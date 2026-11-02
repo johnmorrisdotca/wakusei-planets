@@ -7,7 +7,6 @@ import "./saturn.ts";
 import "./uranus.ts";
 import "./neptune.ts";
 import "./pluto.ts";
-import "./moons-earth.ts";
 import "./moons-mars.ts";
 import "./moons-jupiter.ts";
 import "./moons-saturn.ts";

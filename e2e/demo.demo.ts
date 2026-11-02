@@ -3,11 +3,11 @@ import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";
 
-test("the page has the family's header, ten bodies, and draws the chosen one", async ({ page }) => {
+test("the page has the family's header, eleven bodies, and draws the chosen one", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=saturn`);
   await expect(page.locator("kazoku-language-picker")).toBeVisible();
   await expect(page.locator("kazoku-theme-switch")).toBeVisible();
-  await expect(page.locator(".tile")).toHaveCount(10);
+  await expect(page.locator(".tile")).toHaveCount(11);
   await expect(page.locator("#main")).toHaveAttribute("body", "saturn");
   await expect(page.locator("#main svg")).toBeVisible();
   await expect(page.locator("#caption")).toContainText("Saturn");
@@ -29,6 +29,12 @@ test("moons show for a planet that has them, and the date row opens", async ({ p
   await expect(page.locator("#main svg")).toContainText("Callisto");
   await page.locator('.tile[data-body="mercury"]').click();
   await expect(page.locator("#moons")).toBeHidden();
+});
+
+test("the Earth is chikyu-earth's own globe, not a second copy", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=earth`);
+  await expect(page.locator("#main chikyu-earth")).toBeAttached();
+  await expect(page.locator("#caption")).toContainText("Earth");
 });
 
 test("the Japanese page names the bodies in Japanese", async ({ page }) => {

@@ -13,7 +13,7 @@ registerLook({ id: "dione", surface: rock({ dark: "#8c8a85", light: "#cdcbc5", c
 registerLook({ id: "rhea", surface: rock({ dark: "#8a8883", light: "#cac8c2", craters: 1.5, contrast: 0.9, seed: 24, patches: 2 }), relief: 0.85, ambient: 0.02 });
 registerLook({
   id: "titan",
-  surface: cloud({ light: "#e8b862", dark: "#c78f40", swirl: 0.3 }),
+  surface: cloud({ light: "#ecbe6c", dark: "#b8802f", swirl: 0.7 }),
   atmosphere: { colour: [0.92, 0.66, 0.3], strength: 0.65, power: 2.3 },
   limb: 0.3,
   ambient: 0.06,

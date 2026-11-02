@@ -11,7 +11,7 @@ vec4 surface(vec3 p) {
   col = mix(col, vec3(0.86, 0.46, 0.17), smoothstep(0.52, 0.74, m) * 0.75);
   col = mix(col, vec3(0.96, 0.96, 0.92), smoothstep(0.68, 0.85, fbm(p * 5.0 + 8.0)) * 0.65);
   float c = -craters(p, 6.5, 1.0, 21.0);
-  col = mix(col, vec3(0.09, 0.06, 0.05), smoothstep(0.1, 0.17, c));
+  col = mix(col, vec3(0.20, 0.12, 0.07), smoothstep(0.06, 0.26, c) * 0.8);
   float pele = oval(p, -90.0, -18.0, 13.0, 13.0, 0.5) - oval(p, -90.0, -18.0, 6.0, 6.0, 0.5);
   col = mix(col, vec3(0.78, 0.2, 0.1), clamp(pele, 0.0, 1.0) * 0.55);
   return vec4(col, 0.0);

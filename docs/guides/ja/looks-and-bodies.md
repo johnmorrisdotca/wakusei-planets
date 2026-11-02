@@ -15,6 +15,10 @@ description: 3つの見た目、天体ごとのエントリー、three.js、画�
 
 陰影つきの見た目は、天体ごとのコードとデータなので、importも別です。`@johnmorrisdotca/wakusei-planets/saturn`、ガリレオ衛星は `/moons-jupiter` です。`/all` はすべてをimportします。エントリーをimportしていない天体は、その色の簡単な球として描かれます。
 
+## 地球
+
+地球はここでは描きません。`@johnmorrisdotca/wakusei-planets/earth` が [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) の要素に任せるので、どのページでも同じ地球が出ます。`@johnmorrisdotca/chikyu-earth` (任意の依存) を入れて `/earth` をimportしてください。線画は chikyu-earth の線の地球儀、陰影つきと表面の地図は、その時刻の本物の太陽、雲、夜の明かりつきの「宇宙から見た地球」です。chikyu-earth は自分の WebGL を持つので、地球とほかの天体を同時に動かすと、ページには WebGL が2つになります。
+
 ## WebGLは1つ、必要なときだけ描く
 
 陰影つきの天体は、kazoku-ui の共通レンダラーを通じて、1ページで1つの WebGL を共有します。選ばれているものが動き、ほかは絵です。`live="hover"` にすると、指した天体に渡され、`live="off"` なら絵だけです。何も変わらないときは何も描かず、アニメーションフレームも頼みません。動いている間も1秒に30回まで、キャンバスは1辺4096ピクセル・600万ピクセルまでに抑え、要素が消えるときはすべて解放します。見えていないとき、タブが隠れているときは描かず、WebGL が失われても自動で戻ります。

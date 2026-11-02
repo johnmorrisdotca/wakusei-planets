@@ -5,11 +5,12 @@ import { apparent, BODIES, MOONS_OF, type BodyId } from "../src/index.ts";
 import { lookOf } from "../src/scene/look.ts";
 import "../src/element.ts";
 import "../src/bodies/all.ts";
+import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { WORDS } from "./words.js";
 
 type Look = "line" | "realistic" | "painted";
-const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon"];
+const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon"];
 
 /** A word of the page in the language it is in now (the family's chooser, set by the page), English if the chooser is not there. */
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;

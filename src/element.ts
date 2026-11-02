@@ -9,7 +9,7 @@ import { lineSvg } from "./line.ts";
 import { createLive, type LiveFrame, type LiveRequest } from "./live.ts";
 import { VERSION } from "./version.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
-import { onRegister } from "./scene/store.ts";
+import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
 import { turn as turnVec, type Vec3 } from "./vec.ts";
 
@@ -101,6 +101,8 @@ export class WakuseiBody extends HTMLElement {
   #view: View | undefined;
   #viewKey = "";
   #viewSig = "";
+  #delegateEl: HTMLElement | undefined;
+  #delegateKind = "";
   #stilled = false;
   #wantLive = false;
   #visible = typeof IntersectionObserver !== "function";
@@ -209,6 +211,10 @@ export class WakuseiBody extends HTMLElement {
   async goLive(): Promise<boolean> {
     if (this.look === "line") return false;
     this.#wantLive = true;
+    if (delegates.has(this.body)) {
+      await this.#delegated(delegates.get(this.body)!);
+      return true;
+    }
     await this.#ensureView();
     const ok = (await this.#view?.focus()) === true;
     if (ok) {
@@ -222,6 +228,10 @@ export class WakuseiBody extends HTMLElement {
   /** Give the WebGL context back: the picture stays as a still. */
   rest(): void {
     this.#wantLive = false;
+    if (delegates.has(this.body)) {
+      this.#queue(true);
+      return;
+    }
     this.#stopTick();
     if (this.#view !== undefined) {
       this.#view.blur();
@@ -354,6 +364,16 @@ export class WakuseiBody extends HTMLElement {
     const stage = this.#stage;
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
+    const delegate = delegates.get(this.body);
+    if (delegate !== undefined) {
+      await this.#delegated(delegate);
+      return;
+    }
+    if (this.#delegateEl !== undefined) {
+      this.#delegateEl.remove();
+      this.#delegateEl = undefined;
+      this.#delegateKind = "";
+    }
     const wants3d = this.look !== "line" && this.#state !== "unavailable";
     if (!wants3d) {
       if (this.#view !== undefined) {
@@ -480,6 +500,31 @@ export class WakuseiBody extends HTMLElement {
     this.#view = this.#renderer!.view(this.#stage, item);
     this.#set("loading");
     if (this.#visible) this.#still();
+  }
+
+  /** A body another package draws (the Earth): its line globe, or its shaded Earth once it is asked to go live. */
+  async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>): Promise<void> {
+    if (this.#view !== undefined) {
+      this.#view.dispose();
+      this.#view = undefined;
+      this.#viewKey = "";
+    }
+    const shaded = this.look !== "line" && (this.#wantLive || (this.#hasPriority() && (this.getAttribute("live") ?? "always") === "always"));
+    const kind = shaded ? "live" : "line";
+    const time = this.#start === undefined ? "now" : new Date(this.#start).toISOString();
+    const base = this.getAttribute("texture-base");
+    const center = this.hasAttribute("meridian") ? `${num(this.getAttribute("meridian"), 10)},20` : "10,20";
+    const key = `${kind}|${center}|${time}|${base ?? ""}`;
+    if (this.#delegateEl !== undefined && this.#delegateKind === key) return;
+    const size = Math.round(this.clientWidth || 320);
+    const el = kind === "live" ? await delegate.live({ center, time, textureBase: base }) : await delegate.line({ center, size });
+    this.#delegateEl?.remove();
+    this.#stage.innerHTML = "";
+    el.style.cssText = "display:block;width:100%;height:100%;aspect-ratio:1";
+    this.#stage.append(el);
+    this.#delegateEl = el;
+    this.#delegateKind = key;
+    this.#set(kind === "live" ? "live" : this.look === "line" ? "line" : "still");
   }
 
   /** Make the view's still, once, when it is in sight. */

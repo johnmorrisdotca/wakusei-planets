@@ -8,6 +8,7 @@
 // It draws only when something changes, and nothing while it is out of sight or the tab is hidden.
 import "../src/element.ts";
 import "../src/bodies/all.ts";
+import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 
 setThreeLoader(() => import("./three-subset.ts"));

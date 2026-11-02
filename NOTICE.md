@@ -13,6 +13,10 @@ No picture is used by the line and shaded looks: they are drawn from numbers.
 
 The tests compare the Galilean moons and four planets with astronomy-engine (MIT, https://github.com/cosinekitty/astronomy), a development dependency that is never shipped.
 
+## The Earth
+
+The Earth is drawn by chikyu-earth (MIT, by John Morris; https://github.com/johnmorrisdotca/chikyu-earth), an optional peer dependency: its own NOTICE.md has the terms of its outlines and its NASA pictures.
+
 ## Surface pictures
 
 None yet. When the painted looks arrive, each picture will be listed here with its source and licence, checked per file.

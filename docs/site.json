@@ -10,25 +10,110 @@
   },
   "icon": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b1424'/%3E%3Ccircle cx='50' cy='50' r='24' fill='%2313203a' stroke='%238fa1b8' stroke-width='4'/%3E%3Cellipse cx='50' cy='50' rx='42' ry='12' fill='none' stroke='%238fa1b8' stroke-width='3' transform='rotate(-20 50 50)'/%3E%3C/svg%3E",
   "entries": {
-    ".": { "en": "Facts, line drawings and positions", "ja": "データ・線画・位置", "platform": "node" },
-    "./element": { "en": "The <wakusei-body> element", "ja": "<wakusei-body> 要素", "platform": "browser" },
-    "./look": { "en": "How a body is drawn with three.js", "ja": "three.js での描き方", "platform": "browser" },
-    "./all": { "en": "Every body's shaded look", "ja": "すべての天体の陰影つきの見た目", "platform": "browser" },
-    "./sun": { "en": "The Sun's shaded look", "ja": "太陽の陰影つきの見た目", "platform": "browser" },
-    "./mercury": { "en": "Mercury's shaded look", "ja": "水星の陰影つきの見た目", "platform": "browser" },
-    "./venus": { "en": "Venus's shaded look", "ja": "金星の陰影つきの見た目", "platform": "browser" },
-    "./mars": { "en": "Mars's shaded look", "ja": "火星の陰影つきの見た目", "platform": "browser" },
-    "./jupiter": { "en": "Jupiter's shaded look", "ja": "木星の陰影つきの見た目", "platform": "browser" },
-    "./saturn": { "en": "Saturn's shaded look", "ja": "土星の陰影つきの見た目", "platform": "browser" },
-    "./uranus": { "en": "Uranus's shaded look", "ja": "天王星の陰影つきの見た目", "platform": "browser" },
-    "./neptune": { "en": "Neptune's shaded look", "ja": "海王星の陰影つきの見た目", "platform": "browser" },
-    "./pluto": { "en": "Pluto's shaded look", "ja": "冥王星の陰影つきの見た目", "platform": "browser" },
-    "./moons-earth": { "en": "The Moon's shaded look", "ja": "月の陰影つきの見た目", "platform": "browser" },
-    "./moons-mars": { "en": "Phobos and Deimos: shaded looks", "ja": "フォボスとダイモスの陰影つきの見た目", "platform": "browser" },
-    "./moons-jupiter": { "en": "The Galilean moons: shaded looks", "ja": "ガリレオ衛星の陰影つきの見た目", "platform": "browser" },
-    "./moons-saturn": { "en": "Saturn's moons: shaded looks", "ja": "土星の衛星の陰影つきの見た目", "platform": "browser" },
-    "./moons-uranus": { "en": "Uranus's moons: shaded looks", "ja": "天王星の衛星の陰影つきの見た目", "platform": "browser" },
-    "./moons-neptune": { "en": "Neptune's moons: shaded looks", "ja": "海王星の衛星の陰影つきの見た目", "platform": "browser" },
-    "./moons-pluto": { "en": "Pluto's moons: shaded looks", "ja": "冥王星の衛星の陰影つきの見た目", "platform": "browser" }
+    ".": {
+      "en": "Facts, line drawings and positions",
+      "ja": "データ・線画・位置",
+      "platform": "node"
+    },
+    "./element": {
+      "en": "The <wakusei-body> element",
+      "ja": "<wakusei-body> 要素",
+      "platform": "browser"
+    },
+    "./look": {
+      "en": "How a body is drawn with three.js",
+      "ja": "three.js での描き方",
+      "platform": "browser"
+    },
+    "./all": {
+      "en": "Every body's shaded look",
+      "ja": "すべての天体の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./sun": {
+      "en": "The Sun's shaded look",
+      "ja": "太陽の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./mercury": {
+      "en": "Mercury's shaded look",
+      "ja": "水星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./venus": {
+      "en": "Venus's shaded look",
+      "ja": "金星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./mars": {
+      "en": "Mars's shaded look",
+      "ja": "火星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./jupiter": {
+      "en": "Jupiter's shaded look",
+      "ja": "木星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./saturn": {
+      "en": "Saturn's shaded look",
+      "ja": "土星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./uranus": {
+      "en": "Uranus's shaded look",
+      "ja": "天王星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./neptune": {
+      "en": "Neptune's shaded look",
+      "ja": "海王星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./pluto": {
+      "en": "Pluto's shaded look",
+      "ja": "冥王星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-earth": {
+      "en": "The Moon's shaded look",
+      "ja": "月の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-mars": {
+      "en": "Phobos and Deimos: shaded looks",
+      "ja": "フォボスとダイモスの陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-jupiter": {
+      "en": "The Galilean moons: shaded looks",
+      "ja": "ガリレオ衛星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-saturn": {
+      "en": "Saturn's moons: shaded looks",
+      "ja": "土星の衛星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-uranus": {
+      "en": "Uranus's moons: shaded looks",
+      "ja": "天王星の衛星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-neptune": {
+      "en": "Neptune's moons: shaded looks",
+      "ja": "海王星の衛星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-pluto": {
+      "en": "Pluto's moons: shaded looks",
+      "ja": "冥王星の衛星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./earth": {
+      "en": "The Earth, drawn by chikyu-earth",
+      "ja": "地球 (chikyu-earth が描く)",
+      "platform": "browser"
+    }
   }
 }

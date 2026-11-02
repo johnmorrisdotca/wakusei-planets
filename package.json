@@ -142,7 +142,12 @@
       "import": "./dist/bodies/moons-pluto.js",
       "default": "./dist/bodies/moons-pluto.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./earth": {
+      "types": "./dist/bodies/earth.d.ts",
+      "import": "./dist/bodies/earth.js",
+      "default": "./dist/bodies/earth.js"
+    }
   },
   "files": [
     "dist",
@@ -181,6 +186,7 @@
     "@angular/core": "^22.2.4",
     "@angular/platform-browser": "^22.2.4",
     "@eslint/js": "^9.0.0",
+    "@johnmorrisdotca/chikyu-earth": "^0.7.0",
     "@playwright/test": "1.64.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^24.0.0",
@@ -213,10 +219,14 @@
     "@johnmorrisdotca/kazoku-ui": "^0.9.1"
   },
   "peerDependencies": {
-    "three": ">=0.160.0"
+    "three": ">=0.160.0",
+    "@johnmorrisdotca/chikyu-earth": ">=0.7.0"
   },
   "peerDependenciesMeta": {
     "three": {
+      "optional": true
+    },
+    "@johnmorrisdotca/chikyu-earth": {
       "optional": true
     }
   },
