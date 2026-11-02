@@ -1,0 +1,16 @@
+import "./sun.ts";
+import "./mercury.ts";
+import "./venus.ts";
+import "./mars.ts";
+import "./jupiter.ts";
+import "./saturn.ts";
+import "./uranus.ts";
+import "./neptune.ts";
+import "./pluto.ts";
+import "./moons-earth.ts";
+import "./moons-mars.ts";
+import "./moons-jupiter.ts";
+import "./moons-saturn.ts";
+import "./moons-uranus.ts";
+import "./moons-neptune.ts";
+import "./moons-pluto.ts";

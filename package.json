@@ -1,0 +1,228 @@
+{
+  "name": "@johnmorrisdotca/wakusei-planets",
+  "version": "0.1.0",
+  "description": "Wakusei Planets 惑星 — The Sun, planets and moons for the web: each as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation as data, and positions of the moons for any date and time. SVG for the lines, three.js (optional) for the rest.",
+  "keywords": [
+    "planets",
+    "solar-system",
+    "sun",
+    "moon",
+    "moons",
+    "jupiter",
+    "saturn",
+    "mars",
+    "astronomy",
+    "ephemeris",
+    "web-component",
+    "custom-element",
+    "svg",
+    "three",
+    "webgl",
+    "line-drawing",
+    "typescript"
+  ],
+  "homepage": "https://johnmorrisdotca.github.io/wakusei-planets/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johnmorrisdotca/wakusei-planets.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johnmorrisdotca/wakusei-planets/issues"
+  },
+  "author": "John Morris",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "./dist/element.js",
+    "./dist/bodies/*.js",
+    "./src/element.ts",
+    "./src/bodies/*.ts"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./element": {
+      "types": "./dist/element.d.ts",
+      "import": "./dist/element.js",
+      "default": "./dist/element.js"
+    },
+    "./look": {
+      "types": "./dist/scene/look.d.ts",
+      "import": "./dist/scene/look.js",
+      "default": "./dist/scene/look.js"
+    },
+    "./all": {
+      "types": "./dist/bodies/all.d.ts",
+      "import": "./dist/bodies/all.js",
+      "default": "./dist/bodies/all.js"
+    },
+    "./sun": {
+      "types": "./dist/bodies/sun.d.ts",
+      "import": "./dist/bodies/sun.js",
+      "default": "./dist/bodies/sun.js"
+    },
+    "./mercury": {
+      "types": "./dist/bodies/mercury.d.ts",
+      "import": "./dist/bodies/mercury.js",
+      "default": "./dist/bodies/mercury.js"
+    },
+    "./venus": {
+      "types": "./dist/bodies/venus.d.ts",
+      "import": "./dist/bodies/venus.js",
+      "default": "./dist/bodies/venus.js"
+    },
+    "./mars": {
+      "types": "./dist/bodies/mars.d.ts",
+      "import": "./dist/bodies/mars.js",
+      "default": "./dist/bodies/mars.js"
+    },
+    "./jupiter": {
+      "types": "./dist/bodies/jupiter.d.ts",
+      "import": "./dist/bodies/jupiter.js",
+      "default": "./dist/bodies/jupiter.js"
+    },
+    "./saturn": {
+      "types": "./dist/bodies/saturn.d.ts",
+      "import": "./dist/bodies/saturn.js",
+      "default": "./dist/bodies/saturn.js"
+    },
+    "./uranus": {
+      "types": "./dist/bodies/uranus.d.ts",
+      "import": "./dist/bodies/uranus.js",
+      "default": "./dist/bodies/uranus.js"
+    },
+    "./neptune": {
+      "types": "./dist/bodies/neptune.d.ts",
+      "import": "./dist/bodies/neptune.js",
+      "default": "./dist/bodies/neptune.js"
+    },
+    "./pluto": {
+      "types": "./dist/bodies/pluto.d.ts",
+      "import": "./dist/bodies/pluto.js",
+      "default": "./dist/bodies/pluto.js"
+    },
+    "./moons-earth": {
+      "types": "./dist/bodies/moons-earth.d.ts",
+      "import": "./dist/bodies/moons-earth.js",
+      "default": "./dist/bodies/moons-earth.js"
+    },
+    "./moons-mars": {
+      "types": "./dist/bodies/moons-mars.d.ts",
+      "import": "./dist/bodies/moons-mars.js",
+      "default": "./dist/bodies/moons-mars.js"
+    },
+    "./moons-jupiter": {
+      "types": "./dist/bodies/moons-jupiter.d.ts",
+      "import": "./dist/bodies/moons-jupiter.js",
+      "default": "./dist/bodies/moons-jupiter.js"
+    },
+    "./moons-saturn": {
+      "types": "./dist/bodies/moons-saturn.d.ts",
+      "import": "./dist/bodies/moons-saturn.js",
+      "default": "./dist/bodies/moons-saturn.js"
+    },
+    "./moons-uranus": {
+      "types": "./dist/bodies/moons-uranus.d.ts",
+      "import": "./dist/bodies/moons-uranus.js",
+      "default": "./dist/bodies/moons-uranus.js"
+    },
+    "./moons-neptune": {
+      "types": "./dist/bodies/moons-neptune.d.ts",
+      "import": "./dist/bodies/moons-neptune.js",
+      "default": "./dist/bodies/moons-neptune.js"
+    },
+    "./moons-pluto": {
+      "types": "./dist/bodies/moons-pluto.d.ts",
+      "import": "./dist/bodies/moons-pluto.js",
+      "default": "./dist/bodies/moons-pluto.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.check.json && tsc -p tsconfig.tools.json && tsc -p tsconfig.demo.json",
+    "test": "node --test test/*.test.ts",
+    "test:package": "pnpm build && node scripts/check-package.ts",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && node scripts/check-package.ts",
+    "prepublishOnly": "pnpm check",
+    "family:readme": "node scripts/family-readme.mjs",
+    "site": "pnpm build && node scripts/site.ts",
+    "dev": "pnpm site && node scripts/dev.ts",
+    "test:demo": "pnpm site && node scripts/docs-site.mjs build && playwright test --project=chromium-desk --project=chromium-phone --project=webkit-desk --project=webkit-phone",
+    "test:freeze": "pnpm site && playwright test --project=freeze",
+    "test:soak": "pnpm site && playwright test --project=soak",
+    "screenshots": "pnpm site && node scripts/screenshots.ts",
+    "docs:site": "pnpm build && node scripts/docs-site.mjs build",
+    "docs:check": "pnpm build && node scripts/docs-site.mjs check",
+    "size": "node scripts/docs-site.mjs size",
+    "test:usage": "pnpm site && node scripts/check-usage.ts",
+    "check:standard": "node scripts/check-standard.mjs"
+  },
+  "devDependencies": {
+    "@angular/common": "^22.2.4",
+    "@angular/compiler": "^22.2.4",
+    "@angular/core": "^22.2.4",
+    "@angular/platform-browser": "^22.2.4",
+    "@eslint/js": "^9.0.0",
+    "@playwright/test": "1.64.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-vue": "^6.0.10",
+    "astronomy-engine": "2.1.19",
+    "esbuild": "^0.25.12",
+    "eslint": "^9.0.0",
+    "marked": "^18.1.2",
+    "pagefind": "^1.6.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "rxjs": "^7.8.2",
+    "svelte": "^5.57.3",
+    "three": "0.186.1",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^8.3.5",
+    "vue": "^3.5.44",
+    "webpack": "^5.112.2",
+    "webpack-cli": "^7.3.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "dependencies": {
+    "@johnmorrisdotca/kazoku-ui": "^0.9.1"
+  },
+  "peerDependencies": {
+    "three": ">=0.160.0"
+  },
+  "peerDependenciesMeta": {
+    "three": {
+      "optional": true
+    }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

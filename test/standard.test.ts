@@ -1,0 +1,21 @@
+// The family's must-have list as a check (kazoku-ui templates/check-standard.mjs, copied unchanged and held to one recorded hash).
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { test } from "node:test";
+
+interface Standard {
+  STANDARD_VERSION: string;
+  standardOf(root: string): { missing: { item: string; say: string }[]; exempted: { item: string; reason: string }[] };
+}
+const standard = (await import(new URL("../scripts/check-standard.mjs", import.meta.url).href)) as Standard;
+const sha = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
+
+test("the checker is the recorded file, byte for byte", () => {
+  assert.equal(standard.STANDARD_VERSION, "2026-11-02");
+  assert.equal(sha("scripts/check-standard.mjs"), "86924cfad66b2ef036f531a1eec35d23c90c6bffa059163ea82437a4e0b0d9e3");
+});
+
+test("every item of the must-have list is there", () => {
+  assert.deepEqual(standard.standardOf(".").missing, []);
+});
