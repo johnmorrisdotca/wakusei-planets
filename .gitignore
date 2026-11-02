@@ -1,0 +1,11 @@
+node_modules/
+dist/
+site/
+test-results/
+playwright-report/
+*.tgz
+.cache/
+.DS_Store
+.usage/
+.readme-examples/
+.docs-examples/
