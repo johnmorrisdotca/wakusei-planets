@@ -20,7 +20,14 @@ test(`${MINUTES} minutes of changes leave memory, GPU objects and contexts flat`
     await main.hover();
     await page.waitForTimeout(700);
   }
-  await page.waitForTimeout(1500);
+  const rest = async () => {
+    // the same body is live when we count, so the same shaders and buffers are held
+    await page.locator('.tile[data-body="jupiter"]').click();
+    await main.hover();
+    await expect(main).toHaveAttribute("data-state", "live", { timeout: 60_000 });
+    await page.waitForTimeout(3000);
+  };
+  await rest();
   const start = { heap: await heap(), counts: await readCounts(page) };
   const end = Date.now() + MINUTES * 60_000;
   while (Date.now() < end) {
@@ -28,7 +35,7 @@ test(`${MINUTES} minutes of changes leave memory, GPU objects and contexts flat`
     await main.hover();
     await page.waitForTimeout(900);
   }
-  await page.waitForTimeout(1500);
+  await rest();
   const stop = { heap: await heap(), counts: await readCounts(page) };
   console.log(`soak ${MINUTES} min: heap ${(start.heap / 1048576).toFixed(1)} -> ${(stop.heap / 1048576).toFixed(1)} MB, GPU objects ${gpuObjects(start.counts)} -> ${gpuObjects(stop.counts)}, contexts ${stop.counts.contexts}`);
   expect(stop.counts.contexts).toBe(1);
