@@ -1,0 +1,74 @@
+{
+  "mercury": {
+    "file": "Mercury MESSENGER MDIS Basemap EnhancedColor Mosaic Global 32ppd.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_32ppd.jpg",
+    "licence": "Public domain",
+    "credit": "https://astrogeology.usgs.gov/search/map/Mercury/Messenger/Global/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_665m",
+    "artist": "Johns Hopkins Applied Physics Laboratory, Applied Coherent Technology Corporation",
+    "usage": "Public domain"
+  },
+  "venus": {
+    "file": "Cylindrical Map of Venus.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Cylindrical_Map_of_Venus.jpg",
+    "licence": "Public domain",
+    "credit": "http://solarviews.com/cap/venus/venmap.htm ( image link )",
+    "artist": "NASA / Jet Propulsion Laboratory",
+    "usage": "Public domain"
+  },
+  "mars": {
+    "file": "Mars Viking MDIM21 ClrMosaic 1km.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Mars_Viking_MDIM21_ClrMosaic_1km.jpg",
+    "licence": "Public domain",
+    "credit": "https://astrogeology.usgs.gov/search/details/Mars/Viking/MDIM21/Mars_Viking_MDIM21_ClrMosaic_global_232m/cub",
+    "artist": "NASA / Jet Propulsion Lab / USGS",
+    "usage": "Public domain"
+  },
+  "jupiter": {
+    "file": "Jupiter Cylindrical Map - Dec 2000 PIA07782.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Jupiter_Cylindrical_Map_-_Dec_2000_PIA07782.jpg",
+    "licence": "Public domain",
+    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA07782 ( image link )",
+    "artist": "NASA/JPL/Space Science Institute",
+    "usage": "Public domain"
+  },
+  "saturn": {
+    "file": "Saturn during Equinox.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Saturn_during_Equinox.jpg",
+    "licence": "Public domain",
+    "credit": "http://www.ciclops.org/view/5155/Saturn-Four-Years-On http://www.nasa.gov/images/content/365640main_PIA11141_full.jpg http://photojournal.jpl.nasa.gov/catalog/PIA11141",
+    "artist": "NASA / JPL / Space Science Institute",
+    "usage": "Public domain"
+  },
+  "uranus": {
+    "file": "Uranus as seen by NASA's Voyager 2.tif",
+    "page": "https://commons.wikimedia.org/wiki/File:Uranus_as_seen_by_NASA%27s_Voyager_2.tif",
+    "licence": "Public domain",
+    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA18182",
+    "artist": "NASA",
+    "usage": "Public domain"
+  },
+  "neptune": {
+    "file": "Neptune Full (original).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Neptune_Full_(original).jpg",
+    "licence": "Public domain",
+    "credit": "https://solarsystem.nasa.gov/resources/611/neptune-full-disk-view/ https://photojournal.jpl.nasa.gov/catalog/PIA01492",
+    "artist": "NASA/JPL",
+    "usage": "Public domain"
+  },
+  "pluto": {
+    "file": "Pluto color mapmosaic.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Pluto_color_mapmosaic.jpg",
+    "licence": "Public domain",
+    "credit": "https://www.nasa.gov/image-feature/pluto-global-color-map",
+    "artist": "NASA / Johns Hopkins University Applied Physics Laboratory / Southwest Research Institute",
+    "usage": "Public domain"
+  },
+  "sun": {
+    "file": "SDO 20240810 000000 4096 HMIIC (HMI).jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:SDO_20240810_000000_4096_HMIIC_(HMI).jpg",
+    "licence": "Public domain",
+    "credit": "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/08/10/20240810_000000_4096_HMIIC.jpg",
+    "artist": "Courtesy of NASA/SDO and the AIA, EVE, and HMI science teams.",
+    "usage": "Public domain"
+  }
+}
