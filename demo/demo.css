@@ -1,0 +1,24 @@
+/* Wakusei's own part of the demo: the stage, the tiles and the embed frame. family.css is the shared look. */
+.space-stage { display: grid; justify-items: center; padding: 18px 12px 10px; margin-bottom: 8px; background: #06080d; }
+.body-view { width: min(560px, 100%); aspect-ratio: 1; position: relative; overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: none; border-radius: 12px; }
+.body-view:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.body-view wakusei-body { --wakusei-size: 100%; width: 100%; max-width: none; }
+.stage-name { color: #9fb0c6; margin: 8px 0 0; min-height: 1.3em; }
+kazoku-view-controls { display: block; margin: 8px auto 14px; max-width: 560px; }
+kazoku-view-controls { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface); --kazoku-line: var(--rule); --kazoku-accent: var(--felt); }
+
+.controls .fam-seg button, .controls .fam-button, .controls .fam-field { min-height: 48px; min-width: 48px; font-family: inherit; }
+.controls input[type="datetime-local"] { border-radius: 999px; padding: 0 14px; }
+.controls .field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; }
+
+.bodies { margin-top: 18px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
+.tile { display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 4px; min-height: 48px; padding: 8px 6px 8px; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; color: #c9d4e3; font: inherit; font-size: .85rem; cursor: pointer; }
+.tile:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.tile wakusei-body { --wakusei-size: 84px; width: 84px; pointer-events: none; }
+
+.more .fam-panel { justify-items: start; }
+.embed-frame { width: min(420px, 100%); aspect-ratio: 1; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; }
+.credits { margin-top: 20px; }
+.more .fam-actions .fam-button { color: inherit; }

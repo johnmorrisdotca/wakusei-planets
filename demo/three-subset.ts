@@ -1,0 +1,26 @@
+// The parts of three.js the bodies use, and nothing else: the demo hands this to the element so the bundle holds a few hundred kilobytes of three instead of all of it. A page does the
+// same with `setThreeLoader(() => import("./three-subset"))`.
+export {
+  AdditiveBlending,
+  BufferAttribute,
+  BufferGeometry,
+  ClampToEdgeWrapping,
+  DataTexture,
+  DoubleSide,
+  Line,
+  LineBasicMaterial,
+  LinearFilter,
+  Mesh,
+  NoColorSpace,
+  OrthographicCamera,
+  PlaneGeometry,
+  RGBAFormat,
+  RingGeometry,
+  Scene,
+  ShaderMaterial,
+  SphereGeometry,
+  TextureLoader,
+  Vector2,
+  Vector3,
+  WebGLRenderer,
+} from "three";
