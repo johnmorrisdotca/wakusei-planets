@@ -1,0 +1,33 @@
+name: Release
+# Run by hand (Actions → Release → Run workflow) from main, or push a v<version> tag. It refuses unless the CI workflow has succeeded on this commit (the ci-green job). The steps are then
+# kazoku-ui's shared release workflow (docs/release-workflow.md there): check the tag, run the check and the freeze test below, tag, and publish to npm by trusted publishing, with provenance,
+# and attach the packed tarball to a GitHub release. npm trusts THIS file by name (npmjs.com → the package → Settings → Trusted Publisher: release.yml), so publishing needs no token and no secret.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+  id-token: write
+jobs:
+  ci-green:
+    runs-on: ubuntu-latest
+    steps:
+      - name: CI has succeeded on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --limit 1 --json status,conclusion,url --jq '.[0] | "\(.status) \(.conclusion) \(.url)"')"
+          echo "The latest CI run of $GITHUB_SHA: ${RUN:-none}"
+          case "$RUN" in
+            "completed success "*) ;;
+            *) echo "::error::CI has not succeeded on $GITHUB_SHA. Wait for it to pass (or fix it), then run the release again."; exit 1 ;;
+          esac
+  release:
+    needs: ci-green
+    uses: johnmorrisdotca/kazoku-ui/.github/workflows/reusable-release.yml@v0.9.1
+    with:
+      check-command: pnpm check && pnpm test:package
+      freeze-command: pnpm test:freeze
+      github-release: true
