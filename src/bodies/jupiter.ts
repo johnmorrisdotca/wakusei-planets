@@ -9,8 +9,8 @@ registerLook({
     streaks: 0.22,
     plateau: 0.22,
     extra: `
-    float spot = oval(p, -20.0, -22.0, 9.5, 6.0, 0.55);
-    float halo = oval(p, -20.0, -22.0, 14.0, 9.0, 0.5) - spot;
+    float spot = oval(p, -48.0, -22.0, 9.5, 6.0, 0.55);
+    float halo = oval(p, -48.0, -22.0, 14.0, 9.0, 0.5) - spot;
     vec3 spotCol = mix(vec3(0.70, 0.31, 0.20), vec3(0.86, 0.52, 0.36), fbm(p * 16.0 + 2.0));
     col = mix(col, col * 0.78, clamp(halo, 0.0, 1.0) * 0.5);
     col = mix(col, spotCol, spot);
@@ -19,4 +19,5 @@ registerLook({
   }),
   atmosphere: { colour: [0.75, 0.7, 0.62], strength: 0.12, power: 3.5 },
   limb: 0.45,
+  painted: { map: "jupiter", widths: [512, 1024, 2048], far: 2048, relief: 0 },
 });

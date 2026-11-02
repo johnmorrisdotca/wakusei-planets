@@ -1,7 +1,7 @@
 <h1 align="center">Wakusei Planets <sub>惑星</sub></h1>
 
 <p align="center"><strong>The Sun, the planets and their moons, for the web.</strong><br>
-A clean line drawing, a shaded realistic drawing, or (soon) a painted surface map, with each body's real size, axial tilt and rotation as data, and a planet's moons where they are at any date and time.</p>
+A clean line drawing, a shaded realistic drawing, or a painted surface map, with each body's real size, axial tilt and rotation as data, and a planet's moons where they are at any date and time.</p>
 
 <p align="center">
   <a href="https://github.com/johnmorrisdotca/wakusei-planets/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/johnmorrisdotca/wakusei-planets/actions/workflows/ci.yml/badge.svg"></a>
@@ -72,9 +72,9 @@ A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (a
 |---|---|---|
 | `line` | A clean outline drawing with the body's key features: bands, craters, rings and their gaps, caps, the dark side dashed off. An SVG. | nothing |
 | `realistic` | A shaded sphere drawn from the body's real colours and features, lit from the Sun's side, with the rings casting shadows. No pictures: the surface is worked out in a shader. | `three`, the body's entry point |
-| `painted` | A real surface map from public-domain imagery. Small pictures first, sharper when you zoom in. | arriving in a later version |
+| `painted` | A real surface map from public-domain NASA, USGS and JPL imagery. Small pictures first (0.53 MB for all nine in the package), a sharper one fetched when you zoom in. | `three`, the body's entry point |
 
-Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are 25 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra). The Earth is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe, not a second copy: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` installed). The painted looks follow.
+Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are 25 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra). The Earth is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe, not a second copy: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` installed). The painted looks cover the Sun and the planets from Mercury to Pluto.
 
 ## As the Earth sees it
 
@@ -140,7 +140,7 @@ The pure side has no DOM: `BODIES`, `apparent(id, time)`, `system(planet, time)`
 
 ## The data
 
-Sizes, flattening, poles and rotation are the IAU's and NASA's; planet positions are JPL's approximate elements; the Moon's are Meeus's largest terms; the other moons are JPL's mean elements. Nothing is fetched at run time, and no picture is used by the line and shaded looks. See [NOTICE.md](NOTICE.md).
+Sizes, flattening, poles and rotation are the IAU's and NASA's; planet positions are JPL's approximate elements; the Moon's are Meeus's largest terms; the other moons are JPL's mean elements. Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
 
 ## The name
 

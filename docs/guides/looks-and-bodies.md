@@ -9,7 +9,7 @@ description: The three looks, each body's own entry point, three.js, pictures an
 
 - `line`: a clean outline drawing, an SVG string. It needs nothing else.
 - `realistic`: a shaded sphere drawn with three.js from the body's real colours and features, lit from the Sun's side. No pictures are fetched: the surface is worked out in the shader.
-- `painted`: a real surface map in public-domain imagery. A small picture is drawn first and a sharper one is fetched when the view is zoomed in.
+- `painted`: a real surface map from public-domain NASA, USGS and JPL imagery, for the Sun and the planets from Mercury to Pluto. A small picture is drawn first and a sharper one is fetched when the view is zoomed in; if a picture cannot be fetched the shaded look stays. Saturn, Uranus, Neptune and the Sun have no global map: theirs come from one photograph each, as NOTICE.md says.
 
 ## Each body is its own entry point
 

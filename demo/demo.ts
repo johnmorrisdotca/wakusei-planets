@@ -123,13 +123,15 @@ if (main && controls && tilesBox) {
     setAttr(main!, "body", state.body);
     setAttr(main!, "look", state.look);
     setAttr(main!, "lang", lang());
+    setAttr(main!, "texture-base", "textures/");
     setAttr(main!, "time", real ? state.time : null);
     setAttr(main!, "rate", real ? String(state.speed) : null);
     setAttr(main!, "turn", state.spin && !real ? "14" : null);
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     for (const [id, tile] of tiles) {
-      setAttr(tile.body, "look", state.look === "line" ? "line" : "realistic");
+      setAttr(tile.body, "look", state.look);
+      setAttr(tile.body, "texture-base", "textures/");
       setAttr(tile.body, "lang", lang());
       setAttr(tile.body, "scale-to", state.scale ? "jupiter" : null);
       tile.name.textContent = BODIES[id].name[lang()];

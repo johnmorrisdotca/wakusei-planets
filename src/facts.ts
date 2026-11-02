@@ -239,7 +239,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
     ],
   }),
   jupiter: f("jupiter", "planet", "Jupiter", "木星", 71492, 0.06487, 3.13, 268.056595, 64.495303, 284.95, 870.536, 9.925, "#d9b48a", {
-    showLon: -20,
+    showLon: -48,
     features: [...bandsAt([62, 48, 35, 22, 8, -8, -22, -34, -48, -62]), { kind: "oval", lon: 20, lat: -22, rx: 12, ry: 6 }, { kind: "oval", lon: -70, lat: -33, rx: 3, ry: 2 }],
   }),
   saturn: f("saturn", "planet", "Saturn", "土星", 60268, 0.09796, 26.73, 40.589, 83.537, 38.9, 810.7939024, 10.656, "#e4d09c", {
@@ -248,7 +248,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   }),
   uranus: f("uranus", "planet", "Uranus", "天王星", 25559, 0.02293, 97.77, 257.311, -15.175, 203.81, -501.1600928, -17.24, "#a9e0e5", { rings: URANUS_RINGS, features: bandsAt([62, 38, 14, -14, -38]) }),
   neptune: f("neptune", "planet", "Neptune", "海王星", 24764, 0.01708, 28.32, 299.36, 43.46, 249.978, 541.1397757, 16.11, "#4a6ee0", {
-    showLon: -25,
+    showLon: -30,
     features: [...bandsAt([58, 34, 10, -14, -38, -60]), { kind: "oval", lon: -20, lat: -22, rx: 12, ry: 6 }, { kind: "oval", lon: 45, lat: -42, rx: 5, ry: 2.5 }],
   }),
   pluto: f("pluto", "dwarf-planet", "Pluto", "冥王星", 1188.3, 0, 122.53, 132.993, -6.163, 302.695, 56.3625225, -153.2935, "#c9a98a", {

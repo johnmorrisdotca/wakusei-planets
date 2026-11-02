@@ -17,4 +17,5 @@ vec4 surface(vec3 p) {
   col = mix(col, vec3(0.16, 0.04, 0.01), spot * 0.92);
   return vec4(col * 1.12, 0.0);
 }`,
+  painted: { map: "sun", widths: [512, 1024, 2048], far: 2048, relief: 0 },
 });

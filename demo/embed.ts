@@ -18,7 +18,8 @@ const element = document.createElement("wakusei-body") as WakuseiBody;
 const body = query.get("body") ?? "jupiter";
 element.setAttribute("body", body);
 element.setAttribute("look", query.get("look") ?? "line");
-for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang", "texture-base"]) {
+element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
+for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang"]) {
   const value = query.get(name);
   if (value !== null) element.setAttribute(name, value);
 }

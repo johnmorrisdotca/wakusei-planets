@@ -31,6 +31,14 @@ test("moons show for a planet that has them, and the date row opens", async ({ p
   await expect(page.locator("#moons")).toBeHidden();
 });
 
+test("the painted look is offered, and a body with no picture falls back", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=mars`);
+  await expect(page.locator('#looks [data-look="painted"]')).toBeVisible();
+  await page.locator('#looks [data-look="painted"]').click();
+  await expect(page.locator("#main")).toHaveAttribute("look", "painted");
+  await expect(page).toHaveURL(/look=painted/);
+});
+
 test("the Earth is chikyu-earth's own globe, not a second copy", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=earth`);
   await expect(page.locator("#main chikyu-earth")).toBeAttached();

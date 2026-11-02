@@ -37,6 +37,8 @@ export interface PaintedMap {
   map: string;
   /** The widths made, smallest first: the smallest is drawn first and sharper ones are fetched when the view is zoomed in. */
   widths: readonly number[];
+  /** The smallest width that is not in the npm package: it is fetched from the repository's own files (see `texture-far-base`). */
+  far?: number;
   /** How much of the map's brightness is also relief. Default 0. */
   relief?: number;
   /** The painted pictures' credit line, for the page. */

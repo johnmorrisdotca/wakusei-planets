@@ -18,7 +18,7 @@ vec4 surface(vec3 p) {
 }`,
   ambient: 0.02,
 });
-registerLook({ id: "europa", surface: ice({ base: "#e9e0cd", stain: "#a2623e", cracks: 0.85, craters: 0.2 }), ambient: 0.02, relief: 0.4 });
+registerLook({ id: "europa", surface: ice({ base: "#e9e0cd", stain: "#a2623e", cracks: 0.85, craters: 0.2 }), ambient: 0.02 });
 registerLook({
   id: "ganymede",
   surface: rock({ dark: "#5f5448", light: "#b6aa99", craters: 0.9, contrast: 0.9, seed: 12, patches: 3.4, extra: "col = mix(col, vec3(0.30, 0.25, 0.21), oval(p, -140.0, 20.0, 38.0, 50.0, 0.4) * 0.7); col += vec3(0.28) * smoothstep(0.05, 0.2, -h) * 0.6;" }),

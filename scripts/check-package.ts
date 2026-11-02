@@ -1,5 +1,5 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 
 const entries = ["index", "element", "scene/look", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
@@ -16,3 +16,27 @@ if (moon.illumination < 0.95) throw new Error("the Moon is not full on 2026-11-2
 const saturn = mod.ringStrip(mod.BODIES.saturn, 128);
 if (saturn === null || saturn.width !== 128) throw new Error("ringStrip is off");
 console.log(`package ok: ${mod.BODY_IDS.length} bodies drawn (${(bytes / 1024).toFixed(0)} KB of SVG), full Moon found`);
+
+// The painted looks' pictures in the package: the two smaller widths of every painted body, within the size budget (the sharpest widths are not shipped: they come from the repository).
+const look = await import(new URL("../dist/scene/look.js", import.meta.url).href);
+await import(new URL("../dist/bodies/all.js", import.meta.url).href);
+let pictures = 0;
+let pictureBytes = 0;
+for (const id of mod.BODY_IDS as string[]) {
+  const painted = look.lookOf(id)?.painted;
+  if (painted === undefined) continue;
+  for (const width of painted.widths as number[]) {
+    const file = new URL(`../dist/textures/${painted.map}-${width}.webp`, import.meta.url);
+    if (painted.far !== undefined && width >= painted.far) {
+      if (existsSync(file)) throw new Error(`${painted.map}-${width}.webp is in the package: it must come from the repository`);
+      if (!existsSync(new URL(`../textures/${painted.map}-${width}.webp`, import.meta.url))) throw new Error(`textures/${painted.map}-${width}.webp is missing`);
+    } else {
+      if (!existsSync(file)) throw new Error(`missing dist/textures/${painted.map}-${width}.webp`);
+      pictureBytes += statSync(file).size;
+      pictures += 1;
+    }
+  }
+}
+if (existsSync(new URL("../dist/textures/", import.meta.url)) && readdirSync(new URL("../dist/textures/", import.meta.url)).length !== pictures) throw new Error("dist/textures holds a picture no painted look names");
+if (pictureBytes > 1.2 * 1024 * 1024) throw new Error(`the pictures are ${(pictureBytes / 1048576).toFixed(2)} MB, over the 1.2 MB budget`);
+console.log(`painted ok: ${pictures} pictures, ${(pictureBytes / 1048576).toFixed(2)} MB in the package`);

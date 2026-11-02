@@ -1,6 +1,6 @@
 {
   "name": "@johnmorrisdotca/wakusei-planets",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Wakusei Planets 惑星 — The Sun, planets and moons for the web: each as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation as data, and positions of the moons for any date and time. SVG for the lines, three.js (optional) for the rest.",
   "keywords": [
     "planets",
@@ -160,7 +160,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-textures.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.check.json && tsc -p tsconfig.tools.json && tsc -p tsconfig.demo.json",
     "test": "node --test test/*.test.ts",

@@ -82,6 +82,30 @@ test("changes give back what they took: contexts, buffers, vertex arrays, textur
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
 });
 
+test("a painted body starts with a small picture, gets a sharper one when zoomed in, and gives its pictures back", async ({ page }) => {
+  await page.goto(`${URL}?body=mars&look=painted`);
+  await main(page).hover();
+  await live(page);
+  const width = () => main(page).evaluate((el) => (el as unknown as { stats: { textureWidth: number } }).stats.textureWidth);
+  await expect.poll(width, { timeout: 60_000 }).toBeGreaterThanOrEqual(512);
+  expect(await width()).toBeLessThanOrEqual(1024);
+  await main(page).evaluate((el) => (el as unknown as { setView(v: { zoom: number }): void }).setView({ zoom: 5 }));
+  await expect.poll(width, { timeout: 60_000 }).toBe(2048);
+  await settle(page, 1500);
+  const zoomed = await readCounts(page);
+  for (const id of ["jupiter", "pluto", "mercury", "sun", "mars"]) {
+    await pick(page, id);
+    await main(page).hover();
+    await live(page);
+    await expect.poll(width, { timeout: 60_000 }).toBeGreaterThanOrEqual(512);
+    await settle(page, 500);
+  }
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.contexts).toBe(1);
+  expect(gpuObjects(after)).toBeLessThanOrEqual(gpuObjects(zoomed) + 4);
+});
+
 test("the canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 5120, height: 2880 }, deviceScaleFactor: 2, reducedMotion: "no-preference" });
   const page = await context.newPage();

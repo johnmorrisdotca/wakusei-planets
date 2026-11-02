@@ -14,6 +14,7 @@ export {
   NoColorSpace,
   OrthographicCamera,
   PlaneGeometry,
+  RepeatWrapping,
   RGBAFormat,
   RingGeometry,
   Scene,

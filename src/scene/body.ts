@@ -13,7 +13,7 @@ import { ringStrip } from "./rings.ts";
 export type ThreeParts = Pick<
   typeof THREE,
   | "AdditiveBlending" | "BufferAttribute" | "BufferGeometry" | "ClampToEdgeWrapping" | "DataTexture" | "DoubleSide" | "Line" | "LineBasicMaterial" | "LinearFilter" | "Mesh" | "NoColorSpace"
-  | "OrthographicCamera" | "PlaneGeometry" | "RGBAFormat" | "RingGeometry" | "Scene" | "ShaderMaterial" | "SphereGeometry" | "TextureLoader" | "Vector2" | "Vector3" | "WebGLRenderer"
+  | "OrthographicCamera" | "PlaneGeometry" | "RepeatWrapping" | "RGBAFormat" | "RingGeometry" | "Scene" | "ShaderMaterial" | "SphereGeometry" | "TextureLoader" | "Vector2" | "Vector3" | "WebGLRenderer"
 >;
 
 /** One moon in a system view: its place in planet radii (viewer's frame) and the points of its orbit, if they changed. */
@@ -57,6 +57,8 @@ export interface BodyItemOptions {
   state(): SceneState;
   /** Where the pictures are: a folder address that ends in a slash. */
   textureBase(): string;
+  /** Where the widths from `painted.far` up are: a folder address that ends in a slash. */
+  farBase(): string;
   /** The widest texture worth fetching for a disc this many CSS pixels across (the element's call). */
   wantedWidth(discPx: number): number;
   /** The scene asks for a redraw when a sharper picture arrives. */
@@ -182,16 +184,19 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       let texture: THREE.Texture | undefined;
       let loading = false;
       let failed = false;
+      const tried = new Set<number>();
       let latest: SceneState = options.state();
 
       const loadTexture = (w: number): Promise<THREE.Texture> =>
         new Promise((resolve, reject) => {
           const loader = new T.TextureLoader();
           loader.setCrossOrigin("anonymous");
-          loader.load(`${options.textureBase()}${look.painted!.map}-${w}.webp`, (t) => resolve(t), undefined, (e) => reject(e instanceof Error ? e : new Error("texture failed")));
+          const far = look.painted!.far !== undefined && w >= look.painted!.far;
+          loader.load(`${far ? options.farBase() : options.textureBase()}${look.painted!.map}-${w}.webp`, (t) => resolve(t), undefined, (e) => reject(e instanceof Error ? e : new Error("texture failed")));
         });
       const use = (t: THREE.Texture, w: number): void => {
         t.anisotropy = 4;
+        t.wrapS = T.RepeatWrapping;
         t.colorSpace = T.NoColorSpace;
         const previous = texture;
         texture = t;
@@ -318,7 +323,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           const discPx = (aspect >= 1 ? viewHeight : viewWidth) * (state.zoom / state.extent) ;
           const wanted = options.wantedWidth(discPx);
           const next = look.painted.widths.find((w) => w >= wanted) ?? look.painted.widths[look.painted.widths.length - 1]!;
-          if (next > textureWidth) {
+          if (next > textureWidth && !tried.has(next)) {
+            tried.add(next);
             loading = true;
             void loadTexture(next).then(
               (t) => {

@@ -22,4 +22,5 @@ vec4 surface(vec3 p) {
   atmosphere: { colour: [0.85, 0.6, 0.45], strength: 0.16, power: 4 },
   relief: 0.7,
   ambient: 0.03,
+  painted: { map: "mars", widths: [512, 1024, 2048], far: 2048 },
 });

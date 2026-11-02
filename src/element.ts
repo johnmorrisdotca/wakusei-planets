@@ -40,6 +40,19 @@ export type WakuseiState = "line" | "loading" | "still" | "live" | "lost" | "una
  */
 export const TEXTURE_BASE = `https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets@${VERSION}/dist/textures/`;
 
+/**
+ * Where the sharpest surface pictures are: the files of this exact version in the repository, on jsDelivr's GitHub address. The npm package holds only the two smaller widths, so a page that
+ * never zooms in never fetches them. Set `texture-far-base` on an element to serve them yourself.
+ *
+ * @example
+ * ```ts no-run
+ * import { TEXTURE_FAR_BASE } from "@johnmorrisdotca/wakusei-planets/element";
+ *
+ * console.log(TEXTURE_FAR_BASE);
+ * ```
+ */
+export const TEXTURE_FAR_BASE = `https://cdn.jsdelivr.net/gh/johnmorrisdotca/wakusei-planets@v${VERSION}/textures/`;
+
 const num = (value: string | null, fallback: number): number => {
   if (value === null || value.trim() === "") return fallback;
   const n = Number(value);
@@ -92,7 +105,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "live", "texture-base", "lang", "labels"];
+  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "live", "texture-base", "texture-far-base", "lang", "labels"];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -489,6 +502,11 @@ export class WakuseiBody extends HTMLElement {
       key: this.#viewKey,
       state: () => this.#sceneState ?? state,
       textureBase: base,
+      farBase: () => {
+        const own = this.getAttribute("texture-far-base");
+        if (own !== null && own !== "") return own.endsWith("/") ? own : `${own}/`;
+        return this.hasAttribute("texture-base") ? base() : TEXTURE_FAR_BASE;
+      },
       wantedWidth: (discPx) => discPx * Math.min(2, window.devicePixelRatio || 1) * 1.6,
       redraw: () => this.#view?.invalidate(),
       report: (note) => {
