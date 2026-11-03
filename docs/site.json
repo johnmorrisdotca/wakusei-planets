@@ -25,6 +25,11 @@
       "ja": "three.js での描き方",
       "platform": "browser"
     },
+    "./painter": {
+      "en": "Bodies as objects for your own three.js scene",
+      "ja": "自分の three.js シーンに置く天体",
+      "platform": "browser"
+    },
     "./all": {
       "en": "Every body's shaded look",
       "ja": "すべての天体の陰影つきの見た目",

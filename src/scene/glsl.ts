@@ -54,7 +54,7 @@ float oval(vec3 p, float lon0, float lat0, float rx, float ry, float soft) {
 }`;
 
 /** The fragment shader of a body: the surface code goes between the prelude and `main`. */
-export function bodyFragment(surface: string, painted: boolean): string {
+export function bodyFragment(surface: string, painted: boolean, world = false): string {
   return /* glsl */ `
 precision highp float;
 uniform vec3 uLight;
@@ -73,13 +73,14 @@ ${painted ? "uniform sampler2D uMap;" : ""}
 varying vec3 vObj;
 varying vec3 vN;
 varying vec3 vW;
+${world ? "varying vec3 vV;" : ""}
 ${PRELUDE}
 ${surface}
 void main() {
   vec3 p = normalize(vObj);
   vec4 s = surface(p);
   vec3 n = normalize(vN);
-  float mu = clamp(n.z, 0.0, 1.0);
+  float mu = ${world ? "clamp(dot(n, normalize(vV)), 0.0, 1.0)" : "clamp(n.z, 0.0, 1.0)"};
   if (uEmissive > 0.5) {
     float edge = pow(mu, uLimb);
     vec3 c = s.rgb * mix(vec3(1.0, 0.55, 0.25), vec3(1.0), edge) * (0.55 + 0.45 * edge);
@@ -159,6 +160,43 @@ void main() {
   vW = w.xyz;
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
+
+
+/**
+ * The body's vertex shader for a perspective camera and a body anywhere in the scene: the normal and the position are in the scene's axes, the position in body radii from the body's centre
+ * (`uScale` is the body's size in scene units), and `vV` points at the camera.
+ */
+export const VERTEX_WORLD = /* glsl */ `
+uniform float uScale;
+varying vec3 vObj;
+varying vec3 vN;
+varying vec3 vW;
+varying vec3 vV;
+void main() {
+  vObj = vec3(position.z, position.x, position.y);
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vN = normalize(transpose(inverse(mat3(modelMatrix))) * normal);
+  vW = mat3(modelMatrix) * position / uScale;
+  vV = cameraPosition - w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+
+/** The ring's vertex shader for a perspective camera, with the same frame as `VERTEX_WORLD`. */
+export const RING_VERTEX_WORLD = /* glsl */ `
+uniform float uScale;
+varying vec3 vL;
+varying vec3 vW;
+varying vec3 vV;
+void main() {
+  vL = position;
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vW = mat3(modelMatrix) * position / uScale;
+  vV = cameraPosition - w.xyz;
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+
+/** The ring's fragment shader for a perspective camera: which side is seen comes from the direction to the camera. */
+export const RING_FRAGMENT_WORLD = RING_FRAGMENT.replace("varying vec3 vW;", "varying vec3 vW;\nvarying vec3 vV;").replace("float side = nl * uRingN.z;", "float side = nl * dot(uRingN, normalize(vV));");
 
 export const GLOW_VERTEX = /* glsl */ `
 varying vec2 vP;

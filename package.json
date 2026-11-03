@@ -57,6 +57,11 @@
       "import": "./dist/scene/look.js",
       "default": "./dist/scene/look.js"
     },
+    "./painter": {
+      "types": "./dist/scene/painter.d.ts",
+      "import": "./dist/scene/painter.js",
+      "default": "./dist/scene/painter.js"
+    },
     "./all": {
       "types": "./dist/bodies/all.d.ts",
       "import": "./dist/bodies/all.js",
