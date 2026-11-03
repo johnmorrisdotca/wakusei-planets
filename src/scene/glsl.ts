@@ -21,10 +21,12 @@ float vnoise(vec3 p) {
   return mix(mix(mix(hash13(i), hash13(i + vec3(1,0,0)), f.x), mix(hash13(i + vec3(0,1,0)), hash13(i + vec3(1,1,0)), f.x), f.y),
              mix(mix(hash13(i + vec3(0,0,1)), hash13(i + vec3(1,0,1)), f.x), mix(hash13(i + vec3(0,1,1)), hash13(i + vec3(1,1,1)), f.x), f.y), f.z);
 }
-float fbm(vec3 p) { float a = 0.5; float s = 0.0; for (int i = 0; i < 5; i++) { s += a * vnoise(p); p = p * 2.03 + vec3(1.7, 9.2, 3.1); a *= 0.5; } return s; }
-// Craters: a bowl and a raised rim in each cell that has one. Returns a height, negative in a bowl.
+// Noise that knows how big a pixel is: an octave finer than the pixel can show is replaced by its average (0.5) instead of being sampled, so a small body is smooth and not a spray of pixel-sized specks.
+float fbm(vec3 p) { float fw = length(fwidth(p)); float a = 0.5; float s = 0.0; for (int i = 0; i < 5; i++) { s += a * mix(0.5, vnoise(p), 1.0 - smoothstep(0.3, 0.7, fw)); p = p * 2.03 + vec3(1.7, 9.2, 3.1); fw *= 2.03; a *= 0.5; } return s; }
+// Craters: a bowl and a raised rim in each cell that has one. Returns a height, negative in a bowl. A crater smaller than about two pixels fades out (it would only be noise).
 float craters(vec3 p, float freq, float amp, float seed) {
   vec3 q = p * freq + seed; vec3 ip = floor(q); float h = 0.0;
+  float fw = length(fwidth(q));
   for (int x = -1; x <= 1; x++) for (int y = -1; y <= 1; y++) for (int z = -1; z <= 1; z++) {
     vec3 c = ip + vec3(float(x), float(y), float(z));
     float on = step(0.52, hash13(c + 3.7));
@@ -32,8 +34,8 @@ float craters(vec3 p, float freq, float amp, float seed) {
     float rad = mix(0.12, 0.36, hash13(c + 17.3));
     float d = length(q - ctr) / rad;
     float bowl = d < 1.0 ? (d * d - 1.0) : 0.0;
-    float rim = d >= 1.0 ? exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.3 : 0.0;
-    h += on * amp * rad * (bowl + rim);
+    float rim = d >= 1.0 ? exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.3 * smoothstep(1.0, 1.08, d) : 0.0;
+    h += on * amp * rad * (bowl + rim) * (1.0 - smoothstep(0.35, 0.9, fw / rad));
   }
   return h;
 }
@@ -44,7 +46,7 @@ vec3 dirOf(float lonDeg, float latDeg) { float lo = radians(lonDeg); float la = 
 // One big round bowl with a rim, by longitude, latitude and angular radius in degrees. Negative inside.
 float bowl(vec3 p, float lonDeg, float latDeg, float radDeg, float depth) {
   float d = acos(clamp(dot(p, dirOf(lonDeg, latDeg)), -1.0, 1.0)) / radians(radDeg);
-  return d < 1.0 ? depth * (d * d - 1.0) : depth * exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.3;
+  return d < 1.0 ? depth * (d * d - 1.0) : depth * exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.3 * smoothstep(1.0, 1.08, d);
 }
 // A soft oval on the body, 1 inside and 0 outside, by longitude and latitude in degrees.
 float oval(vec3 p, float lon0, float lat0, float rx, float ry, float soft) {
@@ -93,7 +95,9 @@ void main() {
   float hx = dFdx(s.a); float hy = dFdy(s.a);
   vec3 grad = cross(dpy, n) * hx + cross(n, dpx) * hy;
   float det = dot(dpx, cross(dpy, n));
-  vec3 nb = normalize(abs(det) * n - sign(det) * uRelief * grad * 22.0);
+  // relief is worked out from differences between neighbouring pixels, which cannot show a bump only a few pixels wide: on a small disc it fades out and the colour alone carries the craters
+  float reliefLod = 1.0 - smoothstep(0.008, 0.024, length(fwidth(p)));
+  vec3 nb = normalize(abs(det) * n - sign(det) * uRelief * reliefLod * grad * 22.0);
   float d = dot(nb, uLight);
   float diff = clamp((d + uWrap) / (1.0 + uWrap), 0.0, 1.0) * smoothstep(-0.02 - uWrap * 0.6, 0.1 + uWrap * 0.8, dg);
   if (uRingOn > 0.5) {
