@@ -274,9 +274,9 @@ def lat_strip_to_equirect(strip, lat_max, width):
     return extend_poles(out, pad, pad + resized.shape[0] - 1)
 
 
-def fill_unseen(img, side, margin=8, fade=0.2, depth=4):
+def fill_unseen(img, side, margin=8, fade=0.2, depth=4, calm=0.0, feather=24, along=12):
     """A map with a black region where nothing was imaged (the polar night): `side` is `north` (black above) or `south` (black below). Each column keeps its real rows; above (or below) the first of them it
-    continues with the colour just inside the edge, blurred a long way along the row, and fades to the picture's mean colour away from it."""
+    continues with the colour just inside the edge, blurred a long way along the row, and fades to the picture's mean colour away from it. `calm` (0 to 1) takes that colour part of the way to the mean first, so dark ground at the edge does not smear into the fill, `feather` is how many rows the real picture takes to melt into it, and the colour at the edge is averaged over 1/`along` of the way round the body (a small number smooths it more)."""
     work = img if side == "north" else img[::-1]
     h, w, _ = work.shape
     real = work.mean(axis=2) > 0.05
@@ -285,15 +285,16 @@ def fill_unseen(img, side, margin=8, fade=0.2, depth=4):
     edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 41), axis=1).astype(int) + margin
     mean = np.median(work[real], axis=0)
     band = np.stack([work[min(e + depth, h - 31) : min(e + depth + 26, h - 1), c].mean(axis=0) for c, e in enumerate(edge)])
-    k = np.ones(w // 12) / (w // 12)
-    band = np.stack([np.convolve(np.pad(band[:, c], w // 24, mode="wrap"), k, mode="valid")[:w] for c in range(3)], axis=1)
+    n = w // along
+    k = np.ones(n) / n
+    band = np.stack([np.convolve(np.pad(band[:, c], n // 2, mode="wrap"), k, mode="valid")[:w] for c in range(3)], axis=1)
+    band = band * (1 - calm) + mean * calm
     out = work.copy()
     rows = np.arange(h)[:, None]
     above = rows < edge[None, :]
     t = np.clip((edge[None, :] - rows) / (h * fade), 0, 1)
     t = (t * t * (3 - 2 * t))[..., None]
     out = np.where(above[..., None], band[None] * (1 - t) + mean * t, out)
-    feather = 24
     for j in range(feather):
         f = j / feather
         f = f * f * (3 - 2 * f)
@@ -384,7 +385,7 @@ def make(body):
     elif body == "iapetus":
         img = desaturate(roll(img, 0.5), 0.7)
     elif body == "triton":
-        img = desaturate(fill_unseen(img, "north", margin=30, fade=0.2, depth=60), 0.45)
+        img = desaturate(fill_unseen(img, "north", margin=30, fade=0.28, depth=60, calm=0.3, feather=110, along=3), 0.45)
     elif body == "charon":
         img = fill_unseen(img, "south", margin=12, fade=0.1, depth=40)
     elif body == "mimas":

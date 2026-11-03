@@ -17,6 +17,7 @@ registerLook({
   relief: 0.7,
   ambient: 0.02,
   painted: { map: "ceres", widths: [512, 1024, 2048], far: 2048 },
+  mapped: true,
 });
 registerLook({ id: "orcus", surface: rock({ dark: "#6f7074", light: "#a9a9ab", craters: 0.5, contrast: 0.5, seed: 63, patches: 2.2 }), relief: 0.5, ambient: 0.02 });
 registerLook({
