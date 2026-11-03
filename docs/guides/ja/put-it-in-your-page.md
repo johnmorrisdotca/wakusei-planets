@@ -7,7 +7,7 @@ description: デモで天体を決めて、HTML、ESモジュール、React、Vu
 
 デモの「自分のページに入れる」は、設定画面です。上で天体を決めます (どの天体か、見た目、空と日時、衛星、回すかどうか)。大きさを選んで、ページの作り方を選びます。選ぶたびに、コードと横の絵が変わります。絵につけるクレジットはコードの下に出ます。
 
-![コードビルダー：天体・見た目・大きさ・空・回転を選ぶ行、ページの作り方ごとのタブ、プレビュー、コピーできるコード。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/builder-desk.png)
+図：[コードビルダー：天体・見た目・大きさ・空・回転を選ぶ行、ページの作り方ごとのタブ、プレビュー、コピーできるコード。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/builder-desk.png)
 
 同じ文章は `embedCode` で作れるので、自分のページでも同じ選択画面を作れます。
 

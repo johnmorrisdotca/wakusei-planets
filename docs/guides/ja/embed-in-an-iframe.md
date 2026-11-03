@@ -7,7 +7,7 @@ description: iframe 1つで、自分のスクリプトなしに、他人のペ�
 
 埋め込みページは、アドレスで言われたものを描くだけで、自分のファイル以外は取得しません。どのページに置いても安全です。この例は、パッケージのテストがブラウザーで動かしています。
 
-![埋め込みフレーム：木星と4つの大きな衛星が軌道の上にあり、透明なページに描かれている。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/embed-frame.png)
+図：[埋め込みフレーム：木星と4つの大きな衛星が軌道の上にあり、透明なページに描かれている。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/embed-frame.png)
 
 ```html
 <!doctype html>

@@ -7,7 +7,7 @@ description: Show a body in somebody else's page with one iframe and no script o
 
 The embed page draws what its address says and fetches nothing but its own files, so it is safe to put in any page. The example was run in a browser by the package's tests.
 
-![The embed frame: Jupiter with its four large moons on their orbits, drawn on a transparent page.](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/embed-frame.png)
+Picture: [The embed frame: Jupiter with its four large moons on their orbits, drawn on a transparent page.](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/embed-frame.png)
 
 ```html
 <!doctype html>
