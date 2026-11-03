@@ -41,6 +41,7 @@
               <button type="button" data-look="painted" aria-pressed="false" data-say="look_painted" hidden>Painted</button>
             </div>
             <button type="button" class="fam-button" id="spin" aria-pressed="false" data-say="spin">Turn</button>
+            <kazoku-speed-buttons id="spin-speed" data-testid="spin-speed" steps="0.5 1 2" value="1" hidden></kazoku-speed-buttons>
           </div>
 
           <div class="fam-row" data-help-en="Show the body as the Earth sees it at a date and time (its real tilt, its rings, how much is lit), or as a portrait. With moons on, the planet is drawn with its moons where they are then." data-help-ja="ある日時に地球から見える姿 (実際の傾き、輪、光の当たり方) か、飾りのない肖像のどちらかで描きます。衛星をオンにすると、その時刻の衛星の位置も描きます。">
@@ -58,17 +59,13 @@
             </div>
           </div>
 
-          <div class="fam-row" id="time-row" hidden data-help-en="Choose the date and time, or go back to now. Speed runs time forward." data-help-ja="日付と時刻を選びます。「今」に戻すこともできます。速さを選ぶと時間が進みます。">
+          <div class="fam-row" id="time-row" hidden data-help-en="Choose the date and time, or go back to now. The buttons are multiples of real time (3600 is an hour a second, 86400 a day a second)." data-help-ja="日付と時刻を選びます。「今」に戻すこともできます。ボタンは実際の時間の何倍かを表します（3600は1秒で1時間、86400は1秒で1日）。">
             <label class="field">
               <span data-say="when">Date and time</span>
               <input type="datetime-local" id="when" class="fam-field" />
             </label>
             <button type="button" class="fam-button" id="now" aria-pressed="true" data-say="now">Now</button>
-            <div class="group fam-seg" id="speeds" role="group" aria-label="Speed" data-say-label="speed">
-              <button type="button" data-speed="1" aria-pressed="true" data-say="speed_real">Real time</button>
-              <button type="button" data-speed="3600" aria-pressed="false" data-say="speed_hour">1 hour a second</button>
-              <button type="button" data-speed="86400" aria-pressed="false" data-say="speed_day">1 day a second</button>
-            </div>
+            <kazoku-speed-buttons id="speeds" data-testid="speeds" steps="1 3600 86400" value="1"></kazoku-speed-buttons>
           </div>
           <p class="fam-fine" id="status" role="status" hidden></p>
         </div>

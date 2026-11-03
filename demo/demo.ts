@@ -1,4 +1,6 @@
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
+import "@johnmorrisdotca/kazoku-ui/speed-buttons/define";
+import type { SpeedButtonsElement } from "@johnmorrisdotca/kazoku-ui/speed-buttons/element";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { apparent, BODIES, DWARF_IDS, MOONS_OF, type BodyId } from "../src/index.ts";
@@ -41,7 +43,8 @@ if (main && controls && pickerBox) {
   const address = createAddressState({ defaults: { body: "jupiter", look: "realistic" } });
   const looks = [...document.querySelectorAll<HTMLButtonElement>("#looks [data-look]")];
   const skies = [...document.querySelectorAll<HTMLButtonElement>("#skies [data-sky]")];
-  const speeds = [...document.querySelectorAll<HTMLButtonElement>("#speeds [data-speed]")];
+  const speeds = document.querySelector<SpeedButtonsElement>("#speeds")!;
+  const spinSpeed = document.querySelector<SpeedButtonsElement>("#spin-speed")!;
   const moonsButton = document.querySelector<HTMLButtonElement>("#moons")!;
   const scaleButton = document.querySelector<HTMLButtonElement>("#scale")!;
   const scaleRefs = document.querySelector<HTMLElement>("#scale-refs")!;
@@ -68,6 +71,7 @@ if (main && controls && pickerBox) {
     ref: (["planet", "earth", "sun"].includes(address.get("ref") ?? "") ? address.get("ref") : "earth") as "planet" | "earth" | "sun",
     spin: address.get("spin") === "1",
     speed: Number(address.get("speed") ?? 1) || 1,
+    spinSpeed: Number(address.get("spinspeed") ?? 1) || 1,
     time: address.get("t") ?? "now",
   };
 
@@ -95,9 +99,6 @@ if (main && controls && pickerBox) {
     ["#moons", "note_moons"],
     ["#scale", "note_scale"],
     ["#now", "note_now"],
-    ['#speeds [data-speed="1"]', "note_speed_real"],
-    ['#speeds [data-speed="3600"]', "note_speed_hour"],
-    ['#speeds [data-speed="86400"]', "note_speed_day"],
   ];
   const noteLines: { button: HTMLElement; line: HTMLElement; key: string }[] = [];
   for (const [selector, key] of NOTES) {
@@ -432,7 +433,12 @@ if (main && controls && pickerBox) {
     pressed(spinButton, state.spin);
     timeRow.hidden = !(state.real || state.moons);
     pressed(nowButton, state.time === "now");
-    for (const b of speeds) pressed(b, Number(b.dataset["speed"]) === state.speed);
+    if (speeds.value !== state.speed) speeds.value = state.speed;
+    if (spinSpeed.value !== state.spinSpeed) spinSpeed.value = state.spinSpeed;
+    spinSpeed.hidden = !state.spin || state.real || (state.moons && hasMoons());
+    for (const box of [speeds, spinSpeed]) box.setAttribute("lang", lang());
+    speeds.setAttribute("label", say("timeSpeed"));
+    spinSpeed.setAttribute("label", say("turnSpeed"));
     if (document.activeElement !== when) when.value = localValue(timeMs());
 
     const setAttr = (el: Element, name: string, value: string | null): void => {
@@ -446,7 +452,7 @@ if (main && controls && pickerBox) {
     setAttr(main!, "texture-base", "textures/");
     setAttr(main!, "time", real ? state.time : null);
     setAttr(main!, "rate", real ? String(state.speed) : null);
-    setAttr(main!, "turn", state.spin && !real ? (turnRate(state.body) < 0 ? "-14" : "14") : null);
+    setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : null);
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     for (const picker of pickers) picker.sync();
@@ -489,6 +495,7 @@ if (main && controls && pickerBox) {
     address.set("ref", state.scale && state.ref !== "earth" ? state.ref : null);
     address.set("spin", state.spin ? "1" : null);
     address.set("speed", state.speed !== 1 ? String(state.speed) : null);
+    address.set("spinspeed", state.spinSpeed !== 1 ? String(state.spinSpeed) : null);
     address.set("t", state.time !== "now" ? state.time : null);
   }
 
@@ -591,7 +598,18 @@ if (main && controls && pickerBox) {
       render();
     }
   });
-  for (const b of speeds) b.addEventListener("click", () => ((state.speed = Number(b.dataset["speed"])), render()));
+  speeds.addEventListener("kazoku-speedchange", (event) => {
+    const { value, reason } = (event as CustomEvent<{ value: number; reason: string }>).detail;
+    if (reason !== "user") return;
+    state.speed = value;
+    render();
+  });
+  spinSpeed.addEventListener("kazoku-speedchange", (event) => {
+    const { value, reason } = (event as CustomEvent<{ value: number; reason: string }>).detail;
+    if (reason !== "user") return;
+    state.spinSpeed = value;
+    render();
+  });
   window.addEventListener("wakusei-language", () => render());
   main.addEventListener("wakusei-state", (event) => {
     const { state: s } = (event as CustomEvent<{ state: string }>).detail;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 - 2026-11-03
+
+The family's speed buttons, in the demo's two places that run time (KAZOKU-UI-46).
+
+- **The date row's Speed is `<kazoku-speed-buttons>`**: `1 3600 86400`, read as multiples of real time (3600× is an hour a second, 86400× a day a second), in the same look as every other speed in the family. It replaces the page's own three buttons ("Real time", "1 hour a second", "1 day a second"); `?speed=` still keeps the choice.
+- **Turn has its own speed buttons**: 0.5×, 1× and 2× of 14 degrees a second (the body's spin; a body that spins the other way, Venus and Uranus, turns the other way at the same speeds), shown while Turn is on and kept in the address as `?spinspeed=`. The controls' Auto-turn comes from kazoku-ui 0.14: under More, 0.5×, 1× and 2× instead of Slow, Medium and Fast.
+- `kazoku-ui` is `^0.14.0` for the demo. Test: `e2e/speed.demo.ts` (desk and phone, Chromium and WebKit, with the config's reduced motion).
+
 ## 0.11.1 - 2026-11-03
 
 The dwarf planets' realistic look is smooth when it is small (MODULES-332).
