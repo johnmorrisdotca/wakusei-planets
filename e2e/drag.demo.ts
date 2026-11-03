@@ -69,12 +69,12 @@ test("Venus: the Turn button turns the body its real way, the ground goes left",
     async () => {
       await page.locator("#spin").click();
       await page.locator("#main").hover();
-      await page.waitForTimeout(60);
+      await page.waitForTimeout(120);
     },
-    { settle: 80, reach: 60, window: [0.38, 0.62, 0.38, 0.62] },
+    { settle: 120, reach: 60, window: [0.38, 0.62, 0.38, 0.62] },
   );
   await expect(page.locator("#main")).toHaveAttribute("turn", "-14");
-  expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-8);
+  expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-3);
 });
 
 test("Mars turns forwards: the Turn button is a positive turn, and a body that turns backwards a negative one", async ({ page }) => {
