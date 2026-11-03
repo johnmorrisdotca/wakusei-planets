@@ -7,7 +7,7 @@ description: Put a planet on a page, tilt it, and let the reader turn it, in abo
 
 This guide puts Saturn on a page and lets the reader turn, tip and zoom it. You need a text editor and a browser. Nothing is installed: the page loads the package from a CDN.
 
-Picture: [The documentation site: a search box, the entry points, the guides in sections and every export with its example.](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/docs-site.png)
+![The documentation site: a search box, the entry points, the guides in sections and every export with its example.](../images/docs-site.png)
 
 ## 1. A page with a planet
 

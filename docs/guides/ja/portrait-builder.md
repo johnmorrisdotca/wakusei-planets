@@ -7,7 +7,7 @@ description: 太陽系の天体を好きなだけ一枚に並べ、光を当て�
 
 [集合写真ビルダー](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html)は、太陽、惑星、冥王星、ほかの準惑星、衛星のどれでも、好きなだけ一枚の絵に並べます。天体はすべて同じ WebGL の場面に描くので、天体がいくつあってもページの WebGL は一つだけです。
 
-図：[集合写真ビルダーの「木星とガリレオ衛星」。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/portrait-galileans.png)
+![集合写真ビルダーの「木星とガリレオ衛星」。](../../images/portrait-galileans.png)
 
 ## 選ぶ・並べる
 

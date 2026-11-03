@@ -71,6 +71,8 @@ test("changes give back what they took: contexts, buffers, vertex arrays, textur
     await page.locator("#moons").click().catch(() => undefined);
     await settle(page, 600);
   };
+  // the first rounds make what the page keeps (the stills of the rows, the programs of each body); on a slow machine they finish during the second, so the count is taken after two
+  await round();
   await round();
   await settle(page, 2500);
   const first = await readCounts(page);

@@ -6,6 +6,8 @@ The drag rule, checked with the family's own check.
 
 - **The surface follows the pointer, exactly** (MODULES-224): the demo tells the shared view controls the radius of the body's disc (`grab-radius`, kept up to date as the view is resized or scaled), so a drag of a few pixels moves the ground at the middle of the body by as many pixels, and the touched point stays under the pointer. New `discRadius` on `<wakusei-body>` (the disc's radius on the screen, in CSS pixels).
 - **The check** is kazoku-ui's shared `e2e/ground.mjs` (copied unchanged from its `templates/e2e-ground.mjs`): in Mars (line, realistic and painted), Venus and the Moon a drag right moves the ground right, a drag up moves it up, the arrow keys agree and Auto-turn goes the right way; exact grab is checked in painted Mars and the Moon.
+- **The documentation site is the family's of 2026-11-03** (MODULES-331): a seeded sample of its pages is read in the browser, and the guides show their pictures as real images (`![..](../images/..)`) instead of links, in English and Japanese.
+- The freeze test that counts what the page keeps now counts after two rounds of changes, not one: on a slow runner the first round was still making the rows' pictures, so the count rose once and then stayed flat (24, 24, 24 with the processor slowed four times); a real leak would keep rising.
 - **The Turn button goes the body's real way** (MODULES-203): Mars turns to the right and Venus, which turns backwards, to the left (it turned every body the same way before); a test per direction.
 
 ## 0.10.0 - 2026-11-03

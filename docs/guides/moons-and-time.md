@@ -7,7 +7,7 @@ description: A planet with its moons where they are on a date and time, and time
 
 Add `moons` to a planet and give it a `time`: the moons are drawn on their orbits where they are then, as the Earth sees them. Their orbits come from JPL's mean elements and are accurate to a few degrees of orbit, which is the width of a moon's own picture on a screen.
 
-Picture: [Saturn with its moons on their orbits at a chosen date and time.](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/moons-saturn.png)
+![Saturn with its moons on their orbits at a chosen date and time.](../images/moons-saturn.png)
 
 ```html
 <wakusei-body body="jupiter" look="line" moons time="2026-11-02T12:00:00Z"></wakusei-body>
