@@ -460,7 +460,8 @@ export interface WakuseiPainter {
   /** The looks `make` takes in `context.look`. */
   readonly looks: readonly PainterLook[];
   /** Make a body: `Sun`, a planet, `Pluto` or a moon, in any case. Throws for a name it does not know. */
-  make(three: PainterThree, name: string, context?: PaintContext): Painting;
+  /** `three` is the three.js module (or a subset of it holding the parts `PainterThree` names); it is typed loosely so that another package can hand over its own subset. */
+  make(three: object, name: string, context?: PaintContext): Painting;
   /** The moons the painter draws for a planet (none for the Earth: its Moon is the viewer's own), where they are at a time, nearest first. */
   moons(planet: string, ms: number): MoonSite[];
 }
@@ -484,7 +485,7 @@ export function createPainter(options: PainterOptions = {}): WakuseiPainter {
   const far = slash(options.farBase ?? (options.textureBase !== undefined ? options.textureBase : TEXTURE_FAR_BASE));
   return {
     looks: LOOKS,
-    make: (three, name, context = {}) => paint(three, idOf(name), context, { near, far }),
+    make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far }),
     moons(planet, ms) {
       const radius = BODIES[idOf(planet) as PlanetId]?.radiusKm;
       if (radius === undefined) return [];
