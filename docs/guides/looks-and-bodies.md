@@ -29,7 +29,7 @@ The Earth is drawn like every other body. Its realistic and painted looks are NA
 
 ## The dwarf planets
 
-Besides Pluto: `ceres`, `orcus`, `haumea`, `quaoar`, `makemake`, `gonggong`, `eris` and `sedna`, in every look. They are put where they are from JPL's osculating elements of June 2026 (good for a few years either side), their sizes are from the papers NOTICE.md lists, Haumea (1161 x 852 x 513 km, turning every 3.9 hours) and Quaoar are drawn as the long shapes they are, and only Ceres has a painted map (Dawn's). The surface of the others is drawn from their published colours, so it is an estimate, and where a pole has not been measured it is taken along the orbit's pole: NOTICE.md says which. The moons Weywot, Xiangliu and S/2015 (136472) 1 are not drawn because no orbit with a published phase exists.
+Besides Pluto: `ceres`, `orcus`, `haumea`, `quaoar`, `makemake`, `gonggong`, `eris` and `sedna`, in every look. They are put where they are from JPL's osculating elements of June 2026 (good for a few years either side), their sizes are from the papers NOTICE.md lists, Haumea (1161 x 852 x 513 km, turning every 3.9 hours) and Quaoar are drawn as the long shapes they are, and only Ceres has a painted map (Dawn's), which its realistic look draws too, so Ceres looks like Ceres, with the bright spots of Occator crater, in every look. The surface of the others is drawn from their published colours, so it is an estimate, and where a pole has not been measured it is taken along the orbit's pole: NOTICE.md says which. The moons Weywot, Xiangliu and S/2015 (136472) 1 are not drawn because no orbit with a published phase exists.
 
 ## The moons
 

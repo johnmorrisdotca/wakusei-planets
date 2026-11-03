@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.1 - 2026-11-03
+
+The dwarf planets' realistic look is smooth when it is small (MODULES-332).
+
+- **No more pixel-sized specks on a small body.** At about 80 px (the portrait builder) Ceres, Orcus, Quaoar, Makemake, Gonggong and Sedna showed square dark specks: the craters and the fine noise were finer than a pixel and were sampled anyway. The shader now knows how big a pixel is: an octave of noise finer than the pixel is replaced by its average, a crater smaller than about two pixels fades out, a crater's rim no longer starts with a step (which a pixel could not draw), and the bump-mapped relief, which is worked out from neighbouring pixels and cannot show a bump a few pixels wide, fades out on a small disc so the colour alone carries the craters. Compared at 64, 128 and 512 px, light and dark: soft craters at every size, the same look as before at 512. All the realistic bodies share the shader, so Mercury, the Moon and the rest are smoother when small too. Test: a realistic dwarf planet at 64, 80 and 128 px has under 0.4 in a thousand speck pixels (the old shader had 17 in a thousand at 64 px).
+- **Ceres looks like Ceres in the realistic look** (it uses Dawn's map as the painted look does, with Occator's bright spots), not a generic cratered ball.
+- **Triton's filled north is soft**: the unseen north of the map (a fill made by `scripts/make-textures.py`) took the dark ground at its edge and smeared it into blobs with a hard line at the seam; it now fades gradually from the real picture's colour to the map's mean, over a long smooth band.
 ## 0.11.0 - 2026-11-03
 
 The drag rule, checked with the family's own check.
