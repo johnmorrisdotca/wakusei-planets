@@ -285,7 +285,7 @@ test("every choice has a line that says what it does, always on the page, tied t
         .filter((button) => !button.hidden)
         .map((button) => {
           const line = document.getElementById(button.getAttribute("aria-describedby")!);
-          return { id: button.id || button.dataset["look"] || button.dataset["sky"] || button.dataset["speed"] || "?", text: line?.textContent ?? "", shown: line !== null && line.getBoundingClientRect().height > 0, folded: line?.closest("details") !== null };
+          return { id: button.id || button.dataset["look"] || button.dataset["sky"] || "?", text: line?.textContent ?? "", shown: line !== null && line.getBoundingClientRect().height > 0, folded: line?.closest("details") !== null };
         }),
     );
   const english = await described();

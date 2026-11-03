@@ -94,11 +94,13 @@ if (main && controls && pickerBox) {
     ['#looks [data-look="realistic"]', "note_realistic"],
     ['#looks [data-look="painted"]', "note_painted"],
     ["#spin", "note_spin"],
+    ["#spin-speed", "note_spin_speed"],
     ['#skies [data-sky="portrait"]', "note_portrait"],
     ['#skies [data-sky="real"]', "note_sky"],
     ["#moons", "note_moons"],
     ["#scale", "note_scale"],
     ["#now", "note_now"],
+    ["#speeds", "note_speeds"],
   ];
   const noteLines: { button: HTMLElement; line: HTMLElement; key: string }[] = [];
   for (const [selector, key] of NOTES) {
