@@ -187,7 +187,7 @@ test("any text gives a scene: unknown bodies and fields are dropped, numbers are
 });
 
 test("every preset is a real scene that lays out inside its camera and survives the address", () => {
-  assert.deepEqual(PRESETS.map((p) => p.id), ["family", "giants", "galileans", "earthmoon"]);
+  assert.deepEqual(PRESETS.map((p) => p.id), ["family", "giants", "galileans", "earthmoon", "marsmoons", "orrery"]);
   for (const preset of PRESETS) {
     assert.ok(preset.scene.items.length >= 2, preset.id);
     assert.match(preset.name.ja, /\S/);
@@ -246,4 +246,42 @@ test("the surface follows the hand: less spin moves the middle of the surface ri
   assert.ok(moved[0] > was[0] + 0.1, `a drag right turns the body so its surface goes right (${was[0].toFixed(2)} to ${moved[0].toFixed(2)})`);
   const up = poseOf({ ...base, pitch: 12 - 10 }, undefined, 0, light);
   assert.ok(surfacePoint(up, 0, 0)[1] > surfacePoint(now, 0, 0)[1] + 0.05, "less pitch lifts the surface in front");
+});
+
+test("the orbit layout puts a moon at its true distance in true scale, and at the same ratio in every picture", () => {
+  const p = setPortrait(withBodies("earth", "moon"), { arrange: "orbit", scale: "true" });
+  const { placed } = resolve(p);
+  const earth = placed.find((q) => q.body === "earth")!;
+  const moon = placed.find((q) => q.body === "moon")!;
+  const distance = Math.hypot(moon.x - earth.x, moon.y - earth.y);
+  assert.ok(Math.abs(distance / earth.r - 384400 / 6378.137) < 0.5, `the Moon is ${(distance / earth.r).toFixed(1)} Earth radii away`);
+  assert.ok(Math.abs(moon.r / earth.r - 1737.4 / 6378.137) < 0.01);
+  for (const q of placed) assert.ok(Math.abs(q.x) + q.r <= p.aspect * 1.0001 && Math.abs(q.y) + q.r <= 1.0001, `${q.body} is in the picture`);
+});
+
+test("with a date the orbit layout puts the planets where they are, seen from above the ecliptic, and draws a ring for each round the Sun", () => {
+  const p = setPortrait(withBodies("sun", "mercury", "venus", "earth", "mars"), { arrange: "orbit", date: "2026-11-03T12:00", scale: "readable" });
+  const { placed } = resolve(p);
+  const sun = placed.find((q) => q.body === "sun")!;
+  const dist = (id: string) => {
+    const q = placed.find((x) => x.body === id)!;
+    return Math.hypot(q.x - sun.x, q.y - sun.y);
+  };
+  assert.ok(dist("mercury") < dist("venus") && dist("venus") < dist("earth") && dist("earth") < dist("mars"));
+  assert.ok(Math.abs(dist("mars") / dist("earth") - 1.52) < 0.15, `Mars is ${(dist("mars") / dist("earth")).toFixed(2)} times as far as the Earth`);
+  const ys = placed.filter((q) => q.body !== "sun").map((q) => Math.round(q.y * 100));
+  assert.ok(new Set(ys).size > 1, "they are not in a line");
+  const rings = shapesOf(p, resolve(p), 800, 450).circles.filter((c) => c.kind === "orbit");
+  assert.equal(rings.length, 4);
+});
+
+test("several systems at once: Mars with its moons and Jupiter with its, each at its own true distances, side by side", () => {
+  const p = setPortrait(withBodies("mars", "phobos", "deimos", "jupiter", "io"), { arrange: "orbit", scale: "readable" });
+  const { placed } = resolve(p);
+  const at = (id: string) => placed.find((q) => q.body === id)!;
+  const d = (a: string, b: string) => Math.hypot(at(a).x - at(b).x, at(a).y - at(b).y);
+  assert.ok(Math.abs(d("mars", "deimos") / d("mars", "phobos") - 23457 / 9375) < 0.01);
+  assert.ok(Math.abs(d("jupiter", "io") / d("mars", "deimos") - 421800 / 23457) < 0.5, "different systems are drawn at one scale, so they can be compared");
+  const rings = shapesOf(p, resolve(p), 800, 450).circles.filter((c) => c.kind === "orbit");
+  assert.equal(rings.length, 3);
 });

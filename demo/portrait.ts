@@ -70,6 +70,7 @@ const NOTES: readonly (readonly [string, string])[] = [
   ['#arranges [data-arrange="row"]', "pt_note_row"],
   ['#arranges [data-arrange="arc"]', "pt_note_arc"],
   ['#arranges [data-arrange="grid"]', "pt_note_grid"],
+  ['#arranges [data-arrange="orbit"]', "pt_note_orbit"],
   ['#scales [data-scale="true"]', "pt_note_true"],
   ['#scales [data-scale="readable"]', "pt_note_readable"],
   ['#moons [data-moons="auto"]', "pt_note_moons_auto"],

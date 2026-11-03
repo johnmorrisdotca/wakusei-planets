@@ -80,8 +80,9 @@ export function shapesOf(p: Portrait, resolved: Resolved, width: number, height:
   const out: Shapes = { circles: [], lines: [], texts: [] };
   const byBody = new Map<BodyId, Placed>(resolved.placed.map((q) => [q.body, q]));
   if (p.orbits) {
+    const sun = p.arrange === "orbit" ? byBody.get("sun") : undefined;
     for (const moon of resolved.placed) {
-      const host = BODIES[moon.body].parent === undefined ? undefined : byBody.get(BODIES[moon.body].parent as BodyId);
+      const host = BODIES[moon.body].parent === undefined ? (moon.body === "sun" ? undefined : sun) : byBody.get(BODIES[moon.body].parent as BodyId);
       if (host === undefined) continue;
       const d = Math.hypot(moon.x - host.x, moon.y - host.y) * at.scale;
       if (d > 2) out.circles.push({ cx: at.px(host.x), cy: at.py(host.y), r: d, kind: "orbit" });

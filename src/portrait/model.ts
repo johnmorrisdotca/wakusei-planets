@@ -1,7 +1,8 @@
 // The portrait builder's scene as plain data, and everything that can be worked out from it without a screen: where each body goes when the layout is automatic, the camera that fits them,
 // which body is under a pointer, where a dragged body snaps, the order they are drawn in, the history for undo, and the short text that keeps a scene in the address. Pure: no DOM, no three.js.
 import { ORBITS } from "../data/orbits.ts";
-import { BODIES, MOONS_OF, PLANET_IDS, ringReach, type BodyId, type Look } from "../facts.ts";
+import { heliocentric, moonVector } from "../ephemeris.ts";
+import { BODIES, MOONS_OF, PLANET_IDS, ringReach, type BodyId, type Look, type MoonId, type PlanetId } from "../facts.ts";
 
 /** How the automatic layout arranges the bodies. */
 export type Arrange = "row" | "arc" | "grid" | "orbit";
@@ -240,6 +241,138 @@ function arrangeUnits(units: Unit[], how: Arrange, aspect: number): { ox: number
   return out;
 }
 
+// --- the true orbit distance layout ---------------------------------------------------------------------------------------------------------------------
+
+const AU_KM = 149_597_870.7;
+const J2000 = Date.UTC(2000, 0, 1, 12);
+
+interface Spot {
+  x: number;
+  y: number;
+}
+
+/** The ring a body goes round its centre on is drawn through it, so the layout keeps the centre of each body that has one. */
+interface System {
+  members: number[];
+  spot: Map<number, Spot>;
+  centre: Map<number, number>;
+}
+
+/**
+ * The orbit layout, in kilometres: the Sun (if it is in the scene) with the planets at their true distance, each planet with its moons at theirs; or each planet with its moons, side by side.
+ * With a date the bodies are where they really are, seen from above the ecliptic; without one they are in a line to the right of their centre. Sizes are true, or squeezed so the smallest can be seen.
+ */
+function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
+  const items = p.items;
+  const ms = p.date === undefined ? undefined : Date.parse(p.date);
+  const when = ms !== undefined && Number.isFinite(ms) ? ms : undefined;
+  const index = new Map<BodyId, number>(items.map((i, k) => [i.body, k]));
+  const planetKind = (id: BodyId): boolean => BODIES[id].parent === undefined && id !== "sun";
+  const planetSpot = (id: BodyId): Spot => {
+    const v = heliocentric(id as PlanetId, when ?? J2000);
+    return when === undefined ? { x: Math.hypot(v[0], v[1], v[2]) * AU_KM, y: 0 } : { x: v[0] * AU_KM, y: v[1] * AU_KM };
+  };
+  const moonSpot = (id: BodyId): Spot => {
+    if (when === undefined) return { x: ORBITS[id]?.a ?? 0, y: 0 };
+    const v = moonVector(id as MoonId, when);
+    return { x: v[0], y: v[1] };
+  };
+  const systems: System[] = [];
+  const taken = new Set<number>();
+  const sun = index.get("sun");
+  const attachMoons = (system: System, planet: number, at: Spot): void => {
+    for (const [k, item] of items.entries()) {
+      if (BODIES[item.body].parent !== items[planet]!.body || taken.has(k)) continue;
+      const m = moonSpot(item.body);
+      system.members.push(k);
+      system.spot.set(k, { x: at.x + m.x, y: at.y + m.y });
+      system.centre.set(k, planet);
+      taken.add(k);
+    }
+  };
+  if (sun !== undefined) {
+    const system: System = { members: [sun], spot: new Map([[sun, { x: 0, y: 0 }]]), centre: new Map() };
+    taken.add(sun);
+    for (const [k, item] of items.entries()) {
+      if (!planetKind(item.body)) continue;
+      const at = planetSpot(item.body);
+      system.members.push(k);
+      system.spot.set(k, at);
+      system.centre.set(k, sun);
+      taken.add(k);
+      attachMoons(system, k, at);
+    }
+    systems.push(system);
+  }
+  for (const [k, item] of items.entries()) {
+    if (taken.has(k) || !planetKind(item.body)) continue;
+    const system: System = { members: [k], spot: new Map([[k, { x: 0, y: 0 }]]), centre: new Map() };
+    taken.add(k);
+    if (p.moons === "auto") attachMoons(system, k, { x: 0, y: 0 });
+    systems.push(system);
+  }
+  for (const [k] of items.entries()) {
+    if (taken.has(k)) continue;
+    systems.push({ members: [k], spot: new Map([[k, { x: 0, y: 0 }]]), centre: new Map() });
+    taken.add(k);
+  }
+  // sizes: true, or squeezed against the size of the picture the distances make
+  const ids = items.map((i) => i.body);
+  let span = 0;
+  for (const system of systems) {
+    for (const k of system.members) {
+      const c = system.centre.get(k);
+      if (c === undefined) continue;
+      const a = system.spot.get(k)!;
+      const b = system.spot.get(c)!;
+      span = Math.max(span, Math.hypot(a.x - b.x, a.y - b.y));
+    }
+  }
+  const biggest = Math.max(...ids.map((id) => BODIES[id].radiusKm));
+  span = Math.max(span, biggest * 8);
+  const radius = (id: BodyId): number => (p.scale === "true" ? BODIES[id].radiusKm : Math.max(0.014 * span, 0.06 * span * (BODIES[id].radiusKm / biggest) ** 0.4));
+  const raw: Placed[] = items.map((item, index2) => ({ ...item, index: index2, x: 0, y: 0, r: radius(item.body), reach: radius(item.body) * reachOf(item.body) }));
+  // the circle each body goes round its centre on reaches this far every way
+  const extent = (system: System): { minX: number; maxX: number; minY: number; maxY: number } => {
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const k of system.members) {
+      const a = system.spot.get(k)!;
+      const reach = raw[k]!.reach;
+      minX = Math.min(minX, a.x - reach);
+      maxX = Math.max(maxX, a.x + reach);
+      minY = Math.min(minY, a.y - reach);
+      maxY = Math.max(maxY, a.y + reach);
+      const c = system.centre.get(k);
+      if (c !== undefined) {
+        const b = system.spot.get(c)!;
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        minX = Math.min(minX, b.x - d);
+        maxX = Math.max(maxX, b.x + d);
+        minY = Math.min(minY, b.y - d);
+        maxY = Math.max(maxY, b.y + d);
+      }
+    }
+    return { minX, maxX, minY, maxY };
+  };
+  const extents = systems.map(extent);
+  const units: Unit[] = systems.map((s, k) => ({ members: s.members, at: [], minX: extents[k]!.minX, maxX: extents[k]!.maxX, halfH: Math.max(extents[k]!.maxY, -extents[k]!.minY) }));
+  const spots = arrangeUnits(units, "row", p.aspect);
+  const reachPoints: Spot[] = [];
+  systems.forEach((s, k) => {
+    const dy = (extents[k]!.minY + extents[k]!.maxY) / 2;
+    for (const m of s.members) {
+      const a = s.spot.get(m)!;
+      raw[m]!.x = spots[k]!.ox + a.x;
+      raw[m]!.y = a.y - dy;
+    }
+    reachPoints.push({ x: spots[k]!.ox + extents[k]!.minX, y: extents[k]!.minY - dy }, { x: spots[k]!.ox + extents[k]!.maxX, y: extents[k]!.maxY - dy });
+  });
+  return { placed: raw, reachPoints };
+}
+
 /** The camera that holds every body with a margin: its centre and half-height. */
 export function fitCamera(placed: readonly Pick<Placed, "x" | "y" | "reach">[], aspect: number, margin = 1.1, labels = false): { x: number; y: number; h: number } {
   if (placed.length === 0) return { x: 0, y: 0, h: 1 };
@@ -277,6 +410,12 @@ export function resolve(scene: Portrait): Resolved {
   const p = scene;
   if (p.layout === "manual" || p.items.length === 0) {
     return { placed: p.items.map((item, index) => ({ ...item, index, reach: item.r * reachOf(item.body) })), camera: p.camera };
+  }
+  if (p.arrange === "orbit") {
+    const { placed: raw, reachPoints } = orbitLayout(p);
+    const cam = fitCamera([...raw, ...reachPoints.map((q) => ({ x: q.x, y: q.y, reach: 0 }))], p.aspect, 1.1, p.labels);
+    const k = 1 / cam.h;
+    return { placed: raw.map((it) => ({ ...it, x: (it.x - cam.x) * k, y: (it.y - cam.y) * k, r: it.r * k, reach: it.reach * k })), camera: { x: 0, y: 0, h: 1 } };
   }
   const ids = p.items.map((item) => item.body);
   const sizes = sizesFor(ids, p.scale);
@@ -689,7 +828,7 @@ export interface Preset {
 const fromList = (ids: readonly BodyId[], change: Partial<Omit<Portrait, "items">> = {}): Portrait => ids.reduce((p, id) => addBody(p, id), { ...defaultPortrait(), ...change });
 
 /**
- * Ready-made scenes to start from: a family photo of the Sun and the planets, the gas giants to scale, Jupiter and the Galileans, and the Earth and the Moon to scale.
+ * Ready-made scenes to start from: a family photo of the Sun and the planets, the gas giants to scale, Jupiter and the Galileans, the Earth and the Moon to scale (size and distance), Mars and its moons at their true distance, and the inner planets round the Sun.
  *
  * @example
  * ```ts
@@ -702,5 +841,7 @@ export const PRESETS: readonly Preset[] = [
   { id: "family", name: { en: "Family photo", ja: "家族写真" }, scene: fromList(["sun", ...PLANET_IDS], { arrange: "arc", scale: "readable", moons: "manual", orbits: false }) },
   { id: "giants", name: { en: "Gas giants", ja: "巨大ガス惑星" }, scene: fromList(["jupiter", "saturn", "uranus", "neptune"], { arrange: "row", scale: "true", moons: "manual", bg: "gradient" }) },
   { id: "galileans", name: { en: "Jupiter and the Galileans", ja: "木星とガリレオ衛星" }, scene: fromList(["jupiter", "io", "europa", "ganymede", "callisto"], { arrange: "row", scale: "readable", moons: "auto", orbits: true }) },
-  { id: "earthmoon", name: { en: "Earth and Moon to scale", ja: "地球と月 (大きさの比)" }, scene: fromList(["earth", "moon"], { arrange: "row", scale: "true", moons: "auto", orbits: true }) },
+  { id: "earthmoon", name: { en: "Earth and Moon to scale", ja: "地球と月 (大きさと距離の比)" }, scene: fromList(["earth", "moon"], { arrange: "orbit", scale: "true", moons: "auto", orbits: true }) },
+  { id: "marsmoons", name: { en: "Mars and its moons at true distance", ja: "火星と衛星 (本当の距離)" }, scene: fromList(["mars", "phobos", "deimos"], { arrange: "orbit", scale: "readable", moons: "auto", orbits: true }) },
+  { id: "orrery", name: { en: "The inner planets round the Sun", ja: "太陽と内側の惑星 (本当の距離)" }, scene: fromList(["sun", "mercury", "venus", "earth", "mars"], { arrange: "orbit", scale: "readable", moons: "auto", orbits: true, bg: "black" }) },
 ];

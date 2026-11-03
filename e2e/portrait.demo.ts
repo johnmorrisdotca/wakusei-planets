@@ -232,3 +232,23 @@ test("the page has every control in the page's own style, in both languages, and
   expect(await page.locator("#sel-name").textContent()).toBeTruthy();
   expect(problems).toEqual([]);
 });
+
+test("the demo's several bodies at once open in the portrait builder at true orbit distance, with their orbits drawn", async ({ page }) => {
+  await page.goto("/wakusei-planets/?body=mars&look=line&with=phobos,deimos");
+  const link = page.locator('[data-testid="orbit-link"]');
+  await expect(link).toBeVisible();
+  await link.click();
+  await expect(page.locator("#view")).toHaveAttribute("data-state", "line");
+  await page.locator("#tab-arrange").click();
+  await expect(page.locator('#arranges [data-arrange="orbit"]')).toHaveAttribute("aria-pressed", "true");
+  const scene = await page.evaluate(() => (globalThis as unknown as { wakuseiPortraitDebug: { scene(): { arrange: string; items: { body: string }[] } } }).wakuseiPortraitDebug.scene());
+  expect(scene.arrange).toBe("orbit");
+  expect(scene.items.map((i) => i.body)).toEqual(["mars", "phobos", "deimos"]);
+  expect(await page.locator("#view").evaluate((el) => el.shadowRoot!.querySelectorAll("#over circle").length)).toBe(2);
+  const radii = await page.locator("#view").evaluate((el) => {
+    const m = (el as unknown as { metrics: { placed: { body: string; x: number; y: number }[] } }).metrics;
+    const at = (id: string) => m.placed.find((q) => q.body === id)!;
+    return { phobos: Math.hypot(at("phobos").x - at("mars").x, at("phobos").y - at("mars").y), deimos: Math.hypot(at("deimos").x - at("mars").x, at("deimos").y - at("mars").y) };
+  });
+  expect(radii.deimos / radii.phobos).toBeCloseTo(23457 / 9375, 1);
+});

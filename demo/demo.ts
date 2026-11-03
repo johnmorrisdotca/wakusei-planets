@@ -267,6 +267,7 @@ if (main && controls && pickerBox) {
   const together = document.querySelector<HTMLElement>("#together")!;
   const togetherRow = document.querySelector<HTMLElement>("#together-row")!;
   const relativeButton = document.querySelector<HTMLButtonElement>("#relative")!;
+  const orbitLink = document.querySelector<HTMLAnchorElement>("#orbit-link")!;
   /** The bodies of the system the big view is in: the planet and its moons, in a fixed order, for the push buttons under the view. */
   const systemOf = (): BodyId[] => {
     const planet = (BODIES[state.body].parent ?? state.body) as BodyId;
@@ -303,6 +304,9 @@ if (main && controls && pickerBox) {
     together.hidden = shown.length < 2;
     pressed(relativeButton, state.relative);
     if (shown.length < 2) return;
+    // the same bodies in the portrait builder, each system at its true distances with its orbits drawn
+    const scene = `arrange:orbit~scale:readable~look:${state.look}~${shown.map((id) => `${id}_0_0_0.3_0`).join("~")}`;
+    orbitLink.href = `portrait.html?scene=${encodeURIComponent(scene)}`;
     const span = Math.max(...shown.map((id) => BODIES[id].radiusKm * (BODIES[id].axesKm ? Math.max(...BODIES[id].axesKm) / BODIES[id].radiusKm : 1))) * 1.06;
     const wanted = shown.join(",");
     if (togetherRow.dataset["ids"] !== wanted) {

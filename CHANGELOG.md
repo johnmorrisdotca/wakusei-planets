@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 - 2026-11-03
+
+The portrait builder at true orbit distance.
+
+- **True orbit distance** (MODULES-283): a fourth arrangement beside row, arc and grid. Each moon is as far from its planet, and each planet from the Sun, as it really is, with the orbits drawn as circles, and the view backed off to hold them all. With a date set, every body is where it is then, seen from above the ecliptic; with none, they are lined up from the Sun along one side. `arrange: "orbit"` in the scene, `?scene=arrange:orbit~...` in the address.
+- **A link from the demo** ("At true orbit distance", under the buttons that show bodies together) opens the same bodies in the portrait builder at true orbit distance, in the look that is chosen.
+
 ## 0.7.0 - 2026-11-03
 
 The portrait builder: any bodies, one picture.

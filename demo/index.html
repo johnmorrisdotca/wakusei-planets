@@ -23,7 +23,10 @@
         <div class="chips" id="chips" role="group" aria-label="Show together" data-say-label="chipsLabel"></div>
         <div id="together" class="together" hidden>
           <div class="together-row" id="together-row"></div>
-          <button type="button" class="fam-button" id="relative" aria-pressed="false" data-say="relative">True relative sizes</button>
+          <div class="fam-actions">
+            <button type="button" class="fam-button" id="relative" aria-pressed="false" data-say="relative">True relative sizes</button>
+            <a class="fam-button" id="orbit-link" href="portrait.html" data-say="orbitLink" data-testid="orbit-link">At true orbit distance</a>
+          </div>
         </div>
       </section>
       <kazoku-view-controls id="controls" for="view" controls="advanced" tilt-max="90" speed="0" zoom-min="0.5" zoom-max="6"></kazoku-view-controls>
