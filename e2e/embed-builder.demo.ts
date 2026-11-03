@@ -22,7 +22,7 @@ test("the code follows the body, the look, the date, the moons and the size, for
     await expect(page.locator(`#embed-tabs [data-kind="${kind}"]`)).toHaveAttribute("aria-selected", "true");
   }
   await expect(page).toHaveURL(/embed=iframe/);
-  await page.locator('.tile[data-body="saturn"]').click();
+  await page.locator('.pick[data-body="saturn"]').click();
   await expect(code).toContainText("body=saturn");
 });
 
@@ -62,4 +62,21 @@ test("every control in the section is a finger wide", async ({ page }) => {
     return out;
   });
   expect(bad).toEqual([]);
+});
+
+test("the panel has its own picker: a planet, then its moon, changes the code and the picture, and Copy has its word", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=jupiter`);
+  const code = page.locator("#embed-code");
+  await expect(page.locator('#embed-picker [data-row="bodies"] .pick')).toHaveCount(10);
+  await page.locator('#embed-picker .pick[data-body="mars"]').click();
+  await expect(code).toContainText('body="mars"');
+  await page.locator('#embed-picker .pick[data-body="deimos"]').click();
+  await expect(code).toContainText('body="deimos"');
+  await expect(page.locator("#embed-preview wakusei-body")).toHaveAttribute("body", "deimos");
+  await expect(page.locator('#embed-picker .pick[data-body="deimos"]')).toHaveAttribute("aria-pressed", "true");
+  const copy = page.locator("#embed-copy");
+  await expect(copy).toHaveText("Copy");
+  // the word can be read: its colour is not the pill's own
+  const colours = await copy.evaluate((el) => ({ ink: getComputedStyle(el).color, ground: getComputedStyle(el).backgroundColor }));
+  expect(colours.ink).not.toBe(colours.ground);
 });

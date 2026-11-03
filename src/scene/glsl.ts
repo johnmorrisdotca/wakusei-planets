@@ -64,6 +64,7 @@ uniform float uLimb;
 uniform float uWrap;
 uniform vec3 uAtmos;
 uniform float uAtmosPow;
+uniform float uRimBase;
 uniform float uEmissive;
 uniform vec3 uRingN;
 uniform vec2 uRingR;
@@ -109,7 +110,7 @@ void main() {
   vec3 alb = pow(s.rgb, vec3(2.2));
   vec3 lit = alb * (uAmbient + (1.0 - uAmbient) * diff * 1.18);
   float rim = pow(1.0 - mu, uAtmosPow);
-  lit += pow(uAtmos, vec3(2.2)) * rim * (0.12 + 0.88 * clamp(dg * 1.6 + 0.35, 0.0, 1.0));
+  lit += pow(uAtmos, vec3(2.2)) * rim * (uRimBase + (1.0 - uRimBase) * clamp(dg * 1.6 + 0.35, 0.0, 1.0));
   lit *= mix(1.0, pow(mu, 0.45), uLimb);
   gl_FragColor = vec4(pow(lit, vec3(1.0 / 2.2)), 1.0);
 }`;

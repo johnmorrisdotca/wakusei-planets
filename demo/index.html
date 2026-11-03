@@ -14,9 +14,17 @@
         <h2 id="stage-h" class="fam-sr" data-say="stage">Body view</h2>
         <div id="view" class="body-view" tabindex="0" role="group" aria-label="Body view" data-say-label="stage">
           <wakusei-body id="main" body="jupiter" look="realistic" live="hover"></wakusei-body>
+          <svg id="scale-leader" class="scale-leader" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" hidden><line x1="50" y1="50" x2="77" y2="77" /></svg>
+          <div id="scale-inset" class="scale-inset" hidden>
+            <wakusei-body id="inset" live="off" size="160"></wakusei-body>
+          </div>
         </div>
         <p class="fam-fine stage-name" id="caption" role="status"></p>
-        <div class="chips" id="chips" role="group" aria-label="Related bodies" data-say-label="chipsLabel"></div>
+        <div class="chips" id="chips" role="group" aria-label="Show together" data-say-label="chipsLabel"></div>
+        <div id="together" class="together" hidden>
+          <div class="together-row" id="together-row"></div>
+          <button type="button" class="fam-button" id="relative" aria-pressed="false" data-say="relative">True relative sizes</button>
+        </div>
       </section>
       <kazoku-view-controls id="controls" for="view" controls="advanced" tilt-max="90" speed="0" zoom-min="0.5" zoom-max="6"></kazoku-view-controls>
 
@@ -40,6 +48,11 @@
             </div>
             <button type="button" class="fam-button" id="moons" aria-pressed="false" data-say="moons" hidden>Moons</button>
             <button type="button" class="fam-button" id="scale" aria-pressed="false" data-say="scale">To scale</button>
+            <div class="group fam-seg" id="scale-refs" role="group" aria-label="To scale with" data-say-label="scaleWith" hidden>
+              <button type="button" data-ref="planet" aria-pressed="false" data-say="ref_planet">Its planet</button>
+              <button type="button" data-ref="earth" aria-pressed="true" data-say="ref_earth">Earth</button>
+              <button type="button" data-ref="sun" aria-pressed="false" data-say="ref_sun">Sun</button>
+            </div>
           </div>
 
           <div class="fam-row" id="time-row" hidden data-help-en="Choose the date and time, or go back to now. Speed runs time forward." data-help-ja="日付と時刻を選びます。「今」に戻すこともできます。速さを選ぶと時間が進みます。">
@@ -60,14 +73,8 @@
 
       <section class="fam-panel bodies" aria-labelledby="bodies-h">
         <h2 id="bodies-h" data-say="bodiesTitle">Every body</h2>
-        <p class="fam-fine" data-say="bodiesText">Pick one. Only the one in the big view moves; the others are still pictures.</p>
-        <div class="tiles" id="tiles" role="group" aria-label="Bodies" data-say-label="bodiesTitle"></div>
-      </section>
-
-      <section class="fam-panel bodies" id="moons-section" aria-labelledby="moons-h">
-        <h2 id="moons-h" data-say="moonsTitle">Moons</h2>
-        <p class="fam-fine" data-say="moonsText">Every moon the package draws, under its planet. Pick one to see it in the big view, in any look.</p>
-        <div id="moon-groups"></div>
+        <p class="fam-fine" data-say="bodiesText">Pick a body. If it has moons, they come up on the row below it. Only the one in the big view moves; the others are still pictures.</p>
+        <div id="picker" class="picker"></div>
       </section>
 
       <section class="fam-panel bodies" id="lineup-section" aria-labelledby="lineup-h" hidden>
@@ -81,6 +88,7 @@
         <p data-say="embedText">Set up the body above (which body, its look, the sky and date, the moons, turning), choose a size, then pick how your page is made and copy the code. The picture beside the code is made from the same choices.</p>
         <div class="fam-panels">
           <div class="fam-panel embed-panel">
+            <div id="embed-picker" class="picker embed-picker" role="group" aria-label="Body for the code" data-say-label="embedBody"></div>
             <div class="fam-row">
               <span class="fam-label" data-say="embedSize">Size</span>
               <div class="group fam-seg" id="embed-sizes" role="group" aria-label="Size" data-say-label="embedSize">

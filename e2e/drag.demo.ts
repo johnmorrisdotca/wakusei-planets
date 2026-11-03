@@ -34,7 +34,7 @@ for (const [body, look] of CASES) {
       const before = await view.screenshot();
       await act();
       await page.waitForTimeout(900);
-      const shift = await groundShift(page, before, await view.screenshot(), 70);
+      const shift = await groundShift(page, before, await view.screenshot(), 70, 0.11);
       return { x: shift.x, y: shift.y };
     };
     const right = await moved(() => dragBy(page, view, 30, 0));

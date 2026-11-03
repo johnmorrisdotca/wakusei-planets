@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0 - 2026-11-03
+
+The demo's pickers, and a scale that is a scale.
+
+- **A compact picker** (MODULES-285): the ten bodies in one row, and when the one chosen has moons, its moons on the row below, in the same place; no long list down the page. The moons' own section is gone. Every picture in it is a picture, in the line, the realistic and the painted look: a test looks at all 35 (10 bodies and 25 moons) for blank and single-colour pictures. (The broken thumbnails of 0.3.0 were the tiles being drawn to scale, which 0.3.1 stopped.) The same picker is in "Put it in your page" (MODULES-286), so the body for the code is chosen beside the code; Copy's word can be read (it was ink on ink).
+- **The buttons under the view stay where they are** (MODULES-283): one push button for each body of the system (the planet and its moons), the chosen one pressed, and others pressed with it to see them side by side under the view, at equal sizes or at their true relative sizes (`span-km`), kept in the address (`?with=phobos,deimos&rel=1`). The orbit-distance layout is not made yet.
+- **To scale says what it is against** (MODULES-284): "Its planet" (for a moon), "Earth" or "Sun", and draws it so: Deimos is 0.0018 times Mars's radius, a magnified picture beside it with a line, the caption says so. `?scale=1&ref=planet`.
+- **Deimos is drawn whole** (MODULES-287): an irregular body reaches past its mean radius along its longest axis, and its picture was cut off at the sides.
+- **Every body is fitted by its globe** (MODULES-293): at about half the view's height, the same for all, so Saturn's rings, the Sun's glow and a haze have room, and the Sun is no smaller than a planet. `fit="tight"` on an element gives the old fit (thumbnails).
+- **The sky shows the real phase** (MODULES-294): in "As seen from Earth" the night side is dark (no wrapped terminator, no rim of air round it), so Venus a few days from new is a thin crescent, not a full disc.
+- **A line under every choice** (MODULES-298) says what it does, in English and Japanese, always on the page and tied to its button with `aria-describedby`.
+
 ## 0.5.1 - 2026-11-03
 
 - kazoku-ui 0.12.0: the demo's view controls have a zoom slider, on top of 0.11's Centre button and exact grab.

@@ -12,7 +12,7 @@ test(`${MINUTES} minutes of changes leave memory, GPU objects and contexts flat`
   await main.hover();
   await expect(main).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   const heap = () => page.evaluate(() => (globalThis as unknown as { gc?: () => void }).gc?.()).then(() => page.evaluate(() => (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize));
-  const ids = ["jupiter", "saturn", "mars", "moon", "neptune", "venus", "sun", "pluto", "uranus", "mercury"];
+  const ids = ["jupiter", "saturn", "mars", "earth", "neptune", "venus", "sun", "pluto", "uranus", "mercury"];
   let i = 0;
   const warm = Date.now() + 60_000;
   while (Date.now() < warm) {

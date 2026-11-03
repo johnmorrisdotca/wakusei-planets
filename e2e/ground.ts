@@ -10,10 +10,10 @@ export interface Shift {
   error: number;
 }
 
-/** Slide the middle half of `before` over `after`, up to `reach` pixels each way, and say where the two agree best. */
-export async function groundShift(page: Page, before: Buffer, after: Buffer, reach = 60): Promise<Shift> {
+/** Slide the middle of `before` (`inner` of the width each way from the centre: 0.2 is the middle 40 per cent) over `after`, up to `reach` pixels each way, and say where the two agree best. */
+export async function groundShift(page: Page, before: Buffer, after: Buffer, reach = 60, inner = 0.2): Promise<Shift> {
   return page.evaluate(
-    async ([a, b, limit]) => {
+    async ([a, b, limit, inner]) => {
       const load = async (data: string): Promise<ImageData> => {
         const img = new Image();
         img.src = `data:image/png;base64,${data}`;
@@ -33,10 +33,10 @@ export async function groundShift(page: Page, before: Buffer, after: Buffer, rea
         const i = (y * w + x) * 4;
         return d.data[i]! * 0.3 + d.data[i + 1]! * 0.59 + d.data[i + 2]! * 0.11;
       };
-      const x0 = Math.round(w * 0.3);
-      const x1 = Math.round(w * 0.7);
-      const y0 = Math.round(h * 0.3);
-      const y1 = Math.round(h * 0.7);
+      const x0 = Math.round(w * (0.5 - (inner as number)));
+      const x1 = Math.round(w * (0.5 + (inner as number)));
+      const y0 = Math.round(h * (0.5 - (inner as number)));
+      const y1 = Math.round(h * (0.5 + (inner as number)));
       let best = { x: 0, y: 0, error: Infinity };
       for (let dy = -(limit as number); dy <= (limit as number); dy += 1) {
         for (let dx = -(limit as number); dx <= (limit as number); dx += 1) {
@@ -58,7 +58,7 @@ export async function groundShift(page: Page, before: Buffer, after: Buffer, rea
       }
       return best;
     },
-    [before.toString("base64"), after.toString("base64"), reach] as const,
+    [before.toString("base64"), after.toString("base64"), reach, inner] as const,
   );
 }
 

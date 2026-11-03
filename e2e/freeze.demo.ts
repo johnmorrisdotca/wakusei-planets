@@ -19,7 +19,7 @@ test("a page of stills asks the browser for nothing, with one WebGL context at m
   await page.goto(`${URL}?body=jupiter`);
   // a still is made only for a picture that is in sight
   await page.locator("#tiles").scrollIntoViewIfNeeded();
-  await expect(page.locator("#tiles .tile wakusei-body[data-state=still]")).toHaveCount(11, { timeout: 120_000 });
+  await expect(page.locator("#tiles .tile wakusei-body[data-state=still]")).toHaveCount(10, { timeout: 120_000 });
   await settle(page, 1500);
   const before = await readCounts(page);
   await settle(page, 2500);

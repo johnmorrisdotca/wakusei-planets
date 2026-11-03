@@ -1,7 +1,7 @@
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
-import { apparent, BODIES, MOONS_OF, PLANET_IDS, type BodyId } from "../src/index.ts";
+import { apparent, BODIES, MOONS_OF, type BodyId } from "../src/index.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
 import { lookOf } from "../src/scene/look.ts";
 import "../src/element.ts";
@@ -11,9 +11,7 @@ import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { WORDS } from "./words.js";
 
 type Look = "line" | "realistic" | "painted";
-const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon"];
-/** The moons, under their planets (the Moon is in the row above). */
-const MOON_GROUPS = PLANET_IDS.filter((id) => id in MOONS_OF && id !== "earth").map((id) => ({ planet: id, moons: MOONS_OF[id as keyof typeof MOONS_OF] as readonly BodyId[] }));
+const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
 /** The lineup: the same picture width in kilometres for every body, so the sizes are true to each other. Wide enough for Saturn's rings. */
 const SPAN_KM = 150_000;
 const FRAME_PX = 180;
@@ -29,15 +27,19 @@ setThreeLoader(() => import("./three-subset.ts"));
 
 const main = document.querySelector<WakuseiBody>("#main");
 const controls = document.querySelector("kazoku-view-controls");
-const tilesBox = document.querySelector<HTMLElement>("#tiles");
+const pickerBox = document.querySelector<HTMLElement>("#picker");
 
-if (main && controls && tilesBox) {
+if (main && controls && pickerBox) {
   const address = createAddressState({ defaults: { body: "jupiter", look: "realistic" } });
   const looks = [...document.querySelectorAll<HTMLButtonElement>("#looks [data-look]")];
   const skies = [...document.querySelectorAll<HTMLButtonElement>("#skies [data-sky]")];
   const speeds = [...document.querySelectorAll<HTMLButtonElement>("#speeds [data-speed]")];
   const moonsButton = document.querySelector<HTMLButtonElement>("#moons")!;
   const scaleButton = document.querySelector<HTMLButtonElement>("#scale")!;
+  const scaleRefs = document.querySelector<HTMLElement>("#scale-refs")!;
+  const scaleInset = document.querySelector<HTMLElement>("#scale-inset")!;
+  const scaleLeader = document.querySelector<SVGElement>("#scale-leader")!;
+  const insetBody = document.querySelector<WakuseiBody>("#inset")!;
   const spinButton = document.querySelector<HTMLButtonElement>("#spin")!;
   const timeRow = document.querySelector<HTMLElement>("#time-row")!;
   const when = document.querySelector<HTMLInputElement>("#when")!;
@@ -45,6 +47,7 @@ if (main && controls && tilesBox) {
   const caption = document.querySelector<HTMLElement>("#caption")!;
   const status = document.querySelector<HTMLElement>("#status")!;
 
+  const asAlso = (value: string | null): BodyId[] => (value ?? "").split(",").filter((id): id is BodyId => id in BODIES);
   const asBody = (value: string | null): BodyId => (value !== null && value in BODIES ? (value as BodyId) : "jupiter");
   const state = {
     body: asBody(address.get("body")),
@@ -52,6 +55,9 @@ if (main && controls && tilesBox) {
     real: address.get("sky") === "real" || address.get("moons") === "1",
     moons: address.get("moons") === "1",
     scale: address.get("scale") === "1",
+    also: asAlso(address.get("with")),
+    relative: address.get("rel") === "1",
+    ref: (["planet", "earth", "sun"].includes(address.get("ref") ?? "") ? address.get("ref") : "earth") as "planet" | "earth" | "sun",
     spin: address.get("spin") === "1",
     speed: Number(address.get("speed") ?? 1) || 1,
     time: address.get("t") ?? "now",
@@ -70,40 +76,120 @@ if (main && controls && tilesBox) {
     status.textContent = text ?? "";
   };
 
-  const tiles = new Map<BodyId, { button: HTMLButtonElement; body: WakuseiBody; name: HTMLElement }>();
-  const addTile = (box: HTMLElement, id: BodyId): void => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "tile";
-    button.dataset["body"] = id;
-    const body = document.createElement("wakusei-body") as WakuseiBody;
-    body.setAttribute("body", id);
-    body.setAttribute("live", "off");
-    const name = document.createElement("span");
-    button.append(body, name);
-    button.addEventListener("click", () => {
-      state.body = id;
-      if (!hasMoons()) state.moons = false;
-      render();
-    });
-    box.append(button);
-    tiles.set(id, { button, body, name });
-  };
-  for (const id of TILES) addTile(tilesBox, id);
-  const moonGroups = document.querySelector<HTMLElement>("#moon-groups")!;
-  for (const group of MOON_GROUPS) {
-    const section = document.createElement("div");
-    section.className = "moon-group";
-    const heading = document.createElement("h3");
-    heading.dataset["planet"] = group.planet;
-    const box = document.createElement("div");
-    box.className = "tiles";
-    box.setAttribute("role", "group");
-    box.dataset["planet"] = group.planet;
-    section.append(heading, box);
-    moonGroups.append(section);
-    for (const id of group.moons) addTile(box, id);
+  // --- a line under every choice that says what it does, always there, and tied to its button for a screen reader ---------------------------------------------------------------------
+  const NOTES: readonly (readonly [string, string])[] = [
+    ['#looks [data-look="line"]', "note_line"],
+    ['#looks [data-look="realistic"]', "note_realistic"],
+    ['#looks [data-look="painted"]', "note_painted"],
+    ["#spin", "note_spin"],
+    ['#skies [data-sky="portrait"]', "note_portrait"],
+    ['#skies [data-sky="real"]', "note_sky"],
+    ["#moons", "note_moons"],
+    ["#scale", "note_scale"],
+    ["#now", "note_now"],
+    ['#speeds [data-speed="1"]', "note_speed_real"],
+    ['#speeds [data-speed="3600"]', "note_speed_hour"],
+    ['#speeds [data-speed="86400"]', "note_speed_day"],
+  ];
+  const noteLines: { button: HTMLElement; line: HTMLElement; key: string }[] = [];
+  for (const [selector, key] of NOTES) {
+    const button = document.querySelector<HTMLElement>(selector);
+    const row = button?.closest<HTMLElement>(".fam-row");
+    if (!button || !row) continue;
+    let box = row.nextElementSibling as HTMLElement | null;
+    if (!box || !box.classList.contains("choice-notes")) {
+      box = document.createElement("div");
+      box.className = "choice-notes";
+      row.after(box);
+    }
+    const line = document.createElement("p");
+    line.className = "fam-fine note";
+    line.id = `note-${key}`;
+    box.append(line);
+    button.setAttribute("aria-describedby", line.id);
+    noteLines.push({ button, line, key });
   }
+  const renderNotes = (): void => {
+    for (const { button, line, key } of noteLines) {
+      line.textContent = say(key);
+      line.hidden = button.hidden;
+    }
+  };
+
+  // --- the picker: the bodies in a row and, under it, the moons of the planet chosen (or the planet of the moon chosen). The same picker is in "Put it in your page". -----------------------------
+  interface Tile {
+    button: HTMLButtonElement;
+    body: WakuseiBody;
+    name: HTMLElement;
+  }
+  interface Picker {
+    sync(): void;
+  }
+  const pickers: Picker[] = [];
+  /** The planet whose moons the picker shows now: the body itself, or the planet of a moon; none for the Sun, Mercury and Venus. */
+  const planetOfChoice = (): BodyId | null => {
+    const planet = (BODIES[state.body].parent ?? state.body) as BodyId;
+    return planet in MOONS_OF ? planet : null;
+  };
+  const setAttrOn = (el: Element, name: string, value: string | null): void => {
+    if (value === null) el.removeAttribute(name);
+    else if (el.getAttribute(name) !== value) el.setAttribute(name, value);
+  };
+  function mountPicker(host: HTMLElement, tileClass: string, ids: { bodies?: string; moons?: string }): void {
+    host.innerHTML = `<div class="tiles"${ids.bodies ? ` id="${ids.bodies}"` : ""} role="group" data-row="bodies"></div><div class="moon-row"${ids.moons ? ` id="${ids.moons}"` : ""} hidden><h3></h3><div class="tiles" role="group" data-row="moons"></div></div>`;
+    const bodiesRow = host.querySelector<HTMLElement>('[data-row="bodies"]')!;
+    const moonRow = host.querySelector<HTMLElement>(".moon-row")!;
+    const moonTiles = host.querySelector<HTMLElement>('[data-row="moons"]')!;
+    const heading = moonRow.querySelector("h3")!;
+    const cache = new Map<BodyId, Tile>();
+    const tileOf = (id: BodyId): Tile => {
+      let held = cache.get(id);
+      if (held !== undefined) return held;
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = tileClass;
+      button.dataset["body"] = id;
+      const body = document.createElement("wakusei-body") as WakuseiBody;
+      body.setAttribute("body", id);
+      body.setAttribute("live", "off");
+      body.setAttribute("fit", "tight");
+      const name = document.createElement("span");
+      button.append(body, name);
+      button.addEventListener("click", () => {
+        state.body = id;
+        if (!hasMoons()) state.moons = false;
+        render();
+      });
+      held = { button, body, name };
+      cache.set(id, held);
+      return held;
+    };
+    for (const id of TILES) bodiesRow.append(tileOf(id).button);
+    let shown = "";
+    pickers.push({
+      sync() {
+        const planet = planetOfChoice();
+        const moons = planet === null ? [] : ([...MOONS_OF[planet as keyof typeof MOONS_OF]] as BodyId[]);
+        const key = `${planet}|${lang()}`;
+        if (key !== shown) {
+          shown = key;
+          moonTiles.replaceChildren(...moons.map((id) => tileOf(id).button));
+          heading.textContent = planet === null ? "" : say("moonsOf", { planet: BODIES[planet].name[lang()] });
+        }
+        moonRow.hidden = moons.length === 0;
+        for (const [id, tile] of cache) {
+          setAttrOn(tile.body, "look", state.look);
+          setAttrOn(tile.body, "texture-base", "textures/");
+          setAttrOn(tile.body, "lang", lang());
+          tile.name.textContent = BODIES[id].name[lang()];
+          pressed(tile.button, id === state.body);
+        }
+      },
+    });
+  }
+  mountPicker(pickerBox, "tile", { bodies: "tiles", moons: "moon-row" });
+  const embedPicker = document.querySelector<HTMLElement>("#embed-picker");
+  if (embedPicker) mountPicker(embedPicker, "pick", {});
 
   // --- the lineup: every body at one scale ---------------------------------------------------------------------------------------------------------
   const lineupSection = document.querySelector<HTMLElement>("#lineup-section")!;
@@ -164,6 +250,7 @@ if (main && controls && tilesBox) {
   const timeMs = (): number => (state.time === "now" ? Date.now() : Date.parse(state.time));
 
   function describe(): void {
+    if (state.scale) return;
     const f = BODIES[state.body];
     const name = f.name[lang()];
     if (!state.real) {
@@ -177,30 +264,117 @@ if (main && controls && tilesBox) {
   }
 
   const chips = document.querySelector<HTMLElement>("#chips")!;
-  /** Buttons under the big view for the bodies it is related to: a planet's moons, or a moon's planet and its sister moons. */
+  const together = document.querySelector<HTMLElement>("#together")!;
+  const togetherRow = document.querySelector<HTMLElement>("#together-row")!;
+  const relativeButton = document.querySelector<HTMLButtonElement>("#relative")!;
+  /** The bodies of the system the big view is in: the planet and its moons, in a fixed order, for the push buttons under the view. */
+  const systemOf = (): BodyId[] => {
+    const planet = (BODIES[state.body].parent ?? state.body) as BodyId;
+    return planet in MOONS_OF ? [planet, ...(MOONS_OF[planet as keyof typeof MOONS_OF] as readonly BodyId[])] : [state.body];
+  };
+  /** Push buttons under the big view, one for each body of its system, that stay where they are: the chosen one is pressed, and any others can be pressed with it to see them side by side. */
   function renderChips(): void {
-    const f = BODIES[state.body];
-    const planet = (f.parent ?? state.body) as BodyId;
-    const related: BodyId[] = planet in MOONS_OF ? [...(f.parent !== undefined ? [planet] : []), ...(MOONS_OF[planet as keyof typeof MOONS_OF] as readonly BodyId[])] : [];
-    if (state.body === "moon") related.splice(0, related.length, "earth", "moon");
-    if (state.body === "earth") related.splice(0, related.length, "moon");
-    const key = related.join(",") + lang() + state.body;
-    if (chips.dataset["key"] === key) return;
-    chips.dataset["key"] = key;
-    chips.replaceChildren();
-    for (const id of related) {
-      if (id === state.body) continue;
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset["chip"] = id;
-      button.textContent = BODIES[id].name[lang()];
-      button.addEventListener("click", () => {
-        state.body = id;
-        if (!hasMoons()) state.moons = false;
-        render();
-      });
-      chips.append(button);
+    const system = systemOf();
+    state.also = state.also.filter((id) => system.includes(id) && id !== state.body);
+    const key = system.join(",") + lang();
+    if (chips.dataset["key"] !== key) {
+      chips.dataset["key"] = key;
+      chips.replaceChildren();
+      for (const id of system.length > 1 ? system : []) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset["chip"] = id;
+        button.textContent = BODIES[id].name[lang()];
+        button.addEventListener("click", () => {
+          if (id === state.body) return;
+          state.also = state.also.includes(id) ? state.also.filter((x) => x !== id) : [...state.also, id];
+          render();
+        });
+        chips.append(button);
+      }
     }
+    for (const button of chips.querySelectorAll<HTMLButtonElement>("[data-chip]")) {
+      const id = button.dataset["chip"] as BodyId;
+      pressed(button, id === state.body || state.also.includes(id));
+      button.setAttribute("aria-disabled", String(id === state.body));
+    }
+    // several at once, side by side: at the same size, or at their true sizes against each other
+    const shown = system.filter((id) => id === state.body || state.also.includes(id));
+    together.hidden = shown.length < 2;
+    pressed(relativeButton, state.relative);
+    if (shown.length < 2) return;
+    const span = Math.max(...shown.map((id) => BODIES[id].radiusKm * (BODIES[id].axesKm ? Math.max(...BODIES[id].axesKm) / BODIES[id].radiusKm : 1))) * 1.06;
+    const wanted = shown.join(",");
+    if (togetherRow.dataset["ids"] !== wanted) {
+      togetherRow.dataset["ids"] = wanted;
+      togetherRow.replaceChildren(
+        ...shown.map((id) => {
+          const cell = document.createElement("div");
+          cell.className = "together-cell";
+          cell.dataset["body"] = id;
+          const body = document.createElement("wakusei-body") as WakuseiBody;
+          body.setAttribute("body", id);
+          body.setAttribute("live", "off");
+          body.setAttribute("fit", "tight");
+          const name = document.createElement("span");
+          cell.append(body, name);
+          return cell;
+        }),
+      );
+    }
+    for (const cell of togetherRow.querySelectorAll<HTMLElement>(".together-cell")) {
+      const id = cell.dataset["body"] as BodyId;
+      const body = cell.querySelector<WakuseiBody>("wakusei-body")!;
+      setAttrOn(body, "look", state.look);
+      setAttrOn(body, "texture-base", "textures/");
+      setAttrOn(body, "lang", lang());
+      setAttrOn(body, "span-km", state.relative ? String(span) : null);
+      cell.querySelector("span")!.textContent = BODIES[id].name[lang()];
+    }
+  }
+
+  /** The body the big view is measured against: its planet (for a moon), the Earth or the Sun; a body is never measured against itself, it takes the next one. */
+  const refOf = (): BodyId => {
+    const parent = BODIES[state.body].parent;
+    let id: BodyId = state.ref === "sun" ? "sun" : state.ref === "planet" && parent !== undefined ? parent : "earth";
+    if (id === state.body) id = id === "sun" ? "jupiter" : "sun";
+    return id;
+  };
+  /** To scale: the big view draws the body at its true size against the one chosen; a body too small to see gets a magnified picture beside it, joined by a line. */
+  function renderScale(): void {
+    scaleRefs.hidden = !state.scale;
+    const hasPlanet = BODIES[state.body].parent !== undefined;
+    for (const b of scaleRefs.querySelectorAll<HTMLButtonElement>("[data-ref]")) {
+      const planetOnly = b.dataset["ref"] === "planet";
+      b.hidden = planetOnly && !hasPlanet;
+      pressed(b, (b.dataset["ref"] === state.ref || (planetOnly === false && state.ref === "planet" && !hasPlanet && b.dataset["ref"] === "earth")));
+    }
+    if (!state.scale) {
+      scaleInset.hidden = true;
+      scaleLeader.setAttribute("hidden", "");
+      main!.removeAttribute("scale-to");
+      return;
+    }
+    const ref = refOf();
+    main!.setAttribute("scale-to", ref);
+    const own = BODIES[state.body].radiusKm;
+    const against = BODIES[ref].radiusKm;
+    const side = document.querySelector<HTMLElement>("#view")!.clientWidth || 560;
+    const diameterPx = (side * own) / (against * 1.06);
+    const small = diameterPx < 40;
+    scaleInset.hidden = !small;
+    if (small) scaleLeader.removeAttribute("hidden");
+    else scaleLeader.setAttribute("hidden", "");
+    if (small) {
+      insetBody.setAttribute("fit", "tight");
+      insetBody.setAttribute("body", state.body);
+      insetBody.setAttribute("look", state.look);
+      insetBody.setAttribute("texture-base", "textures/");
+      insetBody.setAttribute("lang", lang());
+    }
+    const km = Math.round(own * 10) / 10;
+    const ratio = own / against;
+    caption.textContent = say("scaleCaption", { name: BODIES[state.body].name[lang()], km: km.toLocaleString(lang() === "ja" ? "ja-JP" : "en-US"), ratio: ratio >= 10 ? ratio.toFixed(0) : ratio >= 0.1 ? ratio.toFixed(2) : ratio.toPrecision(2), ref: BODIES[ref].name[lang()], refKm: Math.round(against).toLocaleString(lang() === "ja" ? "ja-JP" : "en-US") });
   }
 
   function render(): void {
@@ -214,6 +388,7 @@ if (main && controls && tilesBox) {
     moonsButton.hidden = !hasMoons();
     pressed(moonsButton, state.moons && hasMoons());
     pressed(scaleButton, state.scale);
+    renderScale();
     pressed(spinButton, state.spin);
     timeRow.hidden = !(state.real || state.moons);
     pressed(nowButton, state.time === "now");
@@ -234,14 +409,8 @@ if (main && controls && tilesBox) {
     setAttr(main!, "turn", state.spin && !real ? "14" : null);
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
-    for (const [id, tile] of tiles) {
-      setAttr(tile.body, "look", state.look);
-      setAttr(tile.body, "texture-base", "textures/");
-      setAttr(tile.body, "lang", lang());
-      tile.name.textContent = BODIES[id].name[lang()];
-      pressed(tile.button, id === state.body);
-    }
-    for (const heading of moonGroups.querySelectorAll<HTMLElement>("h3[data-planet]")) heading.textContent = BODIES[heading.dataset["planet"] as BodyId].name[lang()];
+    for (const picker of pickers) picker.sync();
+    renderNotes();
     renderChips();
     renderEmbed();
     lineupSection.hidden = !state.scale;
@@ -264,8 +433,7 @@ if (main && controls && tilesBox) {
     // the view controls hold the body in sight (a quarter of it stays in) and grab it exactly: they are told how big it is at Fit
     const view = document.querySelector<HTMLElement>("#view")!;
     const side = Math.min(view.clientWidth || 560, view.clientHeight || 560);
-    const f = BODIES[state.body];
-    const half = state.moons && hasMoons() ? 6 : state.body === "sun" ? 1.55 : Math.max(1.06, (f.rings ? 2.4 : 0) * 1.04);
+    const half = state.moons && hasMoons() ? 6 : 2.2;
     const disc = Math.max(24, Math.round(side / half));
     Reflect.set(controls!, "objectSize", { width: disc, height: disc });
     controls!.setAttribute("grab-radius", String(Math.round(disc / 2)));
@@ -274,7 +442,10 @@ if (main && controls && tilesBox) {
     address.set("look", state.look);
     address.set("sky", state.real ? "real" : null);
     address.set("moons", state.moons ? "1" : null);
+    address.set("with", state.also.length > 0 ? state.also.join(",") : null);
+    address.set("rel", state.relative ? "1" : null);
     address.set("scale", state.scale ? "1" : null);
+    address.set("ref", state.scale && state.ref !== "earth" ? state.ref : null);
     address.set("spin", state.spin ? "1" : null);
     address.set("speed", state.speed !== 1 ? String(state.speed) : null);
     address.set("t", state.time !== "now" ? state.time : null);
@@ -368,6 +539,8 @@ if (main && controls && tilesBox) {
   for (const b of skies) b.addEventListener("click", () => ((state.real = b.dataset["sky"] === "real"), render()));
   moonsButton.addEventListener("click", () => ((state.moons = !state.moons), (state.real = state.real || state.moons), render()));
   scaleButton.addEventListener("click", () => ((state.scale = !state.scale), render()));
+  relativeButton.addEventListener("click", () => ((state.relative = !state.relative), render()));
+  for (const b of scaleRefs.querySelectorAll<HTMLButtonElement>("[data-ref]")) b.addEventListener("click", () => ((state.ref = (b.dataset["ref"] ?? "earth") as typeof state.ref), render()));
   spinButton.addEventListener("click", () => ((state.spin = !state.spin), render()));
   nowButton.addEventListener("click", () => ((state.time = "now"), render()));
   when.addEventListener("change", () => {

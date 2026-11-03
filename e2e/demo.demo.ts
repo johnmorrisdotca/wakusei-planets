@@ -3,11 +3,11 @@ import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";
 
-test("the page has the family's header, eleven bodies, and draws the chosen one", async ({ page }) => {
+test("the page has the family's header, ten bodies, and draws the chosen one", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=saturn`);
   await expect(page.locator("kazoku-language-picker")).toBeVisible();
   await expect(page.locator("kazoku-theme-switch")).toBeVisible();
-  await expect(page.locator("#tiles .tile")).toHaveCount(11);
+  await expect(page.locator("#tiles .tile")).toHaveCount(10);
   await expect(page.locator("#main")).toHaveAttribute("body", "saturn");
   await expect(page.locator("#main svg")).toBeVisible();
   await expect(page.locator("#caption")).toContainText("Saturn");

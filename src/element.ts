@@ -69,7 +69,10 @@ const readTime = (value: string | null): number | "now" | undefined => {
 };
 
 /** The half-width of the picture, in body radii, for a body alone, with a scale to another body, or with its moons. */
-function extentOf(id: BodyId, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number }): number {
+/** The half-width of a body's picture, in its radii, when it has no scale of its own: the globe takes a little under half the height, so its rings, glow and haze have room round it. */
+const ROOM = 2.2;
+
+function extentOf(id: BodyId, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number; tight?: boolean }): number {
   const f = BODIES[id];
   if (options.moons === true && id in BODIES && f.parent === undefined && id !== "sun") {
     const near = nearMoons(id as PlanetId);
@@ -78,7 +81,10 @@ function extentOf(id: BodyId, options: { scaleTo?: BodyId; spanKm?: number; moon
   }
   if (options.spanKm !== undefined) return options.spanKm / f.radiusKm;
   if (options.scaleTo !== undefined) return (BODIES[options.scaleTo].radiusKm * 1.06) / f.radiusKm;
-  return Math.max(id === "sun" ? 1.55 : 1.06, ringReach(f) * 1.04);
+  if (options.tight !== true) return ROOM;
+  // tight (a thumbnail): the picture holds the body and its rings, and an irregular body (Deimos, Phobos, Nix, Hydra) whole along its longest axis
+  const longest = f.axesKm === undefined ? 1 : Math.max(...f.axesKm) / f.radiusKm;
+  return Math.max(1.06, ringReach(f) * 1.04, longest * 1.06);
 }
 
 /** Keep the body in the picture: at least a quarter of its width stays inside the edge, however far the view is moved. `pan` is in half-widths of the picture. */
@@ -113,7 +119,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "live", "texture-base", "texture-far-base", "lang", "labels"];
+  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "lang", "labels"];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -313,7 +319,7 @@ export class WakuseiBody extends HTMLElement {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
     const span = num(this.getAttribute("span-km"), 0);
-    const extent = extentOf(this.body, { ...(span > 0 ? { spanKm: span } : {}), ...(scaleTo !== null && scaleTo in BODIES ? { scaleTo } : {}), moons: r.moons, ...(range !== undefined && range > 0 ? { range } : {}) });
+    const extent = extentOf(this.body, { ...(this.getAttribute("fit") === "tight" ? { tight: true } : {}), ...(span > 0 ? { spanKm: span } : {}), ...(scaleTo !== null && scaleTo in BODIES ? { scaleTo } : {}), moons: r.moons, ...(range !== undefined && range > 0 ? { range } : {}) });
     const moons: MoonDraw[] | undefined = r.moons
       ? frame.moons
           .filter((m) => m.distance <= extent * 1.05)
@@ -323,7 +329,7 @@ export class WakuseiBody extends HTMLElement {
             return { id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], ...(orbit !== undefined ? { orbit: tiltBy === 0 ? orbit : this.#tiltedOrbit(m.id as string, orbit, tiltBy) } : {}) };
           })
       : undefined;
-    return { pose: { pole, meridian, light }, extent, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), ...(moons !== undefined ? { moons } : {}) };
+    return { pose: { pole, meridian, light }, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), ...(moons !== undefined ? { moons } : {}) };
   }
 
   #tilted = new Map<string, { source: Float32Array; tilt: number; out: Float32Array }>();
@@ -459,7 +465,7 @@ export class WakuseiBody extends HTMLElement {
       size,
       pose: scene.pose,
       ...(r.moons ? { moons: true, ...(frame.time !== undefined ? { time: frame.time } : {}), range: scene.extent, moonsAt: (scene.moons ?? []).map((m) => ({ id: m.id as MoonId, x: m.x, y: m.y, z: m.z, distance: Math.hypot(m.x, m.y, m.z) })), orbits: new Map((scene.moons ?? []).filter((m) => m.orbit !== undefined).map((m) => [m.id as string, m.orbit!])) } : {}),
-      ...(scaleTo !== null || this.hasAttribute("span-km") ? { fill: this.#fill() } : {}),
+      ...(scaleTo !== null || this.hasAttribute("span-km") || this.getAttribute("fit") !== "tight" ? { fill: this.#fill() } : {}),
       ...(this.getAttribute("lang") === "ja" ? { lang: "ja" as const } : {}),
       ...(this.getAttribute("labels") === "off" ? { labels: false } : {}),
       ...(stroke !== "" ? { stroke } : {}),
@@ -548,7 +554,7 @@ export class WakuseiBody extends HTMLElement {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const span = num(this.getAttribute("span-km"), 0);
     const half = span > 0 ? span : scaleTo !== null && scaleTo in BODIES ? BODIES[scaleTo].radiusKm * 1.06 : 0;
-    return half > 0 ? Math.max(0.01, Math.min(1, BODIES[this.body].radiusKm / half)) : 1;
+    return half > 0 ? Math.max(0.01, Math.min(1, BODIES[this.body].radiusKm / half)) : this.getAttribute("fit") === "tight" ? 1 : 1 / ROOM;
   }
 
   /** Make the view's still, once, when it is in sight. */

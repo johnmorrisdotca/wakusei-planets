@@ -63,7 +63,7 @@ test("with To scale on, no tile is a flat square or a dot", async ({ page }, tes
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
   await page.goto(`${URL}?look=line&scale=1&body=jupiter`);
   await page.locator("#tiles").scrollIntoViewIfNeeded();
-  for (const id of ["sun", "mercury", "mars", "pluto", "moon", "saturn"]) {
+  for (const id of ["sun", "mercury", "mars", "pluto", "venus", "saturn"]) {
     const tile = still(page, id);
     await expect.poll(async () => (await look(page, tile)).drawn, { message: id, timeout: 30_000 }).toBeGreaterThan(300);
     const s = await look(page, tile);
@@ -91,28 +91,121 @@ test("To scale is a lineup in true proportion, with the Sun as a curved edge and
   expect(await width("jupiter")).toBeCloseTo(await width("mars"), 0);
 });
 
-test("every moon has a tile under its planet, and opens in the big view, deep-linked", async ({ page }) => {
-  await page.goto(`${URL}?look=line&body=jupiter`);
+test("pick a planet and its moons come up on the next row: every moon has a tile, and opens, deep-linked", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=sun`);
+  await expect(page.locator("#moon-row")).toBeHidden();
   for (const [planet, moons] of Object.entries(MOONS_OF)) {
-    if (planet === "earth") continue;
-    for (const moon of moons) {
-      const tile = page.locator(`#moon-groups .tiles[data-planet="${planet}"] .tile[data-body="${moon}"]`);
-      await expect(tile, moon).toBeAttached();
-    }
+    await page.locator(`#tiles .tile[data-body="${planet}"]`).click();
+    await expect(page.locator("#moon-row")).toBeVisible();
+    await expect(page.locator("#moon-row .tile")).toHaveCount(moons.length);
+    for (const moon of moons) await expect(page.locator(`#moon-row .tile[data-body="${moon}"]`), `${planet}: ${moon}`).toBeAttached();
   }
-  await expect(page.locator("#moon-groups .tile")).toHaveCount(24);
-  const io = page.locator('#moon-groups .tile[data-body="io"]');
-  await io.scrollIntoViewIfNeeded();
-  await io.click();
+  await page.locator('#tiles .tile[data-body="mercury"]').click();
+  await expect(page.locator("#moon-row")).toBeHidden();
+  await page.locator('#tiles .tile[data-body="jupiter"]').click();
+  await page.locator('#moon-row .tile[data-body="io"]').click();
   await expect(page.locator("#main")).toHaveAttribute("body", "io");
   await expect(page).toHaveURL(/body=io/);
   await expect(page.locator("#caption")).toContainText("Io");
+  await expect(page.locator('#moon-row .tile[data-body="europa"]')).toBeVisible();
   await expect(page.locator('#chips [data-chip="jupiter"]')).toBeVisible();
-  await expect(page.locator('#chips [data-chip="europa"]')).toBeVisible();
   await page.goto(`${URL}?look=line&body=triton`);
   await expect(page.locator("#main")).toHaveAttribute("body", "triton");
-  await page.locator('#chips [data-chip="neptune"]').click();
+  await expect(page.locator('#moon-row .tile[data-body="nereid"]')).toBeAttached();
+  await page.locator('#tiles .tile[data-body="neptune"]').click();
   await expect(page.locator("#main")).toHaveAttribute("body", "neptune");
+});
+
+test("the buttons under the view stay where they are, can be on together, and show the bodies side by side, at equal or at true relative sizes", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=mars`);
+  const chip = (id: string) => page.locator(`#chips [data-chip="${id}"]`);
+  await expect(page.locator("#chips [data-chip]")).toHaveCount(3);
+  const before = await Promise.all(["mars", "phobos", "deimos"].map(async (id) => (await chip(id).boundingBox())!.x));
+  await expect(chip("mars")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#together")).toBeHidden();
+  await chip("phobos").click();
+  await chip("deimos").click();
+  const after = await Promise.all(["mars", "phobos", "deimos"].map(async (id) => (await chip(id).boundingBox())!.x));
+  expect(after, "no button moved").toEqual(before);
+  for (const id of ["mars", "phobos", "deimos"]) await expect(chip(id)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#together .together-cell")).toHaveCount(3);
+  await expect(page.locator("#main")).toHaveAttribute("body", "mars");
+  await expect(page).toHaveURL(/with=phobos%2Cdeimos|with=phobos,deimos/);
+  // equal sizes: nothing is given a scale; true relative sizes: every picture holds the same number of kilometres
+  await expect(page.locator("#together wakusei-body").first()).not.toHaveAttribute("span-km", /./);
+  await page.locator("#relative").click();
+  const spans = await page.locator("#together wakusei-body").evaluateAll((els) => els.map((el) => el.getAttribute("span-km")));
+  expect(new Set(spans).size, "one span for all").toBe(1);
+  expect(Number(spans[0])).toBeGreaterThan(3389);
+  await expect(page).toHaveURL(/rel=1/);
+  await chip("phobos").click();
+  await expect(chip("phobos")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#together .together-cell")).toHaveCount(2);
+  await chip("deimos").click();
+  await expect(page.locator("#together")).toBeHidden();
+});
+
+for (const lookName of ["line", "realistic", "painted"] as const) {
+  test(`every picture in the picker is a picture, planets and moons, in the ${lookName} look: not blank, not one colour`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+    test.setTimeout(420_000);
+    await page.goto(`${URL}?look=${lookName}&body=mars`);
+    await page.locator("#picker").scrollIntoViewIfNeeded();
+    const seen = new Set<string>();
+    const check = async (tile: Locator): Promise<void> => {
+      await tile.scrollIntoViewIfNeeded();
+      const id = (await tile.getAttribute("body")) ?? "";
+      if (lookName !== "line") await expect(tile, id).toHaveAttribute("data-state", "still", { timeout: 60_000 });
+      await expect.poll(async () => (await look(page, tile)).drawn, { timeout: 30_000, message: id }).toBeGreaterThan(150);
+      expect((await look(page, tile)).colours, `${id} is not one colour`).toBeGreaterThan(3);
+      seen.add(id);
+    };
+    for (const tile of await page.locator("#tiles .tile wakusei-body").all()) await check(tile);
+    for (const planet of ["mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "earth"]) {
+      await page.locator(`#tiles .tile[data-body="${planet}"]`).click();
+      for (const tile of await page.locator("#moon-row .tile wakusei-body").all()) await check(tile);
+    }
+    expect(seen.size, "every body of the picker was looked at").toBe(10 + 2 + 4 + 7 + 5 + 3 + 3 + 1);
+  });
+}
+
+test("Fit holds the Sun by its disc, like the planets: it is not drawn smaller to make room for its glow", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+  await page.goto(`${URL}?look=realistic&body=mars`);
+  await page.locator("#picker").scrollIntoViewIfNeeded();
+  for (const id of ["sun", "mars"]) await expect(still(page, id)).toHaveAttribute("data-state", "still", { timeout: 60_000 });
+  const sun = await look(page, still(page, "sun"));
+  const mars = await look(page, still(page, "mars"));
+  expect(sun.drawn, "the Sun's disc is as big as Mars's, not smaller").toBeGreaterThan(mars.drawn * 0.8);
+});
+
+test("the sky shows the real phase: Venus a few days from new is a thin crescent, not a full disc", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+  await page.goto(`${URL}?look=realistic&body=venus&sky=real&t=2026-11-02T12:00:00.000Z`);
+  const big = page.locator("#main");
+  await big.hover();
+  await expect(big).toHaveAttribute("data-state", "live", { timeout: 90_000 });
+  await page.waitForTimeout(2500);
+  const lit = await page.evaluate(() => {
+    const el = document.querySelector("#main") as unknown as { stats?: unknown };
+    return el ? 0 : 0;
+  });
+  void lit;
+  const png = (await big.screenshot()).toString("base64");
+  const share = await page.evaluate(async (data) => {
+    const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext("2d")!;
+    context.drawImage(bitmap, 0, 0);
+    const { data: px } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    const side = Math.min(bitmap.width, bitmap.height);
+    const disc = Math.PI * (side / 2 / 1.06) ** 2;
+    let bright = 0;
+    for (let i = 0; i < px.length; i += 4) if (px[i]! + px[i + 1]! + px[i + 2]! > 90) bright += 1;
+    return bright / disc;
+  }, png);
+  expect(share, "the lit part of Venus is a small share of its disc").toBeLessThan(0.22);
+  expect(share, "and it is there").toBeGreaterThan(0.005);
 });
 
 test("the body cannot be dragged out of the view, and Centre brings it back to the middle", async ({ page }) => {
@@ -129,4 +222,115 @@ test("the body cannot be dragged out of the view, and Centre brings it back to t
   expect(at.y, "some of the body is still in the view").toBeLessThan(box.y + box.height);
   await page.getByRole("button", { name: /centre|中央/i }).first().click();
   await expect.poll(async () => await state(), { timeout: 5000 }).toMatchObject({ panX: 0, panY: 0, yaw: 0, tilt: 0 });
+});
+
+test("To scale with its planet: Deimos is drawn at its true size beside Mars, a magnified picture beside it with a line, and the caption says so", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=deimos&scale=1&ref=planet`);
+  await expect(page.locator("#main")).toHaveAttribute("scale-to", "mars");
+  await expect(page.locator("#scale-inset")).toBeVisible();
+  await expect(page.locator("#scale-leader")).toBeVisible();
+  await expect(page.locator("#caption")).toContainText("0.0018 times the radius of Mars");
+  // the buttons name the three things it can be measured against, and its planet only for a moon
+  await expect(page.locator('#scale-refs [data-ref="planet"]')).toBeVisible();
+  await page.locator('#scale-refs [data-ref="sun"]').click();
+  await expect(page.locator("#main")).toHaveAttribute("scale-to", "sun");
+  await expect(page).toHaveURL(/ref=sun/);
+  await page.locator('.tile[data-body="mercury"]').click();
+  await expect(page.locator('#scale-refs [data-ref="planet"]')).toBeHidden();
+  await expect(page.locator("#scale-inset")).toBeVisible();
+  await page.locator('.tile[data-body="saturn"]').click();
+  await page.locator('#scale-refs [data-ref="earth"]').click();
+  await expect(page.locator("#scale-inset")).toBeHidden();
+  await expect(page.locator("#caption")).toContainText("times the radius of Earth");
+});
+
+test("an irregular body is drawn whole: the sides of Deimos's and Phobos's pictures are clear", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+  for (const id of ["deimos", "phobos"]) {
+    await page.goto(`${URL}?look=realistic&body=${id}`);
+    const big = page.locator("#main");
+    await big.hover();
+    await expect(big).toHaveAttribute("data-state", "live", { timeout: 90_000 });
+    await page.waitForTimeout(2500);
+    const edges = await page.evaluate(async () => undefined);
+    void edges;
+    const png = (await big.screenshot()).toString("base64");
+    const sides = await page.evaluate(async (data) => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext("2d")!;
+      context.drawImage(bitmap, 0, 0);
+      const bg = context.getImageData(2, 2, 1, 1).data;
+      const column = (x: number): number => {
+        const { data: px } = context.getImageData(x, 0, 1, bitmap.height);
+        let drawn = 0;
+        for (let i = 0; i < px.length; i += 4) if (Math.abs(px[i]! - bg[0]!) + Math.abs(px[i + 1]! - bg[1]!) + Math.abs(px[i + 2]! - bg[2]!) > 24) drawn += 1;
+        return drawn;
+      };
+      return { left: column(1), right: column(bitmap.width - 2), middle: column(Math.floor(bitmap.width / 2)) };
+    }, png);
+    expect(sides.middle, `${id} is drawn`).toBeGreaterThan(50);
+    expect(sides.left, `${id}: the left edge is clear (not clipped)`).toBe(0);
+    expect(sides.right, `${id}: the right edge is clear (not clipped)`).toBe(0);
+  }
+});
+
+test("every choice has a line that says what it does, always on the page, tied to its button, in English and Japanese", async ({ page }) => {
+  await page.goto(`${URL}?look=line&body=jupiter`);
+  const described = async (): Promise<{ id: string; text: string; shown: boolean; folded: boolean }[]> =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>(".controls [aria-describedby]")]
+        .filter((button) => !button.hidden)
+        .map((button) => {
+          const line = document.getElementById(button.getAttribute("aria-describedby")!);
+          return { id: button.id || button.dataset["look"] || button.dataset["sky"] || button.dataset["speed"] || "?", text: line?.textContent ?? "", shown: line !== null && line.getBoundingClientRect().height > 0, folded: line?.closest("details") !== null };
+        }),
+    );
+  const english = await described();
+  expect(english.length).toBeGreaterThanOrEqual(10);
+  for (const note of english) {
+    expect(note.text.length, `${note.id} has a description`).toBeGreaterThan(20);
+    expect(note.shown, `${note.id}'s description is on the page`).toBe(true);
+    expect(note.folded, `${note.id}'s description is not in a fold`).toBe(false);
+  }
+  expect(english.find((n) => n.id === "real")?.text).toContain("partly or nearly all dark");
+  await page.goto(`${URL}?look=line&body=jupiter&lang=ja`);
+  await page.locator("#looks").waitFor();
+  const japanese = await described();
+  expect(japanese.map((n) => n.text)).not.toEqual(english.map((n) => n.text));
+  expect(japanese.some((n) => /[぀-ヿ]/.test(n.text))).toBe(true);
+});
+
+test("every body is fitted by its globe at about half the view's height, so rings, glow and haze have room", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+  const shares: Record<string, number> = {};
+  for (const id of ["mars", "saturn", "sun"]) {
+    await page.goto(`${URL}?look=realistic&body=${id}`);
+    const big = page.locator("#main");
+    await big.hover();
+    await expect(big).toHaveAttribute("data-state", "live", { timeout: 90_000 });
+    await page.waitForTimeout(2500);
+    const png = (await big.screenshot()).toString("base64");
+    shares[id] = await page.evaluate(async (data) => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext("2d")!;
+      context.drawImage(bitmap, 0, 0);
+      // the height of the bright part down the middle column
+      const { data: px } = context.getImageData(Math.floor(bitmap.width / 2), 0, 1, bitmap.height);
+      let top = -1;
+      let bottom = -1;
+      for (let y = 0; y < bitmap.height; y += 1) {
+        if (px[y * 4]! + px[y * 4 + 1]! + px[y * 4 + 2]! <= 120) continue;
+        if (top < 0) top = y;
+        bottom = y;
+      }
+      return (bottom - top) / bitmap.height;
+    }, png);
+  }
+  for (const id of ["mars", "saturn"]) {
+    expect(shares[id], `${id}'s globe is about half the height`).toBeGreaterThan(0.33);
+    expect(shares[id], `${id}'s globe is about half the height`).toBeLessThan(0.58);
+  }
+  expect(shares["sun"], "the Sun's disc is no smaller than a planet's").toBeGreaterThan(0.33);
 });

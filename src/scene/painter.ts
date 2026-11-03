@@ -213,6 +213,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       uWrap: { value: look.wrap ?? (a === undefined ? 0.04 : 0.3) },
       uAtmos: { value: new T.Vector3(...(a?.colour ?? [0, 0, 0])) },
       uAtmosPow: { value: a?.power ?? 3 },
+      uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },
       uRingN: { value: new T.Vector3(0, 1, 0) },
       uRingR: { value: new T.Vector2(1, 2) },

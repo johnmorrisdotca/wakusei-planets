@@ -35,6 +35,8 @@ export interface SceneState {
   panX: number;
   panY: number;
   moons?: readonly MoonDraw[];
+  /** The body is drawn as the sky shows it at a date: its real phase, with no light on the night side from a wrapped terminator or a rim of air. */
+  sky?: boolean;
   /** The smallest a moon is drawn, in CSS pixels across its radius. Default 2.5. */
   minMoonPx?: number;
   /** The colour of the orbit lines, `#rrggbb`. */
@@ -89,6 +91,7 @@ function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THRE
       uWrap: { value: look.wrap ?? (a === undefined ? 0.04 : 0.3) },
       uAtmos: { value: col3(T, a?.colour ?? [0, 0, 0]) },
       uAtmosPow: { value: a?.power ?? 3 },
+      uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },
       uRingN: { value: new T.Vector3(0, 1, 0) },
       uRingR: { value: new T.Vector2(1, 2) },
@@ -125,6 +128,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const shader = assets.acquire(`wk:body:${options.id}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${options.id}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
 
+      const baseWrap = look.wrap ?? (look.atmosphere === undefined ? 0.04 : 0.3);
+      const baseAmbient = look.ambient ?? 0.04;
       const scene = new T.Scene();
       const camera = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 400);
       camera.position.set(0, 0, 200);
@@ -339,7 +344,14 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             mat.uniforms.uRingTex!.value = ringTexture;
           }
         }
-        for (const mat of [shader, paintedMaterial]) mat?.uniforms.uLight!.value.copy(v3(T, state.pose.light));
+        for (const mat of [shader, paintedMaterial]) {
+          if (mat === undefined) continue;
+          mat.uniforms.uLight!.value.copy(v3(T, state.pose.light));
+          const sky = state.sky === true;
+          mat.uniforms.uWrap!.value = sky ? 0.02 : (mat === paintedMaterial ? baseWrap : baseWrap);
+          mat.uniforms.uAmbient!.value = sky ? 0.012 : baseAmbient;
+          mat.uniforms.uRimBase!.value = sky ? 0.02 : 0.12;
+        }
         if (glow !== undefined) glow.scale.setScalar(1);
         // a sharper picture, when the disc is big enough to show it
         if (wantPainted && !failed && !loading && look.painted !== undefined) {

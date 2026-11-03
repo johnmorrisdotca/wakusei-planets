@@ -273,7 +273,7 @@ export function lineSvg(id: BodyId, options: LineOptions = {}): string {
   const head = (label: string): string => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(size)} ${n(size)}" width="${n(size)}" height="${n(size)}" role="img" aria-label="${label}"><title>${label}</title>`;
   if (options.moons === true && facts.parent === undefined && id !== "sun") return systemSvg(id as PlanetId, options, size, stroke, paper, hair, head);
   const pose = poseFor(id, options);
-  const reach = Math.max(ringReach(facts), id === "sun" ? 1.26 : 1);
+  const reach = Math.max(ringReach(facts), id === "sun" ? 1.08 : 1);
   const fit = options.fill === undefined ? 0.94 / reach : options.fill;
   const zoom = options.zoom ?? 1;
   const frame: Frame = { cx: (size / 2) * (1 - (options.panX ?? 0)), cy: (size / 2) * (1 + (options.panY ?? 0)), r: (size / 2) * fit * zoom };

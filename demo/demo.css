@@ -13,11 +13,16 @@ kazoku-view-controls { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface
 
 .bodies { margin-top: 18px; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
-.tile { display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 4px; min-height: 48px; padding: 8px 6px 8px; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; color: #c9d4e3; font: inherit; font-size: .85rem; cursor: pointer; }
-.tile:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
-.tile wakusei-body { --wakusei-size: 84px; width: 84px; pointer-events: none; }
+.tile, .pick { display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 4px; min-height: 48px; padding: 8px 6px 8px; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; color: #c9d4e3; font: inherit; font-size: .85rem; cursor: pointer; }
+.tile:focus-visible, .pick:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.tile[aria-pressed="true"], .pick[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.tile wakusei-body, .pick wakusei-body { --wakusei-size: 84px; width: 84px; pointer-events: none; }
 
+.scale-inset { position: absolute; right: 4%; bottom: 4%; width: 38%; aspect-ratio: 1; border: 1px solid var(--rule); border-radius: 50%; background: #06080d; overflow: hidden; pointer-events: none; }
+.scale-inset wakusei-body { --wakusei-size: 100%; width: 100%; max-width: none; }
+.scale-leader { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.scale-leader[hidden] { display: none; }
+.scale-leader line { stroke: #8fa1b8; stroke-width: 1.2; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
 .moon-group { margin-top: 14px; }
 .moon-group h3 { margin: 0 0 6px; font-size: .95rem; font-weight: 600; color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0 0; }
@@ -52,6 +57,19 @@ kazoku-view-controls { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface
 .more .embed-panel { justify-items: stretch; }
 .embed-frame { width: min(420px, 100%); aspect-ratio: 1; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; }
 .credits { margin-top: 20px; }
-.more .fam-actions .fam-button { color: inherit; }
+.more .fam-actions .fam-button:not([data-primary="true"]) { color: inherit; }
 .embed-panel .fam-tabs button, .embed-panel .fam-button { min-height: 48px; }
 .embed-panel .fam-button { display: inline-flex; align-items: center; }
+
+.moon-row { margin-top: 10px; }
+.moon-row h3 { margin: 0 0 6px; font-size: .9rem; font-weight: 600; color: var(--muted); }
+.embed-picker .tiles { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+.embed-picker .pick { padding: 6px 4px; font-size: .78rem; }
+.embed-picker .pick wakusei-body { --wakusei-size: 56px; width: 56px; }
+.chips button[aria-disabled="true"] { cursor: default; }
+.together { display: grid; justify-items: center; gap: 10px; margin: 12px 0 0; width: min(560px, 100%); }
+.together-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.together-cell { display: grid; justify-items: center; gap: 4px; padding: 8px; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; color: #c9d4e3; font-size: .85rem; }
+.together-cell wakusei-body { --wakusei-size: 120px; width: 120px; }
+.choice-notes { display: grid; gap: 2px; margin: -4px 0 4px; }
+.choice-notes .note { margin: 0; line-height: 1.35; }
