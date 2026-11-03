@@ -16,11 +16,22 @@ try {
     ["line-phone", { width: 390, height: 844 }, "?body=jupiter&look=line"],
     ["moons-desk", { width: 1280, height: 900 }, "?body=jupiter&look=line&moons=1&t=2026-11-02T12:00:00.000Z"],
     ["realistic-phone", { width: 390, height: 844 }, "?body=mars&look=realistic"],
+    ["lineup-desk", { width: 1280, height: 900 }, "?body=earth&look=painted&scale=1"],
   ];
+  const only = process.env["ONLY"]?.split(",");
   for (const [name, viewport, query] of shots) {
+    if (only !== undefined && !only.includes(name)) continue;
     const context = await browser.newContext({ viewport, reducedMotion: "reduce", deviceScaleFactor: 1 });
     const page = await context.newPage();
     await page.goto(`http://127.0.0.1:${port}/wakusei-planets/${query}`);
+    if (name === "lineup-desk") {
+      await page.locator("#lineup-section").scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      await page.waitForFunction(() => document.querySelectorAll("#lineup wakusei-body[data-state=still]").length === document.querySelectorAll("#lineup wakusei-body").length, undefined, { timeout: 120_000 });
+      await page.locator("#lineup-section").screenshot({ path: out(name) });
+      await context.close();
+      continue;
+    }
     if (query.includes("look=realistic")) {
       await page.locator("#main").hover();
       await page.waitForSelector("#main[data-state=live]", { timeout: 90_000 });

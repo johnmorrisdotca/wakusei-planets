@@ -17,7 +17,11 @@ description: 3つの見た目、天体ごとのエントリー、three.js、画�
 
 ## 地球
 
-地球はここでは描きません。`@johnmorrisdotca/wakusei-planets/earth` が [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) の要素に任せるので、どのページでも同じ地球が出ます。`@johnmorrisdotca/chikyu-earth` (任意の依存) を入れて `/earth` をimportしてください。線画は chikyu-earth の線の地球儀、陰影つきと表面の地図は、その時刻の本物の太陽、雲、夜の明かりつきの「宇宙から見た地球」です。chikyu-earth は自分の WebGL を持つので、地球とほかの天体を同時に動かすと、ページには WebGL が2つになります。
+地球も、ほかの天体と同じように描きます。陰影つきと表面の地図のどちらも、NASA の Blue Marble の画像を、ほかの天体と同じ光と自転で描き、まわりに空気の縁をつけます (数字だけから本物らしい地球は描けないので、どちらの見た目も画像を使います)。`/all` に含まれます。ページの WebGL は1つを共有し、天体の並びでは止まった絵が出ます。線画は [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) の国境つきの線の地球儀です。`@johnmorrisdotca/chikyu-earth` (任意の依存、0.10.0 以降) を入れて `/earth` をimportしてください。入っていないときの線画は、このパッケージ自身の輪郭です。
+
+## 衛星
+
+どの衛星も、`body` に自分の名前を渡せば、どの見た目でも描けます。デモには衛星の並びもあります。火星: `phobos`、`deimos`。木星: `io`、`europa`、`ganymede`、`callisto`。土星: `mimas`、`enceladus`、`tethys`、`dione`、`rhea`、`titan`、`iapetus`。天王星: `miranda`、`ariel`、`umbriel`、`titania`、`oberon`。海王星: `proteus`、`triton`、`nereid`。冥王星: `charon`、`nix`、`hydra`。地球の衛星は `moon` です。`?body=io` でデモがイオで開きます。
 
 ## WebGLは1つ、必要なときだけ描く
 

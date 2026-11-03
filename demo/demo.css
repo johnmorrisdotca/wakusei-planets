@@ -18,6 +18,25 @@ kazoku-view-controls { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface
 .tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
 .tile wakusei-body { --wakusei-size: 84px; width: 84px; pointer-events: none; }
 
+.moon-group { margin-top: 14px; }
+.moon-group h3 { margin: 0 0 6px; font-size: .95rem; font-weight: 600; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0 0; }
+.chips:empty { display: none; }
+.chips button { min-height: 48px; min-width: 48px; padding: 0 16px; border: 1px solid var(--rule); border-radius: 999px; background: #06080d; color: #c9d4e3; font: inherit; font-size: .9rem; cursor: pointer; }
+.chips button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.chips button[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.lineup { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+.lineup .cell { display: grid; justify-items: center; gap: 6px; padding: 8px; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; color: #c9d4e3; font-size: .85rem; text-align: center; }
+.lineup .cell[aria-current="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+.lineup .frame { position: relative; width: 180px; height: 180px; overflow: hidden; }
+.lineup .frame wakusei-body { --wakusei-size: 180px; width: 180px; position: absolute; inset: 0; pointer-events: none; }
+.lineup .frame .inset { --wakusei-size: 64px; width: 64px; inset: auto 4px 4px auto; border: 1px solid var(--rule); border-radius: 50%; background: #06080d; }
+.lineup .frame svg.leader { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.lineup .frame svg.limb { position: absolute; inset: 0; width: 100%; height: 100%; }
+.lineup svg.limb .disc { fill: url(#sun-limb); }
+.lineup svg.limb.line .disc { fill: none; stroke: #c9d4e3; stroke-width: 1.5; }
+.lineup small { color: #8798b0; }
+
 .more .fam-panel { justify-items: start; }
 .embed-frame { width: min(420px, 100%); aspect-ratio: 1; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; }
 .credits { margin-top: 20px; }

@@ -11,7 +11,9 @@ A clean line drawing, a shaded realistic drawing, or a painted surface map, with
 
 <p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><strong>Open the demo →</strong></a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/embed.html">Embed page</a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/docs/">Docs</a></p>
 
-<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="docs/images/hero-desk.png" width="640"></p>
+<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.3.1/docs/images/hero-desk.png" width="640"></p>
+
+<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.3.1/docs/images/lineup-desk.png" width="640"></p>
 
 ## One minute
 
@@ -74,7 +76,7 @@ A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (a
 | `realistic` | A shaded sphere drawn from the body's real colours and features, lit from the Sun's side, with the rings casting shadows. No pictures: the surface is worked out in a shader. | `three`, the body's entry point |
 | `painted` | A real surface map from public-domain NASA, USGS and JPL imagery. Small pictures first (1.31 MB for all of them in the package), a sharper one fetched when you zoom in. | `three`, the body's entry point |
 
-Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are 25 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra). The Earth is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe, not a second copy: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` installed). The painted looks cover the Sun, the planets from Mercury to Pluto, the Moon, the four Galilean moons, Titan, Rhea, Enceladus and Mimas, and Saturn's rings are Cassini's own picture of them.
+Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are 25 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra). The Earth is drawn like the rest in the realistic and painted looks (NASA's Blue Marble), and its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` 0.10.0 or later installed). The painted looks cover the Sun, the planets from Mercury to Earth and Pluto, the Moon, the four Galilean moons, Titan, Rhea, Enceladus and Mimas, and Saturn's rings are Cassini's own picture of them.
 
 ## As the Earth sees it
 

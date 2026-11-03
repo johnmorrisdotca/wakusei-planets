@@ -120,7 +120,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
     key: options.key,
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
       const look = lookOf(options.id) ?? fallbackLook(facts);
-      const wantPainted = options.look === "painted" && look.painted !== undefined;
+      const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
       const geometry = assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 128, 64), (g) => g.dispose());
       const shader = assets.acquire(`wk:body:${options.id}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${options.id}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;

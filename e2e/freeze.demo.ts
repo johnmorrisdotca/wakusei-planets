@@ -18,8 +18,8 @@ test.beforeEach(async ({ page }) => {
 test("a page of stills asks the browser for nothing, with one WebGL context at most", async ({ page }) => {
   await page.goto(`${URL}?body=jupiter`);
   // a still is made only for a picture that is in sight
-  await page.locator(".tiles").scrollIntoViewIfNeeded();
-  await expect(page.locator(".tile wakusei-body[data-state=still]")).toHaveCount(11, { timeout: 120_000 });
+  await page.locator("#tiles").scrollIntoViewIfNeeded();
+  await expect(page.locator("#tiles .tile wakusei-body[data-state=still]")).toHaveCount(11, { timeout: 120_000 });
   await settle(page, 1500);
   const before = await readCounts(page);
   await settle(page, 2500);
@@ -62,7 +62,7 @@ test("changes give back what they took: contexts, buffers, vertex arrays, textur
   await main(page).hover();
   await live(page);
   const round = async () => {
-    for (const id of ["saturn", "mars", "moon", "neptune", "sun", "mercury", "jupiter"]) {
+    for (const id of ["saturn", "mars", "earth", "moon", "earth", "neptune", "sun", "mercury", "jupiter"]) {
       await pick(page, id);
       await main(page).hover();
       await live(page);

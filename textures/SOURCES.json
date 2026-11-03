@@ -150,5 +150,13 @@
     "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA14908",
     "artist": "NASA",
     "usage": "Public domain"
+  },
+  "earth": {
+    "file": "world.topo.bathy.200409.3x5400x2700.jpg",
+    "page": "https://visibleearth.nasa.gov/images/73801",
+    "licence": "Public domain",
+    "credit": "NASA Earth Observatory (Reto Stockli), Blue Marble: Next Generation with topography and bathymetry",
+    "artist": "Reto Stockli, NASA Earth Observatory",
+    "usage": "Public domain (NASA)"
   }
 }

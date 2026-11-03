@@ -74,6 +74,8 @@ export interface BodyLook {
   /** How much of the night side shows (0 to 1). Default 0.04. */
   ambient?: number;
   painted?: PaintedMap;
+  /** Draw the painted map in the realistic look too: for a body with no honest drawing from numbers (the Earth's continents). */
+  mapped?: boolean;
 }
 
 import { looks, waiting } from "./store.ts";

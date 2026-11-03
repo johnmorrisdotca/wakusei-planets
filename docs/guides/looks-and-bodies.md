@@ -17,7 +17,11 @@ A shaded look is code and data for one body, so each has its own import: `@johnm
 
 ## The Earth
 
-The Earth is not drawn here: `@johnmorrisdotca/wakusei-planets/earth` hands it to [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own elements, so the page shows the same Earth everywhere. Install `@johnmorrisdotca/chikyu-earth` (an optional peer) and import `/earth`; the line look is its line globe, and the shaded and painted looks are its Earth from space, with the real Sun at `time`, clouds and night lights. chikyu-earth keeps its own WebGL context, so a page with a live Earth beside another live body holds two.
+The Earth is drawn like every other body. Its realistic and painted looks are NASA's Blue Marble picture, lit and turned like the rest, with a rim of air (a shaded Earth cannot honestly be worked out from numbers, so both looks use the picture); `/all` includes it. They share the page's one WebGL context and have stills in a row of bodies. Its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe with the countries: install `@johnmorrisdotca/chikyu-earth` (an optional peer, 0.10.0 or later) and import `/earth`; without it the line look is this package's own outline.
+
+## The moons
+
+Every moon has its own name for `body`, in every look and in the demo's row of moons: Mars: `phobos`, `deimos`. Jupiter: `io`, `europa`, `ganymede`, `callisto`. Saturn: `mimas`, `enceladus`, `tethys`, `dione`, `rhea`, `titan`, `iapetus`. Uranus: `miranda`, `ariel`, `umbriel`, `titania`, `oberon`. Neptune: `proteus`, `triton`, `nereid`. Pluto: `charon`, `nix`, `hydra`. The Earth's is `moon`. `?body=io` opens the demo on Io.
 
 ## One WebGL context, drawn on demand
 

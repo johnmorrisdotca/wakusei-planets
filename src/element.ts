@@ -69,15 +69,23 @@ const readTime = (value: string | null): number | "now" | undefined => {
 };
 
 /** The half-width of the picture, in body radii, for a body alone, with a scale to another body, or with its moons. */
-function extentOf(id: BodyId, options: { scaleTo?: BodyId; moons?: boolean; range?: number }): number {
+function extentOf(id: BodyId, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number }): number {
   const f = BODIES[id];
   if (options.moons === true && id in BODIES && f.parent === undefined && id !== "sun") {
     const near = nearMoons(id as PlanetId);
     const far = Math.max(1.8, ringReach(f) * 1.15, ...near.map((m) => m.reach * 1.1));
     return options.range ?? far;
   }
+  if (options.spanKm !== undefined) return options.spanKm / f.radiusKm;
   if (options.scaleTo !== undefined) return (BODIES[options.scaleTo].radiusKm * 1.06) / f.radiusKm;
   return Math.max(id === "sun" ? 1.55 : 1.06, ringReach(f) * 1.04);
+}
+
+/** Keep the body in the picture: at least a quarter of its width stays inside the edge, however far the view is moved. `pan` is in half-widths of the picture. */
+function clampPan(pan: number, extent: number, zoom: number): number {
+  const half = extent / Math.max(0.05, zoom);
+  const limit = 1 + 0.5 / half;
+  return Math.max(-limit, Math.min(limit, pan));
 }
 
 const TEMPLATE = `<style>
@@ -91,7 +99,7 @@ const TEMPLATE = `<style>
  *
  * Attributes: `body` (a name, such as `jupiter`), `look` (`line`, `realistic` or `painted`), `size` (pixels across), `time` (`now` or an ISO date: the body as the Earth sees it then; leave it out for a portrait),
  * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
- * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
+ * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `span-km` (draw to scale: the half-width of the picture in kilometres, the same in every picture of a lineup), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
  *
  * @example
  * ```ts no-run
@@ -105,7 +113,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "live", "texture-base", "texture-far-base", "lang", "labels"];
+  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "live", "texture-base", "texture-far-base", "lang", "labels"];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -224,10 +232,6 @@ export class WakuseiBody extends HTMLElement {
   async goLive(): Promise<boolean> {
     if (this.look === "line") return false;
     this.#wantLive = true;
-    if (delegates.has(this.body)) {
-      await this.#delegated(delegates.get(this.body)!);
-      return true;
-    }
     await this.#ensureView();
     const ok = (await this.#view?.focus()) === true;
     if (ok) {
@@ -241,10 +245,6 @@ export class WakuseiBody extends HTMLElement {
   /** Give the WebGL context back: the picture stays as a still. */
   rest(): void {
     this.#wantLive = false;
-    if (delegates.has(this.body)) {
-      this.#queue(true);
-      return;
-    }
     this.#stopTick();
     if (this.#view !== undefined) {
       this.#view.blur();
@@ -312,7 +312,8 @@ export class WakuseiBody extends HTMLElement {
     const r = this.#request();
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
-    const extent = extentOf(this.body, { ...(scaleTo !== null && scaleTo in BODIES ? { scaleTo } : {}), moons: r.moons, ...(range !== undefined && range > 0 ? { range } : {}) });
+    const span = num(this.getAttribute("span-km"), 0);
+    const extent = extentOf(this.body, { ...(span > 0 ? { spanKm: span } : {}), ...(scaleTo !== null && scaleTo in BODIES ? { scaleTo } : {}), moons: r.moons, ...(range !== undefined && range > 0 ? { range } : {}) });
     const moons: MoonDraw[] | undefined = r.moons
       ? frame.moons
           .filter((m) => m.distance <= extent * 1.05)
@@ -322,7 +323,7 @@ export class WakuseiBody extends HTMLElement {
             return { id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], ...(orbit !== undefined ? { orbit: tiltBy === 0 ? orbit : this.#tiltedOrbit(m.id as string, orbit, tiltBy) } : {}) };
           })
       : undefined;
-    return { pose: { pole, meridian, light }, extent, zoom: this.#zoom, panX: this.#panX, panY: this.#panY, ...(moons !== undefined ? { moons } : {}) };
+    return { pose: { pole, meridian, light }, extent, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), ...(moons !== undefined ? { moons } : {}) };
   }
 
   #tilted = new Map<string, { source: Float32Array; tilt: number; out: Float32Array }>();
@@ -377,7 +378,7 @@ export class WakuseiBody extends HTMLElement {
     const stage = this.#stage;
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
-    const delegate = delegates.get(this.body);
+    const delegate = this.look === "line" ? delegates.get(this.body) : undefined;
     if (delegate !== undefined) {
       await this.#delegated(delegate);
       return;
@@ -458,12 +459,12 @@ export class WakuseiBody extends HTMLElement {
       size,
       pose: scene.pose,
       ...(r.moons ? { moons: true, ...(frame.time !== undefined ? { time: frame.time } : {}), range: scene.extent, moonsAt: (scene.moons ?? []).map((m) => ({ id: m.id as MoonId, x: m.x, y: m.y, z: m.z, distance: Math.hypot(m.x, m.y, m.z) })), orbits: new Map((scene.moons ?? []).filter((m) => m.orbit !== undefined).map((m) => [m.id as string, m.orbit!])) } : {}),
-      ...(scaleTo !== null && scaleTo in BODIES ? { fill: BODIES[this.body].radiusKm / (BODIES[scaleTo].radiusKm * 1.06) } : {}),
+      ...(scaleTo !== null || this.hasAttribute("span-km") ? { fill: this.#fill() } : {}),
       ...(this.getAttribute("lang") === "ja" ? { lang: "ja" as const } : {}),
       ...(this.getAttribute("labels") === "off" ? { labels: false } : {}),
       ...(stroke !== "" ? { stroke } : {}),
       ...(paper !== "" ? { paper } : {}),
-      ...(this.#zoom !== 1 ? { zoom: this.#zoom, panX: this.#panX, panY: this.#panY } : {}),
+      ...(this.#zoom !== 1 ? { zoom: this.#zoom, panX: scene.panX, panY: scene.panY } : {}),
     });
     this.#stage.innerHTML = html;
   }
@@ -520,29 +521,34 @@ export class WakuseiBody extends HTMLElement {
     if (this.#visible) this.#still();
   }
 
-  /** A body another package draws (the Earth): its line globe, or its shaded Earth once it is asked to go live. */
+  /** A body whose line look another package draws (the Earth's globe with its countries). It is drawn at the body's size in a scale picture, never larger than the picture. */
   async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>): Promise<void> {
     if (this.#view !== undefined) {
       this.#view.dispose();
       this.#view = undefined;
       this.#viewKey = "";
     }
-    const shaded = this.look !== "line" && (this.#wantLive || (this.#hasPriority() && (this.getAttribute("live") ?? "always") === "always"));
-    const kind = shaded ? "live" : "line";
-    const time = this.#start === undefined ? "now" : new Date(this.#start).toISOString();
-    const base = this.getAttribute("texture-base");
     const center = this.hasAttribute("meridian") ? `${num(this.getAttribute("meridian"), 10)},20` : "10,20";
-    const key = `${kind}|${center}|${time}|${base ?? ""}`;
-    if (this.#delegateEl !== undefined && this.#delegateKind === key) return;
     const size = Math.round(this.clientWidth || 320);
-    const el = kind === "live" ? await delegate.live({ center, time, textureBase: base }) : await delegate.line({ center, size });
+    const fill = this.#fill();
+    const key = `line|${center}|${fill}`;
+    if (this.#delegateEl !== undefined && this.#delegateKind === key) return;
+    const el = await delegate.line({ center, size });
     this.#delegateEl?.remove();
     this.#stage.innerHTML = "";
-    el.style.cssText = "display:block;width:100%;height:100%;aspect-ratio:1";
+    el.style.cssText = `display:block;width:${fill * 100}%;height:${fill * 100}%;aspect-ratio:1;position:absolute;left:${(1 - fill) * 50}%;top:${(1 - fill) * 50}%`;
     this.#stage.append(el);
     this.#delegateEl = el;
     this.#delegateKind = key;
-    this.#set(kind === "live" ? "live" : this.look === "line" ? "line" : "still");
+    this.#set("line");
+  }
+
+  /** How much of the picture's width the body's disc takes: 1 alone, less in a scale picture (`scale-to`, `span-km`). */
+  #fill(): number {
+    const scaleTo = this.getAttribute("scale-to") as BodyId | null;
+    const span = num(this.getAttribute("span-km"), 0);
+    const half = span > 0 ? span : scaleTo !== null && scaleTo in BODIES ? BODIES[scaleTo].radiusKm * 1.06 : 0;
+    return half > 0 ? Math.max(0.01, Math.min(1, BODIES[this.body].radiusKm / half)) : 1;
   }
 
   /** Make the view's still, once, when it is in sight. */

@@ -1,7 +1,8 @@
+import "./earth-look.ts";
 import { delegates } from "../scene/store.ts";
 
-// The Earth is drawn by chikyu-earth's own elements, not a second copy of them: the line globe with the countries, and the Earth from space with the real Sun, clouds and night lights.
-// chikyu-earth is an optional peer, loaded only when an Earth is drawn.
+// The Earth's line look is chikyu-earth's own globe with the countries, not a second copy (chikyu-earth is an optional peer, loaded only when that line globe is drawn). The realistic and
+// painted looks are drawn here like every other body's (earth-look.ts, which `/all` also loads).
 const CENTRE = "10,20";
 
 delegates.set("earth", {
@@ -12,13 +13,5 @@ delegates.set("earth", {
     globe.setAttribute("look", "line");
     globe.setAttribute("size", String(size));
     return globe;
-  },
-  async live({ center, time, textureBase }) {
-    await import("@johnmorrisdotca/chikyu-earth/realistic/element");
-    const earth = document.createElement("chikyu-earth-realistic");
-    earth.setAttribute("center", center || CENTRE);
-    earth.setAttribute("time", time);
-    if (textureBase !== null) earth.setAttribute("texture-base", textureBase);
-    return earth;
   },
 });

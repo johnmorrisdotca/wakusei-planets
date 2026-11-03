@@ -16,6 +16,7 @@
           <wakusei-body id="main" body="jupiter" look="realistic" live="hover"></wakusei-body>
         </div>
         <p class="fam-fine stage-name" id="caption" role="status"></p>
+        <div class="chips" id="chips" role="group" aria-label="Related bodies" data-say-label="chipsLabel"></div>
       </section>
       <kazoku-view-controls id="controls" for="view" controls="advanced" tilt-max="90" speed="0" zoom-min="0.5" zoom-max="6"></kazoku-view-controls>
 
@@ -61,6 +62,18 @@
         <h2 id="bodies-h" data-say="bodiesTitle">Every body</h2>
         <p class="fam-fine" data-say="bodiesText">Pick one. Only the one in the big view moves; the others are still pictures.</p>
         <div class="tiles" id="tiles" role="group" aria-label="Bodies" data-say-label="bodiesTitle"></div>
+      </section>
+
+      <section class="fam-panel bodies" id="moons-section" aria-labelledby="moons-h">
+        <h2 id="moons-h" data-say="moonsTitle">Moons</h2>
+        <p class="fam-fine" data-say="moonsText">Every moon the package draws, under its planet. Pick one to see it in the big view, in any look.</p>
+        <div id="moon-groups"></div>
+      </section>
+
+      <section class="fam-panel bodies" id="lineup-section" aria-labelledby="lineup-h" hidden>
+        <h2 id="lineup-h" data-say="lineupTitle">To scale</h2>
+        <p class="fam-fine" data-say="lineupText">Every body at the same scale, so the sizes can be compared. A body too small to see has a magnified picture beside it, joined by a line. The Sun is far larger than the page: only the edge of it fits.</p>
+        <div class="lineup" id="lineup" role="list"></div>
       </section>
 
       <section class="more" id="embed" aria-labelledby="embed-h">

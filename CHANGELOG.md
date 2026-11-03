@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1
+
+The Earth is a body like the others, and "To scale" is a comparison.
+
+- **The Earth draws in every look.** In the realistic and painted looks the big view was empty and the row showed chikyu-earth's line globe, because the Earth was handed to chikyu-earth's own live element (0.7.0 here, a second WebGL context, no still). It is now drawn by this package like every other body, from NASA's Blue Marble picture (`earth-512`, `-1024` and `-2048`; the package grows by 0.08 MB), through the page's one WebGL context, with a still in the row. Both looks use the picture (an honest shaded Earth cannot be worked out from numbers), with a rim of air. Only the line look is chikyu-earth's globe. The Earth is in `/all`. chikyu-earth is now `^0.10.0` (it was `^0.7.0`).
+- **"To scale" is a lineup** (section "To scale" in the demo): every body at the same scale in the same size of picture, a magnified picture joined by a line for each body too small to see, Saturn's rings whole, the Sun as the curved edge it is, the Earth at its true size. The tiles in the row are never scaled any more (the Sun was a flat square, Mercury a dot). New attribute `span-km`: the half-width of a picture in kilometres, the same in every picture of a lineup.
+- **Every moon has a tile and a name** for `body` (`?body=io`), in the demo under its planet, with chips on each planet's and moon's view for its moons, its planet and its sister moons.
+- **The body cannot be dragged out of the view** (a quarter of it stays in), and Fit centres it and returns it to its first angle.
+- The README's pictures are absolute addresses pinned to the release's tag (npm's page showed a different picture from GitHub's), and a test holds it (`pnpm readme:images` pins them after a version bump).
+
 ## 0.3.0
 
 Painted moons, Saturn's rings from Cassini, and a drag that goes the right way up.

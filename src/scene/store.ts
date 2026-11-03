@@ -3,12 +3,10 @@ import type { BodyId } from "../facts.ts";
 import type { BodyLook } from "./look.ts";
 
 const KEY = Symbol.for("johnmorrisdotca.wakusei-planets.looks");
-/** A body drawn by another package's element (the Earth, by chikyu-earth) instead of by this one: the element asks it for what to show. */
+/** A body whose line look another package's element draws (the Earth, by chikyu-earth) instead of this one: the element asks it for what to show. The shaded and painted looks are always this package's. */
 export interface Delegate {
   /** The line look: an element for the body, centred on a longitude and latitude (`"lon,lat"`). */
   line(options: { center: string; size: number }): Promise<HTMLElement>;
-  /** The shaded and painted looks, drawn live: an element lit by the Sun at `time` (`"now"` or an ISO date). */
-  live(options: { center: string; time: string; textureBase: string | null }): Promise<HTMLElement>;
 }
 
 const store = ((globalThis as Record<symbol, unknown>)[KEY] ??= { looks: new Map<BodyId, BodyLook>(), waiting: new Set<() => void>(), delegates: new Map<BodyId, Delegate>() }) as {

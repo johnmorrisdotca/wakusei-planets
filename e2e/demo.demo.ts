@@ -7,7 +7,7 @@ test("the page has the family's header, eleven bodies, and draws the chosen one"
   await page.goto(`${URL}?look=line&body=saturn`);
   await expect(page.locator("kazoku-language-picker")).toBeVisible();
   await expect(page.locator("kazoku-theme-switch")).toBeVisible();
-  await expect(page.locator(".tile")).toHaveCount(11);
+  await expect(page.locator("#tiles .tile")).toHaveCount(11);
   await expect(page.locator("#main")).toHaveAttribute("body", "saturn");
   await expect(page.locator("#main svg")).toBeVisible();
   await expect(page.locator("#caption")).toContainText("Saturn");
@@ -39,10 +39,12 @@ test("the painted look is offered, and a body with no picture falls back", async
   await expect(page).toHaveURL(/look=painted/);
 });
 
-test("the Earth is chikyu-earth's own globe, not a second copy", async ({ page }) => {
+test("the Earth's line look is chikyu-earth's own globe, not a second copy; its other looks are this package's", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=earth`);
   await expect(page.locator("#main chikyu-earth")).toBeAttached();
   await expect(page.locator("#caption")).toContainText("Earth");
+  await page.locator('#looks [data-look="realistic"]').click();
+  await expect(page.locator("#main chikyu-earth")).toHaveCount(0);
 });
 
 test("the Japanese page names the bodies in Japanese", async ({ page }) => {
