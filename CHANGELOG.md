@@ -1,7 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## 0.5.1 - 2026-11-03
 
+- kazoku-ui 0.12.0: the demo's view controls have a zoom slider, on top of 0.11's Centre button and exact grab.
 - Documentation: an architecture guide and a fuller upgrading guide, each with its Japanese twin; a code builder page (`builder.html`); eight new pictures; a longer README whose examples run (`pnpm test:readme`); and every release of this changelog dated. No behaviour changed.
 - The README opens with the package's thumbnail, and the demo carries it as its link preview (og:image) and publishes the card, a dark card and an icon on Pages at `thumbnail.png`, `thumbnail-dark.png` and `icon.png`.
 
