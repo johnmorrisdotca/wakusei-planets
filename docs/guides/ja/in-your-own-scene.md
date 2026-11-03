@@ -8,13 +8,16 @@ description: 本物の太陽・惑星・冥王星・衛星を、すでにある 
 `@johnmorrisdotca/wakusei-planets/painter` は、天体を半径 1 のオブジェクトとして作ります。それを自分のシーンで動かし、大きさを変え、光を当てます。自分では何も描きません。レンダラーもループも時計も持ちません。`<wakusei-body>` と同じ陰影つきの見た目と、同じ表面の地図を、遠近カメラ向けに描きます。
 
 ```ts
+import * as THREE from "three";
 import { painter } from "@johnmorrisdotca/wakusei-planets/painter";
 
-const jupiter = painter.make(THREE, "Jupiter", { look: "painted", invalidate: () => requestDraw() });
+const scene = new THREE.Scene();
+const jupiter = painter.make(THREE, "Jupiter", { look: "realistic", invalidate: () => undefined });
 scene.add(jupiter.object);
 jupiter.object.position.set(40, 0, 0);
 jupiter.object.scale.setScalar(2);
 jupiter.update({ toSun: [-1, 0, 0], ms: Date.now(), radiusPx: 120 });
+console.log(scene.children.length);
 ```
 
 - `look` は `realistic` か `painted` です。地図が届くまでは陰影つきの見た目を出し、届いたら `invalidate` を呼ぶので、もう一度描いてください。

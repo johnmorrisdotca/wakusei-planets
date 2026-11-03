@@ -190,7 +190,7 @@ const moonsOf = (planet: string): readonly MoonId[] => {
 function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string }): Painting {
   const facts = BODIES[id];
   const look = lookOf(id) ?? fallbackLook(id);
-  const wantPainted = context.look === "painted" && look.painted !== undefined;
+  const wantPainted = (context.look === "painted" || look.mapped === true) && look.painted !== undefined;
   const ratio = context.ratio ?? 1;
   const maxWidth = context.maxTexture ?? 2048;
   const redraw = (): void => context.invalidate?.();

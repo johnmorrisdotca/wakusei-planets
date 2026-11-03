@@ -8,13 +8,16 @@ description: Put the real Sun, planets, Pluto and moons into a three.js scene yo
 `@johnmorrisdotca/wakusei-planets/painter` makes each body as an object of radius 1 that you move, scale and light in a scene of your own. It draws nothing by itself: no renderer, no loop, no clock. It is a perspective-camera version of what `<wakusei-body>` draws, so the same shaded look and the same painted maps are there.
 
 ```ts
+import * as THREE from "three";
 import { painter } from "@johnmorrisdotca/wakusei-planets/painter";
 
-const jupiter = painter.make(THREE, "Jupiter", { look: "painted", invalidate: () => requestDraw() });
+const scene = new THREE.Scene();
+const jupiter = painter.make(THREE, "Jupiter", { look: "realistic", invalidate: () => undefined });
 scene.add(jupiter.object);
 jupiter.object.position.set(40, 0, 0);
 jupiter.object.scale.setScalar(2);
 jupiter.update({ toSun: [-1, 0, 0], ms: Date.now(), radiusPx: 120 });
+console.log(scene.children.length);
 ```
 
 - `look` is `realistic` or `painted`. A painted body shows the shaded look until its map arrives, then `invalidate` is called so you draw again.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+The bodies for someone else's three.js scene.
+
+- **`@johnmorrisdotca/wakusei-planets/painter`**: `painter.make(three, "Jupiter", { look, invalidate, ratio })` makes the Sun, a planet, Pluto or a moon as an object of radius 1 for a perspective-camera scene of your own, in the realistic or the painted look, lit from any direction in the scene's own axes (equatorial J2000, y up), turned about its real pole at the moment given, with its rings and the Sun's glow. Nothing is drawn by it and it holds no renderer, loop or clock: the caller places, scales and calls `update({ toSun, ms, radiusPx })` at each draw. A painted body shows the shaded look until its map arrives, fetches a sharper map only when it is big on the screen, and lets the big one go a few seconds after it shrinks. `painter.moons("Jupiter", ms)` places a planet's moons in planet radii. Its shape is chikyu-earth's `BodyPainter`, so `setBodyPainter(painter)` is the whole wiring (chikyu-earth 0.11).
+- New shaders for it (`VERTEX_WORLD` and friends): the lighting, the ring's shadow and the limb are worked out from the direction to the camera, not from an orthographic viewer's frame.
+- `orientation(id, ms)` and `moonOffset(id, ms)`: a body's pole and prime meridian, and a moon's place from its planet, in the same axes.
+- A guide, "In your own three.js scene", in English and Japanese.
+
 ## 0.4.0
 
 "Put it in your page" is a configurator.
