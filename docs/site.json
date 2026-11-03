@@ -20,6 +20,11 @@
       "ja": "<wakusei-body> 要素",
       "platform": "browser"
     },
+    "./portrait": {
+      "en": "The <wakusei-portrait> element: many bodies in one scene",
+      "ja": "<wakusei-portrait> 要素 (たくさんの天体を一つの絵に)",
+      "platform": "browser"
+    },
     "./look": {
       "en": "How a body is drawn with three.js",
       "ja": "three.js での描き方",

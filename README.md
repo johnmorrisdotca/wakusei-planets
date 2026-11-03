@@ -13,9 +13,9 @@ A clean line drawing, a shaded realistic drawing, or a painted surface map, with
 
 <p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><strong>Open the demo →</strong></a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/embed.html">Embed page</a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/docs/">Docs</a></p>
 
-<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.6.0/docs/images/hero-desk.png" width="640"></p>
+<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.7.0/docs/images/hero-desk.png" width="640"></p>
 
-<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.6.0/docs/images/lineup-desk.png" width="640"></p>
+<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.7.0/docs/images/lineup-desk.png" width="640"></p>
 
 ## One minute
 
@@ -271,6 +271,19 @@ A body that turns by itself and a moving sky, in HTML:
 
 [The code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) is one screen: choose which planet's system, the body, the look, the size, the sky and the turning, then pick how your page is made and copy the code. It is built from `embedCode`, so it writes what the package writes. [Put it in your page](docs/guides/put-it-in-your-page.md) is its guide.
 
+## The portrait builder
+
+<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.7.0/docs/images/portrait-family.png" width="640"></p>
+
+[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies in one picture: drag them, size them, turn them, order them front to back, arrange them in a row, an arc or a grid (true or readable sizes, a planet's moons round it in orbit order), light them from one direction, and take the code, a PNG or an SVG. The scene is kept in the address, and every body is drawn in one WebGL scene, so the page holds one WebGL context. [The portrait builder](docs/guides/portrait-builder.md) is its guide.
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/portrait/+esm"></script>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/all/+esm"></script>
+
+<wakusei-portrait scene="look:painted~jupiter_0_0_0.3_0~io_0_0_0.1_0"></wakusei-portrait>
+```
+
 ## API
 
 The reference is a site, made from the source's own doc comments: every export has a summary, its parameters, what it returns and an example that runs when the site is built. [Open the reference](https://johnmorrisdotca.github.io/wakusei-planets/docs/).
@@ -279,6 +292,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | --- | --- |
 | `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`. No browser. |
 | `.../element` | `<wakusei-body>`; three.js is loaded only for a shaded look. |
+| `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
 | `.../all` | Every body's shaded look, at once. |
@@ -302,6 +316,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Frameworks](docs/guides/frameworks.md) | React, Vue, Svelte, Angular |
 | [Embed in an iframe](docs/guides/embed-in-an-iframe.md) | No script of your own |
 | [Put it in your page](docs/guides/put-it-in-your-page.md) | Set up a body and copy the code |
+| [The portrait builder](docs/guides/portrait-builder.md) | Many bodies in one picture |
 | [Looks and bodies](docs/guides/looks-and-bodies.md) | The looks and each body's entry point |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |

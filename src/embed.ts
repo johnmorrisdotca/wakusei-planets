@@ -1,6 +1,7 @@
 // The text to put a body in a page, for each way a page is made: a script tag from a CDN, an ES module, React, Vue, Angular, Svelte, or an iframe of `embed.html`. The demo's "Put it in your page"
 // section shows these as the reader changes a choice, and the tests build or parse every one. Pure: no DOM.
 import { BODIES, type BodyId, type Look } from "./facts.ts";
+import { decodeScene } from "./portrait/model.ts";
 import { VERSION } from "./version.ts";
 
 /**
@@ -90,8 +91,50 @@ function attributesOf(o: EmbedOptions): [string, string][] {
 }
 
 const quote = (v: string): string => `"${v.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"`;
-const tagAttrs = (o: EmbedOptions): string => attributesOf(o).map(([k, v]) => (v === "" ? k : `${k}=${quote(v)}`)).join(" ");
 const needsShading = (o: EmbedOptions): boolean => (o.look ?? "realistic") !== "line";
+
+interface Spec {
+  /** The element's tag, and the entry point (under the package name) that defines it. */
+  tag: string;
+  element: string;
+  /** The entry points that hold the looks of the bodies drawn, or none for a line drawing. */
+  entries: readonly string[];
+  attrs: readonly (readonly [string, string])[];
+  /** The name the React, Angular and plain module examples use: `planet` gives `Planet`, `PlanetComponent`, `app-planet` and `#planet`. */
+  name: string;
+  iframe: { src: string; title: string; width: number; height: number };
+}
+
+const attrText = (attrs: Spec["attrs"]): string => attrs.map(([k, v]) => (v === "" ? k : `${k}=${quote(v)}`)).join(" ");
+
+function snippet(kind: EmbedKind, spec: Spec, cdn: string): string {
+  const Name = spec.name.charAt(0).toUpperCase() + spec.name.slice(1);
+  const tagAttrs2 = attrText(spec.attrs);
+  if (kind === "iframe") {
+    const f = spec.iframe;
+    return `<iframe\n  src=${quote(f.src)}\n  title=${quote(f.title)}\n  width="${f.width}"\n  height="${f.height}"\n  loading="lazy"\n  style="border: 0"\n></iframe>`;
+  }
+  if (kind === "html") {
+    const scripts = [`<script type="module" src="${cdn}/${spec.element}/+esm"></script>`, ...spec.entries.map((e) => `<script type="module" src="${cdn}/${e}/+esm"></script>`)];
+    return `${scripts.join("\n")}\n\n<${spec.tag} ${tagAttrs2}></${spec.tag}>`;
+  }
+  const imports = [`import "${PACKAGE}/${spec.element}";`, ...spec.entries.map((e) => `import "${PACKAGE}/${e}";`)];
+  if (kind === "module") {
+    const sets = spec.attrs.map(([k, v]) => `${spec.name}.setAttribute(${JSON.stringify(k)}, ${JSON.stringify(v)});`);
+    return `${imports.join("\n")}\n\nconst ${spec.name} = document.createElement("${spec.tag}");\n${sets.join("\n")}\ndocument.querySelector("#${spec.name}").append(${spec.name});`;
+  }
+  const dynamic = [`void import("${PACKAGE}/${spec.element}");`, ...spec.entries.map((e) => `void import("${PACKAGE}/${e}");`)];
+  if (kind === "react") {
+    return `import { useEffect } from "react";\n\nexport function ${Name}() {\n  useEffect(() => {\n    // The element needs a browser, so it is imported in an effect, never at the top of the file.\n${dynamic.map((l) => `    ${l}`).join("\n")}\n  }, []);\n  return <${spec.tag} ${tagAttrs2} />;\n}`;
+  }
+  if (kind === "vue") {
+    return `<script setup lang="ts">\nimport { onMounted } from "vue";\n\nonMounted(() => {\n${dynamic.map((l) => `  ${l}`).join("\n")}\n});\n</script>\n\n<template>\n  <${spec.tag} ${tagAttrs2}></${spec.tag}>\n</template>`;
+  }
+  if (kind === "angular") {
+    return `import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from "@angular/core";\n\n@Component({\n  selector: "app-${spec.name}",\n  standalone: true,\n  schemas: [CUSTOM_ELEMENTS_SCHEMA],\n  template: \`<${spec.tag} ${tagAttrs2}></${spec.tag}>\`,\n})\nexport class ${Name}Component implements OnInit {\n  ngOnInit(): void {\n    // The element needs a browser: ngOnInit also runs when a server renders.\n    if (typeof window !== "undefined") {\n${dynamic.map((l) => `      ${l}`).join("\n")}\n    }\n  }\n}`;
+  }
+  return `<script lang="ts">\n  import { onMount } from "svelte";\n\n  onMount(() => {\n${dynamic.map((l) => `    ${l}`).join("\n")}\n  });\n</script>\n\n<${spec.tag} ${tagAttrs2}></${spec.tag}>`;
+}
 
 /**
  * The text that puts a body in a page, for one way of making the page. Each way is built, parsed or run by the package's tests: the plain HTML one with a script tag from jsDelivr, an ES module, a React component,
@@ -112,37 +155,73 @@ const needsShading = (o: EmbedOptions): boolean => (o.look ?? "realistic") !== "
 export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", settings: EmbedSettings = {}): string {
   const cdn = settings.cdn ?? CDN;
   const site = settings.site ?? SITE;
-  const shaded = needsShading(options);
-  const entry = entryOf(options.body);
   const size = options.size ?? 320;
-  if (kind === "iframe") {
-    const query = new URLSearchParams({ body: options.body, look: options.look ?? "realistic" });
-    if (options.time !== undefined) query.set("time", options.time);
-    if (options.moons === true && options.time !== undefined) query.set("moons", "1");
-    if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
-    return `<iframe\n  src=${quote(`${site}embed.html?${query.toString()}`)}\n  title=${quote(BODIES[options.body].name.en)}\n  width="${size}"\n  height="${size}"\n  loading="lazy"\n  style="border: 0"\n></iframe>`;
-  }
-  if (kind === "html") {
-    const scripts = [`<script type="module" src="${cdn}/element/+esm"></script>`, ...(shaded ? [`<script type="module" src="${cdn}/${entry}/+esm"></script>`] : [])];
-    return `${scripts.join("\n")}\n\n<wakusei-body ${tagAttrs(options)}></wakusei-body>`;
-  }
-  const imports = [`import "${PACKAGE}/element";`, ...(shaded ? [`import "${PACKAGE}/${entry}";`] : [])];
-  if (kind === "module") {
-    const sets = attributesOf(options).map(([k, v]) => `planet.setAttribute(${JSON.stringify(k)}, ${JSON.stringify(v)});`);
-    return `${imports.join("\n")}\n\nconst planet = document.createElement("wakusei-body");\n${sets.join("\n")}\ndocument.querySelector("#planet").append(planet);`;
-  }
-  const dynamic = [`void import("${PACKAGE}/element");`, ...(shaded ? [`void import("${PACKAGE}/${entry}");`] : [])];
-  if (kind === "react") {
-    const props = attributesOf(options).map(([k, v]) => (v === "" ? k : `${k}=${quote(v)}`)).join(" ");
-    return `import { useEffect } from "react";\n\nexport function Planet() {\n  useEffect(() => {\n    // The element needs a browser, so it is imported in an effect, never at the top of the file.\n${dynamic.map((l) => `    ${l}`).join("\n")}\n  }, []);\n  return <wakusei-body ${props} />;\n}`;
-  }
-  if (kind === "vue") {
-    return `<script setup lang="ts">\nimport { onMounted } from "vue";\n\nonMounted(() => {\n${dynamic.map((l) => `  ${l}`).join("\n")}\n});\n</script>\n\n<template>\n  <wakusei-body ${tagAttrs(options)}></wakusei-body>\n</template>`;
-  }
-  if (kind === "angular") {
-    return `import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from "@angular/core";\n\n@Component({\n  selector: "app-planet",\n  standalone: true,\n  schemas: [CUSTOM_ELEMENTS_SCHEMA],\n  template: \`<wakusei-body ${tagAttrs(options)}></wakusei-body>\`,\n})\nexport class PlanetComponent implements OnInit {\n  ngOnInit(): void {\n    // The element needs a browser: ngOnInit also runs when a server renders.\n    if (typeof window !== "undefined") {\n${dynamic.map((l) => `      ${l}`).join("\n")}\n    }\n  }\n}`;
-  }
-  return `<script lang="ts">\n  import { onMount } from "svelte";\n\n  onMount(() => {\n${dynamic.map((l) => `    ${l}`).join("\n")}\n  });\n</script>\n\n<wakusei-body ${tagAttrs(options)}></wakusei-body>`;
+  const query = new URLSearchParams({ body: options.body, look: options.look ?? "realistic" });
+  if (options.time !== undefined) query.set("time", options.time);
+  if (options.moons === true && options.time !== undefined) query.set("moons", "1");
+  if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
+  return snippet(
+    kind,
+    {
+      tag: "wakusei-body",
+      element: "element",
+      entries: needsShading(options) ? [entryOf(options.body)] : [],
+      attrs: attributesOf(options),
+      name: "planet",
+      iframe: { src: `${site}embed.html?${query.toString()}`, title: BODIES[options.body].name.en, width: size, height: size },
+    },
+    cdn,
+  );
+}
+
+/**
+ * A scene of the portrait builder to put in a page: the scene as the builder writes it in its address, how wide the picture is, and the look to draw it in if not the scene's own.
+ *
+ * @example
+ * ```ts
+ * import { portraitCode, type PortraitEmbed } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * const options: PortraitEmbed = { scene: "look:painted~jupiter_0_0_0.3_0~io_0_0_0.1_0", width: 640 };
+ * console.log(portraitCode(options, "html").includes("wakusei-portrait"));
+ * ```
+ */
+export interface PortraitEmbed {
+  /** The scene as text (`encodeScene`). */
+  scene: string;
+  /** Pixels across; default 720. */
+  width?: number;
+}
+
+/**
+ * The text that puts a portrait scene in a page, for each way a page is made, as `embedCode` does for a single body. The bodies' own entry points are loaded only for the bodies in the scene
+ * (all of them when there are more than six kinds), and none for the line look.
+ *
+ * @param options - The scene and the width.
+ * @param kind - The way the page is made; `html` by default.
+ * @param settings - The CDN and the demo's address, when they are not the package's own.
+ * @returns The text to paste into the page's source.
+ *
+ * @example
+ * ```ts
+ * import { portraitCode } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(portraitCode({ scene: "look:painted~jupiter_0_0_0.3_0~io_0_0_0.1_0" }, "vue"));
+ * ```
+ */
+export function portraitCode(options: PortraitEmbed, kind: EmbedKind = "html", settings: EmbedSettings = {}): string {
+  const cdn = settings.cdn ?? CDN;
+  const site = settings.site ?? SITE;
+  const width = options.width ?? 720;
+  const scene = decodeScene(options.scene);
+  const kinds = [...new Set(scene.items.map((i) => entryOf(i.body)))];
+  const entries = scene.look === "line" ? [] : kinds.length > 6 ? ["all"] : kinds;
+  const attrs: [string, string][] = [["scene", options.scene]];
+  if (width !== 720) attrs.push(["size", String(width)]);
+  return snippet(
+    kind,
+    { tag: "wakusei-portrait", element: "portrait", entries, attrs, name: "portrait", iframe: { src: `${site}embed.html?${new URLSearchParams({ scene: options.scene }).toString()}`, title: "Wakusei Planets portrait", width, height: Math.round(width / scene.aspect) } },
+    cdn,
+  );
 }
 
 /**

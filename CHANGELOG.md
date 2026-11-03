@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0 - 2026-11-03
+
+The portrait builder: any bodies, one picture.
+
+- **`portrait.html` and `<wakusei-portrait>`** (MODULES-231): put the Sun, the planets, Pluto and any of the 25 moons in one picture. Drag a body to move it (in a manual layout it snaps to the middle and edges of the others, with guide lines; hold Alt to switch the snap off), scroll or pinch over it to size it, turn it (the Turn tool, or Shift and a drag: the surface under the pointer follows the pointer, and the arrow keys agree; a body can also turn by itself, the way it really turns), order the bodies front to back, remove them, undo and redo, Centre and Fit all.
+- **Auto-fit and Manual.** Auto-fit places and sizes the bodies and always fits them in: a row, an arc or a grid, at true scale (every size true to the others) or readable (sizes squeezed so the smallest can be seen), with a planet's moons going round it in orbit order, each with its orbit ring (Moons: round their planet, or on their own). Manual keeps every body where it was put and the size it was given, and moving to Manual keeps what Auto-fit had.
+- **One light, a background, names, orbit rings, shadows, a date.** One Sun direction for the whole picture; a black, starry, gradient or clear background; names and orbit rings on or off; shadows (a body can shade another from the Sun, as in an eclipse: `uOcc` in the shader); the sky at a date, with each body's real pole. Line, realistic or painted for the whole scene. Presets: a family photo, the gas giants, Jupiter and the Galileans, the Earth and Moon to scale.
+- **The scene is in the address** (`?scene=...`; `encodeScene`, `decodeScene`), so a link is the picture. **Share** writes the page code in every way a page is made (`portraitCode`, built on the same code as `embedCode`, so `embed.html?scene=...` is the iframe), saves a PNG, saves an SVG (all vector for the line look; the bodies as a picture inside the SVG for the shaded looks) and copies the link.
+- **Performance.** All the bodies of a scene are in ONE three.js scene on the page's one WebGL context; it draws only on a change, thirty times a second at most while something moves, nothing out of sight; pictures are fetched at the size they need and given back. The freeze test plays twelve bodies in one scene (rest, turning, a drag, changes to the scene, the 5K canvas budget).
+- `painter.make(...).update` takes an optional `pose` (a pole and a prime meridian to draw instead of the real ones) and `occluders` (spheres that shade the body from the Sun). `ThreeParts` now includes `Group`: a page that hands over its own three.js subset adds `Group`.
+- New entry point `@johnmorrisdotca/wakusei-planets/portrait`; `addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`, `PORTRAIT_PRESETS` and `portraitCode` in the main one. A guide, "The portrait builder", in English and Japanese.
+
 ## 0.6.0 - 2026-11-03
 
 The demo's pickers, and a scale that is a scale.

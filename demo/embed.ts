@@ -5,8 +5,10 @@
 //   &moons=1                     the planet with its moons on their orbits
 //   &turn=12                     degrees a second it turns by itself (still by default)
 //   &tilt=  &pitch=  &phase=     a portrait's pose, degrees
+//   ?scene=...                   a scene of the portrait builder instead of one body (the text its address holds)
 // It draws only when something changes, and nothing while it is out of sight or the tab is hidden.
 import "../src/element.ts";
+import "../src/portrait/element.ts";
 import "../src/bodies/all.ts";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
@@ -14,14 +16,29 @@ import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 setThreeLoader(() => import("./three-subset.ts"));
 const query = new URLSearchParams(location.search);
 const frame = document.getElementById("frame")!;
-const element = document.createElement("wakusei-body") as WakuseiBody;
-const body = query.get("body") ?? "jupiter";
-element.setAttribute("body", body);
-element.setAttribute("look", query.get("look") ?? "line");
-element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
-for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang"]) {
-  const value = query.get(name);
-  if (value !== null) element.setAttribute(name, value);
+
+function portrait(): void {
+  const view = document.createElement("wakusei-portrait");
+  view.setAttribute("scene", query.get("scene") ?? "");
+  view.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
+  const lang = query.get("lang");
+  if (lang !== null) view.setAttribute("lang", lang);
+  frame.classList.add("portrait");
+  frame.append(view);
 }
-if (query.get("moons") === "1") element.setAttribute("moons", "");
-frame.append(element);
+
+function body(): void {
+  const element = document.createElement("wakusei-body") as WakuseiBody;
+  element.setAttribute("body", query.get("body") ?? "jupiter");
+  element.setAttribute("look", query.get("look") ?? "line");
+  element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
+  for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang"]) {
+    const value = query.get(name);
+    if (value !== null) element.setAttribute(name, value);
+  }
+  if (query.get("moons") === "1") element.setAttribute("moons", "");
+  frame.append(element);
+}
+
+if (query.has("scene")) portrait();
+else body();

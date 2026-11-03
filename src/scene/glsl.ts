@@ -74,7 +74,7 @@ ${painted ? "uniform sampler2D uMap;" : ""}
 varying vec3 vObj;
 varying vec3 vN;
 varying vec3 vW;
-${world ? "varying vec3 vV;" : ""}
+${world ? "varying vec3 vV;\nuniform int uOccN;\nuniform vec4 uOcc[6];" : ""}
 ${PRELUDE}
 ${surface}
 void main() {
@@ -107,6 +107,15 @@ void main() {
       }
     }
   }
+${world ? `  for (int i = 0; i < 6; i++) {
+    if (i >= uOccN) break;
+    vec3 oc = uOcc[i].xyz - vW;
+    float along = dot(oc, uLight);
+    if (along > 0.0) {
+      float miss = length(oc - along * uLight);
+      diff *= 1.0 - 0.92 * (1.0 - smoothstep(uOcc[i].w * 0.8, uOcc[i].w * 1.04 + 0.01, miss));
+    }
+  }` : ""}
   vec3 alb = pow(s.rgb, vec3(2.2));
   vec3 lit = alb * (uAmbient + (1.0 - uAmbient) * diff * 1.18);
   float rim = pow(1.0 - mu, uAtmosPow);

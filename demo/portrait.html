@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b1424'/%3E%3Ccircle cx='50' cy='50' r='24' fill='%2313203a' stroke='%238fa1b8' stroke-width='4'/%3E%3Cellipse cx='50' cy='50' rx='42' ry='12' fill='none' stroke='%238fa1b8' stroke-width='3' transform='rotate(-20 50 50)'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <section class="fam-felt space-stage portrait-stage" aria-labelledby="stage-h">
+        <h1 id="stage-h" class="portrait-title"><span data-say="pt_title">Portrait builder</span></h1>
+        <p class="fam-fine portrait-lede" data-say="pt_lede">Put any bodies of the solar system in one picture. Drag them, size them, turn them, then copy the code or save the picture.</p>
+        <div class="portrait-top">
+          <div class="group fam-seg" id="tools" role="group" aria-label="Tool" data-say-label="pt_tools">
+            <button type="button" data-tool="move" aria-pressed="true" data-say="pt_tool_move">Move</button>
+            <button type="button" data-tool="turn" aria-pressed="false" data-say="pt_tool_turn">Turn</button>
+          </div>
+          <button type="button" class="fam-button" id="undo" data-say="pt_undo" disabled>Undo</button>
+          <button type="button" class="fam-button" id="redo" data-say="pt_redo" disabled>Redo</button>
+          <button type="button" class="fam-button" id="centre" data-say="pt_centre">Centre</button>
+          <button type="button" class="fam-button" id="fit" data-say="pt_fit">Fit all</button>
+        </div>
+        <div id="wrap" class="portrait-wrap" tabindex="0" role="group" aria-label="Portrait" data-testid="portrait-wrap">
+          <wakusei-portrait id="view" size="1100" live="always"></wakusei-portrait>
+        </div>
+        <p class="fam-fine portrait-hint" id="hint" role="status"></p>
+        <div class="chips" id="inscene" role="group" aria-label="In the picture" data-say-label="pt_inscene"></div>
+        <div class="selection" id="selection" role="group" aria-label="Chosen body" data-say-label="pt_sel">
+          <p class="fam-fine" id="sel-name" role="status"></p>
+          <div class="fam-row sel-row" id="sel-controls">
+            <div class="group fam-seg" id="order" role="group" aria-label="Order" data-say-label="pt_inscene">
+              <button type="button" id="o-back" data-say="pt_back">To back</button>
+              <button type="button" id="o-backward" data-say="pt_backward">Backward</button>
+              <button type="button" id="o-forward" data-say="pt_forward">Forward</button>
+              <button type="button" id="o-front" data-say="pt_front">To front</button>
+            </div>
+            <button type="button" class="fam-button" id="addmoons" data-say="pt_addmoons">Add its moons</button>
+            <button type="button" class="fam-button" id="remove" data-danger="true" data-say="pt_remove">Remove</button>
+          </div>
+          <div class="fam-row sel-row">
+            <label class="field"><span data-say="pt_size">Size</span><input type="range" id="size" class="fam-range" min="-5.3" max="1.2" step="0.01" /></label>
+            <label class="field"><span data-say="pt_lean">Lean</span><input type="range" id="lean" class="fam-range" min="-90" max="90" step="1" /></label>
+            <label class="field"><span data-say="pt_over">Look over the pole</span><input type="range" id="over" class="fam-range" min="-90" max="90" step="1" /></label>
+            <span class="fam-label" data-say="pt_turns">Turns by itself</span>
+            <div class="group fam-seg" id="turns" role="group" aria-label="Turns by itself" data-say-label="pt_turns">
+              <button type="button" data-turn="0" aria-pressed="true" data-say="pt_still">Still</button>
+              <button type="button" data-turn="8" aria-pressed="false" data-say="pt_slow">Slow</button>
+              <button type="button" data-turn="30" aria-pressed="false" data-say="pt_fast">Fast</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="fam-panels">
+        <div class="fam-panel portrait-panel">
+          <div class="fam-tabs" role="tablist" id="tabs" aria-label="Choices">
+            <button type="button" role="tab" id="tab-bodies" aria-controls="panel-bodies" aria-selected="true" data-say="pt_tab_bodies">Bodies</button>
+            <button type="button" role="tab" id="tab-arrange" aria-controls="panel-arrange" aria-selected="false" tabindex="-1" data-say="pt_tab_arrange">Arrange</button>
+            <button type="button" role="tab" id="tab-look" aria-controls="panel-look" aria-selected="false" tabindex="-1" data-say="pt_tab_look">Look</button>
+            <button type="button" role="tab" id="tab-share" aria-controls="panel-share" aria-selected="false" tabindex="-1" data-say="pt_tab_share">Share</button>
+          </div>
+
+          <div role="tabpanel" id="panel-bodies" aria-labelledby="tab-bodies">
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_start">Start from</span>
+              <div class="chips" id="presets" role="group" aria-label="Start from" data-say-label="pt_start"></div>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_group">Which bodies</span>
+              <div class="chips" id="groups" role="group" aria-label="Which bodies" data-say-label="pt_group"></div>
+            </div>
+            <div class="chips" id="picker" role="group" aria-label="Bodies"></div>
+          </div>
+
+          <div role="tabpanel" id="panel-arrange" aria-labelledby="tab-arrange" hidden>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_layout">Layout</span>
+              <div class="group fam-seg" id="layouts" role="group" aria-label="Layout" data-say-label="pt_layout">
+                <button type="button" data-layout="auto" aria-pressed="true" data-say="pt_auto">Auto-fit</button>
+                <button type="button" data-layout="manual" aria-pressed="false" data-say="pt_manual">Manual</button>
+              </div>
+            </div>
+            <div class="fam-row" id="arrange-row">
+              <span class="fam-label" data-say="pt_arrange">Arrangement</span>
+              <div class="group fam-seg" id="arranges" role="group" aria-label="Arrangement" data-say-label="pt_arrange">
+                <button type="button" data-arrange="row" aria-pressed="true" data-say="pt_row">Row</button>
+                <button type="button" data-arrange="arc" aria-pressed="false" data-say="pt_arc">Arc</button>
+                <button type="button" data-arrange="grid" aria-pressed="false" data-say="pt_grid">Grid</button>
+              </div>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_scale">Sizes</span>
+              <div class="group fam-seg" id="scales" role="group" aria-label="Sizes" data-say-label="pt_scale">
+                <button type="button" data-scale="true" aria-pressed="false" data-say="pt_true">True scale</button>
+                <button type="button" data-scale="readable" aria-pressed="true" data-say="pt_readable">Readable</button>
+              </div>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_moons">Moons</span>
+              <div class="group fam-seg" id="moons" role="group" aria-label="Moons" data-say-label="pt_moons">
+                <button type="button" data-moons="auto" aria-pressed="true" data-say="pt_moons_auto">Round their planet</button>
+                <button type="button" data-moons="manual" aria-pressed="false" data-say="pt_moons_manual">On their own</button>
+              </div>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_shape">Picture shape</span>
+              <div class="group fam-seg" id="shapes" role="group" aria-label="Picture shape" data-say-label="pt_shape"></div>
+            </div>
+          </div>
+
+          <div role="tabpanel" id="panel-look" aria-labelledby="tab-look" hidden>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_look">Drawn as</span>
+              <div class="group fam-seg" id="looks" role="group" aria-label="Drawn as" data-say-label="pt_look">
+                <button type="button" data-look="line" aria-pressed="false" data-say="look_line">Line</button>
+                <button type="button" data-look="realistic" aria-pressed="true" data-say="look_realistic">Realistic</button>
+                <button type="button" data-look="painted" aria-pressed="false" data-say="look_painted">Painted</button>
+              </div>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_bg">Background</span>
+              <div class="group fam-seg" id="bgs" role="group" aria-label="Background" data-say-label="pt_bg">
+                <button type="button" data-bg="black" aria-pressed="false" data-say="pt_bg_black">Black</button>
+                <button type="button" data-bg="stars" aria-pressed="true" data-say="pt_bg_stars">Stars</button>
+                <button type="button" data-bg="gradient" aria-pressed="false" data-say="pt_bg_gradient">Gradient</button>
+                <button type="button" data-bg="transparent" aria-pressed="false" data-say="pt_bg_transparent">Clear</button>
+              </div>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_sun">Sun direction</span>
+              <label class="field"><span data-say="pt_sun_az">From</span><input type="range" id="sun-az" class="fam-range" min="0" max="359" step="1" /></label>
+              <label class="field"><span data-say="pt_sun_el">Toward you</span><input type="range" id="sun-el" class="fam-range" min="0" max="90" step="1" /></label>
+            </div>
+            <div class="fam-row">
+              <span class="fam-label" data-say="pt_show">Show</span>
+              <button type="button" class="fam-button" id="labels" aria-pressed="true" data-say="pt_labels">Names</button>
+              <button type="button" class="fam-button" id="orbits" aria-pressed="true" data-say="pt_orbits">Orbit rings</button>
+              <button type="button" class="fam-button" id="shadows" aria-pressed="true" data-say="pt_shadows">Shadows</button>
+              <button type="button" class="fam-button" id="skydate" aria-pressed="false" data-say="pt_date">Sky at a date</button>
+              <label class="field" id="date-field" hidden><span data-say="when">Date and time</span><input type="datetime-local" id="when" class="fam-field" /></label>
+            </div>
+          </div>
+
+          <div role="tabpanel" id="panel-share" aria-labelledby="tab-share" hidden>
+            <div class="fam-tabs" role="tablist" id="code-tabs" aria-label="How your page is made" data-say-label="embedKinds"></div>
+            <pre class="codebox" id="code-box" tabindex="0" aria-label="Code for this picture" data-say-label="pt_code"><code id="code"></code></pre>
+            <div class="fam-actions">
+              <button type="button" class="fam-button" data-primary="true" id="copy" data-say="copy">Copy</button>
+              <button type="button" class="fam-button" id="png" data-say="pt_png">Save PNG</button>
+              <button type="button" class="fam-button" id="svg" data-say="pt_svg">Save SVG</button>
+              <button type="button" class="fam-button" id="link" data-say="pt_link">Copy link</button>
+              <a class="fam-button" href="embed.html" id="open" data-say="embedLink">Open the embed page</a>
+              <span class="fam-fine" id="share-status" role="status" aria-live="polite"></span>
+            </div>
+            <p class="fam-fine" id="credit"></p>
+          </div>
+        </div>
+      </div>
+
+      <p class="fam-fine portrait-keys" data-say="pt_keys">Keys: arrows move or turn the chosen body, [ and ] size it, Page Up and Page Down change the order, Delete removes it, Ctrl+Z undoes.</p>
+      <p class="fam-fine credits"><span data-say="credits">Sizes, tilt and rotation: the IAU and NASA fact sheets. Planet positions: JPL approximate elements. Moons: JPL mean elements. The shaded looks are drawn from these numbers, with no pictures. Details in</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts portrait.js-->
+  </body>
+</html>

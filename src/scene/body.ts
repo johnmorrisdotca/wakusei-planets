@@ -12,7 +12,7 @@ import { ringStrip } from "./rings.ts";
 /** The parts of three.js the bodies use: a page may hand over a module with only these (see `setThreeLoader`). */
 export type ThreeParts = Pick<
   typeof THREE,
-  | "AdditiveBlending" | "BufferAttribute" | "BufferGeometry" | "ClampToEdgeWrapping" | "DataTexture" | "DoubleSide" | "Line" | "LineBasicMaterial" | "LinearFilter" | "Mesh" | "NoColorSpace"
+  | "AdditiveBlending" | "BufferAttribute" | "BufferGeometry" | "ClampToEdgeWrapping" | "DataTexture" | "DoubleSide" | "Group" | "Line" | "LineBasicMaterial" | "LinearFilter" | "Mesh" | "NoColorSpace"
   | "OrthographicCamera" | "PlaneGeometry" | "RepeatWrapping" | "RGBAFormat" | "RingGeometry" | "Scene" | "ShaderMaterial" | "SphereGeometry" | "TextureLoader" | "Vector2" | "Vector3" | "WebGLRenderer"
 >;
 

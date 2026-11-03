@@ -80,6 +80,10 @@ export interface PaintInfo {
   toSun: Vec3;
   ms: number;
   radiusPx: number;
+  /** The pole and the prime meridian to draw instead of the body's real ones at `ms` (a portrait's own pose), in the scene's axes. */
+  pose?: { pole: Vec3; meridian: Vec3 };
+  /** Spheres that may shade this body from the Sun: x, y, z (from this body's centre) and radius, all in this body's radii, in the scene's axes. At most six are used. */
+  occluders?: readonly (readonly [number, number, number, number])[];
 }
 
 /**
@@ -221,6 +225,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       uRingTex: { value: null },
       uMap: { value: null },
       uScale: { value: 1 },
+      uOccN: { value: 0 },
+      uOcc: { value: new Float32Array(24) },
     };
   };
   const material = (painted: boolean): THREE.ShaderMaterial => {
@@ -416,16 +422,21 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       light.set(info.toSun[0], info.toSun[1], info.toSun[2]);
       const scale = group.scale.x || 1;
       if (look.emissive !== true) {
-        const { pole, meridian } = orientation(id, info.ms);
+        const { pole, meridian } = info.pose ?? orientation(id, info.ms);
         const east = cross(pole, meridian);
         basis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
         if (ringMesh !== undefined) basis(ringMesh, meridian, east, pole);
         poleVec.set(pole[0], pole[1], pole[2]);
       }
+      const occluders = info.occluders ?? [];
+      const shaded = Math.min(6, occluders.length);
       for (const m of materials) {
         (m.uniforms.uLight!.value as THREE.Vector3).copy(light);
         m.uniforms.uScale!.value = scale;
         (m.uniforms.uRingN!.value as THREE.Vector3).copy(poleVec);
+        m.uniforms.uOccN!.value = shaded;
+        const packed = m.uniforms.uOcc!.value as Float32Array;
+        for (let i = 0; i < shaded; i += 1) packed.set(occluders[i]!, i * 4);
       }
       if (ringMaterial !== undefined) {
         (ringMaterial.uniforms.uLight!.value as THREE.Vector3).copy(light);

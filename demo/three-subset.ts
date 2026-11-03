@@ -7,6 +7,7 @@ export {
   ClampToEdgeWrapping,
   DataTexture,
   DoubleSide,
+  Group,
   Line,
   LineBasicMaterial,
   LinearFilter,

@@ -8,21 +8,29 @@ import { FAMILY_SCRIPT, familyFooter, familyHead, familyHeader, familyUnreviewed
 const id = "wakusei-planets";
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
+const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
-/** The page's text with the family's blocks put in where its comments say. */
-export function renderIndex(): string {
-  const html = readFileSync(new URL("../demo/index.html", import.meta.url), "utf8");
+/** The family's scripts and the language chooser, then the page's own module. */
+const scripts = (script: string): string =>
+  `<script>${FAMILY_SCRIPT}</script>\n<script>window.wakuseiLanguage = familyLanguage({ id: ${JSON.stringify(id)}, words: ${JSON.stringify(WORDS)}, onChange: function (lang) { window.dispatchEvent(new CustomEvent('wakusei-language', { detail: { lang: lang } })); } });</script>\n<script type="module" src="kazoku-parts.js"></script>\n<script type="module" src="${script}"></script>`;
+
+/** A page of the demo with the family's blocks put in where its comments say. */
+function render(file: string, title: string, description: string): string {
+  const html = readFileSync(new URL(`../demo/${file}`, import.meta.url), "utf8");
   return html
-    .replace("<!--family:head-->", familyHead({ id, title: TITLE, description: DESCRIPTION }))
-    .replace("<!--family:header-->", familyHeader({ id, links: [{ href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }] }))
+    .replace("<!--family:head-->", familyHead({ id, title, description }))
+    .replace("<!--family:header-->", familyHeader({ id, links: LINKS }))
     .replace("<!--family:unreviewed-->", familyUnreviewed({ id }))
     .replace("<!--family:footer-->", familyFooter({ id }))
-    .replace(
-      /<!--family:scripts ([\w.-]+)-->/,
-      (_, script: string) =>
-        `<script>${FAMILY_SCRIPT}</script>\n<script>window.wakuseiLanguage = familyLanguage({ id: ${JSON.stringify(id)}, words: ${JSON.stringify(WORDS)}, onChange: function (lang) { window.dispatchEvent(new CustomEvent('wakusei-language', { detail: { lang: lang } })); } });</script>\n<script type="module" src="kazoku-parts.js"></script>\n<script type="module" src="${script}"></script>`,
-    );
+    .replace(/<!--family:scripts ([\w.-]+)-->/, (_, script: string) => scripts(script));
 }
+
+/** The demo's page. */
+export const renderIndex = (): string => render("index.html", TITLE, DESCRIPTION);
+
+/** The portrait builder's page. */
+export const renderPortrait = (): string =>
+  render("portrait.html", "Wakusei Planets 惑星: portrait builder", "Put any bodies of the solar system in one picture: drag, size, turn and light them, arrange them in a row, an arc or a grid, then copy the code or save a PNG or SVG.");
 
 /** demo/embed.html, the frame a page puts in an iframe: plain, no family blocks. */
 export function renderEmbed(): string {

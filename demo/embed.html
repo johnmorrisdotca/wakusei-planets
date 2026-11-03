@@ -11,6 +11,8 @@
       body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
       #frame { width: min(100vw, 100vh); height: min(100vw, 100vh); touch-action: none; outline-offset: -3px; }
       #frame:focus-visible { outline: 3px solid #6cd0ff; }
+      #frame.portrait { width: 100vw; height: auto; max-height: 100vh; }
+      wakusei-portrait { --wakusei-size: 100%; width: 100%; max-width: none; }
       wakusei-body { --wakusei-size: 100%; display: block; width: 100%; max-width: none; aspect-ratio: 1; }
     </style>
   </head>
