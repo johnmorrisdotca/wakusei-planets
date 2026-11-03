@@ -46,7 +46,7 @@ SOURCES = {
 # A source with less than 2048 pixels across is not made at 2048.
 MAX_WIDTH = {"europa": 1024}
 # Pictures full of fine detail get a lower WebP quality, to keep the package small.
-QUALITY = {"rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 70, "dione": 70, "iapetus": 70}
+QUALITY = {"rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 62, "dione": 62, "iapetus": 64}
 META = os.path.join(OUT, "SOURCES.json")
 # Commons names no author for this file: the images are Galileo SSI and Voyager's, NASA and JPL's, and Commons marks the file public domain.
 CREDIT_FALLBACK = {"io": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author"}
@@ -274,7 +274,7 @@ def lat_strip_to_equirect(strip, lat_max, width):
     return extend_poles(out, pad, pad + resized.shape[0] - 1)
 
 
-def fill_unseen(img, side, margin=8, fade=0.2):
+def fill_unseen(img, side, margin=8, fade=0.2, depth=4):
     """A map with a black region where nothing was imaged (the polar night): `side` is `north` (black above) or `south` (black below). Each column keeps its real rows; above (or below) the first of them it
     continues with the colour just inside the edge, blurred a long way along the row, and fades to the picture's mean colour away from it."""
     work = img if side == "north" else img[::-1]
@@ -283,8 +283,8 @@ def fill_unseen(img, side, margin=8, fade=0.2):
     edge = np.array([next((r for r in range(h - 12) if real[r : r + 12, c].all()), h - 1) for c in range(w)])
     pad = np.pad(edge, 20, mode="wrap")
     edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 41), axis=1).astype(int) + margin
-    mean = work[real].mean(axis=0)
-    band = np.stack([work[e + 4 : e + 30].mean(axis=0)[0:1][0] if False else work[min(e + 4, h - 31) : min(e + 30, h - 1), c].mean(axis=0) for c, e in enumerate(edge)])
+    mean = np.median(work[real], axis=0)
+    band = np.stack([work[min(e + depth, h - 31) : min(e + depth + 26, h - 1), c].mean(axis=0) for c, e in enumerate(edge)])
     k = np.ones(w // 12) / (w // 12)
     band = np.stack([np.convolve(np.pad(band[:, c], w // 24, mode="wrap"), k, mode="valid")[:w] for c in range(3)], axis=1)
     out = work.copy()
@@ -384,9 +384,9 @@ def make(body):
     elif body == "iapetus":
         img = desaturate(roll(img, 0.5), 0.7)
     elif body == "triton":
-        img = desaturate(fill_unseen(img, "north", fade=0.2), 0.45)
+        img = desaturate(fill_unseen(img, "north", margin=30, fade=0.2, depth=60), 0.45)
     elif body == "charon":
-        img = fill_unseen(img, "south", fade=0.1)
+        img = fill_unseen(img, "south", margin=12, fade=0.1, depth=40)
     elif body == "mimas":
         img = img[163:1951, 201:3736]
     big = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))

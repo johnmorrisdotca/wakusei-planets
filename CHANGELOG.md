@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0 - 2026-11-03
+
+Painted maps for five more moons.
+
+- **Tethys, Dione, Iapetus, Triton and Charon are painted** (MODULES-220), from public-domain maps: Cassini's global colour maps of Tethys, Dione and Iapetus (Paul Schenk, PIA18439, PIA18434, PIA18436), Voyager 2's global colour mosaic of Triton (PIA18668) and New Horizons' global map of Charon. Every source file is public domain by its Wikimedia Commons file page, and `NOTICE.md` has each one's credit and what was done to it, including where the map was centred (turned to match known features: Tethys's crater Odysseus, Iapetus's dark Cassini Regio; Triton's centre is from the USGS label of the same mosaic) and the unmapped north of Triton and south of Charon, which are continued smoothly from the real rows.
+- The pictures add 0.45 MB to the package (the 512 and 1024 pixel widths; the 2048 ones are fetched when a view is zoomed in), which makes the pictures 1.94 MB; the test that holds their size now allows 2 MB.
+
 ## 0.9.0 - 2026-11-03
 
 The other dwarf planets.

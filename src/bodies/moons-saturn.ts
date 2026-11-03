@@ -9,8 +9,8 @@ registerLook({
   relief: 0.3,
   painted: { map: "enceladus", widths: [512, 1024, 2048], far: 2048 },
 });
-registerLook({ id: "tethys", surface: rock({ dark: "#8f8d88", light: "#d0cec9", craters: 1.2, contrast: 0.9, seed: 14, patches: 2.2, extra: "float od = bowl(p, 232.0, 5.0, 24.0, 0.6); h += od; col *= 1.0 + 0.7 * od;" }), relief: 0.8, ambient: 0.02 });
-registerLook({ id: "dione", surface: rock({ dark: "#8c8a85", light: "#cdcbc5", craters: 1, contrast: 0.9, seed: 18, patches: 2.6 }), relief: 0.8, ambient: 0.02 });
+registerLook({ id: "tethys", surface: rock({ dark: "#8f8d88", light: "#d0cec9", craters: 1.2, contrast: 0.9, seed: 14, patches: 2.2, extra: "float od = bowl(p, 232.0, 5.0, 24.0, 0.6); h += od; col *= 1.0 + 0.7 * od;" }), relief: 0.8, ambient: 0.02, painted: { map: "tethys", widths: [512, 1024, 2048], far: 2048 } });
+registerLook({ id: "dione", surface: rock({ dark: "#8c8a85", light: "#cdcbc5", craters: 1, contrast: 0.9, seed: 18, patches: 2.6 }), relief: 0.8, ambient: 0.02, painted: { map: "dione", widths: [512, 1024, 2048], far: 2048 } });
 registerLook({ id: "rhea", surface: rock({ dark: "#8a8883", light: "#cac8c2", craters: 1.5, contrast: 0.9, seed: 24, patches: 2 }), relief: 0.85, ambient: 0.02, painted: { map: "rhea", widths: [512, 1024, 2048], far: 2048 } });
 registerLook({
   id: "titan",
@@ -32,4 +32,5 @@ registerLook({
   }),
   relief: 0.7,
   ambient: 0.02,
+  painted: { map: "iapetus", widths: [512, 1024, 2048], far: 2048 },
 });
