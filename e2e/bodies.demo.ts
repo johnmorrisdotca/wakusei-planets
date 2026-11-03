@@ -1,11 +1,9 @@
 // The bodies the page shows, looked at in a real browser (Chromium, drawn in software): the Earth is a picture like the others in every look, in the big view and in the row; no tile is a flat square or a
 // dot; "To scale" is a lineup whose sizes are true to each other; every moon has a tile and opens; the body cannot be dragged out of the view and Fit brings it back.
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { SOFTWARE_GL_ARGS } from "@johnmorrisdotca/kazoku-ui/testing";
 import { BODIES, MOONS_OF } from "../src/index.ts";
 
 const URL = "/wakusei-planets/";
-test.use({ launchOptions: { args: [...SOFTWARE_GL_ARGS] } });
 
 /** What a picture holds: how many pixels differ from its corner (the background), how many distinct colours, and whether the corners are background. */
 async function look(page: Page, locator: Locator): Promise<{ drawn: number; colours: number; cornersClear: boolean }> {
