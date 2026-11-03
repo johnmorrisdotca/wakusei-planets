@@ -115,23 +115,18 @@ test("every moon has a tile under its planet, and opens in the big view, deep-li
   await expect(page.locator("#main")).toHaveAttribute("body", "neptune");
 });
 
-test("the body cannot be dragged out of the view, and Fit brings it back to the middle", async ({ page }) => {
+test("the body cannot be dragged out of the view, and Centre brings it back to the middle", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=mars`);
   const view = page.locator("#view");
   const box = (await view.boundingBox())!;
-  // zoom in so the view can be moved, then drag far off
-  await page.evaluate(() => Reflect.get(document.querySelector("kazoku-view-controls")!, "controller").set({ zoom: 2, panX: 40, panY: -40 }, true, "set"));
+  const state = (): Promise<{ panX: number; panY: number; yaw: number; tilt: number; zoom: number }> => page.evaluate(() => Reflect.get(document.querySelector("kazoku-view-controls")!, "controller").state);
+  await page.evaluate(() => Reflect.get(document.querySelector("kazoku-view-controls")!, "controller").set({ zoom: 2, panX: 40, panY: -40, yaw: 40 }, true, "set"));
   await page.waitForTimeout(300);
-  const svg = page.locator("#main svg").first();
-  const at = (await svg.boundingBox())!;
+  const at = (await page.locator("#main svg").first().boundingBox())!;
   expect(at.x + at.width, "some of the body is still in the view").toBeGreaterThan(box.x);
   expect(at.x, "some of the body is still in the view").toBeLessThan(box.x + box.width);
-  const centred = (await page.evaluate(() => {
-    const controller = Reflect.get(document.querySelector("kazoku-view-controls")!, "controller");
-    controller.set({ yaw: 40, panX: 40 }, true, "set");
-    return controller.state;
-  })) as { panX: number };
-  expect(centred.panX).toBe(40);
-  await page.getByRole("button", { name: /^fit$/i }).first().click();
-  await expect.poll(async () => (await page.evaluate(() => Reflect.get(document.querySelector("kazoku-view-controls")!, "controller").state)) as { panX: number; yaw: number }, { timeout: 5000 }).toMatchObject({ panX: 0, yaw: 0 });
+  expect(at.y + at.height, "some of the body is still in the view").toBeGreaterThan(box.y);
+  expect(at.y, "some of the body is still in the view").toBeLessThan(box.y + box.height);
+  await page.getByRole("button", { name: /centre|中央/i }).first().click();
+  await expect.poll(async () => await state(), { timeout: 5000 }).toMatchObject({ panX: 0, panY: 0, yaw: 0, tilt: 0 });
 });

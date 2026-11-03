@@ -21,7 +21,7 @@ test("the code follows the body, the look, the date, the moons and the size, for
     await expect(code, kind).toContainText(needle);
     await expect(page.locator(`#embed-tabs [data-kind="${kind}"]`)).toHaveAttribute("aria-selected", "true");
   }
-  await expect(page).toHaveURL(/embed=svelte/);
+  await expect(page).toHaveURL(/embed=iframe/);
   await page.locator('.tile[data-body="saturn"]').click();
   await expect(code).toContainText("body=saturn");
 });

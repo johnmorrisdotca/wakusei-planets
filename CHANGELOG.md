@@ -7,6 +7,7 @@
 - **Set up a body, copy the code.** The demo's last section follows what is set up above it (body, look, sky and date, moons, turning) and a size (160, 240, 320 or 480), and writes working code for plain HTML from jsDelivr, an ES module, React, Vue, Angular, Svelte and an iframe of the embed page, on tabs that answer the arrow keys, beside a picture made from the same choices, with a Copy button and the credits that go with the picture. The choices are kept in the address (`?embed=react&size=240`).
 - **`embedCode(options, kind, settings)` and `embedCredit(options)`** make the same text for a page of your own (`EMBED_KINDS`: `html`, `module`, `react`, `vue`, `angular`, `svelte`, `iframe`). Pattern: senshu-jerseys' `embedCode` and its tabbed "Put it in your page". Every snippet is tested (`test/embed.test.ts`): the React component is built and rendered, the Vue and Svelte components compiled, the Angular template parsed, the module checked as TypeScript, the iframe's address read the way the embed page reads it, and every body's entry point exists in the package.
 - A guide, "Put it in your page", in English and Japanese.
+- **kazoku-ui 0.11.0**: the view controls' Centre button (it appears once the body is dragged away), a pan that keeps a quarter of the body in sight (told the body's size with `object-size`), and a drag that keeps the touched point under the pointer (`grab-radius`). The 0.3.1 stopgap that made Fit re-centre is gone.
 
 ## 0.3.1
 

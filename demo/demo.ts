@@ -261,6 +261,14 @@ if (main && controls && tilesBox) {
         part.limb?.classList.toggle("line", state.look === "line");
       }
     }
+    // the view controls hold the body in sight (a quarter of it stays in) and grab it exactly: they are told how big it is at Fit
+    const view = document.querySelector<HTMLElement>("#view")!;
+    const side = Math.min(view.clientWidth || 560, view.clientHeight || 560);
+    const f = BODIES[state.body];
+    const half = state.moons && hasMoons() ? 6 : state.body === "sun" ? 1.55 : Math.max(1.06, (f.rings ? 2.4 : 0) * 1.04);
+    const disc = Math.max(24, Math.round(side / half));
+    Reflect.set(controls!, "objectSize", { width: disc, height: disc });
+    controls!.setAttribute("grab-radius", String(Math.round(disc / 2)));
     describe();
     address.set("body", state.body);
     address.set("look", state.look);
@@ -379,8 +387,6 @@ if (main && controls && tilesBox) {
   controls.addEventListener("kazoku-viewchange", (event) => {
     const detail = (event as CustomEvent<ViewChangeDetail>).detail;
     main.setView(detail);
-    // Fit brings the body back to the middle at its first angle, however far it was moved or turned
-    if (detail.reason === "fit" && (detail.panX !== 0 || detail.panY !== 0 || detail.yaw !== 0 || detail.tilt !== 0)) Reflect.get(controls, "controller").set({ yaw: 0, tilt: 0, panX: 0, panY: 0 }, true, "centre");
   });
   // a tap or a hover on the big view makes it live; the controls make it live too
   controls.addEventListener("pointerdown", () => void main.goLive());
