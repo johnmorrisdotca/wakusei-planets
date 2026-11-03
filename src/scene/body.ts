@@ -132,28 +132,55 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       mesh.frustumCulled = false;
       scene.add(mesh);
 
-      // rings
-      const strip = ringStrip(facts, 1024);
+      // rings: a picture of them when the look has one (painted), else the table's strip
+      const loadImage = (url: string): Promise<THREE.Texture> =>
+        new Promise((resolve, reject) => {
+          const loader = new T.TextureLoader();
+          loader.setCrossOrigin("anonymous");
+          loader.load(url, (t) => resolve(t), undefined, (e) => reject(e instanceof Error ? e : new Error("texture failed")));
+        });
+      const table = ringStrip(facts, 1024);
+      const photo = wantPainted && table !== null ? look.painted?.rings : undefined;
+      let photoTexture: THREE.Texture | undefined;
+      if (photo !== undefined) {
+        try {
+          photoTexture = await loadImage(`${options.textureBase()}${photo.map}-${photo.width}.webp`);
+        } catch {
+          photoTexture = undefined;
+        }
+      }
+      const ringInner = photo !== undefined && photoTexture !== undefined ? photo.from / facts.radiusKm : (table?.inner ?? 1);
+      const ringOuter = photo !== undefined && photoTexture !== undefined ? photo.to / facts.radiusKm : (table?.outer ?? 2);
+      const ringKey = photoTexture !== undefined ? `${options.id}:p` : options.id;
       let ringMesh: THREE.Mesh | undefined;
-      let ringTexture: THREE.DataTexture | undefined;
+      let ringTexture: THREE.Texture | undefined;
       let ringMaterial: THREE.ShaderMaterial | undefined;
-      if (strip !== null && look.emissive !== true) {
-        ringTexture = assets.acquire(`wk:ringtex:${options.id}`, () => {
-          const tex = new T.DataTexture(strip.data, strip.width, 1, T.RGBAFormat);
+      if (table !== null && look.emissive !== true) {
+        ringTexture = assets.acquire(`wk:ringtex:${ringKey}`, () => {
+          if (photoTexture !== undefined) {
+            photoTexture.magFilter = T.LinearFilter;
+            photoTexture.minFilter = T.LinearFilter;
+            photoTexture.generateMipmaps = false;
+            photoTexture.wrapS = T.ClampToEdgeWrapping;
+            photoTexture.colorSpace = T.NoColorSpace;
+            return photoTexture;
+          }
+          const tex = new T.DataTexture(table.data, table.width, 1, T.RGBAFormat);
           tex.magFilter = T.LinearFilter;
           tex.minFilter = T.LinearFilter;
           tex.wrapS = T.ClampToEdgeWrapping;
           tex.needsUpdate = true;
           return tex;
         }, (t) => t.dispose());
-        const ringGeometry = assets.acquire(`wk:ring:${options.id}`, () => new T.RingGeometry(strip.inner, strip.outer, 256, 1), (g) => g.dispose());
-        ringMaterial = assets.acquire(`wk:ringmat:${options.id}`, () => new T.ShaderMaterial({
+        if (photoTexture !== undefined && ringTexture !== photoTexture) photoTexture.dispose();
+        const ringGeometry = assets.acquire(`wk:ring:${ringKey}`, () => new T.RingGeometry(ringInner, ringOuter, 256, 1), (g) => g.dispose());
+        ringMaterial = assets.acquire(`wk:ringmat:${ringKey}`, () => new T.ShaderMaterial({
           vertexShader: RING_VERTEX,
           fragmentShader: RING_FRAGMENT,
           side: T.DoubleSide,
           transparent: true,
           depthWrite: false,
-          uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(strip.inner, strip.outer) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) } },
+          uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) } },
         }), (m) => m.dispose());
         ringMesh = new T.Mesh(ringGeometry, ringMaterial);
         ringMesh.frustumCulled = false;
@@ -187,13 +214,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const tried = new Set<number>();
       let latest: SceneState = options.state();
 
-      const loadTexture = (w: number): Promise<THREE.Texture> =>
-        new Promise((resolve, reject) => {
-          const loader = new T.TextureLoader();
-          loader.setCrossOrigin("anonymous");
-          const far = look.painted!.far !== undefined && w >= look.painted!.far;
-          loader.load(`${far ? options.farBase() : options.textureBase()}${look.painted!.map}-${w}.webp`, (t) => resolve(t), undefined, (e) => reject(e instanceof Error ? e : new Error("texture failed")));
-        });
+      const loadTexture = (w: number): Promise<THREE.Texture> => {
+        const far = look.painted!.far !== undefined && w >= look.painted!.far;
+        return loadImage(`${far ? options.farBase() : options.textureBase()}${look.painted!.map}-${w}.webp`);
+      };
       const use = (t: THREE.Texture, w: number): void => {
         t.anisotropy = 4;
         t.wrapS = T.RepeatWrapping;
@@ -302,7 +326,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         orient(state);
         frame(state);
         place(state);
-        if (ringMaterial !== undefined && strip !== null) {
+        if (ringMaterial !== undefined) {
           const light = v3(T, state.pose.light);
           const pole = v3(T, state.pose.pole);
           ringMaterial.uniforms.uLight!.value.copy(light);
@@ -311,7 +335,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             if (mat === undefined) continue;
             mat.uniforms.uRingOn!.value = 1;
             mat.uniforms.uRingN!.value.copy(pole);
-            mat.uniforms.uRingR!.value.set(strip.inner, strip.outer);
+            mat.uniforms.uRingR!.value.set(ringInner, ringOuter);
             mat.uniforms.uRingTex!.value = ringTexture;
           }
         }

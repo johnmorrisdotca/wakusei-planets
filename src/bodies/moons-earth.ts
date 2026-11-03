@@ -34,4 +34,5 @@ registerLook({
   }),
   relief: 0.8,
   ambient: 0.02,
+  painted: { map: "moon", widths: [512, 1024, 2048], far: 2048 },
 });

@@ -10,8 +10,11 @@ const notice = readFileSync("NOTICE.md", "utf8");
 
 test("every painted look has all its pictures, and every picture is one a look names", () => {
   const painted = BODY_IDS.map((id) => lookOf(id)?.painted).filter((p): p is NonNullable<typeof p> => p !== undefined);
-  assert.equal(painted.length, 9);
-  for (const map of painted) for (const width of map.widths) assert.ok(existsSync(`textures/${map.map}-${width}.webp`), `${map.map}-${width}`);
+  assert.equal(painted.length, 18);
+  for (const map of painted) {
+    for (const width of map.widths) assert.ok(existsSync(`textures/${map.map}-${width}.webp`), `${map.map}-${width}`);
+    if (map.rings) assert.ok(existsSync(`textures/${map.rings.map}-${map.rings.width}.webp`), map.rings.map);
+  }
 });
 
 test("each picture's source is public domain or CC0, and credited in NOTICE.md", () => {
@@ -21,13 +24,14 @@ test("each picture's source is public domain or CC0, and credited in NOTICE.md",
   }
 });
 
-test("the pictures of the package are small: the widths that ship stay within 1.2 MB, and the sharpest is far", () => {
+test("the pictures of the package are small: the widths that ship stay within 1.5 MB, and the sharpest is far", () => {
   let bytes = 0;
   for (const id of BODY_IDS) {
     const map = lookOf(id)?.painted;
     if (map === undefined) continue;
-    assert.equal(map.far, 2048);
+    if (map.widths.includes(2048)) assert.equal(map.far, 2048);
     for (const width of map.widths) if (width < (map.far ?? Infinity)) bytes += statSync(`textures/${map.map}-${width}.webp`).size;
+    if (map.rings) bytes += statSync(`textures/${map.rings.map}-${map.rings.width}.webp`).size;
   }
-  assert.ok(bytes < 1.2 * 1024 * 1024, String(bytes));
+  assert.ok(bytes < 1.5 * 1024 * 1024, String(bytes));
 });

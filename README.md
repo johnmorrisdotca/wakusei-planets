@@ -72,9 +72,9 @@ A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (a
 |---|---|---|
 | `line` | A clean outline drawing with the body's key features: bands, craters, rings and their gaps, caps, the dark side dashed off. An SVG. | nothing |
 | `realistic` | A shaded sphere drawn from the body's real colours and features, lit from the Sun's side, with the rings casting shadows. No pictures: the surface is worked out in a shader. | `three`, the body's entry point |
-| `painted` | A real surface map from public-domain NASA, USGS and JPL imagery. Small pictures first (0.53 MB for all nine in the package), a sharper one fetched when you zoom in. | `three`, the body's entry point |
+| `painted` | A real surface map from public-domain NASA, USGS and JPL imagery. Small pictures first (1.31 MB for all of them in the package), a sharper one fetched when you zoom in. | `three`, the body's entry point |
 
-Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are 25 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra). The Earth is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe, not a second copy: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` installed). The painted looks cover the Sun and the planets from Mercury to Pluto.
+Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are 25 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra). The Earth is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe, not a second copy: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` installed). The painted looks cover the Sun, the planets from Mercury to Pluto, the Moon, the four Galilean moons, Titan, Rhea, Enceladus and Mimas, and Saturn's rings are Cassini's own picture of them.
 
 ## As the Earth sees it
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Makes textures/<body>-<width>.webp, the painted looks' surface maps, from public-domain imagery on Wikimedia Commons (NASA, USGS, JPL).
-Usage: python3 scripts/make-textures.py [body ...]     (needs numpy and Pillow; originals are kept in .cache/src, never in the repository)
+Usage: python3 scripts/make-textures.py [body ... | saturn-ring]     (needs numpy and Pillow; originals are kept in .cache/src, never in the repository)
 Each source's licence is read from Commons' own metadata for the file and the script stops unless it says public domain or CC0.
 Maps are equirectangular, 2:1, longitude 0 in the middle and east to the right, north at the top. A planet with no global map (Saturn, Uranus, Neptune, the Sun) is made from one
 photograph by turning the visible hemisphere back onto the sphere, taking the limb darkening off, and repeating the far side from the near one (mirrored at the limb)."""
@@ -26,7 +26,24 @@ SOURCES = {
     "neptune": ("Neptune Full (original).jpg", 2188),
     "pluto": ("Pluto color mapmosaic.jpg", 4096),
     "sun": ("SDO 20240810 000000 4096 HMIIC (HMI).jpg", 2048),
+    "moon": ("CGI Moon Kit - Lroc color poles.tif", 4096),
+    "io": ("Io from Galileo and Voyager missions.jpg", 4096),
+    "europa": ("Europa Voyager GalileoSSI global mosaic.jpg", 1024),
+    "ganymede": ("Ganymede equatorial.jpg", 3126),
+    "callisto": ("Callisto equatorial.jpg", 4096),
+    "titan": ("Titan map April 2011 full.png", 4046),
+    "rhea": ("Rhea Color Map.jpg", 4096),
+    "enceladus": ("Enceladus Color Map.jpg", 4096),
+    "mimas": ("Map of Mimas 2010-02 PIA12780.jpg", 3840),
+    "saturn-ring": ("Saturn's rings in visible light and radio.jpg", 3840),
 }
+# A source with less than 2048 pixels across is not made at 2048.
+MAX_WIDTH = {"europa": 1024}
+# Pictures full of fine detail get a lower WebP quality, to keep the package small.
+QUALITY = {"rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74}
+META = os.path.join(OUT, "SOURCES.json")
+# Commons names no author for this file: the images are Galileo SSI and Voyager's, NASA and JPL's, and Commons marks the file public domain.
+CREDIT_FALLBACK = {"io": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author"}
 
 
 def api(**p):
@@ -36,14 +53,19 @@ def api(**p):
 
 
 def licence(title):
-    page = list(api(action="query", titles="File:" + title, prop="imageinfo", iiprop="extmetadata", iiextmetadatafilter="LicenseShortName|Credit")["query"]["pages"].values())[0]
+    page = list(api(action="query", titles="File:" + title, prop="imageinfo", iiprop="extmetadata", iiextmetadatafilter="LicenseShortName|Credit|Artist|UsageTerms")["query"]["pages"].values())[0]
     meta = page["imageinfo"][0]["extmetadata"]
-    return meta.get("LicenseShortName", {}).get("value", ""), page["title"]
+    return meta.get("LicenseShortName", {}).get("value", ""), page["title"], meta
+
+
+def strip_tags(text):
+    import re
+    return re.sub(r"<[^>]+>", "", text).strip()
 
 
 def fetch(body):
     title, width = SOURCES[body]
-    lic, page = licence(title)
+    lic, page, meta = licence(title)
     if not (lic.lower().startswith("public domain") or lic.lower().startswith("cc0")):
         sys.exit(f"{body}: {title} is '{lic}', not public domain: not used")
     path = os.path.join(CACHE, body + ".jpg")
@@ -53,7 +75,24 @@ def fetch(body):
             f.write(r.read())
         time.sleep(2)
     print(f"{body}: {page} ({lic})")
+    record(body, {
+        "file": title,
+        "page": "https://commons.wikimedia.org/wiki/" + page.replace(" ", "_"),
+        "licence": lic,
+        "credit": strip_tags(meta.get("Credit", {}).get("value", "")) or CREDIT_FALLBACK.get(body, ""),
+        "artist": strip_tags(meta.get("Artist", {}).get("value", "")) or CREDIT_FALLBACK.get(body, ""),
+        "usage": meta.get("UsageTerms", {}).get("value", lic),
+    })
     return np.asarray(Image.open(path).convert("RGB"), dtype=np.float32) / 255.0
+
+
+def record(body, entry):
+    """textures/SOURCES.json: the file page, licence and credit of each source, as Commons gave them."""
+    data = json.load(open(META)) if os.path.exists(META) else {}
+    data[body] = entry
+    with open(META, "w") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 def fill_black_rows(img, trim=0.07):
@@ -169,6 +208,74 @@ def smooth_rows(img, lo, hi, amount=1):
     return out
 
 
+def extend_poles(img, top, bottom, window=24):
+    """Rows above `top` and below `bottom` (the poles a strip does not reach): from the nearest rows that hold data, blurred a long way along the row, they fade to that band's one mean colour at the pole."""
+    out = img.copy()
+    w = img.shape[1]
+    k = np.ones(w // 10) / (w // 10)
+
+    def fill(edge_a, edge_b, rows):
+        r = img[edge_a:edge_b].mean(axis=0)
+        blur = np.stack([np.convolve(np.pad(r[:, c], w // 20, mode="wrap"), k, mode="valid")[:w] for c in range(3)], axis=1)
+        mean = r.mean(axis=0)
+        n = len(rows)
+        for j, i in enumerate(rows):
+            t = (j + 1) / n
+            t = t * t * (3 - 2 * t)
+            out[i] = blur * (1 - t) + mean * t
+
+    fill(top, top + window, range(top - 1, -1, -1))
+    fill(bottom - window + 1, bottom + 1, range(bottom + 1, img.shape[0]))
+    # the last rows of real data fade into the fill, so the edge is not a line on the sphere
+    feather = max(8, img.shape[0] // 20)
+    for j in range(feather):
+        t = j / feather
+        t = t * t * (3 - 2 * t)
+        out[top + j] = out[top - 1] * (1 - t) + img[top + j] * t
+        out[bottom - j] = out[bottom + 1] * (1 - t) + img[bottom - j] * t if bottom + 1 < img.shape[0] else out[bottom - j]
+    return out
+
+
+def mercator_to_equirect(strip, lat_max, width):
+    """A Mercator strip (one turn round, +- lat_max degrees) as an equirectangular map `width` across and half as high; the poles it does not reach repeat its last rows."""
+    h, w, _ = strip.shape
+    scale = width / w
+    resized = np.asarray(Image.fromarray((strip * 255).astype(np.uint8)).resize((width, max(2, round(h * scale))), Image.LANCZOS), dtype=np.float32) / 255.0
+    rh = resized.shape[0]
+    merc = lambda lat: np.log(np.tan(np.pi / 4 + np.radians(lat) / 2))
+    ymax = merc(lat_max)
+    out_h = width // 2
+    lat = 90 - (np.arange(out_h) + 0.5) / out_h * 180
+    inside = np.abs(lat) <= lat_max
+    src = np.zeros(out_h)
+    src[inside] = (ymax - merc(lat[inside])) / (2 * ymax) * rh - 0.5
+    src = np.clip(src, 0, rh - 1.001)
+    y0 = np.floor(src).astype(int)
+    f = (src - y0)[:, None, None]
+    out = resized[y0] * (1 - f) + resized[y0 + 1] * f
+    first, last = np.where(inside)[0][[0, -1]]
+    return extend_poles(out, first, last)
+
+
+def lat_strip_to_equirect(strip, lat_max, width):
+    """A strip of an equirectangular map that covers +- lat_max degrees, as the whole map `width` across."""
+    h, w, _ = strip.shape
+    resized = np.asarray(Image.fromarray((strip * 255).astype(np.uint8)).resize((width, round(width * (2 * lat_max / 360))), Image.LANCZOS), dtype=np.float32) / 255.0
+    out_h = width // 2
+    pad = (out_h - resized.shape[0]) // 2
+    out = np.zeros((out_h, width, 3), dtype=np.float32)
+    out[pad : pad + resized.shape[0]] = resized
+    return extend_poles(out, pad, pad + resized.shape[0] - 1)
+
+
+def tint(img, dark, light, contrast):
+    """A grey map as colour: its brightness picks a colour between `dark` and `light`, with the contrast turned down toward the middle."""
+    g = img.mean(axis=2, keepdims=True)
+    mid = np.median(g)
+    g = np.clip(mid + (g - mid) * contrast, 0, 1)
+    return np.asarray(dark, dtype=np.float32) * (1 - g) + np.asarray(light, dtype=np.float32) * g
+
+
 def make(body):
     img = fetch(body)
     if body == "mercury":
@@ -215,12 +322,49 @@ def make(body):
         seen = unproject(img[:3700], cx, cy, r, 0, 0, dark=(0.55, 0.6), shrink=0.97)
         centre = np.median(seen[:, 1800:2300].reshape(-1, 3), axis=0)
         img = highpass(seen, 40, centre)
+    elif body == "moon":
+        pass
+    elif body == "io":
+        img = roll(lat_strip_to_equirect(img[:, 3:-3], 57.3, 4096), 0.5)
+    elif body == "europa":
+        img = extend_poles(img, 8, int(img.shape[0] * 0.9))
+    elif body in ("ganymede", "callisto"):
+        img = mercator_to_equirect(img, 57.0, 4096)
+    elif body == "titan":
+        img = tint(roll(img, 0.5), (0.20, 0.11, 0.04), (0.92, 0.62, 0.28), 0.35)
+    elif body in ("rhea", "enceladus"):
+        img = desaturate(roll(img, 0.5), 0.3 if body == "enceladus" else 0.55)
+    elif body == "mimas":
+        img = img[163:1951, 201:3736]
     big = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))
-    for w in WIDTHS:
+    for w in [x for x in WIDTHS if x <= MAX_WIDTH.get(body, 2048)]:
         small = big.resize((w, w // 2), Image.LANCZOS)
-        small.save(os.path.join(OUT, f"{body}-{w}.webp"), "WEBP", quality=82, method=6)
-    print(f"  {body}: " + ", ".join(f"{w}={os.path.getsize(os.path.join(OUT, f'{body}-{w}.webp')) // 1024} KB" for w in WIDTHS))
+        small.save(os.path.join(OUT, f"{body}-{w}.webp"), "WEBP", quality=QUALITY.get(body, 82), method=6)
+    print(f"  {body}: " + ", ".join(f"{w}={os.path.getsize(os.path.join(OUT, f'{body}-{w}.webp')) // 1024} KB" for w in WIDTHS if w <= MAX_WIDTH.get(body, 2048)))
+
+
+# Saturn's rings: Cassini's natural-colour mosaic of the lit side (PIA07874, PIA06175) is a picture of the rings along one radius, the planet far to the left. Along the line it is
+# made from, a column is a radius: r = RING_FROM_KM + RING_KM_PER_PX * column, fitted to five edges the picture shows (the B ring's inner edge, the Cassini Division's two, the
+# Encke gap and the A ring's outer edge; every one within 300 km). The strip keeps the picture's colour and takes its opacity from its brightness, so over black space it is the photograph.
+RING_FROM_KM, RING_KM_PER_PX, RING_COLUMNS, RING_WIDTH = 74794.0, 16.4267, 3789, 2048
+
+
+def make_ring():
+    img = fetch("saturn-ring")
+    photo = img[262:284, :RING_COLUMNS].mean(axis=0)
+    blocks = np.array_split(np.arange(RING_COLUMNS), RING_WIDTH)
+    strip = np.stack([photo[b].mean(axis=0) for b in blocks])
+    lum = strip.mean(axis=1)
+    alpha = np.clip(lum * 1.1, 0.0, 1.0)
+    colour = strip / np.maximum(alpha, 0.04)[:, None]
+    # white balance: the mosaic is pinker and bluer than Cassini's natural-colour portrait of Saturn that the planet's map is made from; the B ring's blue to green falls from 0.98 to 0.86
+    colour = np.clip(colour * np.array([0.98, 1.0, 0.88]), 0.0, 1.0)
+    rgba = np.concatenate([colour, alpha[:, None]], axis=1)
+    out = Image.fromarray((rgba * 255 + 0.5).astype(np.uint8)[None, :, :], "RGBA")
+    path = os.path.join(OUT, f"saturn-ring-{RING_WIDTH}.webp")
+    out.save(path, "WEBP", lossless=True, method=6)
+    print(f"  saturn-ring: {RING_WIDTH} samples, {RING_FROM_KM:.0f} to {RING_FROM_KM + RING_KM_PER_PX * RING_COLUMNS:.0f} km, {os.path.getsize(path)} bytes")
 
 
 for name in (sys.argv[1:] or list(SOURCES)):
-    make(name)
+    make_ring() if name == "saturn-ring" else make(name)

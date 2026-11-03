@@ -70,5 +70,85 @@
     "credit": "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/08/10/20240810_000000_4096_HMIIC.jpg",
     "artist": "Courtesy of NASA/SDO and the AIA, EVE, and HMI science teams.",
     "usage": "Public domain"
+  },
+  "io": {
+    "file": "Io from Galileo and Voyager missions.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Io_from_Galileo_and_Voyager_missions.jpg",
+    "licence": "Public domain",
+    "credit": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author",
+    "artist": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author",
+    "usage": "Public domain"
+  },
+  "europa": {
+    "file": "Europa Voyager GalileoSSI global mosaic.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Europa_Voyager_GalileoSSI_global_mosaic.jpg",
+    "licence": "Public domain",
+    "credit": "https://astrogeology.usgs.gov/search/map/Europa/Voyager-Galileo/Europa_Voyager_GalileoSSI_global_mosaic_500m",
+    "artist": "U.S. Geological Survey / Planetary Data System / Tammy Becker",
+    "usage": "Public domain"
+  },
+  "ganymede": {
+    "file": "Ganymede equatorial.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Ganymede_equatorial.jpg",
+    "licence": "Public domain",
+    "credit": "http://geopubs.wr.usgs.gov/i-map/i2762/",
+    "artist": "USGS",
+    "usage": "Public domain"
+  },
+  "callisto": {
+    "file": "Callisto equatorial.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Callisto_equatorial.jpg",
+    "licence": "Public domain",
+    "credit": "http://geopubs.wr.usgs.gov/i-map/i2770/",
+    "artist": "USGS",
+    "usage": "Public domain"
+  },
+  "saturn-ring": {
+    "file": "Saturn's rings in visible light and radio.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Saturn's_rings_in_visible_light_and_radio.jpg",
+    "licence": "Public domain",
+    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA07874",
+    "artist": "NASA / JPL / Space Science Institute",
+    "usage": "Public domain"
+  },
+  "moon": {
+    "file": "CGI Moon Kit - Lroc color poles.tif",
+    "page": "https://commons.wikimedia.org/wiki/File:CGI_Moon_Kit_-_Lroc_color_poles.tif",
+    "licence": "Public domain",
+    "credit": "https://svs.gsfc.nasa.gov/4720/",
+    "artist": "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro)",
+    "usage": "Public domain"
+  },
+  "rhea": {
+    "file": "Rhea Color Map.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Rhea_Color_Map.jpg",
+    "licence": "Public domain",
+    "credit": "http://photojournal.jpl.nasa.gov/jpeg/PIA18438.jpg",
+    "artist": "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute",
+    "usage": "Public domain"
+  },
+  "enceladus": {
+    "file": "Enceladus Color Map.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Enceladus_Color_Map.jpg",
+    "licence": "Public domain",
+    "credit": "http://photojournal.jpl.nasa.gov/jpeg/PIA18435.jpg",
+    "artist": "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute",
+    "usage": "Public domain"
+  },
+  "mimas": {
+    "file": "Map of Mimas 2010-02 PIA12780.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Map_of_Mimas_2010-02_PIA12780.jpg",
+    "licence": "Public domain",
+    "credit": "http://www.ciclops.org/view_media/31726/Map_of_Mimas_-_February_2010",
+    "artist": "NASA/JPL/Space Science Institute",
+    "usage": "Public domain"
+  },
+  "titan": {
+    "file": "Titan map April 2011 full.png",
+    "page": "https://commons.wikimedia.org/wiki/File:Titan_map_April_2011_full.png",
+    "licence": "Public domain",
+    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA14908",
+    "artist": "NASA",
+    "usage": "Public domain"
   }
 }

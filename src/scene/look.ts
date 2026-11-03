@@ -41,6 +41,8 @@ export interface PaintedMap {
   far?: number;
   /** How much of the map's brightness is also relief. Default 0. */
   relief?: number;
+  /** A picture of the body's rings for this look, one pixel high: colour and opacity from the inner edge to the outer, `width` samples. Used instead of the table's strip when it loads. */
+  rings?: { map: string; width: number; from: number; to: number };
   /** The painted pictures' credit line, for the page. */
   credit?: string;
 }
