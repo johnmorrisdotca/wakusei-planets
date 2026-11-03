@@ -2,6 +2,7 @@ import "@johnmorrisdotca/kazoku-ui/view-controls/define";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { apparent, BODIES, MOONS_OF, PLANET_IDS, type BodyId } from "../src/index.ts";
+import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
 import { lookOf } from "../src/scene/look.ts";
 import "../src/element.ts";
 import "../src/bodies/all.ts";
@@ -242,6 +243,7 @@ if (main && controls && tilesBox) {
     }
     for (const heading of moonGroups.querySelectorAll<HTMLElement>("h3[data-planet]")) heading.textContent = BODIES[heading.dataset["planet"] as BodyId].name[lang()];
     renderChips();
+    renderEmbed();
     lineupSection.hidden = !state.scale;
     if (state.scale) {
       const earthRadius = BODIES.earth.radiusKm;
@@ -269,6 +271,90 @@ if (main && controls && tilesBox) {
     address.set("speed", state.speed !== 1 ? String(state.speed) : null);
     address.set("t", state.time !== "now" ? state.time : null);
   }
+
+  // --- "Put it in your page": the code for the body as it is set up above, for each way a page is made ---------------------------------------------
+  const embedTabs = document.querySelector<HTMLElement>("#embed-tabs")!;
+  const embedCodeBox = document.querySelector<HTMLElement>("#embed-code")!;
+  const embedPreview = document.querySelector<HTMLElement>("#embed-preview")!;
+  const embedCredits = document.querySelector<HTMLElement>("#embed-credit")!;
+  const embedCopy = document.querySelector<HTMLButtonElement>("#embed-copy")!;
+  const embedStatus = document.querySelector<HTMLElement>("#embed-status")!;
+  const embedOpen = document.querySelector<HTMLAnchorElement>("#embed-open")!;
+  const sizeButtons = [...document.querySelectorAll<HTMLButtonElement>("#embed-sizes [data-size]")];
+  const embed = { kind: (EMBED_KINDS.includes(address.get("embed") as EmbedKind) ? address.get("embed") : "html") as EmbedKind, size: [160, 240, 320, 480].includes(Number(address.get("size"))) ? Number(address.get("size")) : 320 };
+  for (const kind of EMBED_KINDS) {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.role = "tab";
+    tab.dataset["kind"] = kind;
+    tab.addEventListener("click", () => {
+      embed.kind = kind;
+      address.set("embed", kind === "html" ? null : kind);
+      renderEmbed();
+    });
+    embedTabs.append(tab);
+  }
+  embedTabs.addEventListener("keydown", (event) => {
+    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (step === 0) return;
+    const at = EMBED_KINDS.indexOf(embed.kind);
+    const next = EMBED_KINDS[(at + step + EMBED_KINDS.length) % EMBED_KINDS.length]!;
+    embedTabs.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.click();
+    embedTabs.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.focus();
+    event.preventDefault();
+  });
+  for (const b of sizeButtons)
+    b.addEventListener("click", () => {
+      embed.size = Number(b.dataset["size"]);
+      address.set("size", embed.size === 320 ? null : String(embed.size));
+      renderEmbed();
+    });
+  const embedOptions = (): EmbedOptions => {
+    const real = state.real || (state.moons && hasMoons());
+    return { body: state.body, look: state.look, size: embed.size, ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
+  };
+  function renderEmbed(): void {
+    const options = embedOptions();
+    for (const tab of embedTabs.querySelectorAll<HTMLButtonElement>("[data-kind]")) {
+      tab.textContent = say(`kind_${tab.dataset["kind"]}`);
+      tab.setAttribute("aria-selected", String(tab.dataset["kind"] === embed.kind));
+      tab.tabIndex = tab.dataset["kind"] === embed.kind ? 0 : -1;
+    }
+    for (const b of sizeButtons) pressed(b, Number(b.dataset["size"]) === embed.size);
+    const code = embedCode(options, embed.kind, { site: "" });
+    embedCodeBox.textContent = embedCode(options, embed.kind);
+    embedCredits.textContent = embedCredit(options);
+    const key = JSON.stringify([options, embed.kind === "iframe", lang()]);
+    if (embedPreview.dataset["key"] !== key) {
+      embedPreview.dataset["key"] = key;
+      embedPreview.replaceChildren();
+      if (embed.kind === "iframe") {
+        const holder = document.createElement("div");
+        holder.innerHTML = code;
+        const frame = holder.querySelector("iframe")!;
+        frame.setAttribute("loading", "lazy");
+        embedPreview.append(frame);
+      } else {
+        const preview = document.createElement("wakusei-body") as WakuseiBody;
+        for (const [name, value] of Object.entries({ body: options.body, look: options.look ?? "realistic", size: String(embed.size), "texture-base": "textures/", lang: lang() })) preview.setAttribute(name, value);
+        if (options.time !== undefined) preview.setAttribute("time", options.time);
+        if (options.moons === true) preview.setAttribute("moons", "");
+        if (options.turn !== undefined) preview.setAttribute("turn", String(options.turn));
+        preview.setAttribute("live", "off");
+        embedPreview.append(preview);
+      }
+    }
+    embedOpen.href = `embed.html?${new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.time !== undefined ? { time: options.time } : {}), ...(options.moons === true ? { moons: "1" } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) }).toString()}`;
+  }
+  embedCopy.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(embedCodeBox.textContent ?? "");
+      embedStatus.textContent = say("copied");
+    } catch {
+      embedStatus.textContent = say("copyFail");
+    }
+    setTimeout(() => (embedStatus.textContent = ""), 2500);
+  });
 
   for (const b of looks) b.addEventListener("click", () => ((state.look = (b.dataset["look"] ?? "realistic") as Look), render()));
   for (const b of skies) b.addEventListener("click", () => ((state.real = b.dataset["sky"] === "real"), render()));

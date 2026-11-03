@@ -11,9 +11,9 @@ A clean line drawing, a shaded realistic drawing, or a painted surface map, with
 
 <p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><strong>Open the demo →</strong></a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/embed.html">Embed page</a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/docs/">Docs</a></p>
 
-<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.3.1/docs/images/hero-desk.png" width="640"></p>
+<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.4.0/docs/images/hero-desk.png" width="640"></p>
 
-<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.3.1/docs/images/lineup-desk.png" width="640"></p>
+<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.4.0/docs/images/lineup-desk.png" width="640"></p>
 
 ## One minute
 
@@ -94,6 +94,7 @@ Give a body a `time` and it is drawn as the sky shows it then: its pole and rota
 | An ES module in Vite or webpack, only the bodies you need | [bundlers guide](docs/guides/bundlers.md) |
 | React, Vue, Svelte, Angular; Next.js, Nuxt, SvelteKit | [frameworks guide](docs/guides/frameworks.md) |
 | An `<iframe>` of the embed page, no script of your own | [iframe guide](docs/guides/embed-in-an-iframe.md) |
+| Set up a body in the demo and copy the code for HTML, React, Vue, Angular, Svelte or an iframe | [Put it in your page](docs/guides/put-it-in-your-page.md), or `embedCode()` |
 | TypeScript types, an SVG string on a server, Node | [TypeScript and Node guide](docs/guides/typescript-and-node.md) |
 | The looks, the entry points, one WebGL context | [looks and bodies](docs/guides/looks-and-bodies.md) |
 | Moons where they are on a date, time that runs fast | [moons and time](docs/guides/moons-and-time.md) |

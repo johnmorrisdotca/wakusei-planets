@@ -3,3 +3,4 @@ export { apparent, moonGeocentric, heliocentric, orbitPath, system, type Apparen
 export { drawnTilt, portrait, type PortraitOptions } from "./pose.ts";
 export { lineSvg, mix, type LineOptions } from "./line.ts";
 export { ringStrip, type RingStrip } from "./scene/rings.ts";
+export { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions, type EmbedSettings } from "./embed.ts";
