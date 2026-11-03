@@ -13,9 +13,9 @@ A clean line drawing, a shaded realistic drawing, or a painted surface map, with
 
 <p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><strong>Open the demo →</strong></a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/embed.html">Embed page</a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/docs/">Docs</a></p>
 
-<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.10.0/docs/images/hero-desk.png" width="640"></p>
+<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.11.0/docs/images/hero-desk.png" width="640"></p>
 
-<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.10.0/docs/images/lineup-desk.png" width="640"></p>
+<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.11.0/docs/images/lineup-desk.png" width="640"></p>
 
 ## One minute
 
@@ -273,7 +273,7 @@ A body that turns by itself and a moving sky, in HTML:
 
 ## The portrait builder
 
-<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.10.0/docs/images/portrait-family.png" width="640"></p>
+<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.11.0/docs/images/portrait-family.png" width="640"></p>
 
 [The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies in one picture: drag them, size them, turn them, order them front to back, arrange them in a row, an arc, a grid or at true orbit distance (true or readable sizes, a planet's moons round it in orbit order), light them from one direction, and take the code, a PNG or an SVG. The scene is kept in the address, and every body is drawn in one WebGL scene, so the page holds one WebGL context. [The portrait builder](docs/guides/portrait-builder.md) is its guide.
 

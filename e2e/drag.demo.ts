@@ -1,11 +1,11 @@
-// The surface under the pointer follows the pointer, in every look: drag right and it moves right, drag up and it moves up, and the arrow keys agree. Real pointer events, real key presses,
-// and the pictures compared: the surface's move is found by sliding the middle of the first picture over the second (e2e/ground.ts). Bodies with features to follow only: a banded
-// planet looks the same when it turns. Chromium only, in software: the 3D looks have no software drawing in WebKit.
+// The surface under the pointer follows the pointer, in every look: drag right and it moves right, drag up and it moves up, the arrow keys agree, and Auto-turn goes the body's real way
+// (the shared check of the family's drag rule: kazoku-ui's templates/e2e-ground.mjs, copied unchanged as e2e/ground.mjs). On top of it: exact grab (a drag of a few pixels moves the ground at
+// the middle of the body by as many pixels, because the view controls are told the disc's radius) and the Turn button's direction (Mars goes right, Venus, which turns backwards, goes left).
+// Real pointer events, real key presses, and the pictures compared. Chromium only, in software: the 3D looks have no software drawing in WebKit.
 import { expect, test, type Page } from "@playwright/test";
-import { dragBy, groundShift } from "./ground.ts";
+import { checkFollowsTheHand, dragBy, movedBy } from "./ground.mjs";
 
 const URL = "/wakusei-planets/";
-const MIN = 8;
 const CASES: readonly (readonly [string, string])[] = [
   ["mars", "line"],
   ["mars", "realistic"],
@@ -13,9 +13,13 @@ const CASES: readonly (readonly [string, string])[] = [
   ["venus", "painted"],
   ["moon", "painted"],
 ];
+// the middle of the picture where the body is: the picture is wide and the body takes the middle of it
+const WINDOW: [number, number, number, number] = [0.42, 0.58, 0.42, 0.58];
 
-async function open(page: Page, body: string, look: string): Promise<void> {
+/** `upright`: the body's axis is set straight up for the check, as a drag turns it about its own axis, so a body whose axis leans on the page (Mars, 25 degrees) moves along a slanted path. */
+async function open(page: Page, body: string, look: string, upright = false): Promise<void> {
   await page.goto(`${URL}?body=${body}&look=${look}`);
+  if (upright) await page.locator("#main").evaluate((el) => el.setAttribute("tilt", "0"));
   const main = page.locator("#main");
   if (look !== "line") {
     await main.hover();
@@ -26,30 +30,59 @@ async function open(page: Page, body: string, look: string): Promise<void> {
 }
 
 for (const [body, look] of CASES) {
-  test(`${body}, ${look}: the surface follows a drag and the arrow keys`, async ({ page }, testInfo) => {
+  test(`${body}, ${look}: the surface follows a drag and the arrow keys, and Auto-turn goes the right way`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium-desk", "a pointer and keyboard test, in software 3D");
-    await open(page, body, look);
-    const view = page.locator("#view");
-    const moved = async (act: () => Promise<void>): Promise<{ x: number; y: number }> => {
-      const before = await view.screenshot();
-      await act();
-      await page.waitForTimeout(900);
-      const shift = await groundShift(page, before, await view.screenshot(), 70, 0.11);
-      return { x: shift.x, y: shift.y };
-    };
-    const right = await moved(() => dragBy(page, view, 30, 0));
-    expect(right.x, `a drag right moves the surface right (moved ${right.x},${right.y})`).toBeGreaterThan(MIN);
-    await dragBy(page, view, -30, 0);
-    const up = await moved(() => dragBy(page, view, 0, -30));
-    expect(up.y, `a drag up moves the surface up (moved ${up.x},${up.y})`).toBeLessThan(-MIN);
-    await dragBy(page, view, 0, 30);
-    await page.waitForTimeout(600);
-
-    await view.focus();
-    const arrowRight = await moved(() => page.keyboard.press("ArrowRight"));
-    expect(arrowRight.x, `the right arrow moves the surface right (moved ${arrowRight.x},${arrowRight.y})`).toBeGreaterThan(MIN);
-    await page.keyboard.press("ArrowLeft");
-    const arrowUp = await moved(() => page.keyboard.press("ArrowUp"));
-    expect(arrowUp.y, `the up arrow moves the surface up (moved ${arrowUp.x},${arrowUp.y})`).toBeLessThan(-MIN);
+    await open(page, body, look, true);
+    await checkFollowsTheHand(page, { view: "#view", controls: "#controls", window: WINDOW, autoTurn: body === "venus" ? false : "right" });
   });
 }
+
+for (const [body, look] of [["mars", "painted"], ["moon", "painted"]] as const) {
+  test(`${body}, ${look}: exact grab, a drag moves the ground at the middle by as many pixels`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "chromium-desk", "a pointer test, in software 3D");
+    await open(page, body, look, true);
+    const radius = await page.locator("#main").evaluate((el) => (el as unknown as { discRadius: number }).discRadius);
+    expect(radius, "the disc has a radius on the screen").toBeGreaterThan(60);
+    await expect(page.locator("#controls")).toHaveAttribute("grab-radius", String(Math.round(radius)));
+    const view = page.locator("#view");
+    const pixels = Math.max(12, Math.round(radius * 0.15));
+    const moved = await movedBy(page, view, () => dragBy(page, view, pixels, 0), { reach: pixels * 2, window: WINDOW });
+    expect(Math.abs(moved.x - pixels), `a drag of ${pixels} px moves the ground by ${pixels} px, within 25% (moved ${moved.x},${moved.y})`).toBeLessThanOrEqual(Math.max(3, pixels * 0.25));
+    expect(Math.abs(moved.y)).toBeLessThanOrEqual(Math.max(3, pixels * 0.25));
+    await dragBy(page, view, -pixels, 0);
+    const up = await movedBy(page, view, () => dragBy(page, view, 0, -pixels), { reach: pixels * 2, window: WINDOW });
+    expect(Math.abs(up.y + pixels), `a drag up of ${pixels} px moves the ground up by ${pixels} px, within 25% (moved ${up.x},${up.y})`).toBeLessThanOrEqual(Math.max(3, pixels * 0.25));
+  });
+}
+
+// Venus turns backwards: its ground goes left while Turn runs (the picture is compared). Mars turns forwards, the other way: its Turn is the same call with the opposite sign, so the page's
+// own sign is read (a positive turn is eastward, which the check above shows is to the right).
+test("Venus: the Turn button turns the body its real way, the ground goes left", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "a pointer test, in software 3D");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await open(page, "venus", "painted", true);
+  const view = page.locator("#view");
+  // the body is photographed while it turns (stopping puts it back where it began)
+  const turned = await movedBy(
+    page,
+    view,
+    async () => {
+      await page.locator("#spin").click();
+      await page.locator("#main").hover();
+      await page.waitForTimeout(60);
+    },
+    { settle: 80, reach: 60, window: [0.38, 0.62, 0.38, 0.62] },
+  );
+  await expect(page.locator("#main")).toHaveAttribute("turn", "-14");
+  expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-8);
+});
+
+test("Mars turns forwards: the Turn button is a positive turn, and a body that turns backwards a negative one", async ({ page }) => {
+  await page.goto(`${URL}?body=mars&look=line`);
+  await page.locator("#spin").click();
+  await expect(page.locator("#main")).toHaveAttribute("turn", "14");
+  await page.goto(`${URL}?body=uranus&look=line&spin=1`);
+  await expect(page.locator("#main")).toHaveAttribute("turn", "-14");
+  await page.goto(`${URL}?body=jupiter&look=line&spin=1`);
+  await expect(page.locator("#main")).toHaveAttribute("turn", "14");
+});

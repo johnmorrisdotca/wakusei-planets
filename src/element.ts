@@ -164,6 +164,10 @@ export class WakuseiBody extends HTMLElement {
     else this.#resume();
   };
 
+  /** The radius of the body's disc on the screen in CSS pixels, at the picture's own size: what `grab-radius` on the shared view controls wants for a drag that keeps the touched point under the pointer. */
+  get discRadius(): number {
+    return (this.getBoundingClientRect().width / 2) * this.#fill();
+  }
   get body(): BodyId {
     const id = this.getAttribute("body") as BodyId | null;
     return id !== null && id in BODIES ? id : "earth";

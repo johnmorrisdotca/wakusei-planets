@@ -8,6 +8,7 @@ import "../src/element.ts";
 import "../src/bodies/all.ts";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
+import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
 
 type Look = "line" | "realistic" | "painted";
@@ -409,6 +410,13 @@ if (main && controls && pickerBox) {
     caption.textContent = say("scaleCaption", { name: BODIES[state.body].name[lang()], km: km.toLocaleString(lang() === "ja" ? "ja-JP" : "en-US"), ratio: ratio >= 10 ? ratio.toFixed(0) : ratio >= 0.1 ? ratio.toFixed(2) : ratio.toPrecision(2), ref: BODIES[ref].name[lang()], refKm: Math.round(against).toLocaleString(lang() === "ja" ? "ja-JP" : "en-US") });
   }
 
+  /** A drag keeps the touched point under the pointer: the view controls are told the radius of the body's disc on the screen. */
+  function syncGrab(): void {
+    const radius = Math.round(main!.discRadius);
+    if (radius > 0) setAttrOn(controls!, "grab-radius", String(radius));
+  }
+  new ResizeObserver(syncGrab).observe(main);
+
   function render(): void {
     const looksAvailable = lookOf(state.body)?.painted !== undefined;
     for (const b of looks) {
@@ -438,10 +446,11 @@ if (main && controls && pickerBox) {
     setAttr(main!, "texture-base", "textures/");
     setAttr(main!, "time", real ? state.time : null);
     setAttr(main!, "rate", real ? String(state.speed) : null);
-    setAttr(main!, "turn", state.spin && !real ? "14" : null);
+    setAttr(main!, "turn", state.spin && !real ? (turnRate(state.body) < 0 ? "-14" : "14") : null);
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     for (const picker of pickers) picker.sync();
+    syncGrab();
     renderNotes();
     renderChips();
     renderEmbed();
