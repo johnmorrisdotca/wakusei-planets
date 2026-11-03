@@ -3,7 +3,7 @@
 // The caller places, sizes and lights the object and calls `update` when something changed; a picture that arrives later asks for a redraw through `context.invalidate`.
 import type * as THREE from "three";
 import "../bodies/all.ts";
-import { BODIES, MOONS_OF, type BodyId, type MoonId, type PlanetId } from "../facts.ts";
+import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../facts.ts";
 import { VERSION } from "../version.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import type { ThreeParts } from "./body.ts";
@@ -499,7 +499,7 @@ export function createPainter(options: PainterOptions = {}): WakuseiPainter {
     looks: LOOKS,
     make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far }),
     moons(planet, ms) {
-      const radius = BODIES[idOf(planet) as PlanetId]?.radiusKm;
+      const radius = BODIES[idOf(planet) as HostId]?.radiusKm;
       if (radius === undefined) return [];
       return moonsOf(planet)
         .map((moon) => ({ name: titled(moon), offset: moonOffset(moon, ms), radius: BODIES[moon].radiusKm / radius }))

@@ -2,7 +2,7 @@
 // planet are carried forward from there. A frame costs a few turns of vectors, never an ephemeris. Pure, no DOM.
 import { ORBITS } from "./data/orbits.ts";
 import { apparent, system, type MoonPlace, type Pose } from "./ephemeris.ts";
-import { BODIES, MOONS_OF, type BodyId, type PlanetId } from "./facts.ts";
+import { BODIES, MOONS_OF, type BodyId, type HostId } from "./facts.ts";
 import { portrait, type PortraitOptions } from "./pose.ts";
 import { turn, unit, cross, type Vec3 } from "./vec.ts";
 
@@ -76,12 +76,12 @@ export function createLive(): { at(request: LiveRequest, now: number): LiveFrame
       const signature = `${r.id}|${r.start}|${r.startedAt}|${r.rate}|${wantMoons}|${JSON.stringify(r.portrait)}`;
       if (anchor === undefined || anchor.signature !== signature || now - anchor.real >= ANCHOR_MS || now < anchor.real) {
         count += 1;
-        const pose = timed ? (wantMoons ? system(r.id as PlanetId, sim!).planet : apparent(r.id, sim!)) : portrait(r.id, r.portrait);
+        const pose = timed ? (wantMoons ? system(r.id as HostId, sim!).planet : apparent(r.id, sim!)) : portrait(r.id, r.portrait);
         let place: readonly MoonPlace[] = [];
         let axes: Vec3[] = [];
         if (wantMoons) {
-          place = system(r.id as PlanetId, sim!).moons;
-          const later = system(r.id as PlanetId, sim! + 3_600_000).moons;
+          place = system(r.id as HostId, sim!).moons;
+          const later = system(r.id as HostId, sim! + 3_600_000).moons;
           axes = place.map((m) => {
             const n = later.find((l) => l.id === m.id)!;
             return unit(cross([m.x, m.y, m.z], [n.x, n.y, n.z]));

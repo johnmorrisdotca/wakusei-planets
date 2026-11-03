@@ -3,7 +3,7 @@
 // something changes, at most 30 times a second while it moves, and nothing while it is out of sight, the tab is hidden or the reader prefers reduced motion.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { orbitPath, nearMoons } from "./ephemeris.ts";
-import { BODIES, ringReach, type BodyId, type Look, type MoonId, type PlanetId } from "./facts.ts";
+import { BODIES, ringReach, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
 import { createLive, type LiveFrame, type LiveRequest } from "./live.ts";
@@ -75,7 +75,7 @@ const ROOM = 2.2;
 function extentOf(id: BodyId, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number; tight?: boolean }): number {
   const f = BODIES[id];
   if (options.moons === true && id in BODIES && f.parent === undefined && id !== "sun") {
-    const near = nearMoons(id as PlanetId);
+    const near = nearMoons(id as HostId);
     const far = Math.max(1.8, ringReach(f) * 1.15, ...near.map((m) => m.reach * 1.1));
     return options.range ?? far;
   }

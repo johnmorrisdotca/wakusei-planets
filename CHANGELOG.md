@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0 - 2026-11-03
+
+The other dwarf planets.
+
+- **Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna** (MODULES-232), in the line, realistic and painted looks (`DWARF_IDS`, `DwarfId`, `BODIES.eris`...), and the moons whose orbits are published with a date: **Vanth** (Orcus), **Hiʻiaka and Namaka** (Haumea) and **Dysnomia** (Eris). Weywot, Xiangliu and S/2015 (136472) 1 are left out: no orbit with a published phase exists.
+- **Where they are**: `heliocentric()` takes a dwarf planet too, from JPL's Small-Body Database osculating elements of June 2026, run as a plain ellipse. Against JPL Horizons on 2026-11-03 all five checked are within 0.0002 au (a test holds it). The moons' orbits are from Holler et al. 2021 (Dysnomia), Ragozzine & Brown 2009 (Hiʻiaka, Namaka) and Brown et al. 2010 (Vanth); `NOTICE.md` has the sources and says which numbers are estimates (poles that have not been measured are taken along the orbit's pole; the shaded surfaces other than Ceres's are drawn from colours alone).
+- **Haumea and Quaoar are long shapes** (1161 x 852 x 513 km, turning every 3.9 hours; 1241 x 1093 x 1023 km): the line look now draws the outline of a body with `axesKm` as the ellipse it really shows, and its features on that shape (Phobos, Deimos, Proteus, Nix and Hydra too).
+- **Ceres is painted** from Dawn's colourised global map (public domain; the incomplete colour at high latitudes is made the surface's own grey).
+- **The picker has three groups** (MODULES-204): the Sun and the planets, the dwarf planets and the well-known moons (the Moon, Phobos, Deimos, Io, Europa, Ganymede, Callisto, Enceladus, Titan, Triton, Charon), each a click away; the group follows the body chosen and the address keeps the choice. The portrait builder and the code builder have a dwarf planets group too.
+- **Tests that every body turns about its real axis the right way** (MODULES-203): the rotation rate matches the period, and the spin axis of each planet and dwarf planet makes the published axial tilt with its orbit's pole, backwards for Venus, Uranus and Pluto.
+- New entry points `@johnmorrisdotca/wakusei-planets/dwarfs` and `/moons-dwarf`; `/all` has both. `DWARF_IDS`, `DwarfId` and `HostId` (a planet or dwarf planet a moon can go round) are exported; `BODIES` and `BODY_IDS` have 12 more bodies, and the Portrait builder's order puts the dwarf planets after Pluto.
+- The painted pictures of Ceres add 0.13 MB to the package (512 and 1024 pixels wide).
+
 ## 0.8.0 - 2026-11-03
 
 The portrait builder at true orbit distance.

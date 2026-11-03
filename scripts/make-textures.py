@@ -35,12 +35,18 @@ SOURCES = {
     "rhea": ("Rhea Color Map.jpg", 4096),
     "enceladus": ("Enceladus Color Map.jpg", 4096),
     "mimas": ("Map of Mimas 2010-02 PIA12780.jpg", 3840),
+    "ceres": ("PIA20354-Ceres-DwarfPlanet-MercatorMap-HAMO-20160322-0DegreeLongitude.jpg", 4000),
+    "tethys": ("Tethys Color Map.jpg", 4096),
+    "dione": ("Dione Color Map.jpg", 4096),
+    "iapetus": ("Iapetus Color Map.jpg", 4096),
+    "triton": ("Triton map no grid.jpg", 4096),
+    "charon": ("Charon map iau1803c.jpg", 4096),
     "saturn-ring": ("Saturn's rings in visible light and radio.jpg", 3840),
 }
 # A source with less than 2048 pixels across is not made at 2048.
 MAX_WIDTH = {"europa": 1024}
 # Pictures full of fine detail get a lower WebP quality, to keep the package small.
-QUALITY = {"rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74}
+QUALITY = {"rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 70, "dione": 70, "iapetus": 70}
 META = os.path.join(OUT, "SOURCES.json")
 # Commons names no author for this file: the images are Galileo SSI and Voyager's, NASA and JPL's, and Commons marks the file public domain.
 CREDIT_FALLBACK = {"io": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author"}
@@ -268,6 +274,35 @@ def lat_strip_to_equirect(strip, lat_max, width):
     return extend_poles(out, pad, pad + resized.shape[0] - 1)
 
 
+def fill_unseen(img, side, margin=8, fade=0.2):
+    """A map with a black region where nothing was imaged (the polar night): `side` is `north` (black above) or `south` (black below). Each column keeps its real rows; above (or below) the first of them it
+    continues with the colour just inside the edge, blurred a long way along the row, and fades to the picture's mean colour away from it."""
+    work = img if side == "north" else img[::-1]
+    h, w, _ = work.shape
+    real = work.mean(axis=2) > 0.05
+    edge = np.array([next((r for r in range(h - 12) if real[r : r + 12, c].all()), h - 1) for c in range(w)])
+    pad = np.pad(edge, 20, mode="wrap")
+    edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 41), axis=1).astype(int) + margin
+    mean = work[real].mean(axis=0)
+    band = np.stack([work[e + 4 : e + 30].mean(axis=0)[0:1][0] if False else work[min(e + 4, h - 31) : min(e + 30, h - 1), c].mean(axis=0) for c, e in enumerate(edge)])
+    k = np.ones(w // 12) / (w // 12)
+    band = np.stack([np.convolve(np.pad(band[:, c], w // 24, mode="wrap"), k, mode="valid")[:w] for c in range(3)], axis=1)
+    out = work.copy()
+    rows = np.arange(h)[:, None]
+    above = rows < edge[None, :]
+    t = np.clip((edge[None, :] - rows) / (h * fade), 0, 1)
+    t = (t * t * (3 - 2 * t))[..., None]
+    out = np.where(above[..., None], band[None] * (1 - t) + mean * t, out)
+    feather = 24
+    for j in range(feather):
+        f = j / feather
+        f = f * f * (3 - 2 * f)
+        r = edge + j
+        ok = r < h
+        out[r[ok], np.arange(w)[ok]] = band[ok] * (1 - f) + work[r[ok], np.arange(w)[ok]] * f
+    return out if side == "north" else out[::-1]
+
+
 def tint(img, dark, light, contrast):
     """A grey map as colour: its brightness picks a colour between `dark` and `light`, with the contrast turned down toward the middle."""
     g = img.mean(axis=2, keepdims=True)
@@ -334,6 +369,24 @@ def make(body):
         img = tint(roll(img, 0.5), (0.20, 0.11, 0.04), (0.92, 0.62, 0.28), 0.35)
     elif body in ("rhea", "enceladus"):
         img = desaturate(roll(img, 0.5), 0.3 if body == "enceladus" else 0.55)
+    elif body == "ceres":
+        # the green and yellow of the map are where Dawn's colour coverage is incomplete (the map says so): they become the grey the rest of the surface is, keeping the picture's detail
+        lum = img.mean(axis=2, keepdims=True)
+        sat = (img.max(axis=2) - img.min(axis=2))[..., None]
+        calm = sat < 0.1
+        tone = (img * calm).sum(axis=(0, 1)) / np.maximum(1, (lum * calm).sum(axis=(0, 1)))
+        wrong = np.clip((sat - 0.12) / 0.14, 0, 1)
+        img = img * (1 - wrong) + lum * tone * wrong
+        img = extend_poles(img, int(img.shape[0] * 0.02), int(img.shape[0] * 0.93))
+        img = desaturate(img, 0.6)
+    elif body in ("tethys", "dione"):
+        img = desaturate(roll(img, 0.5), 0.55)
+    elif body == "iapetus":
+        img = desaturate(roll(img, 0.5), 0.7)
+    elif body == "triton":
+        img = desaturate(fill_unseen(img, "north", fade=0.2), 0.45)
+    elif body == "charon":
+        img = fill_unseen(img, "south", fade=0.1)
     elif body == "mimas":
         img = img[163:1951, 201:3736]
     big = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))

@@ -3,7 +3,8 @@
 // good to about an arc minute. The Moon: the largest terms of Meeus, "Astronomical Algorithms", chapter 47. Other moons: JPL's mean elements (data/orbits.ts).
 // Light travel time is allowed for, so a turning planet shows the face it really showed when the light left. Pure: no DOM, no three.js.
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
-import { BODIES, MOONS_OF, type BodyId, type MoonId, type PlanetId } from "./facts.ts";
+import { DWARF_ELEMENTS } from "./data/dwarf.ts";
+import { BODIES, MOONS_OF, type BodyId, type HostId, type MoonId, type PlanetId } from "./facts.ts";
 import { add, cross, DEG, dot, fromRaDec, length, OBLIQUITY, RAD, scale, sub, toEcliptic, unit, wrap360, type Vec3 } from "./vec.ts";
 
 /** Milliseconds since 1970 at J2000.0 (2000-01-01 12:00 TT, taken as UTC). */
@@ -44,8 +45,8 @@ export function kepler(meanAnomaly: number, e: number): number {
 }
 
 /**
- * A planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time, from JPL's approximate elements.
- * @param planet - The planet's name.
+ * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: a planet from JPL's approximate elements, a dwarf planet from the osculating elements of one epoch (JPL's Small-Body Database).
+ * @param planet - The planet's or dwarf planet's name.
  * @param ms - The instant, in milliseconds since 1970.
  * @returns The position as x, y, z in au.
  *
@@ -57,17 +58,34 @@ export function kepler(meanAnomaly: number, e: number): number {
  * console.log(Math.hypot(x, y, z).toFixed(3));
  * ```
  */
-export function heliocentric(planet: PlanetId, ms: number): Vec3 {
-  const el = ELEMENTS[planet];
-  const T = centuries(ms);
-  const a = el[0]! + el[6]! * T;
-  const e = el[1]! + el[7]! * T;
-  const I = (el[2]! + el[8]! * T) * RAD;
-  const L = el[3]! + el[9]! * T;
-  const peri = el[4]! + el[10]! * T;
-  const node = (el[5]! + el[11]! * T) * RAD;
-  const w = peri * RAD - node;
-  const E = kepler((L - peri) * RAD, e);
+export function heliocentric(planet: HostId, ms: number): Vec3 {
+  let a: number;
+  let e: number;
+  let I: number;
+  let node: number;
+  let w: number;
+  let E: number;
+  const dwarf = DWARF_ELEMENTS[planet as keyof typeof DWARF_ELEMENTS];
+  if (dwarf !== undefined) {
+    // a dwarf planet: the osculating elements of one epoch, run as a plain ellipse (good for years either side of it)
+    a = dwarf.a;
+    e = dwarf.e;
+    I = dwarf.i * RAD;
+    node = dwarf.node * RAD;
+    w = dwarf.w * RAD;
+    E = kepler((dwarf.m + (dwarf.n * (ms - dwarf.epoch)) / DAY) * RAD, e);
+  } else {
+    const el = ELEMENTS[planet as PlanetId];
+    const T = centuries(ms);
+    a = el[0]! + el[6]! * T;
+    e = el[1]! + el[7]! * T;
+    I = (el[2]! + el[8]! * T) * RAD;
+    const L = el[3]! + el[9]! * T;
+    const peri = el[4]! + el[10]! * T;
+    node = (el[5]! + el[11]! * T) * RAD;
+    w = peri * RAD - node;
+    E = kepler((L - peri) * RAD, e);
+  }
   const x = a * (Math.cos(E) - e);
   const y = a * Math.sqrt(1 - e * e) * Math.sin(E);
   const cw = Math.cos(w);
@@ -206,7 +224,7 @@ function geometry(id: BodyId, ms: number): { earth: Vec3; target: Vec3; sunFrom:
     return { earth, target: g, sunFrom: scale(earth, -1), emit: ms - length(g) * LIGHT_SECONDS_PER_AU * 1000, distanceAu: length(g) };
   }
   const facts = BODIES[id];
-  const planet: PlanetId = (facts.parent ?? id) as PlanetId;
+  const planet: HostId = (facts.parent ?? id) as HostId;
   let emit = ms;
   let h = heliocentric(planet, ms);
   let g = sub(h, earth);
@@ -249,7 +267,7 @@ export function apparent(id: BodyId, time: number): Apparent {
   let meridianEcl: Vec3;
   if (facts.synchronous === true && id !== "moon" && moonOffset !== undefined) {
     // the face toward the planet: the direction from the moon to the planet, in the equator
-    poleEcl = poleOf(facts.parent as PlanetId);
+    poleEcl = poleOf(facts.parent as HostId);
     const planetward = scale(unit(moonOffset), -1);
     meridianEcl = unit(sub(planetward, scale(poleEcl, dot(planetward, poleEcl))));
   } else {
@@ -291,7 +309,8 @@ export function moonVector(id: MoonId, ms: number): Vec3 {
 
 function referenceBasis(orbit: OrbitElements): { x: Vec3; y: Vec3; z: Vec3 } {
   if (orbit.frame === "ecliptic") return { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
-  const pole = orbit.frame === "laplace" && orbit.pole !== undefined ? orbit.pole : ([BODIES[orbit.parent as PlanetId].pole.ra, BODIES[orbit.parent as PlanetId].pole.dec] as const);
+  if (orbit.frame === "j2000") return { x: toEcliptic([1, 0, 0]), y: toEcliptic([0, 1, 0]), z: toEcliptic([0, 0, 1]) };
+  const pole = orbit.frame === "laplace" && orbit.pole !== undefined ? orbit.pole : ([BODIES[orbit.parent as HostId].pole.ra, BODIES[orbit.parent as HostId].pole.dec] as const);
   const z = fromRaDec(pole[0], pole[1]);
   const x = fromRaDec(pole[0] + 90, 0);
   return { x: toEcliptic(x), y: toEcliptic(cross(z, x)), z: toEcliptic(z) };
@@ -379,7 +398,7 @@ export interface System {
  * console.log(moons.map((moon) => `${moon.id} ${moon.x.toFixed(1)}`).join(", "));
  * ```
  */
-export function system(planet: PlanetId, time: number): System {
+export function system(planet: HostId, time: number): System {
   const pose = apparent(planet, time);
   const emit = time - pose.distanceKm / AU_KM * LIGHT_SECONDS_PER_AU * 1000;
   const radius = BODIES[planet].radiusKm;
@@ -412,7 +431,7 @@ export function system(planet: PlanetId, time: number): System {
  */
 export function orbitPath(id: MoonId, time: number, points = 96): Float32Array {
   const facts = BODIES[id];
-  const planet = (facts.parent ?? "earth") as PlanetId;
+  const planet = (facts.parent ?? "earth") as HostId;
   const orbit = id === "moon" ? undefined : ORBITS[id];
   const rate = id === "moon" ? 13.1763585 : orbit?.sid;
   if (rate === undefined) return new Float32Array(0);
@@ -432,7 +451,7 @@ export function orbitPath(id: MoonId, time: number, points = 96): Float32Array {
 }
 
 /** The planets' moons that are near enough to draw in a system view, nearest first, with how far each goes in planet radii. */
-export function nearMoons(planet: PlanetId, within = 80): { id: MoonId; reach: number }[] {
+export function nearMoons(planet: HostId, within = 80): { id: MoonId; reach: number }[] {
   const ids: readonly MoonId[] = planet in MOONS_OF ? MOONS_OF[planet as keyof typeof MOONS_OF] : [];
   const radius = BODIES[planet].radiusKm;
   return ids

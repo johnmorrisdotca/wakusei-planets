@@ -1,10 +1,13 @@
 // Made by scripts/make-moon-data.py from JPL's Planetary Satellite Mean Elements (https://ssd.jpl.nasa.gov/sats/elem/); do not edit by hand.
+// The moons of the dwarf planets are not on that page: their orbits are in dwarf.ts, from the papers it cites, and are added at the end.
+import { DWARF_MOON_ORBITS } from "./dwarf.ts";
+
 // `sid` is the mean motion in degrees a day (negative: retrograde); `dw` and `dn` are the precession rates of the periapsis and the node, degrees a day.
 export interface OrbitElements {
   /** The planet it goes round. */
   parent: string;
-  /** The reference plane: the ecliptic, the planet's equator, or the Laplace plane whose pole is `pole` (right ascension, declination, degrees). */
-  frame: "ecliptic" | "equatorial" | "laplace";
+  /** The reference plane: the ecliptic, the Earth's equator of J2000, the planet's equator, or the Laplace plane whose pole is `pole` (right ascension, declination, degrees). */
+  frame: "ecliptic" | "j2000" | "equatorial" | "laplace";
   pole?: [number, number];
   /** The epoch of the elements, in milliseconds since 1970. */
   epoch: number;
@@ -39,4 +42,5 @@ export const ORBITS: Record<string, OrbitElements> = {
   charon: { parent: "pluto", frame: "equatorial", epoch: 946728000000, a: 19600, e: 0, w: 0, m: 304.1, i: 0, node: 0, sid: 56.3624607, dw: 0.00000, dn: 0.00000 },
   nix: { parent: "pluto", frame: "equatorial", epoch: 946728000000, a: 49300, e: 0.015, w: 31.4, m: 338.2, i: 0, node: 0, sid: 14.4842403, dw: 0.00000, dn: 0.00000 },
   hydra: { parent: "pluto", frame: "equatorial", epoch: 946728000000, a: 65200, e: 0.009, w: 139.3, m: 335, i: 0.3, node: 114.3, sid: 9.4236471, dw: 0.00000, dn: -0.07040 },
+  ...DWARF_MOON_ORBITS,
 };

@@ -4,13 +4,14 @@ import "../src/bodies/all.ts";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
-import { BODIES, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/facts.ts";
+import { BODIES, DWARF_IDS, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/facts.ts";
 
 setThreeLoader(() => import("./three-subset.ts"));
 
 const KIND_WORDS: Readonly<Record<EmbedKind, string>> = { html: "HTML", module: "Module", react: "React", vue: "Vue", angular: "Angular", svelte: "Svelte", iframe: "Iframe" };
 const GROUPS: readonly { id: string; label: string; bodies: readonly BodyId[] }[] = [
   { id: "sun", label: "The Sun and the planets", bodies: ["sun", ...PLANET_IDS] },
+  { id: "dwarfs", label: "Dwarf planets", bodies: DWARF_IDS },
   ...Object.entries(MOONS_OF).map(([planet, moons]) => ({ id: planet, label: `Moons of ${BODIES[planet as keyof typeof MOONS_OF].name.en}`, bodies: moons as readonly BodyId[] })),
 ];
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;

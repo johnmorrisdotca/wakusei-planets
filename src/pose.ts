@@ -69,28 +69,45 @@ export function portrait(id: BodyId, options: PortraitOptions = {}): Pose {
   return { pole, meridian, light };
 }
 
-/** A longitude and latitude (degrees) as a point on the body, in the viewer's frame (unit radius): x right, y up, z toward the viewer. The flattening squeezes it along the pole. */
-export function surfacePoint(pose: Pose, lon: number, lat: number, flattening = 0): Vec3 {
+/** The semi-axes of a body that is not a spheroid, as fractions of its radius: along its longitude 0, along its east and along its pole. */
+export type Axes = readonly [number, number, number];
+
+/** A longitude and latitude (degrees) as a point on the body, in the viewer's frame (unit radius): x right, y up, z toward the viewer. The flattening squeezes it along the pole; `axes` shape a triaxial body instead. */
+export function surfacePoint(pose: Pose, lon: number, lat: number, flattening = 0, axes?: Axes): Vec3 {
   const cl = Math.cos(lat * RAD);
   const east = cross(pose.pole, pose.meridian);
-  const x = cl * Math.cos(lon * RAD);
-  const y = cl * Math.sin(lon * RAD);
-  const z = Math.sin(lat * RAD) * (1 - flattening);
+  const x = cl * Math.cos(lon * RAD) * (axes?.[0] ?? 1);
+  const y = cl * Math.sin(lon * RAD) * (axes?.[1] ?? 1);
+  const z = Math.sin(lat * RAD) * (axes?.[2] ?? 1 - flattening);
   return [pose.meridian[0] * x + east[0] * y + pose.pole[0] * z, pose.meridian[1] * x + east[1] * y + pose.pole[1] * z, pose.meridian[2] * x + east[2] * y + pose.pole[2] * z];
 }
 
 /** The outward normal's z at a longitude and latitude: positive when that point faces the viewer. */
-export function facing(pose: Pose, lon: number, lat: number, flattening = 0): number {
+export function facing(pose: Pose, lon: number, lat: number, flattening = 0, axes?: Axes): number {
   const cl = Math.cos(lat * RAD);
   const east = cross(pose.pole, pose.meridian);
-  const x = cl * Math.cos(lon * RAD);
-  const y = cl * Math.sin(lon * RAD);
-  const z = Math.sin(lat * RAD) / (1 - flattening);
+  const x = (cl * Math.cos(lon * RAD)) / (axes?.[0] ?? 1);
+  const y = (cl * Math.sin(lon * RAD)) / (axes?.[1] ?? 1);
+  const z = Math.sin(lat * RAD) / (axes?.[2] ?? 1 - flattening);
   return pose.meridian[2] * x + east[2] * y + pose.pole[2] * z;
 }
 
-/** The silhouette of a body: its half-width, half-height along the pole's direction and the angle of the pole from straight up, clockwise, in degrees. */
-export function silhouette(pose: Pose, flattening: number): { a: number; b: number; angle: number } {
+/** The silhouette of a body: its half-width, half-height along the pole's direction and the angle of the pole from straight up, clockwise, in degrees. With `axes` it is the outline of a triaxial body: its long half-width, its short one and the angle of the long one from straight right, clockwise. */
+export function silhouette(pose: Pose, flattening: number, axes?: Axes): { a: number; b: number; angle: number } {
+  if (axes !== undefined) {
+    const east = cross(pose.pole, pose.meridian);
+    const cols: [number, number][] = [
+      [pose.meridian[0] * axes[0], pose.meridian[1] * axes[0]],
+      [east[0] * axes[1], east[1] * axes[1]],
+      [pose.pole[0] * axes[2], pose.pole[1] * axes[2]],
+    ];
+    const sxx = cols.reduce((t, c) => t + c[0] * c[0], 0);
+    const syy = cols.reduce((t, c) => t + c[1] * c[1], 0);
+    const sxy = cols.reduce((t, c) => t + c[0] * c[1], 0);
+    const mean = (sxx + syy) / 2;
+    const spread = Math.sqrt(((sxx - syy) / 2) ** 2 + sxy * sxy);
+    return { a: Math.sqrt(mean + spread), b: Math.sqrt(Math.max(0, mean - spread)), angle: -0.5 * Math.atan2(2 * sxy, sxx - syy) * DEG };
+  }
   const c = 1 - flattening;
   const s = pose.pole[2];
   return { a: 1, b: Math.sqrt(c * c * (1 - s * s) + s * s), angle: Math.atan2(pose.pole[0], pose.pole[1]) * DEG };

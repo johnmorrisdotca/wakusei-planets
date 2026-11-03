@@ -2,7 +2,7 @@
 // which body is under a pointer, where a dragged body snaps, the order they are drawn in, the history for undo, and the short text that keeps a scene in the address. Pure: no DOM, no three.js.
 import { ORBITS } from "../data/orbits.ts";
 import { heliocentric, moonVector } from "../ephemeris.ts";
-import { BODIES, MOONS_OF, PLANET_IDS, ringReach, type BodyId, type Look, type MoonId, type PlanetId } from "../facts.ts";
+import { BODIES, DWARF_IDS, MOONS_OF, PLANET_IDS, ringReach, type BodyId, type HostId, type Look, type MoonId } from "../facts.ts";
 
 /** How the automatic layout arranges the bodies. */
 export type Arrange = "row" | "arc" | "grid" | "orbit";
@@ -108,8 +108,8 @@ export interface Resolved {
 export const ASPECTS: readonly (readonly [string, number])[] = [["16:9", 16 / 9], ["4:3", 4 / 3], ["1:1", 1], ["3:4", 3 / 4]];
 export const MAX_ITEMS = 40;
 
-/** The Sun, then each planet followed by its moons nearest first: the order a layout and a row of buttons use. */
-export const ORDER: readonly BodyId[] = ["sun", ...PLANET_IDS.flatMap((planet) => [planet, ...(planet in MOONS_OF ? [...MOONS_OF[planet as keyof typeof MOONS_OF]].sort(byDistance) : [])])] as BodyId[];
+/** The Sun, then each planet and dwarf planet followed by its moons nearest first: the order a layout and a row of buttons use. */
+export const ORDER: readonly BodyId[] = ["sun", ...[...PLANET_IDS, ...DWARF_IDS].flatMap((planet) => [planet, ...(planet in MOONS_OF ? [...MOONS_OF[planet as keyof typeof MOONS_OF]].sort(byDistance) : [])])] as BodyId[];
 function byDistance(a: BodyId, b: BodyId): number {
   return (ORBITS[a]?.a ?? 0) - (ORBITS[b]?.a ?? 0);
 }
@@ -269,7 +269,7 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
   const index = new Map<BodyId, number>(items.map((i, k) => [i.body, k]));
   const planetKind = (id: BodyId): boolean => BODIES[id].parent === undefined && id !== "sun";
   const planetSpot = (id: BodyId): Spot => {
-    const v = heliocentric(id as PlanetId, when ?? J2000);
+    const v = heliocentric(id as HostId, when ?? J2000);
     return when === undefined ? { x: Math.hypot(v[0], v[1], v[2]) * AU_KM, y: 0 } : { x: v[0] * AU_KM, y: v[1] * AU_KM };
   };
   const moonSpot = (id: BodyId): Spot => {

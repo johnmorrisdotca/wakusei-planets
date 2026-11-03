@@ -54,10 +54,12 @@ for key, (period, parent, name) in MOONS.items():
     out.append((key, parent, frame, ep, a, e, w, m, i, node, sid, ap, node_rate, pole, ra, dec))
 
 lines = ["// Made by scripts/make-moon-data.py from JPL's Planetary Satellite Mean Elements (https://ssd.jpl.nasa.gov/sats/elem/); do not edit by hand.",
+         "// The moons of the dwarf planets are not on that page: their orbits are in dwarf.ts, from the papers it cites, and are added at the end.",
+         "import { DWARF_MOON_ORBITS } from \"./dwarf.ts\";", "",
          "// `sid` is the mean motion in degrees a day (negative: retrograde); `dw` and `dn` are the precession rates of the periapsis and the node, degrees a day.",
          "export interface OrbitElements {", "  /** The planet it goes round. */", "  parent: string;",
-         "  /** The reference plane: the ecliptic, the planet's equator, or the Laplace plane whose pole is `pole` (right ascension, declination, degrees). */",
-         "  frame: \"ecliptic\" | \"equatorial\" | \"laplace\";", "  pole?: [number, number];",
+         "  /** The reference plane: the ecliptic, the Earth's equator of J2000, the planet's equator, or the Laplace plane whose pole is `pole` (right ascension, declination, degrees). */",
+         "  frame: \"ecliptic\" | \"j2000\" | \"equatorial\" | \"laplace\";", "  pole?: [number, number];",
          "  /** The epoch of the elements, in milliseconds since 1970. */", "  epoch: number;",
          "  /** Semi-major axis in km, eccentricity, argument of periapsis, mean anomaly, inclination and node, degrees. */",
          "  a: number; e: number; w: number; m: number; i: number; node: number;",
@@ -67,6 +69,7 @@ for key, parent, frame, ep, a, e, w, m, i, node, sid, ap, nr, pole, ra, dec in o
     f = {"ecliptic": "ecliptic", "equatorial": "equatorial", "Laplace": "laplace"}[frame]
     p = f", pole: [{ra}, {dec}]" if f == "laplace" else ""
     lines.append(f'  {key}: {{ parent: "{parent}", frame: "{f}"{p}, epoch: {ep}, a: {a:g}, e: {e:g}, w: {w:g}, m: {m:g}, i: {i:g}, node: {node:g}, sid: {sid:.7f}, dw: {ap:.5f}, dn: {nr:.5f} }},')
+lines.append("  ...DWARF_MOON_ORBITS,")
 lines.append("};")
 open("src/data/orbits.ts", "w").write("\n".join(lines) + "\n")
 print("wrote src/data/orbits.ts,", len(out), "orbits")

@@ -1,7 +1,7 @@
 // The portrait builder: put any bodies of the solar system in one picture. The picture is one <wakusei-portrait> (one WebGL context for every body in it); this file is the editing around it: pick,
 // drag, turn, size, order, undo, the choices, the code, the saved picture. Every change makes a new scene (never edits the old), so undo is a list of scenes and the address holds the latest.
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
-import { BODIES, drawnTilt, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/index.ts";
+import { BODIES, DWARF_IDS, drawnTilt, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/index.ts";
 import { EMBED_KINDS, portraitCode, type EmbedKind } from "../src/embed.ts";
 import { addBody, addMoons, ASPECTS, auto, centreCamera, createHistory, decodeScene, encodeScene, fitAll, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, snap, type Guide, type Item, type Portrait } from "../src/portrait/model.ts";
 import { defaultPitch } from "../src/portrait/pose.ts";
@@ -109,6 +109,7 @@ for (const [selector, key] of NOTES) {
 // --- the page from the scene --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const GROUPS: readonly { id: string; label: () => string; bodies: readonly BodyId[] }[] = [
   { id: "planets", label: () => say("pt_g_planets"), bodies: ["sun", ...PLANET_IDS] },
+  { id: "dwarfs", label: () => say("pt_g_dwarfs"), bodies: DWARF_IDS },
   ...Object.entries(MOONS_OF).map(([planet, moons]) => ({ id: planet, label: () => say("moonsOf", { planet: name(planet as BodyId) }), bodies: moons as readonly BodyId[] })),
 ];
 

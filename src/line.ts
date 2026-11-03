@@ -1,7 +1,7 @@
 // The line drawing: a body as thin outlines on a dark disc, in the same style as the family's other line drawings. One SVG string, no canvas, no DOM.
 import { apparent, nearMoons, orbitPath, system, type Pose } from "./ephemeris.ts";
-import { BODIES, ringReach, type BodyFacts, type BodyId, type Feature, type MoonId, type PlanetId } from "./facts.ts";
-import { facing, portrait, silhouette, surfacePoint, type PortraitOptions } from "./pose.ts";
+import { BODIES, ringReach, type BodyFacts, type BodyId, type Feature, type MoonId, type HostId } from "./facts.ts";
+import { facing, portrait, silhouette, surfacePoint, type Axes, type PortraitOptions } from "./pose.ts";
 import { cross, RAD, scale, unit, type Vec3 } from "./vec.ts";
 
 /**
@@ -107,13 +107,17 @@ function around(lon: number, lat: number, rx: number, ry: number, steps = 28): {
   return out;
 }
 
+/** The semi-axes of a body that is far from round, as fractions of its radius. */
+const axesOf = (facts: BodyFacts): Axes | undefined => (facts.axesKm === undefined ? undefined : [facts.axesKm[0] / facts.radiusKm, facts.axesKm[1] / facts.radiusKm, facts.axesKm[2] / facts.radiusKm]);
+
 function featurePaths(facts: BodyFacts, pose: Pose, frame: Frame, stroke: string, hair: number): string {
   const f = facts.flattening;
-  const visible = (lon: number, lat: number): boolean => facing(pose, lon, lat, f) > 0.02;
+  const axes = axesOf(facts);
+  const visible = (lon: number, lat: number): boolean => facing(pose, lon, lat, f, axes) > 0.02;
   const out: string[] = [];
   const draw = (pts: readonly { lon: number; lat: number }[], close: boolean, fill: boolean): void => {
     const parts = runs(
-      pts.map((p) => surfacePoint(pose, p.lon, p.lat, f)),
+      pts.map((p) => surfacePoint(pose, p.lon, p.lat, f, axes)),
       (_, i) => visible(pts[i]!.lon, pts[i]!.lat),
     );
     for (const part of parts) {
@@ -223,7 +227,7 @@ function cachedOrbit(id: MoonId, time: number): Float32Array {
 
 function bodyGroup(id: BodyId, pose: Pose, frame: Frame, o: Required<Pick<LineOptions, "stroke" | "paper">>, hair: number, ringScale: number): string {
   const facts = BODIES[id];
-  const sil = silhouette(pose, facts.flattening);
+  const sil = silhouette(pose, facts.flattening, axesOf(facts));
   const disc = `<ellipse cx="${n(frame.cx)}" cy="${n(frame.cy)}" rx="${n(frame.r * sil.a)}" ry="${n(frame.r * sil.b)}" transform="rotate(${n(sil.angle)} ${n(frame.cx)} ${n(frame.cy)})"`;
   const rings = ringPaths(facts, pose, frame, o.stroke, hair, ringScale);
   const dark = id === "sun" || facts.kind === "star" ? "" : nightPath(pose, frame);
@@ -271,9 +275,9 @@ export function lineSvg(id: BodyId, options: LineOptions = {}): string {
   const paper = options.paper ?? mix(facts.colour, NAVY, id === "sun" ? 0.62 : 0.84);
   const hair = Math.max(0.6, size / 320);
   const head = (label: string): string => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(size)} ${n(size)}" width="${n(size)}" height="${n(size)}" role="img" aria-label="${label}"><title>${label}</title>`;
-  if (options.moons === true && facts.parent === undefined && id !== "sun") return systemSvg(id as PlanetId, options, size, stroke, paper, hair, head);
+  if (options.moons === true && facts.parent === undefined && id !== "sun") return systemSvg(id as HostId, options, size, stroke, paper, hair, head);
   const pose = poseFor(id, options);
-  const reach = Math.max(ringReach(facts), id === "sun" ? 1.08 : 1);
+  const reach = Math.max(ringReach(facts), id === "sun" ? 1.08 : 1, ...(axesOf(facts) ?? []));
   const fit = options.fill === undefined ? 0.94 / reach : options.fill;
   const zoom = options.zoom ?? 1;
   const frame: Frame = { cx: (size / 2) * (1 - (options.panX ?? 0)), cy: (size / 2) * (1 + (options.panY ?? 0)), r: (size / 2) * fit * zoom };
@@ -282,7 +286,7 @@ export function lineSvg(id: BodyId, options: LineOptions = {}): string {
 }
 
 /** A planet with its moons on their orbits, as the Earth sees it at a time. */
-function systemSvg(planet: PlanetId, options: LineOptions, size: number, stroke: string, paper: string, hair: number, head: (label: string) => string): string {
+function systemSvg(planet: HostId, options: LineOptions, size: number, stroke: string, paper: string, hair: number, head: (label: string) => string): string {
   const facts = BODIES[planet];
   const time = options.time ?? Date.now();
   const sys = options.moonsAt === undefined || options.pose === undefined ? system(planet, time) : undefined;

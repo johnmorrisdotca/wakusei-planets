@@ -28,7 +28,7 @@ description: ページに惑星を1つ置いて、傾けたり回したりでき
 </html>
 ```
 
-`body` は天体の名前です (`sun`、`mercury`、`venus`、`earth`、`mars`、`jupiter`、`saturn`、`uranus`、`neptune`、`pluto`、`moon`、そして各惑星の衛星)。`look="line"` は輪郭だけの線画で、SVGなので、ほかには何も要りません。円盤は土星の自転軸の傾き (26.73度) のとおりに傾き、輪は北極の上から見たように開いています。`size` は幅 (ピクセル) です。
+`body` は天体の名前です (`sun`、`mercury`、`venus`、`earth`、`mars`、`jupiter`、`saturn`、`uranus`、`neptune`、`pluto`、準惑星の `ceres`、`orcus`、`haumea`、`quaoar`、`makemake`、`gonggong`、`eris`、`sedna`、`moon`、そして各惑星の衛星)。`look="line"` は輪郭だけの線画で、SVGなので、ほかには何も要りません。円盤は土星の自転軸の傾き (26.73度) のとおりに傾き、輪は北極の上から見たように開いています。`size` は幅 (ピクセル) です。
 
 ## 2. 読む人が回せるようにする
 

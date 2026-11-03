@@ -12,7 +12,18 @@
  */
 export const PLANET_IDS = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const;
 /**
- * The moons the package draws, by planet.
+ * The dwarf planets besides Pluto, nearest the Sun first (by the size of their orbits).
+ *
+ * @example
+ * ```ts
+ * import { DWARF_IDS } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(DWARF_IDS.join(", "));
+ * ```
+ */
+export const DWARF_IDS = ["ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"] as const;
+/**
+ * The moons the package draws, by planet or dwarf planet.
  *
  * @example
  * ```ts
@@ -29,6 +40,9 @@ export const MOONS_OF = {
   uranus: ["miranda", "ariel", "umbriel", "titania", "oberon"],
   neptune: ["proteus", "triton", "nereid"],
   pluto: ["charon", "nix", "hydra"],
+  orcus: ["vanth"],
+  haumea: ["hiiaka", "namaka"],
+  eris: ["dysnomia"],
 } as const;
 
 /**
@@ -44,6 +58,30 @@ export const MOONS_OF = {
  */
 export type PlanetId = (typeof PLANET_IDS)[number];
 /**
+ * The name of a dwarf planet besides Pluto: `ceres`, `eris`, `haumea`...
+ *
+ * @example
+ * ```ts
+ * import { DWARF_IDS, type DwarfId } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * const id: DwarfId = DWARF_IDS[0];
+ * console.log(id);
+ * ```
+ */
+export type DwarfId = (typeof DWARF_IDS)[number];
+/**
+ * A body a moon can go round: a planet, Pluto or another dwarf planet.
+ *
+ * @example
+ * ```ts
+ * import { MOONS_OF, type HostId } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * const host: HostId = "eris";
+ * console.log(MOONS_OF[host]);
+ * ```
+ */
+export type HostId = PlanetId | DwarfId;
+/**
  * The name of a moon the package draws, such as `moon`, `io` or `titan`.
  *
  * @example
@@ -56,7 +94,7 @@ export type PlanetId = (typeof PLANET_IDS)[number];
  */
 export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
 /**
- * The name of a body: `sun`, a planet or a moon.
+ * The name of a body: `sun`, a planet, a dwarf planet or a moon.
  *
  * @example
  * ```ts
@@ -66,7 +104,7 @@ export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
  * console.log(lineSvg(id, { size: 64 }).length > 100);
  * ```
  */
-export type BodyId = "sun" | PlanetId | MoonId;
+export type BodyId = "sun" | PlanetId | DwarfId | MoonId;
 /**
  * How a body is drawn: `line` (an outline drawing), `realistic` (shaded, from the numbers) or `painted` (a real surface map).
  *
@@ -129,8 +167,8 @@ export type Feature =
 export interface BodyFacts {
   id: BodyId;
   kind: "star" | "planet" | "dwarf-planet" | "moon";
-  /** The planet a moon goes round. */
-  parent?: PlanetId;
+  /** The planet or dwarf planet a moon goes round. */
+  parent?: HostId;
   name: { en: string; ja: string };
   /** The equatorial radius in kilometres (a moon's mean radius). */
   radiusKm: number;
@@ -260,6 +298,17 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
       ...dots([[-60, 20, 6], [-100, -20, 7], [60, 40, 5]]),
     ],
   }),
+  ceres: f("ceres", "dwarf-planet", "Ceres", "ケレス", 481.05, 0.0731, 4.04, 291.42744, 66.76033, 170.65, 952.1532, 9.07417, "#7b7873", {
+    showLon: 239,
+    features: [{ kind: "circle", lon: 239, lat: 20, radius: 6 }, { kind: "circle", lon: 239, lat: 20, radius: 1.5, fill: true }, { kind: "circle", lon: 10, lat: -42, radius: 10 }, ...dots([[-60, 30, 8], [100, 15, 9], [160, -20, 7], [-120, -35, 8], [40, 45, 6], [-20, 0, 5]])],
+  }),
+  orcus: f("orcus", "dwarf-planet", "Orcus", "オルクス", 455, 0, 73.83, 142.474, 15.004, 0, 655.15, 13.188, "#9a9a9c", { features: dots([[-60, 20, 9], [40, -15, 7], [130, 30, 8], [-130, -30, 6]]) }),
+  haumea: f("haumea", "dwarf-planet", "Haumea", "ハウメア", 798, 0, 90.15, 282.6, -13, 0, 2206.6, 3.915341, "#dfe0e3", { showLon: 90, axesKm: [1161, 852, 513], features: [{ kind: "oval", lon: 40, lat: 5, rx: 22, ry: 12, fill: true }, { kind: "band", lat: 0 }, ...dots([[-80, 25, 7]])] }),
+  quaoar: f("quaoar", "dwarf-planet", "Quaoar", "クワオアー", 557.8, 0, 0, 265.4, 74.409, 0, 488.72, 17.6788, "#a3735a", { showLon: 90, axesKm: [620.7, 546.5, 511.5], features: dots([[-40, 20, 8], [70, -15, 9], [150, 35, 7], [-110, -30, 6]]) }),
+  makemake: f("makemake", "dwarf-planet", "Makemake", "マケマケ", 715, 0.01, 0, 317.92, 50.03, 0, 378.5, 22.8266, "#b87f5d", { features: [{ kind: "oval", lon: 30, lat: 10, rx: 30, ry: 18, fill: true }, ...dots([[-70, -20, 8], [120, 25, 7]])] }),
+  gonggong: f("gonggong", "dwarf-planet", "Gonggong", "ゴンゴン", 615, 0, 0, 255.383, 36.831, 0, 385.7, 22.4, "#9c4f3b", { features: dots([[-50, 10, 9], [60, -25, 8], [140, 30, 7]]) }),
+  eris: f("eris", "dwarf-planet", "Eris", "エリス", 1163, 0, 78.22, 36.17, 44.51, 0, 22.805163, 378.8616, "#e8e4dc", { features: [{ kind: "band", lat: 0 }, ...dots([[-30, 30, 8], [80, -20, 9]])] }),
+  sedna: f("sedna", "dwarf-planet", "Sedna", "セドナ", 453, 0, 0, 297.062, 74.71, 0, 840.95, 10.273, "#9a3f2b", { features: dots([[-40, 20, 9], [70, -30, 8], [150, 10, 7]]) }),
   moon: f("moon", "moon", "Moon", "月", 1737.4, 0.0012, 6.68, 269.9949, 66.5392, 38.3213, 13.17635815, 655.728, "#b8b5ae", {
     parent: "earth",
     synchronous: true,
@@ -298,10 +347,14 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   charon: f("charon", "moon", "Charon", "カロン", 606, 0, 0, 132.993, -6.163, 122.695, 56.3625225, 153.2935, "#9c9189", { parent: "pluto", synchronous: true, features: [{ kind: "oval", lon: 0, lat: 76, rx: 90, ry: 14, fill: true }, { kind: "circle", lon: 40, lat: -15, radius: 12 }, ...dots([[-60, 10, 8], [120, 30, 7]])] }),
   nix: f("nix", "moon", "Nix", "ニクス", 19.3, 0.3, 0, 132.993, -6.163, 0, 14.48, 0, "#b3ada7", { parent: "pluto", axesKm: [24.9, 16.6, 15.6], features: [{ kind: "circle", lon: 0, lat: 0, radius: 18 }] }),
   hydra: f("hydra", "moon", "Hydra", "ヒドラ", 19.5, 0.4, 0, 132.993, -6.163, 0, 9.42, 0, "#c4beb6", { parent: "pluto", axesKm: [32.5, 22.5, 12.5], features: [{ kind: "circle", lon: 30, lat: 10, radius: 20 }] }),
+  vanth: f("vanth", "moon", "Vanth", "ヴァント", 221, 0, 0, 142.474, 15.004, 0, 37.738618, 228.9488, "#6e6a66", { parent: "orcus", synchronous: true, features: dots([[-50, 15, 10], [80, -20, 9], [150, 30, 8]]) }),
+  hiiaka: f("hiiaka", "moon", "Hiʻiaka", "ヒイアカ", 185, 0, 0, 282.6, -13, 0, 0, 0, "#e0e0e0", { parent: "haumea", features: dots([[-30, 20, 12], [70, -25, 10]]) }),
+  namaka: f("namaka", "moon", "Namaka", "ナマカ", 75, 0, 0, 282.6, -13, 0, 0, 0, "#d0d0d0", { parent: "haumea", features: dots([[0, 0, 14]]) }),
+  dysnomia: f("dysnomia", "moon", "Dysnomia", "ディスノミア", 308, 0, 0, 36.17, 44.51, 0, 22.805163, 378.8616, "#5a5856", { parent: "eris", synchronous: true, features: dots([[-60, 20, 10], [50, -25, 9], [140, 30, 8]]) }),
 };
 
 /**
- * Every body's name: the Sun, the planets outward, then the moons of each planet.
+ * Every body's name: the Sun, the planets outward, the dwarf planets, then the moons of each.
  *
  * @example
  * ```ts
@@ -310,7 +363,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
  * console.log(BODY_IDS.length, BODY_IDS[0]);
  * ```
  */
-export const BODY_IDS: readonly BodyId[] = ["sun", ...PLANET_IDS, ...Object.values(MOONS_OF).flat()];
+export const BODY_IDS: readonly BodyId[] = ["sun", ...PLANET_IDS, ...DWARF_IDS, ...Object.values(MOONS_OF).flat()];
 
 /** A body's polar radius as a fraction of its equatorial radius. */
 export const polarRatio = (facts: BodyFacts): number => 1 - facts.flattening;

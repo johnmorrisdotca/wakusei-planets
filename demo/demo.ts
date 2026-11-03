@@ -1,7 +1,7 @@
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
-import { apparent, BODIES, MOONS_OF, type BodyId } from "../src/index.ts";
+import { apparent, BODIES, DWARF_IDS, MOONS_OF, type BodyId } from "../src/index.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
 import { lookOf } from "../src/scene/look.ts";
 import "../src/element.ts";
@@ -12,6 +12,13 @@ import { WORDS } from "./words.js";
 
 type Look = "line" | "realistic" | "painted";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
+const DWARF_TILES: readonly BodyId[] = DWARF_IDS;
+/** The well-known moons, in a row of their own: the rest are under their planet. */
+const MOON_TILES: readonly BodyId[] = ["moon", "phobos", "deimos", "io", "europa", "ganymede", "callisto", "enceladus", "titan", "triton", "charon"];
+type Group = "planets" | "dwarfs" | "moons";
+/** Which row of bodies a body is in: the planets (with the Sun), or the dwarf planets, each with their moons below. */
+const groupOfBody = (id: BodyId): Group => ((DWARF_TILES as readonly string[]).includes(id) || (DWARF_TILES as readonly string[]).includes(BODIES[id].parent ?? "") ? "dwarfs" : "planets");
+const TILES_OF: Record<Group, readonly BodyId[]> = { planets: TILES, dwarfs: DWARF_TILES, moons: MOON_TILES };
 /** The lineup: the same picture width in kilometres for every body, so the sizes are true to each other. Wide enough for Saturn's rings. */
 const SPAN_KM = 150_000;
 const FRAME_PX = 180;
@@ -136,7 +143,7 @@ if (main && controls && pickerBox) {
     else if (el.getAttribute(name) !== value) el.setAttribute(name, value);
   };
   function mountPicker(host: HTMLElement, tileClass: string, ids: { bodies?: string; moons?: string }): void {
-    host.innerHTML = `<div class="tiles"${ids.bodies ? ` id="${ids.bodies}"` : ""} role="group" data-row="bodies"></div><div class="moon-row"${ids.moons ? ` id="${ids.moons}"` : ""} hidden><h3></h3><div class="tiles" role="group" data-row="moons"></div></div>`;
+    host.innerHTML = `<div class="group fam-seg groups" role="group" data-row="groups"><button type="button" data-group="planets" data-testid="group-planets"></button><button type="button" data-group="dwarfs" data-testid="group-dwarfs"></button><button type="button" data-group="moons" data-testid="group-moons"></button></div><div class="tiles"${ids.bodies ? ` id="${ids.bodies}"` : ""} role="group" data-row="bodies"></div><div class="moon-row"${ids.moons ? ` id="${ids.moons}"` : ""} hidden><h3></h3><div class="tiles" role="group" data-row="moons"></div></div>`;
     const bodiesRow = host.querySelector<HTMLElement>('[data-row="bodies"]')!;
     const moonRow = host.querySelector<HTMLElement>(".moon-row")!;
     const moonTiles = host.querySelector<HTMLElement>('[data-row="moons"]')!;
@@ -164,10 +171,31 @@ if (main && controls && pickerBox) {
       cache.set(id, held);
       return held;
     };
-    for (const id of TILES) bodiesRow.append(tileOf(id).button);
+    const groupButtons = [...host.querySelectorAll<HTMLButtonElement>("[data-group]")];
+    let group: Group = groupOfBody(state.body);
+    let lastBody = state.body;
+    let rowOf = "";
+    for (const button of groupButtons) {
+      button.addEventListener("click", () => {
+        group = button.dataset["group"] as Group;
+        render();
+      });
+    }
     let shown = "";
     pickers.push({
       sync() {
+        if (state.body !== lastBody) {
+          lastBody = state.body;
+          if (!(group === "moons" && MOON_TILES.includes(state.body))) group = groupOfBody(state.body);
+        }
+        if (rowOf !== group) {
+          rowOf = group;
+          bodiesRow.replaceChildren(...TILES_OF[group].map((id) => tileOf(id).button));
+        }
+        for (const button of groupButtons) {
+          button.textContent = say(`grp_${button.dataset["group"]}`);
+          pressed(button, button.dataset["group"] === group);
+        }
         const planet = planetOfChoice();
         const moons = planet === null ? [] : ([...MOONS_OF[planet as keyof typeof MOONS_OF]] as BodyId[]);
         const key = `${planet}|${lang()}`;

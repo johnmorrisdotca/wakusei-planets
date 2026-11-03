@@ -5,7 +5,7 @@ order: 7
 description: Put any bodies of the solar system in one picture, arrange them, light them, and take the code or a saved picture.
 ---
 
-[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies of the solar system in one picture: the Sun, the planets, Pluto and any of the moons. Every body is drawn in the same WebGL scene, so the page still holds one WebGL context however many bodies are in it.
+[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies of the solar system in one picture: the Sun, the planets, Pluto, the other dwarf planets and any of the moons. Every body is drawn in the same WebGL scene, so the page still holds one WebGL context however many bodies are in it.
 
 Picture: [The Jupiter and the Galileans preset in the portrait builder.](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/portrait-galileans.png)
 

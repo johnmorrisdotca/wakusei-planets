@@ -85,6 +85,11 @@
       "ja": "冥王星の陰影つきの見た目",
       "platform": "browser"
     },
+    "./dwarfs": {
+      "en": "The dwarf planets: shaded looks (Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna)",
+      "ja": "準惑星の陰影つきの見た目 (ケレス、オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナ)",
+      "platform": "browser"
+    },
     "./moons-earth": {
       "en": "The Moon's shaded look",
       "ja": "月の陰影つきの見た目",
@@ -118,6 +123,11 @@
     "./moons-pluto": {
       "en": "Pluto's moons: shaded looks",
       "ja": "冥王星の衛星の陰影つきの見た目",
+      "platform": "browser"
+    },
+    "./moons-dwarf": {
+      "en": "The dwarf planets' moons: shaded looks (Vanth, Hiʻiaka, Namaka, Dysnomia)",
+      "ja": "準惑星の衛星の陰影つきの見た目 (ヴァント、ヒイアカ、ナマカ、ディスノミア)",
       "platform": "browser"
     },
     "./earth": {

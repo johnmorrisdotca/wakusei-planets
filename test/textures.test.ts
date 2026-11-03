@@ -10,7 +10,7 @@ const notice = readFileSync("NOTICE.md", "utf8");
 
 test("every painted look has all its pictures, and every picture is one a look names", () => {
   const painted = BODY_IDS.map((id) => lookOf(id)?.painted).filter((p): p is NonNullable<typeof p> => p !== undefined);
-  assert.equal(painted.length, 19);
+  assert.equal(painted.length, 20);
   for (const map of painted) {
     for (const width of map.widths) assert.ok(existsSync(`textures/${map.map}-${width}.webp`), `${map.map}-${width}`);
     if (map.rings) assert.ok(existsSync(`textures/${map.rings.map}-${map.rings.width}.webp`), map.rings.map);
