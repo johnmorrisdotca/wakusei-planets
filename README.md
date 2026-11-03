@@ -1,3 +1,5 @@
+<p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/thumbnail-dark.png"><img src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/thumbnail.png" alt="Wakusei Planets: Mars, the Earth, Saturn with its rings, Jupiter and Neptune, shaded in 3D, side by side." width="1200"></picture></a></p>
+
 <h1 align="center">Wakusei Planets <sub>惑星</sub></h1>
 
 <p align="center"><strong>The Sun, the planets and their moons, for the web.</strong><br>
