@@ -7,6 +7,8 @@ description: Set up a body in the demo, then copy working code for plain HTML, a
 
 The demo's "Put it in your page" section is a configurator. Set up the body above it (which body, its look, the sky and date, the moons, whether it turns), choose a size, then pick how your page is made. The code and the picture beside it change with every choice, and the credits that go with the picture are under the code.
 
+![The code builder: rows of bodies, looks, sizes, sky and turning, tabs for each way a page is made, a preview and the code to copy.](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/builder-desk.png)
+
 The same text is made by `embedCode`, so a page of your own can offer the same choice:
 
 ```ts

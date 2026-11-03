@@ -59,6 +59,11 @@ try {
     ["moons-desk", { width: 1280, height: 900 }, "?body=jupiter&look=line&moons=1&t=2026-11-02T12:00:00.000Z"],
     ["realistic-phone", { width: 390, height: 844 }, "?body=mars&look=realistic"],
     ["lineup-desk", { width: 1280, height: 900 }, "?body=earth&look=painted&scale=1"],
+    ["hero-saturn-painted", { width: 1280, height: 900 }, "?body=saturn&look=painted"],
+    ["hero-earth-painted", { width: 1280, height: 900 }, "?body=earth&look=painted"],
+    ["hero-io-painted", { width: 1280, height: 900 }, "?body=io&look=painted"],
+    ["hero-venus-realistic", { width: 1280, height: 900 }, "?body=venus&look=realistic"],
+    ["moons-saturn", { width: 1280, height: 900 }, "?body=saturn&look=line&moons=1&t=2026-11-02T12:00:00.000Z"],
   ];
   const only = process.env["ONLY"]?.split(",");
   for (const [name, viewport, query] of shots) {
@@ -75,7 +80,7 @@ try {
       await context.close();
       continue;
     }
-    if (query.includes("look=realistic")) {
+    if (query.includes("look=realistic") || query.includes("look=painted")) {
       await page.locator("#main").hover();
       await page.waitForSelector("#main[data-state=live]", { timeout: 90_000 });
       await page.waitForTimeout(1500);
@@ -84,6 +89,30 @@ try {
     await page.waitForTimeout(400);
     if (name.startsWith("hero") || name.startsWith("moons")) await page.locator(".space-stage").screenshot({ path: out(name) });
     else await page.screenshot({ path: out(name) });
+    await context.close();
+  }
+  // the code builder, the embed frame and the documentation site (`pnpm docs:site` first)
+  const pages: [string, { width: number; height: number }, string, string][] = [
+    ["builder-desk", { width: 1280, height: 1000 }, "builder.html", 'html[data-ready="true"]'],
+    ["embed-frame", { width: 600, height: 600 }, "embed.html?body=jupiter&look=line&time=2026-11-02T12:00Z&moons=1", "wakusei-body"],
+    ["docs-site", { width: 1200, height: 800 }, "docs/index.html", "main, body"],
+  ];
+  for (const [name, viewport, path, ready] of pages) {
+    if (onlyThumbnail || (only !== undefined && !only.includes(name))) continue;
+    const context = await browser.newContext({ viewport, reducedMotion: "reduce", deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${port}/wakusei-planets/${path}`);
+    await page.waitForSelector(ready);
+    if (name === "builder-desk") {
+      await page.locator('[data-testid="body-jupiter"]').click();
+      await page.locator('[data-testid="look-realistic"]').click();
+      await page.locator('[data-testid="kind-react"]').click();
+      await page.waitForSelector('[data-testid="builder-preview"] wakusei-body[data-state]', { timeout: 90_000 });
+    }
+    // the frame is transparent, made for any page: the picture shows it on the demo's dark
+    if (name === "embed-frame") await page.addStyleTag({ content: "html { background: #06080d; }" });
+    await page.waitForTimeout(1500);
+    await page.screenshot({ path: out(name) });
     await context.close();
   }
   if (only === undefined || only.includes("thumbnail")) await thumbnails(browser);

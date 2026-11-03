@@ -11,6 +11,14 @@ description: 3つの見た目、天体ごとのエントリー、three.js、画�
 - `realistic`: 天体の実際の色と地形から three.js で描く、陰影つきの球。太陽の側から光が当たります。画像は取得せず、表面はシェーダーで計算します。
 - `painted`: NASA・USGS・JPL の公有の画像から作った、太陽、水星から冥王星までの惑星、月、ガリレオ衛星の4つ、タイタン、レア、エンケラドス、ミマスの、本物の表面の地図です。土星の輪は、カッシーニが撮った輪の写真から作っています。最初は小さい画像を描き、拡大すると、より細かい画像を取得します。取得できなければ陰影つきのままです。土星・天王星・海王星・太陽は全体の地図がないので、写真1枚から作っています (NOTICE.md に書いてあります)。
 
+![地図つきの見た目の土星。輪はカッシーニの画像から。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/hero-saturn-painted.png)
+
+![地図つきの見た目の地球。NASA の Blue Marble の画像から。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/hero-earth-painted.png)
+
+![地図つきの見た目のイオ。地図つきの9つの衛星のひとつ。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/hero-io-painted.png)
+
+![陰影つきの見た目の金星。画像を使わず、表面はシェーダーで計算している。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/hero-venus-realistic.png)
+
 ## 天体ごとに別のエントリー
 
 陰影つきの見た目は、天体ごとのコードとデータなので、importも別です。`@johnmorrisdotca/wakusei-planets/saturn`、ガリレオ衛星は `/moons-jupiter` です。`/all` はすべてをimportします。エントリーをimportしていない天体は、その色の簡単な球として描かれます。

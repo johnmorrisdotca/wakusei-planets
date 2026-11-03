@@ -70,6 +70,37 @@ The same tag with the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazo
 
 A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (and `import { lineSvg } from "@johnmorrisdotca/wakusei-planets"` for the SVG string, which needs no browser). For the shaded look add the body's own entry point, `import "@johnmorrisdotca/wakusei-planets/jupiter"`, and `three` (an optional peer).
 
+## Who it is for
+
+- **A developer who wants a planet on a page** with one tag, no build step, and a drawing that is an SVG before any 3D has loaded.
+- **A teacher, writer or museum** who needs the Sun, the planets and their moons at their real sizes and tilts, with every number traceable to the IAU, NASA or JPL.
+- **A maker of sky tools** who wants a planet's pole, phase, ring opening and its moons' places for any date and time as plain data, on a server or in a browser.
+- **A three.js developer** who wants the bodies as objects for a scene of their own.
+
+## Features
+
+- The Sun, the eight planets, Pluto and 25 moons, each with its real size, flattening, axial tilt, pole and rotation as data.
+- Three looks: a clean `line` drawing (an SVG string), a shaded `realistic` sphere worked out in a shader, and a `painted` surface map from public-domain imagery.
+- The sky for any date and time: a body's pole, rotation, phase and ring opening as the Earth sees it, and a planet's moons where they are then.
+- One WebGL context for the page, nothing drawn at rest, at most thirty frames a second, and everything freed when an element leaves.
+- A pure side that runs on a server: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait` and `lineSvg`.
+- `embedCode` writes the code that puts a body in a page for HTML, a module, React, Vue, Angular, Svelte or an iframe.
+- `painter.make` hands a body to a three.js scene of your own.
+- Every guide in English and Japanese; the demo's words too.
+
+## Use it in your project
+
+```sh
+npm install @johnmorrisdotca/wakusei-planets three
+```
+
+```ts no-run
+import "@johnmorrisdotca/wakusei-planets/element";
+import "@johnmorrisdotca/wakusei-planets/saturn";
+```
+
+Import the element once in client code, and the entry point of each body you draw in a shaded look (or `/all`). A line drawing needs neither `three` nor an entry point. [Bundlers](docs/guides/bundlers.md) and [Frameworks](docs/guides/frameworks.md) go through it.
+
 ## Three looks
 
 | Look | What it is | Needs |
@@ -146,6 +177,229 @@ The pure side has no DOM: `BODIES`, `apparent(id, time)`, `system(planet, time)`
 ## The data
 
 Sizes, flattening, poles and rotation are the IAU's and NASA's; planet positions are JPL's approximate elements; the Moon's are Meeus's largest terms; the other moons are JPL's mean elements. Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
+
+## Examples
+
+Every `ts` block in this README is type-checked and run against the package as npm packs it (`pnpm test:readme`).
+
+```ts
+import { BODIES, MOONS_OF, PLANET_IDS } from "@johnmorrisdotca/wakusei-planets";
+
+BODIES.saturn.radiusKm; // 60268
+PLANET_IDS.length; // 9
+Object.values(MOONS_OF).flat().length; // 25
+```
+
+The planets' state as the Earth sees them on a date:
+
+```ts
+import { apparent } from "@johnmorrisdotca/wakusei-planets";
+
+const saturn = apparent("saturn", Date.UTC(2026, 10, 2));
+console.log(saturn.subObserverLat.toFixed(1), saturn.illumination.toFixed(2));
+```
+
+A planet's moons where they are on a date, as offsets from it in the planet's radii:
+
+```ts
+import { system } from "@johnmorrisdotca/wakusei-planets";
+
+const { moons } = system("jupiter", Date.UTC(2026, 10, 2));
+console.log(moons.map((moon) => `${moon.id} ${moon.x.toFixed(1)}`).join(", "));
+```
+
+A line drawing as an SVG string, with no browser:
+
+```ts
+import { lineSvg } from "@johnmorrisdotca/wakusei-planets";
+
+const svg = lineSvg("mars", { size: 200, tilt: 15, lang: "ja" });
+if (!svg.startsWith("<svg") || !svg.includes("火星")) throw new Error("not a Mars drawing");
+```
+
+The code that puts a body in a page, for any of the ways a page is made:
+
+```ts
+import { EMBED_KINDS, embedCode } from "@johnmorrisdotca/wakusei-planets";
+
+for (const kind of EMBED_KINDS) console.log(kind, embedCode({ body: "mars", look: "line", size: 240 }, kind).split("\n")[0]);
+```
+
+A body for your own three.js scene, in the browser:
+
+The moons' places on an orbit, as points for a line you draw yourself:
+
+```ts
+import { orbitPath } from "@johnmorrisdotca/wakusei-planets";
+
+const path = orbitPath("io", Date.UTC(2026, 10, 2), 8);
+console.log(path.length / 3, "points");
+```
+
+How much of the Moon is lit on a date:
+
+```ts
+import { apparent } from "@johnmorrisdotca/wakusei-planets";
+
+const moon = apparent("moon", Date.UTC(2026, 10, 24, 14));
+if (moon.illumination < 0.9) throw new Error("the Moon is nearly full on 24 November 2026");
+```
+
+A page that cannot run script uses an iframe of the embed page:
+
+```html
+<iframe src="https://johnmorrisdotca.github.io/wakusei-planets/embed.html?body=mars&look=line" title="Mars" width="320" height="320" style="border:0"></iframe>
+```
+
+```ts no-run
+import * as THREE from "three";
+import { painter } from "@johnmorrisdotca/wakusei-planets/painter";
+
+const scene = new THREE.Scene();
+const jupiter = painter.make(THREE, "Jupiter", { look: "realistic", invalidate: () => {}, ratio: 1 });
+scene.add(jupiter.object);
+```
+
+A body that turns by itself and a moving sky, in HTML:
+
+```html
+<wakusei-body body="jupiter" look="line" moons time="now" rate="600" size="360"></wakusei-body>
+<wakusei-body body="venus" look="realistic" time="2026-11-02T12:00:00Z" turn="12" live="hover"></wakusei-body>
+```
+
+## The code builder
+
+[The code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) is one screen: choose which planet's system, the body, the look, the size, the sky and the turning, then pick how your page is made and copy the code. It is built from `embedCode`, so it writes what the package writes. [Put it in your page](docs/guides/put-it-in-your-page.md) is its guide.
+
+## API
+
+The reference is a site, made from the source's own doc comments: every export has a summary, its parameters, what it returns and an example that runs when the site is built. [Open the reference](https://johnmorrisdotca.github.io/wakusei-planets/docs/).
+
+| Entry point | What it gives |
+| --- | --- |
+| `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`. No browser. |
+| `.../element` | `<wakusei-body>`; three.js is loaded only for a shaded look. |
+| `.../look` | What a body needs to be drawn with three.js. |
+| `.../painter` | The bodies as objects for a scene of your own. |
+| `.../all` | Every body's shaded look, at once. |
+| `.../saturn`, `.../jupiter` and the rest | One body's shaded look. `.../moons-jupiter` and its siblings: a planet's moons. |
+
+```ts
+import * as pure from "@johnmorrisdotca/wakusei-planets";
+
+console.log(Object.keys(pure).sort().join(", "));
+```
+
+## Guides
+
+Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-started.md).
+
+| Guide | What it is for |
+| --- | --- |
+| [Getting started](docs/guides/getting-started.md) | A body on a page |
+| [HTML and CDN](docs/guides/html-and-cdn.md) | A script tag from jsDelivr or unpkg |
+| [Bundlers](docs/guides/bundlers.md) | Vite and webpack, only the bodies you need |
+| [Frameworks](docs/guides/frameworks.md) | React, Vue, Svelte, Angular |
+| [Embed in an iframe](docs/guides/embed-in-an-iframe.md) | No script of your own |
+| [Put it in your page](docs/guides/put-it-in-your-page.md) | Set up a body and copy the code |
+| [Looks and bodies](docs/guides/looks-and-bodies.md) | The looks and each body's entry point |
+| [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
+| [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
+| [TypeScript and Node](docs/guides/typescript-and-node.md) | Types and the pure side |
+| [How it works](docs/guides/how-it-works.md) | Where the numbers come from |
+| [Architecture](docs/guides/architecture.md) | How the layers fit |
+| [Troubleshooting](docs/guides/troubleshooting.md) | Something does not appear |
+| [Upgrading](docs/guides/upgrading.md) | What to act on between versions |
+
+## Limits
+
+```ts
+import { BODIES } from "@johnmorrisdotca/wakusei-planets";
+
+BODIES.pluto.kind; // "dwarf-planet"
+```
+
+- A fact with no source is left out, never guessed. Moon positions are JPL's mean elements and are accurate to a few degrees on the orbit, about the size of the moon on screen.
+- The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a real map where one exists; the Sun, Saturn, Uranus and Neptune have no global map, so theirs are made from one photograph each, as `NOTICE.md` says.
+- A shaded look needs WebGL. Without it the line drawing is drawn.
+- Saturn and Uranus have their rings drawn.
+- Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
+
+## Accessibility
+
+- Every `<wakusei-body>` is an image with an accessible name from its body and look, such as "Saturn, line drawing", or the Japanese name with `lang="ja"`.
+- A reader who prefers reduced motion gets no turning and no moving sky.
+- A body can be turned, tipped, zoomed and panned with the keyboard, and the view controls are at least 48 pixels.
+- Names and labels are in English and Japanese (`lang="ja"`).
+
+```html
+<wakusei-body body="saturn" look="line" lang="ja" size="320"></wakusei-body>
+```
+
+## Browser and runtime support
+
+- The package needs Node 24 or later. The pure side runs in Node and in any current browser; the element needs a current browser.
+- The shaded looks need WebGL and `three` `>=0.160.0` (an optional peer).
+- The tests run the demo in Chromium and WebKit, at a phone's width and a desk's, and draw WebGL in software.
+
+## Languages
+
+The names and labels in the element are in English and Japanese (`lang`), and so are the demo's words and every guide: each guide in [docs/guides](docs/guides) has a twin in [docs/guides/ja](docs/guides/ja/getting-started.md), one language to a page.
+
+```ts
+import { lineSvg } from "@johnmorrisdotca/wakusei-planets";
+
+console.log(lineSvg("saturn", { size: 160, lang: "ja" }).includes("土星"));
+```
+
+Japanese names and labels need only the `lang` attribute; the SVG string takes the same option.
+
+## Architecture
+
+The lowest layers are pure and import with no browser: the facts, the positions, the pose and the line drawing. The shaded looks are one entry point for each body, registered by name, and every `<wakusei-body>` shares one WebGL context through kazoku-ui. [Architecture](docs/guides/architecture.md) has the layers.
+
+```ts
+import { portrait } from "@johnmorrisdotca/wakusei-planets";
+
+const pose = portrait("uranus");
+console.log(pose.pole.length);
+```
+
+## Development
+
+```sh
+pnpm install
+pnpm check         # lint, types, unit tests, the build and the packed package
+pnpm test:readme   # every ts block of the README, type-checked and run against the packed package
+pnpm test:usage    # every way of using it in the README and the guides, built and opened
+pnpm docs:check    # the reference site's checks
+pnpm test:demo     # the demo and the docs site in a real browser
+pnpm dev           # the demo on http://127.0.0.1:8300/wakusei-planets/
+```
+
+The pictures in `docs/images` are made by the package's own script:
+
+```sh
+ONLY=hero-saturn-painted,builder-desk pnpm screenshots
+```
+
+## Contributing
+
+Work in a git worktree from `origin/main`, one branch per change:
+
+```sh
+git worktree add ../wakusei-work -b my-change origin/main
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The rules that matter most: draw from public facts and cite them, pictures only from public-domain sources, a fact with no source is left out, and performance is not optional.
+
+## Changes
+
+[CHANGELOG.md](CHANGELOG.md) lists every release with its date.
+
+## Licence
+
+MIT: see [LICENSE](LICENSE). The pictures are public-domain NASA, USGS and JPL imagery, each file credited in [NOTICE.md](NOTICE.md).
 
 ## The name
 

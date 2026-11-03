@@ -16,6 +16,16 @@ const usage = at(".usage");
 const NAME = "@johnmorrisdotca/wakusei-planets";
 const require = createRequire(import.meta.url);
 
+/** Run a program and, if it fails, say what it printed. */
+const sh = (program: string, args: string[], cwd: string): string => {
+  try {
+    return execFileSync(program, args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const out = error as { stdout?: string; stderr?: string };
+    throw new Error(`${program} ${args.join(" ")} failed:\n${out.stdout ?? ""}${out.stderr ?? ""}`);
+  }
+};
+
 const only = process.argv.slice(2);
 const results: string[] = [];
 const failures: string[] = [];
@@ -107,6 +117,23 @@ const unpkgAnswer = async (pathname: string): Promise<string | null> => {
 const pageOf = (file: string) => readFileSync(file, "utf8");
 
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+
+await step("readme", () => {
+  // The README's TypeScript and JavaScript blocks: each one is type-checked, and run unless it says `no-run` (it needs a browser).
+  const folder = join(usage, "readme");
+  mkdirSync(folder, { recursive: true });
+  const blocks = [...readFileSync(at("README.md"), "utf8").matchAll(/^```(ts|js|mjs)( [^\n]*)?\n([\s\S]*?)^```$/gm)];
+  if (blocks.length < 3) throw new Error("the README has no code blocks to check");
+  const names = blocks.map((block, index) => {
+    const name = `block-${index + 1}.${block[1] === "ts" ? "ts" : "mjs"}`;
+    // A block that only shows a call leaves its value unused; making it a module keeps the files apart.
+    writeFileSync(join(folder, name), `${block[3]}\nexport {};\n`);
+    return { name, run: !(block[2] ?? "").includes("no-run") };
+  });
+  writeFileSync(join(folder, "tsconfig.json"), JSON.stringify({ compilerOptions: { target: "ES2022", module: "esnext", moduleResolution: "bundler", strict: true, noEmit: true, allowImportingTsExtensions: true, lib: ["es2023", "dom", "dom.iterable"], types: [], skipLibCheck: true }, include: names.filter((one) => one.name.endsWith(".ts")).map((one) => one.name) }));
+  sh(process.execPath, [require.resolve("typescript/bin/tsc"), "-p", join(folder, "tsconfig.json")], usage);
+  for (const one of names) if (one.run) sh(process.execPath, [join(folder, one.name)], usage);
+});
 
 await step("node", () => {
   const out = execFileSync(process.execPath, [join(examples("node"), "server.mjs")], { cwd: usage, encoding: "utf8" }).trim();

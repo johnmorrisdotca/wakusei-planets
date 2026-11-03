@@ -7,6 +7,8 @@ description: ある日時の衛星の位置つきで惑星を描きます。時�
 
 惑星に `moons` を付けて `time` を与えると、その時刻に地球から見える位置に、衛星を軌道つきで描きます。軌道は JPL の平均軌道要素から計算していて、誤差は軌道上で数度です。画面で見る衛星の大きさと同じくらいです。
 
+![選んだ日時の、土星と軌道上の衛星。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/moons-saturn.png)
+
 ```html
 <wakusei-body body="jupiter" look="line" moons time="2026-11-02T12:00:00Z"></wakusei-body>
 ```

@@ -2,9 +2,10 @@
 
 ## [Unreleased]
 
+- Documentation: an architecture guide and a fuller upgrading guide, each with its Japanese twin; a code builder page (`builder.html`); eight new pictures; a longer README whose examples run (`pnpm test:readme`); and every release of this changelog dated. No behaviour changed.
 - The README opens with the package's thumbnail, and the demo carries it as its link preview (og:image) and publishes the card, a dark card and an icon on Pages at `thumbnail.png`, `thumbnail-dark.png` and `icon.png`.
 
-## 0.5.0
+## 0.5.0 - 2026-11-03
 
 The bodies for someone else's three.js scene.
 
@@ -13,7 +14,7 @@ The bodies for someone else's three.js scene.
 - `orientation(id, ms)` and `moonOffset(id, ms)`: a body's pole and prime meridian, and a moon's place from its planet, in the same axes.
 - A guide, "In your own three.js scene", in English and Japanese.
 
-## 0.4.0
+## 0.4.0 - 2026-11-03
 
 "Put it in your page" is a configurator.
 
@@ -22,7 +23,7 @@ The bodies for someone else's three.js scene.
 - A guide, "Put it in your page", in English and Japanese.
 - **kazoku-ui 0.11.0**: the view controls' Centre button (it appears once the body is dragged away), a pan that keeps a quarter of the body in sight (told the body's size with `object-size`), and a drag that keeps the touched point under the pointer (`grab-radius`). The 0.3.1 stopgap that made Fit re-centre is gone.
 
-## 0.3.1
+## 0.3.1 - 2026-11-03
 
 The Earth is a body like the others, and "To scale" is a comparison.
 
@@ -32,7 +33,7 @@ The Earth is a body like the others, and "To scale" is a comparison.
 - **The body cannot be dragged out of the view** (a quarter of it stays in), and Fit centres it and returns it to its first angle.
 - The README's pictures are absolute addresses pinned to the release's tag (npm's page showed a different picture from GitHub's), and a test holds it (`pnpm readme:images` pins them after a version bump).
 
-## 0.3.0
+## 0.3.0 - 2026-11-03
 
 Painted moons, Saturn's rings from Cassini, and a drag that goes the right way up.
 
@@ -44,7 +45,7 @@ Painted moons, Saturn's rings from Cassini, and a drag that goes the right way u
 - **A drag up moves the surface up** (it moved it down), in every look: the controls' tilt tipped the pole toward you as it grew, and now tips the top of the body away, so the near surface goes up, as in chikyu-earth 0.9.1. Drag right, the right arrow and the up arrow agree. Test (`e2e/drag.demo.ts`): a real pointer and real key presses on Mars (line, shaded, painted), Venus and the Moon (painted); the vertical checks fail on 0.2.0.
 - `scripts/make-textures.py` makes the moons and the ring strip too (`python3 scripts/make-textures.py io saturn-ring`) and writes each source's file page, licence and credit into `textures/SOURCES.json`.
 
-## 0.2.0
+## 0.2.0 - 2026-11-02
 
 The painted looks.
 
@@ -52,7 +53,7 @@ The painted looks.
 - Small pictures by default: the 512 and 1024 pixel widths are in the package (0.53 MB in all); a view that is zoomed in fetches the 2048 pixel width from the repository by jsDelivr's GitHub address (`texture-far-base` to serve it yourself). A picture that fails to load leaves the shaded look drawn, and no picture is asked for twice.
 - A texture is freed when a sharper one replaces it and when the element leaves.
 
-## 0.1.0
+## 0.1.0 - 2026-11-03
 
 The first release. The package, to the family's standard from the start: a demo and an embed page on GitHub Pages, a documentation site in English and Japanese, a README with every way to use it (each one tested), the shared release workflow with its freeze test.
 

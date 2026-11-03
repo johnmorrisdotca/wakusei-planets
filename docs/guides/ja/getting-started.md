@@ -7,6 +7,8 @@ description: ページに惑星を1つ置いて、傾けたり回したりでき
 
 このガイドでは、土星をページに置いて、読む人が回す・傾ける・拡大できるようにします。必要なのはテキストエディターとブラウザーだけです。インストールは要りません。ページがCDNからパッケージを読み込みます。
 
+![ドキュメントサイト：検索欄、エントリーポイント、分類されたガイド、例つきのすべてのエクスポート。](https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/docs-site.png)
+
 ## 1. 惑星のあるページ
 
 `saturn.html` という名前で保存して開いてください。`<wakusei-body>` が天体で、その上のスクリプトがこのタグを動かします。

@@ -184,7 +184,8 @@
     "docs:check": "pnpm build && node scripts/docs-site.mjs check",
     "size": "node scripts/docs-site.mjs size",
     "test:usage": "pnpm site && node scripts/check-usage.ts",
-    "check:standard": "node scripts/check-standard.mjs"
+    "check:standard": "node scripts/check-standard.mjs",
+    "test:readme": "pnpm build && node scripts/check-usage.ts readme"
   },
   "devDependencies": {
     "@angular/common": "^22.2.4",
