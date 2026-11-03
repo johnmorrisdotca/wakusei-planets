@@ -255,7 +255,7 @@ export class WakuseiBody extends HTMLElement {
     }
   }
 
-  /** The shared controllers' camera: `yaw` turns the body about its pole, `tilt` tips its pole toward or away, `zoom` and the pan move the picture. */
+  /** The shared controllers' camera: `yaw` turns the body about its pole, `tilt` tips its top away from you as it grows (a drag up moves the surface up), `zoom` and the pan move the picture. */
   setView(view: { yaw?: number; tilt?: number; zoom?: number; panX?: number; panY?: number }): void {
     this.#yaw = view.yaw ?? 0;
     this.#tilt = view.tilt ?? 0;
@@ -301,7 +301,7 @@ export class WakuseiBody extends HTMLElement {
 
   #sceneOf(frame: LiveFrame): SceneState {
     let { pole, meridian, light } = frame.pose;
-    const tiltBy = this.#tilt + this.#pitchDelta;
+    const tiltBy = this.#pitchDelta - this.#tilt;
     if (this.#yaw !== 0) meridian = turnVec(meridian, pole, this.#yaw);
     if (tiltBy !== 0) {
       const x: Vec3 = [1, 0, 0];
