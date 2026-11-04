@@ -1,5 +1,7 @@
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
 import "@johnmorrisdotca/kazoku-ui/speed-buttons/define";
+import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
+import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
 import type { SpeedButtonsElement } from "@johnmorrisdotca/kazoku-ui/speed-buttons/element";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
@@ -501,89 +503,40 @@ if (main && controls && pickerBox) {
     address.set("t", state.time !== "now" ? state.time : null);
   }
 
-  // --- "Put it in your page": the code for the body as it is set up above, for each way a page is made ---------------------------------------------
-  const embedTabs = document.querySelector<HTMLElement>("#embed-tabs")!;
-  const embedCodeBox = document.querySelector<HTMLElement>("#embed-code")!;
-  const embedPreview = document.querySelector<HTMLElement>("#embed-preview")!;
-  const embedCredits = document.querySelector<HTMLElement>("#embed-credit")!;
-  const embedCopy = document.querySelector<HTMLButtonElement>("#embed-copy")!;
-  const embedStatus = document.querySelector<HTMLElement>("#embed-status")!;
-  const embedOpen = document.querySelector<HTMLAnchorElement>("#embed-open")!;
-  const sizeButtons = [...document.querySelectorAll<HTMLButtonElement>("#embed-sizes [data-size]")];
-  const embed = { kind: (EMBED_KINDS.includes(address.get("embed") as EmbedKind) ? address.get("embed") : "html") as EmbedKind, size: [160, 240, 320, 480].includes(Number(address.get("size"))) ? Number(address.get("size")) : 320 };
-  for (const kind of EMBED_KINDS) {
-    const tab = document.createElement("button");
-    tab.type = "button";
-    tab.role = "tab";
-    tab.dataset["kind"] = kind;
-    tab.addEventListener("click", () => {
-      embed.kind = kind;
-      address.set("embed", kind === "html" ? null : kind);
-      renderEmbed();
-    });
-    embedTabs.append(tab);
-  }
-  embedTabs.addEventListener("keydown", (event) => {
-    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (step === 0) return;
-    const at = EMBED_KINDS.indexOf(embed.kind);
-    const next = EMBED_KINDS[(at + step + EMBED_KINDS.length) % EMBED_KINDS.length]!;
-    embedTabs.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.click();
-    embedTabs.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.focus();
-    event.preventDefault();
-  });
-  for (const b of sizeButtons)
-    b.addEventListener("click", () => {
-      embed.size = Number(b.dataset["size"]);
-      address.set("size", embed.size === 320 ? null : String(embed.size));
-      renderEmbed();
-    });
+  // --- "Put it in your page": the family's panel, filled with the code for the body as it is set up above ---------------------------------------------
+  const panel = document.querySelector<EmbedPanelElement>("#embed-panel")!;
   const embedOptions = (): EmbedOptions => {
     const real = state.real || (state.moons && hasMoons());
-    return { body: state.body, look: state.look, size: embed.size, ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
+    return { body: state.body, look: state.look, size: panel.size, ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
   };
+  panel.kinds = EMBED_KINDS;
+  const kept = address.get("embed");
+  if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;
+  panel.size = Number(address.get("size")) || 320;
+  panel.generate = ({ kind, preview }) => embedCode(embedOptions(), kind as EmbedKind, preview ? { site: "" } : {});
+  panel.preview = ({ kind }) => {
+    if (kind === "iframe") return undefined;
+    const options = embedOptions();
+    const body = document.createElement("wakusei-body") as WakuseiBody;
+    for (const [name, value] of Object.entries({ body: options.body, look: options.look ?? "realistic", size: String(panel.size), "texture-base": "textures/", lang: lang() })) body.setAttribute(name, value);
+    if (options.time !== undefined) body.setAttribute("time", options.time);
+    if (options.moons === true) body.setAttribute("moons", "");
+    if (options.turn !== undefined) body.setAttribute("turn", String(options.turn));
+    body.setAttribute("live", "off");
+    return body;
+  };
+  panel.credits = () => embedCredit(embedOptions());
+  panel.addEventListener("kazoku-embedchange", (event) => {
+    const { kind, size } = (event as CustomEvent<EmbedChangeDetail>).detail;
+    address.set("embed", kind === "html" ? null : kind);
+    address.set("size", size === 320 ? null : String(size));
+  });
   function renderEmbed(): void {
     const options = embedOptions();
-    for (const tab of embedTabs.querySelectorAll<HTMLButtonElement>("[data-kind]")) {
-      tab.textContent = say(`kind_${tab.dataset["kind"]}`);
-      tab.setAttribute("aria-selected", String(tab.dataset["kind"] === embed.kind));
-      tab.tabIndex = tab.dataset["kind"] === embed.kind ? 0 : -1;
-    }
-    for (const b of sizeButtons) pressed(b, Number(b.dataset["size"]) === embed.size);
-    const code = embedCode(options, embed.kind, { site: "" });
-    embedCodeBox.textContent = embedCode(options, embed.kind);
-    embedCredits.textContent = embedCredit(options);
-    const key = JSON.stringify([options, embed.kind === "iframe", lang()]);
-    if (embedPreview.dataset["key"] !== key) {
-      embedPreview.dataset["key"] = key;
-      embedPreview.replaceChildren();
-      if (embed.kind === "iframe") {
-        const holder = document.createElement("div");
-        holder.innerHTML = code;
-        const frame = holder.querySelector("iframe")!;
-        frame.setAttribute("loading", "lazy");
-        embedPreview.append(frame);
-      } else {
-        const preview = document.createElement("wakusei-body") as WakuseiBody;
-        for (const [name, value] of Object.entries({ body: options.body, look: options.look ?? "realistic", size: String(embed.size), "texture-base": "textures/", lang: lang() })) preview.setAttribute(name, value);
-        if (options.time !== undefined) preview.setAttribute("time", options.time);
-        if (options.moons === true) preview.setAttribute("moons", "");
-        if (options.turn !== undefined) preview.setAttribute("turn", String(options.turn));
-        preview.setAttribute("live", "off");
-        embedPreview.append(preview);
-      }
-    }
-    embedOpen.href = `embed.html?${new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.time !== undefined ? { time: options.time } : {}), ...(options.moons === true ? { moons: "1" } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) }).toString()}`;
+    panel.setAttribute("lang", lang());
+    panel.openHref = `embed.html?${new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.time !== undefined ? { time: options.time } : {}), ...(options.moons === true ? { moons: "1" } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) }).toString()}`;
+    panel.update();
   }
-  embedCopy.addEventListener("click", async () => {
-    try {
-      await navigator.clipboard.writeText(embedCodeBox.textContent ?? "");
-      embedStatus.textContent = say("copied");
-    } catch {
-      embedStatus.textContent = say("copyFail");
-    }
-    setTimeout(() => (embedStatus.textContent = ""), 2500);
-  });
 
   for (const b of looks) b.addEventListener("click", () => ((state.look = (b.dataset["look"] ?? "realistic") as Look), render()));
   for (const b of skies) b.addEventListener("click", () => ((state.real = b.dataset["sky"] === "real"), render()));

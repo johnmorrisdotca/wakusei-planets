@@ -42,6 +42,7 @@ kazoku-view-controls, kazoku-speed-buttons { --kazoku-ink: var(--ink); --kazoku-
 .lineup svg.limb.line .disc { fill: none; stroke: #c9d4e3; stroke-width: 1.5; }
 .lineup small { color: #8798b0; }
 
+kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface); --kazoku-line: var(--rule); --kazoku-accent: var(--accent); --kazoku-preview-bg: #06080d; }
 .embed-panel { display: grid; gap: 12px; justify-items: stretch; }
 .embed-panel .fam-tabs { overflow-x: auto; }
 .embed-panel .fam-tabs button { flex: 0 0 auto; min-width: 48px; padding: 0 14px; font: inherit; font-weight: 600; cursor: pointer; }

@@ -87,31 +87,10 @@
         <h2 id="embed-h" data-say="embedTitle">Put it in your page</h2>
         <p data-say="embedText">Set up the body above (which body, its look, the sky and date, the moons, turning), choose a size, then pick how your page is made and copy the code. The picture beside the code is made from the same choices.</p>
         <div class="fam-panels">
-          <div class="fam-panel embed-panel">
-            <div id="embed-picker" class="picker embed-picker" role="group" aria-label="Body for the code" data-say-label="embedBody"></div>
-            <div class="fam-row">
-              <span class="fam-label" data-say="embedSize">Size</span>
-              <div class="group fam-seg" id="embed-sizes" role="group" aria-label="Size" data-say-label="embedSize">
-                <button type="button" data-size="160" aria-pressed="false">160</button>
-                <button type="button" data-size="240" aria-pressed="false">240</button>
-                <button type="button" data-size="320" aria-pressed="true">320</button>
-                <button type="button" data-size="480" aria-pressed="false">480</button>
-              </div>
-            </div>
-            <div class="fam-tabs" role="tablist" id="embed-tabs" aria-label="How your page is made" data-say-label="embedKinds"></div>
-            <div class="embed-grid" role="tabpanel" id="embed-panel">
-              <div class="embed-preview" id="embed-preview" aria-live="off"></div>
-              <div class="embed-code">
-                <pre class="codebox" id="embed-box" tabindex="0"><code id="embed-code"></code></pre>
-                <div class="fam-actions">
-                  <button type="button" class="fam-button" data-primary="true" id="embed-copy" data-say="copy">Copy</button>
-                  <a class="fam-button" href="embed.html" id="embed-open" data-say="embedLink">Open the embed page</a>
-                  <a class="fam-button" href="docs/" data-say="docsLink">Read the docs</a>
-                  <span class="fam-fine" id="embed-status" role="status" aria-live="polite"></span>
-                </div>
-                <p class="fam-fine" id="embed-credit"></p>
-              </div>
-            </div>
+          <div class="fam-panel">
+            <kazoku-embed-panel id="embed-panel" sizes="160 240 320 480" docs-href="docs/" data-testid="embed-panel">
+              <div slot="picker" id="embed-picker" class="picker embed-picker" role="group" aria-label="Body for the code" data-say-label="embedBody"></div>
+            </kazoku-embed-panel>
           </div>
         </div>
       </section>

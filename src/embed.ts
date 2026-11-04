@@ -1,5 +1,6 @@
 // The text to put a body in a page, for each way a page is made: a script tag from a CDN, an ES module, React, Vue, Angular, Svelte, or an iframe of `embed.html`. The demo's "Put it in your page"
 // section shows these as the reader changes a choice, and the tests build or parse every one. Pure: no DOM.
+import { embedSnippet } from "@johnmorrisdotca/kazoku-ui/embed-panel";
 import { BODIES, DWARF_IDS, type BodyId, type Look } from "./facts.ts";
 import { decodeScene } from "./portrait/model.ts";
 import { VERSION } from "./version.ts";
@@ -91,7 +92,6 @@ function attributesOf(o: EmbedOptions): [string, string][] {
   return out;
 }
 
-const quote = (v: string): string => `"${v.replace(/&/g, "&amp;").replace(/"/g, "&quot;")}"`;
 const needsShading = (o: EmbedOptions): boolean => (o.look ?? "realistic") !== "line";
 
 interface Spec {
@@ -106,36 +106,8 @@ interface Spec {
   iframe: { src: string; title: string; width: number; height: number };
 }
 
-const attrText = (attrs: Spec["attrs"]): string => attrs.map(([k, v]) => (v === "" ? k : `${k}=${quote(v)}`)).join(" ");
-
-function snippet(kind: EmbedKind, spec: Spec, cdn: string): string {
-  const Name = spec.name.charAt(0).toUpperCase() + spec.name.slice(1);
-  const tagAttrs2 = attrText(spec.attrs);
-  if (kind === "iframe") {
-    const f = spec.iframe;
-    return `<iframe\n  src=${quote(f.src)}\n  title=${quote(f.title)}\n  width="${f.width}"\n  height="${f.height}"\n  loading="lazy"\n  style="border: 0"\n></iframe>`;
-  }
-  if (kind === "html") {
-    const scripts = [`<script type="module" src="${cdn}/${spec.element}/+esm"></script>`, ...spec.entries.map((e) => `<script type="module" src="${cdn}/${e}/+esm"></script>`)];
-    return `${scripts.join("\n")}\n\n<${spec.tag} ${tagAttrs2}></${spec.tag}>`;
-  }
-  const imports = [`import "${PACKAGE}/${spec.element}";`, ...spec.entries.map((e) => `import "${PACKAGE}/${e}";`)];
-  if (kind === "module") {
-    const sets = spec.attrs.map(([k, v]) => `${spec.name}.setAttribute(${JSON.stringify(k)}, ${JSON.stringify(v)});`);
-    return `${imports.join("\n")}\n\nconst ${spec.name} = document.createElement("${spec.tag}");\n${sets.join("\n")}\ndocument.querySelector("#${spec.name}").append(${spec.name});`;
-  }
-  const dynamic = [`void import("${PACKAGE}/${spec.element}");`, ...spec.entries.map((e) => `void import("${PACKAGE}/${e}");`)];
-  if (kind === "react") {
-    return `import { useEffect } from "react";\n\nexport function ${Name}() {\n  useEffect(() => {\n    // The element needs a browser, so it is imported in an effect, never at the top of the file.\n${dynamic.map((l) => `    ${l}`).join("\n")}\n  }, []);\n  return <${spec.tag} ${tagAttrs2} />;\n}`;
-  }
-  if (kind === "vue") {
-    return `<script setup lang="ts">\nimport { onMounted } from "vue";\n\nonMounted(() => {\n${dynamic.map((l) => `  ${l}`).join("\n")}\n});\n</script>\n\n<template>\n  <${spec.tag} ${tagAttrs2}></${spec.tag}>\n</template>`;
-  }
-  if (kind === "angular") {
-    return `import { Component, CUSTOM_ELEMENTS_SCHEMA, OnInit } from "@angular/core";\n\n@Component({\n  selector: "app-${spec.name}",\n  standalone: true,\n  schemas: [CUSTOM_ELEMENTS_SCHEMA],\n  template: \`<${spec.tag} ${tagAttrs2}></${spec.tag}>\`,\n})\nexport class ${Name}Component implements OnInit {\n  ngOnInit(): void {\n    // The element needs a browser: ngOnInit also runs when a server renders.\n    if (typeof window !== "undefined") {\n${dynamic.map((l) => `      ${l}`).join("\n")}\n    }\n  }\n}`;
-  }
-  return `<script lang="ts">\n  import { onMount } from "svelte";\n\n  onMount(() => {\n${dynamic.map((l) => `    ${l}`).join("\n")}\n  });\n</script>\n\n<${spec.tag} ${tagAttrs2}></${spec.tag}>`;
-}
+/** The seven ways are kazoku-ui's: one description of the element gives every one of them. */
+const snippet = (kind: EmbedKind, spec: Spec, cdn: string): string => embedSnippet(kind, { ...spec, package: PACKAGE, cdn });
 
 /**
  * The text that puts a body in a page, for one way of making the page. Each way is built, parsed or run by the package's tests: the plain HTML one with a script tag from jsDelivr, an ES module, a React component,

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.0 - 2026-11-04
+
+The family's one "Put it in your page" panel, wakusei-planets first (KAZOKU-UI-40).
+
+- **The demo's "Put it in your page" is kazoku-ui's `<kazoku-embed-panel>`** (kazoku-ui 0.15), filled with wakusei's own choices and code. Nothing it had is gone, and a test counts it: the body picker (tiles by group, planet and moon, in the panel's `picker` slot), the four sizes, the seven tabs (HTML, ES module, React, Vue, Angular, Svelte, iframe; the arrow keys, `?embed=`, `?size=`), the picture made from the same choices, Copy, Open the embed page, Read the docs and the credit line. What changed: the picture always fits its box (Venus was cut off on the right), Copy says "Copy code" in a button that can be read (MODULES-286), Home and End work on the tabs, and the panel is the same one every package of the family now gets.
+- `embedCode` writes its seven tabs through kazoku-ui's `embedSnippet`; the text is unchanged (the package's tests build and parse every tab as before).
+- `kazoku-ui` is `^0.15.0`. Tests: `e2e/embed-builder.demo.ts` (the code for each tab, the picture, Copy, the picker, "nothing is gone", the picture fits at every size; desk and phone, Chromium and WebKit).
+- Left for a follow-up: the code panels of `builder.html` and `portrait.html` still use the earlier markup.
+
 ## 0.13.0 - 2026-11-04
 
 The wheel zooms (KAZOKU-UI-45).

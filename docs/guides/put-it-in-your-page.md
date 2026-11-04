@@ -5,7 +5,7 @@ order: 3
 description: Set up a body in the demo, then copy working code for plain HTML, an ES module, React, Vue, Angular, Svelte or an iframe.
 ---
 
-The demo's "Put it in your page" section is a configurator. Set up the body above it (which body, its look, the sky and date, the moons, whether it turns), choose a size, then pick how your page is made. The code and the picture beside it change with every choice, and the credits that go with the picture are under the code.
+The demo's "Put it in your page" section is a configurator, and it is the family's shared panel, kazoku-ui's `<kazoku-embed-panel>` ([its guide](https://github.com/johnmorrisdotca/kazoku-ui/blob/main/docs/guides/embed-panel.md)): a compact picker for the body, a size, a tab for each way a page is made, the picture, Copy code, Open the embed page, Read the docs and the credit line. Set up the body above it (which body, its look, the sky and date, the moons, whether it turns), choose a size, then pick how your page is made. The code and the picture beside it change with every choice, and the credits that go with the picture are under the code.
 
 ![The code builder: rows of bodies, looks, sizes, sky and turning, tabs for each way a page is made, a preview and the code to copy.](../images/builder-desk.png)
 
