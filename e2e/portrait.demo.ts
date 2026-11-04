@@ -72,11 +72,20 @@ test.describe("3D", () => {
     expect(Math.abs((await scene(page)).items[1]!.y)).toBeGreaterThan(0.002);
   });
 
-  test("the wheel over a body sizes it, a drag on empty space moves the view, Centre and Fit all bring the bodies back", async ({ page }) => {
+  test("Shift and the wheel over a body sizes it, the wheel zooms the view, a drag on empty space moves the view, Centre and Fit all bring the bodies back", async ({ page }) => {
     await open(page, `${MANUAL}~earth_-0.5_0_0.2_0~mars_0.5_0_0.15_0`);
     const mars = await centreOf(page, 1);
     await page.mouse.move(mars.x, mars.y);
+    const before = await scene(page);
     await page.mouse.wheel(0, -300);
+    await expect.poll(async () => (await scene(page)).camera.h).toBeLessThan(before.camera.h * 0.9);
+    expect((await scene(page)).items[1]!.r).toBe(before.items[1]!.r);
+    await page.locator("#fit").click();
+    const marsAgain = await centreOf(page, 1);
+    await page.mouse.move(marsAgain.x, marsAgain.y);
+    await page.keyboard.down("Shift");
+    await page.mouse.wheel(0, -300);
+    await page.keyboard.up("Shift");
     await expect.poll(async () => (await scene(page)).items[1]!.r).toBeGreaterThan(0.17);
     const cam = (await scene(page)).camera;
     const box = (await page.locator("#view").boundingBox())!;

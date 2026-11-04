@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.13.0 - 2026-11-04
+
+The wheel zooms (KAZOKU-UI-45).
+
+- **The portrait builder's wheel zooms the view.** In Manual, the wheel over the picture now zooms it about the pointer, whether the pointer is over a body or over empty space; before, the wheel over a body sized it and only Ctrl or Command with the wheel zoomed. **Shift and the wheel over a body sizes it** (pinching a body on a touch screen still sizes it). A sideways swipe is left to the page, and so is a wheel that starts with the view already at its closest or widest. The hint under the builder (English and Japanese) and the Portrait builder guide say so.
+- The solar-system view's own controls are the family's `<kazoku-view-controls>`, where the plain wheel has zoomed since kazoku-ui 0.13; nothing changed there.
+
 ## 0.12.0 - 2026-11-03
 
 The family's speed buttons, in the demo's two places that run time (KAZOKU-UI-46).

@@ -457,7 +457,7 @@ function finish(event: PointerEvent): void {
 wrap.addEventListener("pointerup", finish);
 wrap.addEventListener("pointercancel", finish);
 
-// wheel over a body sizes it (Manual); Ctrl or Command and the wheel zooms the view
+// the wheel over the view zooms it about the pointer (Manual); Shift and the wheel over a body sizes it
 let wheelTimer: ReturnType<typeof setTimeout> | undefined;
 let wheelBase: Portrait | undefined;
 wrap.addEventListener(
@@ -466,20 +466,23 @@ wrap.addEventListener(
     const p = wheelBase ?? scene();
     if (p.layout !== "manual") return;
     const index = view.pick(event.clientX, event.clientY);
-    const zoom = event.ctrlKey || event.metaKey;
-    if (index < 0 && !zoom) return;
+    const size = event.shiftKey && index >= 0;
+    if (!size && !event.ctrlKey && !event.metaKey && Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    const delta = event.deltaY || (size ? event.deltaX : 0);
+    const k = Math.exp(-delta * (event.deltaMode === 1 ? 0.03 : 0.0018));
+    const now = view.portrait;
+    const h = clamp(now.camera.h / k, 1e-4, 1e4);
+    if (!size && h === now.camera.h && wheelBase === undefined && !event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     wheelBase ??= scene();
-    const k = Math.exp(-event.deltaY * (event.deltaMode === 1 ? 0.03 : 0.0018));
-    const now = view.portrait;
     let next: Portrait;
-    if (zoom || index < 0) {
+    if (size) next = setItem(now, index, { r: clamp(now.items[index]!.r * k, 0.003, 4) });
+    else {
       const at = view.worldAt(event.clientX, event.clientY);
-      const h = clamp(now.camera.h / k, 1e-4, 1e4);
       const f = h / now.camera.h;
       next = setPortrait(now, { camera: { x: at.x - (at.x - now.camera.x) * f, y: at.y - (at.y - now.camera.y) * f, h } });
-    } else next = setItem(now, index, { r: clamp(now.items[index]!.r * k, 0.003, 4) });
-    if (index >= 0 && !zoom) ui.selected = index;
+    }
+    if (size) ui.selected = index;
     preview(next);
     clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => {
