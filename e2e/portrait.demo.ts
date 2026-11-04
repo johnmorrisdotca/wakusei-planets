@@ -199,11 +199,12 @@ test.describe("3D", () => {
     const download = page.waitForEvent("download");
     await page.locator("#png").click();
     expect((await download).suggestedFilename()).toBe("wakusei-portrait.png");
-    await expect(page.locator("#code")).toContainText("<wakusei-portrait");
-    await expect(page.locator("#code")).toContainText("jupiter_");
-    await page.locator('[data-kind="iframe"]').click();
-    await expect(page.locator("#code")).toContainText("embed.html?scene=");
-    await expect(page.locator("#open")).toHaveAttribute("href", /embed\.html\?scene=/);
+    const code = page.locator('#embed-panel [part="code"]');
+    await expect(code).toContainText("<wakusei-portrait");
+    await expect(code).toContainText("jupiter_");
+    await page.locator('#embed-panel button[data-kind="iframe"]').click();
+    await expect(code).toContainText("embed.html?scene=");
+    await expect(page.locator('#embed-panel [part="open"]')).toHaveAttribute("href", /embed\.html\?scene=/);
   });
 
   test("the embed page draws a scene from its address", async ({ page }) => {
@@ -211,6 +212,26 @@ test.describe("3D", () => {
     await expect(page.locator("wakusei-portrait")).toHaveAttribute("data-state", /live|still/, { timeout: 90_000 });
     expect(await page.locator("wakusei-portrait").evaluate((el) => (el as unknown as { stats: { bodies: number } }).stats.bodies)).toBe(2);
   });
+});
+
+test("nothing the Share tab had before the shared panel is gone: seven tabs, the code, Copy, Save PNG, Save SVG, Copy link, the embed page and the credit, and a docs link besides", async ({ page }) => {
+  await open(page, "look:line~jupiter_0_0_0.3_0~io_0_0_0.1_0");
+  await page.locator("#tab-share").click();
+  const panel = page.locator("#embed-panel");
+  await expect(panel.locator('[role="tab"]')).toHaveText(["HTML", "ES module", "React", "Vue", "Angular", "Svelte", "iframe"]);
+  await expect(panel.locator('[part="code"]')).toContainText("<wakusei-portrait");
+  await expect(panel.locator('[part="copy"]')).toHaveText("Copy code");
+  await expect(page.locator("#png")).toHaveText("Save PNG");
+  await expect(page.locator("#svg")).toHaveText("Save SVG");
+  await expect(page.locator("#link")).toHaveText("Copy link");
+  await expect(panel.locator('[part="open"]')).toHaveText("Open the embed page");
+  await expect(panel.locator('[part="docs"]')).toHaveAttribute("href", "docs/");
+  await expect(panel.locator('[part="credits"]')).toContainText("Wakusei Planets by John Morris (MIT)");
+  await expect(panel.locator('[part="preview"]')).toBeHidden();
+  await expect(page.locator("canvas")).toHaveCount(0);
+  await page.locator('#embed-panel button[data-kind="vue"]').click();
+  await expect(panel.locator('[part="code"]')).toContainText("<script setup");
+  await expect(page).toHaveURL(/embed=vue/);
 });
 
 test("the line look is one SVG, with the bodies, names and orbit rings, and needs no WebGL", async ({ page }) => {

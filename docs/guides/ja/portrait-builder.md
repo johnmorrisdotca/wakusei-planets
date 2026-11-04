@@ -34,7 +34,7 @@ description: 太陽系の天体を好きなだけ一枚に並べ、光を当て�
 
 ## 絵を残す・共有する
 
-絵はアドレスの `?scene=...` に残るので、リンクがそのまま絵になります。**共有**タブでは、ページの作り方ごとにコードを書きます (HTML、ES モジュール、React、Vue、Angular、Svelte、iframe)。PNG と SVG の保存、リンクのコピーもできます。線画の SVG は全部ベクターです。陰影つきの見た目では、天体は SVG の中の画像になり、背景、軌道の輪、名前はベクターのままです。
+絵はアドレスの `?scene=...` に残るので、リンクがそのまま絵になります。**共有**タブはファミリー共通の埋め込みパネルです ([自分のページに入れる](put-it-in-your-page.md))。ページの作り方ごとにコードを書きます (HTML、ES モジュール、React、Vue、Angular、Svelte、iframe)。「コードをコピー」、埋め込みページを開く、ドキュメントを読む、クレジットの行があり、となりに PNG の保存、SVG の保存、リンクのコピーが並びます。線画の SVG は全部ベクターです。陰影つきの見た目では、天体は SVG の中の画像になり、背景、軌道の輪、名前はベクターのままです。
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/portrait/+esm"></script>

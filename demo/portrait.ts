@@ -1,6 +1,8 @@
 // The portrait builder: put any bodies of the solar system in one picture. The picture is one <wakusei-portrait> (one WebGL context for every body in it); this file is the editing around it: pick,
 // drag, turn, size, order, undo, the choices, the code, the saved picture. Every change makes a new scene (never edits the old), so undo is a list of scenes and the address holds the latest.
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
+import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
+import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
 import { BODIES, DWARF_IDS, drawnTilt, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/index.ts";
 import { EMBED_KINDS, portraitCode, type EmbedKind } from "../src/embed.ts";
 import { addBody, addMoons, ASPECTS, auto, centreCamera, createHistory, decodeScene, encodeScene, fitAll, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, snap, type Guide, type Item, type Portrait } from "../src/portrait/model.ts";
@@ -30,7 +32,7 @@ const initial = (): Portrait => {
   return text === null ? { ...PRESETS.find((p) => p.id === "galileans")!.scene } : decodeScene(text);
 };
 const history = createHistory(initial());
-const ui = { selected: -1, tool: "move" as "move" | "turn", tab: "bodies", group: "planets", kind: (EMBED_KINDS.includes(address.get("embed") as EmbedKind) ? address.get("embed") : "html") as EmbedKind, guides: [] as Guide[] };
+const ui = { selected: -1, tool: "move" as "move" | "turn", tab: "bodies", group: "planets", guides: [] as Guide[] };
 const scene = (): Portrait => history.current;
 
 const pressed = (button: Element, on: boolean): void => {
@@ -199,39 +201,21 @@ function renderChoices(p: Portrait): void {
 
 const localValue = (ms: number): string => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
+const panel = $<EmbedPanelElement>("#embed-panel");
+panel.kinds = EMBED_KINDS;
+const kept = address.get("embed");
+if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;
+panel.generate = ({ kind, preview }) => portraitCode({ scene: encodeScene(scene()), width: 720 }, kind as EmbedKind, preview ? { site: "" } : {});
+panel.credits = () => `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${scene().look === "painted" ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : ""}`;
+panel.addEventListener("kazoku-embedchange", (event) => {
+  const { kind } = (event as CustomEvent<EmbedChangeDetail>).detail;
+  address.set("embed", kind === "html" ? null : kind);
+});
+
 function renderShare(p: Portrait): void {
-  const tabs = $("#code-tabs");
-  if (tabs.childElementCount === 0) {
-    for (const kind of EMBED_KINDS) {
-      const tab = document.createElement("button");
-      tab.type = "button";
-      tab.role = "tab";
-      tab.dataset["kind"] = kind;
-      tab.addEventListener("click", () => {
-        ui.kind = kind;
-        address.set("embed", kind === "html" ? null : kind);
-        renderShare(scene());
-      });
-      tabs.append(tab);
-    }
-    tabs.addEventListener("keydown", (event) => {
-      const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-      if (step === 0) return;
-      const next = EMBED_KINDS[(EMBED_KINDS.indexOf(ui.kind) + step + EMBED_KINDS.length) % EMBED_KINDS.length]!;
-      tabs.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.click();
-      tabs.querySelector<HTMLButtonElement>(`[data-kind="${next}"]`)?.focus();
-      event.preventDefault();
-    });
-  }
-  for (const tab of tabs.querySelectorAll<HTMLButtonElement>("[data-kind]")) {
-    tab.textContent = say(`kind_${tab.dataset["kind"]}`);
-    tab.setAttribute("aria-selected", String(tab.dataset["kind"] === ui.kind));
-    tab.tabIndex = tab.dataset["kind"] === ui.kind ? 0 : -1;
-  }
-  const text = encodeScene(p);
-  $("#code").textContent = portraitCode({ scene: text, width: 720 }, ui.kind);
-  $<HTMLAnchorElement>("#open").href = `embed.html?${new URLSearchParams({ scene: text }).toString()}`;
-  $("#credit").textContent = `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${p.look === "painted" ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : ""}`;
+  panel.setAttribute("lang", lang());
+  panel.openHref = `embed.html?${new URLSearchParams({ scene: encodeScene(p) }).toString()}`;
+  panel.update();
 }
 
 function render(): void {
@@ -556,14 +540,6 @@ const save = (blob: Blob, file: string): void => {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 4000);
 };
-$("#copy").addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText($("#code").textContent ?? "");
-    told(say("copied"));
-  } catch {
-    told(say("copyFail"));
-  }
-});
 $("#link").addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(location.href);

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+The family's embed panel on the code builder and the portrait builder (MODULES-380).
+
+- **`builder.html`'s code section is kazoku-ui's `<kazoku-embed-panel>`**, with the builder's own choices inside it: which planet's system and the body in the `picker` slot; the look, the sky and the turning in the `options` slot; the size is the panel's own (160, 240, 320, 480). Nothing it had is gone, and a test counts it: the twelve groups and ten bodies, the look, sky and turning rows, the seven tabs (HTML, ES module, React, Vue, Angular, Svelte, iframe), the four sizes, the picture made from the same choices (the picture now fits its box at every size), Copy (now "Copy code", in a button that can be read), Open the embed page and the credit line (which names NASA, USGS and JPL for the painted look and NASA for the Earth). Added by the panel: Read the docs, Home and End on the tabs.
+- **`portrait.html`'s Share tab is the panel too**, with Save PNG, Save SVG and Copy link and their status line in the `actions` slot, and the credit line as before. It has `no-preview` and `no-size`: the portrait is the picture on the page, so the panel adds no second WebGL context and no frame loop. The tab and the code stay in the address as `?embed=`. A test counts the seven tabs, the code, Copy, the three actions, the embed page link, the docs link and the credit.
+- `scripts/check-standard.mjs` is kazoku-ui 0.15's (it has the `embed-panel` item; this package passes).
+- Guides (English and Japanese) say so. Tests: `e2e/builder.demo.ts` and `e2e/portrait.demo.ts` (desk and phone, Chromium and WebKit).
+
 ## 0.14.0 - 2026-11-04
 
 The family's one "Put it in your page" panel, wakusei-planets first (KAZOKU-UI-40).

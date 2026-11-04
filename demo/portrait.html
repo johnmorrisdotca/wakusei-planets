@@ -146,17 +146,12 @@
           </div>
 
           <div role="tabpanel" id="panel-share" aria-labelledby="tab-share" hidden>
-            <div class="fam-tabs" role="tablist" id="code-tabs" aria-label="How your page is made" data-say-label="embedKinds"></div>
-            <pre class="codebox" id="code-box" tabindex="0" aria-label="Code for this picture" data-say-label="pt_code"><code id="code"></code></pre>
-            <div class="fam-actions">
-              <button type="button" class="fam-button" data-primary="true" id="copy" data-say="copy">Copy</button>
-              <button type="button" class="fam-button" id="png" data-say="pt_png">Save PNG</button>
-              <button type="button" class="fam-button" id="svg" data-say="pt_svg">Save SVG</button>
-              <button type="button" class="fam-button" id="link" data-say="pt_link">Copy link</button>
-              <a class="fam-button" href="embed.html" id="open" data-say="embedLink">Open the embed page</a>
-              <span class="fam-fine" id="share-status" role="status" aria-live="polite"></span>
-            </div>
-            <p class="fam-fine" id="credit"></p>
+            <kazoku-embed-panel id="embed-panel" no-preview no-size docs-href="docs/" data-testid="portrait-panel">
+              <button slot="actions" type="button" class="fam-button" id="png" data-say="pt_png">Save PNG</button>
+              <button slot="actions" type="button" class="fam-button" id="svg" data-say="pt_svg">Save SVG</button>
+              <button slot="actions" type="button" class="fam-button" id="link" data-say="pt_link">Copy link</button>
+              <span slot="actions" class="fam-fine" id="share-status" role="status" aria-live="polite"></span>
+            </kazoku-embed-panel>
           </div>
         </div>
       </div>

@@ -106,8 +106,8 @@ try {
     if (name === "builder-desk") {
       await page.locator('[data-testid="body-jupiter"]').click();
       await page.locator('[data-testid="look-realistic"]').click();
-      await page.locator('[data-testid="kind-react"]').click();
-      await page.waitForSelector('[data-testid="builder-preview"] wakusei-body[data-state]', { timeout: 90_000 });
+      await page.locator('#embed-panel button[data-kind="react"]').click();
+      await page.waitForSelector('#embed-panel [part="preview"] wakusei-body[data-state]', { timeout: 90_000 });
     }
     // the frame is transparent, made for any page: the picture shows it on the demo's dark
     if (name === "embed-frame") await page.addStyleTag({ content: "html { background: #06080d; }" });

@@ -22,29 +22,17 @@
       <p class="lede">Choose a body, how it is drawn and its size. Copy the code that puts exactly that in your page. <a href="./">The full demo</a> · <a href="docs/index.html">The documentation</a></p>
       <div class="fam-panels">
         <div class="fam-panel">
-          <div class="rows">
-            <div class="row"><span class="fam-label" id="group-title">Which planet's system</span><div class="chips" id="groups" role="group" aria-labelledby="group-title"></div></div>
-            <div class="row"><span class="fam-label" id="body-title">Body</span><div class="chips" id="bodies" role="group" aria-labelledby="body-title"></div></div>
-            <div class="row"><span class="fam-label" id="look-title">Look</span><div class="chips" id="looks" role="group" aria-labelledby="look-title"></div></div>
-            <div class="row"><span class="fam-label" id="size-title">Size</span><div class="chips" id="sizes" role="group" aria-labelledby="size-title"></div></div>
-            <div class="row"><span class="fam-label" id="sky-title">Sky</span><div class="chips" id="skies" role="group" aria-labelledby="sky-title"></div></div>
-            <div class="row"><span class="fam-label" id="turn-title">Turning</span><div class="chips" id="turns" role="group" aria-labelledby="turn-title"></div></div>
-          </div>
-        </div>
-        <div class="fam-panel embed-panel">
-          <div class="fam-tabs" role="tablist" id="kinds" aria-label="How your page is made"></div>
-          <div class="embed-grid">
-            <div class="embed-preview" id="preview" data-testid="builder-preview" aria-live="off"></div>
-            <div class="embed-code">
-              <pre class="codebox" tabindex="0"><code id="code" data-testid="builder-code"></code></pre>
-              <div class="fam-actions">
-                <button type="button" class="fam-button" data-primary="true" id="copy" data-testid="builder-copy">Copy</button>
-                <a class="fam-button" id="open" data-testid="builder-open" href="embed.html">Open the embed page</a>
-                <span class="fam-fine" id="status" role="status" aria-live="polite"></span>
-              </div>
-              <p class="fam-fine" id="credit" data-testid="builder-credit"></p>
+          <kazoku-embed-panel id="embed-panel" sizes="160 240 320 480" docs-href="docs/" data-testid="builder-panel">
+            <div slot="picker" class="rows">
+              <div class="row"><span class="fam-label" id="group-title">Which planet's system</span><div class="chips" id="groups" role="group" aria-labelledby="group-title"></div></div>
+              <div class="row"><span class="fam-label" id="body-title">Body</span><div class="chips" id="bodies" role="group" aria-labelledby="body-title"></div></div>
             </div>
-          </div>
+            <div slot="options" class="rows">
+              <div class="row"><span class="fam-label" id="look-title">Look</span><div class="chips" id="looks" role="group" aria-labelledby="look-title"></div></div>
+              <div class="row"><span class="fam-label" id="sky-title">Sky</span><div class="chips" id="skies" role="group" aria-labelledby="sky-title"></div></div>
+              <div class="row"><span class="fam-label" id="turn-title">Turning</span><div class="chips" id="turns" role="group" aria-labelledby="turn-title"></div></div>
+            </div>
+          </kazoku-embed-panel>
         </div>
       </div>
     </main>

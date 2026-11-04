@@ -34,7 +34,7 @@ Arrow keys move the chosen body, or turn it with the Turn tool. `[` and `]` size
 
 ## Keeping and sharing a scene
 
-The scene is kept in the address, as `?scene=...`, so a link is the picture. The **Share** tab writes the code for it in every way a page is made (plain HTML, an ES module, React, Vue, Angular, Svelte, an iframe), saves a PNG, saves an SVG, and copies the link. The SVG of a line scene is all vector. For the shaded looks, the bodies are a picture inside the SVG, with the background, the orbit rings and the names as vector.
+The scene is kept in the address, as `?scene=...`, so a link is the picture. The **Share** tab is the family's embed panel ([Put it in your page](put-it-in-your-page.md)): it writes the code for the scene in every way a page is made (plain HTML, an ES module, React, Vue, Angular, Svelte, an iframe), with Copy code, Open the embed page, Read the docs and the credit line, and beside them it saves a PNG, saves an SVG, and copies the link. The SVG of a line scene is all vector. For the shaded looks, the bodies are a picture inside the SVG, with the background, the orbit rings and the names as vector.
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/portrait/+esm"></script>
