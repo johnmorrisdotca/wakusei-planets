@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.16.0 - 2026-11-05
+
+Every body as a journey stop (MODULES-401), for journey planners such as uchusen-rockets' journey mode.
+
 - **`JOURNEY_STOPS`**: every body as one row, with its radius, its mean distance from the Sun, its gravitational parameter, its mass and its escape speed, and `stopPlaceAu` for where it is on a date. A body whose pages print no mass has those fields empty.
 
 ## 0.15.0 - 2026-11-04
