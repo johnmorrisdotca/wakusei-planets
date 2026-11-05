@@ -98,6 +98,23 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
 }
 
 /**
+ * Mean distance from the Sun, in astronomical units: a planet's semi-major axis at J2000, or a dwarf planet's semi-major axis at the epoch of its elements.
+ * @param id - A planet or a dwarf planet.
+ * @returns The semi-major axis in au.
+ *
+ * @example
+ * ```ts
+ * import { meanSunAu } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(meanSunAu("earth").toFixed(3));
+ * ```
+ */
+export function meanSunAu(id: HostId): number {
+  const dwarf = DWARF_ELEMENTS[id as keyof typeof DWARF_ELEMENTS];
+  return dwarf !== undefined ? dwarf.a : ELEMENTS[id as PlanetId][0]!;
+}
+
+/**
  * The Moon's position from the Earth's centre (J2000 ecliptic, kilometres), from the largest terms of Meeus's lunar series.
  * @param ms - The instant, in milliseconds since 1970.
  * @returns The position as x, y, z in kilometres.

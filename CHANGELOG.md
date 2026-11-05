@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **`JOURNEY_STOPS`**: every body as one row, with its radius, its mean distance from the Sun, its gravitational parameter, its mass and its escape speed, and `stopPlaceAu` for where it is on a date. A body whose pages print no mass has those fields empty.
+
 ## 0.15.0 - 2026-11-04
 
 The family's embed panel on the code builder and the portrait builder (MODULES-380).
