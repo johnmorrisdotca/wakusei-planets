@@ -221,19 +221,19 @@ const SATURN_RINGS: readonly RingBand[] = [
   { from: 133610, to: 136775, alpha: 0.5, tone: 0.65 },
   { from: 140100, to: 140260, alpha: 0.35, tone: 0.8 },
 ];
-// Jupiter: the halo inside the main ring, the main ring, and the gossamer rings out to about 226,000 km (NASA). Dark; the main ring is the one that shows.
+// Jupiter: the halo inside the main ring, the main ring, and the gossamer rings out to about 226,000 km (NASA). The halo and the gossamer are a hint; the main ring is the one that shows.
 const JUPITER_RINGS: readonly RingBand[] = [
-  { from: 92000, to: 122500, alpha: 0.04, tone: 0.25 },
-  { from: 122800, to: 129200, alpha: 0.4, tone: 0.55 },
-  { from: 129200, to: 181350, alpha: 0.06, tone: 0.3 },
-  { from: 181350, to: 226000, alpha: 0.04, tone: 0.25 },
+  { from: 92000, to: 122500, alpha: 0.012, tone: 0.25 },
+  { from: 122800, to: 129200, alpha: 0.55, tone: 0.7 },
+  { from: 129200, to: 181350, alpha: 0.018, tone: 0.3 },
+  { from: 181350, to: 226000, alpha: 0.01, tone: 0.25 },
 ];
-// Neptune: Galle, Le Verrier, the Lassell sheet and Adams. Adams's arcs sit on that radius; a strip has no longitude, so they are the same band.
+// Neptune: Galle, Le Verrier, the Lassell sheet and Adams. The sheet is faint. Adams's arcs sit on that radius; a strip has no longitude, so they are the same band.
 const NEPTUNE_RINGS: readonly RingBand[] = [
-  { from: 40900, to: 42900, alpha: 0.1, tone: 0.3 },
-  { from: 53150, to: 53300, alpha: 0.45, tone: 0.5 },
-  { from: 53300, to: 57200, alpha: 0.05, tone: 0.25 },
-  { from: 62890, to: 62980, alpha: 0.55, tone: 0.6 },
+  { from: 40900, to: 42900, alpha: 0.08, tone: 0.35 },
+  { from: 53150, to: 53300, alpha: 0.5, tone: 0.55 },
+  { from: 53300, to: 57200, alpha: 0.006, tone: 0.25 },
+  { from: 62890, to: 62980, alpha: 0.6, tone: 0.65 },
 ];
 const URANUS_RINGS: readonly RingBand[] = [
   { from: 41800, to: 41880, alpha: 0.3, tone: 0.2 },
