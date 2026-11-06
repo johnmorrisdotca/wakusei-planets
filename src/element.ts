@@ -1,12 +1,12 @@
 // <wakusei-body>: a body of the solar system as a web component. `look="line"` is an SVG and needs nothing else. `realistic` and `painted` are drawn with three.js through
 // kazoku-ui's shared renderer (one WebGL context for the whole page), and need the body's own entry point loaded (`@johnmorrisdotca/wakusei-planets/jupiter`). It draws only when
-// something changes, at most 30 times a second while it moves, and nothing while it is out of sight, the tab is hidden or the reader prefers reduced motion.
+// something changes, at most 30 times a second while it moves, and nothing while it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; `turn="0"` is the only stop.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { orbitPath, nearMoons } from "./ephemeris.ts";
 import { BODIES, ringReach, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
-import { createLive, defaultTurn, type LiveFrame, type LiveRequest } from "./live.ts";
+import { createLive, defaultTurn, REDUCED_TURN, type LiveFrame, type LiveRequest } from "./live.ts";
 import { VERSION } from "./version.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
 import { delegates, onRegister } from "./scene/store.ts";
@@ -104,7 +104,7 @@ const TEMPLATE = `<style>
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
  *
  * Attributes: `body` (a name, such as `jupiter`), `look` (`line`, `realistic` or `painted`), `size` (pixels across), `time` (`now` or an ISO date: the body as the Earth sees it then; leave it out for a portrait),
- * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second; left out, 12 a second, backwards when the body is; `0` stays still), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
+ * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second; left out, 12 a second, backwards when the body is, and a date keeps its orientation and adds this turn; `0` stays still; reduced motion keeps a quarter of it), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
  * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `span-km` (draw to scale: the half-width of the picture in kilometres, the same in every picture of a lineup), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
  *
  * @example
@@ -297,14 +297,15 @@ export class WakuseiBody extends HTMLElement {
         ...(this.hasAttribute("phase") ? { phase: num(this.getAttribute("phase"), 0) } : {}),
         ...(this.hasAttribute("meridian") ? { spin: num(this.getAttribute("meridian"), 0) } : {}),
       },
-      turn: this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : defaultTurn(this.body),
+      turn: (this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : defaultTurn(this.body)) * (this.#reduce ? REDUCED_TURN : 1),
     };
   }
 
   /** The picture moves on its own: a turn, or time running faster than the clock. */
   get #moving(): boolean {
     const r = this.#request();
-    return !this.#reduce && (r.turn !== 0 || ((this.#start !== undefined || r.moons) && r.rate !== 1));
+    const turning = r.turn !== 0 || ((this.#start !== undefined || r.moons) && r.rate !== 1);
+    return this.#reduce ? r.turn !== 0 : turning;
   }
 
   // --- the state of the scene --------------------------------------------------------------------------------------------------------------------

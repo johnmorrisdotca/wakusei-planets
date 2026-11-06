@@ -55,6 +55,9 @@ const ANCHOR_MS = 1000;
 /** Degrees a second a portrait turns when the page does not set `turn`. Slow enough to watch. */
 export const DEFAULT_TURN = 12;
 
+/** The share of that turn kept when the reader prefers reduced motion. `turn="0"` is the only stop. */
+export const REDUCED_TURN = 0.25;
+
 /** The portrait turn when none is set: `DEFAULT_TURN` degrees a second, and backwards when the body turns backwards. `turn="0"` stays still. */
 export function defaultTurn(id: BodyId): number {
   return (BODIES[id].rotationHours < 0 ? -1 : 1) * DEFAULT_TURN;
@@ -103,7 +106,7 @@ export function createLive(): { at(request: LiveRequest, now: number): LiveFrame
       if (a.sim === undefined) {
         if (r.turn !== 0) pose = { ...pose, meridian: turn(pose.meridian, pose.pole, r.turn * seconds) };
       } else if (seconds !== 0) {
-        pose = { ...pose, meridian: turn(pose.meridian, pose.pole, turnRate(r.id) * seconds) };
+        pose = { ...pose, meridian: turn(pose.meridian, pose.pole, (turnRate(r.id) + r.turn) * seconds) };
       }
       const moons = a.place.map((m, i): LiveMoon => {
         const rate = Math.abs(ORBITS[m.id]?.sid ?? 0) / 86400;

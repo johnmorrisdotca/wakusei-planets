@@ -34,6 +34,16 @@ test("a portrait turns by default, backwards when the body does, and turn 0 stay
   assert.deepEqual(held.at(still, 0).pose.meridian, held.at(still, 1000).pose.meridian);
 });
 
+test("a dated picture keeps that date's orientation and adds the turn", () => {
+  const at = (turn: number) => {
+    const live = createLive();
+    const r = request({ id: "jupiter", start: Date.UTC(2026, 10, 2), startedAt: 0, rate: 1, moons: false, turn });
+    live.at(r, 0);
+    return live.at(r, 500).pose.meridian;
+  };
+  assert.notDeepEqual(at(12), at(0));
+});
+
 test("a portrait with no date turns by its own rate and needs no ephemeris", () => {
   const live = createLive();
   const r = request({ start: undefined, moons: false, turn: 20 });

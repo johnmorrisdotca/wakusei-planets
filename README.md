@@ -154,7 +154,7 @@ Vue, Svelte and Angular components, the Vite and webpack setups and an `<iframe>
 
 ## Light by design
 
-A page full of bodies stays light: one WebGL context for the page through kazoku-ui's shared renderer (the body in focus is live, the others are pictures), nothing drawn while nothing changes, at most thirty frames a second while it moves, a canvas held to 4096 pixels a side and six million pixels, everything freed when an element leaves, no drawing out of sight or in a hidden tab, no movement for a reader who prefers reduced motion, and a lost WebGL context coming back by itself. The tests count draws, animation frames, contexts and GPU objects at rest and over many changes (`pnpm test:freeze`, and a soak with `pnpm test:soak`).
+A page full of bodies stays light: one WebGL context for the page through kazoku-ui's shared renderer (the body in focus is live, the others are pictures), nothing drawn while nothing changes, at most thirty frames a second while it moves, a canvas held to 4096 pixels a side and six million pixels, everything freed when an element leaves, no drawing out of sight or in a hidden tab, a slower turn for a reader who prefers reduced motion (`turn="0"` is the only stop), and a lost WebGL context coming back by itself. The tests count draws, animation frames, contexts and GPU objects at rest and over many changes (`pnpm test:freeze`, and a soak with `pnpm test:soak`).
 
 ## The element
 
@@ -338,13 +338,13 @@ BODIES.pluto.kind; // "dwarf-planet"
 - The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a map. Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mercury uses the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0). Mars stays on the Viking mosaic. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Jupiter, Saturn, Uranus and Neptune have their rings drawn.
-- A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. `turn="0"` stays still. A picture with a date follows the real rotation.
+- A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. A picture with a date keeps that orientation and adds the same turn. `turn="0"` stays still.
 - Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
 
 ## Accessibility
 
 - Every `<wakusei-body>` is an image with an accessible name from its body and look, such as "Saturn, line drawing", or the Japanese name with `lang="ja"`.
-- A reader who prefers reduced motion gets no turning and no moving sky.
+- A reader who prefers reduced motion gets a quarter of the turn. `turn="0"` is the only stop.
 - A body can be turned, tipped, zoomed and panned with the keyboard, and the view controls are at least 48 pixels.
 - Names and labels are in English and Japanese (`lang="ja"`).
 
