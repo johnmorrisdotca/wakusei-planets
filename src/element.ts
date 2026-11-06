@@ -454,7 +454,7 @@ export class WakuseiBody extends HTMLElement {
   #label(): string {
     const f = BODIES[this.body];
     const ja = this.getAttribute("lang") === "ja";
-    const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "描き絵" : "illustrated drawing" } as const;
+    const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "イラスト" : "illustrated drawing" } as const;
     return ja ? `${f.name.ja}の${looks[this.look]}` : `${f.name.en}, ${looks[this.look]}`;
   }
 

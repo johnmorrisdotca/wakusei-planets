@@ -179,7 +179,10 @@ function renderChoices(p: Portrait): void {
   }
   for (const b of all("#scales [data-scale]")) pressed(b, b.dataset["scale"] === p.scale);
   for (const b of all("#moons [data-moons]")) pressed(b, b.dataset["moons"] === p.moons);
-  for (const b of all("#looks [data-look]")) pressed(b, b.dataset["look"] === p.look);
+  for (const b of all("#looks [data-look]")) {
+    if (b.dataset["look"] === "painted") b.hidden = true;
+    pressed(b, b.dataset["look"] === "realistic" ? p.look === "realistic" || p.look === "painted" : b.dataset["look"] === p.look);
+  }
   for (const b of all("#bgs [data-bg]")) pressed(b, b.dataset["bg"] === p.bg);
   const shapes = $("#shapes");
   if (shapes.childElementCount === 0) shapes.replaceChildren(...ASPECTS.map(([label, ratio]) => chip(label, false, () => change(setPortrait(scene(), { aspect: ratio })), `shape-${label}`)));
@@ -206,7 +209,7 @@ panel.kinds = EMBED_KINDS;
 const kept = address.get("embed");
 if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;
 panel.generate = ({ kind, preview }) => portraitCode({ scene: encodeScene(scene()), width: 720 }, kind as EmbedKind, preview ? { site: "" } : {});
-panel.credits = () => `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${scene().look === "painted" ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : ""}`;
+panel.credits = () => `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${scene().look !== "line" && scene().look !== "illustrated" ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : ""}`;
 panel.addEventListener("kazoku-embedchange", (event) => {
   const { kind } = (event as CustomEvent<EmbedChangeDetail>).detail;
   address.set("embed", kind === "html" ? null : kind);

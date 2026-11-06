@@ -425,8 +425,8 @@ if (main && controls && pickerBox) {
   function render(): void {
     const looksAvailable = lookOf(state.body)?.painted !== undefined;
     for (const b of looks) {
-      if (b.dataset["look"] === "painted") b.hidden = !TILES.some((id) => lookOf(id)?.painted !== undefined);
-      pressed(b, b.dataset["look"] === state.look);
+      if (b.dataset["look"] === "painted") b.hidden = true;
+      pressed(b, b.dataset["look"] === "realistic" ? state.look === "realistic" || state.look === "painted" : b.dataset["look"] === state.look);
     }
     if (state.look === "painted" && !looksAvailable) notice(null);
     for (const b of skies) pressed(b, (b.dataset["sky"] === "real") === state.real);
