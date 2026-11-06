@@ -112,12 +112,12 @@
     "usage": "Public domain"
   },
   "moon": {
-    "file": "2k_moon.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
-    "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "file": "CGI Moon Kit - Lroc color poles.tif",
+    "page": "https://commons.wikimedia.org/wiki/File:CGI_Moon_Kit_-_Lroc_color_poles.tif",
+    "licence": "Public domain",
+    "credit": "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro); Lunar Reconnaissance Orbiter Camera",
+    "artist": "NASA SVS / LROC",
+    "usage": "Public domain. Kept until it has been compared with Solar System Scope beside a photograph."
   },
   "rhea": {
     "file": "Rhea Color Map.jpg",
@@ -152,12 +152,12 @@
     "usage": "Public domain"
   },
   "earth": {
-    "file": "2k_earth_daymap.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
-    "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "file": "world.topo.bathy.200409.3x5400x2700.jpg",
+    "page": "https://visibleearth.nasa.gov/images/73801",
+    "licence": "Public domain",
+    "credit": "NASA Earth Observatory (Reto Stockli), Blue Marble: Next Generation with topography and bathymetry",
+    "artist": "Reto Stockli, NASA Earth Observatory",
+    "usage": "Public domain (NASA). Kept until it has been compared with Solar System Scope beside a photograph."
   },
   "ceres": {
     "file": "PIA20354-Ceres-DwarfPlanet-MercatorMap-HAMO-20160322-0DegreeLongitude.jpg",
