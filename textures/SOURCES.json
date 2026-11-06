@@ -21,7 +21,7 @@
     "licence": "Public domain",
     "credit": "https://astrogeology.usgs.gov/search/details/Mars/Viking/MDIM21/Mars_Viking_MDIM21_ClrMosaic_global_232m/cub",
     "artist": "NASA / Jet Propulsion Lab / USGS",
-    "usage": "Public domain. Kept: the ice caps and the dark regions read more clearly than Solar System Scope's map. Nestaeric's colour is a custom unwrap, not an equirectangular map."
+    "usage": "Public domain. The Viking mosaic, graded warmer so the ground is a rust red and the ice caps stay white. The detail is the mosaic's."
   },
   "jupiter": {
     "file": "Uv1_jupiter1_diff.png",
