@@ -16,12 +16,12 @@
     "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "mars": {
-    "file": "2k_mars.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
-    "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "file": "Mars Viking MDIM21 ClrMosaic 1km.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Mars_Viking_MDIM21_ClrMosaic_1km.jpg",
+    "licence": "Public domain",
+    "credit": "https://astrogeology.usgs.gov/search/details/Mars/Viking/MDIM21/Mars_Viking_MDIM21_ClrMosaic_global_232m/cub",
+    "artist": "NASA / Jet Propulsion Lab / USGS",
+    "usage": "Public domain. Kept: the ice caps and the dark regions read more clearly than Solar System Scope's map. Nestaeric's colour is a custom unwrap, not an equirectangular map."
   },
   "jupiter": {
     "file": "Uv1_jupiter1_diff.png",
