@@ -250,7 +250,7 @@ export class WakuseiPortrait extends HTMLElement {
     const text = this.getAttribute("scene");
     const p = text === null ? defaultPortrait() : decodeScene(text);
     const look = this.getAttribute("look");
-    if (look === "line" || look === "realistic" || look === "painted") p.look = look;
+    if (look === "line" || look === "realistic" || look === "painted" || look === "illustrated") p.look = look;
     this.#portrait = p;
   }
 
@@ -281,7 +281,7 @@ export class WakuseiPortrait extends HTMLElement {
 
   #draw(): PortraitDraw {
     const p = this.#portrait;
-    return { placed: this.#resolved.placed, camera: this.#resolved.camera, light: p.light, look: p.look === "painted" ? "painted" : "realistic", ms: this.#date(), seconds: this.#seconds(), shadows: p.shadows };
+    return { placed: this.#resolved.placed, camera: this.#resolved.camera, light: p.light, look: p.look === "illustrated" ? "realistic" : "painted", ms: this.#date(), seconds: this.#seconds(), shadows: p.shadows };
   }
 
   #changed(): void {

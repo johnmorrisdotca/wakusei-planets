@@ -59,7 +59,7 @@ const num = (value: string | null, fallback: number): number => {
   return Number.isFinite(n) ? n : fallback;
 };
 
-const readLook = (value: string | null): Look => (value === "realistic" || value === "painted" ? value : "line");
+const readLook = (value: string | null): Look => (value === "realistic" || value === "painted" || value === "illustrated" ? value : "line");
 
 const readTime = (value: string | null): number | "now" | undefined => {
   if (value === null || value === "") return undefined;
@@ -454,7 +454,7 @@ export class WakuseiBody extends HTMLElement {
   #label(): string {
     const f = BODIES[this.body];
     const ja = this.getAttribute("lang") === "ja";
-    const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "リアルな絵" : "realistic drawing", painted: ja ? "表面の地図" : "painted surface" } as const;
+    const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "描き絵" : "illustrated drawing" } as const;
     return ja ? `${f.name.ja}の${looks[this.look]}` : `${f.name.en}, ${looks[this.look]}`;
   }
 
@@ -510,7 +510,7 @@ export class WakuseiBody extends HTMLElement {
     };
     const item = createBodyItem({
       id: this.body,
-      look: this.look === "painted" ? "painted" : "realistic",
+      look: this.look === "illustrated" ? "realistic" : "painted",
       key: this.#viewKey,
       state: () => this.#sceneState ?? state,
       textureBase: base,

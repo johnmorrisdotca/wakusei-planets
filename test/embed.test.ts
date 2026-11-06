@@ -107,6 +107,8 @@ test("the iframe points at the demo's embed page with the same names the page re
 test("there is a snippet for every kind, and the credit names what is used", () => {
   for (const kind of EMBED_KINDS) assert.ok(embedCode({ body: "mars", look: "painted" }, kind).includes("mars"), kind);
   assert.match(embedCredit({ body: "mars", look: "painted" }), /public domain/);
+  assert.match(embedCredit({ body: "mars", look: "realistic" }), /public domain/);
   assert.doesNotMatch(embedCredit({ body: "mars", look: "line" }), /public domain/);
+  assert.doesNotMatch(embedCredit({ body: "mars", look: "illustrated" }), /public domain/);
   assert.match(embedCredit({ body: "earth", look: "painted" }), /Blue Marble/);
 });

@@ -198,7 +198,7 @@ export function portraitCode(options: PortraitEmbed, kind: EmbedKind = "html", s
 }
 
 /**
- * The credits that travel with a picture of a body: the line and shaded looks are drawn from numbers, the painted look uses public-domain pictures.
+ * The credits that travel with a picture of a body: the line and illustrated looks are drawn from numbers, and `realistic` and `painted` use the surface maps.
  *
  * @param options - The choices, so only what is used is named.
  * @returns A short line of credit to put near the picture.
@@ -212,7 +212,8 @@ export function portraitCode(options: PortraitEmbed, kind: EmbedKind = "html", s
  */
 export function embedCredit(options: EmbedOptions): string {
   const base = "Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.";
-  const painted = (options.look ?? "realistic") === "painted" ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : "";
+  const photos = options.look !== "line" && options.look !== "illustrated";
+  const painted = photos ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : "";
   const earth = options.body === "earth" ? " Earth: NASA Earth Observatory, Blue Marble." : "";
   return `${base}${painted}${earth}`;
 }

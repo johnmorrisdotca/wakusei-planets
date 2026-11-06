@@ -699,7 +699,7 @@ export function createHistory(initial: Portrait, limit = 100): History {
 
 // --- the address --------------------------------------------------------------------------------------------------------------------------------------
 
-const LOOKS: readonly Look[] = ["line", "realistic", "painted"];
+const LOOKS: readonly Look[] = ["line", "realistic", "painted", "illustrated"];
 const BACKGROUNDS: readonly Background[] = ["black", "stars", "gradient", "transparent"];
 const ARRANGES: readonly Arrange[] = ["row", "arc", "grid", "orbit"];
 

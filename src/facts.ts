@@ -106,17 +106,17 @@ export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
  */
 export type BodyId = "sun" | PlanetId | DwarfId | MoonId;
 /**
- * How a body is drawn: `line` (an outline drawing), `realistic` (shaded, from the numbers) or `painted` (a real surface map).
+ * How a body is drawn: `line` (an outline drawing), `realistic` and `painted` (a real surface map; `painted` is the same maps), or `illustrated` (shaded from the numbers, not a default).
  *
  * @example
  * ```ts
  * import { type Look } from "@johnmorrisdotca/wakusei-planets";
  *
- * const looks: Look[] = ["line", "realistic", "painted"];
+ * const looks: Look[] = ["line", "realistic", "painted", "illustrated"];
  * console.log(looks.length);
  * ```
  */
-export type Look = "line" | "realistic" | "painted";
+export type Look = "line" | "realistic" | "painted" | "illustrated";
 
 /**
  * One band of a ring system, in kilometres from the planet's centre: how much light it stops (`alpha`, 0 to 1) and how bright it is (`tone`, 0 dark, 1 bright).

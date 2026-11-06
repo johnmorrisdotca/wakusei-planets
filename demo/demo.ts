@@ -15,7 +15,7 @@ import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
 
-type Look = "line" | "realistic" | "painted";
+type Look = "line" | "realistic" | "painted" | "illustrated";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
 const DWARF_TILES: readonly BodyId[] = DWARF_IDS;
 /** The well-known moons, in a row of their own: the rest are under their planet. */
@@ -64,7 +64,7 @@ if (main && controls && pickerBox) {
   const asBody = (value: string | null): BodyId => (value !== null && value in BODIES ? (value as BodyId) : "jupiter");
   const state = {
     body: asBody(address.get("body")),
-    look: (["line", "realistic", "painted"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
+    look: (["line", "realistic", "painted", "illustrated"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
     real: address.get("sky") === "real" || address.get("moons") === "1",
     moons: address.get("moons") === "1",
     scale: address.get("scale") === "1",
