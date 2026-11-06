@@ -335,7 +335,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 ```
 
 - A fact with no source is left out, never guessed. Moon positions are JPL's mean elements and are accurate to a few degrees on the orbit, about the size of the moon on screen.
-- The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a map. Mercury, Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mars stays on the Viking mosaic. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
+- The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a map. Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mercury uses the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0). Mars stays on the Viking mosaic. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Jupiter, Saturn, Uranus and Neptune have their rings drawn.
 - A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. `turn="0"` stays still. A picture with a date follows the real rotation.

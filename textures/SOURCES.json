@@ -1,11 +1,11 @@
 {
   "mercury": {
-    "file": "2k_mercury.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
+    "file": "8k_mercury.jpg",
+    "page": "https://sketchfab.com/3d-models/mercury-realistic-8k-215f364627054d25ae03bcd72afda714",
     "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "credit": "This work is based on \"Mercury Realistic 8K\" (https://sketchfab.com/3d-models/mercury-realistic-8k-215f364627054d25ae03bcd72afda714) by Shady Tex, CC BY 4.0. The same map is Solar System Scope's 8k_mercury (https://www.solarsystemscope.com/textures/), CC BY 4.0. The normal map is not used: its licence is unknown.",
+    "artist": "Shady Tex; Solar System Scope",
+    "usage": "Natural grey equirectangular map, resized to 512, 1024 and 2048. The 8K original stays out of the package."
   },
   "venus": {
     "file": "2k_venus_surface.jpg",
