@@ -21,7 +21,9 @@ export interface RingStrip {
 
 const PALETTE: Record<string, readonly [readonly number[], readonly number[]]> = {
   saturn: [[104, 86, 66], [243, 230, 200]],
+  jupiter: [[92, 78, 62], [186, 164, 132]],
   uranus: [[58, 62, 66], [150, 158, 162]],
+  neptune: [[48, 56, 70], [140, 156, 176]],
 };
 
 const hash = (n: number): number => {

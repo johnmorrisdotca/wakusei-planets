@@ -35,6 +35,15 @@ test("mix blends two colours", () => {
   assert.equal(mix("#000000", "#ffffff", 0.5), "#808080");
 });
 
+test("every ringed planet draws its rings", () => {
+  for (const id of ["jupiter", "saturn", "uranus", "neptune"] as const) {
+    const strip = ringStrip(BODIES[id], 256);
+    assert.ok(strip !== null && strip.outer > strip.inner && strip.inner > 1, id);
+    assert.ok((BODIES[id].rings ?? []).length >= 4, id);
+  }
+  for (const id of ["mercury", "venus", "earth", "mars"] as const) assert.equal(ringStrip(BODIES[id], 32), null, id);
+});
+
 test("a ring strip has soft, gapped bands: opaque in the B ring, clear in the Cassini division", () => {
   const strip = ringStrip(BODIES.saturn, 512)!;
   const alphaAt = (km: number): number => strip.data[Math.floor(((km / BODIES.saturn.radiusKm - strip.inner) / (strip.outer - strip.inner)) * strip.width) * 4 + 3]!;
