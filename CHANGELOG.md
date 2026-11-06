@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1 - 2026-11-06
+
+Saturn, Uranus and Neptune show their turn.
+
+- A plain band is the same at every longitude, so those three turned and the picture stayed still. Saturn now draws its north hexagon and a wave in the bands; Uranus and Neptune draw a storm and a wave. They move with the surface (MODULES-509).
+- `e2e/turn-all.demo.ts` waits three seconds and fails unless one percent of the middle of the disc has changed, for every body, with no date and with a date.
+
 ## 0.17.0 - 2026-11-06
 
 Photo maps on the realistic look, and every body turns.
