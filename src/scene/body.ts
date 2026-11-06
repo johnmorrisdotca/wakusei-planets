@@ -220,9 +220,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
 
       // the picture
       let textureWidth = 0;
-      let texture: THREE.Texture | undefined;
       let loading = false;
       let failed = false;
+      let gone = false;
       const tried = new Set<number>();
       let latest: SceneState = options.state();
 
@@ -230,16 +230,23 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const far = look.painted!.far !== undefined && w >= look.painted!.far;
         return loadImage(`${far ? options.farBase() : options.textureBase()}${look.painted!.map}-${w}.webp`);
       };
+      const drop = (t: THREE.Texture): void => {
+        t.dispose();
+        t.image = null;
+      };
       const use = (t: THREE.Texture, w: number): void => {
+        if (gone) {
+          drop(t);
+          return;
+        }
         t.anisotropy = 4;
         t.wrapS = T.RepeatWrapping;
         t.colorSpace = T.NoColorSpace;
-        const previous = texture;
-        texture = t;
+        const shared = assets.acquire(`wk:map:${options.id}:${w}`, () => t, (tex) => drop(tex));
+        if (shared !== t) drop(t);
         textureWidth = w;
-        paintedMaterial!.uniforms.uMap!.value = t;
+        paintedMaterial!.uniforms.uMap!.value = shared;
         mesh.material = paintedMaterial!;
-        previous?.dispose();
         options.report?.({ painted: true, width: w });
       };
       const fail = (): void => {
@@ -388,6 +395,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             void loadTexture(next).then(
               (t) => {
                 loading = false;
+                if (gone) {
+                  drop(t);
+                  return;
+                }
                 use(t, next);
                 options.redraw();
               },
@@ -422,8 +433,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           return false;
         },
         dispose() {
-          texture?.dispose();
-          texture = undefined;
+          gone = true;
           for (const o of orbitLines.values()) o.line.geometry.dispose();
           orbitMaterial.dispose();
           scene.clear();
