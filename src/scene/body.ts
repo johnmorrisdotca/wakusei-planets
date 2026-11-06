@@ -157,9 +157,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const ringInner = photo !== undefined && photoTexture !== undefined ? photo.from / facts.radiusKm : (table?.inner ?? 1);
       const ringOuter = photo !== undefined && photoTexture !== undefined ? photo.to / facts.radiusKm : (table?.outer ?? 2);
       const ringKey = photoTexture !== undefined ? `${options.id}:p` : options.id;
-      let ringMesh: THREE.Mesh | undefined;
+      // Two halves. The near one is drawn over the disc; the far one is tested against it, so it goes behind.
+      let ringHalves: { mesh: THREE.Mesh; material: THREE.ShaderMaterial }[] | undefined;
       let ringTexture: THREE.Texture | undefined;
-      let ringMaterial: THREE.ShaderMaterial | undefined;
       if (table !== null && look.emissive !== true) {
         ringTexture = assets.acquire(`wk:ringtex:${ringKey}`, () => {
           if (photoTexture !== undefined) {
@@ -178,18 +178,25 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           return tex;
         }, (t) => t.dispose());
         if (photoTexture !== undefined && ringTexture !== photoTexture) photoTexture.dispose();
-        const ringGeometry = assets.acquire(`wk:ring:${ringKey}`, () => new T.RingGeometry(ringInner, ringOuter, 256, 1), (g) => g.dispose());
-        ringMaterial = assets.acquire(`wk:ringmat:${ringKey}`, () => new T.ShaderMaterial({
+        const ringMaterial = (key: string, depthTest: boolean) => assets.acquire(`wk:ringmat:${ringKey}:${key}`, () => new T.ShaderMaterial({
           vertexShader: RING_VERTEX,
           fragmentShader: RING_FRAGMENT,
           side: T.DoubleSide,
           transparent: true,
           depthWrite: false,
+          depthTest,
           uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) } },
         }), (m) => m.dispose());
-        ringMesh = new T.Mesh(ringGeometry, ringMaterial);
-        ringMesh.frustumCulled = false;
-        scene.add(ringMesh);
+        // 0..pi is the +Y half. The basis maps local +Y onto +east.
+        const half = (key: string, start: number, depthTest: boolean) => {
+          const geometry = assets.acquire(`wk:ring:${ringKey}:${key}`, () => new T.RingGeometry(ringInner, ringOuter, 128, 1, start, Math.PI), (g) => g.dispose());
+          const material = ringMaterial(key, depthTest);
+          const piece = new T.Mesh(geometry, material);
+          piece.frustumCulled = false;
+          scene.add(piece);
+          return { mesh: piece, material };
+        };
+        ringHalves = [half("e", 0, false), half("w", Math.PI, true)];
       }
 
       // the glow of a star
@@ -261,7 +268,21 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const scaleY = ax ? ax[2] / mean : 1 - facts.flattening;
         const scaleZ = ax ? ax[0] / mean : 1;
         setBasis(T, mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
-        if (ringMesh !== undefined) setBasis(T, ringMesh, meridian, east, pole);
+        if (ringHalves !== undefined) {
+          const [near, far] = ringHalves;
+          // The camera sits on +Z. The ring's near direction is +Z laid onto the ring plane, and that half is drawn over the disc.
+          const zx = meridian[2];
+          const zy = east[2];
+          const span = Math.hypot(zx, zy) || 1;
+          const toward: Vec3 = [(meridian[0] * zx + east[0] * zy) / span, (meridian[1] * zx + east[1] * zy) / span, (meridian[2] * zx + east[2] * zy) / span];
+          const across = cross(toward, pole);
+          setBasis(T, near.mesh, across, toward, pole);
+          setBasis(T, far.mesh, [-across[0], -across[1], -across[2]], [-toward[0], -toward[1], -toward[2]], pole);
+          near.mesh.renderOrder = 2;
+          far.mesh.renderOrder = 1;
+          near.material.depthTest = false;
+          far.material.depthTest = true;
+        }
       };
 
       const frame = (state: SceneState): void => {
@@ -331,11 +352,13 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         orient(state);
         frame(state);
         place(state);
-        if (ringMaterial !== undefined) {
+        if (ringHalves !== undefined) {
           const light = v3(T, state.pose.light);
           const pole = v3(T, state.pose.pole);
-          ringMaterial.uniforms.uLight!.value.copy(light);
-          ringMaterial.uniforms.uRingN!.value.copy(pole);
+          for (const piece of ringHalves) {
+            piece.material.uniforms.uLight!.value.copy(light);
+            piece.material.uniforms.uRingN!.value.copy(pole);
+          }
           for (const mat of [shader, paintedMaterial]) {
             if (mat === undefined) continue;
             mat.uniforms.uRingOn!.value = 1;

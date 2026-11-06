@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The documentation site's browser test is the family's current copy, so the skip-link check reaches the link with Tab on Mac WebKit (MODULES-411).
+- Saturn's rings are drawn as two halves. The half toward the camera is painted over the disc, and the far half is hidden behind it, so the near arc crosses in front and the far arc goes behind. The shadow on the rings stays.
 
 ## 0.16.0 - 2026-11-05
 
