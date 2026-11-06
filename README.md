@@ -335,7 +335,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 ```
 
 - A fact with no source is left out, never guessed. Moon positions are JPL's mean elements and are accurate to a few degrees on the orbit, about the size of the moon on screen.
-- The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a real map where one exists; the Sun, Saturn, Uranus and Neptune have no global map, so theirs are made from one photograph each, as `NOTICE.md` says.
+- The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a map. Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune, the Earth, the Moon and the Sun use Solar System Scope's maps (CC BY 4.0); Saturn's poles use Nestaeric's caps (CC BY 4.0). The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Saturn and Uranus have their rings drawn.
 - Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
@@ -414,7 +414,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). The rules that matter most: draw from pu
 
 ## Licence
 
-MIT: see [LICENSE](LICENSE). The pictures are public-domain NASA, USGS and JPL imagery, each file credited in [NOTICE.md](NOTICE.md).
+MIT: see [LICENSE](LICENSE). The code is MIT. Some pictures are CC BY 4.0 (Solar System Scope, and Nestaeric for Saturn's poles) and the rest are public-domain NASA, USGS and JPL imagery. Each file is credited in [NOTICE.md](NOTICE.md).
 
 ## The name
 

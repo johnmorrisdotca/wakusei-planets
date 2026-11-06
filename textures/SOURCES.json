@@ -1,59 +1,59 @@
 {
   "mercury": {
-    "file": "Mercury MESSENGER MDIS Basemap EnhancedColor Mosaic Global 32ppd.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_32ppd.jpg",
-    "licence": "Public domain",
-    "credit": "https://astrogeology.usgs.gov/search/map/Mercury/Messenger/Global/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_665m",
-    "artist": "Johns Hopkins Applied Physics Laboratory, Applied Coherent Technology Corporation",
-    "usage": "Public domain"
+    "file": "2k_mercury.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "venus": {
-    "file": "Cylindrical Map of Venus.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Cylindrical_Map_of_Venus.jpg",
-    "licence": "Public domain",
-    "credit": "http://solarviews.com/cap/venus/venmap.htm ( image link )",
-    "artist": "NASA / Jet Propulsion Laboratory",
-    "usage": "Public domain"
+    "file": "2k_venus_surface.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "mars": {
-    "file": "Mars Viking MDIM21 ClrMosaic 1km.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Mars_Viking_MDIM21_ClrMosaic_1km.jpg",
-    "licence": "Public domain",
-    "credit": "https://astrogeology.usgs.gov/search/details/Mars/Viking/MDIM21/Mars_Viking_MDIM21_ClrMosaic_global_232m/cub",
-    "artist": "NASA / Jet Propulsion Lab / USGS",
-    "usage": "Public domain"
+    "file": "2k_mars.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "jupiter": {
-    "file": "Jupiter Cylindrical Map - Dec 2000 PIA07782.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Jupiter_Cylindrical_Map_-_Dec_2000_PIA07782.jpg",
-    "licence": "Public domain",
-    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA07782 ( image link )",
-    "artist": "NASA/JPL/Space Science Institute",
-    "usage": "Public domain"
+    "file": "2k_jupiter.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "saturn": {
-    "file": "Saturn during Equinox.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Saturn_during_Equinox.jpg",
-    "licence": "Public domain",
-    "credit": "http://www.ciclops.org/view/5155/Saturn-Four-Years-On http://www.nasa.gov/images/content/365640main_PIA11141_full.jpg http://photojournal.jpl.nasa.gov/catalog/PIA11141",
-    "artist": "NASA / JPL / Space Science Institute",
-    "usage": "Public domain"
+    "file": "2k_saturn.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/ The pole caps, including the north-polar hexagon, are from Nestaeric's Saturn (https://sketchfab.com/3d-models/saturn-c09a1970148c43ad99db134a9d6d00b5), also CC BY 4.0.",
+    "artist": "Solar System Scope; pole caps by Nestaeric",
+    "usage": "The band map is Solar System Scope's. The regions within 20 degrees of each pole are reprojected from Nestaeric's polar caps. Resized to 512, 1024 and 2048."
   },
   "uranus": {
-    "file": "Uranus as seen by NASA's Voyager 2.tif",
-    "page": "https://commons.wikimedia.org/wiki/File:Uranus_as_seen_by_NASA%27s_Voyager_2.tif",
-    "licence": "Public domain",
-    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA18182",
-    "artist": "NASA",
-    "usage": "Public domain"
+    "file": "2k_uranus.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "neptune": {
-    "file": "Neptune Full (original).jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Neptune_Full_(original).jpg",
-    "licence": "Public domain",
-    "credit": "https://solarsystem.nasa.gov/resources/611/neptune-full-disk-view/ https://photojournal.jpl.nasa.gov/catalog/PIA01492",
-    "artist": "NASA/JPL",
-    "usage": "Public domain"
+    "file": "2k_neptune.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "pluto": {
     "file": "Pluto color mapmosaic.jpg",
@@ -64,12 +64,12 @@
     "usage": "Public domain"
   },
   "sun": {
-    "file": "SDO 20240810 000000 4096 HMIIC (HMI).jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:SDO_20240810_000000_4096_HMIIC_(HMI).jpg",
-    "licence": "Public domain",
-    "credit": "https://sdo.gsfc.nasa.gov/assets/img/browse/2024/08/10/20240810_000000_4096_HMIIC.jpg",
-    "artist": "Courtesy of NASA/SDO and the AIA, EVE, and HMI science teams.",
-    "usage": "Public domain"
+    "file": "2k_sun.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "io": {
     "file": "Io from Galileo and Voyager missions.jpg",
@@ -112,12 +112,12 @@
     "usage": "Public domain"
   },
   "moon": {
-    "file": "CGI Moon Kit - Lroc color poles.tif",
-    "page": "https://commons.wikimedia.org/wiki/File:CGI_Moon_Kit_-_Lroc_color_poles.tif",
-    "licence": "Public domain",
-    "credit": "https://svs.gsfc.nasa.gov/4720/",
-    "artist": "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro)",
-    "usage": "Public domain"
+    "file": "2k_moon.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "rhea": {
     "file": "Rhea Color Map.jpg",
@@ -152,12 +152,12 @@
     "usage": "Public domain"
   },
   "earth": {
-    "file": "world.topo.bathy.200409.3x5400x2700.jpg",
-    "page": "https://visibleearth.nasa.gov/images/73801",
-    "licence": "Public domain",
-    "credit": "NASA Earth Observatory (Reto Stockli), Blue Marble: Next Generation with topography and bathymetry",
-    "artist": "Reto Stockli, NASA Earth Observatory",
-    "usage": "Public domain (NASA)"
+    "file": "2k_earth_daymap.jpg",
+    "page": "https://www.solarsystemscope.com/textures/",
+    "licence": "CC BY 4.0",
+    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
+    "artist": "Solar System Scope",
+    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "ceres": {
     "file": "PIA20354-Ceres-DwarfPlanet-MercatorMap-HAMO-20160322-0DegreeLongitude.jpg",
