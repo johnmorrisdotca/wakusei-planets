@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+- Jupiter keeps a thin main ring. The halo and the gossamer stay a hint, and Neptune's sheet stays fainter than the thin rings (MODULES-509).
+
 ## 0.17.1 - 2026-11-06
 
 Saturn, Uranus and Neptune show their turn.
