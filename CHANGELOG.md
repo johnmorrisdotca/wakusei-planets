@@ -3,7 +3,7 @@
 ## Unreleased
 
 - The documentation site's browser test is the family's current copy, so the skip-link check reaches the link with Tab on Mac WebKit (MODULES-411).
-- Painted maps of Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune, the Earth, the Moon and the Sun are Solar System Scope's equirectangular maps, CC BY 4.0 (MODULES-509). Saturn's poles, including the north hexagon, are reprojected from Nestaeric's caps, also CC BY 4.0. Sizes in the repository are 512, 1024 and 2048. The 8K originals, the every-body turn test and the release are not in this commit.
+- Painted maps of Mercury, Venus, Mars, Saturn, Neptune, the Earth, the Moon and the Sun are Solar System Scope's equirectangular maps, CC BY 4.0 (MODULES-509). Jupiter and Uranus use Nestaeric's band maps, CC BY 4.0, which have east-west detail. Saturn's poles, including the north hexagon, are reprojected from Nestaeric's caps, also CC BY 4.0. Sizes in the repository are 512, 1024 and 2048. The 8K originals, the every-body turn test and the release are not in this commit.
 - Saturn's rings are drawn as two halves. The half toward the camera is painted over the disc, and the far half is hidden behind it, so the near arc crosses in front and the far arc goes behind. The shadow on the rings stays.
 
 ## 0.16.0 - 2026-11-05

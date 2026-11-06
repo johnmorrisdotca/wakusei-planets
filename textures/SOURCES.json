@@ -24,12 +24,12 @@
     "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "jupiter": {
-    "file": "2k_jupiter.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
+    "file": "Uv1_jupiter1_diff.png",
+    "page": "https://sketchfab.com/3d-models/jupiter-6380860bdb4247b98b30643615c3afab",
     "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "credit": "This work is based on \"Jupiter\" (https://sketchfab.com/3d-models/jupiter-6380860bdb4247b98b30643615c3afab) by Nestaeric (https://sketchfab.com/Nestaeric) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "artist": "Nestaeric",
+    "usage": "The band half of the texture, which has the Great Red Spot and turbulent detail, resized to 512, 1024 and 2048. The polar caps are not folded in yet."
   },
   "saturn": {
     "file": "2k_saturn.jpg",
@@ -40,12 +40,12 @@
     "usage": "The band map is Solar System Scope's. The regions within 20 degrees of each pole are reprojected from Nestaeric's polar caps. Resized to 512, 1024 and 2048."
   },
   "uranus": {
-    "file": "2k_uranus.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
+    "file": "Uv1_uranus1_diff.png",
+    "page": "https://sketchfab.com/3d-models/uranus-0009a69dbace44608c0bd09af9ba20db",
     "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "credit": "This work is based on \"Uranus\" (https://sketchfab.com/3d-models/uranus-0009a69dbace44608c0bd09af9ba20db) by NestaEric (https://sketchfab.com/Nestaeric) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "artist": "NestaEric",
+    "usage": "The band half of the texture, which has a bright spot, resized to 512, 1024 and 2048. The polar caps are not folded in yet."
   },
   "neptune": {
     "file": "2k_neptune.jpg",
