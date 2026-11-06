@@ -104,7 +104,7 @@ const TEMPLATE = `<style>
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
  *
  * Attributes: `body` (a name, such as `jupiter`), `look` (`line`, `realistic` or `painted`), `size` (pixels across), `time` (`now` or an ISO date: the body as the Earth sees it then; leave it out for a portrait),
- * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second; left out, 12 a second, backwards when the body is, and a date keeps its orientation and adds this turn; `0` stays still; reduced motion keeps a quarter of it), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
+ * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second; left out, 12 a second, backwards when the body is, and a date keeps its orientation and adds this turn; `live="off"` stays still unless this is set; `0` stays still; reduced motion keeps a quarter of it), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
  * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `span-km` (draw to scale: the half-width of the picture in kilometres, the same in every picture of a lineup), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
  *
  * @example
@@ -297,7 +297,7 @@ export class WakuseiBody extends HTMLElement {
         ...(this.hasAttribute("phase") ? { phase: num(this.getAttribute("phase"), 0) } : {}),
         ...(this.hasAttribute("meridian") ? { spin: num(this.getAttribute("meridian"), 0) } : {}),
       },
-      turn: (this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : defaultTurn(this.body)) * (this.#reduce ? REDUCED_TURN : 1),
+      turn: (this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : this.getAttribute("live") === "off" ? 0 : defaultTurn(this.body)) * (this.#reduce ? REDUCED_TURN : 1),
     };
   }
 
