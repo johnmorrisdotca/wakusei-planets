@@ -338,6 +338,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 - The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a map. Mercury, Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mars stays on the Viking mosaic. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Jupiter, Saturn, Uranus and Neptune have their rings drawn.
+- A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. `turn="0"` stays still. A picture with a date follows the real rotation.
 - Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
 
 ## Accessibility

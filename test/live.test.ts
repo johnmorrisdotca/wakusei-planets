@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createLive, type LiveRequest } from "../src/live.ts";
+import { BODIES, BODY_IDS } from "../src/facts.ts";
+import { createLive, defaultTurn, type LiveRequest } from "../src/live.ts";
 import { length } from "../src/vec.ts";
 
 const request = (over: Partial<LiveRequest> = {}): LiveRequest => ({ id: "jupiter", start: Date.UTC(2026, 10, 2), startedAt: 0, rate: 3600, moons: true, portrait: {}, turn: 0, ...over });
@@ -21,6 +22,16 @@ test("a moon keeps its distance from the planet as it is carried forward", () =>
   const later = live.at(r, 900).moons[0]!;
   assert.ok(Math.abs(length([later.x, later.y, later.z]) - length([first.x, first.y, first.z])) < 0.2);
   assert.ok(Math.hypot(later.x - first.x, later.y - first.y) > 0.1);
+});
+
+test("a portrait turns by default, backwards when the body does, and turn 0 stays still", () => {
+  for (const id of BODY_IDS) assert.equal(defaultTurn(id), BODIES[id].rotationHours < 0 ? -12 : 12, id);
+  const live = createLive();
+  const spinning = request({ id: "jupiter", start: undefined, moons: false, turn: defaultTurn("jupiter") });
+  assert.notDeepEqual(live.at(spinning, 0).pose.meridian, live.at(spinning, 1000).pose.meridian);
+  const held = createLive();
+  const still = request({ id: "venus", start: undefined, moons: false, turn: 0 });
+  assert.deepEqual(held.at(still, 0).pose.meridian, held.at(still, 1000).pose.meridian);
 });
 
 test("a portrait with no date turns by its own rate and needs no ephemeris", () => {

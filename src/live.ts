@@ -52,6 +52,14 @@ interface Anchor {
 
 const ANCHOR_MS = 1000;
 
+/** Degrees a second a portrait turns when the page does not set `turn`. Slow enough to watch. */
+export const DEFAULT_TURN = 12;
+
+/** The portrait turn when none is set: `DEFAULT_TURN` degrees a second, and backwards when the body turns backwards. `turn="0"` stays still. */
+export function defaultTurn(id: BodyId): number {
+  return (BODIES[id].rotationHours < 0 ? -1 : 1) * DEFAULT_TURN;
+}
+
 /** The degrees a second a body's own turn advances its prime meridian (a moon that keeps one face to its planet turns once a trip). */
 export function turnRate(id: BodyId): number {
   const f = BODIES[id];
