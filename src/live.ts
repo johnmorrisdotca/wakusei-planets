@@ -105,8 +105,10 @@ export function createLive(): { at(request: LiveRequest, now: number): LiveFrame
       let pose = a.pose;
       if (a.sim === undefined) {
         if (r.turn !== 0) pose = { ...pose, meridian: turn(pose.meridian, pose.pole, r.turn * seconds) };
-      } else if (seconds !== 0) {
-        pose = { ...pose, meridian: turn(pose.meridian, pose.pole, (turnRate(r.id) + r.turn) * seconds) };
+      } else {
+        // The date's own spin is already in the anchor, so only the bit since then is added. The portrait turn is from the start of the clock: folding it into the one-second window made a dated picture jump back every second.
+        const spin = turnRate(r.id) * seconds + r.turn * ((now - r.startedAt) / 1000);
+        if (spin !== 0) pose = { ...pose, meridian: turn(pose.meridian, pose.pole, spin) };
       }
       const moons = a.place.map((m, i): LiveMoon => {
         const rate = Math.abs(ORBITS[m.id]?.sid ?? 0) / 86400;

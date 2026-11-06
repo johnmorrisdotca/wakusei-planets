@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BODIES, BODY_IDS } from "../src/facts.ts";
 import { createLive, defaultTurn, type LiveRequest } from "../src/live.ts";
-import { length } from "../src/vec.ts";
+import { dot, length } from "../src/vec.ts";
 
 const request = (over: Partial<LiveRequest> = {}): LiveRequest => ({ id: "jupiter", start: Date.UTC(2026, 10, 2), startedAt: 0, rate: 3600, moons: true, portrait: {}, turn: 0, ...over });
 
@@ -26,12 +26,32 @@ test("a moon keeps its distance from the planet as it is carried forward", () =>
 
 test("a portrait turns by default, backwards when the body does, and turn 0 stays still", () => {
   for (const id of BODY_IDS) assert.equal(defaultTurn(id), BODIES[id].rotationHours < 0 ? -12 : 12, id);
-  const live = createLive();
-  const spinning = request({ id: "jupiter", start: undefined, moons: false, turn: defaultTurn("jupiter") });
-  assert.notDeepEqual(live.at(spinning, 0).pose.meridian, live.at(spinning, 1000).pose.meridian);
+  for (const id of BODY_IDS) {
+    const live = createLive();
+    const spinning = request({ id, start: undefined, moons: false, turn: defaultTurn(id) });
+    assert.notDeepEqual(live.at(spinning, 0).pose.meridian, live.at(spinning, 500).pose.meridian, id);
+  }
   const held = createLive();
   const still = request({ id: "venus", start: undefined, moons: false, turn: 0 });
   assert.deepEqual(held.at(still, 0).pose.meridian, held.at(still, 1000).pose.meridian);
+});
+
+test("every dated body turns between two moments", () => {
+  for (const id of BODY_IDS) {
+    const live = createLive();
+    const r = request({ id, start: Date.UTC(2026, 10, 2), startedAt: 0, rate: 1, moons: false, turn: defaultTurn(id) });
+    live.at(r, 0);
+    assert.notDeepEqual(live.at(r, 0).pose.meridian, live.at(r, 500).pose.meridian, id);
+  }
+});
+
+test("a dated picture's turn keeps going past one second", () => {
+  const live = createLive();
+  const r = request({ id: "mars", start: Date.UTC(2026, 10, 2), startedAt: 0, rate: 1, moons: false, turn: 12 });
+  const a = live.at(r, 0).pose.meridian;
+  const b = live.at(r, 2500).pose.meridian;
+  const angle = (Math.acos(Math.min(1, Math.max(-1, dot(a, b)))) * 180) / Math.PI;
+  assert.ok(angle > 20, String(angle));
 });
 
 test("a dated picture keeps that date's orientation and adds the turn", () => {

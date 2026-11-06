@@ -2,22 +2,23 @@
 title: Looks and bodies
 section: how-to
 order: 7
-description: The three looks, each body's own entry point, three.js, pictures and the budget that keeps the page light.
+description: The looks, each body's own entry point, three.js, pictures and the budget that keeps the page light.
 ---
 
 ## The looks
 
 - `line`: a clean outline drawing, an SVG string. It needs nothing else.
-- `realistic`: a shaded sphere drawn with three.js from the body's real colours and features, lit from the Sun's side. No pictures are fetched: the surface is worked out in the shader.
-- `painted`: a real surface map from public-domain NASA, USGS and JPL imagery, for the Sun, the planets from Mercury to Pluto, Ceres, the Moon, the four Galilean moons, Saturn's Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus, Triton and Charon; Saturn's rings come from a Cassini picture of them. A small picture is drawn first and a sharper one is fetched when the view is zoomed in; if a picture cannot be fetched the shaded look stays. Saturn, Uranus, Neptune and the Sun have no global map: theirs come from one photograph each, as NOTICE.md says.
+- `realistic`: the photo maps, lit from the Sun's side. `painted` is the same maps, kept so an older page still works. The demo's one button for them is Realistic.
+- `illustrated`: the shaded drawing `realistic` used to be, worked out in the shader from the body's colours and features. It is not a default.
+- `painted`: a real surface map, for the Sun, the planets from Mercury to Pluto, Ceres, the Moon, the four Galilean moons, Saturn's Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus, Triton and Charon; Saturn's rings come from a Cassini picture of them. A small picture is drawn first and a sharper one is fetched when the view is zoomed in; if a picture cannot be fetched the shaded look stays. NOTICE.md names each map.
 
 ![Saturn in the painted look, with its rings from a Cassini picture.](../images/hero-saturn-painted.png)
 
 ![The Earth in the painted look, from NASA's Blue Marble picture.](../images/hero-earth-painted.png)
 
-![Io in the painted look, one of the nine painted moons.](../images/hero-io-painted.png)
+![Io in the painted look, one of the fourteen painted moons.](../images/hero-io-painted.png)
 
-![Venus in the realistic look: a shaded sphere with no picture, its surface worked out in a shader.](../images/hero-venus-realistic.png)
+![Venus in the realistic look, from its cloud map.](../images/hero-venus-realistic.png)
 
 ## Each body is its own entry point
 
