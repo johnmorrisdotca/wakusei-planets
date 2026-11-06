@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Kazoku UI is 0.19.0.
 - The documentation site's browser test is the family's current copy, so the skip-link check reaches the link with Tab on Mac WebKit (MODULES-411).
 
 ## 0.16.0 - 2026-11-05
