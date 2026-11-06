@@ -184,6 +184,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           fragmentShader: RING_FRAGMENT,
           side: T.DoubleSide,
           transparent: true,
+          premultipliedAlpha: photoTexture === undefined,
           depthWrite: false,
           depthTest,
           uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) } },

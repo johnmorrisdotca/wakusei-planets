@@ -78,10 +78,12 @@ export function ringStrip(facts: BodyFacts, width = 1024): RingStrip | null {
       weight += inside;
     }
     const t = weight > 0 ? Math.min(1, tone / weight) : 0;
-    data[x * 4] = Math.round(dark![0]! + (light![0]! - dark![0]!) * t);
-    data[x * 4 + 1] = Math.round(dark![1]! + (light![1]! - dark![1]!) * t);
-    data[x * 4 + 2] = Math.round(dark![2]! + (light![2]! - dark![2]!) * t);
-    data[x * 4 + 3] = Math.round(Math.min(1, alpha) * 255);
+    const a = Math.min(1, alpha);
+    // The colour is stored already multiplied by the opacity. A clear part of the strip is black, so it stays clear even when a sampler drops the alpha.
+    data[x * 4] = Math.round((dark![0]! + (light![0]! - dark![0]!) * t) * a);
+    data[x * 4 + 1] = Math.round((dark![1]! + (light![1]! - dark![1]!) * t) * a);
+    data[x * 4 + 2] = Math.round((dark![2]! + (light![2]! - dark![2]!) * t) * a);
+    data[x * 4 + 3] = Math.round(a * 255);
   }
   return { data, width, inner: from / facts.radiusKm, outer: to / facts.radiusKm };
 }
