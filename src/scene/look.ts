@@ -41,6 +41,11 @@ export interface PaintedMap {
   far?: number;
   /** How much of the map's brightness is also relief. Default 0. */
   relief?: number;
+  /**
+   * Weather drawn on the map so a turn can be seen. `bands` is a wave and a spot that move with longitude.
+   * `hexagon` is that wave plus the six-sided storm at the north pole. A map of plain bands shows no turn without it.
+   */
+  turn?: "bands" | "hexagon";
   /** A picture of the body's rings for this look, one pixel high: colour and opacity from the inner edge to the outer, `width` samples. Used instead of the table's strip when it loads. */
   rings?: { map: string; width: number; from: number; to: number };
   /** The painted pictures' credit line, for the page. */

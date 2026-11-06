@@ -93,6 +93,7 @@ function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THRE
       uAtmosPow: { value: a?.power ?? 3 },
       uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },
+      ...(painted ? { uMark: { value: look.painted?.turn === "hexagon" ? 2 : look.painted?.turn === "bands" ? 1 : 0 } } : {}),
       uRingN: { value: new T.Vector3(0, 1, 0) },
       uRingR: { value: new T.Vector2(1, 2) },
       uRingOn: { value: 0 },

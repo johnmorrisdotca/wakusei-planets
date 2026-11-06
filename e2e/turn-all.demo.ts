@@ -1,5 +1,5 @@
-// Every body turns when nothing says otherwise, with no date and with a date. Two pictures, two seconds apart, must differ in the middle,
-// where the disc is (a ringed body's rings do not turn, so the whole frame barely changes). Chromium, in software, with motion allowed.
+// Every body turns when nothing says otherwise, with no date and with a date. Two pictures, three seconds apart, must differ in the middle,
+// where the disc is (a ringed body's rings do not turn, so the whole frame barely changes). One percent of that middle must change. Chromium, in software, with motion allowed.
 import { expect, type Page, test } from "@playwright/test";
 import { apparent } from "../src/ephemeris.ts";
 import { BODY_IDS, type BodyId } from "../src/facts.ts";
@@ -86,11 +86,11 @@ test("every body turns by default, and a dated picture turns too", async ({ page
       await expect(body).toHaveAttribute("data-state", "live", { timeout: 60_000 });
       await settle();
       const before = await body.screenshot();
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(3000);
       const after = await body.screenshot();
       const share = await centreChanged(page, before, after);
-      // A still picture of the same body differs by 0. The smoothest turning one measured (Uranus, no date) is about 0.008.
-      expect(share, `${id} ${dated ? "dated" : "portrait"}`).toBeGreaterThan(0.004);
+      // A still picture differs by 0. One percent of the middle of the disc must change in three seconds, Saturn, Uranus and Neptune included.
+      expect(share, `${id} ${dated ? "dated" : "portrait"}`).toBeGreaterThan(0.01);
     }
   }
 });
