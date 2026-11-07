@@ -68,4 +68,4 @@ console.log(bodies, "bodies;", moons, "moons");
 
 ## データ
 
-大きさ、扁平率、極、自転は IAU の値と NASA の資料です。惑星の位置は JPL の近似軌道要素、月の位置は Meeus の主な項、ほかの衛星は JPL の平均軌道要素です。衛星の表は `scripts/make-moon-data.py` が作り、手では編集しません。出典のない事実は、推測せずに省きます。出どころは[しくみ](how-it-works.md)にあります。
+大きさ、扁平率、極、自転は IAU の値と NASA の資料です。惑星の位置は JPL の近似軌道要素、月の位置は Meeus の主な項、ほかの衛星は JPL Horizons の位置に合わせた軌道です。衛星の表は `scripts/make-moon-data.py` が作り、手では編集しません。`test/accuracy.test.ts` が、すべての天体を限度の中に保ちます ([精度](accuracy.md))。出典のない事実は、推測せずに省きます。出どころは[しくみ](how-it-works.md)にあります。

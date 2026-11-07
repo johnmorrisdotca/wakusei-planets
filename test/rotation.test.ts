@@ -34,11 +34,11 @@ test("a planet or dwarf planet turns about its real axis, the way its tilt and r
   }
 });
 
-test("a moon that turns once a trip goes round the way its orbit goes", () => {
+test("a moon that turns once a trip turns at the rate its orbit goes round", () => {
   for (const id of BODY_IDS) {
     const f = BODIES[id];
     const orbit = ORBITS[id];
     if (f.synchronous !== true || orbit === undefined) continue;
-    assert.equal(Math.sign(f.prime.rate), Math.sign(orbit.sid), id);
+    assert.ok(Math.abs(Math.abs(f.prime.rate) / Math.abs(orbit.sid) - 1) < 1e-3, `${id}: it turns ${f.prime.rate} degrees a day, its orbit goes round at ${orbit.sid}`);
   }
 });

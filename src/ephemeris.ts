@@ -346,7 +346,8 @@ function orbitVector(orbit: OrbitElements, ms: number): Vec3 {
   const w = orbit.w + orbit.dw * dt;
   const node = orbit.node + orbit.dn * dt;
   const lambda0 = orbit.w + orbit.node + orbit.m;
-  const M = lambda0 + orbit.sid * dt - w - node;
+  const swing = orbit.wave === undefined ? 0 : orbit.wave[0] * Math.sin((2 * Math.PI * dt) / orbit.wave[1] + orbit.wave[2] * RAD);
+  const M = lambda0 + orbit.sid * dt + 0.5 * (orbit.acc ?? 0) * dt * dt + swing - w - node;
   const E = kepler(M * RAD, orbit.e);
   const x = orbit.a * (Math.cos(E) - orbit.e);
   const y = orbit.a * Math.sqrt(1 - orbit.e * orbit.e) * Math.sin(E);

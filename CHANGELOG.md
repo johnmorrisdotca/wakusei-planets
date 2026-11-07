@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+The moons are where they are, and every body is checked against JPL Horizons (MODULES-525, MODULES-522).
+
+- **The moons of Saturn, Uranus, Neptune and Pluto were in the wrong place.** Mimas, Tethys, Dione, Rhea, Titan, Iapetus, Miranda, Ariel, Umbriel, Titania, Oberon, Triton and Nix were tens of degrees off (Titan 157, Dione 151) at every date, including the epoch the elements are for, and Phobos, Enceladus, Proteus and Hydra up to 21. The angles in JPL's Planetary Satellite Mean Elements do not reproduce Horizons' positions for these moons: for Dione the table gives a mean longitude of 328 degrees where Horizons' own elements give 177. Their orbits are fitted to Horizons' positions and velocities for 1950 to 2050 now (`scripts/make-moon-data.py`), each in its mean orbit plane. 21 of the 24 moons are within a degree of Horizons on every date from 1900 to 2100, and the worst is Nereid, an orbit with an eccentricity of 0.75, at 6 degrees. The Uranian moons also go round Uranus the other way from what the pole in the facts says, and Triton's orbit was reversed twice (its inclination and its rate); both are fixed by describing each orbit as going round anticlockwise about its own pole.
+- **Phobos has an acceleration and Mimas and Tethys a swing.** `OrbitElements` has two optional terms for the mean longitude: `acc`, for Phobos, whose orbit is shrinking, and `wave`, for the Mimas–Tethys resonance, a swing of 43 degrees over 70 years that the fit found by itself.
+- **`test/accuracy.test.ts` holds every planet, the Moon and every moon to a limit against Horizons** (`test/data/horizons.json`, from `scripts/fetch-horizons-reference.py`), on five dates from 1800 to 2050 for the planets and seven from 1900 to 2100 for the moons. It fails on the old orbit table. The numbers are in a new [Accuracy](docs/guides/accuracy.md) guide, in English and Japanese. The planets are within 1 arc-minute except Jupiter (5) and Saturn (9).
+- **A synchronous moon's spin takes its direction from the facts and its speed from the orbit** (`turnRate`), because the sign of an orbit's rate no longer says which way a moon goes round. The rotation test checks the rate.
+- **The docs said moon positions were accurate to a few degrees.** That was true for Jupiter's moons and the Moon, not for the rest; the README, the guides and NOTICE.md say what was measured.
+
 ## 0.18.0 - 2026-11-07
 
 The view gestures are the family's, on kazoku-ui 0.19 (MODULES-527).

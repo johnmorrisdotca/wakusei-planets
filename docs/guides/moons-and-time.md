@@ -5,7 +5,7 @@ order: 8
 description: A planet with its moons where they are on a date and time, and time that runs fast.
 ---
 
-Add `moons` to a planet and give it a `time`: the moons are drawn on their orbits where they are then, as the Earth sees them. Their orbits come from JPL's mean elements and are accurate to a few degrees of orbit, which is the width of a moon's own picture on a screen.
+Add `moons` to a planet and give it a `time`: the moons are drawn on their orbits where they are then, as the Earth sees them. Their orbits are fitted to JPL Horizons' own positions, and are within a degree or two on the orbit for almost every moon, which is the width of a moon's own picture on a screen. [Accuracy](accuracy.md) has the number for each moon.
 
 ![Saturn with its moons on their orbits at a chosen date and time.](../images/moons-saturn.png)
 

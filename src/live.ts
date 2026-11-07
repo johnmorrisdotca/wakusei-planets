@@ -66,7 +66,7 @@ export function defaultTurn(id: BodyId): number {
 /** The degrees a second a body's own turn advances its prime meridian (a moon that keeps one face to its planet turns once a trip). */
 export function turnRate(id: BodyId): number {
   const f = BODIES[id];
-  return (f.synchronous === true && ORBITS[id] !== undefined ? ORBITS[id].sid : f.prime.rate) / 86400;
+  return (f.synchronous === true && ORBITS[id] !== undefined ? Math.sign(f.prime.rate) * Math.abs(ORBITS[id].sid) : f.prime.rate) / 86400;
 }
 
 /** The pictured moon-planet's moons, or none. */
