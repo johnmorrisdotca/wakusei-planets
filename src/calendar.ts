@@ -44,6 +44,10 @@ export interface CivilTime {
 
 const floorMod = (a: number, b: number): number => a - b * Math.floor(a / b);
 
+function wholeNumber(name: string, value: number): void {
+  if (!Number.isInteger(value)) throw new RangeError(`${name} must be a whole number, got ${value}`);
+}
+
 function dayNumberOf(year: number, month: number, day: number, gregorian: boolean): number {
   const a = Math.floor((14 - month) / 12);
   const y = year + 4800 - a;
@@ -76,7 +80,7 @@ function dateOfDayNumber(J: number, gregorian: boolean): { year: number; month: 
  * ```
  */
 export function isLeapYear(year: number, calendar: Calendar = "auto"): boolean {
-  if (!Number.isInteger(year)) throw new RangeError(`year must be a whole number, got ${year}`);
+  wholeNumber("year", year);
   const gregorian = calendar === "gregorian" || (calendar === "auto" && year > 1582);
   return floorMod(year, 4) === 0 && (!gregorian || floorMod(year, 100) !== 0 || floorMod(year, 400) === 0);
 }
@@ -139,14 +143,13 @@ export function toCalendar(when: When, calendar: Calendar = "auto"): CivilTime {
  */
 export function fromCalendar(civil: { year: number } & Partial<Omit<CivilTime, "year">>, calendar: Calendar = "auto"): number {
   const { year, month = 1, day = 1, hour = 0, minute = 0, second = 0, millisecond = 0 } = civil;
-  for (const [name, value] of Object.entries({ year, month, day, hour, minute, second, millisecond })) if (!Number.isInteger(value)) throw new RangeError(`${name} must be a whole number, got ${value}`);
+  for (const [name, value] of Object.entries({ year, month, day, hour, minute, second, millisecond })) wholeNumber(name, value);
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 || millisecond < 0 || millisecond > 999) throw new RangeError(`the time of day ${hour}:${minute}:${second}.${millisecond} does not exist`);
   if (day < 1 || day > daysInMonth(year, month, calendar)) throw new RangeError(`${year}-${month}-${day} does not exist in the ${calendar} calendar`);
   let gregorian = calendar === "gregorian";
   if (calendar === "auto") {
-    const afterReform = year > 1582 || (year === 1582 && (month > 10 || (month === 10 && day >= 15)));
     if (year === 1582 && month === 10 && day > 4 && day < 15) throw new RangeError(`${year}-${month}-${day} does not exist: the calendar skipped 5 to 14 October 1582`);
-    gregorian = afterReform;
+    gregorian = year > 1582 || (year === 1582 && (month > 10 || (month === 10 && day >= 15)));
   }
   return (dayNumberOf(year, month, day, gregorian) - UNIX_DAY_NUMBER) * DAY_MS + hour * 3_600_000 + minute * 60_000 + second * 1000 + millisecond;
 }

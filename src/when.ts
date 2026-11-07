@@ -17,11 +17,10 @@ export type When = Date | number;
  * A moment as milliseconds since 1970. A `Date` is never changed. An invalid `Date`, a number that is not finite or anything else throws, naming the argument and the value.
  */
 export function moment(when: When, name = "when"): number {
-  if (typeof when === "number") {
-    if (Number.isFinite(when)) return when;
-  } else if (typeof (when as Date | undefined)?.getTime === "function") {
-    const ms = when.getTime();
-    if (Number.isFinite(ms)) return ms;
-  } else throw new TypeError(`${name} must be a Date or a number of milliseconds since 1970, got ${typeof when}`);
-  throw new RangeError(`${name} must be a valid Date or a finite number of milliseconds since 1970, got ${String(when)}`);
+  if (typeof when !== "number" && typeof (when as Date | undefined)?.getTime !== "function") {
+    throw new TypeError(`${name} must be a Date or a number of milliseconds since 1970, got ${typeof when}`);
+  }
+  const ms = typeof when === "number" ? when : when.getTime();
+  if (!Number.isFinite(ms)) throw new RangeError(`${name} must be a valid Date or a finite number of milliseconds since 1970, got ${String(when)}`);
+  return ms;
 }
