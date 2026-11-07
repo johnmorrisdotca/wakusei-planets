@@ -46,13 +46,22 @@ jobs:
       - name: Every way of using it in the README and the guides, built and opened in a browser
         run: pnpm test:usage
   demo:
-    # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit, about seven minutes each instead of thirty in a row.
-    name: demo (${{ matrix.project }})
+    # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit. The desk's Chromium draws every body in software, so it is dealt out to six jobs (`--shard`).
+    name: demo (${{ matrix.project }} ${{ matrix.shard }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        project: [chromium-desk, chromium-phone, webkit-desk, webkit-phone]
+        include:
+          - { project: chromium-desk, shard: 1/6 }
+          - { project: chromium-desk, shard: 2/6 }
+          - { project: chromium-desk, shard: 3/6 }
+          - { project: chromium-desk, shard: 4/6 }
+          - { project: chromium-desk, shard: 5/6 }
+          - { project: chromium-desk, shard: 6/6 }
+          - { project: chromium-phone, shard: 1/1 }
+          - { project: webkit-desk, shard: 1/1 }
+          - { project: webkit-phone, shard: 1/1 }
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -63,7 +72,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps ${{ startsWith(matrix.project, 'webkit') && 'webkit' || 'chromium' }}
       - name: The demo and the docs site, played in one browser at one width (pnpm test:demo plays all four)
-        run: pnpm test:demo:one --project=${{ matrix.project }}
+        run: pnpm test:demo:one --project=${{ matrix.project }} --shard=${{ matrix.shard }}
   freeze:
     runs-on: ubuntu-latest
     steps:
