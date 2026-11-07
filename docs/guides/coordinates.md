@@ -5,7 +5,7 @@ order: 12
 description: Pure coordinate rotations in degrees, with named frames and AU components.
 ---
 
-Import `/coordinates` in Node or a browser. It imports only `/time`, never rendering, body data, textures or browser globals. There are no new dependencies. The test bundles the whole sub-path and enforces a **4 KiB minified gzip budget**, including its imports.
+Import `/coordinates` in Node or a browser. It imports only clock and frame mathematics, never rendering, body data, textures or browser globals. There are no new dependencies. The test bundles the whole sub-path and enforces a **4 KiB minified gzip budget**, including its imports.
 
 ```ts
 import { sphericalToCartesian, cartesianToSpherical, eclipticToEquatorial } from "@johnmorrisdotca/wakusei-planets/coordinates";
@@ -47,7 +47,7 @@ console.log(equatorialToHorizontal({
 
 `equatorialToHorizontal(direction, when, { observer })` requires **mean equatorial-of-date** coordinates with an epoch equal to `when`. A J2000 direction is rejected. `when` accepts a `Date` or Unix milliseconds; a supplied Date is never mutated. No machine time zone is used.
 
-Observer latitude is degrees north, [-90, 90]; longitude is degrees east, [-180, 180], west negative. `heightM` defaults to zero, metres above mean sea level. Height is validated but does not affect this direction-only rotation. There is no horizon dip or atmospheric model. Azimuth is clockwise from north (east 90°), altitude is [-90, 90]. At zenith or nadir, undefined azimuth is conventionally zero. At a geographic pole, longitude selects the reference meridian.
+Observer latitude is degrees north, [-90, 90]; longitude is degrees east, [-180, 180], west negative. `heightM` defaults to zero, metres above the WGS 84 ellipsoid. Height is validated but does not affect this direction-only rotation. There is no horizon dip or atmospheric model. Azimuth is clockwise from north (east 90°), altitude is [-90, 90]. At zenith or nadir, undefined azimuth is conventionally zero. At a geographic pole, longitude selects the reference meridian.
 
 A geocentric input remains labelled geocentric: the result is an orientation relative to the observer's horizon, **without topocentric parallax**. For a nearby body, supply an already topocentric direction for its geometric observed altitude.
 
