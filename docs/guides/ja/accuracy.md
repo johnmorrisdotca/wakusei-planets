@@ -107,7 +107,7 @@ console.log(Math.hypot(x, y, z).toFixed(2));
 
 同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
 
-測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [52cea27](https://github.com/johnmorrisdotca/wakusei-planets/tree/52cea2703db098cdd98a93aec65bd13ddb23ce56)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
+測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [a56a330](https://github.com/johnmorrisdotca/wakusei-planets/tree/a56a3300c93402cdb044342097ac975769134712)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
 
 ### 共有できる 1950–2050 年のサンプル
 
@@ -208,12 +208,12 @@ SunCalc 2.1.2 の TT−UT 多項式は約1900–2150年を対象とし、1800年
 
 | パッケージ・版 | 測定したコード | gzip（バイト） | ライセンス |
 |---|---|---:|---|
-| wakusei 0.20.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル | 66,061 | MIT |
+| wakusei 0.20.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル | 65,653 | MIT |
 | astronomy-engine 2.1.19 | ESM エントリーの全出力 | 43,971 | MIT |
 | solarsystem 0.1.8 | Python 全モジュールのソース（下記参照） | 11,351 | MIT |
 | suncalc 2.1.2 | ESM エントリーの全出力 | 3,893 | BSD-2-Clause |
 
-JavaScript は esbuild 0.25.12 で全出力を ESM にバンドルして最小化し、gzip level 9 で圧縮します。wakusei の測定にはこの表で使う任意データと /suncalc を含み、メインの SVG・天体情報も含みます。Python はファイル名順の .py 全文を連結した gzip であり、JS バンドルとの単純な大小比較には使えません。どの値も言語ランタイム・インストール用メタデータ・画像を除きます。Python や Node の版によって gzip が少し変わることがあります。root の依存関係と src/ は変更していません。記録環境は Node v24.14.1（zlib 1.2.12）、Python 3.14.4（zlib 1.2.12）です。再現確認では最小化コードのバイト数とコードの指紋に一致を求めます。圧縮後のサイズ差は表示しますが、圧縮器の差を科学的な回帰とは判定しません。
+JavaScript は esbuild 0.25.12 で全出力を ESM にバンドルして最小化し、gzip level 9 で圧縮します。wakusei の測定にはこの表で使う任意データと /suncalc を含み、メインの SVG・天体情報も含みます。Python はファイル名順の .py 全文を連結した gzip であり、JS バンドルとの単純な大小比較には使えません。どの値も言語ランタイム・インストール用メタデータ・画像を除きます。Python や Node の版によって gzip が少し変わることがあります。root の依存関係と src/ は変更していません。記録環境は Node v26.0.0（zlib 1.2.12）、Python 3.14.4（zlib 1.2.12）です。再現確認では最小化コードのバイト数とコードの指紋に一致を求めます。圧縮後のサイズ差は表示しますが、圧縮器の差を科学的な回帰とは判定しません。
 
 同じ UTC インスタントを渡します。wakusei は理論を TT で実行し、Astronomy Engine は自身の Delta-T モデル、SunCalc は自身の TT−UT 多項式を使います。Python solarsystem は UT の日数をそのまま理論に使います。歴史的な Horizons の UT は近代的な UTC と同一ではなく、UT1・地球姿勢・将来の Delta-T の扱いも誤差に含まれます。入力時刻を調整して相手の結果を良くすることはしていません。同じ UTC 入力でも、内部の TT の仮定が一致するとは限りません。
 
