@@ -19,7 +19,7 @@ const PLANET_ARCSEC: Record<string, number> = { mercury: 3.5, venus: 1, earth: 2
 const DWARF_ARCSEC: Record<string, number> = { ceres: 0.3, orcus: 0.1, haumea: 0.1, quaoar: 0.15, makemake: 0.15, gonggong: 0.1, eris: 0.1, sedna: 0.1 };
 /** The worst direction error in degrees from the planet (from the Pluto system's barycentre for Nix and Hydra), over the dates, for the Moon and each moon. */
 const MOON_DEGREES: Record<string, number> = {
-  moon: 0.3, phobos: 0.9, deimos: 0.5, io: 0.15, europa: 0.15, ganymede: 0.3, callisto: 0.12,
+  moon: 0.0008, phobos: 0.9, deimos: 0.5, io: 0.15, europa: 0.15, ganymede: 0.3, callisto: 0.12,
   mimas: 1.6, enceladus: 0.65, tethys: 0.35, dione: 0.15, rhea: 0.15, titan: 0.1, iapetus: 0.35,
   miranda: 2.7, ariel: 0.6, umbriel: 0.25, titania: 0.6, oberon: 0.6,
   triton: 0.1, nereid: 9, proteus: 0.2, charon: 0.05, nix: 3, hydra: 2.4,

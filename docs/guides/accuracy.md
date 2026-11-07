@@ -59,11 +59,11 @@ Before this, a dwarf planet was a plain ellipse that was right only near 2026: C
 
 ## The Moon and the moons
 
-The Moon is the largest terms of Meeus's series. Every other moon's orbit is fitted to Horizons' own positions and velocities for 1950 to 2050: a mean orbit plane, a mean longitude that moves at a steady rate, and a periapsis and node that turn at steady rates. Where a steady rate is not enough, a moon has one more term: Phobos, whose orbit is shrinking, has an acceleration, and Mimas and Tethys, which pull on each other, swing back and forth over about 70 years. Checked on seven dates from 1900 to 2100, so the table includes 50 years either side of the fitted window.
+The Moon is the lunar solution ELP2000-82B (Chapront-Touzé and Chapront, IMCCE) cut to its 540 largest terms and run in terrestrial time, as the planets are. Every other moon's orbit is fitted to Horizons' own positions and velocities for 1950 to 2050: a mean orbit plane, a mean longitude that moves at a steady rate, and a periapsis and node that turn at steady rates. Where a steady rate is not enough, a moon has one more term: Phobos, whose orbit is shrinking, has an acceleration, and Mimas and Tethys, which pull on each other, swing back and forth over about 70 years. Checked on seven dates from 1900 to 2100, so the table includes 50 years either side of the fitted window.
 
 | Body | Worst measured | Held to |
 |---|---|---|
-| The Moon | 0.21° | 0.3° |
+| The Moon | 0.0005° (1.8″) | 0.0008° (2.9″) |
 | Phobos | 0.57° | 0.9° |
 | Deimos | 0.32° | 0.5° |
 | Io | 0.08° | 0.15° |

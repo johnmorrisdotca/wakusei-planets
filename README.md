@@ -176,7 +176,7 @@ The pure side has no DOM: `BODIES`, `apparent(id, time)`, `system(planet, time)`
 
 ## The data
 
-Sizes, flattening, poles and rotation are the IAU's and NASA's; Mercury to Neptune are VSOP87B, cut down, and Pluto is a table fitted to Horizons; the Moon's are Meeus's largest terms; the other moons are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
+Sizes, flattening, poles and rotation are the IAU's and NASA's; Mercury to Neptune are VSOP87B, cut down, and Pluto is a table fitted to Horizons; the Moon's are the lunar solution ELP2000-82B cut down; the other moons are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
 
 ## Examples
 
@@ -336,7 +336,7 @@ import { BODIES } from "@johnmorrisdotca/wakusei-planets";
 BODIES.pluto.kind; // "dwarf-planet"
 ```
 
-- A fact with no source is left out, never guessed. Moon positions are fitted to JPL Horizons and are within a degree or two on the orbit for almost every moon, about the size of the moon on screen; [accuracy](docs/guides/accuracy.md) has each body's number.
+- A fact with no source is left out, never guessed. The Moon is within 2 arc-seconds of JPL Horizons, and the other moons' positions are fitted to it and are within a degree or two on the orbit for almost every moon, about the size of the moon on screen; [accuracy](docs/guides/accuracy.md) has each body's number.
 - `realistic` and `painted` are the photo maps (`painted` is the same maps, so an older page still works). `illustrated` is the shaded drawing from the numbers, and it is not a default. Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mercury uses the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0). Mars stays on the Viking mosaic, graded toward a butterscotch ochre, with the frost in Hellas toned to the basin and the polar ice left. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Jupiter, Saturn, Uranus and Neptune have their rings drawn.
