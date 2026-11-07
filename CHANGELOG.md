@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+The view gestures are the family's, on kazoku-ui 0.19 (MODULES-527).
+
+- **kazoku-ui 0.15 to 0.19.** The wheel over a view moves it, and Shift with the wheel moves it sideways; Ctrl, Command or Alt with the wheel zooms about the pointer; the middle button or Space with a drag moves it; Shift with a drag rolls it. Before, a plain wheel zoomed, Alt did nothing and Shift turned the body.
+- **A pan moves the picture by as many pixels as the controls say.** `setView` read `panX` and `panY` as half-widths of the picture, but the controls send CSS pixels, so any pan jumped the picture to its limit. They are pixels now. A page that calls `setView` with fractions of the width must send pixels.
+- **`setView` takes `roll`**: the picture, with its rings, moons and orbits, turns clockwise about the line of sight, in both the line and the shaded looks.
+- **The portrait builder's wheel is the family's too** (Manual layout): the wheel moves the view, Shift moves it sideways, Ctrl, Command or Alt zoom. Shift with the wheel no longer sizes a body; `[` and `]` do.
+- `e2e/gestures.demo.ts` sends each gesture with real events and compares the pictures with what the controls report. It fails on the old element (a pan lands 80 to 260 pixels from where it should, a roll changes nothing).
+
 ## 0.17.2 - 2026-11-07
 
 Rings are drawn all the way round.

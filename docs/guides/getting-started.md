@@ -60,7 +60,7 @@ The package draws; the shared [kazoku-ui](https://github.com/johnmorrisdotca/kaz
 </html>
 ```
 
-`setView(view)` takes the controls' camera: `yaw` turns the body about its own pole, `tilt` tips the pole toward or away from you, and `zoom` and the pan move the picture. A line drawing is redrawn at once; a shaded one is drawn again by the shared renderer, at most thirty times a second and only while it moves. The surface under the pointer follows the pointer, so a drag moves the ground the way the hand goes; to make the touched point stay under the pointer, give the controls the disc's radius in pixels: `controls.setAttribute("grab-radius", String(Math.round(body.discRadius)))` (`discRadius` is the radius of the body's disc on the screen, which changes with the size of the element and with `scale-to`).
+`setView(view)` takes the controls' camera: `yaw` turns the body about its own pole, `tilt` tips the pole toward or away from you, and `roll` turns the picture clockwise about the line of sight, `zoom` scales it, and `panX` and `panY` move it by that many CSS pixels from the middle. A line drawing is redrawn at once; a shaded one is drawn again by the shared renderer, at most thirty times a second and only while it moves. The surface under the pointer follows the pointer, so a drag moves the ground the way the hand goes; to make the touched point stay under the pointer, give the controls the disc's radius in pixels: `controls.setAttribute("grab-radius", String(Math.round(body.discRadius)))` (`discRadius` is the radius of the body's disc on the screen, which changes with the size of the element and with `scale-to`).
 
 ## 3. Where next
 

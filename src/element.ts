@@ -142,6 +142,7 @@ export class WakuseiBody extends HTMLElement {
   #start: number | undefined;
   #yaw = 0;
   #tilt = 0;
+  #roll = 0;
   #pitchDelta = 0;
   #lastAnchors = -1;
   #zoom = 1;
@@ -265,13 +266,15 @@ export class WakuseiBody extends HTMLElement {
     }
   }
 
-  /** The shared controllers' camera: `yaw` turns the body about its pole, `tilt` tips its top away from you as it grows (a drag up moves the surface up), `zoom` and the pan move the picture. */
-  setView(view: { yaw?: number; tilt?: number; zoom?: number; panX?: number; panY?: number }): void {
+  /** The shared controllers' camera: `yaw` turns the body about its pole, `tilt` tips its top away from you as it grows (a drag up moves the surface up), `roll` turns the picture clockwise about the line of sight, `zoom` scales it, and `panX` and `panY` move it by that many CSS pixels from the middle. */
+  setView(view: { yaw?: number; tilt?: number; roll?: number; zoom?: number; panX?: number; panY?: number }): void {
+    const half = Math.max(1, this.clientWidth) / 2;
     this.#yaw = view.yaw ?? 0;
     this.#tilt = view.tilt ?? 0;
+    this.#roll = view.roll ?? 0;
     this.#zoom = view.zoom ?? 1;
-    this.#panX = view.panX ?? 0;
-    this.#panY = view.panY ?? 0;
+    this.#panX = -(view.panX ?? 0) / half;
+    this.#panY = (view.panY ?? 0) / half;
     this.#queue(true);
   }
 
@@ -320,6 +323,13 @@ export class WakuseiBody extends HTMLElement {
       meridian = turnVec(meridian, x, tiltBy);
       light = turnVec(light, x, tiltBy);
     }
+    const roll = -this.#roll;
+    if (roll !== 0) {
+      const z: Vec3 = [0, 0, 1];
+      pole = turnVec(pole, z, roll);
+      meridian = turnVec(meridian, z, roll);
+      light = turnVec(light, z, roll);
+    }
     const r = this.#request();
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
@@ -330,25 +340,27 @@ export class WakuseiBody extends HTMLElement {
           .filter((m) => m.distance <= extent * 1.05)
           .map((m) => {
             const orbit = this.#orbits.get(m.id as string);
-            const rotated = tiltBy === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [1, 0, 0], tiltBy);
-            return { id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], ...(orbit !== undefined ? { orbit: tiltBy === 0 ? orbit : this.#tiltedOrbit(m.id as string, orbit, tiltBy) } : {}) };
+            const tipped = tiltBy === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [1, 0, 0], tiltBy);
+            const rotated = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
+            return { id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], ...(orbit !== undefined ? { orbit: tiltBy === 0 && roll === 0 ? orbit : this.#tiltedOrbit(m.id as string, orbit, tiltBy, roll) } : {}) };
           })
       : undefined;
     return { pose: { pole, meridian, light }, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), ...(moons !== undefined ? { moons } : {}) };
   }
 
-  #tilted = new Map<string, { source: Float32Array; tilt: number; out: Float32Array }>();
-  #tiltedOrbit(id: string, orbit: Float32Array, tilt: number): Float32Array {
+  #tilted = new Map<string, { source: Float32Array; tilt: number; roll: number; out: Float32Array }>();
+  #tiltedOrbit(id: string, orbit: Float32Array, tilt: number, roll: number): Float32Array {
     const held = this.#tilted.get(id);
-    if (held !== undefined && held.source === orbit && held.tilt === tilt) return held.out;
+    if (held !== undefined && held.source === orbit && held.tilt === tilt && held.roll === roll) return held.out;
     const out = new Float32Array(orbit.length);
     for (let i = 0; i < orbit.length; i += 3) {
-      const v = turnVec([orbit[i]!, orbit[i + 1]!, orbit[i + 2]!], [1, 0, 0], tilt);
+      const tipped = turnVec([orbit[i]!, orbit[i + 1]!, orbit[i + 2]!], [1, 0, 0], tilt);
+      const v = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
       out[i] = v[0];
       out[i + 1] = v[1];
       out[i + 2] = v[2];
     }
-    this.#tilted.set(id, { source: orbit, tilt, out });
+    this.#tilted.set(id, { source: orbit, tilt, roll, out });
     return out;
   }
 

@@ -72,21 +72,40 @@ test.describe("3D", () => {
     expect(Math.abs((await scene(page)).items[1]!.y)).toBeGreaterThan(0.002);
   });
 
-  test("Shift and the wheel over a body sizes it, the wheel zooms the view, a drag on empty space moves the view, Centre and Fit all bring the bodies back", async ({ page }) => {
+  test("the family's wheel: it moves the view by as many pixels as it turns, Shift moves it sideways, Ctrl, Command or Alt zoom about the pointer and never size a body; a drag on empty space moves the view, Centre and Fit all bring the bodies back", async ({ page }) => {
     await open(page, `${MANUAL}~earth_-0.5_0_0.2_0~mars_0.5_0_0.15_0`);
     const mars = await centreOf(page, 1);
     await page.mouse.move(mars.x, mars.y);
     const before = await scene(page);
-    await page.mouse.wheel(0, -300);
-    await expect.poll(async () => (await scene(page)).camera.h).toBeLessThan(before.camera.h * 0.9);
+    // a plain wheel down 100 pixels moves the picture up 100 pixels, as a page scrolls
+    await page.mouse.wheel(0, 100);
+    await expect.poll(async () => Math.round((await centreOf(page, 1)).y - mars.y)).toBe(-100);
+    expect(Math.abs((await centreOf(page, 1)).x - mars.x)).toBeLessThan(2);
+    expect((await scene(page)).camera.h).toBe(before.camera.h);
+    await page.locator("#fit").click();
+    const fitted = await centreOf(page, 1);
+    await page.mouse.move(fitted.x, fitted.y);
+    // Shift and the wheel moves it sideways, and does not size the body
+    await page.keyboard.down("Shift");
+    await page.mouse.wheel(0, 100);
+    await page.keyboard.up("Shift");
+    await expect.poll(async () => Math.round((await centreOf(page, 1)).x - fitted.x)).toBe(-100);
+    expect(Math.abs((await centreOf(page, 1)).y - fitted.y)).toBeLessThan(2);
     expect((await scene(page)).items[1]!.r).toBe(before.items[1]!.r);
     await page.locator("#fit").click();
-    const marsAgain = await centreOf(page, 1);
-    await page.mouse.move(marsAgain.x, marsAgain.y);
-    await page.keyboard.down("Shift");
-    await page.mouse.wheel(0, -300);
-    await page.keyboard.up("Shift");
-    await expect.poll(async () => (await scene(page)).items[1]!.r).toBeGreaterThan(0.17);
+    // Ctrl, Command and Alt zoom the view about the pointer, up zooms in, and none of them sizes a body
+    for (const key of ["Control", "Meta", "Alt"]) {
+      await page.locator("#fit").click();
+      const zero = await scene(page);
+      const spot = await centreOf(page, 1);
+      await page.mouse.move(spot.x, spot.y);
+      await page.keyboard.down(key);
+      await page.mouse.wheel(0, -60);
+      await page.keyboard.up(key);
+      await expect.poll(async () => (await scene(page)).camera.h, { message: `${key} and the wheel up zooms in` }).toBeLessThan(zero.camera.h * 0.95);
+      expect((await scene(page)).items[1]!.r).toBe(zero.items[1]!.r);
+    }
+    await page.locator("#fit").click();
     const cam = (await scene(page)).camera;
     const box = (await page.locator("#view").boundingBox())!;
     await drag(page, { x: box.x + 60, y: box.y + box.height - 40 }, -150, -50);

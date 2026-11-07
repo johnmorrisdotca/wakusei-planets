@@ -1,6 +1,7 @@
 // The portrait builder: put any bodies of the solar system in one picture. The picture is one <wakusei-portrait> (one WebGL context for every body in it); this file is the editing around it: pick,
 // drag, turn, size, order, undo, the choices, the code, the saved picture. Every change makes a new scene (never edits the old), so undo is a list of scenes and the address holds the latest.
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
+import { wheelMove, wheelZoomFactor } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
 import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
 import { BODIES, DWARF_IDS, drawnTilt, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/index.ts";
@@ -444,7 +445,7 @@ function finish(event: PointerEvent): void {
 wrap.addEventListener("pointerup", finish);
 wrap.addEventListener("pointercancel", finish);
 
-// the wheel over the view zooms it about the pointer (Manual); Shift and the wheel over a body sizes it
+// the family's wheel (Manual): the wheel moves the view, Shift and the wheel moves it sideways, Ctrl, Command or Alt with the wheel zooms it about the pointer
 let wheelTimer: ReturnType<typeof setTimeout> | undefined;
 let wheelBase: Portrait | undefined;
 wrap.addEventListener(
@@ -452,24 +453,21 @@ wrap.addEventListener(
   (event) => {
     const p = wheelBase ?? scene();
     if (p.layout !== "manual") return;
-    const index = view.pick(event.clientX, event.clientY);
-    const size = event.shiftKey && index >= 0;
-    if (!size && !event.ctrlKey && !event.metaKey && Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
-    const delta = event.deltaY || (size ? event.deltaX : 0);
-    const k = Math.exp(-delta * (event.deltaMode === 1 ? 0.03 : 0.0018));
+    const asked = wheelMove(event, wrap.getBoundingClientRect().height || 800);
     const now = view.portrait;
-    const h = clamp(now.camera.h / k, 1e-4, 1e4);
-    if (!size && h === now.camera.h && wheelBase === undefined && !event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     wheelBase ??= scene();
     let next: Portrait;
-    if (size) next = setItem(now, index, { r: clamp(now.items[index]!.r * k, 0.003, 4) });
-    else {
+    if (asked.zoom) {
+      const h = clamp(now.camera.h / wheelZoomFactor(event.deltaY, event.deltaMode, event.ctrlKey || event.metaKey ? "pinch" : "wheel"), 1e-4, 1e4);
       const at = view.worldAt(event.clientX, event.clientY);
       const f = h / now.camera.h;
       next = setPortrait(now, { camera: { x: at.x - (at.x - now.camera.x) * f, y: at.y - (at.y - now.camera.y) * f, h } });
+    } else {
+      const from = view.worldAt(event.clientX, event.clientY);
+      const to = view.worldAt(event.clientX - asked.panX, event.clientY - asked.panY);
+      next = setPortrait(now, { camera: { x: now.camera.x + to.x - from.x, y: now.camera.y + to.y - from.y, h: now.camera.h } });
     }
-    if (size) ui.selected = index;
     preview(next);
     clearTimeout(wheelTimer);
     wheelTimer = setTimeout(() => {
