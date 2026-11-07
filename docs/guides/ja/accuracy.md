@@ -101,3 +101,142 @@ console.log(Math.hypot(x, y, z).toFixed(2));
 ## 自分で確かめる
 
 `pnpm test` で精度のテストが動きます。`python3 -I scripts/fetch-horizons-reference.py` は Horizons の位置をもう一度取り直して `test/data/horizons.json` に書き、`python3 -I scripts/make-moon-data.py` は衛星を合わせ直して `src/data/orbits.ts` に書きます。どちらもネットワークが必要で、テストの中では動きません。
+
+<!-- comparison:start -->
+## 他のパッケージとの比較
+
+同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
+
+測定した wakusei は package.json 上の版 0.19.0、**未リリースのソース [52cea27](https://github.com/johnmorrisdotca/wakusei-planets/tree/52cea2703db098cdd98a93aec65bd13ddb23ce56)** です。同じ版番号の古い npm リリースの測定値という意味ではありません。
+
+### 共有できる 1950–2050 年のサンプル
+
+全期間の最大値だけでは、対応期間外の呼び出しや暦の問題が順位を支配します。まず 1950 年以降、2050-01-01T12:00:00Z までの共通サンプルを示します。天体によって日付とサンプル数は異なります。planet は3日、dwarf は4日、moon は5日、horizon は6日です。
+
+| 天体 | wakusei（秒角） | 上限 | astronomy-engine | solarsystem | suncalc |
+|---|---:|---:|---:|---:|---:|
+| mercury | 2.323 | 3.500 | 10.369 | 36.760 | — |
+| venus | 0.538 | 1.000 | 6.579 | 11.172 | — |
+| earth | 1.464 | 2.200 | 1.149 | 10.375 | — |
+| mars | 1.414 | 2.200 | 2.750 | 55.795 | — |
+| jupiter | 1.883 | 2.800 | 6.426 | 61.115 | — |
+| saturn | 3.730 | 5.600 | 9.941 | 75.064 | — |
+| uranus | 3.839 | 5.800 | 12.503 | 74.782 | — |
+| neptune | 3.325 | 5.000 | 14.934 | 44.883 | — |
+| pluto | 0.037 | 0.300 | 4.869 | 52.455 | — |
+| ceres | 0.159 | 0.300 | — | 2665.961† | — |
+| eris | 0.010 | 0.100 | — | 129.397† | — |
+| moon | 0.651 | 2.880 | 10.497 | 165.958 | — |
+| io | 138.857 | 540.000 | 96.969 | — | — |
+| europa | 186.788 | 540.000 | 97.804 | — | — |
+| ganymede | 764.864 | 1080.000 | 86.120 | — | — |
+| callisto | 203.521 | 432.000 | 61.012 | — | — |
+| sun | 1.464 | 2.200 | 1.149 | 10.375 | — |
+| sun (horizon) | 3.925 | 6.000 | 4.502 | — | 30.927 |
+| moon (horizon) | 4.839 | 8.000 | 10.560 | — | 34.195 |
+
+**Astronomy Engine が良い場合もあります。** この部分集合では地球・地心の太陽と、ガリレオ衛星4個すべてで最大誤差が小さくなりました。全期間でも地球・地心の太陽・ガニメデ・カリストでは Astronomy Engine が勝ちます。wakusei は地球以外の8行（惑星と冥王星）と地球の月で小さい最大誤差を示しますが、個々の日付で常に勝つわけではありません。サイズでも勝者ではありません。
+
+### 幾何学的位置：全ての参照日
+
+単位はすべて秒角です。惑星は1800–2050年の5日、準惑星は1900–2099年の6日、衛星は1900–2100年の7日です。太陽は惑星と同じ5日に地心から測定します。ベクトルは地球のベクトルの符号を反転したものなので、その方向誤差は地球と同じで、独立した証拠ではありません。これらの期間はパッケージ共通の保証範囲ではありません。
+
+| 天体 | wakusei（秒角） | 上限 | astronomy-engine | solarsystem | suncalc |
+|---|---:|---:|---:|---:|---:|
+| mercury | 2.323 | 3.500 | 10.369 | 37992.132 | — |
+| venus | 0.538 | 1.000 | 6.579 | 11670.162 | — |
+| earth | 1.464 | 2.200 | 1.418 | 7344.329 | — |
+| mars | 1.414 | 2.200 | 2.750 | 3563.521 | — |
+| jupiter | 1.883 | 2.800 | 6.426 | 612.646 | — |
+| saturn | 3.730 | 5.600 | 9.941 | 331.634 | — |
+| uranus | 3.839 | 5.800 | 12.503 | 225.545 | — |
+| neptune | 3.325 | 5.000 | 15.911 | 44.883 | — |
+| pluto | 0.045 | 0.300 | 18.930 | 2052.754 | — |
+| ceres | 0.159 | 0.300 | — | 3184.163† | — |
+| orcus | 0.042 | 0.100 | — | — | — |
+| haumea | 0.027 | 0.100 | — | — | — |
+| quaoar | 0.081 | 0.150 | — | — | — |
+| makemake | 0.081 | 0.150 | — | — | — |
+| gonggong | 0.007 | 0.100 | — | — | — |
+| eris | 0.020 | 0.100 | — | 345.847† | — |
+| sedna | 0.003 | 0.100 | — | — | — |
+| moon | 1.832 | 2.880 | 78.289 | 53144.774 | — |
+| phobos | 2058.294 | 3240.000 | — | — | — |
+| deimos | 1141.302 | 1800.000 | — | — | — |
+| io | 292.581 | 540.000 | 901.772 | — | — |
+| europa | 324.240 | 540.000 | 504.853 | — | — |
+| ganymede | 764.864 | 1080.000 | 339.079 | — | — |
+| callisto | 241.658 | 432.000 | 129.411 | — | — |
+| mimas | 3858.669 | 5760.000 | — | — | — |
+| enceladus | 1511.154 | 2340.000 | — | — | — |
+| tethys | 801.241 | 1260.000 | — | — | — |
+| dione | 280.402 | 540.000 | — | — | — |
+| rhea | 331.703 | 540.000 | — | — | — |
+| titan | 165.668 | 360.000 | — | — | — |
+| iapetus | 831.707 | 1260.000 | — | — | — |
+| miranda | 6350.328 | 9720.000 | — | — | — |
+| ariel | 1378.971 | 2160.000 | — | — | — |
+| umbriel | 521.442 | 900.000 | — | — | — |
+| titania | 1436.882 | 2160.000 | — | — | — |
+| oberon | 1381.817 | 2160.000 | — | — | — |
+| triton | 125.009 | 360.000 | — | — | — |
+| nereid | 21784.845 | 32400.000 | — | — | — |
+| proteus | 470.760 | 720.000 | — | — | — |
+| charon | 67.108 | 180.000 | — | — | — |
+| nix | 6958.999 | 10800.000 | — | — | — |
+| hydra | 5542.896 | 8640.000 | — | — | — |
+| sun | 1.464 | 2.200 | 1.418 | 7344.329 | — |
+
+惑星・準惑星は太陽中心、衛星は親天体中心（Nix・Hydra は冥王星系の重心）、太陽は地球中心です。参照は J2000 平均黄道の幾何学的ベクトルです。木星から冥王星は惑星単体の中心ではなく、惑星系の重心が Horizons の対象です。公開 API が明示しない中心の違いも小さな誤差に寄与し得ます。距離の誤差は順位付けしません。wakusei は全ての任意テーブルを読み込みます。Astronomy Engine の HelioVector・GeoMoon・JupiterMoons は J2000 赤道から固定黄道傾斜角で回転します。Python solarsystem は precession=False の平均日付黄道座標を IAU 1976 歳差・平均黄道傾斜角で J2000 に変換します。緯度を捨てる経度差ではなく、正規化した3次元ベクトル間の角度を安定な atan2 式で求めます。
+
+† Ceres・Eris の Python スコアは、元期付き軌道要素を固定 J2000 座標と解釈した値です。公開 API はこの2天体の座標系を明確に保証していないため、確定的な順位には使いません。日付黄道と解釈した場合の全期間最大値は ceres: 3066.112; eris: 4665.214 秒角です。両方の解釈を結果 JSON に保持しています。
+
+Python パッケージの内部ユリウス日は、1800年のサンプルで2日、1900年1月のサンプルで1日早い値になります。入力日は修正していません。これは全期間表の大きな誤差の一因であり、通常期間の軌道精度だけを示す数値ではありません。Chiron は Python 側にありますが、共有できる参照・wakusei の実装がないため採点しません。
+
+### 観測者から見た太陽・月：別の量
+
+SunCalc の公開 API は視位置の地平座標を返すため、幾何学的な惑星表には混ぜません。既存の惑星・月の日付の和集合9日を使い、北緯35°・東経−105°・楕円体高0mで Horizons の視位置・大気差なしの方位角と高度を別途取得しました。各ライブラリーの大気差だけを数値的に取り除き、視差・光行差・光行時間・恒星時モデルの差は残して比較します。地平線より下も含み、天候や大気モデル自体の精度は測りません。
+
+| 天体 | wakusei（秒角） | 上限 | astronomy-engine | solarsystem | suncalc |
+|---|---:|---:|---:|---:|---:|
+| sun (horizon) | 3.925 | 6.000 | 4.502 | — | 1140.685 |
+| moon (horizon) | 4.839 | 8.000 | 77.952 | — | 13159.151 |
+
+SunCalc 2.1.2 の TT−UT 多項式は約1900–2150年を対象とし、1800年は範囲外です。上の全期間値にはその外挿も含まれるため、通常期間の精度として宣伝してはいけません。1950–2050年の結果は最初の表にあります。この比較は方向だけです。出没時刻・食・位相の精度は証明しません。
+
+### サイズ・ライセンス・再現
+
+| パッケージ・版 | 測定したコード | gzip（バイト） | ライセンス |
+|---|---|---:|---|
+| wakusei 0.19.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル | 66,061 | MIT |
+| astronomy-engine 2.1.19 | ESM エントリーの全出力 | 43,971 | MIT |
+| solarsystem 0.1.8 | Python 全モジュールのソース（下記参照） | 11,351 | MIT |
+| suncalc 2.1.2 | ESM エントリーの全出力 | 3,893 | BSD-2-Clause |
+
+JavaScript は esbuild 0.25.12 で全出力を ESM にバンドルして最小化し、gzip level 9 で圧縮します。wakusei の測定にはこの表で使う任意データと /suncalc を含み、メインの SVG・天体情報も含みます。Python はファイル名順の .py 全文を連結した gzip であり、JS バンドルとの単純な大小比較には使えません。どの値も言語ランタイム・インストール用メタデータ・画像を除きます。Python や Node の版によって gzip が少し変わることがあります。root の依存関係と src/ は変更していません。記録環境は Node v26.0.0、Python 3.14.4 です。再現確認では gzip の64バイト以内の差だけを許し、最小化コードのバイト数とソースの指紋は一致を求めます。
+
+同じ UTC インスタントを渡します。wakusei は理論を TT で実行し、Astronomy Engine は自身の Delta-T モデル、SunCalc は自身の TT−UT 多項式を使います。Python solarsystem は UT の日数をそのまま理論に使います。歴史的な Horizons の UT は近代的な UTC と同一ではなく、UT1・地球姿勢・将来の Delta-T の扱いも誤差に含まれます。入力時刻を調整して相手の結果を良くすることはしていません。同じ UTC 入力でも、内部の TT の仮定が一致するとは限りません。
+
+リポジトリーのルートから次の順に実行します（Node 24以上、Python 3.12以上）。初回のインストールだけネットワークが必要です。通常の比較は保存した参照を使うためオフラインで実行できます。
+
+~~~sh
+pnpm install --frozen-lockfile
+pnpm --dir scripts/compare install --frozen-lockfile --ignore-scripts
+python3 -m venv scripts/compare/.venv
+scripts/compare/.venv/bin/python -m pip install --require-hashes --only-binary=:all: --no-deps -r scripts/compare/requirements.txt
+node scripts/compare/run.mjs
+node scripts/compare/run.mjs --check
+pnpm check
+pnpm docs:check
+~~~
+
+Windows の仮想環境は Scripts/python.exe を使います。COMPARE_PYTHON で Python の実行ファイルを明示できます。run.mjs は results.json とこの英日セクションを生成します。--check は生成済みの値と文書が一致するか確認します。test/comparison.test.ts は第三者のインストールなしで、同じ参照日の wakusei の値が公開上限を超えないことを検査します。上限は自動で緩めません。
+
+参照ベクトル・APIパラメーター・全ての日付ごとの誤差とワースト日付は scripts/compare/ にあります。新しい地平座標の参照を取得する場合だけ python3 -I scripts/compare/fetch-observer.py を実行します。浮動小数点の丸めによるゼロを避けるため、極小の角度にも acos を使いません。Horizons ベクトルは0.1km単位に丸められています。適合テーブルは同じ Horizons を元に作ったものなので、この表はその参照への一致度を示します。全期間の精度、未知の日付での精度、パッケージ全体の優劣はこの少数の点だけでは証明できません。
+
+出典：[Astronomy Engine API](https://github.com/cosinekitty/astronomy/blob/master/source/js/README.md)、[solarsystem](https://github.com/IoannisNasios/solarsystem/blob/master/README.md)、[SunCalc](https://github.com/mourner/suncalc/blob/master/README.md)、[Schlyter の日付座標系・暦の範囲](https://stjarnhimlen.se/comp/ppcomp.html)、[Horizons の定義](https://ssd.jpl.nasa.gov/horizons/manual.html)。
+
+### 実行していないもの：README の主張だけ
+
+[Caelis Engine](https://github.com/HermeticaLabs/caelis-engine/blob/main/README.md) は AGPL-3.0 で、VSOP87B と ELP/MPP02-LLR を使うと説明しています。[Pyswisseph](https://github.com/astrorigin/pyswisseph/blob/master/README.rst) は AGPL-3.0 で、JPL DE431 に基づく高精度エフェメリスと説明しています。[ephemeris](https://github.com/hemantgoswami/ephemeris/blob/master/README.md) は Moshier 系の実装と説明し、元の [README](https://github.com/mivion/ephemeris/blob/master/README.md) は GPL-2 を明記しています。これらは2026-11-07に確認した**公開READMEの主張**で、今回の測定値ではありません。どれもインストール・実行していません。各 README にこの表と同じ条件の数値上限はないため、誤差の数値を作って補うことはしません。
+<!-- comparison:end -->

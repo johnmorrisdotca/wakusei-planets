@@ -1,0 +1,120 @@
+{
+  "source": "https://ssd.jpl.nasa.gov/api/horizons.api",
+  "retrieved": "2026-11-07",
+  "parameters": {
+    "format": "json",
+    "OBJ_DATA": "'NO'",
+    "MAKE_EPHEM": "'YES'",
+    "EPHEM_TYPE": "'OBSERVER'",
+    "TIME_TYPE": "'UT'",
+    "CENTER": "'coord@399'",
+    "COORD_TYPE": "'GEODETIC'",
+    "SITE_COORD": "'-105,35,0'",
+    "QUANTITIES": "'4'",
+    "APPARENT": "'AIRLESS'",
+    "ANG_FORMAT": "'DEG'",
+    "TIME_DIGITS": "'FRACSEC'",
+    "EXTRA_PREC": "'YES'",
+    "CSV_FORMAT": "'YES'",
+    "CAL_FORMAT": "'JD'",
+    "TLIST": "'2378499.000000000 2415023.000000000 2433434.000000000 2451545.000000000 2456368.750000000 2461352.000000000 2469624.000000000 2469808.000000000 2488070.000000000'"
+  },
+  "observer": {
+    "latitude": 35.0,
+    "longitude": -105.0,
+    "heightM": 0.0
+  },
+  "commands": {
+    "sun": "10",
+    "moon": "301"
+  },
+  "dates": [
+    "1800-01-03T12:00:00Z",
+    "1900-01-03T12:00:00Z",
+    "1950-06-01T12:00:00Z",
+    "2000-01-01T12:00:00Z",
+    "2013-03-17T06:00:00Z",
+    "2026-11-07T12:00:00Z",
+    "2049-07-01T12:00:00Z",
+    "2050-01-01T12:00:00Z",
+    "2100-01-01T12:00:00Z"
+  ],
+  "bodies": {
+    "sun": [
+      {
+        "azimuth": 100.876989303,
+        "altitude": -25.706187178
+      },
+      {
+        "azimuth": 100.93208153,
+        "altitude": -25.640337045
+      },
+      {
+        "azimuth": 63.924833,
+        "altitude": 1.493000103
+      },
+      {
+        "azimuth": 101.279396054,
+        "altitude": -25.464912159
+      },
+      {
+        "azimuth": 330.998014626,
+        "altitude": -52.703309828
+      },
+      {
+        "azimuth": 97.647550433,
+        "altitude": -18.088826127
+      },
+      {
+        "azimuth": 62.204435767,
+        "altitude": 0.951686098
+      },
+      {
+        "azimuth": 101.164618745,
+        "altitude": -25.49005774
+      },
+      {
+        "azimuth": 101.196670657,
+        "altitude": -25.457876984
+      }
+    ],
+    "moon": [
+      {
+        "azimuth": 331.290222631,
+        "altitude": -45.309672937
+      },
+      {
+        "azimuth": 76.140599138,
+        "altitude": -43.50643723
+      },
+      {
+        "azimuth": 230.623084085,
+        "altitude": 3.438815798
+      },
+      {
+        "azimuth": 126.89332037,
+        "altitude": 25.295847331
+      },
+      {
+        "azimuth": 292.383104407,
+        "altitude": 0.619831313
+      },
+      {
+        "azimuth": 107.074179175,
+        "altitude": -0.026801802
+      },
+      {
+        "azimuth": 57.389315228,
+        "altitude": -13.728100047
+      },
+      {
+        "azimuth": 327.748325763,
+        "altitude": -37.188371628
+      },
+      {
+        "azimuth": 201.007859548,
+        "altitude": 59.506325883
+      }
+    ]
+  }
+}

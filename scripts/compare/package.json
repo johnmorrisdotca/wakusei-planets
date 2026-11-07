@@ -1,0 +1,12 @@
+{
+  "name": "wakusei-accuracy-comparison",
+  "private": true,
+  "type": "module",
+  "scripts": { "compare": "node run.mjs" },
+  "devDependencies": {
+    "astronomy-engine": "2.1.19",
+    "esbuild": "0.25.12",
+    "suncalc": "2.1.2"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

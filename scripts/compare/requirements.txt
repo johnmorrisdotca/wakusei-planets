@@ -1,0 +1,1 @@
+solarsystem==0.1.8 --hash=sha256:78c4e13fe09e083b61a4f34cfb497f266ef9f253efe6d0d2fec2756bf4e5779a

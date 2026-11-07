@@ -1,0 +1,25 @@
+name: Accuracy comparison
+on:
+  push:
+    branches: [feat/compare]
+  workflow_dispatch:
+jobs:
+  comparison:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir scripts/compare install --frozen-lockfile --ignore-scripts
+      - run: python3 -m venv scripts/compare/.venv
+      - run: scripts/compare/.venv/bin/python -m pip install --require-hashes --only-binary=:all: --no-deps -r scripts/compare/requirements.txt
+      - run: node scripts/compare/run.mjs --check
+      - run: pnpm check
+      - run: pnpm docs:check
