@@ -167,10 +167,10 @@ export function deltaTPolynomial(year: number): number {
  */
 export function ttMinusUtc(when: When): number {
   const ms = moment(when);
-  if (ms >= LEAP_SECONDS[0]![0]) {
-    let taiMinusUtc = LEAP_SECONDS[0]![1];
-    for (const [from, seconds] of LEAP_SECONDS) if (ms >= from) taiMinusUtc = seconds;
-    return taiMinusUtc + TT_MINUS_TAI_SECONDS;
+  let i = LEAP_SECONDS.length;
+  while (i) {
+    const [from, seconds] = LEAP_SECONDS[--i]!;
+    if (ms >= from) return seconds + TT_MINUS_TAI_SECONDS;
   }
   return deltaTPolynomial(1970 + ms / YEAR_MS);
 }
