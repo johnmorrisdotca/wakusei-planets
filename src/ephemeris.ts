@@ -182,8 +182,9 @@ export const heliocentric = /* @__PURE__ */ Object.assign(function heliocentric(
  * Query again after importing a table or when changing the instant.
  */
 model: (planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } => {
+  const tt = toTerrestrialTime(ms);
   if (VSOP87[planet] !== undefined) return { theory: "vsop87b", worstArcseconds: null };
-  const table = fittedTableAt(planet, toTerrestrialTime(ms));
+  const table = fittedTableAt(planet, tt);
   return table !== undefined
     ? { theory: "chebyshev", worstArcseconds: table.worst }
     : { theory: planet in DWARF_ELEMENTS ? "osculating-elements" : "approximate-elements", worstArcseconds: null };

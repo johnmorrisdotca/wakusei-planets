@@ -44,3 +44,7 @@ test("model information respects built-in priorities, TT segment edges and unkno
     registerTable("ceres", original);
   }
 });
+
+test("model queries reject nonfinite instants without loading tables", () => {
+  for (const body of ["earth", "pluto", "ceres"] as const) for (const ms of [NaN, Infinity, -Infinity]) assert.throws(() => heliocentric.model(body, ms), RangeError);
+});
