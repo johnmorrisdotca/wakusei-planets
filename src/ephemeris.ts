@@ -21,16 +21,17 @@ const AU_KM = 149_597_870.7;
 /** Light takes this many seconds to cross one astronomical unit. */
 const LIGHT_SECONDS_PER_AU = 499.004784;
 
-// a (au), e, I, L, long.peri, long.node (degrees), then their rates per Julian century.
+// Semi-major axes for meanSunAu. Only Pluto needs the remaining elements and rates:
+// Mercury to Neptune always use VSOP87B before reaching the approximate fallback.
 const ELEMENTS: Record<PlanetId, readonly number[]> = {
-  mercury: [0.38709927, 0.20563593, 7.00497902, 252.2503235, 77.45779628, 48.33076593, 0.00000037, 0.00001906, -0.00594749, 149472.67411175, 0.16047689, -0.12534081],
-  venus: [0.72333566, 0.00677672, 3.39467605, 181.9790995, 131.60246718, 76.67984255, 0.0000039, -0.00004107, -0.0007889, 58517.81538729, 0.00268329, -0.27769418],
-  earth: [1.00000261, 0.01671123, -0.00001531, 100.46457166, 102.93768193, 0, 0.00000562, -0.00004392, -0.01294668, 35999.37244981, 0.32327364, 0],
-  mars: [1.52371034, 0.0933941, 1.84969142, -4.55343205, -23.94362959, 49.55953891, 0.00001847, 0.00007882, -0.00813131, 19140.30268499, 0.44441088, -0.29257343],
-  jupiter: [5.202887, 0.04838624, 1.30439695, 34.39644051, 14.72847983, 100.47390909, -0.00011607, -0.00013253, -0.00183714, 3034.74612775, 0.21252668, 0.20469106],
-  saturn: [9.53667594, 0.05386179, 2.48599187, 49.95424423, 92.59887831, 113.66242448, -0.0012506, -0.00050991, 0.00193609, 1222.49362201, -0.41897216, -0.28867794],
-  uranus: [19.18916464, 0.04725744, 0.77263783, 313.23810451, 170.9542763, 74.01692503, -0.00196176, -0.00004397, -0.00242939, 428.48202785, 0.40805281, 0.04240589],
-  neptune: [30.06992276, 0.00859048, 1.77004347, -55.12002969, 44.96476227, 131.78422574, 0.00026291, 0.00005105, 0.00035372, 218.45945325, -0.32241464, -0.00508664],
+  mercury: [0.38709927],
+  venus: [0.72333566],
+  earth: [1.00000261],
+  mars: [1.52371034],
+  jupiter: [5.202887],
+  saturn: [9.53667594],
+  uranus: [19.18916464],
+  neptune: [30.06992276],
   pluto: [39.48211675, 0.2488273, 17.14001206, 238.92903833, 224.06891629, 110.30393684, -0.00031596, 0.0000517, 0.00004818, 145.20780515, -0.04062942, -0.01183482],
 };
 
@@ -51,7 +52,7 @@ export function kepler(meanAnomaly: number, e: number): number {
   return E;
 }
 
-const PLUTO_TABLE: FittedTable = { start: PLUTO_START, segment: PLUTO_SEGMENT_MS, worst: 0, segments: PLUTO };
+const PLUTO_TABLE: FittedTable = { start: PLUTO_START, segment: PLUTO_SEGMENT_MS, worst: 0.14637, segments: PLUTO };
 
 /** A position from a Chebyshev table, as x, y, z in au, or undefined outside the years it covers. */
 function fittedPosition(table: FittedTable, terrestrialMs: number): Vec3 | undefined {
@@ -70,6 +71,14 @@ function fittedPosition(table: FittedTable, terrestrialMs: number): Vec3 | undef
     return x * b1 - b2 + axis[0]!;
   };
   return [at(coefficients[0]!), at(coefficients[1]!), at(coefficients[2]!)];
+}
+
+/** Same table priority and TT segment coverage for positions and model information. */
+function fittedTableAt(planet: HostId, tt: number): FittedTable | undefined {
+  const covers = (table: FittedTable): boolean => table.segments[Math.floor((tt - table.start) / table.segment)] !== undefined;
+  if (planet === "pluto" && covers(PLUTO_TABLE)) return PLUTO_TABLE;
+  const registered = tableOf(planet);
+  return registered !== undefined && covers(registered) ? registered : undefined;
 }
 
 /** Each planet's mass as a fraction of the Sun's (IAU 2012 and JPL DE440 values; the Earth with its Moon), to find the Sun's place among the planets. */
@@ -118,17 +127,14 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
 export function heliocentric(planet: HostId, ms: number): Vec3 {
   const vsop = VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
-  if (planet === "pluto") {
-    const table = fittedPosition(PLUTO_TABLE, toTerrestrialTime(ms));
-    if (table !== undefined) return table;
-  }
-  const fitted = tableOf(planet);
-  if (fitted !== undefined) {
+  if (planet === "pluto" || tableOf(planet) !== undefined) {
     const tt = toTerrestrialTime(ms);
-    const table = fittedPosition(fitted, tt);
-    if (table !== undefined) {
+    const fitted = fittedTableAt(planet, tt);
+    if (fitted !== undefined) {
+      const position = fittedPosition(fitted, tt)!;
+      if (fitted === PLUTO_TABLE) return position;
       const sun = barycentreFromSun(tt);
-      return [table[0] + sun[0], table[1] + sun[1], table[2] + sun[2]];
+      return [position[0] + sun[0], position[1] + sun[1], position[2] + sun[2]];
     }
   }
   let a: number;
@@ -168,6 +174,20 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
   const si = Math.sin(I);
   return [(cw * cn - sw * sn * ci) * x + (-sw * cn - cw * sn * ci) * y, (cw * sn + sw * cn * ci) * x + (-sw * sn + cw * cn * ci) * y, sw * si * x + cw * si * y];
 }
+
+/**
+ * The theory that would answer `heliocentric(planet, ms)` with the tables currently loaded.
+ * `worstArcseconds` is the fitted table's measured maximum on held-back samples,
+ * not an all-dates bound; null means that no such measurement is available.
+ * Query again after importing a table or when changing the instant.
+ */
+heliocentric.model = (planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } => {
+  if (VSOP87[planet] !== undefined) return { theory: "vsop87b", worstArcseconds: null };
+  const table = fittedTableAt(planet, toTerrestrialTime(ms));
+  return table !== undefined
+    ? { theory: "chebyshev", worstArcseconds: table.worst }
+    : { theory: planet in DWARF_ELEMENTS ? "osculating-elements" : "approximate-elements", worstArcseconds: null };
+};
 
 /**
  * Mean distance from the Sun, in astronomical units: a planet's semi-major axis at J2000, or a dwarf planet's semi-major axis at the epoch of its elements.
