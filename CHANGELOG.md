@@ -9,6 +9,7 @@ The moons are where they are, and every body is checked against JPL Horizons (MO
 - **`test/accuracy.test.ts` holds every planet, the Moon and every moon to a limit against Horizons** (`test/data/horizons.json`, from `scripts/fetch-horizons-reference.py`), on five dates from 1800 to 2050 for the planets and seven from 1900 to 2100 for the moons. It fails on the old orbit table. The numbers are in a new [Accuracy](docs/guides/accuracy.md) guide, in English and Japanese. The planets are within 1 arc-minute except Jupiter (5) and Saturn (9).
 - **A synchronous moon's spin takes its direction from the facts and its speed from the orbit** (`turnRate`), because the sign of an orbit's rate no longer says which way a moon goes round. The rotation test checks the rate.
 - **The docs said moon positions were accurate to a few degrees.** That was true for Jupiter's moons and the Moon, not for the rest; the README, the guides and NOTICE.md say what was measured.
+- **The npm keywords name every planet and what the package does** (MODULES-532): planet, mercury, venus, earth, uranus, neptune, pluto, dwarf-planets, heliocentric, orbit, orbits, rotation, space, celestial, nasa, jpl, 3d, javascript, browser, added to the 17 it had. A test keeps them lower case and free of astrology and other packages' names.
 
 ## 0.18.0 - 2026-11-07
 
