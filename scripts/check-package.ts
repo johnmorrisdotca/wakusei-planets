@@ -55,3 +55,14 @@ const vector = coordinates.sphericalToCartesian({ origin: "heliocentric", frame:
 if (vector.xAu !== 1 || vector.yAu !== 0 || vector.zAu !== 0) throw new Error("coordinates package entry failed");
 const names = ["cartesianToSpherical", "eclipticToEquatorial", "equatorialToEcliptic", "equatorialToHorizontal", "meanObliquity", "sphericalToCartesian"];
 if (JSON.stringify(Object.keys(coordinates).sort()) !== JSON.stringify(names)) throw new Error("coordinates public API changed");
+
+// The sun and moon times through package resolution too, both conventions.
+const suncalcEntry = "@johnmorrisdotca/wakusei-planets/suncalc";
+const sunTimes = await import(suncalcEntry);
+const legacyEntry = "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
+const oldTimes = await import(legacyEntry);
+const london = sunTimes.getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 51.5, -0.1, 0, 60);
+if (!(london.sunrise instanceof Date) || london.sunrise.getTime() >= london.sunset.getTime()) throw new Error("suncalc package entry failed");
+const polar = oldTimes.getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 69.65, 18.96);
+if (!Number.isNaN(polar.sunrise.getTime())) throw new Error("suncalc legacy package entry failed");
+

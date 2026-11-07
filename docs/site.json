@@ -45,6 +45,16 @@
       "ja": "オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナの位置の表、1800年から2200年 (gzip で約5 kB)",
       "platform": "node"
     },
+    "./suncalc": {
+      "en": "The Sun and Moon from a place: position, sunrise and sunset, Moon rise, set and phase, with suncalc 2's names and a better engine",
+      "ja": "場所から見た太陽と月: 位置、日の出と日の入り、月の出入りと月相。suncalc 2 と同じ名前で、より正確です",
+      "platform": "node"
+    },
+    "./suncalc/legacy": {
+      "en": "The same, with suncalc 1's conventions (radians, azimuth from south)",
+      "ja": "同じものを suncalc 1 の約束 (ラジアン、南からの方位) で",
+      "platform": "node"
+    },
     "./look": {
       "en": "How a body is drawn with three.js",
       "ja": "three.js での描き方",

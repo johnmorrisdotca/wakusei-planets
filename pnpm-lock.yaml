@@ -75,6 +75,12 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
+      suncalc:
+        specifier: 2.1.2
+        version: 2.1.2
+      suncalc1:
+        specifier: npm:suncalc@1.9.0
+        version: suncalc@1.9.0
       svelte:
         specifier: ^5.57.3
         version: 5.57.3(@typescript-eslint/types@8.72.1)
@@ -1448,6 +1454,12 @@ packages:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
 
+  suncalc@1.9.0:
+    resolution: {integrity: sha512-vMJ8Byp1uIPoj+wb9c1AdK4jpkSKVAywgHX0lqY7zt6+EWRRC3Z+0Ucfjy/0yxTVO1hwwchZe4uoFNqrIC24+A==}
+
+  suncalc@2.1.2:
+    resolution: {integrity: sha512-ynVGhi3CUcgrfbhQNqe1k53uKLe1FUfZq0czOVA84ASwdB5HUrlZX6gQ9akcItor92CJB69Yg8F6VoUWqrTkiw==}
+
   supports-color@7.2.0:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
@@ -2793,6 +2805,10 @@ snapshots:
   source-map@0.6.1: {}
 
   strip-json-comments@3.1.1: {}
+
+  suncalc@1.9.0: {}
+
+  suncalc@2.1.2: {}
 
   supports-color@7.2.0:
     dependencies:

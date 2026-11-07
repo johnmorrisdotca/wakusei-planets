@@ -85,6 +85,16 @@
       "import": "./dist/time.js",
       "default": "./dist/time.js"
     },
+    "./suncalc": {
+      "types": "./dist/suncalc.d.ts",
+      "import": "./dist/suncalc.js",
+      "default": "./dist/suncalc.js"
+    },
+    "./suncalc/legacy": {
+      "types": "./dist/suncalc-legacy.d.ts",
+      "import": "./dist/suncalc-legacy.js",
+      "default": "./dist/suncalc-legacy.js"
+    },
     "./tables": {
       "types": "./dist/tables/all.d.ts",
       "import": "./dist/tables/all.js",
@@ -273,6 +283,8 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "rxjs": "^7.8.2",
+    "suncalc": "2.1.2",
+    "suncalc1": "npm:suncalc@1.9.0",
     "svelte": "^5.57.3",
     "three": "0.186.1",
     "typescript": "^5.9.0",

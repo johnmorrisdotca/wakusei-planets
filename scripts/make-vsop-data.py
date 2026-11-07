@@ -37,8 +37,9 @@ lines = [
     f"// A term is kept when A x 0.25^power reaches {THRESHOLD:g}, so the sum is good for the years 1750 to 2250 and degrades slowly beyond.",
     "export type Term = readonly [number, number, number];",
     "export type Variable = readonly (readonly Term[])[];",
-    "export const VSOP87: Record<string, readonly [Variable, Variable, Variable]> = {",
+    "export type Series = readonly [Variable, Variable, Variable];",
 ]
+names = []
 total = 0
 for name, code in PLANETS.items():
     data = series(urllib.request.urlopen(BASE + code, timeout=120).read().decode("ascii", "ignore"))
@@ -50,8 +51,14 @@ for name, code in PLANETS.items():
         last = max((a for a in range(6) if var[a]), default=0)
         powers = ["[" + ",".join(f"[{number(A, 10)},{number(B, 6)},{number(C, 6)}]" for A, B, C in var[a]) + "]" for a in range(last + 1)]
         parts.append("[" + ",".join(powers) + "]")
-    lines.append(f"  {name}: [{', '.join(parts)}],")
+    lines.append(f"/** {name.capitalize()}'s series, on its own so that a page that needs one planet imports only it. */")
+    lines.append(f"export const VSOP_{name.upper()}: Series = [{', '.join(parts)}];")
+    names.append(name)
     print(f"{name:8s} {count:5d} terms", flush=True)
+lines.append("/** Every planet's series by name. */")
+lines.append("export const VSOP87: Record<string, Series> = {")
+for name in names:
+    lines.append(f"  {name}: VSOP_{name.upper()},")
 lines.append("};")
 open("src/data/vsop.ts", "w").write("\n".join(lines) + "\n")
 print(f"threshold {THRESHOLD:g}: {total} terms, src/data/vsop.ts")
