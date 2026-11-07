@@ -124,7 +124,8 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
  * console.log(Math.hypot(x, y, z).toFixed(3));
  * ```
  */
-export function heliocentric(planet: HostId, ms: number): Vec3 {
+// A pure initializer lets unused position theories drop out of drawing-only imports.
+export const heliocentric = /* @__PURE__ */ Object.assign(function heliocentric(planet: HostId, ms: number): Vec3 {
   const vsop = VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
   if (planet === "pluto" || tableOf(planet) !== undefined) {
@@ -173,21 +174,22 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
   const ci = Math.cos(I);
   const si = Math.sin(I);
   return [(cw * cn - sw * sn * ci) * x + (-sw * cn - cw * sn * ci) * y, (cw * sn + sw * cn * ci) * x + (-sw * sn + cw * cn * ci) * y, sw * si * x + cw * si * y];
-}
-
+}, {
 /**
  * The theory that would answer `heliocentric(planet, ms)` with the tables currently loaded.
  * `worstArcseconds` is the fitted table's measured maximum on held-back samples,
  * not an all-dates bound; null means that no such measurement is available.
  * Query again after importing a table or when changing the instant.
  */
-heliocentric.model = (planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } => {
+model: (planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } => {
   if (VSOP87[planet] !== undefined) return { theory: "vsop87b", worstArcseconds: null };
   const table = fittedTableAt(planet, toTerrestrialTime(ms));
   return table !== undefined
     ? { theory: "chebyshev", worstArcseconds: table.worst }
     : { theory: planet in DWARF_ELEMENTS ? "osculating-elements" : "approximate-elements", worstArcseconds: null };
-};
+}
+});
+
 
 /**
  * Mean distance from the Sun, in astronomical units: a planet's semi-major axis at J2000, or a dwarf planet's semi-major axis at the epoch of its elements.
