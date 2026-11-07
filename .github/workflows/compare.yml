@@ -1,7 +1,10 @@
 name: Accuracy comparison
+# Run by hand, or when the comparison itself changes. A change to src/ or a version bump
+# makes --check ask for a regenerated result (node scripts/compare/run.mjs), by design.
 on:
   push:
-    branches: [feat/compare]
+    branches: [main]
+    paths: [scripts/compare/**, test/comparison.test.ts, docs/guides/accuracy.md, docs/guides/ja/accuracy.md, .github/workflows/compare.yml]
   workflow_dispatch:
 jobs:
   comparison:
