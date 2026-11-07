@@ -22,6 +22,16 @@ test("the Moon is new in the second week of November 2026 and full on the 24th",
   assert.ok(apparent("moon", at(2026, 11, 24, 14)).illumination > 0.97);
 });
 
+test("the Earth and the Moon are lit from the same side", () => {
+  for (const when of [at(2026, 11, 9, 14), at(2026, 11, 24, 14), at(2026, 11, 2)]) {
+    const earth = apparent("earth", when);
+    const moon = apparent("moon", when);
+    const agree = dot(earth.light, moon.light);
+    assert.ok(agree > 0.95, `${when} ${agree}`);
+    assert.ok(Math.abs(earth.illumination - moon.illumination) < 0.08, `${earth.illumination} ${moon.illumination}`);
+  }
+});
+
 test("the Moon is about 360,000 to 406,000 km away, and its angular size half a degree", () => {
   const d = length(moonGeocentric(at(2026, 11, 2)));
   assert.ok(d > 356000 && d < 407000, String(d));

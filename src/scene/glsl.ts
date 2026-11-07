@@ -68,6 +68,7 @@ uniform vec3 uAtmos;
 uniform float uAtmosPow;
 uniform float uRimBase;
 uniform float uEmissive;
+${painted ? "uniform float uMark;" : ""}
 uniform vec3 uRingN;
 uniform vec2 uRingR;
 uniform float uRingOn;
@@ -139,6 +140,24 @@ vec4 surface(vec3 p) {
   vec2 ax = dFdx(a); vec2 ay = dFdy(a); vec2 bx = dFdx(b); vec2 by = dFdy(b);
   bool useA = dot(ax, ax) + dot(ay, ay) <= dot(bx, bx) + dot(by, by);
   vec3 c = textureGrad(uMap, useA ? a : b, useA ? ax : bx, useA ? ay : by).rgb;
+  // A map of plain bands is the same at every longitude, so the body turns and the picture does not. The wave, the spot and the polar hexagon move with the surface.
+  if (uMark > 0.5) {
+    float lon = atan(p.y, p.x);
+    float lat = asin(clamp(p.z, -1.0, 1.0));
+    float wave = sin(lon * 4.0 + lat * 6.0);
+    float belt = 1.0 - smoothstep(1.15, 1.45, abs(lat));
+    c *= 0.86 + 0.22 * (0.5 + 0.5 * wave) * belt;
+    if (uMark > 1.5) {
+      float ang = atan(p.y, p.x);
+      float radius = length(p.xy);
+      float hexR = 0.26 + 0.045 * cos(ang * 6.0);
+      float hex = (1.0 - smoothstep(0.0, 0.028, abs(radius - hexR))) * smoothstep(0.42, 0.68, p.z);
+      c = mix(c, vec3(0.45, 0.55, 0.68), hex);
+    } else {
+      float spot = exp(-pow((lat - 0.32) / 0.2, 2.0) - pow(lon / 0.5, 2.0));
+      c = mix(c, c * vec3(0.28, 0.34, 0.5), clamp(spot, 0.0, 1.0));
+    }
+  }
   return vec4(c, dot(c, vec3(0.3, 0.59, 0.11)));
 }`;
 

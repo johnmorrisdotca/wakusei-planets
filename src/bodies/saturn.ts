@@ -11,5 +11,5 @@ registerLook({
   }),
   atmosphere: { colour: [0.9, 0.82, 0.62], strength: 0.12, power: 3.5 },
   limb: 0.4,
-  painted: { map: "saturn", widths: [512, 1024, 2048], far: 2048, relief: 0, rings: { map: "saturn-ring", width: 2048, from: 74794, to: 137035 } },
+  painted: { map: "saturn", widths: [512, 1024, 2048], far: 2048, relief: 0, turn: "hexagon", rings: { map: "saturn-ring", width: 2048, from: 74794, to: 137035 } },
 });

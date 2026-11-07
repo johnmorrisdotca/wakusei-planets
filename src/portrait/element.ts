@@ -1,6 +1,6 @@
 // <wakusei-portrait>: a scene of bodies of the solar system, arranged on one picture. The line look is one SVG and needs nothing else; the realistic and painted looks put EVERY body of the scene in ONE
 // three.js scene, drawn through kazoku-ui's shared renderer (one WebGL context for the page). It draws only when something changes, at most 30 times a second while it moves, and nothing while
-// it is out of sight, the tab is hidden or the reader prefers reduced motion. The same element is the portrait builder's canvas: the page sets `portrait`, `editing`, and asks `pick`.
+// it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; a turn of 0 is the only stop. The same element is the portrait builder's canvas: the page sets `portrait`, `editing`, and asks `pick`.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { BODIES } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
@@ -9,6 +9,7 @@ import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared
 import { TEXTURE_BASE, TEXTURE_FAR_BASE } from "../element.ts";
 import { backgroundCss, drawShapes, lineScene, paintBackground, shapesOf, shapesSvg, starfield } from "./overlay.ts";
 import { decodeScene, defaultPortrait, encodeScene, fromScreen, hitTest, resolve, toScreen, type Guide, type Placed, type Portrait, type Resolved } from "./model.ts";
+import { REDUCED_TURN } from "../live.ts";
 import { poseOf } from "./pose.ts";
 import { createPortraitItem, type PortraitDraw, type PortraitScene } from "./scene3d.ts";
 
@@ -249,7 +250,7 @@ export class WakuseiPortrait extends HTMLElement {
     const text = this.getAttribute("scene");
     const p = text === null ? defaultPortrait() : decodeScene(text);
     const look = this.getAttribute("look");
-    if (look === "line" || look === "realistic" || look === "painted") p.look = look;
+    if (look === "line" || look === "realistic" || look === "painted" || look === "illustrated") p.look = look;
     this.#portrait = p;
   }
 
@@ -269,16 +270,18 @@ export class WakuseiPortrait extends HTMLElement {
   }
 
   get #turning(): boolean {
-    return !this.#reduce && this.#portrait.items.some((i) => i.turn !== 0);
+    return this.#portrait.items.some((i) => i.turn !== 0);
   }
 
   #seconds(): number {
-    return this.#turning ? (performance.now() - this.#startedAt) / 1000 : 0;
+    if (!this.#turning) return 0;
+    const elapsed = (performance.now() - this.#startedAt) / 1000;
+    return this.#reduce ? elapsed * REDUCED_TURN : elapsed;
   }
 
   #draw(): PortraitDraw {
     const p = this.#portrait;
-    return { placed: this.#resolved.placed, camera: this.#resolved.camera, light: p.light, look: p.look === "painted" ? "painted" : "realistic", ms: this.#date(), seconds: this.#seconds(), shadows: p.shadows };
+    return { placed: this.#resolved.placed, camera: this.#resolved.camera, light: p.light, look: p.look === "illustrated" ? "realistic" : "painted", ms: this.#date(), seconds: this.#seconds(), shadows: p.shadows };
   }
 
   #changed(): void {

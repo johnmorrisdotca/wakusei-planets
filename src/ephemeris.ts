@@ -236,8 +236,8 @@ function geometry(id: BodyId, ms: number): { earth: Vec3; target: Vec3; sunFrom:
     return { earth, target: g, sunFrom: scale(earth, -1), emit: ms - length(g) * LIGHT_SECONDS_PER_AU * 1000, distanceAu: length(g) };
   }
   if (id === "earth") {
-    // The Earth is seen from the Moon: the viewer is a Moon's distance away, looking back.
-    const g = scale(moonGeocentric(ms), -1 / AU_KM);
+    // The same side of the pair as the Moon is seen from: a Moon's distance out, opposite the Moon, so the Earth and the Moon show the same phase.
+    const g = scale(moonGeocentric(ms), 1 / AU_KM);
     return { earth, target: g, sunFrom: scale(earth, -1), emit: ms - length(g) * LIGHT_SECONDS_PER_AU * 1000, distanceAu: length(g) };
   }
   const facts = BODIES[id];

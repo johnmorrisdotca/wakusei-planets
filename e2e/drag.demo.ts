@@ -61,19 +61,22 @@ test("Venus: the Turn button turns the body its real way, the ground goes left",
   test.skip(testInfo.project.name !== "chromium-desk", "a pointer test, in software 3D");
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await open(page, "venus", "painted", true);
+  // A sharper cloud picture replaces the first one. Wait until that has stopped, or the check follows the swap.
+  const width = async (): Promise<number> => page.locator("#main").evaluate((el) => (el as unknown as { stats: { textureWidth: number } }).stats.textureWidth);
+  await expect.poll(async () => {
+    const first = await width();
+    await page.waitForTimeout(400);
+    return (await width()) === first && first > 0 ? first : 0;
+  }, { timeout: 30_000 }).toBeGreaterThan(0);
   const view = page.locator("#view");
-  // the body is photographed while it turns (stopping puts it back where it began)
-  const turned = await movedBy(
-    page,
-    view,
-    async () => {
-      await page.locator("#spin").click();
-      await page.locator("#main").hover();
-      await page.waitForTimeout(120);
-    },
-    { settle: 120, reach: 60, window: [0.38, 0.62, 0.38, 0.62] },
-  );
+  // The button is pressed without moving the pointer, and the speed row opens before the two pictures, so neither of those moves the globe.
+  // The picture is put back on the live context after that, and the two pictures are taken while it keeps turning.
+  await page.locator("#spin").evaluate((el: HTMLButtonElement) => el.click());
   await expect(page.locator("#main")).toHaveAttribute("turn", "-14");
+  await page.locator("#main").evaluate((el) => (el as unknown as { goLive(): Promise<boolean> }).goLive());
+  await expect(page.locator("#main")).toHaveAttribute("data-state", "live");
+  await page.waitForTimeout(200);
+  const turned = await movedBy(page, view, () => page.waitForTimeout(500), { settle: 100, reach: 40, window: [0.4, 0.6, 0.4, 0.6] });
   expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-3);
 });
 

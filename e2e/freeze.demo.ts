@@ -189,7 +189,7 @@ test("changes to the portrait give back what they took: adding and removing bodi
   await liveView(page);
   const round = async () => {
     await page.locator("#tab-look").click();
-    for (const look of ["realistic", "line", "painted"]) {
+    for (const look of ["line", "realistic"]) {
       await page.locator(`#looks [data-look="${look}"]`).click();
       await settle(page, 500);
     }

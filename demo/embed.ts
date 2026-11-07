@@ -3,7 +3,7 @@
 //   &look=line|realistic|painted the drawing (line by default; the 3D looks need WebGL and fall back to the line drawing)
 //   &time=now|2026-11-02T12:00Z  the body as the Earth sees it then (a portrait when left out)
 //   &moons=1                     the planet with its moons on their orbits
-//   &turn=12                     degrees a second it turns by itself (still by default)
+//   &turn=12                     degrees a second it turns by itself (the default rate when this is left out; 0 stays still)
 //   &tilt=  &pitch=  &phase=     a portrait's pose, degrees
 //   ?scene=...                   a scene of the portrait builder instead of one body (the text its address holds)
 // It draws only when something changes, and nothing while it is out of sight or the tab is hidden.

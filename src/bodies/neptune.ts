@@ -16,5 +16,5 @@ registerLook({
   atmosphere: { colour: [0.35, 0.5, 0.95], strength: 0.42, power: 2.8 },
   limb: 0.3,
   ambient: 0.05,
-  painted: { map: "neptune", widths: [512, 1024, 2048], far: 2048, relief: 0 },
+  painted: { map: "neptune", widths: [512, 1024, 2048], far: 2048, relief: 0, turn: "bands" },
 });

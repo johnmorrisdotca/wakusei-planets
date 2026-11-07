@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";
 
-test("painted Saturn asks for the Cassini ring strip, and the realistic look does not", async ({ page }, testInfo) => {
+test("painted and realistic Saturn both ask for the Cassini ring strip", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
   const asked: string[] = [];
   page.on("response", (response) => {
@@ -17,8 +17,7 @@ test("painted Saturn asks for the Cassini ring strip, and the realistic look doe
   await page.goto(`${URL}?body=saturn&look=realistic`);
   await page.locator("#main").hover();
   await expect(page.locator("#main")).toHaveAttribute("data-state", "live", { timeout: 90_000 });
-  await page.waitForTimeout(1500);
-  expect(asked).toEqual([]);
+  await expect.poll(() => asked, { timeout: 10_000 }).toEqual(["200"]);
 });
 
 test("a painted moon draws from its map", async ({ page }, testInfo) => {

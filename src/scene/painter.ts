@@ -272,6 +272,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       fragmentShader: RING_FRAGMENT_WORLD,
       side: T.DoubleSide,
       transparent: true,
+      premultipliedAlpha: true,
       depthWrite: false,
       uniforms: { uRingTex: { value: strip }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(1, 0, 0) }, uRingN: { value: new T.Vector3(0, 1, 0) }, uScale: { value: 1 } },
     });
@@ -300,6 +301,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           ringMesh!.geometry.dispose();
           ringMesh!.geometry = new T.RingGeometry(ringInner, ringOuter, 256, 1);
           disposables.push(ringMesh!.geometry);
+          ringMaterial!.premultipliedAlpha = false;
+          ringMaterial!.needsUpdate = true;
           ringMaterial!.uniforms.uRingTex!.value = t;
           ringMaterial!.uniforms.uRingR!.value.set(ringInner, ringOuter);
           for (const m of materials) {

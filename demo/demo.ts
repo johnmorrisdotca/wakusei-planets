@@ -15,7 +15,7 @@ import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
 
-type Look = "line" | "realistic" | "painted";
+type Look = "line" | "realistic" | "painted" | "illustrated";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
 const DWARF_TILES: readonly BodyId[] = DWARF_IDS;
 /** The well-known moons, in a row of their own: the rest are under their planet. */
@@ -64,7 +64,7 @@ if (main && controls && pickerBox) {
   const asBody = (value: string | null): BodyId => (value !== null && value in BODIES ? (value as BodyId) : "jupiter");
   const state = {
     body: asBody(address.get("body")),
-    look: (["line", "realistic", "painted"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
+    look: (["line", "realistic", "painted", "illustrated"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
     real: address.get("sky") === "real" || address.get("moons") === "1",
     moons: address.get("moons") === "1",
     scale: address.get("scale") === "1",
@@ -425,8 +425,8 @@ if (main && controls && pickerBox) {
   function render(): void {
     const looksAvailable = lookOf(state.body)?.painted !== undefined;
     for (const b of looks) {
-      if (b.dataset["look"] === "painted") b.hidden = !TILES.some((id) => lookOf(id)?.painted !== undefined);
-      pressed(b, b.dataset["look"] === state.look);
+      if (b.dataset["look"] === "painted") b.hidden = true;
+      pressed(b, b.dataset["look"] === "realistic" ? state.look === "realistic" || state.look === "painted" : b.dataset["look"] === state.look);
     }
     if (state.look === "painted" && !looksAvailable) notice(null);
     for (const b of skies) pressed(b, (b.dataset["sky"] === "real") === state.real);
@@ -456,7 +456,7 @@ if (main && controls && pickerBox) {
     setAttr(main!, "texture-base", "textures/");
     setAttr(main!, "time", real ? state.time : null);
     setAttr(main!, "rate", real ? String(state.speed) : null);
-    setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : null);
+    setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : real ? null : "0");
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     for (const picker of pickers) picker.sync();

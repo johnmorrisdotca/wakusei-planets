@@ -182,6 +182,8 @@ await step("cdn-realistic", async () => {
       const { pathname } = new URL(route.request().url());
       if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/element/+esm") return route.fulfill({ body: await bundleOf(modules("element.js")), contentType: "text/javascript" });
       if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/jupiter/+esm") return route.fulfill({ body: await bundleOf(modules("bodies/jupiter.js")), contentType: "text/javascript" });
+      const picture = pathname.split("/").pop() ?? "";
+      if (picture.endsWith(".webp") && existsSync(at("textures", picture))) return route.fulfill({ body: readFileSync(at("textures", picture)), contentType: "image/webp" });
       return route.fulfill({ status: 404, body: "" });
     });
     await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples(""), "cdn-realistic.html")), contentType: "text/html" }));

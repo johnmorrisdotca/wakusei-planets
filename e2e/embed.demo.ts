@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("the embed frame turns by itself when it is asked to, and a line drawing is the same picture each time", async ({ page }) => {
-  await page.goto("/wakusei-planets/embed.html?body=mars&look=line&time=2026-11-02T12:00Z");
+  await page.goto("/wakusei-planets/embed.html?body=mars&look=line&time=2026-11-02T12:00Z&turn=0");
   const first = await page.locator("wakusei-body").evaluate((el) => el.shadowRoot?.innerHTML ?? "");
   await page.reload();
   const second = await page.locator("wakusei-body").evaluate((el) => el.shadowRoot?.innerHTML ?? "");

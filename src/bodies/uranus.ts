@@ -12,5 +12,5 @@ registerLook({
   atmosphere: { colour: [0.55, 0.88, 0.92], strength: 0.4, power: 2.8 },
   limb: 0.3,
   ambient: 0.05,
-  painted: { map: "uranus", widths: [512, 1024, 2048], far: 2048, relief: 0 },
+  painted: { map: "uranus", widths: [512, 1024, 2048], far: 2048, relief: 0, turn: "bands" },
 });

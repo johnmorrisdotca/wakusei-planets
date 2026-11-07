@@ -52,6 +52,17 @@ interface Anchor {
 
 const ANCHOR_MS = 1000;
 
+/** Degrees a second a portrait turns when the page does not set `turn`. Slow enough to watch. */
+export const DEFAULT_TURN = 12;
+
+/** The share of that turn kept when the reader prefers reduced motion. `turn="0"` is the only stop. */
+export const REDUCED_TURN = 0.25;
+
+/** The portrait turn when none is set: `DEFAULT_TURN` degrees a second, and backwards when the body turns backwards. `turn="0"` stays still. */
+export function defaultTurn(id: BodyId): number {
+  return (BODIES[id].rotationHours < 0 ? -1 : 1) * DEFAULT_TURN;
+}
+
 /** The degrees a second a body's own turn advances its prime meridian (a moon that keeps one face to its planet turns once a trip). */
 export function turnRate(id: BodyId): number {
   const f = BODIES[id];
@@ -94,8 +105,10 @@ export function createLive(): { at(request: LiveRequest, now: number): LiveFrame
       let pose = a.pose;
       if (a.sim === undefined) {
         if (r.turn !== 0) pose = { ...pose, meridian: turn(pose.meridian, pose.pole, r.turn * seconds) };
-      } else if (seconds !== 0) {
-        pose = { ...pose, meridian: turn(pose.meridian, pose.pole, turnRate(r.id) * seconds) };
+      } else {
+        // The date's own spin is already in the anchor, so only the bit since then is added. The portrait turn is from the start of the clock: folding it into the one-second window made a dated picture jump back every second.
+        const spin = turnRate(r.id) * seconds + r.turn * ((now - r.startedAt) / 1000);
+        if (spin !== 0) pose = { ...pose, meridian: turn(pose.meridian, pose.pole, spin) };
       }
       const moons = a.place.map((m, i): LiveMoon => {
         const rate = Math.abs(ORBITS[m.id]?.sid ?? 0) / 86400;

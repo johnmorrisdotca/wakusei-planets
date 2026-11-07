@@ -13,9 +13,9 @@ A clean line drawing, a shaded realistic drawing, or a painted surface map, with
 
 <p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><strong>Open the demo →</strong></a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/embed.html">Embed page</a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/docs/">Docs</a></p>
 
-<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.16.0/docs/images/hero-desk.png" width="640"></p>
+<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.17.1/docs/images/hero-desk.png" width="640"></p>
 
-<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.16.0/docs/images/lineup-desk.png" width="640"></p>
+<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.17.1/docs/images/lineup-desk.png" width="640"></p>
 
 ## One minute
 
@@ -154,7 +154,7 @@ Vue, Svelte and Angular components, the Vite and webpack setups and an `<iframe>
 
 ## Light by design
 
-A page full of bodies stays light: one WebGL context for the page through kazoku-ui's shared renderer (the body in focus is live, the others are pictures), nothing drawn while nothing changes, at most thirty frames a second while it moves, a canvas held to 4096 pixels a side and six million pixels, everything freed when an element leaves, no drawing out of sight or in a hidden tab, no movement for a reader who prefers reduced motion, and a lost WebGL context coming back by itself. The tests count draws, animation frames, contexts and GPU objects at rest and over many changes (`pnpm test:freeze`, and a soak with `pnpm test:soak`).
+A page full of bodies stays light: one WebGL context for the page through kazoku-ui's shared renderer (the body in focus is live, the others are pictures), nothing drawn while nothing changes, at most thirty frames a second while it moves, a canvas held to 4096 pixels a side and six million pixels, everything freed when an element leaves, no drawing out of sight or in a hidden tab, a slower turn for a reader who prefers reduced motion (`turn="0"` is the only stop), and a lost WebGL context coming back by itself. The tests count draws, animation frames, contexts and GPU objects at rest and over many changes (`pnpm test:freeze`, and a soak with `pnpm test:soak`).
 
 ## The element
 
@@ -273,7 +273,7 @@ A body that turns by itself and a moving sky, in HTML:
 
 ## The portrait builder
 
-<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.16.0/docs/images/portrait-family.png" width="640"></p>
+<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.17.1/docs/images/portrait-family.png" width="640"></p>
 
 [The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies in one picture: drag them, size them, turn them, order them front to back, arrange them in a row, an arc, a grid or at true orbit distance (true or readable sizes, a planet's moons round it in orbit order), light them from one direction, and take the code, a PNG or an SVG. The scene is kept in the address, and every body is drawn in one WebGL scene, so the page holds one WebGL context. [The portrait builder](docs/guides/portrait-builder.md) is its guide.
 
@@ -335,15 +335,16 @@ BODIES.pluto.kind; // "dwarf-planet"
 ```
 
 - A fact with no source is left out, never guessed. Moon positions are JPL's mean elements and are accurate to a few degrees on the orbit, about the size of the moon on screen.
-- The shaded `realistic` look works out a surface from the body's real colours and features in a shader: it is a likeness, not a map. The `painted` look is a real map where one exists; the Sun, Saturn, Uranus and Neptune have no global map, so theirs are made from one photograph each, as `NOTICE.md` says.
+- `realistic` and `painted` are the photo maps (`painted` is the same maps, so an older page still works). `illustrated` is the shaded drawing from the numbers, and it is not a default. Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mercury uses the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0). Mars stays on the Viking mosaic, graded toward a butterscotch ochre, with the frost in Hellas toned to the basin and the polar ice left. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
-- Saturn and Uranus have their rings drawn.
+- Jupiter, Saturn, Uranus and Neptune have their rings drawn.
+- A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. A picture with a date keeps that orientation and adds the same turn. `turn="0"` stays still.
 - Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
 
 ## Accessibility
 
 - Every `<wakusei-body>` is an image with an accessible name from its body and look, such as "Saturn, line drawing", or the Japanese name with `lang="ja"`.
-- A reader who prefers reduced motion gets no turning and no moving sky.
+- A reader who prefers reduced motion gets a quarter of the turn. `turn="0"` is the only stop.
 - A body can be turned, tipped, zoomed and panned with the keyboard, and the view controls are at least 48 pixels.
 - Names and labels are in English and Japanese (`lang="ja"`).
 
@@ -414,7 +415,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). The rules that matter most: draw from pu
 
 ## Licence
 
-MIT: see [LICENSE](LICENSE). The pictures are public-domain NASA, USGS and JPL imagery, each file credited in [NOTICE.md](NOTICE.md).
+MIT: see [LICENSE](LICENSE). The code is MIT. Some pictures are CC BY 4.0 (Solar System Scope, and Nestaeric for Jupiter, Uranus and Saturn's poles) and the rest are public-domain NASA, USGS and JPL imagery. Each file is credited in [NOTICE.md](NOTICE.md).
 
 ## The name
 

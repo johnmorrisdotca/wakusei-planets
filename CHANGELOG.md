@@ -1,9 +1,31 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
+
+- Jupiter keeps a thin main ring. The halo and the gossamer stay a hint, and Neptune's sheet stays fainter than the thin rings (MODULES-509).
+
+## 0.17.1 - 2026-11-06
+
+Saturn, Uranus and Neptune show their turn.
+
+- A plain band is the same at every longitude, so those three turned and the picture stayed still. Saturn now draws its north hexagon and a wave in the bands; Uranus and Neptune draw a storm and a wave. They move with the surface (MODULES-509).
+- `e2e/turn-all.demo.ts` waits three seconds and fails unless one percent of the middle of the disc has changed, for every body, with no date and with a date.
+
+## 0.17.0 - 2026-11-06
+
+Photo maps on the realistic look, and every body turns.
 
 - Kazoku UI is 0.19.0.
 - The documentation site's browser test is the family's current copy, so the skip-link check reaches the link with Tab on Mac WebKit (MODULES-411).
+- Painted maps of Venus, Saturn, Neptune and the Sun are Solar System Scope's equirectangular maps, CC BY 4.0 (MODULES-509). Mercury is the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0), resized to 512, 1024 and 2048; the enhanced-colour map and its smeared poles are gone, and the normal map is not used. Mars stays on the Viking mosaic, graded toward a butterscotch ochre (MODULES-509): the craters and the ice caps are the mosaic's, and the seasonal frost in Hellas is toned to the basin and feathered so the patch has no hard edge. Both polar caps stay white. Solar System Scope's map and Shady Tex's 4K were compared; the 4K is the warmer colour and the mosaic is the detail, so the mosaic was graded rather than replaced. The painter's relief comes from the colour, so a separate normal map is not used. Jupiter and Uranus use Nestaeric's band maps, CC BY 4.0, which have east-west detail. Saturn's poles, including the north hexagon, are reprojected from Nestaeric's caps, also CC BY 4.0. The Earth stays on Blue Marble and the Moon on the LRO map until each has been compared. Sizes in the repository are 512, 1024 and 2048. The 8K originals stay out of the repository.
+- `realistic` draws the photo maps, and `painted` is the same maps, kept as an attribute for an older page (MODULES-509). The demo shows one button for it, Realistic. `illustrated` is the shaded drawing that `realistic` used to be, and it is not a default. Its Japanese name on the picture is イラスト, which means "illustration".
+- A portrait with no `turn` turns at 12 degrees a second, backwards for a body that turns backwards (Venus, Uranus). A picture with a date keeps that orientation and adds the same turn, and that turn keeps going instead of jumping back each second. `turn="0"` is the only stop. Reduced motion keeps a quarter of the turn (MODULES-509). `e2e/turn-all.demo.ts` photographs every body twice, two seconds apart, with no date and with a date, and the pictures differ.
+- The Earth is drawn from the side opposite the Moon, so the Earth and the Moon show the same phase (MODULES-509).
+- A portrait's true sizes keep the real ratio. A small body beside the Sun is no longer lifted to a minimum, which had made the Earth too big next to Jupiter.
+- A surface picture that arrives after its body has gone is dropped, so switching bodies does not keep the old pictures. A thumbnail with `live="off"` stays still unless it is given a turn.
+- Neptune's colour stays Solar System Scope after a comparison with Nestaeric's band map (MODULES-509): both have the dark spot, and Solar System Scope has more of the bands. The black hole is not part of this.
+- Jupiter and Neptune have rings, drawn by the same code as Saturn and Uranus (MODULES-509). Jupiter's are the halo, the main ring from 122,800 to 129,200 km and the gossamer rings out to 226,000 km. Neptune's are Galle, Le Verrier, the Lassell sheet and Adams. Adams's arcs are that radius; a strip has no longitude.
+- Saturn's rings are drawn as two halves. The half toward the camera is painted over the disc, and the far half is hidden behind it, so the near arc crosses in front and the far arc goes behind. The shadow on the rings stays.
 
 ## 0.16.0 - 2026-11-05
 

@@ -106,17 +106,17 @@ export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
  */
 export type BodyId = "sun" | PlanetId | DwarfId | MoonId;
 /**
- * How a body is drawn: `line` (an outline drawing), `realistic` (shaded, from the numbers) or `painted` (a real surface map).
+ * How a body is drawn: `line` (an outline drawing), `realistic` and `painted` (a real surface map; `painted` is the same maps), or `illustrated` (shaded from the numbers, not a default).
  *
  * @example
  * ```ts
  * import { type Look } from "@johnmorrisdotca/wakusei-planets";
  *
- * const looks: Look[] = ["line", "realistic", "painted"];
+ * const looks: Look[] = ["line", "realistic", "painted", "illustrated"];
  * console.log(looks.length);
  * ```
  */
-export type Look = "line" | "realistic" | "painted";
+export type Look = "line" | "realistic" | "painted" | "illustrated";
 
 /**
  * One band of a ring system, in kilometres from the planet's centre: how much light it stops (`alpha`, 0 to 1) and how bright it is (`tone`, 0 dark, 1 bright).
@@ -221,6 +221,20 @@ const SATURN_RINGS: readonly RingBand[] = [
   { from: 133610, to: 136775, alpha: 0.5, tone: 0.65 },
   { from: 140100, to: 140260, alpha: 0.35, tone: 0.8 },
 ];
+// Jupiter: the halo inside the main ring, the main ring, and the gossamer rings out to about 226,000 km (NASA). The halo and the gossamer are a hint; the main ring is the one that shows.
+const JUPITER_RINGS: readonly RingBand[] = [
+  { from: 92000, to: 122500, alpha: 0.012, tone: 0.25 },
+  { from: 122800, to: 129200, alpha: 0.55, tone: 0.7 },
+  { from: 129200, to: 181350, alpha: 0.018, tone: 0.3 },
+  { from: 181350, to: 226000, alpha: 0.01, tone: 0.25 },
+];
+// Neptune: Galle, Le Verrier, the Lassell sheet and Adams. The sheet is faint. Adams's arcs sit on that radius; a strip has no longitude, so they are the same band.
+const NEPTUNE_RINGS: readonly RingBand[] = [
+  { from: 40900, to: 42900, alpha: 0.08, tone: 0.35 },
+  { from: 53150, to: 53300, alpha: 0.5, tone: 0.55 },
+  { from: 53300, to: 57200, alpha: 0.006, tone: 0.25 },
+  { from: 62890, to: 62980, alpha: 0.6, tone: 0.65 },
+];
 const URANUS_RINGS: readonly RingBand[] = [
   { from: 41800, to: 41880, alpha: 0.3, tone: 0.2 },
   { from: 42200, to: 42270, alpha: 0.3, tone: 0.2 },
@@ -278,6 +292,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   }),
   jupiter: f("jupiter", "planet", "Jupiter", "木星", 71492, 0.06487, 3.13, 268.056595, 64.495303, 284.95, 870.536, 9.925, "#d9b48a", {
     showLon: -48,
+    rings: JUPITER_RINGS,
     features: [...bandsAt([62, 48, 35, 22, 8, -8, -22, -34, -48, -62]), { kind: "oval", lon: 20, lat: -22, rx: 12, ry: 6 }, { kind: "oval", lon: -70, lat: -33, rx: 3, ry: 2 }],
   }),
   saturn: f("saturn", "planet", "Saturn", "土星", 60268, 0.09796, 26.73, 40.589, 83.537, 38.9, 810.7939024, 10.656, "#e4d09c", {
@@ -287,6 +302,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   uranus: f("uranus", "planet", "Uranus", "天王星", 25559, 0.02293, 97.77, 257.311, -15.175, 203.81, -501.1600928, -17.24, "#a9e0e5", { rings: URANUS_RINGS, features: bandsAt([62, 38, 14, -14, -38]) }),
   neptune: f("neptune", "planet", "Neptune", "海王星", 24764, 0.01708, 28.32, 299.36, 43.46, 249.978, 541.1397757, 16.11, "#4a6ee0", {
     showLon: -30,
+    rings: NEPTUNE_RINGS,
     features: [...bandsAt([58, 34, 10, -14, -38, -60]), { kind: "oval", lon: -20, lat: -22, rx: 12, ry: 6 }, { kind: "oval", lon: 45, lat: -42, rx: 5, ry: 2.5 }],
   }),
   pluto: f("pluto", "dwarf-planet", "Pluto", "冥王星", 1188.3, 0, 122.53, 132.993, -6.163, 302.695, 56.3625225, -153.2935, "#c9a98a", {

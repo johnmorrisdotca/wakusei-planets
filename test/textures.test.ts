@@ -17,9 +17,9 @@ test("every painted look has all its pictures, and every picture is one a look n
   }
 });
 
-test("each picture's source is public domain or CC0, and credited in NOTICE.md", () => {
+test("each picture's source is public domain, CC0 or CC BY 4.0, and credited in NOTICE.md", () => {
   for (const [name, source] of Object.entries(sources)) {
-    assert.match(source.licence, /^(Public domain|CC0)/, name);
+    assert.match(source.licence, /^(Public domain|CC0|CC BY 4\.0)/, name);
     assert.ok(notice.includes(source.page), `${name}'s file page is in NOTICE.md`);
   }
 });

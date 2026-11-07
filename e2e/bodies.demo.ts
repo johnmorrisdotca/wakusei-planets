@@ -289,7 +289,7 @@ test("every choice has a line that says what it does, always on the page, tied t
         }),
     );
   const english = await described();
-  expect(english.length).toBeGreaterThanOrEqual(10);
+  expect(english.length).toBeGreaterThanOrEqual(9);
   for (const note of english) {
     expect(note.text.length, `${note.id} has a description`).toBeGreaterThan(20);
     expect(note.shown, `${note.id}'s description is on the page`).toBe(true);

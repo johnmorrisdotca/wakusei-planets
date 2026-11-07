@@ -568,7 +568,8 @@ export function rescale(p: Portrait, mode: ScaleMode): Portrait {
   const base = sizesFor([largest.body], mode)[0]!;
   const sizes = sizesFor(p.items.map((i) => i.body), mode);
   out.items.forEach((item, i) => {
-    item.r = Math.max(0.004, (sizes[i]! / base) * largest.r);
+    const scaled = (sizes[i]! / base) * largest.r;
+    item.r = mode === "true" ? scaled : Math.max(0.004, scaled);
   });
   return out;
 }
@@ -699,7 +700,7 @@ export function createHistory(initial: Portrait, limit = 100): History {
 
 // --- the address --------------------------------------------------------------------------------------------------------------------------------------
 
-const LOOKS: readonly Look[] = ["line", "realistic", "painted"];
+const LOOKS: readonly Look[] = ["line", "realistic", "painted", "illustrated"];
 const BACKGROUNDS: readonly Background[] = ["black", "stars", "gradient", "transparent"];
 const ARRANGES: readonly Arrange[] = ["row", "arc", "grid", "orbit"];
 

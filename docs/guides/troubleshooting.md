@@ -19,7 +19,7 @@ The browser gave no WebGL. The element says so with its `data-state="unavailable
 
 ## It does not move
 
-By design. A picture is drawn only when something changes. Give it `turn="12"` or a `rate`, or the reader's controls. A reader who prefers reduced motion gets no movement on its own.
+By design. A picture is drawn only when something changes. With no `turn` a portrait turns at 12 degrees a second, and a picture with a date adds that turn to the date's orientation. `turn="0"` stays still. A reader who prefers reduced motion gets a quarter of the turn.
 
 ## Two shaded bodies, one is a picture
 
