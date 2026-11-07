@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- Kazoku UI is 0.19.0. Ctrl and the wheel zoom the body, and a browser test presses that.
 - Jupiter keeps a thin main ring. The halo and the gossamer stay a hint, and Neptune's sheet stays fainter than the thin rings (MODULES-509).
 
 ## 0.17.1 - 2026-11-06
@@ -15,7 +16,6 @@ Saturn, Uranus and Neptune show their turn.
 
 Photo maps on the realistic look, and every body turns.
 
-- Kazoku UI is 0.19.0.
 - The documentation site's browser test is the family's current copy, so the skip-link check reaches the link with Tab on Mac WebKit (MODULES-411).
 - Painted maps of Venus, Saturn, Neptune and the Sun are Solar System Scope's equirectangular maps, CC BY 4.0 (MODULES-509). Mercury is the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0), resized to 512, 1024 and 2048; the enhanced-colour map and its smeared poles are gone, and the normal map is not used. Mars stays on the Viking mosaic, graded toward a butterscotch ochre (MODULES-509): the craters and the ice caps are the mosaic's, and the seasonal frost in Hellas is toned to the basin and feathered so the patch has no hard edge. Both polar caps stay white. Solar System Scope's map and Shady Tex's 4K were compared; the 4K is the warmer colour and the mosaic is the detail, so the mosaic was graded rather than replaced. The painter's relief comes from the colour, so a separate normal map is not used. Jupiter and Uranus use Nestaeric's band maps, CC BY 4.0, which have east-west detail. Saturn's poles, including the north hexagon, are reprojected from Nestaeric's caps, also CC BY 4.0. The Earth stays on Blue Marble and the Moon on the LRO map until each has been compared. Sizes in the repository are 512, 1024 and 2048. The 8K originals stay out of the repository.
 - `realistic` draws the photo maps, and `painted` is the same maps, kept as an attribute for an older page (MODULES-509). The demo shows one button for it, Realistic. `illustrated` is the shaded drawing that `realistic` used to be, and it is not a default. Its Japanese name on the picture is イラスト, which means "illustration".
