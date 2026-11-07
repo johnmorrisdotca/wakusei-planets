@@ -198,7 +198,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           scene.add(piece);
           return { mesh: piece, material };
         };
-        ringHalves = [half("e", 0, false), half("w", Math.PI, true)];
+        ringHalves = [half("e", 0, false), half("w", 0, true)];
       }
 
       // the glow of a star
