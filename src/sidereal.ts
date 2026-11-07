@@ -1,19 +1,28 @@
 // Sidereal time: the Earth's turn against the stars. Greenwich mean sidereal time (IAU 1982, Meeus ch. 12) from UT1, the equation of the equinoxes from the nutation (IAU 1980, its largest terms, 0.5 arc-seconds),
 // the apparent time that adds it, and the local time at a longitude. Angles are degrees, 0 to 360 (15 degrees an hour). UT1 is UTC unless `dut1` is given, which is within 0.9 s of the Earth's turn (0.004 degrees). Pure: no DOM, no three.js.
-import { DAY_MS, J2000_JD, J2000_MS, toJulianDate, toTerrestrialTime } from "./clock.ts";
+import { J2000_JD, julianCenturies, toJulianDate } from "./clock.ts";
 import { moment, type When } from "./when.ts";
 
 const RAD = Math.PI / 180;
 const ARCSEC = Math.PI / 648000;
 
+/** IAU 1980 mean obliquity, in arcseconds, at TT Julian centuries from J2000. */
+export const meanObliquityArcseconds = (T: number): number => 84381.448 - 46.815 * T - 0.00059 * T * T + 0.001813 * T * T * T;
+
+/** Unwrapped IAU 1982 Greenwich mean sidereal angle, in degrees, at UT1 days from J2000. */
+export function meanSiderealDegrees(days: number): number {
+  const T = days / 36525;
+  return 280.46061837 + 360.98564736629 * days + 0.000387933 * T * T - (T * T * T) / 38710000;
+}
+
 /** Nutation in longitude and in obliquity, and the mean obliquity of date, in radians, at `T` Julian centuries of terrestrial time from J2000 (Meeus ch. 22, accurate to 0.5 arc-seconds). */
 export function nutation(T: number): { longitude: number; obliquity: number; meanObliquity: number } {
   const omega = (125.04452 - 1934.136261 * T) * RAD;
-  const sunL = (280.4665 + 36000.7698 * T) * RAD;
-  const moonL = (218.3165 + 481267.8813 * T) * RAD;
-  const longitude = (-17.2 * Math.sin(omega) - 1.32 * Math.sin(2 * sunL) - 0.23 * Math.sin(2 * moonL) + 0.21 * Math.sin(2 * omega)) * ARCSEC;
-  const obliquity = (9.2 * Math.cos(omega) + 0.57 * Math.cos(2 * sunL) + 0.1 * Math.cos(2 * moonL) - 0.09 * Math.cos(2 * omega)) * ARCSEC;
-  const meanObliquity = (84381.448 - 46.815 * T - 0.00059 * T * T + 0.001813 * T * T * T) * ARCSEC;
+  const twiceSunLongitude = (560.933 + 72001.5396 * T) * RAD;
+  const twiceMoonLongitude = (436.633 + 962535.7626 * T) * RAD;
+  const longitude = (-17.2 * Math.sin(omega) - 1.32 * Math.sin(twiceSunLongitude) - 0.23 * Math.sin(twiceMoonLongitude) + 0.21 * Math.sin(2 * omega)) * ARCSEC;
+  const obliquity = (9.2 * Math.cos(omega) + 0.57 * Math.cos(twiceSunLongitude) + 0.1 * Math.cos(twiceMoonLongitude) - 0.09 * Math.cos(2 * omega)) * ARCSEC;
+  const meanObliquity = meanObliquityArcseconds(T) * ARCSEC;
   return { longitude, obliquity, meanObliquity };
 }
 
@@ -34,8 +43,7 @@ const wrap = (degrees: number): number => ((degrees % 360) + 360) % 360;
  */
 export function greenwichMeanSiderealTime(when: When, dut1 = 0): number {
   const jd = toJulianDate(moment(when) + dut1 * 1000);
-  const T = (jd - J2000_JD) / 36525;
-  return wrap(280.46061837 + 360.98564736629 * (jd - J2000_JD) + 0.000387933 * T * T - (T * T * T) / 38710000);
+  return wrap(meanSiderealDegrees(jd - J2000_JD));
 }
 
 /**
@@ -51,7 +59,7 @@ export function greenwichMeanSiderealTime(when: When, dut1 = 0): number {
  * ```
  */
 export function equationOfTheEquinoxes(when: When): number {
-  const T = (toTerrestrialTime(when) - J2000_MS) / (36525 * DAY_MS);
+  const T = julianCenturies(when);
   const n = nutation(T);
   return (n.longitude * Math.cos(n.meanObliquity + n.obliquity)) / RAD;
 }

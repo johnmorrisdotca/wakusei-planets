@@ -1,6 +1,8 @@
 // Coordinate rotations: Meeus, Astronomical Algorithms, 2nd ed., chapters 12, 13, 22.
 // Standalone mathematics; no body data, ephemerides or rendering dependencies.
 import { ttMinusUtc } from "./clock.ts";
+import { meanObliquityArcseconds, meanSiderealDegrees } from "./sidereal.ts";
+import type { EquatorialAngles, HorizontalAngles, Observer } from "./sky/types.ts";
 
 const RAD = Math.PI / 180;
 const J2000 = 2451545;
@@ -73,8 +75,8 @@ export interface EclipticCoordinates extends CoordinateContext { frame: "eclipti
  * console.log(value);
  * ```
  */
-export interface EquatorialCoordinates extends CoordinateContext { frame: "equatorialJ2000" | "equatorialOfDate"; rightAscension: number; declination: number }
-/** Earth observer: degrees north/east; optional metres above mean sea level. Rotations do not use height.
+export interface EquatorialCoordinates extends CoordinateContext, EquatorialAngles { frame: "equatorialJ2000" | "equatorialOfDate" }
+/** Earth observer: degrees north/east; optional metres above the WGS 84 ellipsoid. Rotations do not use height.
  * @example
  * ```ts
  * import type { CoordinateObserver } from "@johnmorrisdotca/wakusei-planets/coordinates";
@@ -82,7 +84,8 @@ export interface EquatorialCoordinates extends CoordinateContext { frame: "equat
  * console.log(value);
  * ```
  */
-export interface CoordinateObserver { latitude: number; longitude: number; heightM?: number }
+// Keep the public interface open to declaration merging.
+export interface CoordinateObserver extends Observer { heightM?: Observer["heightM"] }
 /** Geometric horizontal direction. Azimuth is clockwise from north; origin remains that of the supplied direction.
  * @example
  * ```ts
@@ -91,17 +94,15 @@ export interface CoordinateObserver { latitude: number; longitude: number; heigh
  * console.log(value);
  * ```
  */
-export interface HorizontalCoordinates {
+export interface HorizontalCoordinates extends HorizontalAngles {
   origin: CoordinateOrigin;
   frame: "horizontal";
   epoch: number;
   corrections: "geometric";
-  altitude: number;
-  azimuth: number;
 }
 
 function finite(name: string, value: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) throw new RangeError(`${name}: ${String(value)} must be finite`);
+  if (!Number.isFinite(value)) throw new RangeError(`${name}: ${String(value)} must be finite`);
   return value;
 }
 function bounded(name: string, value: number, low: number, high: number): number {
@@ -125,17 +126,17 @@ function context(c: CoordinateContext): CoordinateContext {
     if (typeof c.epoch !== "number") throw new RangeError(`epoch: ${c.epoch}; expected Unix milliseconds`);
     instant(c.epoch);
   }
-  return { origin: c.origin, frame: c.frame, epoch: c.epoch, corrections: c.corrections };
+  return { origin: c.origin, frame: c.frame, epoch: c.epoch, corrections: "geometric" };
 }
-function spherical(longitude: number, latitude: number): [number, number, number] {
+function unitDirection(longitude: number, latitude: number): [number, number, number] {
   const l = wrap(finite("longitude", longitude)) * RAD;
   const b = bounded("latitude", latitude, -90, 90) * RAD;
   const cb = Math.abs(latitude) === 90 ? 0 : Math.cos(b);
   return [cb * Math.cos(l), cb * Math.sin(l), Math.sin(b)];
 }
-function angles(x: number, y: number, z: number): [number, number] {
+function directionAngles(x: number, y: number, z: number, radius = Math.hypot(x, y, z)): [number, number] {
   const xy = Math.hypot(x, y);
-  return [xy < 1e-15 * Math.hypot(x, y, z) ? 0 : wrap(Math.atan2(y, x) / RAD), Math.atan2(z, xy) / RAD];
+  return [xy < 1e-15 * radius ? 0 : wrap(Math.atan2(y, x) / RAD), Math.atan2(z, xy) / RAD];
 }
 
 /** Convert spherical to Cartesian, preserving origin, frame, epoch and geometric corrections. Radius must be positive.
@@ -151,7 +152,7 @@ export function sphericalToCartesian(value: SphericalAu): CartesianAu {
   const c = context(value);
   const d = finite("distanceAu", value.distanceAu);
   if (d <= 0) throw new RangeError(`distanceAu: ${d} must be positive`);
-  const [x, y, z] = spherical(value.longitude, value.latitude);
+  const [x, y, z] = unitDirection(value.longitude, value.latitude);
   return { ...c, xAu: x * d, yAu: y * d, zAu: z * d };
 }
 /** Convert Cartesian to spherical. Zero vectors throw; longitude at either pole is conventionally zero.
@@ -168,7 +169,7 @@ export function cartesianToSpherical(value: CartesianAu): SphericalAu {
   const x = finite("xAu", value.xAu), y = finite("yAu", value.yAu), z = finite("zAu", value.zAu);
   const d = finite("distanceAu", Math.hypot(x, y, z));
   if (d === 0) throw new RangeError("distanceAu: 0 has no direction");
-  const [longitude, latitude] = angles(x / d, y / d, z / d);
+  const [longitude, latitude] = directionAngles(x / d, y / d, z / d);
   return { ...c, longitude, latitude, distanceAu: d };
 }
 /** Mean obliquity in degrees: IAU 1980 (Meeus 22.2), evaluated in TT. Validated for 1800–2050; extrapolates outside it.
@@ -183,10 +184,10 @@ export function cartesianToSpherical(value: CartesianAu): SphericalAu {
 export function meanObliquity(when: Date | number): number {
   const utc = instant(when);
   const t = ((utc + ttMinusUtc(utc) * 1000) / DAY_MS + 2440587.5 - J2000) / 36525;
-  return (84381.448 - 46.815 * t - 0.00059 * t * t + 0.001813 * t * t * t) / 3600;
+  return meanObliquityArcseconds(t) / 3600;
 }
 function obliquity(c: CoordinateContext): number {
-  return (c.epoch === "J2000" ? 84381.448 / 3600 : meanObliquity(c.epoch)) * RAD;
+  return (c.epoch === "J2000" ? meanObliquityArcseconds(0) / 3600 : meanObliquity(c.epoch)) * RAD;
 }
 /** Rotate a mean ecliptic direction into the matching mean equatorial frame. No precession between epochs, nutation, aberration or light-time is added.
  * @param value - Coordinates with explicit origin, frame, epoch and geometric corrections.
@@ -200,9 +201,9 @@ function obliquity(c: CoordinateContext): number {
 export function eclipticToEquatorial(value: EclipticCoordinates): EquatorialCoordinates {
   const c = context(value);
   if (!c.frame.startsWith("ecliptic")) throw new RangeError(`frame: ${c.frame}; expected ecliptic`);
-  const [x, y, z] = spherical(value.eclipticLongitude, value.eclipticLatitude);
+  const [x, y, z] = unitDirection(value.eclipticLongitude, value.eclipticLatitude);
   const e = obliquity(c);
-  const [rightAscension, declination] = angles(x, y * Math.cos(e) - z * Math.sin(e), y * Math.sin(e) + z * Math.cos(e));
+  const [rightAscension, declination] = directionAngles(x, y * Math.cos(e) - z * Math.sin(e), y * Math.sin(e) + z * Math.cos(e));
   return { ...c, frame: c.frame === "eclipticJ2000" ? "equatorialJ2000" : "equatorialOfDate", rightAscension, declination };
 }
 /** Inverse mean-equator rotation, retaining the same origin and epoch.
@@ -217,15 +218,15 @@ export function eclipticToEquatorial(value: EclipticCoordinates): EquatorialCoor
 export function equatorialToEcliptic(value: EquatorialCoordinates): EclipticCoordinates {
   const c = context(value);
   if (!c.frame.startsWith("equatorial")) throw new RangeError(`frame: ${c.frame}; expected equatorial`);
-  const [x, y, z] = spherical(value.rightAscension, value.declination);
+  const [x, y, z] = unitDirection(value.rightAscension, value.declination);
   const e = obliquity(c);
-  const [eclipticLongitude, eclipticLatitude] = angles(x, y * Math.cos(e) + z * Math.sin(e), -y * Math.sin(e) + z * Math.cos(e));
+  const [eclipticLongitude, eclipticLatitude] = directionAngles(x, y * Math.cos(e) + z * Math.sin(e), -y * Math.sin(e) + z * Math.cos(e));
   return { ...c, frame: c.frame === "equatorialJ2000" ? "eclipticJ2000" : "eclipticOfDate", eclipticLongitude, eclipticLatitude };
 }
 /** Rotate a mean equatorial-of-date direction to an observer's horizon (Meeus 12.4, 13.5–6). The input epoch must equal when. UTC approximates UT1; height is validated but unused. No parallax, refraction, nutation or horizon dip. Azimuth at zenith/nadir is conventionally zero.
  * @param value - Mean equatorial-of-date direction with explicit origin and epoch.
  * @param when - Date or Unix UTC milliseconds equal to the input epoch.
- * @param options - Observer in degrees north/east; height in metres above mean sea level.
+ * @param options - Observer in degrees north/east; height in metres above the WGS 84 ellipsoid.
  * @returns Altitude and north-based azimuth in degrees; original origin preserved.
  * @example
  * ```ts
@@ -242,11 +243,11 @@ export function equatorialToHorizontal(value: EquatorialCoordinates, when: Date 
   finite("observer.heightM", observer.heightM ?? 0);
   const ra = wrap(finite("rightAscension", value.rightAscension));
   const d = bounded("declination", value.declination, -90, 90) * RAD;
-  const days = ms / DAY_MS + 2440587.5 - J2000, t = days / 36525;
-  const h = wrap(280.46061837 + 360.98564736629 * days + 0.000387933 * t * t - t * t * t / 38710000 + l - ra) * RAD;
+  const days = ms / DAY_MS + 2440587.5 - J2000;
+  const h = wrap(meanSiderealDegrees(days) + l - ra) * RAD;
   const east = -Math.cos(d) * Math.sin(h);
   const north = Math.sin(d) * Math.cos(p) - Math.cos(d) * Math.cos(h) * Math.sin(p);
   const up = Math.sin(d) * Math.sin(p) + Math.cos(d) * Math.cos(h) * Math.cos(p);
-  const horizontal = Math.hypot(east, north);
-  return { origin: c.origin, frame: "horizontal", epoch: ms, corrections: "geometric", altitude: Math.atan2(up, horizontal) / RAD, azimuth: horizontal < 1e-15 ? 0 : wrap(Math.atan2(east, north) / RAD) };
+  const [azimuth, altitude] = directionAngles(north, east, up, 1);
+  return { origin: c.origin, frame: "horizontal", epoch: ms, corrections: "geometric", altitude, azimuth };
 }

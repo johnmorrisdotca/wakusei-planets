@@ -2,75 +2,32 @@
 // Written from the standard methods (Meeus, "Astronomical Algorithms", chapters 12, 21, 22, 40, 48; the IAU 1976 precession; IAU 1980 nutation, its largest terms) on this package's own positions: the Sun from the Earth's VSOP87B place,
 // the Moon from ELP2000-82B. Pure: no DOM, no three.js. Time is UTC in milliseconds; UT1 is taken as UTC (up to 0.9 s, 0.004 degrees of turn of the Earth); the theories run in terrestrial time.
 import { earthPosition, moonGeocentric } from "../theory.ts";
-import { toTerrestrialTime } from "../clock.ts";
-import { greenwichApparentSiderealTime, nutation } from "../sidereal.ts";
-
-type Vec = readonly [number, number, number];
-type Matrix = readonly [Vec, Vec, Vec];
+import { julianCenturies } from "../clock.ts";
+import { greenwichApparentSiderealTime as greenwichSiderealTime, nutation } from "../sidereal.ts";
+import { eclipticJ2000ToTrueEquatorialOfDate } from "./frames.ts";
+import type { Vec3 as Vec } from "../vec.ts";
+import type { EquatorialAngles, HorizontalAngles, Observer } from "./types.ts";
+export type { Observer } from "./types.ts";
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
-const ARCSEC = Math.PI / 648000;
-const DAY_MS = 86_400_000;
-const J2000_MS = Date.UTC(2000, 0, 1, 12);
 const AU_KM = 149597870.7;
 const LIGHT_KM_S = 299792.458;
-/** The mean obliquity of the ecliptic at J2000 in the IAU 1976 value the VSOP87 and ELP frames use (84381.448 arc-seconds). */
-const OBLIQUITY_J2000 = 84381.448 * ARCSEC;
 /** The Earth's equatorial radius in kilometres and its flattening (WGS 84). */
 const EARTH_RADIUS_KM = 6378.137;
 const EARTH_FLATTENING = 1 / 298.257223563;
 
-/** A place on the Earth: degrees north, degrees east (west negative) and metres above the ellipsoid. */
-export interface Observer {
-  latitude: number;
-  longitude: number;
-  heightM?: number;
-}
-
 /** A body's place on the sky of date, as the Earth's centre sees it (apparent: light time, aberration for the Sun, nutation): angles in degrees, distance in kilometres. */
-export interface Equatorial {
-  /** Right ascension of date, 0 to 360. */
-  rightAscension: number;
-  /** Declination of date, -90 to 90. */
-  declination: number;
+export interface Equatorial extends EquatorialAngles {
   distanceKm: number;
 }
 
 /** Where a body is in a place's sky: azimuth 0 to 360 from north through east, altitude, the hour angle (0 on the meridian, positive west) and the parallactic angle, all in degrees. */
-export interface Horizontal {
-  azimuth: number;
-  altitude: number;
+export interface Horizontal extends HorizontalAngles {
   hourAngle: number;
   parallacticAngle: number;
   /** The distance from the place to the body in kilometres. */
   distanceKm: number;
-}
-
-const matrixTimes = (a: Matrix, b: Matrix): Matrix => [0, 1, 2].map((i) => [0, 1, 2].map((j) => a[i]![0]! * b[0]![j]! + a[i]![1]! * b[1]![j]! + a[i]![2]! * b[2]![j]!)) as unknown as Matrix;
-const apply = (m: Matrix, v: Vec): Vec => [m[0]![0]! * v[0] + m[0]![1]! * v[1] + m[0]![2]! * v[2], m[1]![0]! * v[0] + m[1]![1]! * v[1] + m[1]![2]! * v[2], m[2]![0]! * v[0] + m[2]![1]! * v[1] + m[2]![2]! * v[2]];
-/** The matrix that re-expresses a vector in axes turned by `a` radians about x, y or z (a frame turn, not a vector turn). */
-const frameTurn = (axis: 1 | 2 | 3, a: number): Matrix => {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  if (axis === 1) return [[1, 0, 0], [0, c, s], [0, -s, c]];
-  if (axis === 2) return [[c, 0, -s], [0, 1, 0], [s, 0, c]];
-  return [[c, s, 0], [-s, c, 0], [0, 0, 1]];
-};
-
-/** Julian centuries of terrestrial time from J2000 for a UTC instant in milliseconds. */
-const centuries = (ms: number): number => (toTerrestrialTime(ms) - J2000_MS) / (36525 * DAY_MS);
-
-/** A J2000 mean-ecliptic vector turned into the true equator and equinox of date: obliquity of J2000, IAU 1976 precession, then nutation. */
-function trueOfDate(ecliptic: Vec, T: number): Vec {
-  const equatorial = apply(frameTurn(1, -OBLIQUITY_J2000), ecliptic);
-  const zeta = (2306.2181 * T + 0.30188 * T * T + 0.017998 * T * T * T) * ARCSEC;
-  const z = (2306.2181 * T + 1.09468 * T * T + 0.018203 * T * T * T) * ARCSEC;
-  const theta = (2004.3109 * T - 0.42665 * T * T - 0.041833 * T * T * T) * ARCSEC;
-  const precession = matrixTimes(frameTurn(3, -z), matrixTimes(frameTurn(2, theta), frameTurn(3, -zeta)));
-  const n = nutation(T);
-  const nutate = matrixTimes(frameTurn(1, -(n.meanObliquity + n.obliquity)), matrixTimes(frameTurn(3, -n.longitude), frameTurn(1, n.meanObliquity)));
-  return apply(nutate, apply(precession, equatorial));
 }
 
 const toEquatorial = (v: Vec, distanceKm: number): Equatorial => ({
@@ -87,7 +44,7 @@ const fromEquatorial = (e: Equatorial): Vec => {
 
 /** The Sun as seen from the Earth's centre: the apparent place of date, with the annual aberration (the Earth's speed over the speed of light, about 20 arc-seconds) and nutation. */
 export function sunEquatorial(ms: number): Equatorial {
-  const T = centuries(ms);
+  const T = julianCenturies(ms);
   const earth = earthPosition(ms);
   const later = earthPosition(ms + 60_000);
   const sun: Vec = [-earth[0], -earth[1], -earth[2]];
@@ -95,20 +52,20 @@ export function sunEquatorial(ms: number): Equatorial {
   // the Earth's velocity in au per second, over the speed of light in au per second, moves the apparent direction toward where the Earth is heading
   const beta: Vec = [(later[0] - earth[0]) / 60 / (LIGHT_KM_S / AU_KM), (later[1] - earth[1]) / 60 / (LIGHT_KM_S / AU_KM), (later[2] - earth[2]) / 60 / (LIGHT_KM_S / AU_KM)];
   const aberrated: Vec = [sun[0] / distanceAu + beta[0], sun[1] / distanceAu + beta[1], sun[2] / distanceAu + beta[2]];
-  return toEquatorial(trueOfDate(aberrated, T), distanceAu * AU_KM);
+  return toEquatorial(eclipticJ2000ToTrueEquatorialOfDate(aberrated, T), distanceAu * AU_KM);
 }
 
 /** The Moon as seen from the Earth's centre: the apparent place of date, with the light time (the Moon is about 1.3 seconds away) and nutation. */
 export function moonEquatorial(ms: number): Equatorial {
-  const T = centuries(ms);
+  const T = julianCenturies(ms);
   const first = moonGeocentric(ms);
   const distance = Math.hypot(first[0], first[1], first[2]);
   const geometric = moonGeocentric(ms - (distance / LIGHT_KM_S) * 1000);
-  return toEquatorial(trueOfDate(geometric, T), Math.hypot(geometric[0], geometric[1], geometric[2]));
+  return toEquatorial(eclipticJ2000ToTrueEquatorialOfDate(geometric, T), Math.hypot(geometric[0], geometric[1], geometric[2]));
 }
 
 /** The apparent sidereal time at Greenwich in degrees, from the UTC instant taken as UT1. */
-export const greenwichSiderealTime = (ms: number): number => greenwichApparentSiderealTime(ms);
+export { greenwichSiderealTime };
 
 /** The observer's place from the Earth's centre in the true equator of date, in kilometres, with the turn of the Earth (Meeus ch. 11). */
 function observerVector(observer: Observer, ms: number): Vec {
@@ -174,7 +131,7 @@ export function moonPhase(ms: number): { fraction: number; phase: number; angle:
   const d = moon.declination * RAD;
   const angle = Math.atan2(Math.cos(d0) * Math.sin(a0 - a), Math.sin(d0) * Math.cos(d) - Math.cos(d0) * Math.sin(d) * Math.cos(a0 - a)) * DEG;
   // waxing while the Moon is east of the Sun along the ecliptic: its longitude is ahead by under half a turn
-  const n = nutation(centuries(ms));
+  const n = nutation(julianCenturies(ms));
   const epsilon = n.meanObliquity + n.obliquity;
   const longitudeOf = (v: Vec): number => Math.atan2(v[1] * Math.cos(epsilon) + v[2] * Math.sin(epsilon), v[0]) * DEG;
   const ahead = (((longitudeOf(moonV) - longitudeOf(sunV)) % 360) + 360) % 360;
