@@ -4,11 +4,13 @@
 import type * as THREE from "three";
 import "../bodies/all.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../facts.ts";
-import { VERSION } from "../version.ts";
+import { writeBasis } from "./basis.ts";
+import { TEXTURE_BASE, TEXTURE_FAR_BASE, slash, loadImage } from "./textures.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import type { ThreeParts } from "./body.ts";
 import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
-import { lookOf, type BodyLook } from "./look.ts";
+import { fallbackLook } from "./fallback.ts";
+import { lookOf } from "./look.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
 
@@ -140,9 +142,6 @@ export interface PainterOptions {
   farBase?: string;
 }
 
-const TEXTURE_BASE = `https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets@${VERSION}/dist/textures/`;
-const TEXTURE_FAR_BASE = `https://cdn.jsdelivr.net/gh/johnmorrisdotca/wakusei-planets@v${VERSION}/textures/`;
-const slash = (base: string): string => (base.endsWith("/") ? base : `${base}/`);
 const titled = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
 
 // Geometry shared by every body of one three.js module, counted so the last one to leave frees it.
@@ -174,11 +173,6 @@ function acquire<T extends { dispose(): void }>(three: object, key: string, make
   };
 }
 
-const fallbackLook = (id: BodyId): BodyLook => {
-  const c = [1, 3, 5].map((i) => (parseInt(BODIES[id].colour.slice(i, i + 2), 16) / 255).toFixed(3)).join(", ");
-  return { id, surface: `vec4 surface(vec3 p) { float n = fbm(p * 5.0); return vec4(vec3(${c}) * (0.85 + 0.3 * n), 0.0); }` };
-};
-
 /** The name of a body as the painter takes it: any case, `Sun`, a planet or Pluto, or a moon such as `Io`. */
 function idOf(name: string): BodyId {
   const id = name.toLowerCase();
@@ -193,7 +187,7 @@ const moonsOf = (planet: string): readonly MoonId[] => {
 
 function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string }): Painting {
   const facts = BODIES[id];
-  const look = lookOf(id) ?? fallbackLook(id);
+  const look = lookOf(id) ?? fallbackLook(facts);
   const wantPainted = (context.look === "painted" || look.mapped === true) && look.painted !== undefined;
   const ratio = context.ratio ?? 1;
   const maxWidth = context.maxTexture ?? 2048;
@@ -236,7 +230,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   };
   const shader = material(false);
   const paintedMaterial = wantPainted ? material(true) : undefined;
-  const materials = [shader, ...(paintedMaterial ? [paintedMaterial] : [])];
+  const materials = paintedMaterial ? [shader, paintedMaterial] : [shader];
 
   const mesh = new T.Mesh(sphere.value, shader);
   mesh.matrixAutoUpdate = false;
@@ -249,12 +243,6 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let ringInner = 1;
   let ringOuter = 2;
   const table = look.emissive === true ? null : ringStrip(facts, 1024);
-  const loadImage = (url: string): Promise<THREE.Texture> =>
-    new Promise((resolve, reject) => {
-      const loader = new T.TextureLoader();
-      loader.setCrossOrigin("anonymous");
-      loader.load(url, resolve, undefined, (e) => reject(e instanceof Error ? e : new Error("texture failed")));
-    });
   let gone = false;
   if (table !== null) {
     ringInner = table.inner;
@@ -283,7 +271,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     group.add(ringMesh);
     const photo = wantPainted ? look.painted?.rings : undefined;
     if (photo !== undefined) {
-      void loadImage(`${bases.near}${photo.map}-${photo.width}.webp`).then(
+      void loadImage(T, `${bases.near}${photo.map}-${photo.width}.webp`).then(
         (t) => {
           if (gone) {
             t.dispose();
@@ -355,7 +343,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     redraw();
   };
   if (wantPainted && paintedMaterial !== undefined && widths[0] !== undefined) {
-    void loadImage(urlOf(widths[0])).then(
+    void loadImage(T, urlOf(widths[0])).then(
       (t) => {
         if (gone) {
           t.dispose();
@@ -376,7 +364,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     if (next > sharpWidth && next > widths[0]! && !tried.has(next)) {
       tried.add(next);
       loading = true;
-      void loadImage(urlOf(next)).then(
+      void loadImage(T, urlOf(next)).then(
         (t) => {
           loading = false;
           if (gone) {
@@ -412,9 +400,6 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   const scaleX = axes ? axes[1] / facts.radiusKm : 1;
   const scaleY = axes ? axes[2] / facts.radiusKm : 1 - facts.flattening;
   const scaleZ = axes ? axes[0] / facts.radiusKm : 1;
-  const basis = (object: THREE.Object3D, x: Vec3, y: Vec3, z: Vec3, sx = 1, sy = 1, sz = 1): void => {
-    object.matrix.makeBasis(new T.Vector3(x[0] * sx, x[1] * sx, x[2] * sx), new T.Vector3(y[0] * sy, y[1] * sy, y[2] * sy), new T.Vector3(z[0] * sz, z[1] * sz, z[2] * sz));
-  };
   const light = new T.Vector3();
   const poleVec = new T.Vector3();
 
@@ -427,8 +412,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       if (look.emissive !== true) {
         const { pole, meridian } = info.pose ?? orientation(id, info.ms);
         const east = cross(pole, meridian);
-        basis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
-        if (ringMesh !== undefined) basis(ringMesh, meridian, east, pole);
+        writeBasis(mesh.matrix, east, pole, meridian, scaleX, scaleY, scaleZ);
+        if (ringMesh !== undefined) writeBasis(ringMesh.matrix, meridian, east, pole);
         poleVec.set(pole[0], pole[1], pole[2]);
       }
       const occluders = info.occluders ?? [];
