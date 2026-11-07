@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## 0.18.0 - 2026-11-07
+
 The view gestures are the family's, on kazoku-ui 0.19 (MODULES-527).
 
 - **kazoku-ui 0.15 to 0.19.** The wheel over a view moves it, and Shift with the wheel moves it sideways; Ctrl, Command or Alt with the wheel zooms about the pointer; the middle button or Space with a drag moves it; Shift with a drag rolls it. Before, a plain wheel zoomed, Alt did nothing and Shift turned the body.
