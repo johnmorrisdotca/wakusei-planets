@@ -2,7 +2,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { heliocentric } from "../src/ephemeris.ts";
-import { DWARF_TABLES } from "../src/data/dwarfs.ts";
+import { tableOf } from "../src/data/tables.ts";
+import "../src/tables/all.ts";
 import { PLUTO_SEGMENT_MS, PLUTO_START } from "../src/data/pluto.ts";
 import { ttMinusUtc } from "../src/time.ts";
 import { length, sub } from "../src/vec.ts";
@@ -25,7 +26,8 @@ test("the table and JPL's approximate elements agree to about 40 arc-seconds in 
 });
 
 test("every dwarf planet's table is continuous across its segment edges, and the elements answer outside it", () => {
-  for (const [name, table] of Object.entries(DWARF_TABLES)) {
+  for (const name of ["ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"]) {
+    const table = tableOf(name)!;
     for (let k = 1; k < table.segments.length; k += 1) {
       const edge = table.start + k * table.segment;
       const utc = edge - ttMinusUtc(edge) * 1000;

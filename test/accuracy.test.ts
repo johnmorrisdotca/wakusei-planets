@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { heliocentric, moonGeocentric, moonVector } from "../src/ephemeris.ts";
+import "../src/tables/all.ts";
 import { ORBITS } from "../src/data/orbits.ts";
 import { length, RAD, type Vec3 } from "../src/vec.ts";
 

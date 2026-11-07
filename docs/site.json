@@ -30,6 +30,21 @@
       "ja": "ユリウス日と、UTC から地球時への換算",
       "platform": "node"
     },
+    "./tables": {
+      "en": "Every dwarf planet's fitted position table (Ceres and the seven slower ones), so heliocentric is within a fraction of an arc-second",
+      "ja": "すべての準惑星の位置の表 (ケレスと、動きの遅い7つ)。heliocentric が1秒角より小さい誤差になります",
+      "platform": "node"
+    },
+    "./tables/ceres": {
+      "en": "Ceres's fitted position table, 1900 to 2100 (about 14 kB gzipped)",
+      "ja": "ケレスの位置の表、1900年から2100年 (gzip で約14 kB)",
+      "platform": "node"
+    },
+    "./tables/dwarfs": {
+      "en": "The fitted position tables of Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna, 1800 to 2200 (about 5 kB gzipped)",
+      "ja": "オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナの位置の表、1800年から2200年 (gzip で約5 kB)",
+      "platform": "node"
+    },
     "./look": {
       "en": "How a body is drawn with three.js",
       "ja": "three.js での描き方",

@@ -103,8 +103,8 @@ const unpkgAnswer = async (pathname: string): Promise<string | null> => {
     const file = join(installed, own[1]!);
     if (!existsSync(file)) return null;
     return readFileSync(file, "utf8")
-      .replace(/(from\s+|import\s*\()"([^./"][^"]*)"/g, (_, lead: string, bare: string) => `${lead}"https://unpkg.com/${bare}?module"`)
-      .replace(/(from\s+|import\s*\()"(\.[^"?]*)"/g, (_, lead: string, relative: string) => `${lead}"${relative}?module"`);
+      .replace(/(from\s+|import\s*\(?\s*)"([^./"][^"]*)"/g, (_, lead: string, bare: string) => `${lead}"https://unpkg.com/${bare}?module"`)
+      .replace(/(from\s+|import\s*\(?\s*)"(\.[^"?]*)"/g, (_, lead: string, relative: string) => `${lead}"${relative}?module"`);
   }
   const dependency = decodeURIComponent(pathname.slice(1)).replace(/@[\d.]+(?=\/|$)/, "");
   try {

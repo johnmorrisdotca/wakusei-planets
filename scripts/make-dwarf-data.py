@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes src/data/dwarfs.ts: the dwarf planets from JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api), as Chebyshev series.
+"""Writes src/tables/ceres.ts and src/tables/dwarfs.ts: the dwarf planets from JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api), as Chebyshev series.
 Each body is measured from the solar system's barycentre (Horizons centre 500@0, ecliptic and equinox J2000, au, TDB), where its path is smooth: from the Sun it also carries the Sun's own
 twelve-year swing about the barycentre (Jupiter's pull), which no short polynomial follows. The package adds that swing back at run time from the planets' masses (src/ephemeris.ts).
 Each body is cut into segments of YEARS Julian years, each a polynomial of DEGREE for x, y and z, fitted by least squares to samples STEP days apart; the odd samples are kept back and the
@@ -97,29 +97,26 @@ for name, (code, first, last, step, years, degree) in BODIES.items():
     print(f"{name}: {first} to {last}, {count} segments of {years} years, degree {degree}: worst error on held-back samples {worst:.4f} arc-seconds")
     tables[name] = (round((start_jd - UNIX_EPOCH_JD) * 86400000), round(seg_days * 86400000), worst, segments, years, degree, first, last)
 
-lines = [
+HEADER = [
     "// Made by scripts/make-dwarf-data.py from JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api): each dwarf planet's position from the solar system's barycentre, ecliptic and equinox J2000, in au, terrestrial time.",
     "// Chebyshev segments, one polynomial of the stated degree for each of x, y and z; the Sun's swing about the barycentre is added back by src/ephemeris.ts. The error on samples held back from each fit is in `worst`. Do not edit by hand.",
-    "/** One dwarf planet's table. */",
-    "export interface FittedTable {",
-    "  /** Milliseconds since 1970, in terrestrial time, at the start of the first segment. */",
-    "  start: number;",
-    "  /** The length of a segment in milliseconds. */",
-    "  segment: number;",
-    "  /** The error on samples held back from the fit, in arc-seconds. */",
-    "  worst: number;",
-    "  /** By segment, then x, y, z, then the Chebyshev coefficients, in au. */",
-    "  segments: readonly (readonly (readonly number[])[])[];",
-    "}",
+    'import { registerTable } from "../data/tables.ts";',
     "",
-    "export const DWARF_TABLES: Readonly<Record<string, FittedTable>> = {",
 ]
-for name, (start, segment, worst, segments, years, degree, first, last) in tables.items():
-    lines.append(f"  // {first} to {last}, {len(segments)} segments of {years} years, degree {degree}")
-    lines.append(f"  {name}: {{ start: {start}, segment: {segment}, worst: {worst:.4f}, segments: [")
-    for coefficients in segments:
-        lines.append("    [" + ",".join("[" + ",".join(repr(round(c, 9)) for c in axis) + "]" for axis in coefficients) + "],")
-    lines.append("  ] },")
-lines.append("};")
-open("src/data/dwarfs.ts", "w").write("\n".join(lines) + "\n")
-print("wrote src/data/dwarfs.ts")
+
+
+def write(path, names, note):
+    lines = HEADER[:2] + [note] + HEADER[2:]
+    for name in names:
+        start, segment, worst, segments, years, degree, first, last = tables[name]
+        lines.append(f"// {name}: {first} to {last}, {len(segments)} segments of {years} years, degree {degree}")
+        lines.append(f'registerTable("{name}", {{ start: {start}, segment: {segment}, worst: {worst:.4f}, segments: [')
+        for coefficients in segments:
+            lines.append("  [" + ",".join("[" + ",".join(repr(round(c, 9)) for c in axis) + "]" for axis in coefficients) + "],")
+        lines.append("] });")
+    open(path, "w").write("\n".join(lines) + "\n")
+    print("wrote", path)
+
+
+write("src/tables/ceres.ts", ["ceres"], "// Ceres is a table of its own: its four-year segments are most of the data.")
+write("src/tables/dwarfs.ts", [n for n in tables if n != "ceres"], "// The seven slower dwarf planets: Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna.")

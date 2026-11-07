@@ -31,6 +31,19 @@ An arc-second is 1/3600 of a degree. Uranus and Saturn are the loosest, because 
 
 Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna are tables fitted to Horizons, like Pluto: Chebyshev segments (4 years each for Ceres, 50 to 200 for the slow ones) from the solar system's barycentre, where a distant body's path is smooth. From the Sun it also carries the Sun's own twelve-year swing about the barycentre (Jupiter's pull, about a million kilometres), which no short polynomial follows, so the package works out that swing from the planets' masses and adds it back. Ceres is tabulated for 1900 to 2100 and the others for 1800 to 2200; outside those years the osculating elements of one epoch answer, good for a few years either side of June 2026. Checked on six dates from 1900 to 2099 that are not on the fit's grid.
 
+The tables are optional, so a page that draws only the Earth does not pay for them: the web component loads them, and a server or a script that calls `heliocentric` imports the ones it wants. Without a table the old elements answer.
+
+```ts
+import { heliocentric } from "@johnmorrisdotca/wakusei-planets";
+import "@johnmorrisdotca/wakusei-planets/tables/dwarfs"; // Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna: about 5 kB gzipped
+import "@johnmorrisdotca/wakusei-planets/tables/ceres"; // Ceres, 1900 to 2100: about 14 kB gzipped
+
+const [x, y, z] = heliocentric("ceres", Date.UTC(2000, 0, 1));
+console.log(Math.hypot(x, y, z).toFixed(2));
+```
+
+`@johnmorrisdotca/wakusei-planets/tables` loads both.
+
 | Body | Worst measured | Held to | Years |
 |---|---|---|---|
 | Ceres | 0.16″ | 0.3″ | 1900 to 2100 |

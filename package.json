@@ -55,9 +55,11 @@
     "./dist/element.js",
     "./dist/portrait/element.js",
     "./dist/bodies/*.js",
+    "./dist/tables/*.js",
     "./src/element.ts",
     "./src/portrait/element.ts",
-    "./src/bodies/*.ts"
+    "./src/bodies/*.ts",
+    "./src/tables/*.ts"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -82,6 +84,21 @@
       "types": "./dist/time.d.ts",
       "import": "./dist/time.js",
       "default": "./dist/time.js"
+    },
+    "./tables": {
+      "types": "./dist/tables/all.d.ts",
+      "import": "./dist/tables/all.js",
+      "default": "./dist/tables/all.js"
+    },
+    "./tables/ceres": {
+      "types": "./dist/tables/ceres.d.ts",
+      "import": "./dist/tables/ceres.js",
+      "default": "./dist/tables/ceres.js"
+    },
+    "./tables/dwarfs": {
+      "types": "./dist/tables/dwarfs.d.ts",
+      "import": "./dist/tables/dwarfs.js",
+      "default": "./dist/tables/dwarfs.js"
     },
     "./look": {
       "types": "./dist/scene/look.d.ts",

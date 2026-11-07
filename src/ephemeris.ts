@@ -4,7 +4,7 @@
 // Light travel time is allowed for, so a turning planet shows the face it really showed when the light left. Pure: no DOM, no three.js.
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
 import { DWARF_ELEMENTS } from "./data/dwarf.ts";
-import { DWARF_TABLES, type FittedTable } from "./data/dwarfs.ts";
+import { tableOf, type FittedTable } from "./data/tables.ts";
 import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
 import { VSOP87, type Variable } from "./data/vsop.ts";
 import { toTerrestrialTime } from "./time.ts";
@@ -139,7 +139,7 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
     const table = fittedPosition(PLUTO_TABLE, toTerrestrialTime(ms));
     if (table !== undefined) return table;
   }
-  const fitted = DWARF_TABLES[planet];
+  const fitted = tableOf(planet);
   if (fitted !== undefined) {
     const tt = toTerrestrialTime(ms);
     const table = fittedPosition(fitted, tt);

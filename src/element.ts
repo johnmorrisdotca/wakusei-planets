@@ -2,6 +2,7 @@
 // kazoku-ui's shared renderer (one WebGL context for the whole page), and need the body's own entry point loaded (`@johnmorrisdotca/wakusei-planets/jupiter`). It draws only when
 // something changes, at most 30 times a second while it moves, and nothing while it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; `turn="0"` is the only stop.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
+import "./tables/all.ts";
 import { orbitPath, nearMoons } from "./ephemeris.ts";
 import { BODIES, ringReach, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
