@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["index", "element", "scene/look", "scene/painter", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -47,3 +47,11 @@ for (const id of mod.BODY_IDS as string[]) {
 if (existsSync(new URL("../dist/textures/", import.meta.url)) && readdirSync(new URL("../dist/textures/", import.meta.url)).length !== pictures) throw new Error("dist/textures holds a picture no painted look names");
 if (pictureBytes > 2 * 1024 * 1024) throw new Error(`the pictures are ${(pictureBytes / 1048576).toFixed(2)} MB, over the 2 MB budget`);
 console.log(`painted ok: ${pictures} pictures, ${(pictureBytes / 1048576).toFixed(2)} MB in the package`);
+
+// Check the public sub-path through package resolution, as a consumer does.
+const coordinateEntry = "@johnmorrisdotca/wakusei-planets/coordinates";
+const coordinates = await import(coordinateEntry);
+const vector = coordinates.sphericalToCartesian({ origin: "heliocentric", frame: "eclipticJ2000", epoch: "J2000", corrections: "geometric", longitude: 0, latitude: 0, distanceAu: 1 });
+if (vector.xAu !== 1 || vector.yAu !== 0 || vector.zAu !== 0) throw new Error("coordinates package entry failed");
+const names = ["cartesianToSpherical", "eclipticToEquatorial", "equatorialToEcliptic", "equatorialToHorizontal", "meanObliquity", "sphericalToCartesian"];
+if (JSON.stringify(Object.keys(coordinates).sort()) !== JSON.stringify(names)) throw new Error("coordinates public API changed");

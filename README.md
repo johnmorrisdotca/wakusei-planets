@@ -321,6 +321,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
+| [Coordinate conversions](docs/guides/coordinates.md) | Pure spherical, ecliptic, equatorial and horizontal coordinate conversions |
 | [TypeScript and Node](docs/guides/typescript-and-node.md) | Types and the pure side |
 | [How it works](docs/guides/how-it-works.md) | Where the numbers come from |
 | [Architecture](docs/guides/architecture.md) | How the layers fit |
