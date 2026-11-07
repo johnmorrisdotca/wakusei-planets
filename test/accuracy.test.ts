@@ -8,12 +8,14 @@ import { heliocentric, moonGeocentric, moonVector } from "../src/ephemeris.ts";
 import { ORBITS } from "../src/data/orbits.ts";
 import { length, RAD, type Vec3 } from "../src/vec.ts";
 
-type Reference = { planetDates: string[]; moonDates: string[]; planets: Record<string, Vec3[]>; moons: Record<string, Vec3[]> };
+type Reference = { planetDates: string[]; moonDates: string[]; dwarfDates: string[]; planets: Record<string, Vec3[]>; moons: Record<string, Vec3[]>; dwarfs: Record<string, Vec3[]> };
 const reference = JSON.parse(readFileSync(new URL("./data/horizons.json", import.meta.url), "utf8")) as Reference;
 const AU_KM = 149597870.7;
 
 /** The worst direction error in arc-seconds from the Sun, over the dates, for each planet. */
 const PLANET_ARCSEC: Record<string, number> = { mercury: 3.5, venus: 1, earth: 2.2, mars: 2.2, jupiter: 2.8, saturn: 5.6, uranus: 5.8, neptune: 5, pluto: 0.3 };
+/** The worst direction error in arc-seconds from the Sun, over the dates from 1900 to 2100, for each dwarf planet besides Pluto. */
+const DWARF_ARCSEC: Record<string, number> = { ceres: 0.3, orcus: 0.1, haumea: 0.1, quaoar: 0.15, makemake: 0.15, gonggong: 0.1, eris: 0.1, sedna: 0.1 };
 /** The worst direction error in degrees from the planet (from the Pluto system's barycentre for Nix and Hydra), over the dates, for the Moon and each moon. */
 const MOON_DEGREES: Record<string, number> = {
   moon: 0.3, phobos: 0.9, deimos: 0.5, io: 0.15, europa: 0.15, ganymede: 0.3, callisto: 0.12,
@@ -36,6 +38,17 @@ test("every planet is where JPL Horizons puts it, within its limit, on every dat
   }
 });
 
+test("every dwarf planet is where JPL Horizons puts it, within its limit, on every date from 1900 to 2100", () => {
+  for (const [name, limit] of Object.entries(DWARF_ARCSEC)) {
+    const rows = reference.dwarfs[name]!;
+    rows.forEach((horizons, i) => {
+      const [x, y, z] = heliocentric(name as Parameters<typeof heliocentric>[0], Date.parse(reference.dwarfDates[i]!));
+      const arcseconds = degreesBetween([x * AU_KM, y * AU_KM, z * AU_KM], horizons) * 3600;
+      assert.ok(arcseconds <= limit, `${name} on ${reference.dwarfDates[i]} is ${arcseconds.toFixed(2)} arc-seconds from Horizons, the limit is ${limit}`);
+    });
+  }
+});
+
 test("the Moon and every moon are where JPL Horizons puts them, within their limits, on every date from 1900 to 2100", () => {
   for (const [name, limit] of Object.entries(MOON_DEGREES)) {
     const rows = reference.moons[name]!;
@@ -50,5 +63,5 @@ test("the Moon and every moon are where JPL Horizons puts them, within their lim
 
 test("every moon with an orbit in the table is measured, and no limit is for a body the package does not have", () => {
   for (const name of Object.keys(ORBITS)) if (name in MOON_DEGREES === false && name in reference.moons === false) assert.ok(["dysnomia", "hiiaka", "namaka", "vanth"].includes(name), `${name} has no accuracy limit`);
-  for (const name of [...Object.keys(MOON_DEGREES), ...Object.keys(PLANET_ARCSEC)]) assert.ok(name in reference.moons || name in reference.planets, name);
+  for (const name of [...Object.keys(MOON_DEGREES), ...Object.keys(PLANET_ARCSEC), ...Object.keys(DWARF_ARCSEC)]) assert.ok(name in reference.moons || name in reference.planets || name in reference.dwarfs, name);
 });

@@ -4,6 +4,7 @@
 // Light travel time is allowed for, so a turning planet shows the face it really showed when the light left. Pure: no DOM, no three.js.
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
 import { DWARF_ELEMENTS } from "./data/dwarf.ts";
+import { DWARF_TABLES, type FittedTable } from "./data/dwarfs.ts";
 import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
 import { VSOP87, type Variable } from "./data/vsop.ts";
 import { toTerrestrialTime } from "./time.ts";
@@ -67,12 +68,14 @@ function vsopPosition(series: readonly [Variable, Variable, Variable], terrestri
   return [radius * cosLatitude * Math.cos(longitude), radius * cosLatitude * Math.sin(longitude), radius * Math.sin(latitude)];
 }
 
-/** The Pluto system's barycentre from its Chebyshev table, as x, y, z in au, or undefined outside 1800 to 2200. */
-function plutoPosition(terrestrialMs: number): Vec3 | undefined {
-  const segment = Math.floor((terrestrialMs - PLUTO_START) / PLUTO_SEGMENT_MS);
-  const coefficients = PLUTO[segment];
+const PLUTO_TABLE: FittedTable = { start: PLUTO_START, segment: PLUTO_SEGMENT_MS, worst: 0, segments: PLUTO };
+
+/** A position from a Chebyshev table, as x, y, z in au, or undefined outside the years it covers. */
+function fittedPosition(table: FittedTable, terrestrialMs: number): Vec3 | undefined {
+  const segment = Math.floor((terrestrialMs - table.start) / table.segment);
+  const coefficients = table.segments[segment];
   if (coefficients === undefined) return undefined;
-  const x = (2 * (terrestrialMs - PLUTO_START - segment * PLUTO_SEGMENT_MS)) / PLUTO_SEGMENT_MS - 1;
+  const x = (2 * (terrestrialMs - table.start - segment * table.segment)) / table.segment - 1;
   const at = (axis: readonly number[]): number => {
     let b1 = 0;
     let b2 = 0;
@@ -86,8 +89,37 @@ function plutoPosition(terrestrialMs: number): Vec3 | undefined {
   return [at(coefficients[0]!), at(coefficients[1]!), at(coefficients[2]!)];
 }
 
+/** Each planet's mass as a fraction of the Sun's (IAU 2012 and JPL DE440 values; the Earth with its Moon), to find the Sun's place among the planets. */
+const MASS_OVER_SUN: Readonly<Record<string, number>> = {
+  mercury: 1 / 6023657.33,
+  venus: 1 / 408523.72,
+  earth: 1 / 328900.56,
+  mars: 1 / 3098703.59,
+  jupiter: 1 / 1047.3486,
+  saturn: 1 / 3497.9018,
+  uranus: 1 / 22902.98,
+  neptune: 1 / 19412.26,
+};
+
+/** The barycentre of the solar system seen from the Sun (J2000 ecliptic, au): the planets' mass-weighted places, which move the Sun about a million kilometres in twelve years. */
+function barycentreFromSun(terrestrialMs: number): Vec3 {
+  let x = 0;
+  let y = 0;
+  let z = 0;
+  let total = 1;
+  for (const id of Object.keys(MASS_OVER_SUN)) {
+    const m = MASS_OVER_SUN[id]!;
+    const p = vsopPosition(VSOP87[id]!, terrestrialMs);
+    x += m * p[0];
+    y += m * p[1];
+    z += m * p[2];
+    total += m;
+  }
+  return [x / total, y / total, z / total];
+}
+
 /**
- * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: Mercury to Neptune from the VSOP87B series and Pluto from a table fitted to Horizons (each within a few arc-seconds or better, see the accuracy guide), a dwarf planet from the osculating elements of one epoch (JPL's Small-Body Database).
+ * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: Mercury to Neptune from the VSOP87B series, and Pluto and the other dwarf planets from tables fitted to Horizons (each within a few arc-seconds or better, see the accuracy guide; outside a table's years a dwarf planet falls back to the osculating elements of one epoch from JPL's Small-Body Database).
  * @param planet - The planet's or dwarf planet's name.
  * @param ms - The instant, in milliseconds since 1970 (UTC).
  * @returns The position as x, y, z in au.
@@ -104,8 +136,17 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
   const vsop = VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
   if (planet === "pluto") {
-    const table = plutoPosition(toTerrestrialTime(ms));
+    const table = fittedPosition(PLUTO_TABLE, toTerrestrialTime(ms));
     if (table !== undefined) return table;
+  }
+  const fitted = DWARF_TABLES[planet];
+  if (fitted !== undefined) {
+    const tt = toTerrestrialTime(ms);
+    const table = fittedPosition(fitted, tt);
+    if (table !== undefined) {
+      const sun = barycentreFromSun(tt);
+      return [table[0] + sun[0], table[1] + sun[1], table[2] + sun[2]];
+    }
   }
   let a: number;
   let e: number;

@@ -27,6 +27,23 @@ Mercury to Neptune come from the VSOP87B series (Bretagnon and Francou, IMCCE), 
 
 An arc-second is 1/3600 of a degree. Uranus and Saturn are the loosest, because the cut series trades a few arc-seconds for size; Pluto, which is not in VSOP87, is fitted to Horizons and is the closest. The cut series is good for the years 1750 to 2250 and slowly gets worse beyond. Before 1972 the step from UTC to terrestrial time is delta T from the polynomials of Espenak and Meeus (NASA), and from 1972 it is exact.
 
+## The dwarf planets
+
+Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna are tables fitted to Horizons, like Pluto: Chebyshev segments (4 years each for Ceres, 50 to 200 for the slow ones) from the solar system's barycentre, where a distant body's path is smooth. From the Sun it also carries the Sun's own twelve-year swing about the barycentre (Jupiter's pull, about a million kilometres), which no short polynomial follows, so the package works out that swing from the planets' masses and adds it back. Ceres is tabulated for 1900 to 2100 and the others for 1800 to 2200; outside those years the osculating elements of one epoch answer, good for a few years either side of June 2026. Checked on six dates from 1900 to 2099 that are not on the fit's grid.
+
+| Body | Worst measured | Held to | Years |
+|---|---|---|---|
+| Ceres | 0.16″ | 0.3″ | 1900 to 2100 |
+| Orcus | 0.04″ | 0.1″ | 1800 to 2200 |
+| Haumea | 0.03″ | 0.1″ | 1800 to 2200 |
+| Quaoar | 0.08″ | 0.15″ | 1800 to 2200 |
+| Makemake | 0.08″ | 0.15″ | 1800 to 2200 |
+| Gonggong | under 0.01″ | 0.1″ | 1800 to 2200 |
+| Eris | 0.02″ | 0.1″ | 1800 to 2200 |
+| Sedna | under 0.01″ | 0.1″ | 1800 to 2200 |
+
+Before this, a dwarf planet was a plain ellipse that was right only near 2026: Ceres was 2° off in 2000 and 9° off in 1900, and the others were a few arc-minutes off.
+
 ## The Moon and the moons
 
 The Moon is the largest terms of Meeus's series. Every other moon's orbit is fitted to Horizons' own positions and velocities for 1950 to 2050: a mean orbit plane, a mean longitude that moves at a steady rate, and a periapsis and node that turn at steady rates. Where a steady rate is not enough, a moon has one more term: Phobos, whose orbit is shrinking, has an acceleration, and Mimas and Tethys, which pull on each other, swing back and forth over about 70 years. Checked on seven dates from 1900 to 2100, so the table includes 50 years either side of the fitted window.
