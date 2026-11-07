@@ -26,7 +26,7 @@ export function render(data,limits,ja=false){
 
 同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
 
-測定した wakusei は package.json 上の版 ${data.packages.wakusei.version}、**未リリースのソース [${data.packages.wakusei.sourceRevision.slice(0,7)}](https://github.com/johnmorrisdotca/wakusei-planets/tree/${data.packages.wakusei.sourceRevision})** です。同じ版番号の古い npm リリースの測定値という意味ではありません。
+測定した wakusei は package.json 上の版 ${data.packages.wakusei.version}、**ソースのリビジョン [${data.packages.wakusei.sourceRevision.slice(0,7)}](https://github.com/johnmorrisdotca/wakusei-planets/tree/${data.packages.wakusei.sourceRevision})**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
 
 ### 共有できる 1950–2050 年のサンプル
 
@@ -91,7 +91,7 @@ Windows の仮想環境は Scripts/python.exe を使います。COMPARE_PYTHON �
 
 We passed the same instants to each package and measured its direction error against JPL Horizons. These are **agreements on this sparse sample**, not guarantees over a whole date range or proof against physical observations. Smaller is better. A dash means unsupported or not measured, never zero error.
 
-Measured wakusei code: package.json version ${data.packages.wakusei.version}, **unreleased source revision [${data.packages.wakusei.sourceRevision.slice(0,7)}](https://github.com/johnmorrisdotca/wakusei-planets/tree/${data.packages.wakusei.sourceRevision})**. This is not a claim about the older npm release with that version label.
+Measured wakusei code: package.json version ${data.packages.wakusei.version}, **source revision [${data.packages.wakusei.sourceRevision.slice(0,7)}](https://github.com/johnmorrisdotca/wakusei-planets/tree/${data.packages.wakusei.sourceRevision})**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
 
 ### Shared samples from 1950–2050
 

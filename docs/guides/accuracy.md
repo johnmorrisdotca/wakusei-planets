@@ -107,7 +107,7 @@ A moon is drawn where it is to within a degree or two on its orbit, which is the
 
 We passed the same instants to each package and measured its direction error against JPL Horizons. These are **agreements on this sparse sample**, not guarantees over a whole date range or proof against physical observations. Smaller is better. A dash means unsupported or not measured, never zero error.
 
-Measured wakusei code: package.json version 0.19.0, **unreleased source revision [52cea27](https://github.com/johnmorrisdotca/wakusei-planets/tree/52cea2703db098cdd98a93aec65bd13ddb23ce56)**. This is not a claim about the older npm release with that version label.
+Measured wakusei code: package.json version 0.20.0, **source revision [52cea27](https://github.com/johnmorrisdotca/wakusei-planets/tree/52cea2703db098cdd98a93aec65bd13ddb23ce56)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
 
 ### Shared samples from 1950–2050
 
@@ -208,12 +208,12 @@ SunCalc 2.1.2's TT−UT polynomial targets approximately 1900–2150; 1800 is ou
 
 | Package/version | Measured code | Gzip bytes | Licence |
 |---|---|---:|---|
-| wakusei 0.19.0 | All main exports + all /suncalc exports + both optional tables | 66,061 | MIT |
+| wakusei 0.20.0 | All main exports + all /suncalc exports + both optional tables | 66,061 | MIT |
 | astronomy-engine 2.1.19 | All ESM entry exports | 43,971 | MIT |
 | solarsystem 0.1.8 | All Python module source (see caveat) | 11,351 | MIT |
 | suncalc 2.1.2 | All ESM entry exports | 3,893 | BSD-2-Clause |
 
-JavaScript sizes bundle every export as ESM with esbuild 0.25.12, minify, then gzip at level 9. The wakusei profile includes the optional data used by these rows, /suncalc, and the main entry's SVG/facts API. Python is a gzip of all .py module source, concatenated in filename order; it is not directly comparable to a JS bundle. Every size excludes language runtimes, installation metadata and images. Gzip can vary slightly with Python/Node versions. Root dependencies and src/ are unchanged. Sizes were recorded with Node v26.0.0 (zlib 1.2.12) and Python 3.14.4 (zlib 1.2.12). Reproduction requires identical minified bytes and code fingerprints; it reports compressed-size differences without treating compressor variation as a scientific regression.
+JavaScript sizes bundle every export as ESM with esbuild 0.25.12, minify, then gzip at level 9. The wakusei profile includes the optional data used by these rows, /suncalc, and the main entry's SVG/facts API. Python is a gzip of all .py module source, concatenated in filename order; it is not directly comparable to a JS bundle. Every size excludes language runtimes, installation metadata and images. Gzip can vary slightly with Python/Node versions. Root dependencies and src/ are unchanged. Sizes were recorded with Node v24.14.1 (zlib 1.2.12) and Python 3.14.4 (zlib 1.2.12). Reproduction requires identical minified bytes and code fingerprints; it reports compressed-size differences without treating compressor variation as a scientific regression.
 
 Each package receives the same UTC instant. Wakusei runs its theories in TT; Astronomy Engine uses its own Delta-T model; SunCalc uses its TT−UT polynomial; Python solarsystem uses UT day counts directly in its theory. Historical Horizons UT is not identical to modern UTC; UT1/Earth-orientation handling and future Delta-T differences also enter the errors. We do not adjust input clocks to improve a competitor's score. Equal UTC inputs do not imply identical internal TT assumptions.
 
