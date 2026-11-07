@@ -3,12 +3,13 @@
 // something changes, at most 30 times a second while it moves, and nothing while it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; `turn="0"` is the only stop.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import "./tables/all.ts";
-import { orbitPath, nearMoons } from "./ephemeris.ts";
+import { orbitPath, nearMoons, type Pose } from "./ephemeris.ts";
 import { BODIES, ringReach, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
 import { createLive, defaultTurn, REDUCED_TURN, type LiveFrame, type LiveRequest } from "./live.ts";
-import { VERSION } from "./version.ts";
+import { texturePaths } from "./scene/textures.ts";
+export { TEXTURE_BASE, TEXTURE_FAR_BASE } from "./scene/textures.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
@@ -29,31 +30,6 @@ export { setThreeLoader };
  */
 export type WakuseiState = "line" | "loading" | "still" | "live" | "lost" | "unavailable";
 
-/**
- * The default home of the surface pictures: the files of this exact version on jsDelivr. Set `texture-base` on an element to serve them yourself.
- *
- * @example
- * ```ts no-run
- * import { TEXTURE_BASE } from "@johnmorrisdotca/wakusei-planets/element";
- *
- * console.log(TEXTURE_BASE);
- * ```
- */
-export const TEXTURE_BASE = `https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets@${VERSION}/dist/textures/`;
-
-/**
- * Where the sharpest surface pictures are: the files of this exact version in the repository, on jsDelivr's GitHub address. The npm package holds only the two smaller widths, so a page that
- * never zooms in never fetches them. Set `texture-far-base` on an element to serve them yourself.
- *
- * @example
- * ```ts no-run
- * import { TEXTURE_FAR_BASE } from "@johnmorrisdotca/wakusei-planets/element";
- *
- * console.log(TEXTURE_FAR_BASE);
- * ```
- */
-export const TEXTURE_FAR_BASE = `https://cdn.jsdelivr.net/gh/johnmorrisdotca/wakusei-planets@v${VERSION}/textures/`;
-
 const num = (value: string | null, fallback: number): number => {
   if (value === null || value.trim() === "") return fallback;
   const n = Number(value);
@@ -69,7 +45,14 @@ const readTime = (value: string | null): number | "now" | undefined => {
   return Number.isFinite(ms) ? ms : undefined;
 };
 
-/** The half-width of the picture, in body radii, for a body alone, with a scale to another body, or with its moons. */
+const vectorKey = (v: Vec3): string => `${v[0].toFixed(2)},${v[1].toFixed(2)},${v[2].toFixed(2)}`;
+
+function turnPose(pose: Pose, axis: Vec3, degrees: number): void {
+  pose.pole = turnVec(pose.pole, axis, degrees);
+  pose.meridian = turnVec(pose.meridian, axis, degrees);
+  pose.light = turnVec(pose.light, axis, degrees);
+}
+
 /** The half-width of a body's picture, in its radii, when it has no scale of its own: the globe takes a little under half the height, so its rings, glow and haze have room round it. */
 const ROOM = 2.2;
 
@@ -221,15 +204,8 @@ export class WakuseiBody extends HTMLElement {
     this.#io?.disconnect();
     document.removeEventListener("visibilitychange", this.#onHidden);
     this.#unsub?.();
-    this.removeEventListener("pointerenter", this.#hover);
-    this.removeEventListener("focusin", this.#hover);
-    this.removeEventListener("pointerdown", this.#hover);
-    this.#view?.dispose();
-    this.#view = undefined;
-    this.#viewKey = "";
-    this.#release?.();
-    this.#release = undefined;
-    this.#renderer = undefined;
+    this.#applyHover(false);
+    this.#disposeView(true);
   }
 
   attributeChangedCallback(name: string): void {
@@ -296,10 +272,10 @@ export class WakuseiBody extends HTMLElement {
       rate: Math.max(-1e7, Math.min(1e7, num(this.getAttribute("rate"), 1))),
       moons,
       portrait: {
-        ...(this.hasAttribute("tilt") ? { tilt: num(this.getAttribute("tilt"), 0) } : {}),
-        ...(this.hasAttribute("pitch") ? { pitch: num(this.getAttribute("pitch"), 0) } : {}),
-        ...(this.hasAttribute("phase") ? { phase: num(this.getAttribute("phase"), 0) } : {}),
-        ...(this.hasAttribute("meridian") ? { spin: num(this.getAttribute("meridian"), 0) } : {}),
+        tilt: this.hasAttribute("tilt") ? num(this.getAttribute("tilt"), 0) : undefined,
+        pitch: this.hasAttribute("pitch") ? num(this.getAttribute("pitch"), 0) : undefined,
+        phase: this.hasAttribute("phase") ? num(this.getAttribute("phase"), 0) : undefined,
+        spin: this.hasAttribute("meridian") ? num(this.getAttribute("meridian"), 0) : undefined,
       },
       turn: (this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : this.getAttribute("live") === "off" ? 0 : defaultTurn(this.body)) * (this.#reduce ? REDUCED_TURN : 1),
     };
@@ -315,38 +291,38 @@ export class WakuseiBody extends HTMLElement {
   // --- the state of the scene --------------------------------------------------------------------------------------------------------------------
 
   #sceneOf(frame: LiveFrame): SceneState {
-    let { pole, meridian, light } = frame.pose;
+    const pose: Pose = { pole: frame.pose.pole, meridian: frame.pose.meridian, light: frame.pose.light };
     const tiltBy = this.#pitchDelta - this.#tilt;
-    if (this.#yaw !== 0) meridian = turnVec(meridian, pole, this.#yaw);
-    if (tiltBy !== 0) {
-      const x: Vec3 = [1, 0, 0];
-      pole = turnVec(pole, x, tiltBy);
-      meridian = turnVec(meridian, x, tiltBy);
-      light = turnVec(light, x, tiltBy);
-    }
+    if (this.#yaw !== 0) pose.meridian = turnVec(pose.meridian, pose.pole, this.#yaw);
+    if (tiltBy !== 0) turnPose(pose, [1, 0, 0], tiltBy);
     const roll = -this.#roll;
-    if (roll !== 0) {
-      const z: Vec3 = [0, 0, 1];
-      pole = turnVec(pole, z, roll);
-      meridian = turnVec(meridian, z, roll);
-      light = turnVec(light, z, roll);
-    }
+    if (roll !== 0) turnPose(pose, [0, 0, 1], roll);
     const r = this.#request();
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
     const span = num(this.getAttribute("span-km"), 0);
-    const extent = extentOf(this.body, { ...(this.getAttribute("fit") === "tight" ? { tight: true } : {}), ...(span > 0 ? { spanKm: span } : {}), ...(scaleTo !== null && scaleTo in BODIES ? { scaleTo } : {}), moons: r.moons, ...(range !== undefined && range > 0 ? { range } : {}) });
-    const moons: MoonDraw[] | undefined = r.moons
-      ? frame.moons
-          .filter((m) => m.distance <= extent * 1.05)
-          .map((m) => {
-            const orbit = this.#orbits.get(m.id as string);
-            const tipped = tiltBy === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [1, 0, 0], tiltBy);
-            const rotated = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
-            return { id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], ...(orbit !== undefined ? { orbit: tiltBy === 0 && roll === 0 ? orbit : this.#tiltedOrbit(m.id as string, orbit, tiltBy, roll) } : {}) };
-          })
-      : undefined;
-    return { pose: { pole, meridian, light }, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), ...(moons !== undefined ? { moons } : {}) };
+    const extent = extentOf(this.body, {
+      tight: this.getAttribute("fit") === "tight",
+      spanKm: span > 0 ? span : undefined,
+      scaleTo: scaleTo !== null && scaleTo in BODIES ? scaleTo : undefined,
+      moons: r.moons,
+      range: range !== undefined && range > 0 ? range : undefined,
+    });
+    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll) : undefined;
+    return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons };
+  }
+
+  #moonsOf(frame: LiveFrame, extent: number, tilt: number, roll: number): MoonDraw[] {
+    const moons: MoonDraw[] = [];
+    for (const m of frame.moons) {
+      if (m.distance <= extent * 1.05) {
+        const orbit = this.#orbits.get(m.id as string);
+        const tipped = tilt === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [1, 0, 0], tilt);
+        const rotated = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
+        moons.push({ id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], orbit: orbit === undefined || (tilt === 0 && roll === 0) ? orbit : this.#tiltedOrbit(m.id as string, orbit, tilt, roll) });
+      }
+    }
+    return moons;
   }
 
   #tilted = new Map<string, { source: Float32Array; tilt: number; roll: number; out: Float32Array }>();
@@ -399,7 +375,6 @@ export class WakuseiBody extends HTMLElement {
 
   async #refresh(): Promise<void> {
     if (!this.isConnected) return;
-    const stage = this.#stage;
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
     const delegate = this.look === "line" ? delegates.get(this.body) : undefined;
@@ -414,14 +389,7 @@ export class WakuseiBody extends HTMLElement {
     }
     const wants3d = this.look !== "line" && this.#state !== "unavailable";
     if (!wants3d) {
-      if (this.#view !== undefined) {
-        this.#view.dispose();
-        this.#view = undefined;
-        this.#viewKey = "";
-        this.#release?.();
-        this.#release = undefined;
-        this.#renderer = undefined;
-      }
+      if (this.#view !== undefined) this.#disposeView(true);
       this.#drawLine();
       if (this.look === "line") this.#set("line");
       return;
@@ -429,9 +397,7 @@ export class WakuseiBody extends HTMLElement {
     const sig = `${this.body}|${this.look}`;
     if (this.#view !== undefined && this.#viewSig !== sig) {
       if (this.#view.live) this.#wantLive = true;
-      this.#view.dispose();
-      this.#view = undefined;
-      this.#viewKey = "";
+      this.#disposeView();
     }
     if (this.#view === undefined || this.#viewKey === "") await this.#ensureView();
     if (this.#view?.live !== true && this.#wantLive) {
@@ -445,7 +411,6 @@ export class WakuseiBody extends HTMLElement {
       this.#rekey();
       if (this.#wantLive || this.#hasPriority()) void this.goLive();
     }
-    void stage;
   }
 
   #hasPriority(): boolean {
@@ -453,14 +418,11 @@ export class WakuseiBody extends HTMLElement {
     return mode === "always" && this.#visible;
   }
 
-  #applyHover(): void {
-    this.removeEventListener("pointerenter", this.#hover);
-    this.removeEventListener("focusin", this.#hover);
-    this.removeEventListener("pointerdown", this.#hover);
-    if ((this.getAttribute("live") ?? "always") === "hover") {
-      this.addEventListener("pointerenter", this.#hover);
-      this.addEventListener("focusin", this.#hover);
-      this.addEventListener("pointerdown", this.#hover);
+  #applyHover(allow = true): void {
+    const events = ["pointerenter", "focusin", "pointerdown"];
+    for (const name of events) this.removeEventListener(name, this.#hover);
+    if (allow && (this.getAttribute("live") ?? "always") === "hover") {
+      for (const name of events) this.addEventListener(name, this.#hover);
     }
   }
 
@@ -483,20 +445,31 @@ export class WakuseiBody extends HTMLElement {
       size,
       pose: scene.pose,
       ...(r.moons ? { moons: true, ...(frame.time !== undefined ? { time: frame.time } : {}), range: scene.extent, moonsAt: (scene.moons ?? []).map((m) => ({ id: m.id as MoonId, x: m.x, y: m.y, z: m.z, distance: Math.hypot(m.x, m.y, m.z) })), orbits: new Map((scene.moons ?? []).filter((m) => m.orbit !== undefined).map((m) => [m.id as string, m.orbit!])) } : {}),
-      ...(scaleTo !== null || this.hasAttribute("span-km") || this.getAttribute("fit") !== "tight" ? { fill: this.#fill() } : {}),
-      ...(this.getAttribute("lang") === "ja" ? { lang: "ja" as const } : {}),
-      ...(this.getAttribute("labels") === "off" ? { labels: false } : {}),
-      ...(stroke !== "" ? { stroke } : {}),
-      ...(paper !== "" ? { paper } : {}),
+      fill: scaleTo !== null || this.hasAttribute("span-km") || this.getAttribute("fit") !== "tight" ? this.#fill() : undefined,
+      lang: this.getAttribute("lang") === "ja" ? "ja" : undefined,
+      labels: this.getAttribute("labels") === "off" ? false : undefined,
+      stroke: stroke || undefined,
+      paper: paper || undefined,
       ...(this.#zoom !== 1 ? { zoom: this.#zoom, panX: scene.panX, panY: scene.panY } : {}),
     });
     this.#stage.innerHTML = html;
   }
 
   #key(state: SceneState): string {
-    const q = (v: Vec3): string => v.map((n) => n.toFixed(2)).join(",");
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
-    return `${this.body}|${this.look}|${q(state.pose.pole)}|${q(state.pose.meridian)}|${q(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}`;
+    return `${this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}`;
+  }
+
+  // Replacing a view keeps the renderer lease; leaving 3D gives it back.
+  #disposeView(releaseRenderer = false): void {
+    this.#view?.dispose();
+    this.#view = undefined;
+    this.#viewKey = "";
+    if (releaseRenderer) {
+      this.#release?.();
+      this.#release = undefined;
+      this.#renderer = undefined;
+    }
   }
 
   /** The renderer, the view and its first still. */
@@ -517,21 +490,12 @@ export class WakuseiBody extends HTMLElement {
     this.#viewSig = `${this.body}|${this.look}`;
     this.#stilled = false;
     this.#stage.innerHTML = "";
-    const base = (): string => {
-      const own = this.getAttribute("texture-base");
-      return own === null || own === "" ? TEXTURE_BASE : own.endsWith("/") ? own : `${own}/`;
-    };
     const item = createBodyItem({
       id: this.body,
       look: this.look === "illustrated" ? "realistic" : "painted",
       key: this.#viewKey,
       state: () => this.#sceneState ?? state,
-      textureBase: base,
-      farBase: () => {
-        const own = this.getAttribute("texture-far-base");
-        if (own !== null && own !== "") return own.endsWith("/") ? own : `${own}/`;
-        return this.hasAttribute("texture-base") ? base() : TEXTURE_FAR_BASE;
-      },
+      ...texturePaths(this),
       wantedWidth: (discPx) => discPx * Math.min(2, window.devicePixelRatio || 1) * 1.6,
       redraw: () => this.#view?.invalidate(),
       report: (note) => {
@@ -548,9 +512,7 @@ export class WakuseiBody extends HTMLElement {
   /** A body whose line look another package draws (the Earth's globe with its countries). It is drawn at the body's size in a scale picture, never larger than the picture. */
   async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>): Promise<void> {
     if (this.#view !== undefined) {
-      this.#view.dispose();
-      this.#view = undefined;
-      this.#viewKey = "";
+      this.#disposeView();
     }
     const center = this.hasAttribute("meridian") ? `${num(this.getAttribute("meridian"), 10)},20` : "10,20";
     const size = Math.round(this.clientWidth || 320);
@@ -590,8 +552,7 @@ export class WakuseiBody extends HTMLElement {
     const state = this.#sceneOf(this.#frameNow());
     const key = this.#key(state);
     if (key === this.#viewKey && this.#view.item !== undefined) return;
-    this.#view.dispose();
-    this.#view = undefined;
+    this.#disposeView();
     this.#makeView();
   }
 
