@@ -25,6 +25,12 @@ test("the scientific engine does not reach compatibility wrappers or rendering",
   assert.ok(!/document\.|window\.|three/.test(new TextDecoder().decode(result.outputFiles[0]!.contents)));
 });
 
+test("unused heliocentric metadata does not retain position tables in a pole-only import", async () => {
+  const result = await build({ stdin: { contents: 'export { poleOf } from "./src/ephemeris.ts";', resolveDir: process.cwd() }, bundle: true, platform: "neutral", format: "esm", write: false, metafile: true });
+  const inputs = Object.values(result.metafile!.outputs)[0]!.inputs;
+  for (const file of ["src/data/vsop.ts", "src/data/lunar.ts", "src/data/pluto.ts"]) assert.equal(inputs[file]?.bytesInOutput ?? 0, 0, file);
+});
+
 // The public aliases retain their structural contracts; lengths keep their units.
 export function observerAndPositionContracts(observer: CoordinateObserver, engine: Equatorial, coordinates: EquatorialCoordinates): void {
   const sameObserver: Observer = observer;
