@@ -226,7 +226,7 @@ export function getMoonIllumination(date: Date | number = new Date()): MoonIllum
  * ```
  */
 export function getTimes(date: Date | number, lat: number, lng: number, height = 0, utcOffset?: number): SunTimes {
-  const day = sunDay(moment(date), place(lat, lng, height), checkOffset(utcOffset), times);
+  const day = sunDay(moment(date), place(lat, lng, height), utcOffset, times);
   const result = { solarNoon: new Date(day.noon), nadir: new Date(day.nadir) } as SunTimes;
   for (const [name, at] of day.events) result[name] = at === null ? null : new Date(at);
   if (day.alwaysUp) result.alwaysUp = true;
@@ -254,7 +254,7 @@ export function getTimes(date: Date | number, lat: number, lng: number, height =
 export function getMoonTimes(date: Date | number, lat: number, lng: number, utcOffset?: number): MoonTimes {
   const ms = moment(date);
   const observer = place(lat, lng);
-  const [start, end] = dayWindow(ms, observer, checkOffset(utcOffset));
+  const [start, end] = dayWindow(ms, observer, utcOffset);
   const day = moonDay(start, end, observer);
   const result: MoonTimes = {};
   if (day.rise !== null) result.rise = new Date(day.rise);
@@ -264,10 +264,4 @@ export function getMoonTimes(date: Date | number, lat: number, lng: number, utcO
   if (day.alwaysUp) result.alwaysUp = true;
   if (day.alwaysDown) result.alwaysDown = true;
   return result;
-}
-
-/** A UTC offset in minutes, or undefined, throwing on anything else. */
-function checkOffset(utcOffset: number | undefined): number | undefined {
-  if (utcOffset !== undefined && !Number.isFinite(utcOffset)) throw new RangeError(`utcOffset must be a finite number of minutes east of UTC, got ${utcOffset}`);
-  return utcOffset;
 }
