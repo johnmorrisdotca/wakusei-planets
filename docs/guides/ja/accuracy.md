@@ -107,7 +107,7 @@ console.log(Math.hypot(x, y, z).toFixed(2));
 
 同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
 
-測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [778ed8c](https://github.com/johnmorrisdotca/wakusei-planets/tree/778ed8cbcbfdda551e2bc79e12873188e3bf07f1)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
+測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [573d1c9](https://github.com/johnmorrisdotca/wakusei-planets/tree/573d1c97ae31138c12f87c405c3b07f3e7693d0a)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
 
 ### 共有できる 1950–2050 年のサンプル
 
@@ -208,7 +208,7 @@ SunCalc 2.1.2 の TT−UT 多項式は約1900–2150年を対象とし、1800年
 
 | パッケージ・版 | 測定したコード | gzip（バイト） | ライセンス |
 |---|---|---:|---|
-| wakusei 0.20.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル | 65,653 | MIT |
+| wakusei 0.20.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル | 65,659 | MIT |
 | astronomy-engine 2.1.19 | ESM エントリーの全出力 | 43,971 | MIT |
 | solarsystem 0.1.8 | Python 全モジュールのソース（下記参照） | 11,351 | MIT |
 | suncalc 2.1.2 | ESM エントリーの全出力 | 3,893 | BSD-2-Clause |
