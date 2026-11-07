@@ -69,3 +69,24 @@ console.log(bodies, "bodies;", moons, "moons");
 ## データ
 
 大きさ、扁平率、極、自転は IAU の値と NASA の資料です。水星から海王星の位置は VSOP87B を短くしたもの、冥王星は Horizons に合わせた表、月の位置は月理論 ELP2000-82B を大きい540項に短くしたもの、ほかの衛星は JPL Horizons の位置に合わせた軌道です。衛星の表は `scripts/make-moon-data.py` が作り、手では編集しません。`test/accuracy.test.ts` が、すべての天体を限度の中に保ちます ([精度](accuracy.md))。出典のない事実は、推測せずに省きます。出どころは[しくみ](how-it-works.md)にあります。
+
+## 科学計算の座標系とモデルの選択
+
+時計は UTC を TT に変換します。`src/sidereal.ts` は平均黄道傾斜、IAU 1980 の章動項、折り返す前の平均恒星時角を一か所で定義します。`src/sky/frames.ts` は、J2000 平均黄道座標 → J2000 平均赤道座標 → 日付の平均赤道座標（IAU 1976 歳差）→ 日付の真赤道座標（章動）の回転を担当します。月理論の ELP 黄道歳差は別のモデルなので、赤道歳差と統合しません。
+
+空の計算エンジンは必要な光行差・光行時間を加え、地表観測者の視差、真赤道座標から地平座標への回転を行います。大気差は独立した計算です。`/coordinates` は対応する**平均**座標系だけを回転し、地平座標には平均恒星時を使います。視差・章動・大気差を追加しません。SunCalc 1 と 2 の単位、方位角の原点、起きない現象の表現、一日の定義は各ラッパーに置き、科学計算エンジンはラッパーを読み込みません。
+
+`CoordinateObserver` とエンジンの `Observer` は同じ型です。緯度・経度は測地座標の度数、任意の `heightM` は WGS 84 楕円体からのメートルです。赤経・赤緯は度数の方向型を共有し、距離は `distanceKm` または `distanceAu` と明記します。`/coordinates` は高さを検証するだけで回転には使いません。空のエンジンは視差に使います。互換性のため、SunCalc の `getTimes` は同じ入力値を見える地平線からの高さとして地平線の伏角にも使います。ジオイドや地形の補正は推測しません。二つの高さ基準を同じとするのは従来の近似であり、自動変換ではありません。
+
+```ts
+import { heliocentric } from "@johnmorrisdotca/wakusei-planets";
+
+const when = Date.UTC(2026, 10, 7);
+console.log(heliocentric.model("ceres", when));
+await import("@johnmorrisdotca/wakusei-planets/tables/ceres");
+console.log(heliocentric.model("ceres", when));
+```
+
+`heliocentric.model(body, milliseconds)` は、**現在**登録されている表と TT の区間範囲に基づき、位置を返す理論を報告します。水星から海王星は `vsop87b`、冥王星は内蔵の `chebyshev` 表を優先します。登録された準惑星の表は範囲内でだけ使います。範囲外では準惑星が `osculating-elements`、冥王星が `approximate-elements` に戻ります。表を読み込んだ後や時刻を変えた後は再照会してください。位置と読み込みの動作は変わらず、この照会が任意の表を読み込むこともありません。
+
+`worstArcseconds` はフィットに使わず保留した標本で測った最大誤差で、全日付の保証ではありません。冥王星は 0.14637″ です。VSOP87B と軌道要素による代替計算には対応する保留標本の上限がないため `null` を返します。[精度比較](accuracy.md) は Horizons に対する別の疎な日付集合の測定で、こちらも全期間の最大誤差を保証しません。
