@@ -91,7 +91,7 @@ function aggregate(samples) {
 async function size(entry){
   const result=await build({entryPoints:[entry],bundle:true,minify:true,format:'esm',platform:'node',write:false,logLevel:'silent',metafile:true});
   const data=result.outputFiles[0].contents;
-  return {minifiedBytes:data.byteLength,gzipBytes:gzipSync(data,{level:9}).byteLength,sourceFiles:Object.keys(result.metafile.inputs).length};
+  return {minifiedBytes:data.byteLength,gzipBytes:gzipSync(data,{level:9}).byteLength,sourceFiles:Object.keys(result.metafile.inputs).length,bundleSha256:createHash('sha256').update(data).digest('hex')};
 }
 // Virtual entry preserves ALL exports of each measured API; no function subset cherry-picking.
 async function ourSize(){
@@ -101,7 +101,7 @@ async function ourSize(){
 const previous=process.argv.includes('--check')?json('results.json'):null;
 const sourceRevision=previous?.packages.wakusei.sourceRevision || spawnSync('git',['log','-1','--format=%H','--','src'],{cwd:root,encoding:'utf8'}).stdout.trim();
 if(!/^[a-f0-9]{40}$/.test(sourceRevision))throw new Error('cannot identify measured model source revision');
-const output={schemaVersion:1,runtime:{node:process.version,python:py.python},observerFixtureSha256:createHash('sha256').update(observerBytes).digest('hex'),fixtureSha256:createHash('sha256').update(referenceBytes).digest('hex'),
+const output={schemaVersion:1,runtime:{node:process.version,nodeZlib:process.versions.zlib,python:py.python,pythonZlib:py.zlib},observerFixtureSha256:createHash('sha256').update(observerBytes).digest('hex'),fixtureSha256:createHash('sha256').update(referenceBytes).digest('hex'),
   configuration:{vectorUnits:'km for geometric vectors; unit local north/east/up directions for horizon rows',pythonMoonEarthRadiusKm:6378.14,frame:'geometric J2000 mean ecliptic; separate apparent airless topocentric horizon rows',observer:observer.observer,solarsystemPrecession:false,solarsystemFrames:{planetsAndMoon:'mean ecliptic of date',ceresAndEris:'fixed J2000 element-frame interpretation; alternative of-date scores retained'}},
   packages:{
     wakusei:{version:json('../../package.json').version,sourceRevision,license:'MIT',...await ourSize()},
@@ -123,8 +123,9 @@ if(process.argv.includes('--check')) {
   if(previous.packages.wakusei.bundleSha256!==output.packages.wakusei.bundleSha256)throw new Error('measured source bundle changed: regenerate and review');
   for(const k of columns){
     const a=output.packages[k],b=previous.packages[k];
-    if(a.version!==b.version || a.license!==b.license || Math.abs(a.gzipBytes-b.gzipBytes)>64 || a.minifiedBytes!==b.minifiedBytes || a.sourceSha256!==b.sourceSha256)throw new Error(`package/profile drift: ${k}`);
+    if(a.version!==b.version || a.license!==b.license || a.minifiedBytes!==b.minifiedBytes || a.sourceSha256!==b.sourceSha256 || a.bundleSha256!==b.bundleSha256)throw new Error(`package/profile drift: ${k}`);
   }
+  console.log('compression audit:',JSON.stringify({runtime:output.runtime,measured:Object.fromEntries(columns.map(k=>[k,output.packages[k].gzipBytes])),published:Object.fromEntries(columns.map(k=>[k,previous.packages[k].gzipBytes]))}));
   for(const row of output.rows){
     const old=previous.rows.find(r=>r.body===row.body&&r.date===row.date);
     if(!old)throw new Error(`unrecorded sample ${row.body} ${row.date}`);

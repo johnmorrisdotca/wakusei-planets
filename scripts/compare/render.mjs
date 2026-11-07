@@ -60,7 +60,7 @@ SunCalc 2.1.2 の TT−UT 多項式は約1900–2150年を対象とし、1800年
 
 ${sizes(data,true)}
 
-JavaScript は esbuild 0.25.12 で全出力を ESM にバンドルして最小化し、gzip level 9 で圧縮します。wakusei の測定にはこの表で使う任意データと /suncalc を含み、メインの SVG・天体情報も含みます。Python はファイル名順の .py 全文を連結した gzip であり、JS バンドルとの単純な大小比較には使えません。どの値も言語ランタイム・インストール用メタデータ・画像を除きます。Python や Node の版によって gzip が少し変わることがあります。root の依存関係と src/ は変更していません。記録環境は Node ${data.runtime.node}、Python ${data.runtime.python} です。再現確認では gzip の64バイト以内の差だけを許し、最小化コードのバイト数とソースの指紋は一致を求めます。
+JavaScript は esbuild 0.25.12 で全出力を ESM にバンドルして最小化し、gzip level 9 で圧縮します。wakusei の測定にはこの表で使う任意データと /suncalc を含み、メインの SVG・天体情報も含みます。Python はファイル名順の .py 全文を連結した gzip であり、JS バンドルとの単純な大小比較には使えません。どの値も言語ランタイム・インストール用メタデータ・画像を除きます。Python や Node の版によって gzip が少し変わることがあります。root の依存関係と src/ は変更していません。記録環境は Node ${data.runtime.node}（zlib ${data.runtime.nodeZlib}）、Python ${data.runtime.python}（zlib ${data.runtime.pythonZlib}）です。再現確認では最小化コードのバイト数とコードの指紋に一致を求めます。圧縮後のサイズ差は表示しますが、圧縮器の差を科学的な回帰とは判定しません。
 
 同じ UTC インスタントを渡します。wakusei は理論を TT で実行し、Astronomy Engine は自身の Delta-T モデル、SunCalc は自身の TT−UT 多項式を使います。Python solarsystem は UT の日数をそのまま理論に使います。歴史的な Horizons の UT は近代的な UTC と同一ではなく、UT1・地球姿勢・将来の Delta-T の扱いも誤差に含まれます。入力時刻を調整して相手の結果を良くすることはしていません。同じ UTC 入力でも、内部の TT の仮定が一致するとは限りません。
 
@@ -125,7 +125,7 @@ SunCalc 2.1.2's TT−UT polynomial targets approximately 1900–2150; 1800 is ou
 
 ${sizes(data,false)}
 
-JavaScript sizes bundle every export as ESM with esbuild 0.25.12, minify, then gzip at level 9. The wakusei profile includes the optional data used by these rows, /suncalc, and the main entry's SVG/facts API. Python is a gzip of all .py module source, concatenated in filename order; it is not directly comparable to a JS bundle. Every size excludes language runtimes, installation metadata and images. Gzip can vary slightly with Python/Node versions. Root dependencies and src/ are unchanged. Sizes were recorded with Node ${data.runtime.node} and Python ${data.runtime.python}; reproduction accepts up to 64 bytes of gzip variation but requires identical minified bytes and source fingerprints.
+JavaScript sizes bundle every export as ESM with esbuild 0.25.12, minify, then gzip at level 9. The wakusei profile includes the optional data used by these rows, /suncalc, and the main entry's SVG/facts API. Python is a gzip of all .py module source, concatenated in filename order; it is not directly comparable to a JS bundle. Every size excludes language runtimes, installation metadata and images. Gzip can vary slightly with Python/Node versions. Root dependencies and src/ are unchanged. Sizes were recorded with Node ${data.runtime.node} (zlib ${data.runtime.nodeZlib}) and Python ${data.runtime.python} (zlib ${data.runtime.pythonZlib}). Reproduction requires identical minified bytes and code fingerprints; it reports compressed-size differences without treating compressor variation as a scientific regression.
 
 Each package receives the same UTC instant. Wakusei runs its theories in TT; Astronomy Engine uses its own Delta-T model; SunCalc uses its TT−UT polynomial; Python solarsystem uses UT day counts directly in its theory. Historical Horizons UT is not identical to modern UTC; UT1/Earth-orientation handling and future Delta-T differences also enter the errors. We do not adjust input clocks to improve a competitor's score. Equal UTC inputs do not imply identical internal TT assumptions.
 

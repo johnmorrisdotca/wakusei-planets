@@ -1,5 +1,5 @@
 """Public API adapter only. No third-party implementation is copied here."""
-import json, sys, gzip, pathlib, hashlib, platform
+import json, sys, gzip, pathlib, hashlib, platform, zlib
 from datetime import datetime
 import solarsystem
 
@@ -15,4 +15,4 @@ for iso in request['dates']:
     rows[iso]={'planets':{k.lower():v for k,v in h.planets().items()},'moon':solarsystem.Moon(**args(iso),topographic=False).position(), 'julianDate':h.d+2451543.5}
 root=pathlib.Path(solarsystem.__file__).parent
 payload=b''.join(p.name.encode()+b'\n'+p.read_bytes()+b'\n' for p in sorted(root.glob('*.py')))
-print(json.dumps({'version':solarsystem.__version__,'python':platform.python_version(),'sourceGzipBytes':len(gzip.compress(payload,compresslevel=9,mtime=0)),'sourceSha256':hashlib.sha256(payload).hexdigest(),'rows':rows},allow_nan=False))
+print(json.dumps({'version':solarsystem.__version__,'python':platform.python_version(),'zlib':zlib.ZLIB_VERSION,'sourceGzipBytes':len(gzip.compress(payload,compresslevel=9,mtime=0)),'sourceSha256':hashlib.sha256(payload).hexdigest(),'rows':rows},allow_nan=False))

@@ -2,7 +2,9 @@
   "schemaVersion": 1,
   "runtime": {
     "node": "v26.0.0",
-    "python": "3.14.4"
+    "nodeZlib": "1.2.12",
+    "python": "3.14.4",
+    "pythonZlib": "1.2.12"
   },
   "observerFixtureSha256": "d09b1f96a74917e92976f48bf3970871397762c262925a2a1c943bd214b8c4d7",
   "fixtureSha256": "06b9a96371d6faa89a45ef2a571a861aae1f5c186c330d19849cdb740f8f4bd8",
@@ -35,7 +37,8 @@
       "license": "MIT",
       "minifiedBytes": 107095,
       "gzipBytes": 43971,
-      "sourceFiles": 1
+      "sourceFiles": 1,
+      "bundleSha256": "dbe07509b72ca4129fd0a92cd918205221ecc38e61a170e6fab0e32945cf9f8f"
     },
     "solarsystem": {
       "version": "0.1.8",
@@ -48,7 +51,8 @@
       "license": "BSD-2-Clause",
       "minifiedBytes": 8024,
       "gzipBytes": 3893,
-      "sourceFiles": 1
+      "sourceFiles": 1,
+      "bundleSha256": "a0c18d44910059f8617a1e15818886f07d03828a7b43ebfcb66fd46c6496358b"
     }
   },
   "calendarOffsets": [
