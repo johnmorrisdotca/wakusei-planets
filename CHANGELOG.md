@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## 0.17.2 - 2026-11-07
+
+Rings are drawn all the way round.
+
+- Every ring is drawn all the way round again. Both halves of a ring covered the side toward the camera, so the far half, which passes behind the planet, was never drawn on Saturn, Uranus, Jupiter and Neptune.
 - Jupiter keeps a thin main ring. The halo and the gossamer stay a hint, and Neptune's sheet stays fainter than the thin rings (MODULES-509).
 
 ## 0.17.1 - 2026-11-06
