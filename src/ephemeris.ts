@@ -1,9 +1,10 @@
 // Where the planets and their moons are at a date and time, and how a body looks from the Earth then: its pole, the face that turns toward us, where the Sun is.
-// Planets Mercury to Neptune: the VSOP87B series of Bretagnon and Francou, truncated (data/vsop.ts), in terrestrial time (time.ts). Pluto: JPL's "Keplerian Elements for Approximate Positions of the Major Planets",
-// Table 1 (1800 to 2050, https://ssd.jpl.nasa.gov/planets/approx_pos.html). The Moon: the largest terms of Meeus, "Astronomical Algorithms", chapter 47. Other moons: fitted to JPL Horizons (data/orbits.ts).
+// Planets Mercury to Neptune: the VSOP87B series of Bretagnon and Francou, truncated (data/vsop.ts), in terrestrial time (time.ts). Pluto: a Chebyshev table fitted to JPL Horizons for 1800 to 2200 (data/pluto.ts),
+// and outside those years JPL's "Keplerian Elements for Approximate Positions of the Major Planets", Table 1 (https://ssd.jpl.nasa.gov/planets/approx_pos.html). The Moon: the largest terms of Meeus, "Astronomical Algorithms", chapter 47. Other moons: fitted to JPL Horizons (data/orbits.ts).
 // Light travel time is allowed for, so a turning planet shows the face it really showed when the light left. Pure: no DOM, no three.js.
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
 import { DWARF_ELEMENTS } from "./data/dwarf.ts";
+import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
 import { VSOP87, type Variable } from "./data/vsop.ts";
 import { toTerrestrialTime } from "./time.ts";
 import { BODIES, MOONS_OF, type BodyId, type HostId, type MoonId, type PlanetId } from "./facts.ts";
@@ -66,8 +67,27 @@ function vsopPosition(series: readonly [Variable, Variable, Variable], terrestri
   return [radius * cosLatitude * Math.cos(longitude), radius * cosLatitude * Math.sin(longitude), radius * Math.sin(latitude)];
 }
 
+/** The Pluto system's barycentre from its Chebyshev table, as x, y, z in au, or undefined outside 1800 to 2200. */
+function plutoPosition(terrestrialMs: number): Vec3 | undefined {
+  const segment = Math.floor((terrestrialMs - PLUTO_START) / PLUTO_SEGMENT_MS);
+  const coefficients = PLUTO[segment];
+  if (coefficients === undefined) return undefined;
+  const x = (2 * (terrestrialMs - PLUTO_START - segment * PLUTO_SEGMENT_MS)) / PLUTO_SEGMENT_MS - 1;
+  const at = (axis: readonly number[]): number => {
+    let b1 = 0;
+    let b2 = 0;
+    for (let k = axis.length - 1; k >= 1; k -= 1) {
+      const b0 = 2 * x * b1 - b2 + axis[k]!;
+      b2 = b1;
+      b1 = b0;
+    }
+    return x * b1 - b2 + axis[0]!;
+  };
+  return [at(coefficients[0]!), at(coefficients[1]!), at(coefficients[2]!)];
+}
+
 /**
- * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: Mercury to Neptune from the VSOP87B series (within a few arc-seconds, see the accuracy guide), Pluto from JPL's approximate elements, a dwarf planet from the osculating elements of one epoch (JPL's Small-Body Database).
+ * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: Mercury to Neptune from the VSOP87B series and Pluto from a table fitted to Horizons (each within a few arc-seconds or better, see the accuracy guide), a dwarf planet from the osculating elements of one epoch (JPL's Small-Body Database).
  * @param planet - The planet's or dwarf planet's name.
  * @param ms - The instant, in milliseconds since 1970 (UTC).
  * @returns The position as x, y, z in au.
@@ -83,6 +103,10 @@ function vsopPosition(series: readonly [Variable, Variable, Variable], terrestri
 export function heliocentric(planet: HostId, ms: number): Vec3 {
   const vsop = VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
+  if (planet === "pluto") {
+    const table = plutoPosition(toTerrestrialTime(ms));
+    if (table !== undefined) return table;
+  }
   let a: number;
   let e: number;
   let I: number;

@@ -11,7 +11,7 @@ For a picture, one degree on a moon's orbit is about the width of the moon's own
 
 ## Planets
 
-Mercury to Neptune come from the VSOP87B series (Bretagnon and Francou, IMCCE), cut to the terms that matter (991 of its 35,080) and run in terrestrial time, the time scale the theory is written in: the clock's UTC plus the leap seconds and 32.184 seconds. Pluto, which VSOP87 does not have, is JPL's approximate Keplerian elements for 1800 to 2050. Checked on five dates from 1800 to 2050.
+Mercury to Neptune come from the VSOP87B series (Bretagnon and Francou, IMCCE), cut to the terms that matter (991 of its 35,080) and run in terrestrial time, the time scale the theory is written in: the clock's UTC plus the leap seconds and 32.184 seconds. Pluto, which VSOP87 does not have, is a table of 20 segments fitted to Horizons for 1800 to 2200 (JPL's approximate Keplerian elements answer outside those years). Checked on five dates from 1800 to 2050.
 
 | Body | Worst measured | Held to |
 |---|---|---|
@@ -23,9 +23,9 @@ Mercury to Neptune come from the VSOP87B series (Bretagnon and Francou, IMCCE), 
 | Saturn | 3.7″ | 5.6″ |
 | Uranus | 3.8″ | 5.8″ |
 | Neptune | 3.3″ | 5″ |
-| Pluto | 39″ | 60″ |
+| Pluto | 0.05″ | 0.3″ |
 
-An arc-second is 1/3600 of a degree. Pluto is the loosest because VSOP87 does not cover it; a fitted table for it is planned. The cut series is good for the years 1750 to 2250 and slowly gets worse beyond. Before 1972 the step from UTC to terrestrial time is delta T from the polynomials of Espenak and Meeus (NASA), and from 1972 it is exact.
+An arc-second is 1/3600 of a degree. Uranus and Saturn are the loosest, because the cut series trades a few arc-seconds for size; Pluto, which is not in VSOP87, is fitted to Horizons and is the closest. The cut series is good for the years 1750 to 2250 and slowly gets worse beyond. Before 1972 the step from UTC to terrestrial time is delta T from the polynomials of Espenak and Meeus (NASA), and from 1972 it is exact.
 
 ## The Moon and the moons
 

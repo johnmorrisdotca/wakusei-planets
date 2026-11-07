@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Pluto is fitted to Horizons** (MODULES-528). VSOP87 has no Pluto, and JPL's approximate elements were 39 arc-seconds from Horizons; a table of 20 Chebyshev segments of 20 years (1800 to 2200, `scripts/make-pluto-data.py`, `src/data/pluto.ts`) is 0.05 arc-seconds on the five reference dates and 0.15 at worst on samples held back from the fit. Pluto is no longer the loosest planet; Saturn and Uranus (3.7 and 3.8) are. The segments are fitted on their own, so the position can step by up to 0.15 arc-seconds where one ends (tested). The elements still answer outside 1800 to 2200. The remaining error is the Sun's yearly wobble about the system's centre of mass, 0.016 arc-seconds at Pluto's distance, which a polynomial of this size cannot follow. The core entry point grows from 35.1 to 39.0 kB gzipped.
+
 ## 0.19.0 - 2026-11-07
 
 The planets and the moons are where they are, and every body is checked against JPL Horizons (MODULES-528, 525, 522). 0.18.0 was never published: what it holds, the view gestures, is below and is in this release.
