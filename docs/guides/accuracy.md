@@ -11,21 +11,21 @@ For a picture, one degree on a moon's orbit is about the width of the moon's own
 
 ## Planets
 
-Planet positions are JPL's approximate Keplerian elements for 1800 to 2050, a polynomial for each planet. They are small and fast, and JPL gives them as approximate. Checked on five dates from 1800 to 2050.
+Mercury to Neptune come from the VSOP87B series (Bretagnon and Francou, IMCCE), cut to the terms that matter (991 of its 35,080) and run in terrestrial time, the time scale the theory is written in: the clock's UTC plus the leap seconds and 32.184 seconds. Pluto, which VSOP87 does not have, is JPL's approximate Keplerian elements for 1800 to 2050. Checked on five dates from 1800 to 2050.
 
 | Body | Worst measured | Held to |
 |---|---|---|
-| Mercury | 41″ | 60″ |
-| Venus | 14″ | 25″ |
-| Earth | 8″ | 15″ |
-| Mars | 58″ | 90″ |
-| Jupiter | 309″ (5′) | 450″ |
-| Saturn | 545″ (9′) | 800″ |
-| Uranus | 79″ | 120″ |
-| Neptune | 45″ | 70″ |
+| Mercury | 2.3″ | 3.5″ |
+| Venus | 0.5″ | 1″ |
+| Earth | 1.5″ | 2.2″ |
+| Mars | 1.4″ | 2.2″ |
+| Jupiter | 1.9″ | 2.8″ |
+| Saturn | 3.7″ | 5.6″ |
+| Uranus | 3.8″ | 5.8″ |
+| Neptune | 3.3″ | 5″ |
 | Pluto | 39″ | 60″ |
 
-An arc-second is 1/3600 of a degree. Jupiter and Saturn are the loosest: the table has no correction for their pull on each other.
+An arc-second is 1/3600 of a degree. Pluto is the loosest because VSOP87 does not cover it; a fitted table for it is planned. The cut series is good for the years 1750 to 2250 and slowly gets worse beyond. Before 1972 the step from UTC to terrestrial time is delta T from the polynomials of Espenak and Meeus (NASA), and from 1972 it is exact.
 
 ## The Moon and the moons
 

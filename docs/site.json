@@ -25,6 +25,11 @@
       "ja": "<wakusei-portrait> 要素 (たくさんの天体を一つの絵に)",
       "platform": "browser"
     },
+    "./time": {
+      "en": "Julian dates and the step from UTC to terrestrial time",
+      "ja": "ユリウス日と、UTC から地球時への換算",
+      "platform": "node"
+    },
     "./look": {
       "en": "How a body is drawn with three.js",
       "ja": "three.js での描き方",

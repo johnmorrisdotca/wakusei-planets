@@ -7,7 +7,7 @@ description: Where the numbers come from, how a body is turned toward you and wh
 
 ## The numbers
 
-Sizes, flattening, poles and rotation are the IAU's (Archinal et al., 2018) with NASA's fact sheets. Planet positions are JPL's approximate Keplerian elements; the Moon's are the largest terms of Meeus. The other moons are fitted to JPL Horizons' positions for 1950 to 2050. The tests compare every planet, the Moon and every moon with Horizons ([Accuracy](accuracy.md)), and check that Saturn's rings are edge-on in March 2025 and that the Moon is new and full on the right days.
+Sizes, flattening, poles and rotation are the IAU's (Archinal et al., 2018) with NASA's fact sheets. Mercury to Neptune are the VSOP87B series of Bretagnon and Francou, cut down and run in terrestrial time; Pluto is JPL's approximate Keplerian elements; the Moon's are the largest terms of Meeus. The other moons are fitted to JPL Horizons' positions for 1950 to 2050. The tests compare every planet, the Moon and every moon with Horizons ([Accuracy](accuracy.md)), and check that Saturn's rings are edge-on in March 2025 and that the Moon is new and full on the right days.
 
 ## A place to go
 

@@ -176,7 +176,7 @@ The pure side has no DOM: `BODIES`, `apparent(id, time)`, `system(planet, time)`
 
 ## The data
 
-Sizes, flattening, poles and rotation are the IAU's and NASA's; planet positions are JPL's approximate elements; the Moon's are Meeus's largest terms; the other moons are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
+Sizes, flattening, poles and rotation are the IAU's and NASA's; Mercury to Neptune are VSOP87B, cut down, and Pluto is JPL's approximate elements; the Moon's are Meeus's largest terms; the other moons are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
 
 ## Examples
 

@@ -78,6 +78,11 @@
       "import": "./dist/portrait/element.js",
       "default": "./dist/portrait/element.js"
     },
+    "./time": {
+      "types": "./dist/time.d.ts",
+      "import": "./dist/time.js",
+      "default": "./dist/time.js"
+    },
     "./look": {
       "types": "./dist/scene/look.d.ts",
       "import": "./dist/scene/look.js",

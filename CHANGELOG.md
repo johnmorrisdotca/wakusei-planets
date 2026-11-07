@@ -2,16 +2,22 @@
 
 ## [Unreleased]
 
-The moons are where they are, and every body is checked against JPL Horizons (MODULES-525, MODULES-522).
+## 0.19.0 - 2026-11-07
+
+The planets and the moons are where they are, and every body is checked against JPL Horizons (MODULES-528, 525, 522). 0.18.0 was never published: what it holds, the view gestures, is below and is in this release.
+
+- **Mercury to Neptune are the VSOP87B series, in terrestrial time** (MODULES-528). Jupiter was 309 arc-seconds from Horizons and Saturn 545; they are 1.9 and 3.7 now, and every planet from Mercury to Neptune is within 4 arc-seconds on five dates from 1800 to 2050 (Mercury was 41, Mars 58, Uranus 79). The series (Bretagnon and Francou, IMCCE) is cut from 35,080 terms to the 991 that matter (`scripts/make-vsop-data.py`, `src/data/vsop.ts`), and the date is converted from UTC to terrestrial time first. The Earth is the Earth's centre now, not the Earth–Moon barycentre. Pluto, which VSOP87 does not have, stays on JPL's elements (39 arc-seconds). The cost is size: the core entry point goes from 21.6 to 35.1 kB gzipped.
+- **`@johnmorrisdotca/wakusei-planets/time`**: Julian dates (`toJulianDate`, `fromJulianDate`, `modifiedJulianDate`), the Julian day and the milliseconds in it with no digit lost (`toJulianDay`, `toMillisecondsInJulianDay`, `fromJulianDayAndMilliseconds`), and the step from UTC to terrestrial time (`ttMinusUtc`, `toTerrestrialTime`): exact from 1972 from the leap seconds, delta T before (MODULES-538). 0.8 kB gzipped. Fed UTC, the same theory is off by up to 17.9 arc-seconds for Mercury, which is why the step is inside.
+- **The planets' limits in `test/accuracy.test.ts` are tighter** (2.2 arc-seconds for Earth and Mars, 5.8 for Uranus), and `test/time.test.ts` checks the Julian dates against Meeus's examples and delta T against astronomy-engine from 1800 to 2005.
 
 - **The moons of Saturn, Uranus, Neptune and Pluto were in the wrong place.** Mimas, Tethys, Dione, Rhea, Titan, Iapetus, Miranda, Ariel, Umbriel, Titania, Oberon, Triton and Nix were tens of degrees off (Titan 157, Dione 151) at every date, including the epoch the elements are for, and Phobos, Enceladus, Proteus and Hydra up to 21. The angles in JPL's Planetary Satellite Mean Elements do not reproduce Horizons' positions for these moons: for Dione the table gives a mean longitude of 328 degrees where Horizons' own elements give 177. Their orbits are fitted to Horizons' positions and velocities for 1950 to 2050 now (`scripts/make-moon-data.py`), each in its mean orbit plane. 21 of the 24 moons are within a degree of Horizons on every date from 1900 to 2100, and the worst is Nereid, an orbit with an eccentricity of 0.75, at 6 degrees. The Uranian moons also go round Uranus the other way from what the pole in the facts says, and Triton's orbit was reversed twice (its inclination and its rate); both are fixed by describing each orbit as going round anticlockwise about its own pole.
 - **Phobos has an acceleration and Mimas and Tethys a swing.** `OrbitElements` has two optional terms for the mean longitude: `acc`, for Phobos, whose orbit is shrinking, and `wave`, for the Mimas–Tethys resonance, a swing of 43 degrees over 70 years that the fit found by itself.
-- **`test/accuracy.test.ts` holds every planet, the Moon and every moon to a limit against Horizons** (`test/data/horizons.json`, from `scripts/fetch-horizons-reference.py`), on five dates from 1800 to 2050 for the planets and seven from 1900 to 2100 for the moons. It fails on the old orbit table. The numbers are in a new [Accuracy](docs/guides/accuracy.md) guide, in English and Japanese. The planets are within 1 arc-minute except Jupiter (5) and Saturn (9).
+- **`test/accuracy.test.ts` holds every planet, the Moon and every moon to a limit against Horizons** (`test/data/horizons.json`, from `scripts/fetch-horizons-reference.py`), on five dates from 1800 to 2050 for the planets and seven from 1900 to 2100 for the moons. It fails on the old orbit table. The numbers are in a new [Accuracy](docs/guides/accuracy.md) guide, in English and Japanese. When it was written the planets were within 1 arc-minute except Jupiter (5) and Saturn (9); the VSOP87 change above took them all within 4 arc-seconds.
 - **A synchronous moon's spin takes its direction from the facts and its speed from the orbit** (`turnRate`), because the sign of an orbit's rate no longer says which way a moon goes round. The rotation test checks the rate.
 - **The docs said moon positions were accurate to a few degrees.** That was true for Jupiter's moons and the Moon, not for the rest; the README, the guides and NOTICE.md say what was measured.
 - **The npm keywords name every planet and what the package does** (MODULES-532): planet, mercury, venus, earth, uranus, neptune, pluto, dwarf-planets, heliocentric, orbit, orbits, rotation, space, celestial, nasa, jpl, 3d, javascript, browser, added to the 17 it had. A test keeps them lower case and free of astrology and other packages' names.
 
-## 0.18.0 - 2026-11-07
+## 0.18.0 - 2026-11-07 (never published; in 0.19.0)
 
 The view gestures are the family's, on kazoku-ui 0.19 (MODULES-527).
 

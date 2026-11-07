@@ -1,9 +1,11 @@
 // Where the planets and their moons are at a date and time, and how a body looks from the Earth then: its pole, the face that turns toward us, where the Sun is.
-// Planets: JPL's "Keplerian Elements for Approximate Positions of the Major Planets", Table 1 (1800 to 2050, https://ssd.jpl.nasa.gov/planets/approx_pos.html),
-// good to about an arc minute. The Moon: the largest terms of Meeus, "Astronomical Algorithms", chapter 47. Other moons: JPL's mean elements (data/orbits.ts).
+// Planets Mercury to Neptune: the VSOP87B series of Bretagnon and Francou, truncated (data/vsop.ts), in terrestrial time (time.ts). Pluto: JPL's "Keplerian Elements for Approximate Positions of the Major Planets",
+// Table 1 (1800 to 2050, https://ssd.jpl.nasa.gov/planets/approx_pos.html). The Moon: the largest terms of Meeus, "Astronomical Algorithms", chapter 47. Other moons: fitted to JPL Horizons (data/orbits.ts).
 // Light travel time is allowed for, so a turning planet shows the face it really showed when the light left. Pure: no DOM, no three.js.
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
 import { DWARF_ELEMENTS } from "./data/dwarf.ts";
+import { VSOP87, type Variable } from "./data/vsop.ts";
+import { toTerrestrialTime } from "./time.ts";
 import { BODIES, MOONS_OF, type BodyId, type HostId, type MoonId, type PlanetId } from "./facts.ts";
 import { add, cross, DEG, dot, fromRaDec, length, OBLIQUITY, RAD, scale, sub, toEcliptic, unit, wrap360, type Vec3 } from "./vec.ts";
 
@@ -44,10 +46,30 @@ export function kepler(meanAnomaly: number, e: number): number {
   return E;
 }
 
+/** A planet from its VSOP87B series: longitude, latitude and radius at a moment in terrestrial time, as x, y, z in the J2000 ecliptic. */
+function vsopPosition(series: readonly [Variable, Variable, Variable], terrestrialMs: number): Vec3 {
+  const t = (terrestrialMs - J2000) / (365_250 * DAY);
+  const spherical = [0, 0, 0];
+  for (let k = 0; k < 3; k += 1) {
+    let sum = 0;
+    let power = 1;
+    for (const terms of series[k]!) {
+      let s = 0;
+      for (const [amplitude, phase, frequency] of terms) s += amplitude * Math.cos(phase + frequency * t);
+      sum += power * s;
+      power *= t;
+    }
+    spherical[k] = sum;
+  }
+  const [longitude, latitude, radius] = spherical as [number, number, number];
+  const cosLatitude = Math.cos(latitude);
+  return [radius * cosLatitude * Math.cos(longitude), radius * cosLatitude * Math.sin(longitude), radius * Math.sin(latitude)];
+}
+
 /**
- * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: a planet from JPL's approximate elements, a dwarf planet from the osculating elements of one epoch (JPL's Small-Body Database).
+ * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: Mercury to Neptune from the VSOP87B series (within a few arc-seconds, see the accuracy guide), Pluto from JPL's approximate elements, a dwarf planet from the osculating elements of one epoch (JPL's Small-Body Database).
  * @param planet - The planet's or dwarf planet's name.
- * @param ms - The instant, in milliseconds since 1970.
+ * @param ms - The instant, in milliseconds since 1970 (UTC).
  * @returns The position as x, y, z in au.
  *
  * @example
@@ -59,6 +81,8 @@ export function kepler(meanAnomaly: number, e: number): number {
  * ```
  */
 export function heliocentric(planet: HostId, ms: number): Vec3 {
+  const vsop = VSOP87[planet];
+  if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
   let a: number;
   let e: number;
   let I: number;
