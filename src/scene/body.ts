@@ -3,11 +3,16 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type * as THREE from "three";
 import type { Pose } from "../ephemeris.ts";
-import { BODIES, ringReach, type BodyFacts, type BodyId } from "../facts.ts";
+import { BODIES, type BodyId } from "../facts.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, RING_FRAGMENT, RING_VERTEX, VERTEX } from "./glsl.ts";
 import { lookOf, type BodyLook } from "./look.ts";
+import { fallbackLook } from "./fallback.ts";
+import { writeBasis } from "./basis.ts";
+import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
+
+export { fallbackLook } from "./fallback.ts";
 
 /** The parts of three.js the bodies use: a page may hand over a module with only these (see `setThreeLoader`). */
 export type ThreeParts = Pick<
@@ -69,15 +74,6 @@ export interface BodyItemOptions {
   report?(note: { painted: boolean; width: number; failed?: boolean }): void;
 }
 
-/** A body that has no registered look is still drawn: a lit ball in its mean colour. */
-export function fallbackLook(facts: BodyFacts): BodyLook {
-  const c = [1, 3, 5].map((i) => (parseInt(facts.colour.slice(i, i + 2), 16) / 255).toFixed(3)).join(", ");
-  return { id: facts.id, surface: `vec4 surface(vec3 p) { float n = fbm(p * 5.0); return vec4(vec3(${c}) * (0.85 + 0.3 * n), 0.0); }` };
-}
-
-const col3 = (T: ThreeParts, rgb: readonly number[]): THREE.Vector3 => new T.Vector3(rgb[0], rgb[1], rgb[2]);
-const v3 = (T: ThreeParts, v: Vec3): THREE.Vector3 => new T.Vector3(v[0], v[1], v[2]);
-
 function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THREE.ShaderMaterial {
   const a = look.atmosphere;
   return new T.ShaderMaterial({
@@ -89,7 +85,7 @@ function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THRE
       uAmbient: { value: look.ambient ?? 0.04 },
       uLimb: { value: look.limb ?? 0 },
       uWrap: { value: look.wrap ?? (a === undefined ? 0.04 : 0.3) },
-      uAtmos: { value: col3(T, a?.colour ?? [0, 0, 0]) },
+      uAtmos: { value: new T.Vector3(...(a?.colour ?? [0, 0, 0])) },
       uAtmosPow: { value: a?.power ?? 3 },
       uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },
@@ -104,11 +100,10 @@ function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THRE
 }
 
 /** Set an object's matrix from three axes (columns), without letting three.js overwrite it. */
-function setBasis(T: ThreeParts, object: THREE.Object3D, x: Vec3, y: Vec3, z: Vec3, sx = 1, sy = 1, sz = 1): void {
+function setBasis(object: THREE.Object3D, x: Vec3, y: Vec3, z: Vec3, sx = 1, sy = 1, sz = 1): void {
   object.matrixAutoUpdate = false;
   object.matrixWorldAutoUpdate = false;
-  object.matrix.makeBasis(new T.Vector3(x[0] * sx, x[1] * sx, x[2] * sx), new T.Vector3(y[0] * sy, y[1] * sy, y[2] * sy), new T.Vector3(z[0] * sz, z[1] * sz, z[2] * sz));
-  object.matrixWorld.copy(object.matrix);
+  object.matrixWorld.copy(writeBasis(object.matrix, x, y, z, sx, sy, sz));
 }
 
 /**
@@ -129,6 +124,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const shader = assets.acquire(`wk:body:${options.id}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${options.id}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
 
+      const materials = paintedMaterial === undefined ? [shader] : [shader, paintedMaterial];
       const baseWrap = look.wrap ?? (look.atmosphere === undefined ? 0.04 : 0.3);
       const baseAmbient = look.ambient ?? 0.04;
       const scene = new T.Scene();
@@ -139,18 +135,12 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       scene.add(mesh);
 
       // rings: a picture of them when the look has one (painted), else the table's strip
-      const loadImage = (url: string): Promise<THREE.Texture> =>
-        new Promise((resolve, reject) => {
-          const loader = new T.TextureLoader();
-          loader.setCrossOrigin("anonymous");
-          loader.load(url, (t) => resolve(t), undefined, (e) => reject(e instanceof Error ? e : new Error("texture failed")));
-        });
       const table = ringStrip(facts, 1024);
       const photo = wantPainted && table !== null ? look.painted?.rings : undefined;
       let photoTexture: THREE.Texture | undefined;
       if (photo !== undefined) {
         try {
-          photoTexture = await loadImage(`${options.textureBase()}${photo.map}-${photo.width}.webp`);
+          photoTexture = await loadImage(T, `${options.textureBase()}${photo.map}-${photo.width}.webp`);
         } catch {
           photoTexture = undefined;
         }
@@ -190,15 +180,16 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) } },
         }), (m) => m.dispose());
         // 0..pi is the +Y half. The basis maps local +Y onto +east.
-        const half = (key: string, start: number, depthTest: boolean) => {
-          const geometry = assets.acquire(`wk:ring:${ringKey}:${key}`, () => new T.RingGeometry(ringInner, ringOuter, 128, 1, start, Math.PI), (g) => g.dispose());
+        const half = (key: string, depthTest: boolean) => {
+          const geometry = assets.acquire(`wk:ring:${ringKey}:${key}`, () => new T.RingGeometry(ringInner, ringOuter, 128, 1, 0, Math.PI), (g) => g.dispose());
           const material = ringMaterial(key, depthTest);
           const piece = new T.Mesh(geometry, material);
           piece.frustumCulled = false;
+          piece.renderOrder = depthTest ? 1 : 2;
           scene.add(piece);
           return { mesh: piece, material };
         };
-        ringHalves = [half("e", 0, false), half("w", 0, true)];
+        ringHalves = [half("e", false), half("w", true)];
       }
 
       // the glow of a star
@@ -219,6 +210,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const orbitMaterial = new T.LineBasicMaterial({ color: 0x8fa1b8, transparent: true, opacity: 0.4 });
       let viewWidth = width;
       let viewHeight = height;
+      let aspect = viewWidth / Math.max(1, viewHeight);
 
       // the picture
       let textureWidth = 0;
@@ -230,7 +222,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
 
       const loadTexture = (w: number): Promise<THREE.Texture> => {
         const far = look.painted!.far !== undefined && w >= look.painted!.far;
-        return loadImage(`${far ? options.farBase() : options.textureBase()}${look.painted!.map}-${w}.webp`);
+        return loadImage(T, `${far ? options.farBase() : options.textureBase()}${look.painted!.map}-${w}.webp`);
       };
       const drop = (t: THREE.Texture): void => {
         t.dispose();
@@ -276,7 +268,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const scaleX = ax ? ax[1] / mean : 1;
         const scaleY = ax ? ax[2] / mean : 1 - facts.flattening;
         const scaleZ = ax ? ax[0] / mean : 1;
-        setBasis(T, mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
+        setBasis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
         if (ringHalves !== undefined) {
           const [near, far] = ringHalves;
           // The camera sits on +Z. The ring's near direction is +Z laid onto the ring plane, and that half is drawn over the disc.
@@ -285,17 +277,12 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           const span = Math.hypot(zx, zy) || 1;
           const toward: Vec3 = [(meridian[0] * zx + east[0] * zy) / span, (meridian[1] * zx + east[1] * zy) / span, (meridian[2] * zx + east[2] * zy) / span];
           const across = cross(toward, pole);
-          setBasis(T, near.mesh, across, toward, pole);
-          setBasis(T, far.mesh, [-across[0], -across[1], -across[2]], [-toward[0], -toward[1], -toward[2]], pole);
-          near.mesh.renderOrder = 2;
-          far.mesh.renderOrder = 1;
-          near.material.depthTest = false;
-          far.material.depthTest = true;
+          setBasis(near.mesh, across, toward, pole);
+          setBasis(far.mesh, [-across[0], -across[1], -across[2]], [-toward[0], -toward[1], -toward[2]], pole);
         }
       };
 
       const frame = (state: SceneState): void => {
-        const aspect = viewWidth / Math.max(1, viewHeight);
         const half = state.extent / Math.max(0.05, state.zoom);
         const halfW = aspect >= 1 ? half * aspect : half;
         const halfH = aspect >= 1 ? half : half / aspect;
@@ -313,7 +300,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (m !== undefined) return m;
         const f = BODIES[id];
         const c = [1, 3, 5].map((i) => parseInt(f.colour.slice(i, i + 2), 16) / 255);
-        const material = assets.acquire(`wk:ball:${id}`, () => new T.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: BALL_FRAGMENT, uniforms: { uLight: { value: new T.Vector3(0, 0, 1) }, uColour: { value: col3(T, c) } } }), (x) => x.dispose());
+        const material = assets.acquire(`wk:ball:${id}`, () => new T.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: BALL_FRAGMENT, uniforms: { uLight: { value: new T.Vector3(0, 0, 1) }, uColour: { value: new T.Vector3(c[0], c[1], c[2]) } } }), (x) => x.dispose());
         m = new T.Mesh(geometry, material);
         m.frustumCulled = false;
         moonMeshes.set(id, m);
@@ -323,7 +310,6 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
 
       const place = (state: SceneState): void => {
         const moons = state.moons ?? [];
-        const aspect = viewWidth / Math.max(1, viewHeight);
         const half = state.extent / Math.max(0.05, state.zoom);
         const unitsPerPx = (2 * half) / Math.max(1, aspect >= 1 ? viewHeight : viewWidth);
         const minR = (state.minMoonPx ?? 2.5) * unitsPerPx;
@@ -339,7 +325,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           mesh2.updateMatrix();
           mesh2.updateMatrixWorld(true);
           const mat = mesh2.material as THREE.ShaderMaterial;
-          (mat.uniforms.uLight!.value as THREE.Vector3).copy(v3(T, state.pose.light));
+          (mat.uniforms.uLight!.value as THREE.Vector3).set(...state.pose.light);
           if (moon.orbit !== undefined) {
             const held = orbitLines.get(moon.id);
             if (held === undefined || held.source !== moon.orbit) {
@@ -356,39 +342,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (state.orbitColour !== undefined) orbitMaterial.color.set(state.orbitColour);
       };
 
-      const apply = (state: SceneState): void => {
-        latest = state;
-        orient(state);
-        frame(state);
-        place(state);
-        if (ringHalves !== undefined) {
-          const light = v3(T, state.pose.light);
-          const pole = v3(T, state.pose.pole);
-          for (const piece of ringHalves) {
-            piece.material.uniforms.uLight!.value.copy(light);
-            piece.material.uniforms.uRingN!.value.copy(pole);
-          }
-          for (const mat of [shader, paintedMaterial]) {
-            if (mat === undefined) continue;
-            mat.uniforms.uRingOn!.value = 1;
-            mat.uniforms.uRingN!.value.copy(pole);
-            mat.uniforms.uRingR!.value.set(ringInner, ringOuter);
-            mat.uniforms.uRingTex!.value = ringTexture;
-          }
-        }
-        for (const mat of [shader, paintedMaterial]) {
-          if (mat === undefined) continue;
-          mat.uniforms.uLight!.value.copy(v3(T, state.pose.light));
-          const sky = state.sky === true;
-          mat.uniforms.uWrap!.value = sky ? 0.02 : (mat === paintedMaterial ? baseWrap : baseWrap);
-          mat.uniforms.uAmbient!.value = sky ? 0.012 : baseAmbient;
-          mat.uniforms.uRimBase!.value = sky ? 0.02 : 0.12;
-        }
-        if (glow !== undefined) glow.scale.setScalar(1);
+      const requestSharperTexture = (state: SceneState): void => {
         // a sharper picture, when the disc is big enough to show it
         if (wantPainted && !failed && !loading && look.painted !== undefined) {
-          const aspect = viewWidth / Math.max(1, viewHeight);
-          const discPx = (aspect >= 1 ? viewHeight : viewWidth) * (state.zoom / state.extent) ;
+          const discPx = (aspect >= 1 ? viewHeight : viewWidth) * (state.zoom / state.extent);
           const wanted = options.wantedWidth(discPx);
           const next = look.painted.widths.find((w) => w >= wanted) ?? look.painted.widths[look.painted.widths.length - 1]!;
           if (next > textureWidth && !tried.has(next)) {
@@ -412,8 +369,39 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         }
       };
 
+      const light = new T.Vector3();
+      const pole = new T.Vector3();
+      const apply = (state: SceneState): void => {
+        latest = state;
+        orient(state);
+        frame(state);
+        place(state);
+        light.set(...state.pose.light);
+        if (ringHalves !== undefined) {
+          pole.set(...state.pose.pole);
+          for (const piece of ringHalves) {
+            piece.material.uniforms.uLight!.value.copy(light);
+            piece.material.uniforms.uRingN!.value.copy(pole);
+          }
+          for (const mat of materials) {
+            mat.uniforms.uRingOn!.value = 1;
+            mat.uniforms.uRingN!.value.copy(pole);
+            mat.uniforms.uRingR!.value.set(ringInner, ringOuter);
+            mat.uniforms.uRingTex!.value = ringTexture;
+          }
+        }
+        const sky = state.sky === true;
+        for (const mat of materials) {
+          mat.uniforms.uLight!.value.copy(light);
+          mat.uniforms.uWrap!.value = sky ? 0.02 : baseWrap;
+          mat.uniforms.uAmbient!.value = sky ? 0.012 : baseAmbient;
+          mat.uniforms.uRimBase!.value = sky ? 0.02 : 0.12;
+        }
+        if (glow !== undefined) glow.scale.setScalar(1);
+        requestSharperTexture(state);
+      };
+
       apply(latest);
-      void ringReach;
 
       return {
         scene,
@@ -428,6 +416,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         resize(w: number, h: number) {
           viewWidth = w;
           viewHeight = h;
+          aspect = viewWidth / Math.max(1, viewHeight);
           frame(latest);
           place(latest);
         },
