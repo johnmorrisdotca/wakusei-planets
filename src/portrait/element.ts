@@ -6,7 +6,9 @@ import { BODIES } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared.ts";
-import { TEXTURE_BASE, TEXTURE_FAR_BASE } from "../element.ts";
+// /portrait has always registered the body element as well.
+import "../element.ts";
+import { texturePaths } from "../scene/textures.ts";
 import { backgroundCss, drawShapes, lineScene, paintBackground, shapesOf, shapesSvg, starfield } from "./overlay.ts";
 import { decodeScene, defaultPortrait, encodeScene, fromScreen, hitTest, resolve, toScreen, type Guide, type Placed, type Portrait, type Resolved } from "./model.ts";
 import { REDUCED_TURN } from "../live.ts";
@@ -172,15 +174,8 @@ export class WakuseiPortrait extends HTMLElement {
     this.#stopTick();
     this.#io?.disconnect();
     document.removeEventListener("visibilitychange", this.#onHidden);
-    this.removeEventListener("pointerenter", this.#hover);
-    this.removeEventListener("focusin", this.#hover);
-    this.removeEventListener("pointerdown", this.#hover);
-    this.#view?.dispose();
-    this.#view = undefined;
-    this.#viewKey = "";
-    this.#release?.();
-    this.#release = undefined;
-    this.#renderer = undefined;
+    this.#applyHover(false);
+    this.#disposeView(true);
   }
 
   attributeChangedCallback(name: string): void {
@@ -332,14 +327,7 @@ export class WakuseiPortrait extends HTMLElement {
     this.setAttribute("aria-label", this.#label());
     const wants3d = p.look !== "line" && this.#state !== "unavailable" && p.items.length > 0;
     if (!wants3d) {
-      if (this.#view !== undefined) {
-        this.#view.dispose();
-        this.#view = undefined;
-        this.#viewKey = "";
-        this.#release?.();
-        this.#release = undefined;
-        this.#renderer = undefined;
-      }
+      if (this.#view !== undefined) this.#disposeView(true);
       this.#drawLine();
       if (p.look === "line" || p.items.length === 0) this.#set("line");
       return;
@@ -369,14 +357,11 @@ export class WakuseiPortrait extends HTMLElement {
     return (this.getAttribute("live") ?? "always") === "always" && this.#visible;
   }
 
-  #applyHover(): void {
-    this.removeEventListener("pointerenter", this.#hover);
-    this.removeEventListener("focusin", this.#hover);
-    this.removeEventListener("pointerdown", this.#hover);
-    if ((this.getAttribute("live") ?? "always") === "hover") {
-      this.addEventListener("pointerenter", this.#hover);
-      this.addEventListener("focusin", this.#hover);
-      this.addEventListener("pointerdown", this.#hover);
+  #applyHover(allow = true): void {
+    const events = ["pointerenter", "focusin", "pointerdown"];
+    for (const name of events) this.removeEventListener(name, this.#hover);
+    if (allow && (this.getAttribute("live") ?? "always") === "hover") {
+      for (const name of events) this.addEventListener(name, this.#hover);
     }
   }
 
@@ -408,6 +393,18 @@ export class WakuseiPortrait extends HTMLElement {
     return `${encodeScene(this.#portrait)}|${width}`;
   }
 
+  // Replacing a view keeps the renderer lease; leaving 3D gives it back.
+  #disposeView(releaseRenderer = false): void {
+    this.#view?.dispose();
+    this.#view = undefined;
+    this.#viewKey = "";
+    if (releaseRenderer) {
+      this.#release?.();
+      this.#release = undefined;
+      this.#renderer = undefined;
+    }
+  }
+
   async #ensureView(): Promise<void> {
     if (this.#renderer === undefined) {
       const taken = takeRenderer(this.#onContext);
@@ -421,19 +418,10 @@ export class WakuseiPortrait extends HTMLElement {
     this.#viewKey = this.#key();
     this.#stilled = false;
     this.#stage.innerHTML = "";
-    const base = (): string => {
-      const own = this.getAttribute("texture-base");
-      return own === null || own === "" ? TEXTURE_BASE : own.endsWith("/") ? own : `${own}/`;
-    };
     const item = createPortraitItem({
       key: this.#viewKey,
       state: () => this.#draw(),
-      textureBase: base,
-      farBase: () => {
-        const own = this.getAttribute("texture-far-base");
-        if (own !== null && own !== "") return own.endsWith("/") ? own : `${own}/`;
-        return this.hasAttribute("texture-base") ? base() : TEXTURE_FAR_BASE;
-      },
+      ...texturePaths(this),
       redraw: () => this.#view?.invalidate(),
     });
     this.#view = this.#renderer!.view(this.#stage, item);
@@ -452,8 +440,7 @@ export class WakuseiPortrait extends HTMLElement {
   #rekey(): void {
     if (this.#renderer === undefined || this.#view === undefined || this.#view.live) return;
     if (this.#key() === this.#viewKey) return;
-    this.#view.dispose();
-    this.#view = undefined;
+    this.#disposeView();
     this.#makeView();
   }
 
