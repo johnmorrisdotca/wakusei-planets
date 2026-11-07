@@ -60,6 +60,9 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.5
+      julian:
+        specifier: 0.2.0
+        version: 0.2.0
       marked:
         specifier: ^18.1.2
         version: 18.1.2
@@ -1129,6 +1132,9 @@ packages:
 
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
+
+  julian@0.2.0:
+    resolution: {integrity: sha512-rpBcYy7SiT9ogHfxcJQDLycCVGx7nTvAbu0wm3dVnpY71P7asAFT5oOOLrlsDqQYS6qenhE/NHfhtMR7AQqWSQ==}
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
@@ -2567,6 +2573,8 @@ snapshots:
   json-schema-traverse@1.0.0: {}
 
   json-stable-stringify-without-jsonify@1.0.1: {}
+
+  julian@0.2.0: {}
 
   keyv@4.5.4:
     dependencies:

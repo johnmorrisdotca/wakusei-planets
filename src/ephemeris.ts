@@ -10,7 +10,7 @@ import { VSOP87 } from "./data/vsop.ts";
 import { moonGeocentric, vsopPosition } from "./theory.ts";
 
 export { moonGeocentric };
-import { toTerrestrialTime } from "./time.ts";
+import { toTerrestrialTime } from "./clock.ts";
 import { BODIES, MOONS_OF, type BodyId, type HostId, type MoonId, type PlanetId } from "./facts.ts";
 import { add, cross, DEG, dot, fromRaDec, length, OBLIQUITY, RAD, scale, sub, toEcliptic, unit, wrap360, type Vec3 } from "./vec.ts";
 

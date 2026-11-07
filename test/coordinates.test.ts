@@ -98,7 +98,7 @@ test("bad values, mismatched frames/epochs, zero and overflow throw rather than 
 
 test("coordinates import graph stays pure and below 4 KiB minified gzip", async () => {
   const result = await build({ entryPoints: ["src/coordinates.ts"], bundle: true, minify: true, format: "esm", platform: "neutral", write: false, metafile: true });
-  assert.deepEqual(Object.keys(result.metafile!.inputs).sort(), ["src/coordinates.ts", "src/time.ts"]);
+  assert.deepEqual(Object.keys(result.metafile!.inputs).sort(), ["src/clock.ts", "src/coordinates.ts", "src/when.ts"]);
   const bytes = gzipSync(result.outputFiles[0]!.contents).byteLength;
   assert.ok(bytes <= 4096, `${bytes} bytes exceeds coordinates budget`);
   console.log(`coordinates: ${result.outputFiles[0]!.contents.byteLength} minified bytes, ${bytes} gzip bytes`);

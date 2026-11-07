@@ -321,6 +321,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
+| [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |
 | [The Sun and Moon from a place](docs/guides/suncalc.md) | Position, sunrise and sunset, Moon rise, set and phase; a drop-in for suncalc |
 | [Coordinate conversions](docs/guides/coordinates.md) | Pure spherical, ecliptic, equatorial and horizontal coordinate conversions |
 | [TypeScript and Node](docs/guides/typescript-and-node.md) | Types and the pure side |

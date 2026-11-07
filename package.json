@@ -278,6 +278,7 @@
     "astronomy-engine": "2.1.19",
     "esbuild": "^0.25.12",
     "eslint": "^9.0.0",
+    "julian": "0.2.0",
     "marked": "^18.1.2",
     "pagefind": "^1.6.0",
     "react": "^19.3.1",

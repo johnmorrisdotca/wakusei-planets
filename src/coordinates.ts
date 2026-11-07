@@ -1,6 +1,6 @@
 // Coordinate rotations: Meeus, Astronomical Algorithms, 2nd ed., chapters 12, 13, 22.
 // Standalone mathematics; no body data, ephemerides or rendering dependencies.
-import { ttMinusUtc } from "./time.ts";
+import { ttMinusUtc } from "./clock.ts";
 
 const RAD = Math.PI / 180;
 const J2000 = 2451545;

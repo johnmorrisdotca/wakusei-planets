@@ -2,7 +2,7 @@
 // ELP2000-82B (Chapront-Touze and Chapront, IMCCE, data/lunar.ts), both in terrestrial time. Pure: no DOM, no three.js.
 import { LUNAR_MAIN, LUNAR_PERIODIC } from "./data/lunar.ts";
 import { VSOP_EARTH, type Variable } from "./data/vsop.ts";
-import { toTerrestrialTime } from "./time.ts";
+import { toTerrestrialTime } from "./clock.ts";
 import type { Vec3 } from "./vec.ts";
 
 /** Milliseconds since 1970 at J2000.0 (2000-01-01 12:00 TT, taken as UTC). */

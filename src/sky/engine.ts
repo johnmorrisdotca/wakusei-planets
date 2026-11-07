@@ -2,7 +2,8 @@
 // Written from the standard methods (Meeus, "Astronomical Algorithms", chapters 12, 21, 22, 40, 48; the IAU 1976 precession; IAU 1980 nutation, its largest terms) on this package's own positions: the Sun from the Earth's VSOP87B place,
 // the Moon from ELP2000-82B. Pure: no DOM, no three.js. Time is UTC in milliseconds; UT1 is taken as UTC (up to 0.9 s, 0.004 degrees of turn of the Earth); the theories run in terrestrial time.
 import { earthPosition, moonGeocentric } from "../theory.ts";
-import { toTerrestrialTime } from "../time.ts";
+import { toTerrestrialTime } from "../clock.ts";
+import { greenwichApparentSiderealTime, nutation } from "../sidereal.ts";
 
 type Vec = readonly [number, number, number];
 type Matrix = readonly [Vec, Vec, Vec];
@@ -12,7 +13,6 @@ const DEG = 180 / Math.PI;
 const ARCSEC = Math.PI / 648000;
 const DAY_MS = 86_400_000;
 const J2000_MS = Date.UTC(2000, 0, 1, 12);
-const J2000_JD = 2451545;
 const AU_KM = 149597870.7;
 const LIGHT_KM_S = 299792.458;
 /** The mean obliquity of the ecliptic at J2000 in the IAU 1976 value the VSOP87 and ELP frames use (84381.448 arc-seconds). */
@@ -61,17 +61,6 @@ const frameTurn = (axis: 1 | 2 | 3, a: number): Matrix => {
 /** Julian centuries of terrestrial time from J2000 for a UTC instant in milliseconds. */
 const centuries = (ms: number): number => (toTerrestrialTime(ms) - J2000_MS) / (36525 * DAY_MS);
 
-/** Nutation in longitude and obliquity, and the mean obliquity of date, all in radians (Meeus ch. 22, the terms that matter at 0.5 arc-seconds). */
-export function nutation(T: number): { longitude: number; obliquity: number; meanObliquity: number } {
-  const omega = (125.04452 - 1934.136261 * T) * RAD;
-  const sunL = (280.4665 + 36000.7698 * T) * RAD;
-  const moonL = (218.3165 + 481267.8813 * T) * RAD;
-  const longitude = (-17.2 * Math.sin(omega) - 1.32 * Math.sin(2 * sunL) - 0.23 * Math.sin(2 * moonL) + 0.21 * Math.sin(2 * omega)) * ARCSEC;
-  const obliquity = (9.2 * Math.cos(omega) + 0.57 * Math.cos(2 * sunL) + 0.1 * Math.cos(2 * moonL) - 0.09 * Math.cos(2 * omega)) * ARCSEC;
-  const meanObliquity = (84381.448 - 46.815 * T - 0.00059 * T * T + 0.001813 * T * T * T) * ARCSEC;
-  return { longitude, obliquity, meanObliquity };
-}
-
 /** A J2000 mean-ecliptic vector turned into the true equator and equinox of date: obliquity of J2000, IAU 1976 precession, then nutation. */
 function trueOfDate(ecliptic: Vec, T: number): Vec {
   const equatorial = apply(frameTurn(1, -OBLIQUITY_J2000), ecliptic);
@@ -118,14 +107,8 @@ export function moonEquatorial(ms: number): Equatorial {
   return toEquatorial(trueOfDate(geometric, T), Math.hypot(geometric[0], geometric[1], geometric[2]));
 }
 
-/** The apparent sidereal time at Greenwich in degrees (Meeus ch. 12 with the equation of the equinoxes), from the UTC instant taken as UT1. */
-export function greenwichSiderealTime(ms: number): number {
-  const jd = ms / DAY_MS + 2440587.5;
-  const T = (jd - J2000_JD) / 36525;
-  const mean = 280.46061837 + 360.98564736629 * (jd - J2000_JD) + 0.000387933 * T * T - (T * T * T) / 38710000;
-  const n = nutation(centuries(ms));
-  return (((mean + n.longitude * DEG * Math.cos(n.meanObliquity + n.obliquity)) % 360) + 360) % 360;
-}
+/** The apparent sidereal time at Greenwich in degrees, from the UTC instant taken as UT1. */
+export const greenwichSiderealTime = (ms: number): number => greenwichApparentSiderealTime(ms);
 
 /** The observer's place from the Earth's centre in the true equator of date, in kilometres, with the turn of the Earth (Meeus ch. 11). */
 function observerVector(observer: Observer, ms: number): Vec {

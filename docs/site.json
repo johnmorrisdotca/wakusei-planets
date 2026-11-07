@@ -26,8 +26,8 @@
       "platform": "browser"
     },
     "./time": {
-      "en": "Julian dates and the step from UTC to terrestrial time",
-      "ja": "ユリウス日と、UTC から地球時への換算",
+      "en": "Julian dates (and the julian package's functions), calendars, time scales, sidereal time and Mars time",
+      "ja": "ユリウス日 (julian パッケージの関数も)、暦、時刻系、恒星時、火星の時刻",
       "platform": "node"
     },
     "./tables": {
