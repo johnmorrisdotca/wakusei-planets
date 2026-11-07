@@ -240,6 +240,7 @@
     "site": "pnpm build && node scripts/site.ts",
     "dev": "pnpm site && node scripts/dev.ts",
     "test:demo": "pnpm site && node scripts/docs-site.mjs build && playwright test --project=chromium-desk --project=chromium-phone --project=webkit-desk --project=webkit-phone",
+    "test:demo:one": "pnpm site && node scripts/docs-site.mjs build && playwright test",
     "test:freeze": "pnpm site && playwright test --project=freeze",
     "test:soak": "pnpm site && playwright test --project=soak",
     "screenshots": "pnpm site && node scripts/screenshots.ts",

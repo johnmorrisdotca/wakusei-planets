@@ -46,7 +46,13 @@ jobs:
       - name: Every way of using it in the README and the guides, built and opened in a browser
         run: pnpm test:usage
   demo:
+    # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit, about seven minutes each instead of thirty in a row.
+    name: demo (${{ matrix.project }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium-desk, chromium-phone, webkit-desk, webkit-phone]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -55,9 +61,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium webkit
-      - name: The demo and the docs site, played in Chromium and WebKit at a phone's width and a desk's
-        run: pnpm test:demo
+      - run: pnpm exec playwright install --with-deps ${{ startsWith(matrix.project, 'webkit') && 'webkit' || 'chromium' }}
+      - name: The demo and the docs site, played in one browser at one width (pnpm test:demo plays all four)
+        run: pnpm test:demo:one --project=${{ matrix.project }}
   freeze:
     runs-on: ubuntu-latest
     steps:

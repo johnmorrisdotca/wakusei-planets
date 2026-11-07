@@ -28,6 +28,7 @@ pnpm test:readme  # every ts block of the README, type-checked and run against t
 pnpm test:usage   # every way of using it in the README and the guides, built and opened
 pnpm docs:check   # the reference site's checks: every export documented with a running example, every guide with its Japanese twin
 pnpm test:demo    # the demo and the docs site in a real browser (needs: pnpm exec playwright install chromium webkit)
+pnpm test:demo:one --project=webkit-phone  # one of the four (chromium-desk, chromium-phone, webkit-desk, webkit-phone): CI runs them as four jobs
 pnpm test:freeze  # draws, frames, contexts and GPU objects at rest and over a run of changes
 ```
 
