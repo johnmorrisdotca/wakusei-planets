@@ -154,6 +154,11 @@
       "en": "The Earth, drawn by chikyu-earth",
       "ja": "地球 (chikyu-earth が描く)",
       "platform": "browser"
+    },
+    "./coordinates": {
+      "en": "Pure coordinate conversions",
+      "ja": "座標変換",
+      "platform": "node"
     }
   }
 }

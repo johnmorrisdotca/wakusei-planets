@@ -210,6 +210,11 @@
       "types": "./dist/bodies/earth.d.ts",
       "import": "./dist/bodies/earth.js",
       "default": "./dist/bodies/earth.js"
+    },
+    "./coordinates": {
+      "types": "./dist/coordinates.d.ts",
+      "import": "./dist/coordinates.js",
+      "default": "./dist/coordinates.js"
     }
   },
   "files": [
