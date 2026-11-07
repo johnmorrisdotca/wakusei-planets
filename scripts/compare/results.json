@@ -26,11 +26,11 @@
   "packages": {
     "wakusei": {
       "version": "0.20.0",
-      "sourceRevision": "a56a3300c93402cdb044342097ac975769134712",
+      "sourceRevision": "778ed8cbcbfdda551e2bc79e12873188e3bf07f1",
       "license": "MIT",
-      "minifiedBytes": 160526,
+      "minifiedBytes": 160546,
       "gzipBytes": 65653,
-      "bundleSha256": "d29436b598a77f5c29febadba24aa5021e6e9a3cb11659b24b0763191f9b6776"
+      "bundleSha256": "e8b3341a4d40688cccb3f5d7ccbc413eb64f3c79c79247f7e5cf0af1ecaf2b9c"
     },
     "astronomyEngine": {
       "version": "2.1.19",
