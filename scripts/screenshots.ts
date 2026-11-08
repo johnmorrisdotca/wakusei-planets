@@ -1,11 +1,11 @@
-// The README and docs pictures: `pnpm screenshots` builds the demo, serves it on 8302 and saves docs/images/*.png. The shaded looks are drawn in software, one browser at a time.
+// The README and docs pictures: `pnpm screenshots` builds the demo, serves it on 8227 and saves docs/images/*.png. The shaded looks are drawn in software, one browser at a time.
 // The family's thumbnail, dark thumbnail and icon come last (scripts/family-thumbnail.mjs); `pnpm screenshots --thumbnail` takes only those three.
 import { spawn } from "node:child_process";
 import { SOFTWARE_GL_ARGS } from "@johnmorrisdotca/kazoku-ui/testing";
 import { chromium, type Browser, type Page } from "@playwright/test";
 import { captureDrawing, composeThumbnails } from "./family-thumbnail.mjs";
 
-const port = 8302;
+const port = 8227;
 const server = spawn(process.execPath, ["scripts/dev.ts"], { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
 const out = (name: string) => new URL(`../docs/images/${name}.png`, import.meta.url).pathname;
 

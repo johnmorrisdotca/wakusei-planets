@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 
-const port = Number(process.env.PORT ?? 8300);
+const port = Number(process.env.PORT ?? 8225);
 const root = new URL("../site/", import.meta.url).pathname;
 const types: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
