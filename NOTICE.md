@@ -28,6 +28,14 @@ Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna (Pluto is with 
 
 The tests compare the Galilean moons and four planets with astronomy-engine (MIT, https://github.com/cosinekitty/astronomy), a development dependency that is never shipped.
 
+## The spacecraft
+
+Voyager 1 and 2, New Horizons, Pioneer 10 and 11, Cassini, Galileo, Juno, Parker Solar Probe and the James Webb Space Telescope. Values read on 2026-11-08. NASA content is not subject to copyright in the United States; credit: NASA/JPL-Caltech. This package is not endorsed by NASA and uses none of its insignia.
+
+- **Where they are**: JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api, read 2026-11-08), VECTORS, heliocentric, ecliptic and equinox J2000, over the whole of each craft's own record (its start and stop are the ones Horizons gives), fitted as Chebyshev tables by `scripts/make-spacecraft-data.py` (`src/craft/<craft>.ts`). The positions the tests compare with are in `test/data/spacecraft-horizons.json`. Horizons' paths after today are predictions.
+- **Facts and events**: NASA mission pages, read 2026-11-08: Voyager 1 (https://science.nasa.gov/mission/voyager/voyager-1/), Voyager 2 (https://science.nasa.gov/mission/voyager/voyager-2/), New Horizons (https://science.nasa.gov/mission/new-horizons/), Pioneer 10 (https://science.nasa.gov/mission/pioneer-10/), Pioneer 11 (https://science.nasa.gov/mission/pioneer-11/), Cassini (https://science.nasa.gov/mission/cassini/ and its timeline, https://science.nasa.gov/mission/cassini/the-journey/timeline/), Galileo (https://science.nasa.gov/mission/galileo/), Juno (https://science.nasa.gov/mission/juno/ and the NSSDCA record 2011-040A, https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=2011-040A), Parker Solar Probe (https://science.nasa.gov/mission/parker-solar-probe/ and the NSSDCA record 2018-065A, https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=2018-065A) and the James Webb Space Telescope (https://science.nasa.gov/mission/webb/ and https://science.nasa.gov/mission/webb/launch/). A time is given only where a page gives one. Where a page's date for a flyby disagrees with the closest approach of Horizons' path, the package keeps the date of the path (listed in the guide).
+- **Japanese names** are the usual Japanese spellings of the missions' names.
+
 ## The Earth
 
 The Earth's line drawing is chikyu-earth's own globe (MIT, by John Morris; https://github.com/johnmorrisdotca/chikyu-earth), an optional peer dependency: its own NOTICE.md has the terms of its outlines. The Earth's realistic and painted looks are drawn here, like every other body, from NASA's Blue Marble picture (below).
