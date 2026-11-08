@@ -5,6 +5,8 @@
 <p align="center"><strong>The Sun, the planets and their moons, for the web.</strong><br>
 A clean line drawing, a shaded realistic drawing, or a painted surface map, with each body's real size, axial tilt and rotation as data, and a planet's moons where they are at any date and time.</p>
 
+<p align="center">Part of <strong>SpaceProgramX (SPX)</strong>, the space packages: <a href="https://github.com/johnmorrisdotca/wakusei-planets">Wakusei Planets</a> · <a href="https://github.com/johnmorrisdotca/hoshi-stars">Hoshi Stars</a> · <a href="https://github.com/johnmorrisdotca/chikyu-earth">Chikyu Earth</a> · <a href="https://github.com/johnmorrisdotca/uchusen-rockets">Uchusen Rockets</a></p>
+
 <p align="center">
   <a href="https://github.com/johnmorrisdotca/wakusei-planets/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/johnmorrisdotca/wakusei-planets/actions/workflows/ci.yml/badge.svg"></a>
   <a href="./LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-2f5d4a"></a>
