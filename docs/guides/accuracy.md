@@ -107,7 +107,7 @@ A moon is drawn where it is to within a degree or two on its orbit, which is the
 
 We passed the same instants to each package and measured its direction error against JPL Horizons. These are **agreements on this sparse sample**, not guarantees over a whole date range or proof against physical observations. Smaller is better. A dash means unsupported or not measured, never zero error.
 
-Measured wakusei code: package.json version 0.20.0, **source revision [ad02e47](https://github.com/johnmorrisdotca/wakusei-planets/tree/ad02e47a7340733558a16d2fb2a18178364ee0f2)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
+Measured wakusei code: package.json version 0.20.0, **source revision [4869bd5](https://github.com/johnmorrisdotca/wakusei-planets/tree/4869bd5fa0f8cd0bdd92d36974bd415ac7b98797)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
 
 ### Shared samples from 1950–2050
 
