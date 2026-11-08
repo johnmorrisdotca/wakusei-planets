@@ -137,7 +137,7 @@ export interface SpaceModel {
   /** Filled at each draw. */
   drawn: { frame: SpaceFrame; distance: number; radiusPx: number } | null;
   /** What the painter has made now: the bodies drawn, and the moons shown. */
-  painted: { bodies: number; moons: number };
+  painted: { bodies: number; moons: number; held: number };
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -171,7 +171,7 @@ export const newSpaceModel = (): SpaceModel => ({
   light: "sun",
   look: "realistic",
   drawn: null,
-  painted: { bodies: 0, moons: 0 },
+  painted: { bodies: 0, moons: 0, held: 0 },
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -520,6 +520,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           let paintedMoons = 0;
           for (const held of moonSlots.values()) if (held.slot.drawing?.object.visible) paintedMoons += 1;
           model.painted.moons = paintedMoons;
+          model.painted.held = moonSlots.size;
 
           if (deps.onLabels && model.labels) {
             const places = {} as Record<SpaceBody, BodyPlace | null>;
