@@ -1,5 +1,5 @@
 // A long run: the demo plays through every body, with the date running, for SOAK_MINUTES (ten by default; the CI run is one). The JavaScript heap, the GPU objects and the contexts must be flat.
-import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
+import { COUNT_SCRIPT, GPU_KINDS, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test } from "@playwright/test";
 
 const MINUTES = Number(process.env.SOAK_MINUTES ?? 10);
@@ -62,9 +62,17 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
   };
   const warm = Date.now() + 60_000;
   while (Date.now() < warm) await step();
-  // the count is taken in one state every time (the first look, scale and light, riding nothing, the Earth in view), after the moons' four seconds are over: the loop leaves them in a different one each time
+  // A body's shader is compiled the first time it is drawn and kept until the look changes: a bounded cache (the bodies and moons of the page). The count is taken from a fresh one every time (the look
+  // changed to painted and back), with the first scale and light, riding nothing, the Earth in view and the sky held at the date the page opened on.
   const rest = async () => {
-    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"], ["Go to", "Earth"]] as const) await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Earth's light", "The Sun's"], ["Go to", "Earth"], ["Look", "Painted"], ["Look", "Realistic"]] as const) {
+      await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+      await page.waitForTimeout(600);
+    }
+    await sky.evaluate((el) => {
+      Reflect.set(el, "speed", 0);
+      Reflect.set(el, "time", Date.UTC(2026, 10, 2, 14));
+    });
     // the pictures and moons let go over a few seconds: wait until the count stops moving, never past a minute
     let last = -1;
     for (let tries = 0; tries < 20; tries += 1) {
@@ -74,12 +82,16 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
       last = now;
     }
   };
+  const run = () => sky.evaluate((el) => Reflect.set(el, "speed", 3600));
   await rest();
   const start = { heap: await heap(), counts: await readCounts(page) };
+  await run();
   const end = Date.now() + MINUTES * 60_000;
   while (Date.now() < end) await step();
   await rest();
   const stop = { heap: await heap(), counts: await readCounts(page) };
+  const kinds = (c: typeof start.counts) => JSON.stringify(Object.fromEntries(GPU_KINDS.map((k) => [k, c.created[k] - c.deleted[k]])));
+  console.log(`space soak ${MINUTES} min, before ${kinds(start.counts)}, after ${kinds(stop.counts)}`);
   console.log(`space soak ${MINUTES} min: heap ${(start.heap / 1048576).toFixed(1)} -> ${(stop.heap / 1048576).toFixed(1)} MB, GPU objects ${gpuObjects(start.counts)} -> ${gpuObjects(stop.counts)}, contexts ${stop.counts.contexts}`);
   expect(stop.counts.contexts).toBe(1);
   expect(gpuObjects(stop.counts)).toBeLessThanOrEqual(gpuObjects(start.counts) + 4);
