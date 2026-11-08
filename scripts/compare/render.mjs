@@ -13,7 +13,7 @@ function table(rows,limits,ja){
 }
 function sizes(data,ja){
  const head=ja?'| パッケージ・版 | 測定したコード | gzip（バイト） | ライセンス |':'| Package/version | Measured code | Gzip bytes | Licence |';
- const profiles=ja?{wakusei:'メイン全出力＋/suncalc 全出力＋全ての任意テーブル',astronomyEngine:'ESM エントリーの全出力',solarsystem:'Python 全モジュールのソース（下記参照）',suncalc:'ESM エントリーの全出力'}:{wakusei:'All main exports + all /suncalc exports + both optional tables',astronomyEngine:'All ESM entry exports',solarsystem:'All Python module source (see caveat)',suncalc:'All ESM entry exports'};
+ const profiles=ja?{wakusei:'メイン全出力＋/suncalc 全出力＋全ての任意テーブル（より細かい惑星級数 tables/vsop を除く）',astronomyEngine:'ESM エントリーの全出力',solarsystem:'Python 全モジュールのソース（下記参照）',suncalc:'ESM エントリーの全出力'}:{wakusei:'All main exports + all /suncalc exports + every optional table (not the finer planet series, tables/vsop)',astronomyEngine:'All ESM entry exports',solarsystem:'All Python module source (see caveat)',suncalc:'All ESM entry exports'};
  return [head,'|---|---|---:|---|',...Object.entries(data.packages).map(([k,v])=>`| ${names[k]} ${v.version} | ${profiles[k]} | ${v.gzipBytes.toLocaleString('en-US')} | ${v.license} |`)].join('\n');
 }
 export function render(data,limits,ja=false){
@@ -34,7 +34,7 @@ export function render(data,limits,ja=false){
 
 ${table(modern,limits,true)}
 
-**Astronomy Engine が良い場合もあります。** この部分集合では地球・地心の太陽と、ガリレオ衛星4個すべてで最大誤差が小さくなりました。全期間でも地球・地心の太陽・ガニメデ・カリストでは Astronomy Engine が勝ちます。wakusei は地球以外の8行（惑星と冥王星）と地球の月で小さい最大誤差を示しますが、個々の日付で常に勝つわけではありません。サイズでも勝者ではありません。
+**Astronomy Engine が良い場合もあります。** この部分集合では地球・地心の太陽とイオで最大誤差が小さくなりました。全期間で勝つのは地球と地心の太陽だけで、差は0.05秒角未満です。wakusei は地球以外の8行（惑星と冥王星）、地球の月、エウロパ・ガニメデ・カリスト（全期間ではイオも）で小さい最大誤差を示しますが、個々の日付で常に勝つわけではありません。サイズでも勝者ではありません。
 
 ### 幾何学的位置：全ての参照日
 
@@ -42,7 +42,7 @@ ${table(modern,limits,true)}
 
 ${table(geometric,limits,true)}
 
-惑星・準惑星は太陽中心、衛星は親天体中心（Nix・Hydra は冥王星系の重心）、太陽は地球中心です。参照は J2000 平均黄道の幾何学的ベクトルです。木星から冥王星は惑星単体の中心ではなく、惑星系の重心が Horizons の対象です。公開 API が明示しない中心の違いも小さな誤差に寄与し得ます。距離の誤差は順位付けしません。wakusei は全ての任意テーブルを読み込みます。Astronomy Engine の HelioVector・GeoMoon・JupiterMoons は J2000 赤道から固定黄道傾斜角で回転します。Python solarsystem は precession=False の平均日付黄道座標を IAU 1976 歳差・平均黄道傾斜角で J2000 に変換します。緯度を捨てる経度差ではなく、正規化した3次元ベクトル間の角度を安定な atan2 式で求めます。
+惑星・準惑星は太陽中心、衛星は親天体中心（Nix・Hydra は冥王星系の重心）、太陽は地球中心です。参照は J2000 平均黄道の幾何学的ベクトルです。木星から冥王星は惑星単体の中心ではなく、惑星系の重心が Horizons の対象です。公開 API が明示しない中心の違いも小さな誤差に寄与し得ます。距離の誤差は順位付けしません。wakusei は tables/vsop (より細かい惑星級数) を除く全ての任意テーブルを読み込みます。Astronomy Engine の HelioVector・GeoMoon・JupiterMoons は J2000 赤道から固定黄道傾斜角で回転します。Python solarsystem は precession=False の平均日付黄道座標を IAU 1976 歳差・平均黄道傾斜角で J2000 に変換します。緯度を捨てる経度差ではなく、正規化した3次元ベクトル間の角度を安定な atan2 式で求めます。
 
 † Ceres・Eris の Python スコアは、元期付き軌道要素を固定 J2000 座標と解釈した値です。公開 API はこの2天体の座標系を明確に保証していないため、確定的な順位には使いません。日付黄道と解釈した場合の全期間最大値は ${alt} 秒角です。両方の解釈を結果 JSON に保持しています。
 
@@ -99,7 +99,7 @@ A full-range maximum can be dominated by out-of-range calls or calendar bugs. St
 
 ${table(modern,limits,false)}
 
-**Astronomy Engine wins some comparisons.** In this subset it has smaller maximum errors for Earth, the geocentric Sun, and all four Galilean moons. Across the full fixture it also wins Earth, the geocentric Sun, Ganymede and Callisto. Wakusei has smaller maxima for the other eight planet/Pluto rows and Earth's Moon, but does not win at every individual date. It is not the smallest package, either.
+**Astronomy Engine wins some comparisons.** In this subset it has smaller maximum errors for Earth, the geocentric Sun and Io. Across the full fixture it wins only Earth and the geocentric Sun, by under 0.05 arc-second. Wakusei has smaller maxima for the other eight planet/Pluto rows, Earth's Moon, and Europa, Ganymede and Callisto (and Io across the full fixture), but does not win at every individual date. It is not the smallest package, either.
 
 ### Geometric positions: all reference dates
 
@@ -107,7 +107,7 @@ Every error is in arcseconds. Planets use 5 dates across 1800–2050; dwarfs 6 a
 
 ${table(geometric,limits,false)}
 
-Planets and dwarfs are heliocentric; moons are relative to their parent (Nix/Hydra to the Pluto-system barycentre); the Sun is geocentric. The reference is geometric J2000 mean ecliptic. For Jupiter through Pluto the Horizons target is the planetary-system barycentre, not the isolated planet centre; unexposed native centre conventions may contribute to small differences. Radius/distance errors are not ranked. Wakusei loads both optional tables. Astronomy Engine's HelioVector, GeoMoon and JupiterMoons are rotated from J2000 equatorial axes by the fixed obliquity. Python solarsystem uses precession=False; mean ecliptic-of-date directions are rotated to J2000 with IAU 1976 precession and mean obliquity. We measure the stable atan2 angle between normalized 3D vectors, not just longitude differences that discard latitude.
+Planets and dwarfs are heliocentric; moons are relative to their parent (Nix/Hydra to the Pluto-system barycentre); the Sun is geocentric. The reference is geometric J2000 mean ecliptic. For Jupiter through Pluto the Horizons target is the planetary-system barycentre, not the isolated planet centre; unexposed native centre conventions may contribute to small differences. Radius/distance errors are not ranked. Wakusei loads every optional table except tables/vsop (the finer planet series). Astronomy Engine's HelioVector, GeoMoon and JupiterMoons are rotated from J2000 equatorial axes by the fixed obliquity. Python solarsystem uses precession=False; mean ecliptic-of-date directions are rotated to J2000 with IAU 1976 precession and mean obliquity. We measure the stable atan2 angle between normalized 3D vectors, not just longitude differences that discard latitude.
 
 † The Python Ceres/Eris values interpret the epoch-based orbital elements as fixed J2000 axes. The public API does not clearly guarantee the frame for these two bodies, so they are not definitive rankings. Interpreting them as ecliptic of date gives full-range maxima of ${alt} arcsec instead. Both interpretations are retained in the result JSON.
 
