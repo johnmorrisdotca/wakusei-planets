@@ -62,10 +62,10 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
   };
   const warm = Date.now() + 60_000;
   while (Date.now() < warm) await step();
+  // the count is taken in one state every time (the first look, scale and light, riding nothing, the Earth in view), after the moons' four seconds are over: the loop leaves them in a different one each time
   const rest = async () => {
-    await page.getByRole("group", { name: "Ride along" }).getByRole("button", { name: "Off", exact: true }).dispatchEvent("click");
-    await page.getByRole("group", { name: "Go to" }).getByRole("button", { name: "Earth", exact: true }).dispatchEvent("click");
-    await page.waitForTimeout(3000);
+    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"], ["Go to", "Earth"]] as const) await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+    await page.waitForTimeout(7000);
   };
   await rest();
   const start = { heap: await heap(), counts: await readCounts(page) };
