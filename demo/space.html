@@ -57,6 +57,20 @@
             <button type="button" class="fam-button" id="names" aria-pressed="true" data-say="sp_names">Names</button>
           </div>
           <div class="fam-row">
+            <span class="fam-label" data-say="sp_ride">Ride along</span>
+            <div class="group fam-seg" id="rides" role="group" aria-label="Ride along" data-say-label="sp_ride">
+              <button type="button" data-ride="" aria-pressed="true" data-say="sp_ride_off">Off</button>
+              <button type="button" data-ride="moon" aria-pressed="false" data-say="sp_ride_moon">The Moon</button>
+              <button type="button" data-ride="mars" aria-pressed="false" data-say="sp_ride_mars">Mars</button>
+              <button type="button" data-ride="io" aria-pressed="false" data-say="sp_ride_io">Io, over Jupiter</button>
+            </div>
+            <span class="fam-label" data-say="sp_ride_look">Looking</span>
+            <div class="group fam-seg" id="ride-looks" role="group" aria-label="Looking" data-say-label="sp_ride_look">
+              <button type="button" data-ride-look="down" aria-pressed="true" data-say="sp_ride_down">Straight down</button>
+              <button type="button" data-ride-look="horizon" aria-pressed="false" data-say="sp_ride_horizon">At the horizon</button>
+            </div>
+          </div>
+          <div class="fam-row">
             <label class="field">
               <span data-say="sp_when">Date and time</span>
               <input type="datetime-local" id="when" class="fam-field" />
