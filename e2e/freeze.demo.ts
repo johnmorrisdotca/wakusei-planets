@@ -252,3 +252,96 @@ test("the portrait canvas stays within 6 million pixels and 4096 a side on a 5K 
   expect(withinPixelBudget(await canvasSize(page))).toBe(true);
   await context.close();
 });
+
+// --- the space view: eleven bodies in ONE scene, one WebGL context, nothing drawn at rest ------------------------------------------------------------------------------------------------
+const SPACE_PAGE = "/wakusei-planets/space.html";
+const sky = (page: Page) => page.locator("wakusei-space");
+const liveSky = (page: Page) => expect(sky(page)).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+const skyStats = (page: Page) => sky(page).evaluate((el) => (el as unknown as { stats: { draws: number; lookups: number; time: number; bodies: { painted: number } } }).stats);
+const goTo = (page: Page, name: string) => page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+
+test("the space view at rest: one WebGL context, one canvas, eleven bodies, and nothing is drawn", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&look=painted`);
+  await liveSky(page);
+  await expect.poll(async () => (await skyStats(page)).bodies.painted, { timeout: 60_000 }).toBe(11);
+  await settle(page, 2500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.contexts).toBe(1);
+  expect(after.draws - before.draws).toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
+  expect(await sky(page).evaluate((el) => el.shadowRoot!.querySelectorAll("canvas").length)).toBe(1);
+});
+
+test("the space view at a day a second: at most thirty frames a second, one frame at a time, a lookup about once a second, and nothing out of sight", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&speed=86400`);
+  await liveSky(page);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  const s0 = await skyStats(page);
+  await settle(page, 4000);
+  const after = await readCounts(page);
+  const s1 = await skyStats(page);
+  expect(s1.draws - s0.draws).toBeGreaterThan(0);
+  expect(s1.draws - s0.draws).toBeLessThanOrEqual(4 * 31);
+  expect((s1.lookups - s0.lookups) / 4).toBeLessThanOrEqual(2.6);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31 * 2);
+  expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "6000px";
+    document.body.prepend(spacer);
+    window.scrollTo(0, 5000);
+  });
+  await settle(page, 2500);
+  const hidden = await readCounts(page);
+  await settle(page, 2500);
+  const still = await readCounts(page);
+  expect(still.draws - hidden.draws).toBe(0);
+  expect(still.rafRequests - hidden.rafRequests).toBeLessThanOrEqual(1);
+});
+
+test("changes to the space view give back what they took: the zooms, the scales, the looks, the light, the clock and a removed element leave contexts and graphics memory flat", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z`);
+  await liveSky(page);
+  const round = async () => {
+    for (const place of ["Moon", "Sun", "Inner planets", "Whole solar system", "Jupiter and its moons", "Earth"]) {
+      await goTo(page, place);
+      await settle(page, 500);
+    }
+    for (const [group, name] of [["Scale", "True"], ["Look", "Painted"], ["Earth's light", "Always lit"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"]] as const) {
+      await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+      await settle(page, 500);
+    }
+    await page.locator("#orbits").dispatchEvent("click");
+    await page.locator("#orbits").dispatchEvent("click");
+    await settle(page, 500);
+  };
+  await round();
+  await round();
+  await settle(page, 2500);
+  const first = await readCounts(page);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await readCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
+  await sky(page).evaluate((el) => el.remove());
+  await settle(page, 3500);
+  const gone = await readCounts(page);
+  for (const kind of ["Buffer", "VertexArray", "Program"] as const) expect(gone.created[kind] - gone.deleted[kind], `${kind} left`).toBe(0);
+  expect(gpuObjects(gone)).toBeLessThanOrEqual(8);
+});
+
+test("the space view's canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 5120, height: 2880 }, deviceScaleFactor: 2, reducedMotion: "no-preference" });
+  const page = await context.newPage();
+  await page.addInitScript(COUNT_SCRIPT);
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z`);
+  await liveSky(page);
+  await settle(page, 800);
+  expect(withinPixelBudget(await canvasSize(page))).toBe(true);
+  await context.close();
+});
