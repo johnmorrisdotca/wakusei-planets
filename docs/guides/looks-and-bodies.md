@@ -26,7 +26,14 @@ A shaded look is code and data for one body, so each has its own import: `@johnm
 
 ## The Earth
 
-The Earth is drawn like every other body. Its realistic and painted looks are NASA's Blue Marble picture, lit and turned like the rest, with a rim of air (a shaded Earth cannot honestly be worked out from numbers, so both looks use the picture); `/all` includes it. They share the page's one WebGL context and have stills in a row of bodies. Its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe with the countries: install `@johnmorrisdotca/chikyu-earth` (an optional peer, 0.10.0 or later) and import `/earth`; without it the line look is this package's own outline.
+The Earth is drawn like every other body. Its realistic and painted looks are NASA's Blue Marble picture, lit and turned like the rest, with a rim of air (a shaded Earth cannot honestly be worked out from numbers, so both looks use the picture); `/all` includes it. They share the page's one WebGL context and have stills in a row of bodies. Its line look is this package's own outline unless the page also has [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s globe with the countries. For that, install `@johnmorrisdotca/chikyu-earth` (an optional peer, 0.10.0 or later) and import its element beside `/earth`:
+
+```js no-check
+import "@johnmorrisdotca/chikyu-earth/element";
+import "@johnmorrisdotca/wakusei-planets/earth";
+```
+
+`/earth` never imports chikyu-earth itself, so a project without it builds and draws the outline; when chikyu-earth's element arrives later on the page, the Earth switches to its globe.
 
 ## The dwarf planets
 

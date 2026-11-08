@@ -10,6 +10,7 @@ import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions 
 import { lookOf } from "../src/scene/look.ts";
 import "../src/element.ts";
 import "../src/bodies/all.ts";
+import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { turnRate } from "../src/live.ts";

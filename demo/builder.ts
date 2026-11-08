@@ -1,6 +1,7 @@
 // The code builder: choose a body, its look, its size, the sky and its turning, and copy the code for any way a page is made. One screen, choices in rows; the preview is the body itself and the code is `embedCode`.
 import "../src/element.ts";
 import "../src/bodies/all.ts";
+import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
 import type { EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";

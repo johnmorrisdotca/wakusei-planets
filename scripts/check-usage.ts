@@ -162,6 +162,21 @@ await step("cdn-jsdelivr", async () => {
   });
 });
 
+await step("earth-without-chikyu", async () => {
+  // chikyu-earth is an optional peer: a project without it must still build /earth and draw the Earth's line look (this package's own outline).
+  const absent = { name: "no-chikyu", setup: (b: import("esbuild").PluginBuild) => b.onResolve({ filter: /^@johnmorrisdotca\/chikyu-earth/ }, (a) => ({ errors: [{ text: `${a.path} is not installed` }] })) };
+  const out = await esbuild({ stdin: { contents: `import "@johnmorrisdotca/wakusei-planets/element"; import "@johnmorrisdotca/wakusei-planets/earth";`, resolveDir: usage }, bundle: true, format: "esm", write: false, absWorkingDir: root, logLevel: "silent", plugins: [absent] });
+  await opened(browser, async (page) => {
+    await page.route("https://page.test/**", (route) => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname === "/main.js") return route.fulfill({ body: out.outputFiles[0]!.text, contentType: "text/javascript" });
+      return route.fulfill({ body: `<!doctype html><wakusei-body body="earth" look="line" size="300"></wakusei-body><script type="module" src="/main.js"></script>`, contentType: "text/html" });
+    });
+    await page.goto("https://page.test/");
+    await seesGlobe(page);
+  });
+});
+
 await step("cdn-unpkg", async () => {
   await opened(browser, async (page) => {
     await page.route("https://unpkg.com/**", async (route) => {

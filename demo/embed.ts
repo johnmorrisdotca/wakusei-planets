@@ -10,6 +10,7 @@
 import "../src/element.ts";
 import "../src/portrait/element.ts";
 import "../src/bodies/all.ts";
+import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 

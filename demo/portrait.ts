@@ -10,6 +10,7 @@ import { addBody, addMoons, ASPECTS, auto, centreCamera, createHistory, decodeSc
 import { defaultPitch } from "../src/portrait/pose.ts";
 import "../src/portrait/element.ts";
 import "../src/bodies/all.ts";
+import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiPortrait } from "../src/portrait/element.ts";
 import { WORDS } from "./words.js";

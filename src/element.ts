@@ -378,10 +378,7 @@ export class WakuseiBody extends HTMLElement {
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
     const delegate = this.look === "line" ? delegates.get(this.body) : undefined;
-    if (delegate !== undefined) {
-      await this.#delegated(delegate);
-      return;
-    }
+    if (delegate !== undefined && (await this.#delegated(delegate))) return;
     if (this.#delegateEl !== undefined) {
       this.#delegateEl.remove();
       this.#delegateEl = undefined;
@@ -510,7 +507,7 @@ export class WakuseiBody extends HTMLElement {
   }
 
   /** A body whose line look another package draws (the Earth's globe with its countries). It is drawn at the body's size in a scale picture, never larger than the picture. */
-  async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>): Promise<void> {
+  async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>): Promise<boolean> {
     if (this.#view !== undefined) {
       this.#disposeView();
     }
@@ -518,8 +515,9 @@ export class WakuseiBody extends HTMLElement {
     const size = Math.round(this.clientWidth || 320);
     const fill = this.#fill();
     const key = `line|${center}|${fill}`;
-    if (this.#delegateEl !== undefined && this.#delegateKind === key) return;
+    if (this.#delegateEl !== undefined && this.#delegateKind === key) return true;
     const el = await delegate.line({ center, size });
+    if (el === null) return false;
     this.#delegateEl?.remove();
     this.#stage.innerHTML = "";
     el.style.cssText = `display:block;width:${fill * 100}%;height:${fill * 100}%;aspect-ratio:1;position:absolute;left:${(1 - fill) * 50}%;top:${(1 - fill) * 50}%`;
@@ -527,6 +525,7 @@ export class WakuseiBody extends HTMLElement {
     this.#delegateEl = el;
     this.#delegateKind = key;
     this.#set("line");
+    return true;
   }
 
   /** How much of the picture's width the body's disc takes: 1 alone, less in a scale picture (`scale-to`, `span-km`). */

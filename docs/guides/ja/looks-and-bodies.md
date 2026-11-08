@@ -26,7 +26,14 @@ description: 見た目、天体ごとのエントリー、three.js、画像、�
 
 ## 地球
 
-地球も、ほかの天体と同じように描きます。realistic と painted は、どちらも NASA の Blue Marble の写真で、ほかの天体と同じ光と自転で描き、まわりに空気の縁をつけます（数字だけでは大陸の形を正直に描けないので、どちらの見た目も写真を使います）。`/all` に含まれます。ページの WebGL は1つを共有し、天体の並びでは止まった絵が出ます。線画は [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) の国境つきの線の地球儀です。`@johnmorrisdotca/chikyu-earth` (任意の依存、0.10.0 以降) を入れて `/earth` をimportしてください。入っていないときの線画は、このパッケージ自身の輪郭です。
+地球も、ほかの天体と同じように描きます。realistic と painted は、どちらも NASA の Blue Marble の写真で、ほかの天体と同じ光と自転で描き、まわりに空気の縁をつけます（数字だけでは大陸の形を正直に描けないので、どちらの見た目も写真を使います）。`/all` に含まれます。ページの WebGL は1つを共有し、天体の並びでは止まった絵が出ます。線画は、ふだんはこのパッケージ自身の輪郭です。ページに [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) の国境つきの地球儀もあれば、そちらを使います。そのためには `@johnmorrisdotca/chikyu-earth` (任意の依存、0.10.0 以降) を入れて、`/earth` と一緒にその要素をimportしてください。
+
+```js no-check
+import "@johnmorrisdotca/chikyu-earth/element";
+import "@johnmorrisdotca/wakusei-planets/earth";
+```
+
+`/earth` は chikyu-earth を自分ではimportしないので、入っていないプロジェクトでもビルドでき、輪郭を描きます。あとから chikyu-earth の要素がページに来たときは、地球はその地球儀に切り替わります。
 
 ## 準惑星
 
