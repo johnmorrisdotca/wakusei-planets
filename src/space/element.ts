@@ -463,8 +463,8 @@ export class WakuseiSpace extends HTMLElement {
     lookups: number;
     /** The camera as the last draw left it: its place in Earth radii from the Earth's centre, and its field of view in degrees. */
     camera: { position: [number, number, number]; fov: number };
-    /** What the painter has made at the last draw: the bodies with a drawing, and the moons shown round a planet that is near. */
-    bodies: { look: string; painted: number; moons: number };
+    /** What the painter has made at the last draw: the bodies with a drawing, the moons shown round a planet that is near, and the moons made and not yet let go. */
+    bodies: { look: string; painted: number; moons: number; held: number };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
   } {
     const stats = this.#taken?.renderer.stats;
@@ -478,7 +478,7 @@ export class WakuseiSpace extends HTMLElement {
       time: this.#model.time,
       lookups: this.#model.lookups,
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
-      bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons },
+      bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
     };
   }
