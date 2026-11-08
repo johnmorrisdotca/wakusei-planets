@@ -142,7 +142,7 @@ console.log(Math.round(titan?.distance ?? 0));
 
 同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
 
-測定した wakusei は package.json 上の版 0.21.0、**ソースのリビジョン [3430b07](https://github.com/johnmorrisdotca/wakusei-planets/tree/3430b07a7740c9e489f22e3418da731048d20903)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
+測定した wakusei は package.json 上の版 0.21.0、**ソースのリビジョン [a126c5e](https://github.com/johnmorrisdotca/wakusei-planets/tree/a126c5e78e28a6df3b1adee43e2e6881cbdf6d0b)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
 
 ### 共有できる 1950–2050 年のサンプル
 

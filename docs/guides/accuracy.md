@@ -142,7 +142,7 @@ A planet is drawn within a few arc-seconds, and a moon within a degree or two on
 
 We passed the same instants to each package and measured its direction error against JPL Horizons. These are **agreements on this sparse sample**, not guarantees over a whole date range or proof against physical observations. Smaller is better. A dash means unsupported or not measured, never zero error.
 
-Measured wakusei code: package.json version 0.21.0, **source revision [3430b07](https://github.com/johnmorrisdotca/wakusei-planets/tree/3430b07a7740c9e489f22e3418da731048d20903)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
+Measured wakusei code: package.json version 0.21.0, **source revision [a126c5e](https://github.com/johnmorrisdotca/wakusei-planets/tree/a126c5e78e28a6df3b1adee43e2e6881cbdf6d0b)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
 
 ### Shared samples from 1950–2050
 
