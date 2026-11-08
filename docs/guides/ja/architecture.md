@@ -79,14 +79,14 @@ console.log(bodies, "bodies;", moons, "moons");
 `CoordinateObserver` とエンジンの `Observer` は同じ型です。緯度・経度は測地座標の度数、任意の `heightM` は WGS 84 楕円体からのメートルです。赤経・赤緯は度数の方向型を共有し、距離は `distanceKm` または `distanceAu` と明記します。`/coordinates` は高さを検証するだけで回転には使いません。空のエンジンは視差に使います。互換性のため、SunCalc の `getTimes` は同じ入力値を見える地平線からの高さとして地平線の伏角にも使います。ジオイドや地形の補正は推測しません。二つの高さ基準を同じとするのは従来の近似であり、自動変換ではありません。
 
 ```ts
-import { heliocentric } from "@johnmorrisdotca/wakusei-planets";
+import { heliocentricModel } from "@johnmorrisdotca/wakusei-planets";
 
 const when = Date.UTC(2026, 10, 7);
-console.log(heliocentric.model("ceres", when));
+console.log(heliocentricModel("ceres", when));
 await import("@johnmorrisdotca/wakusei-planets/tables/ceres");
-console.log(heliocentric.model("ceres", when));
+console.log(heliocentricModel("ceres", when));
 ```
 
-`heliocentric.model(body, milliseconds)` は、**現在**登録されている表と TT の区間範囲に基づき、位置を返す理論を報告します。水星から海王星は `vsop87b`、冥王星は内蔵の `chebyshev` 表を優先します。登録された準惑星の表は範囲内でだけ使います。範囲外では準惑星が `osculating-elements`、冥王星が `approximate-elements` に戻ります。表を読み込んだ後や時刻を変えた後は再照会してください。位置と読み込みの動作は変わらず、この照会が任意の表を読み込むこともありません。
+`heliocentricModel(body, milliseconds)` は、**現在**登録されている表と TT の区間範囲に基づき、位置を返す理論を報告します。水星から海王星は `vsop87b`、冥王星は内蔵の `chebyshev` 表を優先します。登録された準惑星の表は範囲内でだけ使います。範囲外では準惑星が `osculating-elements`、冥王星が `approximate-elements` に戻ります。表を読み込んだ後や時刻を変えた後は再照会してください。位置と読み込みの動作は変わらず、この照会が任意の表を読み込むこともありません。
 
 `worstArcseconds` はフィットに使わず保留した標本で測った最大誤差で、全日付の保証ではありません。冥王星は 0.14637″ です。VSOP87B と軌道要素による代替計算には対応する保留標本の上限がないため `null` を返します。[精度比較](accuracy.md) は Horizons に対する別の疎な日付集合の測定で、こちらも全期間の最大誤差を保証しません。

@@ -124,8 +124,7 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
  * console.log(Math.hypot(x, y, z).toFixed(3));
  * ```
  */
-// A pure initializer lets unused position theories drop out of drawing-only imports.
-export const heliocentric = /* @__PURE__ */ Object.assign(function heliocentric(planet: HostId, ms: number): Vec3 {
+export function heliocentric(planet: HostId, ms: number): Vec3 {
   const vsop = VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
   if (planet === "pluto" || tableOf(planet) !== undefined) {
@@ -174,14 +173,25 @@ export const heliocentric = /* @__PURE__ */ Object.assign(function heliocentric(
   const ci = Math.cos(I);
   const si = Math.sin(I);
   return [(cw * cn - sw * sn * ci) * x + (-sw * cn - cw * sn * ci) * y, (cw * sn + sw * cn * ci) * x + (-sw * sn + cw * cn * ci) * y, sw * si * x + cw * si * y];
-}, {
+}
+
 /**
- * The theory that would answer `heliocentric(planet, ms)` with the tables currently loaded.
- * `worstArcseconds` is the fitted table's measured maximum on held-back samples,
- * not an all-dates bound; null means that no such measurement is available.
- * Query again after importing a table or when changing the instant.
+ * The theory that `heliocentric(planet, ms)` answers with, given the tables loaded now: VSOP87B for Mercury to Neptune, a fitted Chebyshev table where one covers the moment, else
+ * osculating elements (a dwarf planet) or JPL's approximate elements (Pluto outside its table). `worstArcseconds` is the fitted table's measured worst on samples held back from
+ * the fit, not a bound for every date; `null` where no such measurement exists. Ask again after importing a table or for another moment.
+ *
+ * @param planet - A planet or dwarf planet.
+ * @param ms - The moment in milliseconds since 1970 (UTC).
+ * @returns The theory's name and its measured worst error in arc-seconds, or `null`.
+ *
+ * @example
+ * ```ts
+ * import { heliocentricModel } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(heliocentricModel("pluto", Date.UTC(2026, 0, 1)));
+ * ```
  */
-model: (planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } => {
+export function heliocentricModel(planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } {
   const tt = toTerrestrialTime(ms);
   if (VSOP87[planet] !== undefined) return { theory: "vsop87b", worstArcseconds: null };
   const table = fittedTableAt(planet, tt);
@@ -189,7 +199,6 @@ model: (planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "oscula
     ? { theory: "chebyshev", worstArcseconds: table.worst }
     : { theory: planet in DWARF_ELEMENTS ? "osculating-elements" : "approximate-elements", worstArcseconds: null };
 }
-});
 
 
 /**

@@ -79,14 +79,14 @@ The sky engine adds light time and aberration where appropriate, then topocentri
 `CoordinateObserver` and the engine's `Observer` name the same shape: geodetic latitude and longitude in degrees and optional `heightM` above the WGS 84 ellipsoid. Right ascension and declination share one degree-valued direction type; distances remain explicitly `distanceKm` or `distanceAu`. `/coordinates` validates height but ignores it. The sky engine uses it for parallax. For compatibility, SunCalc `getTimes` also treats the supplied height as height above the visible horizon when computing dip. No geoid or terrain correction is inferred; those two height references are an existing approximation, not an automatic conversion.
 
 ```ts
-import { heliocentric } from "@johnmorrisdotca/wakusei-planets";
+import { heliocentricModel } from "@johnmorrisdotca/wakusei-planets";
 
 const when = Date.UTC(2026, 10, 7);
-console.log(heliocentric.model("ceres", when));
+console.log(heliocentricModel("ceres", when));
 await import("@johnmorrisdotca/wakusei-planets/tables/ceres");
-console.log(heliocentric.model("ceres", when));
+console.log(heliocentricModel("ceres", when));
 ```
 
-`heliocentric.model(body, milliseconds)` reports the theory that would answer **now**, with the currently registered tables and their TT segment coverage. Mercury to Neptune use `vsop87b`; Pluto prefers its built-in `chebyshev` table; a registered dwarf table is used only within its coverage. Outside coverage the result is `osculating-elements` for dwarf planets or `approximate-elements` for Pluto. Query again after importing a table or changing the instant. Positions and import behavior are unchanged; no optional table is loaded by the query.
+`heliocentricModel(body, milliseconds)` reports the theory that would answer **now**, with the currently registered tables and their TT segment coverage. Mercury to Neptune use `vsop87b`; Pluto prefers its built-in `chebyshev` table; a registered dwarf table is used only within its coverage. Outside coverage the result is `osculating-elements` for dwarf planets or `approximate-elements` for Pluto. Query again after importing a table or changing the instant. Positions and import behavior are unchanged; no optional table is loaded by the query.
 
 `worstArcseconds` is the table's measured maximum on samples held back from its fit, not a guarantee over every date. For Pluto it is 0.14637″. It is `null` for VSOP87B and the element fallbacks because no corresponding held-out fit bound is available. The [accuracy comparison](accuracy.md) gives separate sparse-grid measurements against Horizons; it is not a universal worst-case bound either.
