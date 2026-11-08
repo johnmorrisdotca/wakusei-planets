@@ -25,12 +25,12 @@
   },
   "packages": {
     "wakusei": {
-      "version": "0.20.0",
-      "sourceRevision": "b84adc284b0846f5fa48b6a549369006df24ac3b",
+      "version": "0.21.0",
+      "sourceRevision": "3430b07a7740c9e489f22e3418da731048d20903",
       "license": "MIT",
       "minifiedBytes": 190190,
-      "gzipBytes": 76978,
-      "bundleSha256": "2ffb1855970d369dad387f6aad8a385b17fc4fe3c40cfd3223a7fbec1f6b7392"
+      "gzipBytes": 76979,
+      "bundleSha256": "ce4843ede174357b901905531f0b0f2c86a6881f89c793dc3c124ef019197373"
     },
     "astronomyEngine": {
       "version": "2.1.19",

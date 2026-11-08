@@ -142,7 +142,7 @@ console.log(Math.round(titan?.distance ?? 0));
 
 同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
 
-測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [b84adc2](https://github.com/johnmorrisdotca/wakusei-planets/tree/b84adc284b0846f5fa48b6a549369006df24ac3b)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
+測定した wakusei は package.json 上の版 0.21.0、**ソースのリビジョン [3430b07](https://github.com/johnmorrisdotca/wakusei-planets/tree/3430b07a7740c9e489f22e3418da731048d20903)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
 
 ### 共有できる 1950–2050 年のサンプル
 
@@ -243,7 +243,7 @@ SunCalc 2.1.2 の TT−UT 多項式は約1900–2150年を対象とし、1800年
 
 | パッケージ・版 | 測定したコード | gzip（バイト） | ライセンス |
 |---|---|---:|---|
-| wakusei 0.20.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル（より細かい惑星級数 tables/vsop を除く） | 76,978 | MIT |
+| wakusei 0.21.0 | メイン全出力＋/suncalc 全出力＋全ての任意テーブル（より細かい惑星級数 tables/vsop を除く） | 76,979 | MIT |
 | astronomy-engine 2.1.19 | ESM エントリーの全出力 | 43,971 | MIT |
 | solarsystem 0.1.8 | Python 全モジュールのソース（下記参照） | 11,351 | MIT |
 | suncalc 2.1.2 | ESM エントリーの全出力 | 3,893 | BSD-2-Clause |

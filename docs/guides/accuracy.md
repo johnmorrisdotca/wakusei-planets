@@ -142,7 +142,7 @@ A planet is drawn within a few arc-seconds, and a moon within a degree or two on
 
 We passed the same instants to each package and measured its direction error against JPL Horizons. These are **agreements on this sparse sample**, not guarantees over a whole date range or proof against physical observations. Smaller is better. A dash means unsupported or not measured, never zero error.
 
-Measured wakusei code: package.json version 0.20.0, **source revision [b84adc2](https://github.com/johnmorrisdotca/wakusei-planets/tree/b84adc284b0846f5fa48b6a549369006df24ac3b)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
+Measured wakusei code: package.json version 0.21.0, **source revision [3430b07](https://github.com/johnmorrisdotca/wakusei-planets/tree/3430b07a7740c9e489f22e3418da731048d20903)**, the last commit that changed src/. A later release of the same version label with a different src/ is not covered.
 
 ### Shared samples from 1950–2050
 
@@ -243,7 +243,7 @@ SunCalc 2.1.2's TT−UT polynomial targets approximately 1900–2150; 1800 is ou
 
 | Package/version | Measured code | Gzip bytes | Licence |
 |---|---|---:|---|
-| wakusei 0.20.0 | All main exports + all /suncalc exports + every optional table (not the finer planet series, tables/vsop) | 76,978 | MIT |
+| wakusei 0.21.0 | All main exports + all /suncalc exports + every optional table (not the finer planet series, tables/vsop) | 76,979 | MIT |
 | astronomy-engine 2.1.19 | All ESM entry exports | 43,971 | MIT |
 | solarsystem 0.1.8 | All Python module source (see caveat) | 11,351 | MIT |
 | suncalc 2.1.2 | All ESM entry exports | 3,893 | BSD-2-Clause |
