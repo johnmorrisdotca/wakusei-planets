@@ -2,26 +2,27 @@
 """Write src/data/stars.ts: the stars to visual magnitude 6.0 from the Yale Bright Star Catalogue.
 
 Source: Hoffleit, D. and Warren, W. H. Jr., 1991, "The Bright Star Catalogue, 5th Revised Edition (Preliminary Version)", Astronomical Data Center
-(NASA Goddard) and CDS, catalogue V/50. The catalogue's own documentation calls it public domain, and the Astronomical Data Center asks only that it
-and the authors are acknowledged; NOTICE.md does. Positions are J2000 (FK5), proper motions and parallaxes are the catalogue's own.
+(NASA Goddard), catalogue V/50, as NASA's HEASARC serves it (table bsc5p, https://heasarc.gsfc.nasa.gov/W3Browse/star-catalog/bsc5p.html), a US
+government source. The catalogue's own documentation calls it public domain, and the Astronomical Data Center asks only that it and the authors are
+acknowledged; NOTICE.md does. Positions are J2000 (FK5) in the catalogue's own sexagesimal resolution; proper motions and parallaxes are the catalogue's.
 NOT the Hipparcos or Tycho catalogues: ESA licenses those CC BY-NC 3.0 IGO (non-commercial), which an MIT package cannot pass on.
 
 The common names are our own list, keyed by the catalogue's Bayer designation; each is checked here against the catalogue (the star must exist and
 be as bright as the name implies). Names follow the IAU Working Group on Star Names.
 
-    python3 -I scripts/make-star-data.py                 # fetches the catalogue from the VizieR mirror (needs the network)
-    python3 -I scripts/make-star-data.py --from FILE     # reads a VizieR TSV saved earlier
+    python3 -I scripts/make-star-data.py                 # fetches HEASARC's heasarc_bsc5p.tdat.gz (needs the network)
+    python3 -I scripts/make-star-data.py --from FILE     # reads that file saved earlier (gzipped or not)
 
 Neither runs in the test.
 """
+import gzip
 import re
 import sys
-import urllib.parse
 import urllib.request
 from pathlib import Path
 
 LIMIT = 6.0
-MIRROR = "https://vizier.cfa.harvard.edu/viz-bin/asu-tsv"
+SOURCE = "https://heasarc.gsfc.nasa.gov/FTP/heasarc/dbase/tdat_files/heasarc_bsc5p.tdat.gz"
 OUT = Path(__file__).resolve().parent.parent / "src" / "data" / "stars.ts"
 
 GREEK = {
@@ -54,9 +55,11 @@ FAINTEST = {}
 
 
 def sexagesimal(text: str, hours: bool) -> float:
-    sign = -1.0 if text.strip().startswith("-") else 1.0
-    parts = text.replace("+", " ").replace("-", " ").split()
-    value = float(parts[0]) + float(parts[1]) / 60 + float(parts[2]) / 3600
+    """HEASARC's packed form: `064508.9` (hours, minutes, seconds) or `-164258` (sign, degrees, minutes, seconds)."""
+    text = text.strip()
+    sign = -1.0 if text.startswith("-") else 1.0
+    digits = text.lstrip("+-")
+    value = float(digits[0:2]) + float(digits[2:4]) / 60 + float(digits[4:]) / 3600
     return sign * value * (15.0 if hours else 1.0)
 
 
@@ -66,16 +69,27 @@ def spectral_class(text: str) -> str:
     return (match.group(1) + (match.group(2) or "")) if match else ""
 
 
+def unpack(raw: bytes) -> str:
+    return (gzip.decompress(raw) if raw[:2] == b"\x1f\x8b" else raw).decode("latin-1")
+
+
 def fetch() -> str:
-    params = {"-source": "V/50/catalog", "-out.max": "unlimited", "-out": "HR,Name,RAJ2000,DEJ2000,pmRA,pmDE,Vmag,B-V,SpType,Parallax", "Vmag": "<=6.5", "-sort": "Vmag", "-oc.form": "d"}
-    url = MIRROR + "?" + urllib.parse.urlencode(params, safe="=<>,/")
-    with urllib.request.urlopen(url, timeout=120) as response:
-        return response.read().decode("latin-1")
+    with urllib.request.urlopen(SOURCE, timeout=120) as response:
+        return unpack(response.read())
+
+
+def records(text: str):
+    """The rows of a HEASARC tdat file as dictionaries keyed by its column names (`line[1]`)."""
+    lines = text.splitlines()
+    columns = next(line for line in lines if line.startswith("line[1]")).split("=", 1)[1].split()
+    for line in lines[lines.index("<DATA>") + 1 : lines.index("<END>")]:
+        yield dict(zip(columns, line.split("|")))
 
 
 def designation(name: str):
-    """The catalogue's ten-character name: a three-character Flamsteed number, a four-character Bayer letter and a three-character constellation."""
-    name = name.ljust(10)
+    """The catalogue's ten-character name (HEASARC's `alt_name`, leading spaces dropped): a three-character Flamsteed number, a four-character Bayer
+    letter and a three-character constellation."""
+    name = name.strip().rjust(10) if name.strip() else " " * 10
     flamsteed = name[0:3].strip()
     bayer = name[3:7].strip()
     constellation = name[7:10].strip()
@@ -86,23 +100,20 @@ def designation(name: str):
 
 
 def main() -> None:
-    text = Path(sys.argv[sys.argv.index("--from") + 1]).read_text(encoding="latin-1") if "--from" in sys.argv else fetch()
+    text = unpack(Path(sys.argv[sys.argv.index("--from") + 1]).read_bytes()) if "--from" in sys.argv else fetch()
     stars = []
-    for line in text.splitlines():
-        if line.startswith("#") or not line.strip():
+    for r in records(text):
+        if not r["hr"].strip() or not r["cra"].strip() or not r["cdec"].strip() or not r["vmag"].strip():
             continue
-        p = line.split("\t")
-        if len(p) < 10 or not p[0].strip().isdigit() or not p[2].strip() or not p[3].strip() or not p[6].strip():
-            continue
-        magnitude = float(p[6])
+        magnitude = float(r["vmag"])
         if magnitude > LIMIT:
             continue
-        flamsteed, letter, constellation = designation(p[1])
+        flamsteed, letter, constellation = designation(r["alt_name"])
         stars.append({
-            "hr": int(p[0]), "letter": letter, "flamsteed": flamsteed, "constellation": constellation,
-            "ra": sexagesimal(p[2], True), "dec": sexagesimal(p[3], False),
-            "pmRa": round(float(p[4]) * 1000) if p[4].strip() else 0, "pmDec": round(float(p[5]) * 1000) if p[5].strip() else 0,
-            "v": magnitude, "bv": p[7].strip(), "spectral": spectral_class(p[8]), "plx": round(float(p[9]) * 1000) if p[9].strip() else 0,
+            "hr": int(r["hr"]), "letter": letter, "flamsteed": flamsteed, "constellation": constellation,
+            "ra": sexagesimal(r["cra"], True), "dec": sexagesimal(r["cdec"], False),
+            "pmRa": round(float(r["pmra"]) * 1000) if r["pmra"].strip() else 0, "pmDec": round(float(r["pmdec"]) * 1000) if r["pmdec"].strip() else 0,
+            "v": magnitude, "bv": r["bv_color"].strip(), "spectral": spectral_class(r["spect_type"]), "plx": round(float(r["parallax"]) * 1000) if r["parallax"].strip() else 0,
         })
     stars.sort(key=lambda s: (s["v"], s["hr"]))
     by_designation = {}
@@ -134,7 +145,7 @@ def main() -> None:
         ]))
     name_lines = ",".join(f"{hr}:{name!r}".replace("'", '"') for hr, name in sorted(names.items()))
     out = f"""// GENERATED by scripts/make-star-data.py. Do not edit by hand.
-// The stars of visual magnitude {LIMIT} and brighter from the Yale Bright Star Catalogue (Hoffleit and Warren 1991, 5th revised edition, preliminary; ADC/CDS V/50):
+// The stars of visual magnitude {LIMIT} and brighter from the Yale Bright Star Catalogue (Hoffleit and Warren 1991, 5th revised edition, preliminary; ADC V/50, from NASA HEASARC):
 // {len(stars)} stars, brightest first. One row a star: HR number | Bayer letter | Flamsteed number | constellation | RA J2000 in tenths of a second of time |
 // Dec J2000 in arc-seconds (both the catalogue's own resolution) | proper motion in RA (times cos Dec) and in Dec, milliarcseconds a year | V magnitude times 100 |
 // B-V times 100 | spectral class and subclass | parallax in milliarcseconds.
