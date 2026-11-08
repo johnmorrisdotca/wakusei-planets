@@ -56,12 +56,14 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
     await page.getByRole("group", { name: "Go to" }).getByRole("button", { name: places[i % places.length]!, exact: true }).dispatchEvent("click");
     const [group, name] = toggles[i % toggles.length]!;
     await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+    if (i % 3 === 0) await page.getByRole("group", { name: "Ride along" }).getByRole("button", { name: ["The Moon", "Mars", "Io, over Jupiter", "Off"][(i / 3) % 4]!, exact: true }).dispatchEvent("click");
     i += 1;
     await page.waitForTimeout(900);
   };
   const warm = Date.now() + 60_000;
   while (Date.now() < warm) await step();
   const rest = async () => {
+    await page.getByRole("group", { name: "Ride along" }).getByRole("button", { name: "Off", exact: true }).dispatchEvent("click");
     await page.getByRole("group", { name: "Go to" }).getByRole("button", { name: "Earth", exact: true }).dispatchEvent("click");
     await page.waitForTimeout(3000);
   };
