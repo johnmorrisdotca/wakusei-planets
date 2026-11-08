@@ -10,6 +10,7 @@ const gl = { launchOptions: { args: [...SOFTWARE_GL_ARGS, "--enable-precise-memo
 const others = ["freeze.demo.ts", "soak.demo.ts"];
 
 export default defineConfig({
+  globalSetup: "@johnmorrisdotca/kazoku-ui/testing/global-setup",
   testDir: "e2e",
   testMatch: ["*.demo.ts", "*.demo.mjs"],
   fullyParallel: false,
