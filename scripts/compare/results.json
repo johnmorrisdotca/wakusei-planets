@@ -26,7 +26,7 @@
   "packages": {
     "wakusei": {
       "version": "0.20.0",
-      "sourceRevision": "f93094f2e9f0163c4bdc93a3bf23f7c02862387f",
+      "sourceRevision": "6669a485505e33e8a781c3adf078a6c0514fb230",
       "license": "MIT",
       "minifiedBytes": 160558,
       "gzipBytes": 65660,
