@@ -316,6 +316,10 @@ test("changes to the space view give back what they took: the zooms, the scales,
     }
     await page.locator("#orbits").dispatchEvent("click");
     await page.locator("#orbits").dispatchEvent("click");
+    for (const name of ["The Moon", "Mars", "Io, over Jupiter", "Off"]) {
+      await page.getByRole("group", { name: "Ride along" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+      await settle(page, 700);
+    }
     await settle(page, 500);
   };
   await round();
@@ -333,6 +337,28 @@ test("changes to the space view give back what they took: the zooms, the scales,
   const gone = await readCounts(page);
   for (const kind of ["Buffer", "VertexArray", "Program"] as const) expect(gone.created[kind] - gone.deleted[kind], `${kind} left`).toBe(0);
   expect(gpuObjects(gone)).toBeLessThanOrEqual(8);
+});
+
+test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&speed=86400&ride=mars`);
+  await liveSky(page);
+  await settle(page, 2500);
+  const s0 = await skyStats(page);
+  const before = await readCounts(page);
+  await settle(page, 4000);
+  const s1 = await skyStats(page);
+  const after = await readCounts(page);
+  expect(s1.draws - s0.draws).toBeGreaterThan(0);
+  expect(s1.draws - s0.draws).toBeLessThanOrEqual(4 * 31);
+  expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31 * 2);
+  await sky(page).evaluate((el) => Reflect.set(el, "speed", 0));
+  await settle(page, 6000);
+  const rest0 = await readCounts(page);
+  await settle(page, 3000);
+  const rest1 = await readCounts(page);
+  expect(rest1.draws - rest0.draws).toBe(0);
+  expect(rest1.rafRequests - rest0.rafRequests).toBe(0);
 });
 
 test("the space view's canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {

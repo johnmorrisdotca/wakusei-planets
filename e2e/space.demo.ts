@@ -239,3 +239,139 @@ test("a lost context is recovered", async ({ page }) => {
   await expect.poll(async () => (await statsOf(page)).draws).toBeGreaterThan(draws);
   expect(errors).toEqual([]);
 });
+
+// --- riding along ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+interface RideStats extends SpaceStats {
+  ride: { riding: boolean; lost: boolean; gliding: boolean };
+}
+const rideOf = (page: Page): Promise<RideStats> => page.locator(SPACE).evaluate((el) => Reflect.get(el, "stats") as RideStats);
+const rideAlong = (page: Page, target: unknown, options: unknown = {}) => page.locator(SPACE).evaluate((el, [t, o]) => (el as unknown as { ride(t: unknown, o: unknown): void }).ride(t, o), [target, options] as const);
+const away = (s: SpaceStats): number => Math.hypot(...s.camera.position);
+
+test("riding the Moon: the camera is 10 Earth radii out when compressed and 55 to 66 when true, and the Moon is not drawn round it", async ({ page }) => {
+  await open(page);
+  await rideAlong(page, "moon");
+  await expect.poll(async () => (await rideOf(page)).ride.gliding).toBe(false);
+  expect(away(await rideOf(page))).toBeCloseTo(10, 0);
+  await setOn(page, "scale", "true");
+  await settle(page, 800);
+  const real = away(await rideOf(page));
+  expect(real).toBeGreaterThan(55);
+  expect(real).toBeLessThan(66);
+});
+
+test("riding a moon: the camera is at the moon's real place round its planet", async ({ page }) => {
+  await open(page);
+  await setOn(page, "scale", "true");
+  await rideAlong(page, "io", { smooth: false });
+  await settle(page, 1200);
+  const s = await rideOf(page);
+  expect(s.ride.riding).toBe(true);
+  const { frameAt, placeAround, placeSun, radiusIn } = await import("../src/space/index.ts");
+  const { moonOffset } = await import("../src/scene/orient.ts");
+  const frame = frameAt(s.time);
+  const sun = placeSun("true", frame.sun);
+  const jupiter = placeAround("true", sun, [frame.planets.jupiter[0] - frame.sun[0], frame.planets.jupiter[1] - frame.sun[1], frame.planets.jupiter[2] - frame.sun[2]]);
+  const offset = moonOffset("io", s.time);
+  const R = radiusIn("jupiter", "true");
+  const expected = [jupiter[0] + offset[0] * R, jupiter[1] + offset[1] * R, jupiter[2] + offset[2] * R];
+  const miss = Math.hypot(s.camera.position[0] - expected[0], s.camera.position[1] - expected[1], s.camera.position[2] - expected[2]);
+  expect(miss, `${miss} Earth radii from io's place`).toBeLessThan(0.05 * R);
+});
+
+test("riding a point of your own: it is 400 km up, and goes round at its own rate, in about 90 minutes", async ({ page }) => {
+  await open(page);
+  await page.locator(SPACE).evaluate((el) => {
+    const radius = 6378.137 + 400;
+    const rate = Math.sqrt(398_600.4418 / radius ** 3);
+    const at = (ms: number) => {
+      const a = rate * (ms / 1000);
+      return { position: [radius * Math.cos(a), 0, radius * Math.sin(a)], velocity: [-radius * rate * Math.sin(a), 0, radius * rate * Math.cos(a)] };
+    };
+    (el as unknown as { ride(t: unknown, o: unknown): void }).ride({ at }, { smooth: false });
+  });
+  await setOn(page, "speed", 60);
+  await settle(page, 600);
+  const s0 = await rideOf(page);
+  expect(away(s0)).toBeCloseTo(1.0627, 2);
+  await page.waitForTimeout(4000);
+  const s1 = await rideOf(page);
+  const turned = (Math.acos(Math.min(1, (s0.camera.position[0] * s1.camera.position[0] + s0.camera.position[1] * s1.camera.position[1] + s0.camera.position[2] * s1.camera.position[2]) / (away(s0) * away(s1)))) * 180) / Math.PI;
+  const expected = ((s1.time - s0.time) / 1000) * Math.sqrt(398_600.4418 / 6778.137 ** 3) * (180 / Math.PI);
+  expect(Math.abs(turned - expected)).toBeLessThan(3);
+});
+
+test("a point that cannot be placed: the ride is lost, the ordinary camera is used and the page is told once", async ({ page }) => {
+  await open(page);
+  await page.locator(SPACE).evaluate((el) => {
+    Reflect.set(window, "__lost", 0);
+    el.addEventListener("wakusei-ride-lost", () => Reflect.set(window, "__lost", (Reflect.get(window, "__lost") as number) + 1));
+    (el as unknown as { ride(t: unknown, o: unknown): void }).ride({ at: () => null }, { smooth: false });
+  });
+  await expect.poll(async () => (await rideOf(page)).ride.lost).toBe(true);
+  expect(await page.evaluate(() => Reflect.get(window, "__lost"))).toBe(1);
+  expect(away(await rideOf(page))).toBeCloseTo(3.4, 0);
+});
+
+test("switching glides and ends in about a second, then (the moons let go) nothing is drawn", async ({ page }) => {
+  await open(page);
+  await rideAlong(page, "moon", { smooth: false });
+  await settle(page, 600);
+  await rideAlong(page, "mars");
+  expect((await rideOf(page)).ride.gliding).toBe(true);
+  await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 4000 }).toBe(false);
+  await settle(page, 5000);
+  const before = await readCounts(page);
+  await page.waitForTimeout(2500);
+  const after = await readCounts(page);
+  expect(after.draws).toBe(before.draws);
+  expect(after.rafRequests).toBe(before.rafRequests);
+});
+
+test("riding at a day a second: at most 30 draws a second, and nothing when scrolled out of sight", async ({ page }) => {
+  await open(page);
+  await rideAlong(page, "mars", { smooth: false });
+  await setOn(page, "speed", 86400);
+  await settle(page, 800);
+  const s0 = await statsOf(page);
+  await page.waitForTimeout(4000);
+  const s1 = await statsOf(page);
+  expect((s1.draws - s0.draws) / 4).toBeLessThanOrEqual(31);
+  expect(s1.draws - s0.draws).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "6000px";
+    document.body.prepend(spacer);
+    window.scrollTo(0, 5000);
+  });
+  await page.waitForTimeout(1200);
+  const hidden = await readCounts(page);
+  await page.waitForTimeout(2500);
+  const still = await readCounts(page);
+  expect(still.draws - hidden.draws).toBe(0);
+});
+
+test("stopping the ride gives the camera back to the body it was looking at", async ({ page }) => {
+  await open(page);
+  await setOn(page, "body", "jupiter");
+  await rideAlong(page, "moon", { smooth: false });
+  await settle(page, 600);
+  await rideAlong(page, null, { smooth: false });
+  await expect.poll(async () => (await rideOf(page)).distance).toBeCloseTo(3.4 * 1.8, 0);
+  expect((await rideOf(page)).ride.riding).toBe(false);
+});
+
+test.describe("a reader who prefers reduced motion", () => {
+  test.use({ reducedMotion: "reduce" });
+  test("a ride jumps instead of gliding, and runs at about one step a second at 60 times real time", async ({ page }) => {
+    await open(page);
+    await rideAlong(page, "moon");
+    expect((await rideOf(page)).ride.gliding).toBe(false);
+    await setOn(page, "speed", 60);
+    await settle(page, 800);
+    const s0 = await statsOf(page);
+    await page.waitForTimeout(4000);
+    const s1 = await statsOf(page);
+    expect((s1.draws - s0.draws) / 4).toBeLessThanOrEqual(1.6);
+  });
+});
