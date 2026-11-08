@@ -68,6 +68,10 @@ A planet's nearer moons appear round it once the planet is a few pixels across, 
 
 Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale`, `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`. Events: `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-time` (while time runs), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera` and `bodies`.
 
+## Riding along
+
+`space.ride("moon")`, `space.ride("io")` or `space.ride({ at })` puts the camera on a moving point and looks at the body it goes round: see [Riding along](ride-along.md).
+
 ## The budget
 
 The view keeps the same rules as every live 3D view in the package, and `pnpm test:freeze` proves them: one WebGL context through the shared renderer, a canvas inside 4096 pixels a side and 6 million pixels, nothing drawn at rest, at most 30 frames a second, real time redrawn once a minute, nothing drawn out of sight, everything freed when the element goes, and a lost context recovered.
