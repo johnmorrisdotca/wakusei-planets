@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Body, GeoVector, HelioVector, MakeTime } from "astronomy-engine";
 import { greenwichMeanSiderealTime } from "../src/time.ts";
-import { AU_IN_EARTH_RADII, blend, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, placeAround, placeMoon, placeSun, planetOrbit, radiusIn, SPACE_PLANETS, SUN_COMPRESSED, truePosition } from "../src/space/index.ts";
+import { AU_IN_EARTH_RADII, blend, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, placeAround, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition } from "../src/space/index.ts";
+import { moonOffset } from "../src/scene/orient.ts";
 import type { Vec3 } from "../src/vec.ts";
 
 const RAD = Math.PI / 180;
@@ -140,4 +141,75 @@ test("the ground direction follows the Earth's turn: Greenwich is at the siderea
   assert.ok(groundDirection(0, 90, ms)[1] > 0.999);
   const later = groundDirection(0, 0, ms + 3_600_000);
   assert.ok(Math.abs(degrees([x, y, z], later) - 15.04) < 0.1);
+});
+
+const dotOf = (a: Vec3, b: Vec3): number => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const rideOf = (extra: Partial<Parameters<typeof ridePose>[0]> = {}) => ridePose({ position: [1.066, 0, 0], velocity: [0, 0, -7.66], radius: 1, look: "down", yaw: 0, tilt: 0, zoom: 1, ...extra });
+
+test("riding along looking down: the camera looks at the centre with the way it goes at the top, and the body fills 70 degrees at 420 km", () => {
+  const pose = rideOf();
+  assert.ok(degrees(pose.forward, [-1, 0, 0]) < 1e-4);
+  assert.ok(degrees(pose.up, [0, 0, -1]) < 1e-4);
+  assert.equal(pose.fov, RIDE_FOV);
+  assert.ok(Math.abs(pose.bodyRadiusDegrees - Math.asin(1 / 1.066) / RAD) < 1e-9);
+});
+
+test("riding along looking at the horizon: tipped forward by the body's angular radius less 12 degrees", () => {
+  const pose = rideOf({ look: "horizon" });
+  const tip = degrees(pose.forward, [-1, 0, 0]);
+  assert.ok(Math.abs(tip - (pose.bodyRadiusDegrees - 12)) < 1e-6, `${tip}`);
+  assert.ok(dotOf(pose.forward, [0, 0, -1]) > 0);
+  assert.ok(Math.abs(dotOf(pose.forward, pose.up)) < 1e-9);
+});
+
+test("riding round any body: the radius is only a unit, so kilometres and radii give the same camera", () => {
+  const inRadii = ridePose({ position: [5.9, 0, 0], velocity: [0, 1, 0], radius: 1, look: "horizon", yaw: 20, tilt: -10, zoom: 2 });
+  const inKm = ridePose({ position: [5.9 * 69_911, 0, 0], velocity: [0, 17, 0], radius: 69_911, look: "horizon", yaw: 20, tilt: -10, zoom: 2 });
+  assert.ok(degrees(inRadii.forward, inKm.forward) < 1e-6);
+  assert.ok(degrees(inRadii.up, inKm.up) < 1e-6);
+  assert.ok(Math.abs(inRadii.bodyRadiusDegrees - inKm.bodyRadiusDegrees) < 1e-9);
+  const moonOverJupiter = Math.asin(1 / 5.9) / RAD;
+  assert.ok(Math.abs(inRadii.bodyRadiusDegrees - moonOverJupiter) < 1e-9);
+});
+
+test("a moon's way of going from two positions a second apart is the top of the picture", () => {
+  const ms = Date.UTC(2026, 10, 2, 14);
+  const here = moonOffset("io", ms);
+  const soon = moonOffset("io", ms + 1000);
+  const velocity: Vec3 = [soon[0] - here[0], soon[1] - here[1], soon[2] - here[2]];
+  const pose = ridePose({ position: here, velocity, radius: 1, look: "down", yaw: 0, tilt: 0, zoom: 1 });
+  assert.ok(degrees(pose.forward, [-here[0], -here[1], -here[2]]) < 1e-6);
+  assert.ok(dotOf(pose.up, velocity) / length(velocity) > 0.99);
+  assert.ok(Math.abs(length(here) - 5.9) < 0.3);
+});
+
+test("with no way of going, or one straight at the body, the camera still has a top: north, or east where north is straight down", () => {
+  for (const velocity of [[0, 0, 0], [-3, 0, 0]] as Vec3[]) {
+    const pose = rideOf({ velocity });
+    assert.ok(Math.abs(length(pose.up) - 1) < 1e-9 && Math.abs(length(pose.forward) - 1) < 1e-9);
+    assert.ok(Math.abs(dotOf(pose.forward, pose.up)) < 1e-9);
+  }
+  const overPole = ridePose({ position: [0, 1.2, 0], velocity: [0, 0, 0], radius: 1, look: "down", yaw: 0, tilt: 0, zoom: 1 });
+  assert.ok(Math.abs(length(overPole.up) - 1) < 1e-9);
+});
+
+test("a drag looks about: yaw turns the camera to its left, tilt tips it towards the bottom, and the pace follows the field of view", () => {
+  const base = rideOf();
+  const left = rideOf({ yaw: 30 });
+  const turned = degrees(base.forward, left.forward);
+  assert.ok(Math.abs(turned - 30 * (1.5 * 60) / 180) < 1e-6, `${turned}`);
+  assert.ok(left.forward[1] > 0.25, "the camera turns to its left (its left is +y here), so the ground moves right");
+  const tipped = rideOf({ tilt: 20 });
+  assert.ok(Math.abs(degrees(base.forward, tipped.forward) - 20 * (1.5 * 60) / 60) < 1e-6);
+  assert.ok(dotOf(tipped.forward, [0, 0, -1]) < 0, "tilt tips the camera towards the bottom of its picture, which is behind it");
+  const zoomed = rideOf({ zoom: 4, yaw: 30 });
+  assert.ok(Math.abs(zoomed.fov - 15) < 1e-9);
+  assert.ok(degrees(base.forward, zoomed.forward) < turned / 3);
+  assert.equal(rideOf({ zoom: 1000 }).fov, 5);
+  assert.equal(rideOf({ zoom: 0.001 }).fov, 100);
+});
+
+test("on or inside the body the angular radius is a quarter turn", () => {
+  assert.equal(rideOf({ position: [0.9, 0, 0] }).bodyRadiusDegrees, 90);
+  assert.equal(rideOf({ position: [1, 0, 0] }).bodyRadiusDegrees, 90);
 });
