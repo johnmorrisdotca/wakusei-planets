@@ -316,7 +316,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`. No browser. |
 | `.../element` | `<wakusei-body>`; three.js is loaded only for a shaded look. |
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
-| `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales: `frameAt`, `createTrack`, `placeSun`, `placeAround`. No browser. |
+| `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
@@ -346,6 +346,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
+| [Riding along](docs/guides/ride-along.md) | The camera on a moon, a planet or any moving point, looking at what it goes round |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
 | [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |

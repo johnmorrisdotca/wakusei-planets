@@ -68,6 +68,10 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale`、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture` です。イベントは `wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-time` (時間が進む間)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies` があります。
 
+## 乗って見る
+
+`space.ride("moon")`、`space.ride("io")`、`space.ride({ at })` で、カメラを動く点に乗せ、その点が回る天体を見ます。詳しくは [乗って見る](ride-along.md) をどうぞ。
+
 ## 負荷の上限
 
 このパッケージの3D表示と同じ決まりを守り、`pnpm test:freeze` で確かめています。共有レンダラーで WebGL コンテキストは1つ、キャンバスは1辺4096ピクセル以内かつ600万ピクセル以内、止まっている間は何も描かず、1秒に30フレームまで、実際の時間なら1分に1回だけ描き直し、画面の外では描かず、要素を外せばすべて解放し、失われたコンテキストは自動で戻します。
