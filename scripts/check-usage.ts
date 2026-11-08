@@ -173,7 +173,10 @@ await step("earth-without-chikyu", async () => {
       return route.fulfill({ body: `<!doctype html><wakusei-body body="earth" look="line" size="300"></wakusei-body><script type="module" src="/main.js"></script>`, contentType: "text/html" });
     });
     await page.goto("https://page.test/");
-    await seesGlobe(page);
+    await page.waitForFunction(() => {
+      const root = document.querySelector("wakusei-body")?.shadowRoot;
+      return root !== null && root !== undefined && root.querySelector("chikyu-earth") === null && root.querySelectorAll("svg path, svg ellipse").length > 0;
+    }, undefined, { timeout: 20_000 });
   });
 });
 
