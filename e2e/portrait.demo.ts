@@ -301,3 +301,31 @@ test("the demo's several bodies at once open in the portrait builder at true orb
   });
   expect(radii.deimos / radii.phobos).toBeCloseTo(23457 / 9375, 1);
 });
+
+test("two fingers: a pinch on empty space zooms the view, and a pinch on a body sizes that body", async ({ page, browserName }, testInfo) => {
+  test.skip(browserName !== "chromium" || !/phone/.test(testInfo.project.name), "a phone's touch, sent through Chromium's input");
+  await page.goto(`${PAGE}?scene=${encodeURIComponent("layout:manual~look:line~labels:0~orbits:0~shadows:0~mars_-0.4_0_0.1_0")}`);
+  await expect(page.locator("#view")).toHaveAttribute("data-state", "line", { timeout: 60_000 });
+  const pinchAt = async (at: { x: number; y: number }): Promise<void> => {
+    const cdp = await page.context().newCDPSession(page);
+    const points = (d: number) => [{ x: at.x - d / 2, y: at.y, id: 0 }, { x: at.x + d / 2, y: at.y, id: 1 }];
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: points(40) });
+    for (let i = 1; i <= 10; i += 1) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: points(40 + 8 * i) });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await cdp.detach();
+    await page.waitForTimeout(700);
+  };
+  const before = await scene(page);
+  const box = (await page.locator("#view").boundingBox())!;
+  const mars = await centreOf(page, 0);
+  const empty = { x: box.x + box.width * 0.8, y: box.y + box.height * 0.8 };
+  expect(Math.hypot(empty.x - mars.x, empty.y - mars.y), "the empty place is away from Mars").toBeGreaterThan(80);
+  await pinchAt(empty);
+  const zoomed = await scene(page);
+  expect(zoomed.camera.h, "a pinch apart on empty space zooms in").toBeLessThan(before.camera.h * 0.8);
+  expect(zoomed.items[0]!.r, "and leaves Mars's size alone").toBeCloseTo(before.items[0]!.r, 6);
+  await pinchAt(await centreOf(page, 0));
+  const sized = await scene(page);
+  expect(sized.items[0]!.r, "a pinch apart on Mars makes it bigger").toBeGreaterThan(zoomed.items[0]!.r * 1.3);
+  expect(sized.camera.h, "and does not zoom the view").toBeCloseTo(zoomed.camera.h, 6);
+});

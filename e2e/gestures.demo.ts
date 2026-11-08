@@ -181,3 +181,27 @@ test("Shift and a drag rolls the picture clockwise on the screen, and a plain dr
   );
   expect(differences.clockwise, `rolled 90 degrees it matches the upright picture turned clockwise (${differences.clockwise.toFixed(1)}) better than counter-clockwise (${differences.counter.toFixed(1)})`).toBeLessThan(differences.counter * 0.8);
 });
+
+/** Two fingers that start `gap` pixels apart about a point and end `gap + spread` apart: real touch events through the browser's own input, as a phone sends them. */
+async function pinch(page: Page, at: { x: number; y: number }, gap: number, spread: number): Promise<void> {
+  const cdp = await page.context().newCDPSession(page);
+  const points = (d: number) => [{ x: at.x - d / 2, y: at.y, id: 0 }, { x: at.x + d / 2, y: at.y, id: 1 }];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: points(gap) });
+  for (let i = 1; i <= 10; i += 1) await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: points(gap + (spread * i) / 10) });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await cdp.detach();
+  await page.waitForTimeout(600);
+}
+
+test("two fingers pinching apart zoom the view in, and together zoom it out", async ({ page, browserName }, testInfo) => {
+  test.skip(browserName !== "chromium" || !/phone/.test(testInfo.project.name), "a phone's touch, sent through Chromium's input");
+  await open(page);
+  const box = (await page.locator("#view").boundingBox())!;
+  const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await pinch(page, centre, 60, 120);
+  const closer = await detail(page);
+  expect(closer.zoom, "fingers apart zoom in").toBeGreaterThan(1.3);
+  expect(closer.yaw, "and do not turn the body").toBe(0);
+  await pinch(page, centre, 180, -120);
+  expect((await detail(page)).zoom, "fingers together zoom out").toBeLessThan(closer.zoom * 0.8);
+});
