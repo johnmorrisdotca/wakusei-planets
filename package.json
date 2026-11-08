@@ -66,7 +66,10 @@
     "horizons",
     "calculation",
     "geolocation",
-    "coordinates"
+    "coordinates",
+    "spacecraft",
+    "voyager",
+    "trajectory"
   ],
   "homepage": "https://johnmorrisdotca.github.io/wakusei-planets/",
   "repository": {
@@ -84,10 +87,12 @@
     "./dist/portrait/element.js",
     "./dist/bodies/*.js",
     "./dist/tables/*.js",
+    "./dist/craft/*.js",
     "./src/element.ts",
     "./src/portrait/element.ts",
     "./src/bodies/*.ts",
-    "./src/tables/*.ts"
+    "./src/tables/*.ts",
+    "./src/craft/*.ts"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -117,6 +122,11 @@
       "types": "./dist/stars.d.ts",
       "import": "./dist/stars.js",
       "default": "./dist/stars.js"
+    },
+    "./spacecraft": {
+      "types": "./dist/spacecraft.d.ts",
+      "import": "./dist/spacecraft.js",
+      "default": "./dist/spacecraft.js"
     },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
