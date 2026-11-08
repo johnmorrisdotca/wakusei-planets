@@ -31,6 +31,8 @@ const state = {
   names: address.get("names") !== "0",
   speed: Number(address.get("speed") ?? 0) || 0,
   time: address.get("t") ?? "now",
+  ride: pick(address.get("ride"), ["", "moon", "mars", "io"], ""),
+  rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
 };
 
@@ -41,6 +43,7 @@ const pressed = (button: HTMLElement, on: boolean): void => {
 const localValue = (ms: number): string => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
 let applied: string | undefined;
+let appliedRide: string | undefined;
 
 function render(): void {
   space.scale = state.scale;
@@ -57,6 +60,12 @@ function render(): void {
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
   for (const b of $$("#lights [data-light]")) pressed(b, b.dataset["light"] === state.light);
   for (const b of $$("#gotos [data-goto]")) pressed(b, b.dataset["goto"] === state.goto);
+  for (const b of $$("#rides [data-ride]")) pressed(b, b.dataset["ride"] === state.ride);
+  for (const b of $$("#ride-looks [data-ride-look]")) pressed(b, b.dataset["rideLook"] === state.rideLook);
+  if (appliedRide !== `${state.ride}|${state.rideLook}`) {
+    appliedRide = `${state.ride}|${state.rideLook}`;
+    space.ride(state.ride === "" ? null : (state.ride as "moon" | "mars" | "io"), { look: state.rideLook });
+  }
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
   pressed(nowButton, state.time === "now");
@@ -71,6 +80,8 @@ function render(): void {
   address.set("speed", state.speed === 0 ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
   address.set("goto", state.goto === "earth" ? null : state.goto);
+  address.set("ride", state.ride === "" ? null : state.ride);
+  address.set("rlook", state.rideLook === "down" ? null : state.rideLook);
 }
 
 function goTo(preset: SpacePreset): void {
@@ -84,6 +95,8 @@ for (const b of $$("#scales [data-scale]")) b.addEventListener("click", () => ((
 for (const b of $$("#looks [data-look]")) b.addEventListener("click", () => ((state.look = b.dataset["look"] as typeof state.look), render()));
 for (const b of $$("#lights [data-light]")) b.addEventListener("click", () => ((state.light = b.dataset["light"] as typeof state.light), render()));
 for (const b of $$("#gotos [data-goto]")) b.addEventListener("click", () => goTo(b.dataset["goto"] as SpacePreset));
+for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((state.ride = b.dataset["ride"] as typeof state.ride), render()));
+for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
 nowButton.addEventListener("click", () => ((state.time = "now"), render()));
