@@ -60,10 +60,12 @@
   "sideEffects": [
     "./dist/element.js",
     "./dist/portrait/element.js",
+    "./dist/space/element.js",
     "./dist/bodies/*.js",
     "./dist/tables/*.js",
     "./src/element.ts",
     "./src/portrait/element.ts",
+    "./src/space/element.ts",
     "./src/bodies/*.ts",
     "./src/tables/*.ts"
   ],
@@ -85,6 +87,16 @@
       "types": "./dist/portrait/element.d.ts",
       "import": "./dist/portrait/element.js",
       "default": "./dist/portrait/element.js"
+    },
+    "./space": {
+      "types": "./dist/space/index.d.ts",
+      "import": "./dist/space/index.js",
+      "default": "./dist/space/index.js"
+    },
+    "./space/element": {
+      "types": "./dist/space/element.d.ts",
+      "import": "./dist/space/element.js",
+      "default": "./dist/space/element.js"
     },
     "./time": {
       "types": "./dist/time.d.ts",

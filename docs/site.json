@@ -25,6 +25,16 @@
       "ja": "<wakusei-portrait> 要素 (たくさんの天体を一つの絵に)",
       "platform": "browser"
     },
+    "./space": {
+      "en": "Where the Sun, Moon and planets are for a date, in two scales, with the camera maths",
+      "ja": "日付ごとの太陽・月・惑星の位置を、二つの縮尺で。カメラの計算つき",
+      "platform": "node"
+    },
+    "./space/element": {
+      "en": "The <wakusei-space> element: the Earth, Moon, Sun and planets in their places",
+      "ja": "<wakusei-space> 要素 (地球・月・太陽・惑星をその位置に)",
+      "platform": "browser"
+    },
     "./time": {
       "en": "Julian dates (and the julian package's functions), calendars, time scales, sidereal time and Mars time",
       "ja": "ユリウス日 (julian パッケージの関数も)、暦、時刻系、恒星時、火星の時刻",
