@@ -78,7 +78,7 @@ Before this, a dwarf planet was a plain ellipse that was right only near 2026: C
 
 The Moon is the lunar solution ELP2000-82B (Chapront-Touzé and Chapront, IMCCE) cut to its 540 largest terms and run in terrestrial time, as the planets are.
 
-Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both, and the web component does):
+Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both; the web component fetches each only when it draws that planet's moons, as a chunk of its own, so a page that shows one planet does not grow):
 
 - **Io, Europa, Ganymede and Callisto**: L1.2 (Lainey, Duriez and Vienne 2006, IMCCE), cut to 140 terms with a Chebyshev polynomial for the slowest swings (`tables/galilean`, about 5 kB gzipped). Valid from 1130 to 2760.
 - **Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus**: TASS1.7 (Vienne and Duriez 1995, IMCCE), cut to 316 terms (`tables/saturn-moons`, about 7 kB gzipped). Hyperion is not in the package.
