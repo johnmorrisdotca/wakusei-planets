@@ -336,3 +336,19 @@ test("every body is fitted by its globe at about half the view's height, so ring
   }
   expect(shares["sun"], "the Sun's disc is no smaller than a planet's").toBeGreaterThan(0.33);
 });
+
+test("To scale: the Earth against the Earth is the reference, drawn full size in the middle of the Moon's orbit, and only a magnified body's caption mentions its picture", async ({ page }) => {
+  await page.goto(`${URL}?look=line&scale=1&moons=1&body=earth`);
+  await expect(page.locator("#main")).toHaveAttribute("scale-to", "earth");
+  await expect(page.locator("#scale-inset")).toBeHidden();
+  await expect(page.locator("#scale-leader")).toBeHidden();
+  await expect(page.locator("#caption")).toHaveText("Earth is the one the others are measured against, drawn full size.");
+  await page.goto(`${URL}?look=line&scale=1&body=mars`);
+  await expect(page.locator("#main")).toHaveAttribute("scale-to", "earth");
+  await expect(page.locator("#scale-inset")).toBeHidden();
+  await expect(page.locator("#caption")).toContainText("0.53 times the radius of Earth");
+  await expect(page.locator("#caption")).not.toContainText("magnified");
+  await page.goto(`${URL}?look=line&scale=1&body=mercury&ref=sun`);
+  await expect(page.locator("#scale-inset")).toBeVisible();
+  await expect(page.locator("#caption")).toContainText("The picture beside it is magnified.");
+});

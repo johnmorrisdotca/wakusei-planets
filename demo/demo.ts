@@ -372,12 +372,10 @@ if (main && controls && pickerBox) {
     }
   }
 
-  /** The body the big view is measured against: its planet (for a moon), the Earth or the Sun; a body is never measured against itself, it takes the next one. */
+  /** The body the big view is measured against: its planet (for a moon), the Earth or the Sun. Measured against itself, a body is the reference: drawn full size like the planets beside it. */
   const refOf = (): BodyId => {
     const parent = BODIES[state.body].parent;
-    let id: BodyId = state.ref === "sun" ? "sun" : state.ref === "planet" && parent !== undefined ? parent : "earth";
-    if (id === state.body) id = id === "sun" ? "jupiter" : "sun";
-    return id;
+    return state.ref === "sun" ? "sun" : state.ref === "planet" && parent !== undefined ? parent : "earth";
   };
   /** To scale: the big view draws the body at its true size against the one chosen; a body too small to see gets a magnified picture beside it, joined by a line. */
   function renderScale(): void {
@@ -413,7 +411,8 @@ if (main && controls && pickerBox) {
     }
     const km = Math.round(own * 10) / 10;
     const ratio = own / against;
-    caption.textContent = say("scaleCaption", { name: BODIES[state.body].name[lang()], km: km.toLocaleString(lang() === "ja" ? "ja-JP" : "en-US"), ratio: ratio >= 10 ? ratio.toFixed(0) : ratio >= 0.1 ? ratio.toFixed(2) : ratio.toPrecision(2), ref: BODIES[ref].name[lang()], refKm: Math.round(against).toLocaleString(lang() === "ja" ? "ja-JP" : "en-US") });
+    const sizes = say("scaleCaption", { name: BODIES[state.body].name[lang()], km: km.toLocaleString(lang() === "ja" ? "ja-JP" : "en-US"), ratio: ratio >= 10 ? ratio.toFixed(0) : ratio >= 0.1 ? ratio.toFixed(2) : ratio.toPrecision(2), ref: BODIES[ref].name[lang()], refKm: Math.round(against).toLocaleString(lang() === "ja" ? "ja-JP" : "en-US") });
+    caption.textContent = ref === state.body ? say("scaleCaptionSelf", { name: BODIES[state.body].name[lang()] }) : small ? `${sizes} ${say("scaleMagnified")}` : sizes;
   }
 
   /** A drag keeps the touched point under the pointer: the view controls are told the radius of the body's disc on the screen. */
