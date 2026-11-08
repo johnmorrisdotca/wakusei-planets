@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "runtime": {
-    "node": "v26.0.0",
+    "node": "v24.14.1",
     "nodeZlib": "1.2.12",
     "python": "3.14.4",
     "pythonZlib": "1.2.12"
@@ -26,11 +26,11 @@
   "packages": {
     "wakusei": {
       "version": "0.20.0",
-      "sourceRevision": "628f5d214f2db99b6647b77d4db15fbdd01146c6",
+      "sourceRevision": "ad02e47a7340733558a16d2fb2a18178364ee0f2",
       "license": "MIT",
-      "minifiedBytes": 160554,
-      "gzipBytes": 65659,
-      "bundleSha256": "0d99e011d983d7f015584078d73ed845d246e1221ab839bde533f04cb0a86de1"
+      "minifiedBytes": 160558,
+      "gzipBytes": 65660,
+      "bundleSha256": "24448d4fddf6aad1506affe260882c8c9c487a44b032f07739fcadf3742f09f2"
     },
     "astronomyEngine": {
       "version": "2.1.19",
