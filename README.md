@@ -111,6 +111,10 @@ Import the element once in client code, and the entry point of each body you dra
 
 Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are the eight other dwarf planets (Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna; Haumea and Quaoar as the long shapes they are, and Ceres with a painted map from Dawn) and 29 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra, and Vanth, Hiʻiaka, Namaka and Dysnomia, the moons of the dwarf planets whose orbits are published with a date). The Earth is drawn like the rest in the realistic and painted looks (NASA's Blue Marble), and its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` 0.10.0 or later installed). The painted looks cover the Sun, the planets from Mercury to Earth and Pluto, Ceres, the Moon, the four Galilean moons, Saturn's Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus, Triton and Charon, and Saturn's rings are Cassini's own picture of them.
 
+## Two packages: this one and chikyu-earth
+
+This package is the Sun, the planets, the dwarf planets and the moons, and where they are. [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) is the Earth in detail: its countries, day and night, places and satellites. Each works alone; install both and the Earth's line look becomes chikyu-earth's globe with the countries. The dependency runs one way: this package may use chikyu-earth, never the reverse. [Why two packages](docs/guides/two-packages.md) has the rule, a table of what lives where and how to use them together.
+
 ## As the Earth sees it
 
 Give a body a `time` and it is drawn as the sky shows it then: its pole and rotation, how far the rings are open (Saturn's rings are edge-on in March 2025), the phase of the Moon or Venus, the Sun's direction.
@@ -318,6 +322,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Put it in your page](docs/guides/put-it-in-your-page.md) | Set up a body and copy the code |
 | [The portrait builder](docs/guides/portrait-builder.md) | Many bodies in one picture |
 | [Looks and bodies](docs/guides/looks-and-bodies.md) | The looks and each body's entry point |
+| [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
