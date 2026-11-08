@@ -1,0 +1,4334 @@
+{
+  "schemaVersion": 1,
+  "fixtureSha256": "f4a643f4ee2836ae923ecd8413ec5e486e289b5eed987f836f791fcb9bddb6d9",
+  "packages": {
+    "astronomyEngine": "2.1.19",
+    "suncalc": "2.1.2"
+  },
+  "calls": {
+    "sun": "wakusei getTimes(noon) and suncalc getTimes(noon) with noon the local mean noon; astronomy-engine SearchAltitude(Sun, -0.833 deg) from 12 h before it, one day",
+    "moon": "wakusei getMoonTimes(midnight, lat, lng, 0) and suncalc getMoonTimes(midnight, lat, lng, 0) for the UTC day; astronomy-engine SearchRiseSet(Moon) from UTC midnight, one day"
+  },
+  "summary": {
+    "sun": {
+      "wakusei": {
+        "matched": 76,
+        "medianSeconds": 0.11,
+        "maxSeconds": 0.417,
+        "missed": 0,
+        "wrong": 0
+      },
+      "astronomyEngine": {
+        "matched": 76,
+        "medianSeconds": 0.1175,
+        "maxSeconds": 0.451,
+        "missed": 0,
+        "wrong": 0
+      },
+      "suncalc": {
+        "matched": 76,
+        "medianSeconds": 1.282,
+        "maxSeconds": 5.278,
+        "missed": 0,
+        "wrong": 0
+      }
+    },
+    "moon": {
+      "wakusei": {
+        "matched": 80,
+        "medianSeconds": 0.072,
+        "maxSeconds": 0.442,
+        "missed": 0,
+        "wrong": 0
+      },
+      "astronomyEngine": {
+        "matched": 80,
+        "medianSeconds": 0.2365,
+        "maxSeconds": 1.383,
+        "missed": 0,
+        "wrong": 0
+      },
+      "suncalc": {
+        "matched": 80,
+        "medianSeconds": 2.3225,
+        "maxSeconds": 7.121,
+        "missed": 0,
+        "wrong": 0
+      }
+    }
+  },
+  "rows": [
+    {
+      "site": "london",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T08:05:37.305Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T08:05:37.722Z",
+          "errorSeconds": 0.417
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T08:05:37.756Z",
+          "errorSeconds": 0.451
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T08:05:36.804Z",
+          "errorSeconds": -0.501
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T16:01:07.749Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T16:01:07.945Z",
+          "errorSeconds": 0.196
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T16:01:08.001Z",
+          "errorSeconds": 0.252
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T16:01:09.621Z",
+          "errorSeconds": 1.872
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T02:40:18.553Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T02:40:18.932Z",
+          "errorSeconds": 0.379
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T02:40:18.945Z",
+          "errorSeconds": 0.392
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T02:40:15.697Z",
+          "errorSeconds": -2.856
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T13:12:30.045Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T13:12:30.438Z",
+          "errorSeconds": 0.393
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T13:12:30.502Z",
+          "errorSeconds": 0.457
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T13:12:31.955Z",
+          "errorSeconds": 1.91
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T06:02:54.052Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T06:02:54.193Z",
+          "errorSeconds": 0.141
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T06:02:54.165Z",
+          "errorSeconds": 0.113
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T06:02:54.279Z",
+          "errorSeconds": 0.227
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T18:12:59.113Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T18:12:59.261Z",
+          "errorSeconds": 0.148
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T18:12:59.279Z",
+          "errorSeconds": 0.166
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T18:13:02.723Z",
+          "errorSeconds": 3.61
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T06:16:07.839Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T06:16:07.946Z",
+          "errorSeconds": 0.107
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T06:16:07.905Z",
+          "errorSeconds": 0.066
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T06:16:06.063Z",
+          "errorSeconds": -1.776
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T20:34:44.883Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T20:34:44.962Z",
+          "errorSeconds": 0.079
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T20:34:45.262Z",
+          "errorSeconds": 0.379
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T20:34:47.704Z",
+          "errorSeconds": 2.821
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T03:42:45.619Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T03:42:45.519Z",
+          "errorSeconds": -0.1
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T03:42:45.521Z",
+          "errorSeconds": -0.098
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T03:42:45.729Z",
+          "errorSeconds": 0.11
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T20:20:52.783Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T20:20:52.736Z",
+          "errorSeconds": -0.047
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T20:20:52.771Z",
+          "errorSeconds": -0.012
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T20:20:55.498Z",
+          "errorSeconds": 2.715
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T11:39:57.432Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T11:39:57.531Z",
+          "errorSeconds": 0.099
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T11:39:57.736Z",
+          "errorSeconds": 0.304
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T11:39:55.781Z",
+          "errorSeconds": -1.651
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T23:45:25.129Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T23:45:25.207Z",
+          "errorSeconds": 0.078
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T23:45:25.214Z",
+          "errorSeconds": 0.085
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T23:45:27.818Z",
+          "errorSeconds": 2.689
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T05:47:35.959Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T05:47:35.880Z",
+          "errorSeconds": -0.079
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T05:47:35.864Z",
+          "errorSeconds": -0.095
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T05:47:34.863Z",
+          "errorSeconds": -1.096
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T17:56:10.278Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:56:10.247Z",
+          "errorSeconds": -0.031
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:56:10.268Z",
+          "errorSeconds": -0.01
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:56:11.566Z",
+          "errorSeconds": 1.288
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T16:50:08.742Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T16:50:08.751Z",
+          "errorSeconds": 0.009
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T16:50:08.746Z",
+          "errorSeconds": 0.004
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T16:50:06.870Z",
+          "errorSeconds": -1.872
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T01:38:31.859Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T01:38:31.903Z",
+          "errorSeconds": 0.044
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T01:38:32.333Z",
+          "errorSeconds": 0.474
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T01:38:35.201Z",
+          "errorSeconds": 3.342
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T07:05:41.537Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:05:41.366Z",
+          "errorSeconds": -0.171
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:05:41.363Z",
+          "errorSeconds": -0.174
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:05:41.347Z",
+          "errorSeconds": -0.19
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T16:21:09.055Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T16:21:09.008Z",
+          "errorSeconds": -0.047
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T16:21:09.040Z",
+          "errorSeconds": -0.015
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T16:21:10.757Z",
+          "errorSeconds": 1.702
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T06:23:16.105Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T06:23:16.095Z",
+          "errorSeconds": -0.01
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T06:23:16.372Z",
+          "errorSeconds": 0.267
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T06:23:14.309Z",
+          "errorSeconds": -1.796
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T15:24:55.467Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T15:24:55.420Z",
+          "errorSeconds": -0.047
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T15:24:55.516Z",
+          "errorSeconds": 0.049
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T15:24:58.372Z",
+          "errorSeconds": 2.905
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T08:03:05.909Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T08:03:05.938Z",
+          "errorSeconds": 0.029
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T08:03:05.890Z",
+          "errorSeconds": -0.019
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T08:03:05.759Z",
+          "errorSeconds": -0.15
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T15:53:02.248Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T15:53:02.080Z",
+          "errorSeconds": -0.168
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T15:53:02.089Z",
+          "errorSeconds": -0.159
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T15:53:04.214Z",
+          "errorSeconds": 1.966
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T13:08:32.878Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T13:08:32.818Z",
+          "errorSeconds": -0.06
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T13:08:32.891Z",
+          "errorSeconds": 0.013
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T13:08:31.014Z",
+          "errorSeconds": -1.864
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T05:06:23.880Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T05:06:23.823Z",
+          "errorSeconds": -0.057
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T05:06:24.226Z",
+          "errorSeconds": 0.346
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T05:06:27.567Z",
+          "errorSeconds": 3.687
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T03:47:42.243Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T03:47:42.150Z",
+          "errorSeconds": -0.093
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T03:47:42.057Z",
+          "errorSeconds": -0.186
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T03:47:42.169Z",
+          "errorSeconds": -0.074
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T20:19:59.961Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T20:19:59.930Z",
+          "errorSeconds": -0.031
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T20:19:59.909Z",
+          "errorSeconds": -0.052
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T20:20:01.985Z",
+          "errorSeconds": 2.024
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "london",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T12:09:34.324Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T12:09:34.240Z",
+          "errorSeconds": -0.084
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T12:09:35.199Z",
+          "errorSeconds": 0.875
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T12:09:36.673Z",
+          "errorSeconds": 2.349
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T12:51:06.180Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T12:51:06.534Z",
+          "errorSeconds": 0.354
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T12:51:06.571Z",
+          "errorSeconds": 0.391
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T12:51:05.872Z",
+          "errorSeconds": -0.308
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T21:50:52.766Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T21:50:52.966Z",
+          "errorSeconds": 0.2
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T21:50:53.018Z",
+          "errorSeconds": 0.252
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T21:50:54.362Z",
+          "errorSeconds": 1.596
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T07:58:46.396Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:58:46.748Z",
+          "errorSeconds": 0.352
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:58:46.769Z",
+          "errorSeconds": 0.373
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:58:43.709Z",
+          "errorSeconds": -2.687
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T18:50:34.379Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T18:50:34.735Z",
+          "errorSeconds": 0.356
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T18:50:34.788Z",
+          "errorSeconds": 0.409
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T18:50:36.032Z",
+          "errorSeconds": 1.653
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T11:20:35.969Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:20:36.078Z",
+          "errorSeconds": 0.109
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:20:36.056Z",
+          "errorSeconds": 0.087
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:20:36.471Z",
+          "errorSeconds": 0.502
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T23:29:58.100Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T23:29:58.209Z",
+          "errorSeconds": 0.109
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T23:29:58.222Z",
+          "errorSeconds": 0.122
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T23:30:01.339Z",
+          "errorSeconds": 3.239
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T11:49:45.860Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:49:45.924Z",
+          "errorSeconds": 0.064
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:49:45.923Z",
+          "errorSeconds": 0.063
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:49:44.182Z",
+          "errorSeconds": -1.678
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T00:34:50.730Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T00:34:50.782Z",
+          "errorSeconds": 0.052
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T00:34:50.975Z",
+          "errorSeconds": 0.245
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T00:34:53.066Z",
+          "errorSeconds": 2.336
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T09:36:04.418Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T09:36:04.282Z",
+          "errorSeconds": -0.136
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T09:36:04.288Z",
+          "errorSeconds": -0.13
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T09:36:04.767Z",
+          "errorSeconds": 0.349
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-06-22T01:02:42.875Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-22T01:02:42.782Z",
+          "errorSeconds": -0.093
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-22T01:02:42.811Z",
+          "errorSeconds": -0.064
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-22T01:02:45.255Z",
+          "errorSeconds": 2.38
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T17:12:31.751Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T17:12:31.806Z",
+          "errorSeconds": 0.055
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T17:12:31.933Z",
+          "errorSeconds": 0.182
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T17:12:30.236Z",
+          "errorSeconds": -1.515
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T04:51:54.088Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T04:51:54.135Z",
+          "errorSeconds": 0.047
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T04:51:54.147Z",
+          "errorSeconds": 0.059
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T04:51:56.511Z",
+          "errorSeconds": 2.423
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T11:06:00.485Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T11:06:00.378Z",
+          "errorSeconds": -0.107
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T11:06:00.366Z",
+          "errorSeconds": -0.119
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T11:05:59.566Z",
+          "errorSeconds": -0.919
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T23:12:54.117Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T23:12:54.043Z",
+          "errorSeconds": -0.074
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T23:12:54.060Z",
+          "errorSeconds": -0.057
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T23:12:55.193Z",
+          "errorSeconds": 1.076
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T21:54:19.553Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T21:54:19.526Z",
+          "errorSeconds": -0.027
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T21:54:19.573Z",
+          "errorSeconds": 0.02
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T21:54:17.902Z",
+          "errorSeconds": -1.651
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T07:34:48.856Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T07:34:48.859Z",
+          "errorSeconds": 0.003
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T07:34:49.230Z",
+          "errorSeconds": 0.374
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T07:34:51.792Z",
+          "errorSeconds": 2.936
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T12:02:36.999Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T12:02:36.814Z",
+          "errorSeconds": -0.185
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T12:02:36.815Z",
+          "errorSeconds": -0.184
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T12:02:36.905Z",
+          "errorSeconds": -0.094
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T21:59:27.026Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:59:26.932Z",
+          "errorSeconds": -0.094
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:59:26.960Z",
+          "errorSeconds": -0.066
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:59:28.536Z",
+          "errorSeconds": 1.51
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T11:31:49.656Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T11:31:49.612Z",
+          "errorSeconds": -0.044
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T11:31:49.907Z",
+          "errorSeconds": 0.251
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T11:31:48.007Z",
+          "errorSeconds": -1.649
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T21:14:37.111Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:14:37.038Z",
+          "errorSeconds": -0.073
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:14:37.176Z",
+          "errorSeconds": 0.065
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:14:39.767Z",
+          "errorSeconds": 2.656
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T12:47:52.234Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T12:47:52.205Z",
+          "errorSeconds": -0.029
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T12:47:52.166Z",
+          "errorSeconds": -0.068
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T12:47:52.265Z",
+          "errorSeconds": 0.031
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T21:43:32.575Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T21:43:32.409Z",
+          "errorSeconds": -0.166
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T21:43:32.408Z",
+          "errorSeconds": -0.167
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T21:43:34.344Z",
+          "errorSeconds": 1.769
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T19:11:09.656Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T19:11:09.567Z",
+          "errorSeconds": -0.089
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T19:11:09.699Z",
+          "errorSeconds": 0.043
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T19:11:08.118Z",
+          "errorSeconds": -1.538
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T10:07:54.564Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T10:07:54.475Z",
+          "errorSeconds": -0.089
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T10:07:54.835Z",
+          "errorSeconds": 0.271
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T10:07:57.853Z",
+          "errorSeconds": 3.289
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T09:40:16.201Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T09:40:16.088Z",
+          "errorSeconds": -0.113
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T09:40:16.102Z",
+          "errorSeconds": -0.099
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T09:40:16.316Z",
+          "errorSeconds": 0.115
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2040-07-02T01:02:41.704Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-02T01:02:41.631Z",
+          "errorSeconds": -0.073
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-02T01:02:41.598Z",
+          "errorSeconds": -0.106
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-02T01:02:43.493Z",
+          "errorSeconds": 1.789
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T05:16:37.262Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T05:16:37.146Z",
+          "errorSeconds": -0.116
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T05:16:37.418Z",
+          "errorSeconds": 0.156
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T05:16:34.698Z",
+          "errorSeconds": -2.564
+        }
+      }
+    },
+    {
+      "site": "toronto",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T17:41:33.106Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T17:41:32.990Z",
+          "errorSeconds": -0.116
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T17:41:33.851Z",
+          "errorSeconds": 0.745
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T17:41:35.121Z",
+          "errorSeconds": 2.015
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "1999-12-31T21:50:51.738Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "1999-12-31T21:50:52.058Z",
+          "errorSeconds": 0.32
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "1999-12-31T21:50:52.098Z",
+          "errorSeconds": 0.36
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "1999-12-31T21:50:51.580Z",
+          "errorSeconds": -0.158
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T07:37:54.297Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:37:54.502Z",
+          "errorSeconds": 0.205
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:37:54.553Z",
+          "errorSeconds": 0.256
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:37:55.771Z",
+          "errorSeconds": 1.474
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T17:33:53.416Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T17:33:53.756Z",
+          "errorSeconds": 0.34
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T17:33:53.790Z",
+          "errorSeconds": 0.374
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T17:33:50.815Z",
+          "errorSeconds": -2.601
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T04:06:43.140Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T04:06:43.489Z",
+          "errorSeconds": 0.349
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T04:06:43.576Z",
+          "errorSeconds": 0.436
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T04:06:44.660Z",
+          "errorSeconds": 1.52
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-03-19T20:45:37.027Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-19T20:45:37.128Z",
+          "errorSeconds": 0.101
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-19T20:45:37.011Z",
+          "errorSeconds": -0.016
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-19T20:45:37.780Z",
+          "errorSeconds": 0.753
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T08:52:31.140Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:52:31.249Z",
+          "errorSeconds": 0.109
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:52:31.257Z",
+          "errorSeconds": 0.117
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:52:34.200Z",
+          "errorSeconds": 3.06
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T21:35:33.485Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T21:35:33.532Z",
+          "errorSeconds": 0.047
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T21:35:33.576Z",
+          "errorSeconds": 0.091
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T21:35:31.873Z",
+          "errorSeconds": -1.612
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T10:18:36.968Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T10:18:37.007Z",
+          "errorSeconds": 0.039
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T10:18:37.205Z",
+          "errorSeconds": 0.237
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T10:18:39.290Z",
+          "errorSeconds": 2.322
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-06-20T19:25:37.263Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-20T19:25:37.131Z",
+          "errorSeconds": -0.132
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-20T19:25:37.145Z",
+          "errorSeconds": -0.118
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-20T19:25:37.798Z",
+          "errorSeconds": 0.535
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T10:00:18.853Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T10:00:18.742Z",
+          "errorSeconds": -0.111
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T10:00:18.769Z",
+          "errorSeconds": -0.084
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T10:00:21.087Z",
+          "errorSeconds": 2.234
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T01:57:05.489Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T01:57:05.538Z",
+          "errorSeconds": 0.049
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T01:57:05.624Z",
+          "errorSeconds": 0.135
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T01:57:04.042Z",
+          "errorSeconds": -1.447
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T14:23:38.750Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T14:23:38.797Z",
+          "errorSeconds": 0.047
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T14:23:38.847Z",
+          "errorSeconds": 0.097
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T14:23:41.135Z",
+          "errorSeconds": 2.385
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-09-22T20:29:34.521Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-22T20:29:34.422Z",
+          "errorSeconds": -0.099
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-22T20:29:34.371Z",
+          "errorSeconds": -0.15
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-22T20:29:33.687Z",
+          "errorSeconds": -0.834
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T08:37:20.891Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T08:37:20.822Z",
+          "errorSeconds": -0.069
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T08:37:20.835Z",
+          "errorSeconds": -0.056
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T08:37:21.819Z",
+          "errorSeconds": 0.928
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T06:48:22.352Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T06:48:22.339Z",
+          "errorSeconds": -0.013
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T06:48:22.419Z",
+          "errorSeconds": 0.067
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T06:48:20.841Z",
+          "errorSeconds": -1.511
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T17:39:22.251Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:39:22.246Z",
+          "errorSeconds": -0.005
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:39:22.582Z",
+          "errorSeconds": 0.331
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:39:24.955Z",
+          "errorSeconds": 2.704
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-11-07T21:09:37.715Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-07T21:09:37.538Z",
+          "errorSeconds": -0.177
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-07T21:09:37.543Z",
+          "errorSeconds": -0.172
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-07T21:09:37.765Z",
+          "errorSeconds": 0.05
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T07:39:51.709Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:39:51.598Z",
+          "errorSeconds": -0.111
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:39:51.622Z",
+          "errorSeconds": -0.087
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:39:53.156Z",
+          "errorSeconds": 1.447
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T21:00:39.280Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:00:39.232Z",
+          "errorSeconds": -0.048
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:00:39.446Z",
+          "errorSeconds": 0.166
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T21:00:37.679Z",
+          "errorSeconds": -1.601
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T06:40:25.023Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T06:40:24.952Z",
+          "errorSeconds": -0.071
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T06:40:25.094Z",
+          "errorSeconds": 0.071
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T06:40:27.515Z",
+          "errorSeconds": 2.492
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-12-20T21:46:53.410Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-20T21:46:53.351Z",
+          "errorSeconds": -0.059
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-20T21:46:53.317Z",
+          "errorSeconds": -0.093
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-20T21:46:53.479Z",
+          "errorSeconds": 0.069
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T07:31:18.905Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T07:31:18.747Z",
+          "errorSeconds": -0.158
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T07:31:18.742Z",
+          "errorSeconds": -0.163
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T07:31:20.503Z",
+          "errorSeconds": 1.598
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T04:34:30.909Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T04:34:30.806Z",
+          "errorSeconds": -0.103
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T04:34:30.937Z",
+          "errorSeconds": 0.028
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T04:34:29.574Z",
+          "errorSeconds": -1.335
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T19:34:52.268Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T19:34:52.170Z",
+          "errorSeconds": -0.098
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T19:34:52.508Z",
+          "errorSeconds": 0.24
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T19:34:55.349Z",
+          "errorSeconds": 3.081
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2040-06-30T19:29:07.432Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-06-30T19:29:07.316Z",
+          "errorSeconds": -0.116
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-06-30T19:29:07.242Z",
+          "errorSeconds": -0.19
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-06-30T19:29:07.621Z",
+          "errorSeconds": 0.189
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T10:01:05.832Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T10:01:05.750Z",
+          "errorSeconds": -0.082
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T10:01:05.710Z",
+          "errorSeconds": -0.122
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T10:01:07.511Z",
+          "errorSeconds": 1.679
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T14:49:58.376Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T14:49:58.249Z",
+          "errorSeconds": -0.127
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T14:49:58.587Z",
+          "errorSeconds": 0.211
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T14:49:55.942Z",
+          "errorSeconds": -2.434
+        }
+      }
+    },
+    {
+      "site": "tokyo",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T02:24:52.409Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T02:24:52.275Z",
+          "errorSeconds": -0.134
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T02:24:53.077Z",
+          "errorSeconds": 0.668
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T02:24:54.305Z",
+          "errorSeconds": 1.896
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T11:13:13.067Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T11:13:13.341Z",
+          "errorSeconds": 0.274
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T11:13:13.378Z",
+          "errorSeconds": 0.311
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T11:13:13.074Z",
+          "errorSeconds": 0.007
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T23:21:17.417Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T23:21:17.693Z",
+          "errorSeconds": 0.276
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T23:21:17.671Z",
+          "errorSeconds": 0.254
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T23:21:18.693Z",
+          "errorSeconds": 1.276
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T07:13:40.386Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:13:40.748Z",
+          "errorSeconds": 0.362
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:13:40.755Z",
+          "errorSeconds": 0.369
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T07:13:38.063Z",
+          "errorSeconds": -2.323
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T19:35:04.111Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T19:35:04.459Z",
+          "errorSeconds": 0.348
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T19:35:04.532Z",
+          "errorSeconds": 0.421
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T19:35:05.433Z",
+          "errorSeconds": 1.322
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T11:17:59.540Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:17:59.655Z",
+          "errorSeconds": 0.115
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:17:59.650Z",
+          "errorSeconds": 0.11
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T11:18:00.851Z",
+          "errorSeconds": 1.311
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T23:24:29.217Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T23:24:29.329Z",
+          "errorSeconds": 0.112
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T23:24:29.324Z",
+          "errorSeconds": 0.107
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T23:24:31.666Z",
+          "errorSeconds": 2.449
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T12:27:50.632Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T12:27:50.686Z",
+          "errorSeconds": 0.054
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T12:27:50.796Z",
+          "errorSeconds": 0.164
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T12:27:49.131Z",
+          "errorSeconds": -1.501
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T00:01:42.854Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T00:01:42.921Z",
+          "errorSeconds": 0.067
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T00:01:43.024Z",
+          "errorSeconds": 0.17
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T00:01:44.995Z",
+          "errorSeconds": 2.141
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T11:12:22.394Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T11:12:22.281Z",
+          "errorSeconds": -0.113
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T11:12:22.291Z",
+          "errorSeconds": -0.103
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T11:12:23.143Z",
+          "errorSeconds": 0.749
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T23:19:05.935Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T23:19:05.826Z",
+          "errorSeconds": -0.109
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T23:19:05.768Z",
+          "errorSeconds": -0.167
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T23:19:07.928Z",
+          "errorSeconds": 1.993
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T17:03:34.313Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T17:03:34.364Z",
+          "errorSeconds": 0.051
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T17:03:34.416Z",
+          "errorSeconds": 0.103
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T17:03:33.017Z",
+          "errorSeconds": -1.296
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T04:40:56.379Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T04:40:56.442Z",
+          "errorSeconds": 0.063
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T04:40:56.521Z",
+          "errorSeconds": 0.142
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T04:40:58.680Z",
+          "errorSeconds": 2.301
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T11:02:55.980Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T11:02:55.901Z",
+          "errorSeconds": -0.079
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T11:02:55.903Z",
+          "errorSeconds": -0.077
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T11:02:55.477Z",
+          "errorSeconds": -0.503
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T23:09:24.444Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T23:09:24.361Z",
+          "errorSeconds": -0.083
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T23:09:24.363Z",
+          "errorSeconds": -0.081
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T23:09:25.140Z",
+          "errorSeconds": 0.696
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T20:59:01.365Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T20:59:01.353Z",
+          "errorSeconds": -0.012
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T20:59:01.541Z",
+          "errorSeconds": 0.176
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T20:59:00.074Z",
+          "errorSeconds": -1.291
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T08:36:03.417Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T08:36:03.421Z",
+          "errorSeconds": 0.004
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T08:36:03.647Z",
+          "errorSeconds": 0.23
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T08:36:05.907Z",
+          "errorSeconds": 2.49
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T10:53:55.528Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T10:53:55.392Z",
+          "errorSeconds": -0.136
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T10:53:55.406Z",
+          "errorSeconds": -0.122
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T10:53:55.636Z",
+          "errorSeconds": 0.108
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T23:01:20.108Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T23:01:19.972Z",
+          "errorSeconds": -0.136
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T23:01:19.923Z",
+          "errorSeconds": -0.185
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T23:01:21.414Z",
+          "errorSeconds": 1.306
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T10:12:03.766Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T10:12:03.713Z",
+          "errorSeconds": -0.053
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T10:12:03.875Z",
+          "errorSeconds": 0.109
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T10:12:02.382Z",
+          "errorSeconds": -1.384
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T22:35:09.973Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T22:35:09.920Z",
+          "errorSeconds": -0.053
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T22:35:10.196Z",
+          "errorSeconds": 0.223
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T22:35:12.392Z",
+          "errorSeconds": 2.419
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T11:07:59.128Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T11:07:59.030Z",
+          "errorSeconds": -0.098
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T11:07:59.004Z",
+          "errorSeconds": -0.124
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T11:07:59.353Z",
+          "errorSeconds": 0.225
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T23:16:06.263Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T23:16:06.169Z",
+          "errorSeconds": -0.094
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T23:16:06.061Z",
+          "errorSeconds": -0.202
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T23:16:07.840Z",
+          "errorSeconds": 1.577
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T20:55:40.145Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T20:55:40.053Z",
+          "errorSeconds": -0.092
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T20:55:40.280Z",
+          "errorSeconds": 0.135
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T20:55:38.963Z",
+          "errorSeconds": -1.182
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T08:23:03.387Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T08:23:03.302Z",
+          "errorSeconds": -0.085
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T08:23:03.554Z",
+          "errorSeconds": 0.167
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T08:23:06.240Z",
+          "errorSeconds": 2.853
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T11:14:35.430Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T11:14:35.340Z",
+          "errorSeconds": -0.09
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T11:14:35.274Z",
+          "errorSeconds": -0.156
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T11:14:35.762Z",
+          "errorSeconds": 0.332
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T23:21:17.465Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T23:21:17.372Z",
+          "errorSeconds": -0.093
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T23:21:17.250Z",
+          "errorSeconds": -0.215
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T23:21:19.054Z",
+          "errorSeconds": 1.589
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T05:08:37.770Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T05:08:37.659Z",
+          "errorSeconds": -0.111
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T05:08:38.207Z",
+          "errorSeconds": 0.437
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T05:08:35.684Z",
+          "errorSeconds": -2.086
+        }
+      }
+    },
+    {
+      "site": "quito",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T17:30:03.170Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T17:30:03.047Z",
+          "errorSeconds": -0.123
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T17:30:03.626Z",
+          "errorSeconds": 0.456
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T17:30:04.656Z",
+          "errorSeconds": 1.486
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "1999-12-31T18:47:02.814Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "1999-12-31T18:47:03.049Z",
+          "errorSeconds": 0.235
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "1999-12-31T18:47:03.100Z",
+          "errorSeconds": 0.286
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "1999-12-31T18:47:02.685Z",
+          "errorSeconds": -0.129
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T09:09:17.123Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T09:09:17.466Z",
+          "errorSeconds": 0.343
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T09:09:17.506Z",
+          "errorSeconds": 0.383
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T09:09:18.620Z",
+          "errorSeconds": 1.497
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T15:38:46.768Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T15:38:47.149Z",
+          "errorSeconds": 0.381
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T15:38:47.157Z",
+          "errorSeconds": 0.389
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T15:38:44.408Z",
+          "errorSeconds": -2.36
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T04:15:18.417Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T04:15:18.772Z",
+          "errorSeconds": 0.355
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T04:15:18.869Z",
+          "errorSeconds": 0.452
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T04:15:19.821Z",
+          "errorSeconds": 1.404
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-03-19T19:57:57.678Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-19T19:57:57.817Z",
+          "errorSeconds": 0.139
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-19T19:57:57.749Z",
+          "errorSeconds": 0.071
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-19T19:57:59.353Z",
+          "errorSeconds": 1.675
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T08:06:56.452Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:06:56.577Z",
+          "errorSeconds": 0.125
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:06:56.560Z",
+          "errorSeconds": 0.108
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:06:58.666Z",
+          "errorSeconds": 2.214
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T22:04:47.322Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T22:04:47.378Z",
+          "errorSeconds": 0.056
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T22:04:47.558Z",
+          "errorSeconds": 0.236
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T22:04:45.782Z",
+          "errorSeconds": -1.54
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T08:33:47.265Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:33:47.349Z",
+          "errorSeconds": 0.084
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:33:47.417Z",
+          "errorSeconds": 0.152
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T08:33:49.514Z",
+          "errorSeconds": 2.249
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-06-20T20:59:57.649Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-20T20:59:57.548Z",
+          "errorSeconds": -0.101
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-20T20:59:57.575Z",
+          "errorSeconds": -0.074
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-20T20:59:58.315Z",
+          "errorSeconds": 0.666
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T06:53:48.781Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T06:53:48.669Z",
+          "errorSeconds": -0.112
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T06:53:48.680Z",
+          "errorSeconds": -0.101
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T06:53:50.924Z",
+          "errorSeconds": 2.143
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T01:24:58.663Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T01:24:58.715Z",
+          "errorSeconds": 0.052
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T01:24:58.693Z",
+          "errorSeconds": 0.03
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T01:24:57.261Z",
+          "errorSeconds": -1.402
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T13:38:52.957Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T13:38:53.043Z",
+          "errorSeconds": 0.086
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T13:38:53.193Z",
+          "errorSeconds": 0.236
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T13:38:55.396Z",
+          "errorSeconds": 2.439
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-09-22T19:43:57.726Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-22T19:43:57.677Z",
+          "errorSeconds": -0.049
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-22T19:43:57.657Z",
+          "errorSeconds": -0.069
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-22T19:43:57.222Z",
+          "errorSeconds": -0.504
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T07:51:56.134Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T07:51:56.050Z",
+          "errorSeconds": -0.084
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T07:51:56.042Z",
+          "errorSeconds": -0.092
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T07:51:56.785Z",
+          "errorSeconds": 0.651
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T04:24:45.273Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T04:24:45.282Z",
+          "errorSeconds": 0.009
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T04:24:45.564Z",
+          "errorSeconds": 0.291
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T04:24:43.945Z",
+          "errorSeconds": -1.328
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T18:11:35.568Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T18:11:35.571Z",
+          "errorSeconds": 0.003
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T18:11:35.712Z",
+          "errorSeconds": 0.144
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T18:11:38.013Z",
+          "errorSeconds": 2.445
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-11-07T18:48:53.153Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-07T18:48:53.056Z",
+          "errorSeconds": -0.097
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-07T18:48:53.080Z",
+          "errorSeconds": -0.073
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-07T18:48:53.116Z",
+          "errorSeconds": -0.037
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T08:29:21.755Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T08:29:21.596Z",
+          "errorSeconds": -0.159
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T08:29:21.601Z",
+          "errorSeconds": -0.154
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T08:29:23.312Z",
+          "errorSeconds": 1.557
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T18:14:02.107Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T18:14:02.055Z",
+          "errorSeconds": -0.052
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T18:14:02.156Z",
+          "errorSeconds": 0.049
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T18:14:00.502Z",
+          "errorSeconds": -1.605
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T07:36:28.993Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:36:28.955Z",
+          "errorSeconds": -0.038
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:36:29.231Z",
+          "errorSeconds": 0.238
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:36:31.664Z",
+          "errorSeconds": 2.671
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-12-20T18:40:39.121Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-20T18:40:38.984Z",
+          "errorSeconds": -0.137
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-20T18:40:38.981Z",
+          "errorSeconds": -0.14
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-20T18:40:39.039Z",
+          "errorSeconds": -0.082
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T09:05:24.070Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T09:05:24.031Z",
+          "errorSeconds": -0.039
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T09:05:23.998Z",
+          "errorSeconds": -0.072
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T09:05:25.857Z",
+          "errorSeconds": 1.787
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-12-21T06:05:50.547Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T06:05:50.460Z",
+          "errorSeconds": -0.087
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T06:05:50.670Z",
+          "errorSeconds": 0.123
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T06:05:49.270Z",
+          "errorSeconds": -1.277
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-12-21T16:12:59.912Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-12-21T16:12:59.845Z",
+          "errorSeconds": -0.067
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-12-21T16:13:00.063Z",
+          "errorSeconds": 0.151
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-12-21T16:13:02.949Z",
+          "errorSeconds": 3.037
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2040-06-30T21:01:01.916Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-06-30T21:01:01.862Z",
+          "errorSeconds": -0.054
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-06-30T21:01:01.820Z",
+          "errorSeconds": -0.096
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-06-30T21:01:02.027Z",
+          "errorSeconds": 0.111
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T06:57:17.162Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T06:57:17.070Z",
+          "errorSeconds": -0.092
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T06:57:16.997Z",
+          "errorSeconds": -0.165
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T06:57:18.985Z",
+          "errorSeconds": 1.823
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T14:09:31.783Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T14:09:31.694Z",
+          "errorSeconds": -0.089
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T14:09:32.479Z",
+          "errorSeconds": 0.696
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T14:09:29.824Z",
+          "errorSeconds": -1.959
+        }
+      }
+    },
+    {
+      "site": "sydney",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T01:47:38.376Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T01:47:38.259Z",
+          "errorSeconds": -0.117
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T01:47:38.722Z",
+          "errorSeconds": 0.346
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T01:47:39.729Z",
+          "errorSeconds": 1.353
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2000-01-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2000-01-01T02:22:09.335Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T02:22:09.732Z",
+          "errorSeconds": 0.397
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T02:22:09.729Z",
+          "errorSeconds": 0.394
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T02:22:04.730Z",
+          "errorSeconds": -4.605
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2000-01-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2000-01-01T10:46:05.676Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2000-01-01T10:46:06.118Z",
+          "errorSeconds": 0.442
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2000-01-01T10:46:06.195Z",
+          "errorSeconds": 0.519
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2000-01-01T10:46:09.359Z",
+          "errorSeconds": 3.683
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T04:43:55.794Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T04:43:55.965Z",
+          "errorSeconds": 0.171
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T04:43:55.911Z",
+          "errorSeconds": 0.117
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T04:43:54.429Z",
+          "errorSeconds": -1.365
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-03-20",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T17:01:30.567Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T17:01:30.759Z",
+          "errorSeconds": 0.192
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T17:01:30.804Z",
+          "errorSeconds": 0.237
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T17:01:35.845Z",
+          "errorSeconds": 5.278
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-03-20T04:09:00.573Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T04:09:00.738Z",
+          "errorSeconds": 0.165
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T04:09:00.539Z",
+          "errorSeconds": -0.034
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T04:08:57.688Z",
+          "errorSeconds": -2.885
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-03-20",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-03-20T20:42:52.571Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-03-20T20:42:52.676Z",
+          "errorSeconds": 0.105
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-03-20T20:42:53.239Z",
+          "errorSeconds": 0.668
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-03-20T20:42:57.592Z",
+          "errorSeconds": 5.021
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-06-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-06-21T10:17:49.011Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T10:17:49.171Z",
+          "errorSeconds": 0.16
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T10:17:49.403Z",
+          "errorSeconds": 0.392
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T10:17:46.212Z",
+          "errorSeconds": -2.799
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-06-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-06-21T22:13:38.996Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-06-21T22:13:39.105Z",
+          "errorSeconds": 0.109
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-06-21T22:13:39.015Z",
+          "errorSeconds": 0.019
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-06-21T22:13:42.740Z",
+          "errorSeconds": 3.744
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T04:27:52.254Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T04:27:52.180Z",
+          "errorSeconds": -0.074
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T04:27:52.142Z",
+          "errorSeconds": -0.112
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T04:27:50.152Z",
+          "errorSeconds": -2.102
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-09-23",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-09-23T16:43:07.623Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T16:43:07.658Z",
+          "errorSeconds": 0.035
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T16:43:07.701Z",
+          "errorSeconds": 0.078
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T16:43:09.950Z",
+          "errorSeconds": 2.327
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-09-23T17:08:58.596Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:08:58.624Z",
+          "errorSeconds": 0.028
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:08:58.287Z",
+          "errorSeconds": -0.309
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-09-23T17:08:54.475Z",
+          "errorSeconds": -4.121
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-09-23",
+      "body": "moon",
+      "kind": "set",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T07:45:52.260Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:45:51.995Z",
+          "errorSeconds": -0.265
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:45:51.945Z",
+          "errorSeconds": -0.315
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:45:50.639Z",
+          "errorSeconds": -1.621
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-11-08",
+      "body": "sun",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T13:08:47.125Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T13:08:47.240Z",
+          "errorSeconds": 0.115
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T13:08:47.311Z",
+          "errorSeconds": 0.186
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T13:08:50.343Z",
+          "errorSeconds": 3.218
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2026-11-08T07:31:03.304Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:31:03.384Z",
+          "errorSeconds": 0.08
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:31:03.957Z",
+          "errorSeconds": 0.653
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T07:30:57.357Z",
+          "errorSeconds": -5.947
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-11-08",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2026-11-08T11:31:54.514Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2026-11-08T11:31:54.445Z",
+          "errorSeconds": -0.069
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2026-11-08T11:31:54.276Z",
+          "errorSeconds": -0.238
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2026-11-08T11:32:01.635Z",
+          "errorSeconds": 7.121
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-12-21",
+      "body": "sun",
+      "kind": "set",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2026-12-21",
+      "body": "moon",
+      "kind": "set",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "rise",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2040-07-01",
+      "body": "sun",
+      "kind": "set",
+      "reference": [],
+      "results": {
+        "wakusei": {
+          "outcome": "none"
+        },
+        "astronomyEngine": {
+          "outcome": "none"
+        },
+        "suncalc": {
+          "outcome": "none"
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "rise",
+      "reference": [
+        "2040-07-01T22:37:00.424Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T22:37:00.363Z",
+          "errorSeconds": -0.061
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T22:37:00.132Z",
+          "errorSeconds": -0.292
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T22:36:56.206Z",
+          "errorSeconds": -4.218
+        }
+      }
+    },
+    {
+      "site": "tromso",
+      "date": "2040-07-01",
+      "body": "moon",
+      "kind": "set",
+      "reference": [
+        "2040-07-01T10:51:07.300Z"
+      ],
+      "results": {
+        "wakusei": {
+          "outcome": "matched",
+          "utc": "2040-07-01T10:51:07.258Z",
+          "errorSeconds": -0.042
+        },
+        "astronomyEngine": {
+          "outcome": "matched",
+          "utc": "2040-07-01T10:51:08.683Z",
+          "errorSeconds": 1.383
+        },
+        "suncalc": {
+          "outcome": "matched",
+          "utc": "2040-07-01T10:51:11.413Z",
+          "errorSeconds": 4.113
+        }
+      }
+    }
+  ]
+}

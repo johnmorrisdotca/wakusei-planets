@@ -1,6 +1,6 @@
 // The sun and moon from a place, with the names, arguments and results of suncalc 2 (degrees, azimuth clockwise from north), written from the public methods on this package's own positions:
-// the Sun from VSOP87B, the Moon from ELP2000-82B, with parallax, refraction and the Earth's turn. It is accurate to seconds of time for the Sun and about ten seconds for the Moon, where
-// suncalc is accurate to a minute or two. Pure: no DOM, no three.js. `import { getTimes } from "@johnmorrisdotca/wakusei-planets/suncalc"` instead of from "suncalc" changes nothing else.
+// the Sun from VSOP87B, the Moon from ELP2000-82B, with parallax, refraction and the Earth's turn. Its rise and set times are within half a second of JPL Horizons for both,
+// where suncalc 2.1.2 is within 5 to 7 seconds (scripts/compare/rise-set.mjs). Pure: no DOM, no three.js. `import { getTimes } from "@johnmorrisdotca/wakusei-planets/suncalc"` instead of from "suncalc" changes nothing else.
 import { horizontalOf, moonEquatorial, moonPhase, refraction, sunEquatorial } from "./sky/engine.ts";
 import { dayWindow, moment, moonDay, place, sunDay } from "./sky/events.ts";
 

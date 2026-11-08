@@ -50,12 +50,17 @@ A `date` is a `Date` or milliseconds since 1970. Latitude is degrees north (-90 
 
 The Sun is the Earth's VSOP87B place, the Moon is the ELP2000-82B lunar solution, both run in terrestrial time and corrected for the Earth's turn (precession, nutation, the equation of the equinoxes), the Sun's aberration, the Moon's light time and parallax from the place's height on the ellipsoid. Refraction is Saemundsson's formula for standard air.
 
-| Measured against | Sunrise and sunset | Moonrise | Where |
-|---|---|---|---|
-| astronomy-engine (an independent library) | within 7 s | within 1 s | six places in both hemispheres, five days from 2000 to 2045 |
-| suncalc 2.1.2 | within 37 s, most within 7 s | within 8 s | the same places and days |
+Rise and set times against JPL Horizons, with the same definition for every package (the Sun's centre 0.833 degrees below the airless horizon, the Moon's upper limb 34 arc-minutes below it), at London, Toronto, Tokyo, Quito, Sydney and Tromsø on seven days from 2000 to 2040 (156 events for each package, none missed or wrong):
 
-The limits the tests hold are a little looser (12 s and 8 s against astronomy-engine). Two things set the floor: the Earth's turn is taken from UTC, which is within 0.9 s of the true UT1, and the standard refraction is not the weather of the day, which moves sunrise by a few seconds at mid latitudes and by minutes near the horizon in cold or low-pressure air.
+| Package | Sunrise and sunset, worst | Moonrise and moonset, worst | Typical (median) |
+|---|---|---|---|
+| this package | 0.4 s | 0.4 s | 0.1 s |
+| astronomy-engine 2.1.19 | 0.5 s | 1.4 s | 0.1 to 0.2 s |
+| suncalc 2.1.2 | 5.3 s | 7.1 s | 1.3 to 2.3 s |
+
+The test holds this package to 1 s of Horizons on every one of them (`scripts/compare/rise-set.mjs` measures all three; `python3 -I scripts/compare/fetch-rise-set.py` fetches the reference again). Against astronomy-engine's own rise and set, which uses the Sun's true size instead of a fixed 16 arc-minutes, the tests hold 12 s for the Sun and 8 s for the Moon.
+
+Two things set the floor, and neither is in any of these packages: the Earth's turn is taken from UTC, which is within 0.9 s of the true UT1 (the worst case above, London in January 2000, is that difference), and the standard refraction is not the weather of the day, which moves sunrise by a few seconds at mid latitudes and by minutes near the horizon in cold or low-pressure air. So a time to the second is honest; a time to the tenth of a second is not.
 
 ## Coming from suncalc 2
 

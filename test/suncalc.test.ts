@@ -2,6 +2,7 @@
 // are a superset of, BSD-2-Clause) and suncalc 1.9.0 (the old interface, which is cruder: it has no delta T and a mean-element Moon). Plus the facts a table can check: the solstice noon altitude, polar day and
 // night, the day lengths at the equator. Every limit is what the code measured, a little looser.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
 import * as Astronomy from "astronomy-engine";
@@ -170,4 +171,38 @@ test("suncalc 1's functions are within suncalc 1's own precision of what it give
       assert.ok(Math.abs(ai.fraction - bi.fraction) < 0.02 && Math.sign(ai.angle) === Math.sign(bi.angle), `${name} ${day} illumination`);
     }
   }
+});
+
+test("the Sun's and the Moon's rise and set are within their frozen limits of JPL Horizons on every recorded place and day, with none missed", () => {
+  const read = (path: string): string => readFileSync(new URL(path, import.meta.url), "utf8");
+  const limits = JSON.parse(read("../scripts/compare/rise-set-limits.json")) as Record<"sun" | "moon", number>;
+  const fixture = JSON.parse(read("../scripts/compare/horizons-rise-set.json")) as {
+    sites: Record<string, { latitude: number; longitude: number }>;
+    cases: { site: string; date: string; sun: { kind: "rise" | "set"; utc: string }[]; moon: { kind: "rise" | "set"; utc: string }[] }[];
+  };
+  let compared = 0;
+  for (const c of fixture.cases) {
+    const { latitude: lat, longitude: lng } = fixture.sites[c.site]!;
+    const midnight = Date.parse(`${c.date}T00:00:00Z`);
+    const noon = midnight + 43_200_000 - (lng / 15) * 3_600_000;
+    const sun = ours.getTimes(new Date(noon), lat, lng);
+    const moon = ours.getMoonTimes(new Date(midnight), lat, lng, 0);
+    const days = { sun: [noon - 43_200_000, { rise: sun.sunrise ?? undefined, set: sun.sunset ?? undefined }], moon: [midnight, { rise: moon.rise, set: moon.set }] } as const;
+    for (const body of ["sun", "moon"] as const) {
+      const [from, found] = days[body];
+      for (const kind of ["rise", "set"] as const) {
+        const refs = c[body].filter((e) => e.kind === kind).map((e) => Date.parse(e.utc));
+        const inDay = refs.filter((t) => t >= from && t < from + 86_400_000);
+        const mine = found[kind];
+        if (mine === undefined) {
+          assert.equal(inDay.length, 0, `${c.site} ${c.date} ${body}${kind} is missing`);
+          continue;
+        }
+        const error = Math.min(...refs.map((t) => Math.abs(mine.getTime() - t))) / 1000;
+        assert.ok(error <= limits[body], `${c.site} ${c.date} ${body}${kind} is ${error.toFixed(3)} s from Horizons`);
+        compared++;
+      }
+    }
+  }
+  assert.equal(compared, 156);
 });

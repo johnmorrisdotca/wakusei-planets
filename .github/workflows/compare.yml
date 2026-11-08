@@ -4,7 +4,7 @@ name: Accuracy comparison
 on:
   push:
     branches: [main]
-    paths: [scripts/compare/**, test/comparison.test.ts, docs/guides/accuracy.md, docs/guides/ja/accuracy.md, .github/workflows/compare.yml]
+    paths: [scripts/compare/**, test/comparison.test.ts, test/suncalc.test.ts, docs/guides/suncalc.md, docs/guides/ja/suncalc.md, docs/guides/accuracy.md, docs/guides/ja/accuracy.md, .github/workflows/compare.yml]
   workflow_dispatch:
 jobs:
   comparison:
@@ -25,5 +25,6 @@ jobs:
       - run: |
           scripts/compare/.venv/bin/python -m pip install --require-hashes --only-binary=:all: --no-deps -r scripts/compare/requirements.txt
       - run: node scripts/compare/run.mjs --check
+      - run: node scripts/compare/rise-set.mjs --check
       - run: pnpm check
       - run: pnpm docs:check
