@@ -8,7 +8,7 @@ import { FAMILY_SCRIPT, familyFooter, familyHead, familyHeader, familyUnreviewed
 const id = "wakusei-planets";
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "space.html", say: "pageSpace" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -31,6 +31,10 @@ export const renderIndex = (): string => render("index.html", TITLE, DESCRIPTION
 /** The portrait builder's page. */
 export const renderPortrait = (): string =>
   render("portrait.html", "Wakusei Planets 惑星: portrait builder", "Put any bodies of the solar system in one picture: drag, size, turn and light them, arrange them in a row, an arc or a grid, then copy the code or save a PNG or SVG.");
+
+/** The space view's page. */
+export const renderSpace = (): string =>
+  render("space.html", "Wakusei Planets 惑星: the space view", "The Earth, the Moon, the Sun and the planets in their places for any date and time, with the Moon's phase and the Earth's day side coming out of the light. Zoom from the Earth out to the whole solar system.");
 
 /** demo/embed.html, the frame a page puts in an iframe: plain, no family blocks. */
 export function renderEmbed(): string {
