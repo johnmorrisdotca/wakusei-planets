@@ -65,7 +65,14 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
   // the count is taken in one state every time (the first look, scale and light, riding nothing, the Earth in view), after the moons' four seconds are over: the loop leaves them in a different one each time
   const rest = async () => {
     for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"], ["Go to", "Earth"]] as const) await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
-    await page.waitForTimeout(7000);
+    // the pictures and moons let go over a few seconds: wait until the count stops moving, never past a minute
+    let last = -1;
+    for (let tries = 0; tries < 20; tries += 1) {
+      await page.waitForTimeout(3000);
+      const now = gpuObjects(await readCounts(page));
+      if (now === last) break;
+      last = now;
+    }
   };
   await rest();
   const start = { heap: await heap(), counts: await readCounts(page) };
