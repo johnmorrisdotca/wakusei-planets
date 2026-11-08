@@ -8,6 +8,7 @@ import { createRequire } from "node:module";
 import { extname, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium, type Browser, type Page } from "@playwright/test";
+import { acquireBrowserLock } from "@johnmorrisdotca/kazoku-ui/testing";
 import { build as esbuild } from "esbuild";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -116,6 +117,7 @@ const unpkgAnswer = async (pathname: string): Promise<string | null> => {
 
 const pageOf = (file: string) => readFileSync(file, "utf8");
 
+const lock = await acquireBrowserLock();
 const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 
 await step("readme", () => {
@@ -314,6 +316,7 @@ await step("angular", async () => {
 });
 
 await browser.close();
+lock.release();
 
 // 4. The guides and the README hold what was tested, word for word.
 const everything = only.length === 0;

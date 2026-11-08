@@ -1,7 +1,7 @@
 // The README and docs pictures: `pnpm screenshots` builds the demo, serves it on 8227 and saves docs/images/*.png. The shaded looks are drawn in software, one browser at a time.
 // The family's thumbnail, dark thumbnail and icon come last (scripts/family-thumbnail.mjs); `pnpm screenshots --thumbnail` takes only those three.
 import { spawn } from "node:child_process";
-import { SOFTWARE_GL_ARGS } from "@johnmorrisdotca/kazoku-ui/testing";
+import { acquireBrowserLock, SOFTWARE_GL_ARGS } from "@johnmorrisdotca/kazoku-ui/testing";
 import { chromium, type Browser, type Page } from "@playwright/test";
 import { captureDrawing, composeThumbnails } from "./family-thumbnail.mjs";
 
@@ -51,6 +51,7 @@ async function thumbnails(browser: Browser): Promise<void> {
 try {
   await new Promise((resolve) => setTimeout(resolve, 800));
   const onlyThumbnail = process.argv.includes("--thumbnail");
+  const lock = await acquireBrowserLock();
   const browser = await chromium.launch({ args: ["--headless=new", ...SOFTWARE_GL_ARGS, "--disable-gpu-compositing"] });
   const shots: [string, { width: number; height: number }, string][] = [
     ["hero-desk", { width: 1280, height: 900 }, "?body=saturn&look=realistic"],
@@ -117,6 +118,7 @@ try {
   }
   if (only === undefined || only.includes("thumbnail")) await thumbnails(browser);
   await browser.close();
+  lock.release();
 } finally {
   server.kill();
 }
