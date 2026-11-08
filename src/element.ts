@@ -2,7 +2,9 @@
 // kazoku-ui's shared renderer (one WebGL context for the whole page), and need the body's own entry point loaded (`@johnmorrisdotca/wakusei-planets/jupiter`). It draws only when
 // something changes, at most 30 times a second while it moves, and nothing while it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; `turn="0"` is the only stop.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
-import "./tables/all.ts";
+import "./tables/ceres.ts";
+import "./tables/dwarfs.ts";
+import { loadMoonTheory } from "./tables/lazy.ts";
 import { orbitPath, nearMoons, type Pose } from "./ephemeris.ts";
 import { BODIES, ringReach, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
@@ -341,6 +343,17 @@ export class WakuseiBody extends HTMLElement {
     return out;
   }
 
+  /** The moons of Jupiter and Saturn follow their theories once those are fetched; until then the fitted orbits answer. */
+  #wantTheory(id: BodyId): void {
+    const planet = BODIES[id].parent ?? id;
+    void loadMoonTheory(planet).then((loaded) => {
+      if (!loaded) return;
+      this.#live = createLive();
+      this.#orbitKey = "";
+      this.#queue(true);
+    });
+  }
+
   #ensureOrbits(frame: LiveFrame): void {
     const r = this.#request();
     if (!r.moons || frame.time === undefined) return;
@@ -352,7 +365,9 @@ export class WakuseiBody extends HTMLElement {
   }
 
   #frameNow(): LiveFrame {
-    const frame = this.#live.at(this.#request(), performance.now());
+    const request = this.#request();
+    if (request.moons) this.#wantTheory(request.id);
+    const frame = this.#live.at(request, performance.now());
     if (frame.anchors !== this.#lastAnchors) {
       this.#lastAnchors = frame.anchors;
       const b = (Math.asin(Math.max(-1, Math.min(1, frame.pose.pole[2]))) * 180) / Math.PI;
