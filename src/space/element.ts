@@ -1,7 +1,7 @@
 // <wakusei-space>: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through kazoku-ui's shared renderer. Optional: the line drawings and
 // the single bodies need none of it. It draws only when something changes, at most 30 times a second, and nothing while it is out of sight.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
-import { BODIES } from "../facts.ts";
+import { BODIES, MOONS_OF, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { ThreeParts } from "../scene/body.ts";
@@ -9,9 +9,10 @@ import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_PLANETS, type SpacePlanet } from "./frame.ts";
 import { placeAround, placeMoon, placeSun, radiusIn, type ScaleMode } from "./scale.ts";
-import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import type { RideLook } from "./ride.ts";
+import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
-export { setThreeLoader, SPACE_BODIES, type SpaceBody, type SpaceLight };
+export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type SpaceBody, type SpaceLight };
 
 /**
  * What a page can tell a reader about a body now.
@@ -59,6 +60,40 @@ export type SpaceState = "loading" | "live" | "unavailable" | "lost";
  * ```
  */
 export type SpacePreset = "earth" | "moon" | "sun" | "inner" | "solar-system" | `${Exclude<SpacePlanet, "mercury" | "venus">}-moons`;
+
+/**
+ * How a ride along is done: `view` `from` (the default) puts the camera at the target looking at the body it goes round, `follow` keeps it a distance from the target looking at it (`distanceKm`,
+ * 3000 by default, for a point of your own; a body or a moon is kept at the distance the zoom says); `look` `down` (the default) or `horizon` is where a camera at the target points; `around` is the
+ * body a point of your own goes round (the Earth by default); `smooth` (the default) glides from the old camera to the new one in about a second and a bit, and jumps instead for a reader who asked for reduced motion.
+ *
+ * @example
+ * ```ts no-run
+ * import type { RideOptions } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const options: RideOptions = { view: "from", look: "horizon", around: "mars" };
+ * console.log(options.look);
+ * ```
+ */
+export interface RideOptions {
+  view?: "from" | "follow";
+  look?: RideLook;
+  distanceKm?: number;
+  around?: SpaceBody;
+  smooth?: boolean;
+}
+
+/**
+ * What the camera is riding along with now: the target, the body it goes round, how (`from` or `follow`), where it looks, and the distance kept for a point.
+ *
+ * @example
+ * ```ts no-run
+ * import type { Riding } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const describe = (ride: Riding | null): string => (ride ? `${ride.view} ${typeof ride.target === "string" ? ride.target : "a point"}` : "not riding");
+ * console.log(typeof describe);
+ * ```
+ */
+export type Riding = RideState;
 
 const readLight = (value: string | null): SpaceLight => (value === "lit" ? "lit" : "sun");
 const RAD = Math.PI / 180;
@@ -117,6 +152,8 @@ export class WakuseiSpace extends HTMLElement {
   #names: Partial<Record<SpaceBody, string>> = {};
   #hint = "choose to look at it";
   #painter: WakuseiPainter | undefined;
+  #focusBeforeRide: SpaceBody = "earth";
+  #lostTold = false;
 
   connectedCallback(): void {
     this.#model.centre = readCentre(this.getAttribute("center")) ?? this.#model.centre;
@@ -152,6 +189,8 @@ export class WakuseiSpace extends HTMLElement {
       cap: () => this.#textureCap(),
       invalidate: () => this.#gate?.request(),
       onLabels: (places) => this.#placeLabels(places),
+      onMoving: () => this.#gate?.request(),
+      onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
     });
     this.#view = taken.renderer.view(this.#stage, item, { still: null });
@@ -326,6 +365,67 @@ export class WakuseiSpace extends HTMLElement {
     return { id, name: this.#nameOf(id), radiusKm: BODIES[id].radiusKm, distanceKm: Math.hypot(geo[0], geo[1], geo[2]) * AU_IN_EARTH_RADII * EARTH_RADIUS_KM };
   }
 
+  // --- riding along -------------------------------------------------------------------------------------------------------------------------------
+  /**
+   * Ride along with a body, a moon or a moving point of your own. By default the camera sits at it and looks at the body it goes round, with the way it is going at the top of the picture, at its real place for the moment shown,
+   * so the ground slides beneath as it moves along its orbit. A drag looks about from there (a drag right turns the camera to its left and a drag up tips it towards the bottom of its picture, so the ground follows the pointer), the shared
+   * controls' zoom narrows the view. A body of the view (`"moon"`, `"mars"`) goes round the Earth; a moon (`"io"`) goes round its planet; a point of your own (`{ at(ms) }`, a satellite, a probe) goes round `around` (the Earth by default) and the
+   * element knows nothing of what it is. Another call switches smoothly; `null` stops. The draw rate follows how fast the picture moves, never more than 30 a second (one a second for a reader who asked for reduced motion), and nothing is drawn out of sight.
+   *
+   * @param target - A body name, a moon name, a point, or `null` to stop.
+   * @param options - `view`, `look`, `distanceKm`, `around`, `smooth` (see `RideOptions`).
+   */
+  ride(target: RideTarget | null, options: RideOptions = {}): void {
+    const model = this.#model;
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const wasRiding = model.ride !== null;
+    if (target === null) {
+      model.ride = null;
+      model.focus = this.#focusBeforeRide;
+    } else {
+      const found = this.#resolveRide(target, options);
+      if (!found) return;
+      if (!wasRiding) this.#focusBeforeRide = model.focus;
+      model.ride = found;
+      if (found.view === "follow" && typeof target === "string" && (SPACE_BODIES as readonly string[]).includes(target)) model.focus = target as SpaceBody;
+      else if (wasRiding) model.focus = this.#focusBeforeRide;
+    }
+    this.#lostTold = false;
+    const pose = model.pose;
+    model.transition = (options.smooth ?? true) && !reduced && pose.valid ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    this.#last = performance.now();
+    this.#schedule();
+    this.#gate?.request();
+    this.dispatchEvent(new CustomEvent("wakusei-ride", { detail: this.riding }));
+  }
+
+  #resolveRide(target: RideTarget, options: RideOptions): RideState | undefined {
+    const look = options.look ?? "down";
+    const distanceKm = Math.max(100, options.distanceKm ?? 3000);
+    if (typeof target !== "string") {
+      const around = options.around && (SPACE_BODIES as readonly string[]).includes(options.around) ? options.around : "earth";
+      return { target, around, view: options.view ?? "from", look, distanceKm };
+    }
+    const id = target.toLowerCase();
+    if ((SPACE_BODIES as readonly string[]).includes(id)) return { target: id as SpaceBody, around: "earth", view: id === "earth" ? "follow" : (options.view ?? "from"), look, distanceKm };
+    for (const [planet, moons] of Object.entries(MOONS_OF)) {
+      if (!(moons as readonly string[]).includes(id) || !(SPACE_BODIES as readonly string[]).includes(planet) || planet === "earth") continue;
+      return { target: id as MoonId, around: planet as SpaceBody, view: options.view ?? "from", look, distanceKm };
+    }
+    return undefined;
+  }
+
+  /** What the camera is riding along with now, or null. */
+  get riding(): Riding | null {
+    return this.#model.ride ? { ...this.#model.ride } : null;
+  }
+
+  #rideLost(): void {
+    if (this.#lostTold) return;
+    this.#lostTold = true;
+    this.dispatchEvent(new CustomEvent("wakusei-ride-lost", { detail: this.riding }));
+  }
+
   /** The zoom that shows a part of the sky: the Earth alone, the Moon's orbit, the Sun, the planets out to Mars, all of them, or a planet's nearer moons, at this scale and moment. */
   zoomFor(preset: SpacePreset): number {
     const mode = this.#model.mode;
@@ -365,6 +465,7 @@ export class WakuseiSpace extends HTMLElement {
     camera: { position: [number, number, number]; fov: number };
     /** What the painter has made at the last draw: the bodies with a drawing, and the moons shown round a planet that is near. */
     bodies: { look: string; painted: number; moons: number };
+    ride: { riding: boolean; lost: boolean; gliding: boolean };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -378,6 +479,7 @@ export class WakuseiSpace extends HTMLElement {
       lookups: this.#model.lookups,
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons },
+      ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
     };
   }
 
@@ -388,13 +490,16 @@ export class WakuseiSpace extends HTMLElement {
     return Number.isFinite(value) ? value : 1;
   }
 
-  /** While time runs, draw as often as it shows: real time once a minute; faster time as often as the fastest turning body in sight moves a pixel (1 to 30 times a second). */
+  /** While time runs, draw as often as it shows: real time once a minute; faster time as often as the fastest turning body in sight moves a pixel (1 to 30 times a second). A ride along moves the whole picture, so real time draws about as often as a pixel moves (once a second at least), and a reader who asked for reduced motion gets one step a second. */
   #schedule(): void {
     clearTimeout(this.#timer);
     this.#timer = undefined;
     if (!this.isConnected || this.#speed === 0) return;
-    const perSecond = Math.min(30, Math.max(1, (this.#model.motion || 0.015) * Math.abs(this.#speed)));
-    const wait = this.#speed === 1 ? REAL_TIME_TICK_MS : 1000 / perSecond;
+    const riding = this.#model.ride !== null;
+    const pixels = Math.max(this.#model.motion || 0.015, this.#model.rideMotion) * Math.abs(this.#speed);
+    let perSecond = Math.min(30, Math.max(1, pixels));
+    if (riding && typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) perSecond = 1;
+    const wait = !riding && this.#speed === 1 ? REAL_TIME_TICK_MS : 1000 / perSecond;
     this.#timer = setTimeout(this.#tick, wait);
   }
 

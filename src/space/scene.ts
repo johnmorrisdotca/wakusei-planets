@@ -2,13 +2,15 @@
 // Sun, so the Moon's phase and the Earth's day side come out of the light, not out of a table. Draws only when asked; holds no clock.
 import type * as THREE from "three";
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
-import { BODIES } from "../facts.ts";
+import { BODIES, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
+import { moonOffset } from "../scene/orient.ts";
 import { type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
-import { createTrack, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet } from "./frame.ts";
+import { createTrack, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { ridePose, type RideLook } from "./ride.ts";
 import { placeAround, placeMoon, placeSun, radiusIn, type ScaleMode } from "./scale.ts";
 
 
@@ -64,6 +66,55 @@ export type SpaceBody = (typeof SPACE_BODIES)[number];
  */
 export type SpaceLight = "sun" | "lit";
 
+/**
+ * Any moving point a camera can ride: where it is and which way it goes at a moment, from the centre of the body it goes round, in kilometres and kilometres a second, in the scene's axes (J2000
+ * equatorial, y north). It returns `null` when it cannot be placed then (its data too old, or it is gone). The space view knows nothing of what the point is: a satellite, a probe, a station.
+ *
+ * @example
+ * ```ts no-run
+ * import type { RidePoint } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const circle: RidePoint = { at: (ms) => ({ position: [7000 * Math.cos(ms / 1e6), 0, 7000 * Math.sin(ms / 1e6)], velocity: [0, 7.5, 0] }) };
+ * console.log(circle.at(0)?.position[0]);
+ * ```
+ */
+export interface RidePoint {
+  at(ms: number): { position: SpaceVec3; velocity: SpaceVec3 } | null;
+}
+
+/**
+ * What a camera can ride along with: a body of the view (`moon`, `mars`, ... going round the Earth), a moon of a planet in the view (`io`, going round Jupiter), or any moving point of your own.
+ *
+ * @example
+ * ```ts no-run
+ * import type { RideTarget } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const targets: RideTarget[] = ["moon", "io", { at: () => null }];
+ * console.log(targets.length);
+ * ```
+ */
+export type RideTarget = SpaceBody | MoonId | RidePoint;
+
+/** What the scene rides: the target, the body it goes round, and how. */
+export interface RideState {
+  target: RideTarget;
+  /** The body the target goes round: the Earth for a body of the view or a point (unless said), the planet for a moon. */
+  around: SpaceBody;
+  /** `from`: the camera is at the target, looking at the body it goes round. `follow`: the camera keeps a distance from it, looking at it. */
+  view: "from" | "follow";
+  look: RideLook;
+  /** For `follow` a point: how far the camera keeps, in kilometres. */
+  distanceKm: number;
+}
+
+/** The camera as the last draw left it, for the next one to start from when the ride changes. */
+export interface CameraPose {
+  p: SpaceVec3;
+  q: [number, number, number, number];
+  fov: number;
+  valid: boolean;
+}
+
 export interface SpaceModel {
   /** Moment shown, milliseconds since the epoch. */
   time: number;
@@ -95,6 +146,15 @@ export interface SpaceModel {
   drawnView: { yaw: number; tilt: number; zoom: number } | null;
   heightPx: number;
   camera: { position: [number, number, number]; fov: number };
+  /** The body or point the camera rides along with, or null. */
+  ride: RideState | null;
+  /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
+  rideLost: boolean;
+  /** A camera move in progress from where the last draw left it: when it began (ms of the page's clock), how long it takes. */
+  transition: { start: number; duration: number; from: { p: SpaceVec3; q: [number, number, number, number]; fov: number } } | null;
+  pose: CameraPose;
+  /** Pixels a game-second that riding makes things move on the screen (0 when not riding): the draw rate follows it. */
+  rideMotion: number;
   ratio(): number;
 }
 
@@ -117,6 +177,11 @@ export const newSpaceModel = (): SpaceModel => ({
   drawnView: null,
   heightPx: 420,
   camera: { position: [0, 0, 0], fov: FOV },
+  ride: null,
+  rideLost: false,
+  transition: null,
+  pose: { p: [0, 0, 0], q: [0, 0, 0, 1], fov: FOV, valid: false },
+  rideMotion: 0,
   ratio: () => Math.min(globalThis.devicePixelRatio || 1, 2),
 });
 
@@ -133,6 +198,10 @@ export interface SpaceDeps {
   invalidate: () => void;
   /** Where each body is on the screen, in CSS pixels in the box, or null when it is behind the camera. Called at each draw. */
   onLabels?: (places: Record<SpaceBody, BodyPlace | null>) => void;
+  /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
+  onMoving?: () => void;
+  /** The target of the ride could not be placed at this draw. */
+  onRideLost?: () => void;
   /** The painter could not make a body (the three.js parts handed over lack something it needs). */
   onPainterError?: (error: unknown) => void;
 }
@@ -155,6 +224,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const camera = new three.PerspectiveCamera(FOV, width / Math.max(1, height), 0.05, 1000);
       const target = new three.Vector3();
       const projected = new three.Vector3();
+      const desiredQ = camera.quaternion.clone();
+      const fromQ = camera.quaternion.clone();
 
       let ended = false;
       interface Slot {
@@ -226,32 +297,137 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const pos = { earth: [0, 0, 0] as Vec3, moon: placeMoon(mode, frame.moon), sun: sunPos } as Record<SpaceBody, Vec3>;
           for (const id of SPACE_PLANETS) pos[id] = placeAround(mode, sunPos, minus(frame.planets[id], frame.sun));
           const radiusOf = (id: SpaceBody): number => radiusIn(id, mode);
+          const placeAll = (at: SpaceFrame): Record<SpaceBody, Vec3> => {
+            const sunAt = placeSun(mode, at.sun);
+            const all = { earth: [0, 0, 0] as Vec3, moon: placeMoon(mode, at.moon), sun: sunAt } as Record<SpaceBody, Vec3>;
+            for (const id of SPACE_PLANETS) all[id] = placeAround(mode, sunAt, minus(at.planets[id], at.sun));
+            return all;
+          };
           const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : frame.planets[id]));
 
-          // the camera: looks at the focus body from the direction the sky was in when it was last moved, turned by yaw and tilt, as far as the zoom says
-          const focusPos = pos[model.focus];
-          const focusRadius = radiusOf(model.focus);
-          model.anchor ??= model.time;
-          const lon = model.centre.lon - model.view.yaw;
-          const lat = Math.max(-90, Math.min(90, model.centre.lat - model.view.tilt));
-          const aim = groundDirection(lon, lat, model.anchor);
-          const distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * focusRadius) / Math.max(1e-9, model.view.zoom));
-          target.set(focusPos[0], focusPos[1], focusPos[2]);
-          camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
-          camera.up.set(0, 1, 0);
-          camera.lookAt(target);
-          camera.near = Math.max(0.0005, distance * 0.02 - focusRadius * 0.5, focusRadius * 0.01);
-          camera.far = Math.max(2000, distance * 4 + (mode === "true" ? 40 * 23_481 : 400));
-          camera.fov = FOV;
+          // riding along: the camera sits at a moving point and looks at the body it goes round (a moon over its planet, a point over any body). The point's place and way of going are in radii of
+          // that body, from its centre; the body is drawn at `centre` with the radius `unitWorld`, so the same numbers place the camera in the scene.
+          model.rideLost = false;
+          model.rideMotion = 0;
+          let focus: SpaceBody = model.focus;
+          let focusPos: Vec3 = pos[focus];
+          let focusRadius = radiusOf(focus);
+          let aimWay = 1;
+          let rideFrom: { around: SpaceBody; centre: Vec3; unitWorld: number; position: Vec3; velocity: Vec3; perSecond: number; hiddenBody: SpaceBody | null; hiddenMoon: string | null } | null = null;
+          const ride = model.ride;
+          if (ride) {
+            const t = ride.target;
+            const around = ride.around;
+            const unitWorld = radiusOf(around);
+            const centre = pos[around];
+            let position: Vec3 | undefined;
+            let velocity: Vec3 = [0, 0, 0];
+            let perSecond = 1;
+            let hiddenBody: SpaceBody | null = null;
+            let hiddenMoon: string | null = null;
+            if (typeof t === "string" && (SPACE_BODIES as readonly string[]).includes(t)) {
+              const id = t as SpaceBody;
+              if (ride.view === "follow") {
+                focus = id;
+                focusPos = pos[id];
+                focusRadius = radiusOf(id);
+              } else {
+                const ends = track.ends();
+                const was = ends ? placeAll(ends[0])[id] : pos[id];
+                const will = ends ? placeAll(ends[1])[id] : pos[id];
+                position = pos[id];
+                velocity = minus(will, was);
+                perSecond = ends ? Math.max(1e-3, (ends[1].ms - ends[0].ms) / 1000) : 1;
+                hiddenBody = id;
+              }
+            } else if (typeof t === "string") {
+              const id = t as MoonId;
+              const offset = moonOffset(id, model.time);
+              const later = moonOffset(id, model.time + 1000);
+              if (ride.view === "follow") {
+                focusPos = [centre[0] + offset[0] * unitWorld, centre[1] + offset[1] * unitWorld, centre[2] + offset[2] * unitWorld];
+                focusRadius = Math.max(1e-6, (BODIES[id].radiusKm / BODIES[around as SpacePlanet].radiusKm) * unitWorld);
+              } else {
+                position = offset;
+                velocity = minus(later, offset);
+                hiddenMoon = id;
+              }
+            } else {
+              const place = t.at(model.time);
+              if (!place) model.rideLost = true;
+              else {
+                const km = BODIES[around].radiusKm;
+                const inRadii: Vec3 = [place.position[0] / km, place.position[1] / km, place.position[2] / km];
+                if (ride.view === "follow") {
+                  focusPos = [centre[0] + inRadii[0] * unitWorld, centre[1] + inRadii[1] * unitWorld, centre[2] + inRadii[2] * unitWorld];
+                  focusRadius = Math.max(1e-6, (ride.distanceKm / km / FIT_DISTANCE) * unitWorld);
+                  aimWay = -1;
+                } else {
+                  position = inRadii;
+                  velocity = [place.velocity[0] / km, place.velocity[1] / km, place.velocity[2] / km];
+                }
+              }
+            }
+            if (position && ride.view === "from") rideFrom = { around, centre, unitWorld, position, velocity, perSecond, hiddenBody, hiddenMoon };
+          }
+
+          let fovNow = FOV;
+          let distance = 0;
+          if (rideFrom) {
+            const pose = ridePose({ position: rideFrom.position, velocity: rideFrom.velocity, radius: 1, look: ride!.look, yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom });
+            const { centre, unitWorld } = rideFrom;
+            camera.position.set(centre[0] + pose.position[0] * unitWorld, centre[1] + pose.position[1] * unitWorld, centre[2] + pose.position[2] * unitWorld);
+            camera.up.set(pose.up[0], pose.up[1], pose.up[2]);
+            camera.lookAt(camera.position.x + pose.forward[0], camera.position.y + pose.forward[1], camera.position.z + pose.forward[2]);
+            fovNow = pose.fov;
+            const away = Math.hypot(...rideFrom.position);
+            camera.near = Math.max(0.0008, Math.min(0.05, (away - 1) * 0.1)) * unitWorld;
+            camera.far = Math.max(2000, 400 + (mode === "true" ? 40 * 23_481 : 0));
+            distance = away * unitWorld;
+            // how fast the ground goes by under the camera, in pixels a game-second: its speed over its height, times the focal length in pixels
+            const focal = size.height / 2 / Math.tan((fovNow / 2) * RAD);
+            const height = Math.max(50 / BODIES[rideFrom.around].radiusKm, away - 1);
+            model.rideMotion = (Math.hypot(...rideFrom.velocity) / rideFrom.perSecond / height) * focal;
+          } else {
+            // looks at the focus body from the direction the sky was in when it was last moved, turned by yaw and tilt, as far as the zoom says
+            model.anchor ??= model.time;
+            const lon = model.centre.lon - aimWay * model.view.yaw;
+            const lat = Math.max(-90, Math.min(90, model.centre.lat - aimWay * model.view.tilt));
+            const aim = groundDirection(lon, lat, model.anchor);
+            distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * focusRadius) / Math.max(1e-9, model.view.zoom));
+            target.set(focusPos[0], focusPos[1], focusPos[2]);
+            camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
+            camera.up.set(0, 1, 0);
+            camera.lookAt(target);
+            camera.near = Math.max(0.0005, distance * 0.02 - focusRadius * 0.5, focusRadius * 0.01);
+            camera.far = Math.max(2000, distance * 4 + (mode === "true" ? 40 * 23_481 : 400));
+          }
+
+          // a ride that changed: glide from where the last draw left the camera
+          const glide = model.transition;
+          if (glide) {
+            const k = Math.min(1, (performance.now() - glide.start) / glide.duration);
+            const ease = k * k * (3 - 2 * k);
+            desiredQ.copy(camera.quaternion);
+            camera.position.set(glide.from.p[0] + (camera.position.x - glide.from.p[0]) * ease, glide.from.p[1] + (camera.position.y - glide.from.p[1]) * ease, glide.from.p[2] + (camera.position.z - glide.from.p[2]) * ease);
+            fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
+            camera.quaternion.copy(fromQ.slerp(desiredQ, ease));
+            fovNow = glide.from.fov + (fovNow - glide.from.fov) * ease;
+            if (k >= 1) model.transition = null;
+          }
+          camera.fov = fovNow;
           camera.aspect = size.width / Math.max(1, size.height);
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld();
-          model.camera = { position: [camera.position.x, camera.position.y, camera.position.z], fov: FOV };
+          const hiddenBody = rideFrom?.hiddenBody ?? null;
+          const hiddenMoon = rideFrom?.hiddenMoon ?? null;
+          model.camera = { position: [camera.position.x, camera.position.y, camera.position.z], fov: fovNow };
+          model.pose = { p: [camera.position.x, camera.position.y, camera.position.z], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
           model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom };
           model.heightPx = size.height;
 
           // how many pixels across each body is: for the pictures it needs and for what is chosen
-          const half = Math.tan((FOV / 2) * RAD);
+          const half = Math.tan((fovNow / 2) * RAD);
           const radiusPxOf = (id: SpaceBody): number => {
             const d = Math.hypot(pos[id][0] - camera.position.x, pos[id][1] - camera.position.y, pos[id][2] - camera.position.z);
             const r = radiusOf(id);
@@ -272,6 +448,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const drawing = slot.drawing;
             if (!drawing) continue;
             paintedBodies += 1;
+            drawing.object.visible = id !== hiddenBody;
             drawing.object.position.set(pos[id][0], pos[id][1], pos[id][2]);
             drawing.object.scale.setScalar(radiusOf(id));
             if (drawing.billboard) drawing.object.quaternion.copy(camera.quaternion);
@@ -311,6 +488,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               projected.set(at[0], at[1], at[2]).project(camera);
               if (projected.z > 1 || Math.abs(projected.x) > 1.25 || Math.abs(projected.y) > 1.25) continue;
               const key = site.name.toLowerCase();
+              if (key === hiddenMoon) continue;
               let held = moonSlots.get(key);
               if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false }, seen: now }));
               held.seen = now;
@@ -346,11 +524,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           if (deps.onLabels && model.labels) {
             const places = {} as Record<SpaceBody, BodyPlace | null>;
             for (const id of SPACE_BODIES) {
-              const at = labelFor(pos[id]);
+              const at = id === hiddenBody || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
               places[id] = at ? { x: at.x, y: at.y, r: px[id] } : null;
             }
             deps.onLabels(places);
           }
+          if (model.rideLost) deps.onRideLost?.();
+          if (model.transition) deps.onMoving?.();
           return false;
         },
         resize(w, h) {
