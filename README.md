@@ -288,6 +288,23 @@ A body that turns by itself and a moving sky, in HTML:
 <wakusei-portrait scene="look:painted~jupiter_0_0_0.3_0~io_0_0_0.1_0"></wakusei-portrait>
 ```
 
+## The space view
+
+[The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html) puts the Earth, the Moon, the Sun and the planets in their places for any date and time, in one WebGL context: the Moon's phase and the Earth's day side come out of the real Sun's light. Zoom from the Earth out to the whole solar system, in a compressed scale (every direction real, the distances squeezed) or the true one, and run time forwards or backwards. Positions come from this package's own models.
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+
+<wakusei-space time="2026-11-02T14:00Z" speed="0"></wakusei-space>
+```
+
+```ts
+import { frameAt } from "@johnmorrisdotca/wakusei-planets/space";
+
+const frame = frameAt(Date.UTC(2026, 10, 2, 14));
+console.log(Math.hypot(...frame.sun).toFixed(3), "au to the Sun");
+```
+
 ## API
 
 The reference is a site, made from the source's own doc comments: every export has a summary, its parameters, what it returns and an example that runs when the site is built. [Open the reference](https://johnmorrisdotca.github.io/wakusei-planets/docs/).
@@ -297,6 +314,8 @@ The reference is a site, made from the source's own doc comments: every export h
 | `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`. No browser. |
 | `.../element` | `<wakusei-body>`; three.js is loaded only for a shaded look. |
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
+| `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales: `frameAt`, `createTrack`, `placeSun`, `placeAround`. No browser. |
+| `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
 | `.../all` | Every body's shaded look, at once. |
@@ -324,6 +343,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Looks and bodies](docs/guides/looks-and-bodies.md) | The looks and each body's entry point |
 | [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
+| [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
 | [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |
