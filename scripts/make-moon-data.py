@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes src/data/orbits.ts.
 The Moon's row is JPL's Planetary Satellite Mean Elements (https://ssd.jpl.nasa.gov/sats/elem/). Every other moon's orbit is fitted to JPL Horizons' own
-positions and velocities (https://ssd.jpl.nasa.gov/api/horizons.api, ICRF equator, UT) for 1950 to 2050: osculating elements in the moon's mean orbit plane, then
+positions and velocities (https://ssd.jpl.nasa.gov/api/horizons.api, ICRF equator, UT) for 1800 to 2199 (Horizons' moons end in 2199 or 2200; Charon's begin in 1800): osculating elements in the moon's mean orbit plane, then
 a straight line through the mean longitude, the longitude of the periapsis and the node, and, where a line leaves more than 0.3 degrees, an acceleration (Phobos)
 or one wave (Mimas and Tethys, in resonance). The page's own phase angles do not reproduce Horizons' positions for most of the Saturn, Uranus and Neptune moons.
 Usage: python3 -I scripts/make-moon-data.py [saved-page.html]   (fetches the page when none is given; needs the network for Horizons either way)
@@ -29,7 +29,7 @@ MOONS = {
 # the IAU poles (right ascension, declination, degrees) of the planets whose moons the page gives in the planet's equator
 PLANET_POLE = {"uranus": (257.311, -15.175), "neptune": (299.36, 43.46), "pluto": (132.993, -6.163)}
 EPOCH_MS = 946728000000  # 2000-01-01 12:00 UT
-START, STOP, STEP_HOURS = "1950-01-02", "2049-12-30", 273  # about 11.4 days: not a multiple of any moon's period
+START, STOP, STEP_HOURS = "1800-01-05", "2199-11-30", 273  # about 11.4 days: not a multiple of any moon's period
 
 dot = lambda a, b: a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 cross = lambda a, b: [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
@@ -165,7 +165,7 @@ for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page, re.S):
     if len(cells) >= 18 and cells[0].isdigit():
         rows[cells[2]] = cells
 
-lines = ["// Made by scripts/make-moon-data.py: the Moon from JPL's Planetary Satellite Mean Elements (https://ssd.jpl.nasa.gov/sats/elem/), every other moon fitted to JPL Horizons' positions for 1950 to 2050; do not edit by hand.",
+lines = ["// Made by scripts/make-moon-data.py: the Moon from JPL's Planetary Satellite Mean Elements (https://ssd.jpl.nasa.gov/sats/elem/), every other moon fitted to JPL Horizons' positions for 1800 to 2199; do not edit by hand.",
          "// The moons of the dwarf planets other than Pluto's are not in either: their orbits are in dwarf.ts, from the papers it cites, and are added at the end.",
          "import { DWARF_MOON_ORBITS } from \"./dwarf.ts\";", "",
          "// `sid` is the mean longitude's rate in degrees a day; `dw` and `dn` are the precession rates of the periapsis and the node, degrees a day.",

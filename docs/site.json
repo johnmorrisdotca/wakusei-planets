@@ -46,8 +46,8 @@
       "platform": "node"
     },
     "./tables": {
-      "en": "Every dwarf planet's fitted position table (Ceres and the seven slower ones), so heliocentric is within a fraction of an arc-second",
-      "ja": "すべての準惑星の位置の表 (ケレスと、動きの遅い7つ)。heliocentric が1秒角より小さい誤差になります",
+      "en": "Every dwarf planet's fitted position table (Ceres and the seven slower ones) and the moon theories for Jupiter's and Saturn's moons, so heliocentric and moonVector are as close as the accuracy guide says",
+      "ja": "すべての準惑星の位置の表 (ケレスと、動きの遅い7つ) と、木星と土星の衛星の理論。heliocentric と moonVector が精度ガイドの値まで正確になります",
       "platform": "node"
     },
     "./tables/ceres": {
@@ -58,6 +58,21 @@
     "./tables/dwarfs": {
       "en": "The fitted position tables of Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna, 1800 to 2200 (about 5 kB gzipped)",
       "ja": "オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナの位置の表、1800年から2200年 (gzip で約5 kB)",
+      "platform": "node"
+    },
+    "./tables/vsop": {
+      "en": "Finer VSOP87B series for Mercury to Neptune, within 2 arc-seconds of Horizons on 60 dates from 1800 to 2200 (about 32 kB gzipped; not in ./tables)",
+      "ja": "水星から海王星までのより細かい VSOP87B 級数。1800年から2200年の60日でホライズンズとの差が2秒角以内 (gzip で約32 kB、./tables には含まれません)",
+      "platform": "node"
+    },
+    "./tables/galilean": {
+      "en": "Io, Europa, Ganymede and Callisto from the theory L1.2 (Lainey, Duriez and Vienne), 1130 to 2760 (about 5 kB gzipped)",
+      "ja": "イオ、エウロパ、ガニメデ、カリストを L1.2 理論 (レイネ、デュリエ、ヴィエンヌ) で計算、1130年から2760年 (gzip で約5 kB)",
+      "platform": "node"
+    },
+    "./tables/saturn-moons": {
+      "en": "Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus from the theory TASS1.7 (Vienne and Duriez) (about 7 kB gzipped)",
+      "ja": "ミマス、エンケラドス、テティス、ディオネ、レア、タイタン、イアペトゥスを TASS1.7 理論 (ヴィエンヌ、デュリエ) で計算 (gzip で約7 kB)",
       "platform": "node"
     },
     "./spacecraft": {

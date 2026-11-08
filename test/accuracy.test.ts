@@ -14,15 +14,15 @@ const reference = JSON.parse(readFileSync(new URL("./data/horizons.json", import
 const AU_KM = 149597870.7;
 
 /** The worst direction error in arc-seconds from the Sun, over the dates, for each planet. */
-const PLANET_ARCSEC: Record<string, number> = { mercury: 3.5, venus: 1, earth: 2.2, mars: 2.2, jupiter: 2.8, saturn: 5.6, uranus: 5.8, neptune: 5, pluto: 0.3 };
+const PLANET_ARCSEC: Record<string, number> = { mercury: 3.5, venus: 1, earth: 2.2, mars: 2.2, jupiter: 1.6, saturn: 5.6, uranus: 5.8, neptune: 2.5, pluto: 0.3 };
 /** The worst direction error in arc-seconds from the Sun, over the dates from 1900 to 2100, for each dwarf planet besides Pluto. */
 const DWARF_ARCSEC: Record<string, number> = { ceres: 0.3, orcus: 0.1, haumea: 0.1, quaoar: 0.15, makemake: 0.15, gonggong: 0.1, eris: 0.1, sedna: 0.1 };
 /** The worst direction error in degrees from the planet (from the Pluto system's barycentre for Nix and Hydra), over the dates, for the Moon and each moon. */
 const MOON_DEGREES: Record<string, number> = {
-  moon: 0.0008, phobos: 0.9, deimos: 0.5, io: 0.15, europa: 0.15, ganymede: 0.3, callisto: 0.12,
-  mimas: 1.6, enceladus: 0.65, tethys: 0.35, dione: 0.15, rhea: 0.15, titan: 0.1, iapetus: 0.35,
-  miranda: 2.7, ariel: 0.6, umbriel: 0.25, titania: 0.6, oberon: 0.6,
-  triton: 0.1, nereid: 9, proteus: 0.2, charon: 0.05, nix: 3, hydra: 2.4,
+  moon: 0.0008, phobos: 0.5, deimos: 0.45, io: 0.08, europa: 0.03, ganymede: 0.022, callisto: 0.008,
+  mimas: 1, enceladus: 0.32, tethys: 0.06, dione: 0.15, rhea: 0.15, titan: 0.025, iapetus: 0.025,
+  miranda: 1.6, ariel: 0.3, umbriel: 0.13, titania: 0.25, oberon: 0.6,
+  triton: 0.1, nereid: 3.6, proteus: 0.15, charon: 0.05, nix: 2.4, hydra: 2.4,
 };
 
 const degreesBetween = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (length(a) * length(b))))) / RAD;

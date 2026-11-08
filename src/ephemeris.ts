@@ -3,6 +3,7 @@
 // and outside those years JPL's "Keplerian Elements for Approximate Positions of the Major Planets", Table 1 (https://ssd.jpl.nasa.gov/planets/approx_pos.html). The Moon: the lunar solution ELP2000-82B (Chapront-Touze and Chapront, IMCCE) cut to its largest terms (data/lunar.ts). Other moons: fitted to JPL Horizons (data/orbits.ts).
 // Light travel time is allowed for, so a turning planet shows the face it really showed when the light left. Pure: no DOM, no three.js.
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
+import { moonTheoryOf, planetSeriesOf } from "./data/theories.ts";
 import { DWARF_ELEMENTS } from "./data/dwarf.ts";
 import { tableOf, type FittedTable } from "./data/tables.ts";
 import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
@@ -101,7 +102,7 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
   let total = 1;
   for (const id of Object.keys(MASS_OVER_SUN)) {
     const m = MASS_OVER_SUN[id]!;
-    const p = vsopPosition(VSOP87[id]!, terrestrialMs);
+    const p = vsopPosition(planetSeriesOf(id) ?? VSOP87[id]!, terrestrialMs);
     x += m * p[0];
     y += m * p[1];
     z += m * p[2];
@@ -125,7 +126,7 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
  * ```
  */
 export function heliocentric(planet: HostId, ms: number): Vec3 {
-  const vsop = VSOP87[planet];
+  const vsop = planetSeriesOf(planet) ?? VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
   if (planet === "pluto" || tableOf(planet) !== undefined) {
     const tt = toTerrestrialTime(ms);
@@ -394,6 +395,8 @@ export function apparent(id: BodyId, time: number): Apparent {
 /** A moon's position from its planet's centre (J2000 ecliptic, kilometres) at a time. */
 export function moonVector(id: MoonId, ms: number): Vec3 {
   if (id === "moon") return moonGeocentric(ms);
+  const theory = moonTheoryOf(id);
+  if (theory !== undefined) return theory(toTerrestrialTime(ms));
   const orbit = ORBITS[id];
   if (orbit === undefined) throw new Error(`no orbit for ${id}`);
   return orbitVector(orbit, ms);

@@ -165,6 +165,21 @@
       "import": "./dist/tables/dwarfs.js",
       "default": "./dist/tables/dwarfs.js"
     },
+    "./tables/vsop": {
+      "types": "./dist/tables/vsop.d.ts",
+      "import": "./dist/tables/vsop.js",
+      "default": "./dist/tables/vsop.js"
+    },
+    "./tables/galilean": {
+      "types": "./dist/tables/galilean.d.ts",
+      "import": "./dist/tables/galilean.js",
+      "default": "./dist/tables/galilean.js"
+    },
+    "./tables/saturn-moons": {
+      "types": "./dist/tables/saturn-moons.d.ts",
+      "import": "./dist/tables/saturn-moons.js",
+      "default": "./dist/tables/saturn-moons.js"
+    },
     "./look": {
       "types": "./dist/scene/look.d.ts",
       "import": "./dist/scene/look.js",
