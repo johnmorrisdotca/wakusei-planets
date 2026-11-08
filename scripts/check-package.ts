@@ -56,6 +56,12 @@ if (vector.xAu !== 1 || vector.yAu !== 0 || vector.zAu !== 0) throw new Error("c
 const names = ["cartesianToSpherical", "eclipticToEquatorial", "equatorialToEcliptic", "equatorialToHorizontal", "meanObliquity", "sphericalToCartesian"];
 if (JSON.stringify(Object.keys(coordinates).sort()) !== JSON.stringify(names)) throw new Error("coordinates public API changed");
 
+// The stars through package resolution: the table loads and a known star is where the catalogue puts it.
+const starsEntry = "@johnmorrisdotca/wakusei-planets/stars";
+const starTable = await import(starsEntry);
+const sirius = starTable.starByName("Sirius");
+if (starTable.stars().length !== 5080 || sirius?.hr !== 2491 || Math.abs(sirius.declination + 16.7161) > 0.001) throw new Error("stars package entry failed");
+
 // The sun and moon times through package resolution too, both conventions.
 const suncalcEntry = "@johnmorrisdotca/wakusei-planets/suncalc";
 const sunTimes = await import(suncalcEntry);

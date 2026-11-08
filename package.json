@@ -91,6 +91,11 @@
       "import": "./dist/time.js",
       "default": "./dist/time.js"
     },
+    "./stars": {
+      "types": "./dist/stars.d.ts",
+      "import": "./dist/stars.js",
+      "default": "./dist/stars.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",
