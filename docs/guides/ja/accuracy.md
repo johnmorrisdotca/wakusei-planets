@@ -107,7 +107,7 @@ console.log(Math.hypot(x, y, z).toFixed(2));
 
 同じ日時を各パッケージに渡し、JPL Horizons との方向のずれを測定しました。以下は**この少数の日付での一致度**であり、全期間での保証でも、観測そのものに対する精度の証明でもありません。小さい値ほど良い結果です。未対応・未測定は「—」で、ゼロ誤差という意味ではありません。
 
-測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [f93094f](https://github.com/johnmorrisdotca/wakusei-planets/tree/f93094f2e9f0163c4bdc93a3bf23f7c02862387f)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
+測定した wakusei は package.json 上の版 0.20.0、**ソースのリビジョン [ee58f6f](https://github.com/johnmorrisdotca/wakusei-planets/tree/ee58f6f10806cff479e256cfcf1698d938a7ea8a)**（src/ を最後に変更したコミット）です。同じ版番号でも src/ が違う後のリリースは対象外です。
 
 ### 共有できる 1950–2050 年のサンプル
 
