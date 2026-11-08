@@ -14,6 +14,7 @@ export {
   Mesh,
   NoColorSpace,
   OrthographicCamera,
+  PerspectiveCamera,
   PlaneGeometry,
   RepeatWrapping,
   RGBAFormat,
