@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-08
+
 - **Every view zooms and pans by itself** (MODULES-642). `<wakusei-body>`, `<wakusei-portrait>` and `<wakusei-space>` carry the shared view controls (kazoku-ui 0.21.1, `carryControls`): a drag, a pinch, Ctrl, Command or Alt with the wheel (the plain wheel still scrolls the page at Fit), and the arrows, `+`, `-` and `0` once focused. `controls="none"` turns them off, `live="off"` starts a body without them, `zoom-min` and `zoom-max` set the range. The ranges: the body's line look 0.1x to 50x (vector, detail at any scale), its shaded looks and the portrait 0.1x to 8x (the 2048 pixel painted maps are sharp to about 1.5x and soften after that), the space view a millionth to 3x (the camera is held 1.05 radii from the surface). A `<kazoku-view-controls>` takes over and reads the range; point its `for` at the element itself. `wakusei-view` is sent when the view changes, `space.controller` is the shared controller, and `<wakusei-portrait>` has `setView`. `embed.html` zooms with the drag, pinch, wheel, keys and + and - buttons and keeps the view in its address (`zoom=2`; the view's tilt is `vtilt`), and `embedCode` takes `zoom` for the iframe way. The code builder's picture zooms too. See the new Zoom and pan guide.
 
 ## [0.23.0] - 2026-11-08
