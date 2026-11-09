@@ -12,8 +12,8 @@
 
       <section class="fam-felt space-stage" aria-labelledby="stage-h">
         <h2 id="stage-h" class="fam-sr" data-say="stage">Body view</h2>
-        <div id="view" class="body-view" tabindex="0" role="group" aria-label="Body view" data-say-label="stage">
-          <wakusei-body id="main" body="jupiter" look="realistic" live="hover"></wakusei-body>
+        <div id="view" class="body-view" role="group" aria-label="Body view" data-say-label="stage">
+          <wakusei-body id="main" body="jupiter" look="realistic" live="hover" tabindex="0"></wakusei-body>
           <svg id="scale-leader" class="scale-leader" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" hidden><line x1="50" y1="50" x2="77" y2="77" /></svg>
           <div id="scale-inset" class="scale-inset" hidden>
             <wakusei-body id="inset" live="off" size="160"></wakusei-body>
@@ -29,7 +29,7 @@
           </div>
         </div>
       </section>
-      <kazoku-view-controls id="controls" for="view" controls="advanced" tilt-max="90" speed="0" zoom-min="0.5" zoom-max="6"></kazoku-view-controls>
+      <kazoku-view-controls id="controls" for="main" controls="advanced" speed="0"></kazoku-view-controls>
 
       <div class="fam-panels">
         <div class="fam-panel controls">

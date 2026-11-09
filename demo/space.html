@@ -12,13 +12,13 @@
 
       <section class="fam-felt space-stage" aria-labelledby="stage-h">
         <h2 id="stage-h" class="fam-sr" data-say="sp_stage">Space view</h2>
-        <div id="sky" class="body-view" tabindex="0" role="group" aria-label="Space view" data-say-label="sp_stage">
-          <wakusei-space id="space" time="now" speed="0" look="realistic" texture-base="textures/"></wakusei-space>
+        <div id="sky" class="body-view" role="group" aria-label="Space view" data-say-label="sp_stage">
+          <wakusei-space id="space" tabindex="0" time="now" speed="0" look="realistic" texture-base="textures/"></wakusei-space>
         </div>
         <p class="fam-fine stage-name" id="caption" role="status"></p>
         <p class="fam-fine" id="scale-note" role="status"></p>
       </section>
-      <kazoku-view-controls id="controls" for="sky" controls="advanced" address tilt-max="90" speed="0" zoom-min="0.000001" zoom-max="2.5"></kazoku-view-controls>
+      <kazoku-view-controls id="controls" for="space" controls="advanced" address speed="0"></kazoku-view-controls>
 
       <div class="fam-panels">
         <div class="fam-panel controls">
