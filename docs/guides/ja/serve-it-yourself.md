@@ -17,7 +17,7 @@ description: 自分のコンピューターで小さな JSON サービスを動�
 
 ## サーバー
 
-```js
+```js no-run
 import { createServer } from "node:http";
 import { BODIES, BODY_IDS, stopPlaceAu } from "@johnmorrisdotca/wakusei-planets";
 import { distance } from "@johnmorrisdotca/wakusei-planets/nearest";
