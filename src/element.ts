@@ -179,7 +179,8 @@ export class WakuseiBody extends HTMLElement {
 
   /** The radius of the body's disc on the screen in CSS pixels, at the picture's own size: what `grab-radius` on the shared view controls wants for a drag that keeps the touched point under the pointer. */
   get discRadius(): number {
-    return (this.getBoundingClientRect().width / 2) * this.#fill();
+    const { width, height } = this.getBoundingClientRect();
+    return (Math.min(width, height) / 2) * this.#fill();
   }
   get body(): BodyId {
     if (this.hasAttribute("star")) return "sun";
@@ -298,8 +299,9 @@ export class WakuseiBody extends HTMLElement {
 
   /** The shared controllers' camera: `yaw` turns the body about its pole, `tilt` tips its top away from you as it grows (a drag up moves the surface up), `roll` turns the picture clockwise about the line of sight, `zoom` scales it, and `panX` and `panY` move it by that many CSS pixels from the middle. */
   setView(view: { yaw?: number; tilt?: number; roll?: number; zoom?: number; panX?: number; panY?: number }): void {
-    const half = Math.max(1, this.clientWidth) / 2;
-    const [yaw, tilt, roll, zoom, panX, panY] = [view.yaw ?? 0, view.tilt ?? 0, view.roll ?? 0, view.zoom ?? 1, -(view.panX ?? 0) / half, (view.panY ?? 0) / half];
+    const halfWidth = Math.max(1, this.clientWidth) / 2;
+    const halfHeight = Math.max(1, this.clientHeight) / 2;
+    const [yaw, tilt, roll, zoom, panX, panY] = [view.yaw ?? 0, view.tilt ?? 0, view.roll ?? 0, view.zoom ?? 1, -(view.panX ?? 0) / halfWidth, (view.panY ?? 0) / halfHeight];
     if (yaw === this.#yaw && tilt === this.#tilt && roll === this.#roll && zoom === this.#zoom && panX === this.#panX && panY === this.#panY) return;
     [this.#yaw, this.#tilt, this.#roll, this.#zoom, this.#panX, this.#panY] = [yaw, tilt, roll, zoom, panX, panY];
     this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: this.#yaw, tilt: this.#tilt, roll: this.#roll, zoom: this.#zoom, panX: view.panX ?? 0, panY: view.panY ?? 0 } }));

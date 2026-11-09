@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- A planet off the middle of the view is no longer cut by a straight edge (MODULES-739).
+
 ## [0.26.0] - 2026-11-09
 
 - **The compressed scale keeps the order of the orbits** (MODULES-742). The Moon was drawn outside Venus's orbit (10 Earth radii out, with the Sun 44 away) and the Earth was not on its own orbit. The Moon is now 3.5 Earth radii out and an astronomical unit is 70 Earth radii; the Sun, the bodies and the orbit lines (the Earth's too) all go through one mapping, `placeBodies` and `orbitLine`, so every body lies on its own orbit line, and the moons of Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn nearer when they would cross the next planet's orbit (`moonDistance`). Tests: every body is on its orbit line at four dates in both scales, and no moon's orbit reaches a neighbouring planet's. `SUN_COMPRESSED` is 70 (was 44) and `MOON_COMPRESSED` 3.5 (was 10).
