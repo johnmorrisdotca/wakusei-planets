@@ -336,6 +336,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
 | `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
+| `.../sheets` | Printable colouring sheets for children: the Sun, the planets and the big moons in thick lines with the real colours and three facts, and all the planets at one scale, in English and Japanese (`kidsSvg`, `kidsSheet`, `kidsFacts`). |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
 | `.../all` | Every body's shaded look, at once. |
@@ -371,6 +372,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |
 | [The stars you can see without a telescope](docs/guides/stars.md) | 5,080 stars with names, positions, proper motion, distance and colour |
 | [What is nearby, and when bodies come close](docs/guides/nearest.md) | The nearest bodies to a body on a date, closest approaches and conjunctions, and how close they are to Horizons |
+| [Colouring sheets for children](docs/guides/kids-sheets.md) | Printable sheets of the Sun, planets and big moons, A4 and US Letter, English and Japanese, and the ready-made PDFs |
 | [Famous spacecraft](docs/guides/spacecraft.md) | Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker and Webb: where they are and their whole voyage |
 | [Data files](docs/guides/data-files.md) | CSV and Parquet tables of the bodies, orbits and spacecraft, for Python, R and Rust |
 | [Serve it yourself](docs/guides/serve-it-yourself.md) | A small Node server over the package, that you host |
