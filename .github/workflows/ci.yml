@@ -7,6 +7,7 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -19,6 +20,7 @@ jobs:
       - run: node scripts/check-standard.mjs
   package:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -35,6 +37,7 @@ jobs:
         run: pnpm test:package
   usage:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -50,6 +53,7 @@ jobs:
     # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit. The desk's Chromium draws every body in software, so it is dealt out to six jobs (`--shard`).
     name: demo (${{ matrix.project }} ${{ matrix.shard }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -76,6 +80,7 @@ jobs:
         run: pnpm test:demo:one --project=${{ matrix.project }} --shard=${{ matrix.shard }}
   freeze:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -89,3 +94,21 @@ jobs:
         run: pnpm test:freeze
       - name: The soak, one minute (ten minutes by hand with pnpm test:soak)
         run: SOAK_MINUTES=1 pnpm test:soak
+  commits:
+    # A pushed commit message never names an AI as author or co-author.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: No AI attribution in the pushed commit messages
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          range="$BEFORE..HEAD"
+          git cat-file -e "$BEFORE^{commit}" 2>/dev/null || range="HEAD~1..HEAD"
+          if git log --format='%an %ae%n%cn %ce%n%B' "$range" | grep -i -E 'co-authored-by:.*(claude|anthropic|openai|chatgpt|gpt)|noreply@anthropic|noreply@openai'; then
+            echo "A commit names an AI as author (see AGENTS.md: no AI attribution)"; exit 1
+          fi
