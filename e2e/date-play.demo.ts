@@ -42,10 +42,12 @@ test.describe("the space page", () => {
     });
     await openSpace(page, `t=${START}&play=on&speed=86400`);
     await expect(play(page)).toHaveAttribute("aria-pressed", "true");
+    // the box follows the clock: it reaches a later day. How soon depends on the frames the machine draws (a frame's step is capped, MODULES-797),
+    // so this waits for the day rather than timing two seconds; on a desk machine it takes about one.
     const before = await boxMs(page);
-    await page.waitForTimeout(2200);
-    const later = await boxMs(page);
-    expect(later - before, `the box moved on (${before} to ${later})`).toBeGreaterThanOrEqual(DAY);
+    await expect
+      .poll(async () => (await boxMs(page)) - before, { timeout: 15_000, message: "the box moves on a whole day" })
+      .toBeGreaterThanOrEqual(DAY);
     const log = (await page.evaluate(() => Reflect.get(window, "__timechange"))) as { at: number; running: boolean }[];
     const running = log.filter((e) => e.running);
     expect(running.length, "told while time runs").toBeGreaterThanOrEqual(3);
