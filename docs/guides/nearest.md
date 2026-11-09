@@ -5,10 +5,10 @@ order: 18
 description: The bodies nearest to a body on a date, by angle in the sky or distance in space, and the moments two bodies come closest, checked against JPL Horizons to seconds of time.
 ---
 
-`/nearest` answers two questions about the Sun, the planets, the dwarf planets and the moons: *what is next to this one on a date?* and *when do these two come closest?* It is good for a game ("which planet is the Moon beside tonight?"), a calendar of conjunctions, or a label on a chart. It runs anywhere, with no browser, on the package's own positions.
+`/nearest` answers three questions about the Sun, the planets, the dwarf planets and the moons: *what is next to this one on a date?*, *when do these two come closest?* and *how far apart are these two, and how far apart do they get?* It is good for a game ("which planet is the Moon beside tonight?"), a calendar of conjunctions, or a label on a chart. It runs anywhere, with no browser, on the package's own positions.
 
 ```ts
-import { closestApproach, conjunctions, nearest, within } from "@johnmorrisdotca/wakusei-planets/nearest";
+import { closestApproach, conjunctions, distance, distanceRange, nearest, within } from "@johnmorrisdotca/wakusei-planets/nearest";
 
 const date = Date.UTC(2026, 11, 27, 16);
 console.log(nearest("moon", { kind: "planet", count: 2, date }).map((row) => `${row.id} ${row.angle.toFixed(2)} degrees`).join(", "));
@@ -17,10 +17,12 @@ console.log(nearest("earth", { by: "space", kind: "planet", count: 1, date })[0]
 
 const great = closestApproach("jupiter", "saturn", { from: Date.UTC(2020, 11, 1), to: Date.UTC(2021, 0, 1) });
 console.log(great.time.toISOString(), great.angle?.toFixed(2), "degrees");
+console.log(distance("earth", "mars", date).distanceAu.toFixed(2), "au now apart");
+console.log(distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) }).max.distanceAu.toFixed(2), "au at most");
 console.log(conjunctions({ from: Date.UTC(2023, 0, 1), to: Date.UTC(2024, 0, 1), bodies: ["venus", "jupiter"], within: 2 }).length, "close approaches");
 ```
 
-## The four functions
+## The six functions
 
 | Function | Gives |
 |---|---|
@@ -28,6 +30,8 @@ console.log(conjunctions({ from: Date.UTC(2023, 0, 1), to: Date.UTC(2024, 0, 1),
 | `within(target, radius, options)` | every body inside a radius, nearest first |
 | `closestApproach(a, b, { from, to })` | the moment two bodies come closest in a span, and how close |
 | `conjunctions({ from, to, within, bodies })` | every close approach of every pair of bodies in a span, soonest first |
+| `distance(a, b, date)` | the straight-line distance between two bodies on a date, in km and au |
+| `distanceRange(a, b, { from, to })` | the least and the greatest distance of two bodies over a span, each with its moment |
 
 A body is a name such as `"mars"`, `"moon"` or `"io"`, the same names as the rest of the package. The Sun, the planets, the dwarf planets and the moons are all searched. Stars are in [`/stars`](stars.md); a star is not a target here.
 
@@ -81,6 +85,66 @@ import { conjunctions } from "@johnmorrisdotca/wakusei-planets/nearest";
 const found = conjunctions({ from: Date.UTC(2026, 0, 1), to: Date.UTC(2027, 0, 1), within: 1 });
 for (const one of found.slice(0, 5)) console.log(one.a, one.b, one.time.toISOString().slice(0, 16), one.angle?.toFixed(2));
 ```
+
+## Distance, and how far apart two bodies get
+
+`distance(a, b, date)` is `by: "space"` for any two bodies, one call: `{ a, b, time, distanceKm, distanceAu, uncertaintyKm }`. The date is a `Date` or milliseconds, and now when left out. `distanceRange(a, b, { from, to })` scans the span as `closestApproach` does and returns `{ a, b, min, max }`, each `{ time, distanceKm, distanceAu, uncertaintyKm, atEdge }`. Each turning point is narrowed to about a second of time by the same golden-section search; the greatest is the least of the negated distance. If the distance only falls or only rises through the span, the end that is the extreme is returned with `atEdge: true`.
+
+```ts
+import { distance, distanceRange } from "@johnmorrisdotca/wakusei-planets/nearest";
+
+const { min, max } = distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) });
+console.log(min.time.toISOString().slice(0, 10), min.distanceAu.toFixed(3), "au;", max.time.toISOString().slice(0, 10), max.distanceAu.toFixed(3), "au");
+console.log(Math.round(distance("jupiter", "io", Date.UTC(2026, 10, 8)).distanceKm), "km from Jupiter to Io");
+```
+
+### The planets, from 1900 to 2100
+
+The least and the greatest distance of each pair of planets over the 200 years (`node scripts/distance-table.ts` prints it), in astronomical units, and the year of each. A star after a year marks an extreme at the end of the span, not a turning point inside it. Earth and Mars come to 0.373 au on 27 August 2003 and go to 2.676 au in 2066.
+
+| Pair | Least (au) | Year | Greatest (au) | Year |
+|---|---|---|---|---|
+| Mercury and Venus | 0.261 | 2085 | 1.187 | 2059 |
+| Mercury and Earth | 0.549 | 2061 | 1.452 | 2034 |
+| Mercury and Mars | 0.966 | 1918 | 2.080 | 1908 |
+| Mercury and Jupiter | 4.595 | 2010 | 5.810 | 2075 |
+| Mercury and Saturn | 8.705 | 1915 | 10.379 | 1900 |
+| Mercury and Uranus | 17.897 | 2051 | 20.486 | 2010 |
+| Mercury and Neptune | 29.483 | 2041 | 30.656 | 1958 |
+| Venus and Earth | 0.264 | 2093 | 1.736 | 1960 |
+| Venus and Mars | 0.654 | 2052 | 2.394 | 2002 |
+| Venus and Jupiter | 4.223 | 2070 | 6.182 | 2005 |
+| Venus and Saturn | 8.295 | 1914 | 10.788 | 1900 |
+| Venus and Uranus | 17.564 | 2050 | 20.818 | 2092 |
+| Venus and Neptune | 29.083 | 2042 | 31.055 | 1959 |
+| Earth and Mars | 0.373 | 2003 | 2.676 | 2066 |
+| Earth and Jupiter | 3.949 | 1951 | 6.456 | 1945 |
+| Earth and Saturn | 8.030 | 1914 | 11.051 | 1900 |
+| Earth and Uranus | 17.290 | 2051 | 21.093 | 2093 |
+| Earth and Neptune | 28.814 | 2041 | 31.324 | 1958 |
+| Mars and Jupiter | 3.516 | 2000 | 6.887 | 1994 |
+| Mars and Saturn | 7.418 | 1915 | 11.663 | 2019 |
+| Mars and Uranus | 16.621 | 2049 | 21.759 | 2093 |
+| Mars and Neptune | 28.304 | 1900 | 31.838 | 1983 |
+| Jupiter and Saturn | 4.033 | 1921 | 15.241 | 1990 |
+| Jupiter and Uranus | 12.849 | 2052 | 25.454 | 1920 |
+| Jupiter and Neptune | 24.745 | 1907 | 35.393 | 1990 |
+| Saturn and Uranus | 9.234 | 1988 | 29.633 | 2100* |
+| Saturn and Neptune | 20.178 | 1989 | 40.007 | 2079 |
+| Uranus and Neptune | 10.570 | 1994 | 49.879 | 2084 |
+
+Each distance is good to about the uncertainty in the result: a few thousand kilometres for the inner planets and tens of thousands for Jupiter and beyond. Against JPL Horizons on three pairs (the Earth and Mars, Venus and the Earth, Jupiter and Saturn), `test/nearest.test.ts` takes the table Horizons gives for each pair's least and greatest distance in 1900 to 2100 (geometric vectors from one planet's centre to the other's, ten days at six-hour steps either side of the turning point; `scripts/fetch-horizons-distance.py` records the queries in `test/data/horizons-distance.json`) and fits a parabola to find the extreme:
+
+| Pair | Horizons | Here | Distance | Time |
+|---|---|---|---|---|
+| Earth and Mars, least | 2003-08-27 09:41, 0.37272 au | 09:51, 0.37271 au | 1,410 km | 10 min |
+| Earth and Mars, greatest | 2066-08-25 00:36, 2.67633 au | 00:28, 2.67631 au | 2,145 km | 8 min |
+| Venus and the Earth, least | 2093-12-17 10:40, 0.26433 au | 10:40, 0.26432 au | 1,020 km | 1 s |
+| Venus and the Earth, greatest | 1960-06-21 23:15, 1.73598 au | 23:27, 1.73599 au | 1,095 km | 12 min |
+| Jupiter and Saturn, least | 1921-07-26 20:13, 4.03311 au | 21:21, 4.03309 au | 3,950 km | 69 min |
+| Jupiter and Saturn, greatest | 1990-10-01 07:59, 15.24084 au | 09:44, 15.24086 au | 2,025 km | 105 min |
+
+The distance is within the claimed uncertainty every time (a third to a tenth of it). The time is minutes to an hour or two for a distance that is at its flat turning point, where it changes by a few kilometres in an hour: the same small difference in position puts the vertex a little earlier or later.
 
 ## What a result holds
 

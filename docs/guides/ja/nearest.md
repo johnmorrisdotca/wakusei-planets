@@ -5,10 +5,10 @@ order: 18
 description: ある日付に、ある天体にいちばん近い天体を、空の見かけの角度か宇宙での距離でさがします。2つの天体がいちばん近づく時刻も、JPL Horizons と秒の単位で比べて確かめています。
 ---
 
-`/nearest` は、太陽・惑星・準惑星・衛星について、2つのことに答えます。「この日、この天体のとなりには何がある?」と「この2つはいつ、いちばん近づく?」です。ゲーム (「今夜、月はどの惑星のとなり?」)、合 (ごう) のカレンダー、星図のラベルに使えます。ブラウザなしでどこでも動き、このパッケージ自身の位置を使います。
+`/nearest` は、太陽・惑星・準惑星・衛星について、3つのことに答えます。「この日、この天体のとなりには何がある?」「この2つはいつ、いちばん近づく?」「この2つは今どれだけ離れていて、どこまで離れる?」です。ゲーム (「今夜、月はどの惑星のとなり?」)、合 (ごう) のカレンダー、星図のラベルに使えます。ブラウザなしでどこでも動き、このパッケージ自身の位置を使います。
 
 ```ts
-import { closestApproach, conjunctions, nearest, within } from "@johnmorrisdotca/wakusei-planets/nearest";
+import { closestApproach, conjunctions, distance, distanceRange, nearest, within } from "@johnmorrisdotca/wakusei-planets/nearest";
 
 const date = Date.UTC(2026, 11, 27, 16);
 console.log(nearest("moon", { kind: "planet", count: 2, date }).map((row) => `${row.id} ${row.angle.toFixed(2)} degrees`).join(", "));
@@ -17,10 +17,12 @@ console.log(nearest("earth", { by: "space", kind: "planet", count: 1, date })[0]
 
 const great = closestApproach("jupiter", "saturn", { from: Date.UTC(2020, 11, 1), to: Date.UTC(2021, 0, 1) });
 console.log(great.time.toISOString(), great.angle?.toFixed(2), "degrees");
+console.log(distance("earth", "mars", date).distanceAu.toFixed(2), "au now apart");
+console.log(distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) }).max.distanceAu.toFixed(2), "au at most");
 console.log(conjunctions({ from: Date.UTC(2023, 0, 1), to: Date.UTC(2024, 0, 1), bodies: ["venus", "jupiter"], within: 2 }).length, "close approaches");
 ```
 
-## 4つの関数
+## 6つの関数
 
 | 関数 | 返すもの |
 |---|---|
@@ -28,6 +30,8 @@ console.log(conjunctions({ from: Date.UTC(2023, 0, 1), to: Date.UTC(2024, 0, 1),
 | `within(target, radius, options)` | ある半径の中にあるすべての天体を、近い順に |
 | `closestApproach(a, b, { from, to })` | 期間の中で2つの天体がいちばん近づく時刻と、そのときの近さ |
 | `conjunctions({ from, to, within, bodies })` | 期間の中のすべての天体の組の近づきを、早い順に |
+| `distance(a, b, date)` | ある日付の2つの天体のあいだの直線距離を、kmとauで |
+| `distanceRange(a, b, { from, to })` | 期間の中で2つの天体がいちばん近い距離といちばん遠い距離を、それぞれの時刻つきで |
 
 天体は `"mars"`、`"moon"`、`"io"` のような名前で、パッケージのほかの部分と同じ名前です。太陽、惑星、準惑星、衛星のすべてが対象です。恒星は [`/stars`](stars.md) にあります。恒星はここでは `target` にできません。
 
@@ -81,6 +85,66 @@ import { conjunctions } from "@johnmorrisdotca/wakusei-planets/nearest";
 const found = conjunctions({ from: Date.UTC(2026, 0, 1), to: Date.UTC(2027, 0, 1), within: 1 });
 for (const one of found.slice(0, 5)) console.log(one.a, one.b, one.time.toISOString().slice(0, 16), one.angle?.toFixed(2));
 ```
+
+## 距離と、2つの天体が離れる範囲
+
+`distance(a, b, date)` は、どの2つの天体でも使える `by: "space"` を1回の呼び出しにしたもので、`{ a, b, time, distanceKm, distanceAu, uncertaintyKm }` を返します。日付は `Date` かミリ秒で、省略すると今です。`distanceRange(a, b, { from, to })` は `closestApproach` と同じように期間を調べ、`{ a, b, min, max }` を返します。それぞれ `{ time, distanceKm, distanceAu, uncertaintyKm, atEdge }` です。どちらの折り返し点も、同じ黄金分割探索で約1秒の単位まで絞ります。最大は、距離にマイナスをつけたものの最小です。期間を通して距離が下がるだけ、または上がるだけのときは、その極値になる端を `atEdge: true` で返します。
+
+```ts
+import { distance, distanceRange } from "@johnmorrisdotca/wakusei-planets/nearest";
+
+const { min, max } = distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) });
+console.log(min.time.toISOString().slice(0, 10), min.distanceAu.toFixed(3), "au;", max.time.toISOString().slice(0, 10), max.distanceAu.toFixed(3), "au");
+console.log(Math.round(distance("jupiter", "io", Date.UTC(2026, 10, 8)).distanceKm), "km from Jupiter to Io");
+```
+
+### 惑星、1900年から2100年
+
+200年のあいだの、惑星の各組のいちばん近い距離といちばん遠い距離と、それぞれの年です (`node scripts/distance-table.ts` が表を出力します)。単位は天文単位です。年のあとの星印は、期間の中の折り返し点ではなく、期間の端が極値だという意味です。地球と火星は、2003年8月27日に0.373 auまで近づき、2066年に2.676 auまで離れます。
+
+| 組 | 最小 (au) | 年 | 最大 (au) | 年 |
+|---|---|---|---|---|
+| 水星と金星 | 0.261 | 2085 | 1.187 | 2059 |
+| 水星と地球 | 0.549 | 2061 | 1.452 | 2034 |
+| 水星と火星 | 0.966 | 1918 | 2.080 | 1908 |
+| 水星と木星 | 4.595 | 2010 | 5.810 | 2075 |
+| 水星と土星 | 8.705 | 1915 | 10.379 | 1900 |
+| 水星と天王星 | 17.897 | 2051 | 20.486 | 2010 |
+| 水星と海王星 | 29.483 | 2041 | 30.656 | 1958 |
+| 金星と地球 | 0.264 | 2093 | 1.736 | 1960 |
+| 金星と火星 | 0.654 | 2052 | 2.394 | 2002 |
+| 金星と木星 | 4.223 | 2070 | 6.182 | 2005 |
+| 金星と土星 | 8.295 | 1914 | 10.788 | 1900 |
+| 金星と天王星 | 17.564 | 2050 | 20.818 | 2092 |
+| 金星と海王星 | 29.083 | 2042 | 31.055 | 1959 |
+| 地球と火星 | 0.373 | 2003 | 2.676 | 2066 |
+| 地球と木星 | 3.949 | 1951 | 6.456 | 1945 |
+| 地球と土星 | 8.030 | 1914 | 11.051 | 1900 |
+| 地球と天王星 | 17.290 | 2051 | 21.093 | 2093 |
+| 地球と海王星 | 28.814 | 2041 | 31.324 | 1958 |
+| 火星と木星 | 3.516 | 2000 | 6.887 | 1994 |
+| 火星と土星 | 7.418 | 1915 | 11.663 | 2019 |
+| 火星と天王星 | 16.621 | 2049 | 21.759 | 2093 |
+| 火星と海王星 | 28.304 | 1900 | 31.838 | 1983 |
+| 木星と土星 | 4.033 | 1921 | 15.241 | 1990 |
+| 木星と天王星 | 12.849 | 2052 | 25.454 | 1920 |
+| 木星と海王星 | 24.745 | 1907 | 35.393 | 1990 |
+| 土星と天王星 | 9.234 | 1988 | 29.633 | 2100* |
+| 土星と海王星 | 20.178 | 1989 | 40.007 | 2079 |
+| 天王星と海王星 | 10.570 | 1994 | 49.879 | 2084 |
+
+どの距離も、結果の不確かさの範囲で正しいと考えてください。内惑星で数千km、木星より外で数万kmです。JPL Horizons との比較は3つの組 (地球と火星、金星と地球、木星と土星) で行います。`test/nearest.test.ts` は、1900年から2100年のそれぞれの組の最小と最大の距離について、Horizons の表 (一方の惑星の中心からもう一方の中心への幾何学的なベクトルで、折り返し点の前後10日を6時間刻み。`scripts/fetch-horizons-distance.py` が問い合わせを `test/data/horizons-distance.json` に記録します) を使い、放物線を当てはめて極値を求めます。
+
+| 組 | Horizons | このパッケージ | 距離の差 | 時刻の差 |
+|---|---|---|---|---|
+| 地球と火星、最小 | 2003-08-27 09:41、0.37272 au | 09:51、0.37271 au | 1,410 km | 10分 |
+| 地球と火星、最大 | 2066-08-25 00:36、2.67633 au | 00:28、2.67631 au | 2,145 km | 8分 |
+| 金星と地球、最小 | 2093-12-17 10:40、0.26433 au | 10:40、0.26432 au | 1,020 km | 1秒 |
+| 金星と地球、最大 | 1960-06-21 23:15、1.73598 au | 23:27、1.73599 au | 1,095 km | 12分 |
+| 木星と土星、最小 | 1921-07-26 20:13、4.03311 au | 21:21、4.03309 au | 3,950 km | 69分 |
+| 木星と土星、最大 | 1990-10-01 07:59、15.24084 au | 09:44、15.24086 au | 2,025 km | 105分 |
+
+距離の差は、毎回、示した不確かさの中に入っています (その3分の1から10分の1)。時刻の差は、数分から1、2時間です。折り返し点では距離がほとんど変わらない (1時間に数km) ので、位置のわずかな差で、頂点が少し早くなったり遅くなったりします。
 
 ## 結果に入っているもの
 

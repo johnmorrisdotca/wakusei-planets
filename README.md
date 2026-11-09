@@ -292,16 +292,19 @@ A body that turns by itself and a moving sky, in HTML:
 
 ## What is nearby, and when bodies come close
 
-`/nearest` answers "what is next to this?" for the Sun, the planets, the dwarf planets and the moons. `nearest` and `within` list the bodies closest to one on a date, by the angle between them in the sky (of the Earth, a place on it or another body) or by the distance between them in space. `closestApproach` and `conjunctions` search a span of time: coarse steps, then each minimum narrowed to about a second. Every result carries the accuracy the theories are held to; against JPL Horizons the great conjunction of 2020 is within 270 s and 0.3 arc-seconds, and the Moon's approaches to the planets within 8 s and 1.5 arc-seconds. [The guide](docs/guides/nearest.md) has the options and the numbers.
+`/nearest` answers "what is next to this?" for the Sun, the planets, the dwarf planets and the moons. `nearest` and `within` list the bodies closest to one on a date, by the angle between them in the sky (of the Earth, a place on it or another body) or by the distance between them in space. `closestApproach` and `conjunctions` search a span of time: coarse steps, then each minimum narrowed to about a second. `distance` and `distanceRange` give two bodies' distance on a date and how near and far they get over a span (Earth and Mars: 0.373 to 2.676 au from 1900 to 2100, the guide has every planet pair). Every result carries the accuracy the theories are held to; against JPL Horizons the great conjunction of 2020 is within 270 s and 0.3 arc-seconds, and the Moon's approaches to the planets within 8 s and 1.5 arc-seconds. [The guide](docs/guides/nearest.md) has the options and the numbers.
 
 ```ts
-import { closestApproach, nearest } from "@johnmorrisdotca/wakusei-planets/nearest";
+import { closestApproach, distanceRange, nearest } from "@johnmorrisdotca/wakusei-planets/nearest";
 
 const planets = nearest("moon", { kind: "planet", count: 2, date: Date.UTC(2026, 11, 27, 16) });
 console.log(planets.map((row) => `${row.id} ${row.angle.toFixed(2)} degrees`).join(", "));
 
 const great = closestApproach("jupiter", "saturn", { from: Date.UTC(2020, 11, 1), to: Date.UTC(2021, 0, 1) });
 console.log(great.time.toISOString(), great.angle?.toFixed(2), "degrees");
+
+const mars = distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) });
+console.log(mars.min.distanceAu.toFixed(2), "to", mars.max.distanceAu.toFixed(2), "au");
 ```
 
 ## The space view
@@ -332,7 +335,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
-| `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`) and when two bodies come closest (`closestApproach`, `conjunctions`). No browser. |
+| `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
 | `.../all` | Every body's shaded look, at once. |
