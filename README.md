@@ -111,6 +111,17 @@ Import the element once in client code, and the entry point of each body you dra
 
 Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are the eight other dwarf planets (Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna; Haumea and Quaoar as the long shapes they are, and Ceres with a painted map from Dawn) and 29 moons (the Moon, Phobos and Deimos, the four Galilean moons, Saturn's seven larger moons, Uranus's five, Proteus, Triton and Nereid, Charon, Nix and Hydra, and Vanth, Hiʻiaka, Namaka and Dysnomia, the moons of the dwarf planets whose orbits are published with a date). The Earth is drawn like the rest in the realistic and painted looks (NASA's Blue Marble), and its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` 0.10.0 or later installed). The painted looks cover the Sun, the planets from Mercury to Earth and Pluto, Ceres, the Moon, the four Galilean moons, Saturn's Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus, Triton and Charon, and Saturn's rings are Cassini's own picture of them.
 
+## A star from its numbers
+
+`<wakusei-body star="Betelgeuse" temperature-k="3600" radius-sun="764" luminosity-class="Iab">` draws any star in 3D or as a line drawing, from a few numbers and with no catalogue: the temperature gives the colour, the radius the size beside the Sun, the luminosity class the grain of the surface, the rotation how it turns, and a flattened star such as Vega or Altair is squashed with hotter poles. Granulation boils, an active star has spots, prominences and flares, and a soft corona glows round it, all through the same shared renderer, with a cheaper `quality="low"` for weak devices. Every star says which parts are measured and which are drawn for looks: *drawn from its numbers, not a photo*. The Sun keeps its own look. See [A star from its numbers](docs/guides/star-look.md) and the [star page](https://johnmorrisdotca.github.io/wakusei-planets/star.html).
+
+```ts
+import { starLook } from "@johnmorrisdotca/wakusei-planets";
+
+const vega = starLook({ name: "Vega", temperatureK: 9602, radiusSun: 2.362, oblateness: 0.11, rotationDays: 0.68 });
+console.log(vega.colour, vega.parts.map((part) => part.status).join(", "));
+```
+
 ## Two packages: this one and chikyu-earth
 
 This package is the Sun, the planets, the dwarf planets and the moons, and where they are. [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) is the Earth in detail: its countries, day and night, places and satellites. Each works alone; install both and the Earth's line look becomes chikyu-earth's globe with the countries. The dependency runs one way: this package may use chikyu-earth, never the reverse. [Why two packages](docs/guides/two-packages.md) has the rule, a table of what lives where and how to use them together.
@@ -330,7 +341,7 @@ The reference is a site, made from the source's own doc comments: every export h
 
 | Entry point | What it gives |
 | --- | --- |
-| `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`. No browser. |
+| `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`, `starLook`, `starLineSvg`. No browser. |
 | `.../element` | `<wakusei-body>`; three.js is loaded only for a shaded look. |
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
@@ -365,6 +376,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
+| [A star from its numbers](docs/guides/star-look.md) | Any star in 3D or as lines, what is measured and what is drawn, every way to put it in a page |
 | [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |
 | [Riding along](docs/guides/ride-along.md) | The camera on a moon, a planet or any moving point, looking at what it goes round |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |

@@ -333,6 +333,76 @@ await step("angular", async () => {
   });
 });
 
+// A star drawn from its numbers: every way of putting it in a page.
+/** The star is drawn from the numbers it was given, and says so: the label names it and says it is not a photo. */
+const seesStar = async (page: Page): Promise<void> => {
+  await seesGlobe(page);
+  const label = await page.locator("wakusei-body").first().getAttribute("aria-label");
+  if (!/Betelgeuse/.test(label ?? "") || !/not a photo/.test(label ?? "")) throw new Error(`the star's label is wrong: ${label}`);
+};
+
+await step("star-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("star"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (!/^#[0-9a-f]{6} true surface,spots,rotation,prominences,glow$/.test(out)) throw new Error(`unexpected output: ${out}`);
+});
+
+await step("star-cdn", async () => {
+  await opened(browser, async (page) => {
+    await page.route("https://cdn.jsdelivr.net/**", async (route) => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname !== "/npm/@johnmorrisdotca/wakusei-planets/element/+esm") return route.fulfill({ status: 404, body: "" });
+      return route.fulfill({ body: await bundleOf(modules("element.js")), contentType: "text/javascript" });
+    });
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("star"), "cdn.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    await page.locator("wakusei-body[data-state=live]").waitFor({ timeout: 60_000 });
+    const label = await page.locator("wakusei-body").getAttribute("aria-label");
+    if (!/Betelgeuse/.test(label ?? "") || !/not a photo/.test(label ?? "")) throw new Error(`the star's label is wrong: ${label}`);
+    const parts = await page.locator("wakusei-body").evaluate((el) => (el as unknown as { starLook: { parts: { status: string }[] } }).starLook.parts.map((part) => part.status));
+    if (!parts.includes("illustrative") || !parts.includes("derived")) throw new Error(`the star does not say what is drawn for looks: ${parts}`);
+  });
+});
+
+await step("star-iframe", async () => {
+  if (!existsSync(at("site", "embed.html"))) throw new Error("site/ is not built: `pnpm test:usage` builds it");
+  await opened(browser, async (page) => {
+    await serve(page, "https://johnmorrisdotca.github.io", at("site"), "/wakusei-planets");
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("star"), "iframe.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    const frame = page.frameLocator("iframe");
+    await frame.locator("wakusei-body svg").waitFor({ timeout: 20_000 });
+    if ((await frame.locator("wakusei-body").getAttribute("star")) !== "Betelgeuse") throw new Error("the embed ignored the star");
+    if ((await frame.locator("wakusei-body").getAttribute("temperature-k")) !== "3600") throw new Error("the embed ignored the star's numbers");
+  });
+});
+
+const starApp = async (name: string, plugins: unknown[] = []): Promise<void> => {
+  const dir = examples(`star/${name}`);
+  const out = join(usage, "out", "star", name);
+  await viteBuild({ root: dir, plugins: plugins as never[], logLevel: "warn", build: { outDir: out, emptyOutDir: true }, base: "./", configFile: false });
+  await opened(browser, async (page) => {
+    await serve(page, "https://app.test", out);
+    await page.goto("https://app.test/");
+    await seesStar(page);
+  });
+};
+await step("star-vite", () => starApp("vite"));
+await step("star-react", () => starApp("react"));
+await step("star-vue", async () => starApp("vue", [(await import("@vitejs/plugin-vue")).default()]));
+await step("star-svelte", async () => starApp("svelte", [(await import("@sveltejs/vite-plugin-svelte")).svelte()]));
+await step("star-angular", async () => {
+  const dir = examples("star/angular");
+  const out = join(usage, "out", "star", "angular");
+  writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { target: "ES2022", module: "esnext", experimentalDecorators: true, useDefineForClassFields: false } }));
+  await esbuild({ entryPoints: [join(dir, "main.ts")], outdir: out, bundle: true, splitting: true, format: "esm", tsconfig: join(dir, "tsconfig.json"), absWorkingDir: root, logLevel: "silent", minify: true });
+  writeFileSync(join(out, "index.html"), readFileSync(join(dir, "index.html")));
+  await opened(browser, async (page) => {
+    await serve(page, "https://app.test", out);
+    await page.goto("https://app.test/");
+    await seesStar(page);
+  });
+});
+
 await browser.close();
 lock.release();
 
@@ -356,6 +426,17 @@ const FILES: Record<string, string[]> = {
   "vue/main.ts": ["docs/guides/frameworks.md", "docs/guides/ja/frameworks.md"],
   "svelte/WakuseiBody.svelte": ["docs/guides/frameworks.md", "docs/guides/ja/frameworks.md"],
   "angular/wakusei-body.component.ts": ["docs/guides/frameworks.md", "docs/guides/ja/frameworks.md"],
+  "star/cdn.html": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/iframe.html": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/node.mjs": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/vite/main.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/vite/index.html": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/react/StarView.tsx": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/react/wakusei-star.d.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/vue/StarView.vue": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/vue/main.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/svelte/StarView.svelte": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "star/angular/star-view.component.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "typescript/index.ts": ["docs/guides/typescript-and-node.md", "docs/guides/ja/typescript-and-node.md"],
   "node/server.mjs": ["docs/guides/typescript-and-node.md", "docs/guides/ja/typescript-and-node.md"],
 };
@@ -367,7 +448,7 @@ for (const [file, places] of everything ? Object.entries(FILES) : []) {
   }
 }
 const unlisted = (folder: string): string[] => readdirSync(at("examples", folder), { withFileTypes: true }).flatMap((entry) => (entry.isDirectory() ? unlisted(join(folder, entry.name)) : [relative("", join(folder, entry.name)).split("\\").join("/")]));
-const known = new Set([...Object.keys(FILES), "angular/index.html", "angular/main.ts", "react/index.html", "react/main.tsx", "svelte/index.html", "svelte/main.ts", "vue/index.html"]);
+const known = new Set([...Object.keys(FILES), "angular/index.html", "angular/main.ts", "star/angular/index.html", "star/angular/main.ts", "star/react/index.html", "star/react/main.tsx", "star/svelte/index.html", "star/svelte/main.ts", "star/vue/index.html", "react/index.html", "react/main.tsx", "svelte/index.html", "svelte/main.ts", "vue/index.html"]);
 for (const file of everything ? unlisted("") : []) if (!known.has(file)) failures.push(`examples/${file} is not listed in scripts/check-usage.ts: say where the guides show it`);
 
 console.log(failures.length === 0 ? `\nusage ok: ${results.length} ways to use ${NAME}` : `\n${failures.length} failure${failures.length === 1 ? "" : "s"}:\n- ${failures.join("\n- ")}`);
