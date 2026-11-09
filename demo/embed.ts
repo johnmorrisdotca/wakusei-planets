@@ -6,7 +6,10 @@
 //   &turn=12                     degrees a second it turns by itself (the default rate when this is left out; 0 stays still)
 //   &tilt=  &pitch=  &phase=     a portrait's pose, degrees
 //   ?scene=...                   a scene of the portrait builder instead of one body (the text its address holds)
+//   &zoom=2                      how far in the picture starts; a drag, a pinch, Ctrl and the wheel, the keys and the + and - buttons zoom it, and the address keeps up (the view's tilt is `vtilt`, for `tilt` is the pose's)
 // It draws only when something changes, and nothing while it is out of sight or the tab is hidden.
+import "@johnmorrisdotca/kazoku-ui/view-controls/define";
+import type { ViewChangeDetail, ViewControlsElement } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import "../src/element.ts";
 import "../src/portrait/element.ts";
 import "../src/bodies/all.ts";
@@ -43,3 +46,20 @@ function body(): void {
 
 if (query.has("scene")) portrait();
 else body();
+
+// the element carries the drag, pinch, wheel and keys; the bar adds the + and - buttons and keeps the view in the address, and takes the hands over while it is there. A frame under 240 pixels has no room for the bar: the hands alone
+const view = frame.firstElementChild as (HTMLElement & { setView(view: Partial<ViewChangeDetail>): void }) | null;
+if (view !== null) {
+  view.id = "view";
+  view.tabIndex = 0;
+}
+if (view !== null && Math.min(window.innerWidth, window.innerHeight) >= 240) {
+  const bar = document.createElement("kazoku-view-controls") as ViewControlsElement;
+  for (const [name, value] of Object.entries({ for: "view", address: "", overlay: "", layout: "compact", speed: "0", "address-keys": "tilt:vtilt", ...(query.has("scene") ? { flat: "" } : {}), ...(query.has("lang") ? { lang: query.get("lang")! } : {}) })) bar.setAttribute(name, value);
+  frame.append(bar);
+  bar.addEventListener("kazoku-viewchange", (event) => {
+    const detail = (event as CustomEvent<ViewChangeDetail>).detail;
+    view.setView(detail);
+    if (window.parent !== window) window.parent.postMessage({ wakusei: "view", zoom: detail.zoom }, location.origin);
+  });
+}

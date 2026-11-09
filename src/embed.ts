@@ -52,6 +52,8 @@ export interface EmbedOptions {
   turn?: number;
   /** Pixels across. */
   size?: number;
+  /** How far in the embed page starts, as its `zoom` address key has it (1 is the whole body). Left out or 1, the page starts at Fit. Only the iframe way carries it: the element's own start is Fit. */
+  zoom?: number;
 }
 
 /**
@@ -133,6 +135,7 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
   if (options.time !== undefined) query.set("time", options.time);
   if (options.moons === true && options.time !== undefined) query.set("moons", "1");
   if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
+  if (options.zoom !== undefined && options.zoom !== 1 && Number.isFinite(options.zoom) && options.zoom > 0) query.set("zoom", String(Math.round(options.zoom * 1000) / 1000));
   return snippet(
     kind,
     {
