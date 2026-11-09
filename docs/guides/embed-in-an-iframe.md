@@ -40,6 +40,7 @@ The address takes these choices:
 | `moons` | `1` draws the planet with its moons on their orbits |
 | `turn` | degrees a second it turns by itself; still by default |
 | `tilt`, `pitch`, `phase`, `meridian` | a portrait's pose, in degrees |
+| `zoom`, `yaw`, `vtilt` | how far in the view starts, and the angle and tilt it is turned to. The frame zooms with a drag, a pinch, Ctrl and the wheel, the keys and its + and - buttons, and keeps these in its own address as the reader moves, so the address can be copied. 1 is the whole body; see [zoom and pan](zoom-and-pan.md) for the range |
 | `scale-to` | draw to scale with another body |
 
 Give the frame a title. The embed page draws only when something changes, and nothing while it is out of sight.

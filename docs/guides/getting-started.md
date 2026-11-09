@@ -32,7 +32,7 @@ Save this as `saturn.html` and open it. The `<wakusei-body>` tag is the body; th
 
 ## 2. Let the reader turn it
 
-The package draws; the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) view controls supply every hand and button: drag to turn, tilt, zoom, pinch, pan and Fit. Add them, and pass what they say to the body with one listener:
+The tag already lets the reader turn and zoom it: drag to turn, pinch, Ctrl and the wheel to zoom (the plain wheel still scrolls the page), the arrows and `+` and `-` once it is focused. [Zoom and pan](zoom-and-pan.md) has the range and the reason for each end. To add buttons, a slider and the view in the address, add the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) view controls beside it, pointed at the tag, and pass what they say to the body with one listener:
 
 ```html
 <!doctype html>
@@ -52,15 +52,13 @@ The package draws; the shared [kazoku-ui](https://github.com/johnmorrisdotca/kaz
     </script>
   </head>
   <body>
-    <div id="view" tabindex="0">
-      <wakusei-body body="saturn" look="line" size="420"></wakusei-body>
-    </div>
-    <kazoku-view-controls for="view" address controls="advanced" tilt-max="90" speed="0"></kazoku-view-controls>
+    <wakusei-body id="planet" body="saturn" look="line" size="420" tabindex="0"></wakusei-body>
+    <kazoku-view-controls for="planet" address controls="advanced" speed="0"></kazoku-view-controls>
   </body>
 </html>
 ```
 
-`setView(view)` takes the controls' camera: `yaw` turns the body about its own pole, `tilt` tips the pole toward or away from you, and `roll` turns the picture clockwise about the line of sight, `zoom` scales it, and `panX` and `panY` move it by that many CSS pixels from the middle. A line drawing is redrawn at once; a shaded one is drawn again by the shared renderer, at most thirty times a second and only while it moves. The surface under the pointer follows the pointer, so a drag moves the ground the way the hand goes; to make the touched point stay under the pointer, give the controls the disc's radius in pixels: `controls.setAttribute("grab-radius", String(Math.round(body.discRadius)))` (`discRadius` is the radius of the body's disc on the screen, which changes with the size of the element and with `scale-to`).
+`setView(view)` takes the controls' camera: `yaw` turns the body about its own pole, `tilt` tips the pole toward or away from you, and `roll` turns the picture clockwise about the line of sight, `zoom` scales it, and `panX` and `panY` move it by that many CSS pixels from the middle. A line drawing is redrawn at once; a shaded one is drawn again by the shared renderer, at most thirty times a second and only while it moves. The bar takes the tag's hands over while it is there, and reads its zoom range (`zoom-min` and `zoom-max` on the tag). The surface under the pointer follows the pointer, so a drag moves the ground the way the hand goes; to make the touched point stay under the pointer, give the bar the disc's radius in pixels: `controls.setAttribute("grab-radius", String(Math.round(body.discRadius)))` (`discRadius` is the radius of the body's disc on the screen, which changes with the size of the element and with `scale-to`). Without the bar the tag does that itself.
 
 ## 3. Where next
 

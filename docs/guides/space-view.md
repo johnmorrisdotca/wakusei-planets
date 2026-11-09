@@ -58,7 +58,7 @@ Say "compressed scale" on the page whenever the compressed one is on; the demo d
 
 ## Zoom, looking at a body, naming
 
-`zoom-min="0.000001"` and `zoom-max="2.5"` on the family's `<kazoku-view-controls>` let it zoom far enough out. The camera sits `3.4 / zoom` radii of the body it looks at from that body: zoom 1 fills the view with it. `space.zoomFor("moon" | "sun" | "inner" | "solar-system" | "earth" | "jupiter-moons")` gives the zoom that shows each part of the sky at the current scale and moment, and `controls.controller.set({ zoom }, true, "jump")` goes there. `space.setView(controls detail)` turns the camera round the body: it is fixed to the stars, so the Earth turns under it as time runs.
+The element carries the drag, the pinch, Ctrl and the wheel, and the keys itself ([zoom and pan](zoom-and-pan.md)), from a millionth (the camera far enough out to see the whole solar system) to 3x. The ceiling is where the camera reaches the body: it sits `3.4 / zoom` radii of the body it looks at from that body, zoom 1 fills the view with it, and the camera is held 1.05 radii from the surface, so past about 3.2 nothing moves. Put the family's `<kazoku-view-controls for="space">` beside it for buttons and it reads the same range; `zoom-min` and `zoom-max` on either one change it, and `controls="none"` takes the element's own hands off. `space.zoomFor("moon" | "sun" | "inner" | "solar-system" | "earth" | "jupiter-moons")` gives the zoom that shows each part of the sky at the current scale and moment, and `space.controller.set({ zoom })` (or, with the bar, `controls.controller.set({ zoom }, true, "jump")`) goes there. `space.setView(controls detail)` turns the camera round the body: it is fixed to the stars, so the Earth turns under it as time runs.
 
 `space.body = "jupiter"` points the camera at a body (`earth`, `sun`, `moon`, `mercury` to `neptune`, `pluto`). The name beside each body is a button (Tab, Enter). A press on a body that is not a drag fires `wakusei-body-click` (`wakusei-body-focus` for the keyboard) with `{ id, name, radiusKm, distanceKm }`; `space.bodyInfo(id)` gives the same. `space.bodyNames = { mars: "火星" }` and `lang="ja"` change the words.
 
@@ -66,7 +66,7 @@ A planet's nearer moons appear round it once the planet is a few pixels across, 
 
 ## Properties, events, stats
 
-Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale`, `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`. Events: `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-time` (while time runs), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera` and `bodies`.
+Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale`, `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`. Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-time` (while time runs), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera` and `bodies`.
 
 ## Riding along
 

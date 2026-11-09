@@ -32,7 +32,7 @@ description: ページに惑星を1つ置いて、傾けたり回したりでき
 
 ## 2. 読む人が回せるようにする
 
-パッケージは絵を描くだけです。回す・傾ける・拡大する・つまむ・動かす・全体に戻すといった操作は、共通の [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) の操作部品が受け持ちます。部品を足して、その知らせを天体に渡すリスナーを1つ書きます。
+タグは、そのままで回したり拡大したりできます。ドラッグで回り、ピンチや Ctrl とホイールで拡大します (ふつうのホイールは、ページをスクロールします)。フォーカスすると、矢印と `+`、`-` も使えます。範囲と、その理由は [ズームと移動](zoom-and-pan.md) にあります。ボタン、スライダー、アドレスに残す機能がほしいときは、共通の [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) の操作部品をタグの横に足して、`for` でタグを指定し、その知らせを天体に渡すリスナーを1つ書きます。
 
 ```html
 <!doctype html>
@@ -52,15 +52,13 @@ description: ページに惑星を1つ置いて、傾けたり回したりでき
     </script>
   </head>
   <body>
-    <div id="view" tabindex="0">
-      <wakusei-body body="saturn" look="line" size="420"></wakusei-body>
-    </div>
-    <kazoku-view-controls for="view" address controls="advanced" tilt-max="90" speed="0"></kazoku-view-controls>
+    <wakusei-body id="planet" body="saturn" look="line" size="420" tabindex="0"></wakusei-body>
+    <kazoku-view-controls for="planet" address controls="advanced" speed="0"></kazoku-view-controls>
   </body>
 </html>
 ```
 
-`setView(view)` は操作部品のカメラを受け取ります。`yaw` は天体を自分の極のまわりに回し、`tilt` は極を手前や奥に傾け、`roll` は絵を視線のまわりに時計回りに回し、`zoom` は拡大・縮小し、`panX` と `panY` は絵を中央から CSS ピクセルの分だけ動かします。線画はすぐに描き直され、陰影つきの絵は共通のレンダラーが、動いている間だけ、1秒に30回までで描き直します。ポインターの下の表面はポインターについてくるので、ドラッグすると手の向きに地面が動きます。触れた点をポインターの下に留めるには、円盤の半径 (ピクセル) を操作部品に渡します: `controls.setAttribute("grab-radius", String(Math.round(body.discRadius)))` (`discRadius` は画面上の天体の円盤の半径で、要素の大きさや `scale-to` で変わります)。
+`setView(view)` は操作部品のカメラを受け取ります。`yaw` は天体を自分の極のまわりに回し、`tilt` は極を手前や奥に傾け、`roll` は絵を視線のまわりに時計回りに回し、`zoom` は拡大・縮小し、`panX` と `panY` は絵を中央から CSS ピクセルの分だけ動かします。線画はすぐに描き直され、陰影つきの絵は共通のレンダラーが、動いている間だけ、1秒に30回までで描き直します。バーがあるあいだは、バーがタグの手を引き継ぎ、タグのズームの範囲 (`zoom-min` と `zoom-max`) を読みます。ポインターの下の表面はポインターについてくるので、ドラッグすると手の向きに地面が動きます。触れた点をポインターの下に留めるには、円盤の半径 (ピクセル) をバーに渡します: `controls.setAttribute("grab-radius", String(Math.round(body.discRadius)))` (`discRadius` は画面上の天体の円盤の半径で、要素の大きさや `scale-to` で変わります)。バーがないときは、タグが自分でやります。
 
 ## 3. 次に
 

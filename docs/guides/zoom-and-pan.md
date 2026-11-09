@@ -1,0 +1,58 @@
+---
+title: Zoom and pan
+section: how-to
+order: 19
+description: Every view in the package zooms and moves with a drag, a pinch, the wheel and the keys, with no controls on the page. The zoom range of each element, why each ends where it does, and how to turn the hands off or add the family's bar.
+---
+
+`<wakusei-body>`, `<wakusei-portrait>` and `<wakusei-space>` carry the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) view controls themselves. A reader who finds the tag on a page can use it: no `<kazoku-view-controls>`, no wiring.
+
+```html
+<wakusei-body body="jupiter" look="realistic" size="420"></wakusei-body>
+```
+
+## What the reader can do
+
+- **Drag.** At Fit a drag turns the body (or, for the portrait, moves the picture); zoomed in, a drag moves the view. The surface under the pointer follows the pointer.
+- **Pinch.** Two fingers zoom, move and twist.
+- **The wheel.** At Fit the plain wheel scrolls the page, so the picture is never a trap. Ctrl, Command or Alt with the wheel zooms about the pointer; once zoomed in, the plain wheel moves the view.
+- **Keys.** Focus the element (it gets `tabindex="0"`): the arrows turn, `+` and `-` zoom, `0` or Home goes back to Fit. A double tap goes to 2x and back.
+- **On a phone.** `touch-action` is `pan-y` at Fit, so a finger can still scroll the page, and `none` once zoomed.
+
+## The zoom range
+
+Zoom draws no more pixels: the canvas is a fixed size, inside the renderer's cap of 4096 pixels a side and 6 million pixels, and zooming only scales what is drawn. So the floor is arbitrary and the ceiling is the point where the picture's detail runs out.
+
+| Element | Range | Why |
+|---|---|---|
+| `<wakusei-body>`, line look | 0.1x to 50x | The floor leaves room to see the whole body small. The line drawing is vector (an SVG), so it has detail at any scale; 50x shows a single band or crater rim large. |
+| `<wakusei-body>`, `realistic` and `painted` | 0.1x to 8x | The sharpest painted map is 2048 pixels round the body: sharp to about 1.5x the size at Fit on a picture of the usual size, softening after that. The shader's own detail (bands, craters, ring edges) carries it to 8x, where the map is soft and the shading is what you see. Finer map tiles are a separate piece of work. |
+| `<wakusei-portrait>` | 0.1x to 8x | The same maps, in a scene. A line portrait could go further; the range is the same for both so a scene can change look. |
+| `<wakusei-space>` | a millionth to 3x | The floor takes the camera out past Neptune in the true scale (a millionth of the Earth's size shows the planets as specks). The ceiling is where the camera reaches the body: it is held 1.05 radii from the surface (`3.4 / zoom` radii away), so past a zoom of about 3.2 nothing moves. 3x is as near as the 2048 pixel maps stay passable. |
+
+Set your own with `zoom-min` and `zoom-max` on the tag (`zoom-min` is held to 1 or less and `zoom-max` to `zoom-min` or more, so Fit is always inside):
+
+```html
+<wakusei-body body="mars" look="realistic" zoom-max="4"></wakusei-body>
+```
+
+## Turning it off, or adding the bar
+
+`controls="none"` takes the hands off. A body with `live="off"` (a thumbnail, a still) starts without them; `controls` with no value brings them back.
+
+A page that wants buttons adds the bar, and the bar takes over while it is there. Apply its events as before with `setView`, and it reads the element's range, so you set it once, on the tag:
+
+```html
+<wakusei-body id="planet" body="saturn" look="line" tabindex="0"></wakusei-body>
+<kazoku-view-controls for="planet" address controls="advanced" speed="0"></kazoku-view-controls>
+```
+
+Point `for` at the element itself, not at a box around it, or the element's own hands and the bar's both handle a drag. The bar needs the element to have a `tabindex` for the keys.
+
+## Telling the page
+
+Every change of the view, from the hands or from `setView`, sends `wakusei-view` on the element, with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY` (the portrait sends `zoom`, `panX` and `panY`; the space view `yaw`, `tilt` and `zoom`). The space view's `controller` is the shared controller behind it: `space.controller.set({ zoom: space.zoomFor("moon") })` goes to a distance.
+
+## The embed page and the builder
+
+`embed.html` zooms with a drag, a pinch, Ctrl and the wheel, the keys and a pair of + and - buttons (a frame under 240 pixels across has no room for the buttons, and no address; the hands stay), and writes the view into its own address: `?body=saturn&look=realistic&zoom=2` opens at 2x. The tilt of the view is `vtilt`, because `tilt` is the pose's. The [code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) follows the zoom of its picture, and the iframe code it writes carries `zoom=` once you have zoomed; the element's code does not, for a tag always starts at Fit.

@@ -42,7 +42,7 @@ A page with no build step needs one tag. `look="line"` is an SVG and needs nothi
 </html>
 ```
 
-The same tag with the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) controls, which turn, tip, zoom and pan the body:
+Every view already turns, zooms and pans with a drag, a pinch, Ctrl and the wheel and the keys (the plain wheel still scrolls the page). To add the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazoku-ui) bar, with buttons and sliders, point it at the tag:
 
 ```html
 <!doctype html>
@@ -62,10 +62,8 @@ The same tag with the shared [kazoku-ui](https://github.com/johnmorrisdotca/kazo
     </script>
   </head>
   <body>
-    <div id="view" tabindex="0">
-      <wakusei-body body="saturn" look="line" size="420"></wakusei-body>
-    </div>
-    <kazoku-view-controls for="view" address controls="advanced" tilt-max="90" speed="0"></kazoku-view-controls>
+    <wakusei-body id="planet" body="saturn" look="line" size="420" tabindex="0"></wakusei-body>
+    <kazoku-view-controls for="planet" address controls="advanced" speed="0"></kazoku-view-controls>
   </body>
 </html>
 ```
@@ -364,6 +362,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
+| [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |
 | [Riding along](docs/guides/ride-along.md) | The camera on a moon, a planet or any moving point, looking at what it goes round |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
