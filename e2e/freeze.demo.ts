@@ -136,6 +136,47 @@ test("a painted body starts with a small picture, gets a sharper one when zoomed
   expect(gpuObjects(after)).toBeLessThanOrEqual(gpuObjects(zoomed) + 4);
 });
 
+/** Ctrl and the wheel, as an event on the element: the body's own hands take it, up to its ceiling and down to its floor. */
+const ctrlWheel = (page: Page, selector: string, deltaY: number, times: number) =>
+  page.locator(selector).evaluate(
+    (el, [dy, n]) => {
+      const box = el.getBoundingClientRect();
+      for (let i = 0; i < (n as number); i += 1) el.dispatchEvent(new WheelEvent("wheel", { deltaY: dy as number, ctrlKey: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true, cancelable: true, composed: true }));
+    },
+    [deltaY, times],
+  );
+
+test("zooming a painted body from a tenth to 8x and back with the hands gives back what it took, draws nothing at rest and keeps the canvas in budget", async ({ page }) => {
+  await page.goto(`${URL}?body=mars&look=painted`);
+  await main(page).hover();
+  await live(page);
+  const round = async () => {
+    for (const [dy, times] of [[-2000, 30], [2000, 60], [-2000, 12], [2000, 12]] as const) {
+      await ctrlWheel(page, "#main", dy, times);
+      await settle(page, 700);
+    }
+    await page.locator("#main").focus();
+    await page.keyboard.press("0");
+    await settle(page, 400);
+  };
+  await round();
+  await round();
+  await settle(page, 2500);
+  const first = await settledCounts(page);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  expect(withinPixelBudget(await canvasSize(page))).toBe(true);
+  const before = await readCounts(page);
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing is drawn at rest").toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
+  expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
+});
+
 test("the canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 5120, height: 2880 }, deviceScaleFactor: 2, reducedMotion: "no-preference" });
   const page = await context.newPage();
@@ -300,6 +341,36 @@ test("the space view at rest: one WebGL context, one canvas, eleven bodies, and 
   expect(after.draws - before.draws).toBe(0);
   expect(after.rafRequests - before.rafRequests).toBe(0);
   expect(await sky(page).evaluate((el) => el.shadowRoot!.querySelectorAll("canvas").length)).toBe(1);
+});
+
+test("zooming the space view from a millionth to its surface and back leaves contexts and graphics memory flat and draws nothing at rest", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&look=painted`);
+  await liveSky(page);
+  await expect.poll(async () => (await skyStats(page)).bodies.painted, { timeout: 60_000 }).toBe(11);
+  const round = async () => {
+    for (const [dy, times] of [[3000, 60], [-3000, 80], [3000, 20], [-1500, 20]] as const) {
+      await ctrlWheel(page, "wakusei-space", dy, times);
+      await settle(page, 900);
+    }
+    await page.locator("wakusei-space").focus();
+    await page.keyboard.press("0");
+    await settle(page, 500);
+  };
+  await round();
+  await round();
+  await settle(page, 2500);
+  const first = await settledCounts(page);
+  for (let i = 0; i < 2; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 6);
+  expect(withinPixelBudget(await canvasSize(page))).toBe(true);
+  const before = await readCounts(page);
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws).toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
 });
 
 test("the space view at a day a second: at most thirty frames a second, one frame at a time, a lookup about once a second, and nothing out of sight", async ({ page }) => {

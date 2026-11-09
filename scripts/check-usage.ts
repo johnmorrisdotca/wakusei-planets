@@ -161,6 +161,15 @@ await step("cdn-jsdelivr", async () => {
     await page.goto("https://page.test/");
     await seesGlobe(page);
     if ((await page.locator("wakusei-body").getAttribute("body")) !== "saturn") throw new Error("the element lost its attributes");
+    // the line drawing zooms by itself, up to 50x
+    const zoomed = await page.locator("wakusei-body").evaluate((el) => {
+      let zoom = 1;
+      el.addEventListener("wakusei-view", (event) => (zoom = (event as CustomEvent<{ zoom: number }>).detail.zoom));
+      const box = el.getBoundingClientRect();
+      for (let at = 0; at < 40; at += 1) el.dispatchEvent(new WheelEvent("wheel", { deltaY: -2000, ctrlKey: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true, cancelable: true, composed: true }));
+      return zoom;
+    });
+    if (Math.abs(zoomed - 50) > 0.01) throw new Error(`the line drawing zoomed to ${zoomed}, not 50`);
   });
 });
 
@@ -209,6 +218,15 @@ await step("cdn-realistic", async () => {
     await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples(""), "cdn-realistic.html")), contentType: "text/html" }));
     await page.goto("https://page.test/");
     await page.locator("wakusei-body[data-state=live]").waitFor({ timeout: 60_000 });
+    // the element zooms by itself: Ctrl and the wheel, with no controls on the page, up to 8x and no further
+    const zoomed = await page.locator("wakusei-body").evaluate((el) => {
+      let zoom = 1;
+      el.addEventListener("wakusei-view", (event) => (zoom = (event as CustomEvent<{ zoom: number }>).detail.zoom));
+      const box = el.getBoundingClientRect();
+      for (let at = 0; at < 40; at += 1) el.dispatchEvent(new WheelEvent("wheel", { deltaY: -2000, ctrlKey: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true, cancelable: true, composed: true }));
+      return zoom;
+    });
+    if (Math.abs(zoomed - 8) > 0.01) throw new Error(`the shaded body zoomed to ${zoomed}, not 8`);
   });
 });
 
@@ -240,7 +258,7 @@ await step("controls", async () => {
     await seesGlobe(page);
     await page.locator("kazoku-view-controls .bar").waitFor({ timeout: 20_000 });
     const before = await page.locator("wakusei-body").evaluate((el) => el.shadowRoot?.innerHTML ?? "");
-    await page.locator("#view").focus();
+    await page.locator("#planet").focus();
     for (let at = 0; at < 4; at += 1) await page.keyboard.press("ArrowRight");
     await page.waitForFunction((was) => document.querySelector("wakusei-body")?.shadowRoot?.innerHTML !== was, before, { timeout: 10_000 });
   });
