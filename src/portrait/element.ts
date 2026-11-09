@@ -204,9 +204,9 @@ export class WakuseiPortrait extends HTMLElement {
 
   /** The shared controllers' camera over the scene's own (and a `wakusei-view` event with the `zoom`, `panX` and `panY`): `zoom` scales the picture about its middle, `panX` and `panY` move it by that many CSS pixels. The scene's camera, and what `portrait` holds, are left as they are. */
   setView(view: { zoom?: number; panX?: number; panY?: number }): void {
-    this.#zoom = Math.max(1e-6, view.zoom ?? 1);
-    this.#panX = view.panX ?? 0;
-    this.#panY = view.panY ?? 0;
+    const [zoom, panX, panY] = [Math.max(1e-6, view.zoom ?? 1), view.panX ?? 0, view.panY ?? 0];
+    if (zoom === this.#zoom && panX === this.#panX && panY === this.#panY) return;
+    [this.#zoom, this.#panX, this.#panY] = [zoom, panX, panY];
     this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { zoom: this.#zoom, panX: this.#panX, panY: this.#panY } }));
     this.#changed();
   }
