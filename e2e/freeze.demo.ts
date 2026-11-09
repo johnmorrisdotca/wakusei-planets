@@ -8,6 +8,23 @@ const URL = "/wakusei-planets/";
 const main = (page: Page) => page.locator("#main");
 const live = (page: Page) => expect(main(page)).toHaveAttribute("data-state", "live", { timeout: 90_000 });
 const settle = (page: Page, ms: number) => page.waitForTimeout(ms);
+/** The counters once the graphics objects alive have stopped changing: the same number on four reads a quarter of a second apart, so a baseline is not taken while textures are still arriving (a slow machine). */
+const settledCounts = async (page: Page) => {
+  let held = -1;
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = gpuObjects(await readCounts(page));
+        same = now === held ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { intervals: [250], timeout: 60_000, message: "the graphics objects alive never stopped changing" },
+    )
+    .toBeGreaterThanOrEqual(3);
+  return readCounts(page);
+};
 const pick = (page: Page, id: string) => page.locator(`.tile[data-body="${id}"]`).click();
 
 test.use({ reducedMotion: "no-preference" });
@@ -75,7 +92,7 @@ test("changes give back what they took: contexts, buffers, vertex arrays, textur
   await round();
   await round();
   await settle(page, 2500);
-  const first = await readCounts(page);
+  const first = await settledCounts(page);
   for (let i = 0; i < 3; i += 1) await round();
   await settle(page, 2500);
   const last = await readCounts(page);
@@ -213,7 +230,7 @@ test("changes to the portrait give back what they took: adding and removing bodi
   };
   await round();
   await settle(page, 3000);
-  const first = await readCounts(page);
+  const first = await settledCounts(page);
   for (let i = 0; i < 2; i += 1) await round();
   await settle(page, 3000);
   const last = await readCounts(page);
@@ -325,7 +342,7 @@ test("changes to the space view give back what they took: the zooms, the scales,
   await round();
   await round();
   await settle(page, 2500);
-  const first = await readCounts(page);
+  const first = await settledCounts(page);
   for (let i = 0; i < 3; i += 1) await round();
   await settle(page, 2500);
   const last = await readCounts(page);
