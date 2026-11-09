@@ -47,19 +47,22 @@ function body(): void {
 if (query.has("scene")) portrait();
 else body();
 
-// the element carries the drag, pinch, wheel and keys; the bar adds the + and - buttons and keeps the view in the address, and takes the hands over while it is there. A frame under 240 pixels has no room for the bar: the hands alone
+// the element carries the drag, pinch, wheel and keys; the bar adds the + and - buttons and keeps the view in the address, and takes the hands over while it is there. A frame under 240 pixels has no room for the bar: the hands alone.
+// The bar is added once the element has drawn (its first draw is the next microtask), so the picture is what it was and the bar's own work does not delay it.
 const view = frame.firstElementChild as (HTMLElement & { setView(view: Partial<ViewChangeDetail>): void }) | null;
 if (view !== null) {
   view.id = "view";
   view.tabIndex = 0;
 }
 if (view !== null && Math.min(window.innerWidth, window.innerHeight) >= 240) {
-  const bar = document.createElement("kazoku-view-controls") as ViewControlsElement;
-  for (const [name, value] of Object.entries({ for: "view", address: "", overlay: "", layout: "compact", speed: "0", "address-keys": "tilt:vtilt", ...(query.has("scene") ? { flat: "" } : {}), ...(query.has("lang") ? { lang: query.get("lang")! } : {}) })) bar.setAttribute(name, value);
-  frame.append(bar);
-  bar.addEventListener("kazoku-viewchange", (event) => {
-    const detail = (event as CustomEvent<ViewChangeDetail>).detail;
-    view.setView(detail);
-    if (window.parent !== window) window.parent.postMessage({ wakusei: "view", zoom: detail.zoom }, location.origin);
+  queueMicrotask(() => {
+    const bar = document.createElement("kazoku-view-controls") as ViewControlsElement;
+    for (const [name, value] of Object.entries({ for: "view", address: "", overlay: "", layout: "compact", speed: "0", "address-keys": "tilt:vtilt", ...(query.has("scene") ? { flat: "" } : {}), ...(query.has("lang") ? { lang: query.get("lang")! } : {}) })) bar.setAttribute(name, value);
+    bar.addEventListener("kazoku-viewchange", (event) => {
+      const detail = (event as CustomEvent<ViewChangeDetail>).detail;
+      view.setView(detail);
+      if (window.parent !== window) window.parent.postMessage({ wakusei: "view", zoom: detail.zoom }, location.origin);
+    });
+    frame.append(bar);
   });
 }
