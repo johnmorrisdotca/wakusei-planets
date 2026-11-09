@@ -17,7 +17,7 @@ Dates need `Z` or a numeric UTC offset. Bad input gets 400; an unknown route get
 
 ## Server
 
-```js
+```js no-run
 import { createServer } from "node:http";
 import { BODIES, BODY_IDS, stopPlaceAu } from "@johnmorrisdotca/wakusei-planets";
 import { distance } from "@johnmorrisdotca/wakusei-planets/nearest";
