@@ -5,6 +5,7 @@
 //   &moons=1                     the planet with its moons on their orbits
 //   &turn=12                     degrees a second it turns by itself (the default rate when this is left out; 0 stays still)
 //   &tilt=  &pitch=  &phase=     a portrait's pose, degrees
+//   ?star=Betelgeuse             a star drawn from numbers instead of a body: its name, then &temperature-k=3600 &radius-sun=760 &luminosity-class=Ia &rotation-days= &oblateness= &activity= &corona= &estimated=radiusSun
 //   ?scene=...                   a scene of the portrait builder instead of one body (the text its address holds)
 //   &zoom=2                      how far in the picture starts; a drag, a pinch, Ctrl and the wheel, the keys and the + and - buttons zoom it, and the address keeps up (the view's tilt is `vtilt`, for `tilt` is the pose's)
 // It draws only when something changes, and nothing while it is out of sight or the tab is hidden.
@@ -31,9 +32,15 @@ function portrait(): void {
   frame.append(view);
 }
 
+/** The names a star's numbers go by in the address: the element's own attributes. */
+const STAR_KEYS = ["temperature-k", "radius-sun", "luminosity-class", "rotation-days", "oblateness", "activity", "corona", "estimated", "quality"];
+
 function body(): void {
   const element = document.createElement("wakusei-body") as WakuseiBody;
-  element.setAttribute("body", query.get("body") ?? "jupiter");
+  if (query.has("star")) {
+    element.setAttribute("star", query.get("star") ?? "");
+    for (const name of STAR_KEYS) if (query.has(name)) element.setAttribute(name, query.get(name) ?? "");
+  } else element.setAttribute("body", query.get("body") ?? "jupiter");
   element.setAttribute("look", query.get("look") ?? "line");
   element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
   for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang"]) {

@@ -108,3 +108,9 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .kids-paper { width: min(1100px, 100%); overflow: hidden; position: relative; border-radius: 6px; background: #1a2233; }
 #paper-inner { transform-origin: 0 0; display: flex; flex-direction: column; gap: 6mm; width: max-content; }
 #paper-inner .kazoku-sheet { display: flex; flex-direction: column; gap: 6mm; }
+
+/* the star page */
+.numbers .field { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.numbers .fam-field { width: 9.5rem; }
+.parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.parts li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
