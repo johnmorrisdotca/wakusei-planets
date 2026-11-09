@@ -120,8 +120,11 @@ controls.addEventListener("kazoku-viewchange", (event) => {
 space.addEventListener("wakusei-body-click", (event) => {
   const info = (event as CustomEvent<BodyInfo>).detail;
   caption.textContent = say("sp_picked", { name: info.name, radius: Math.round(info.radiusKm).toLocaleString("en-US"), distance: Math.round(info.distanceKm).toLocaleString("en-US") });
-  space.body = info.id;
-  controls.controller.set({ zoom: 1 }, true, "jump");
+  // pressing the body already looked at changes nothing: the two presses of a double press (zoom in, zoom out) must not each start the view over
+  if (space.body !== info.id) {
+    space.body = info.id;
+    controls.controller.set({ zoom: 1 }, true, "jump");
+  }
 });
 window.addEventListener("wakusei-language", () => {
   space.setAttribute("lang", chooser()?.lang ?? "en");
