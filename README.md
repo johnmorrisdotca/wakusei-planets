@@ -122,6 +122,18 @@ const vega = starLook({ name: "Vega", temperatureK: 9602, radiusSun: 2.362, obla
 console.log(vega.colour, vega.parts.map((part) => part.status).join(", "));
 ```
 
+## The size line-up
+
+`<wakusei-lineup stars="bright" planets at="betelgeuse">` shows the Sun, Sirius A, Vega, Arcturus, Aldebaran, Rigel, Antares, Betelgeuse and the largest stars known (VY Canis Majoris, WOH G64, UY Scuti, Stephenson 2-18) side by side or one above the next at **true relative size**, each drawn with the star look and labelled with its radius in Suns and kilometres, its error and its paper. A slider zooms smoothly from the Sun (or the Earth, with `planets`) up to the largest star; each star turns slowly and a drag turns the one it takes hold of. Every radius is from a refereed paper that measured the star's angular diameter, or says it did not (WOH G64 and Stephenson 2-18 are estimated from brightness, UY Scuti's distance is not a parallax); where the papers disagree, the label and [the guide](docs/guides/size-lineup.md) say so. The demo's [size line-up page](https://johnmorrisdotca.github.io/wakusei-planets/lineup.html) saves the picture as a PNG or SVG, prints it as a poster on A4 or US Letter, and writes the code for every way of putting it in a page. The table needs no browser:
+
+```ts
+import { lineupBodies, lineupText } from "@johnmorrisdotca/wakusei-planets";
+
+const largest = lineupBodies({ set: "largest" }).at(-1)!;
+const text = lineupText(largest, "en");
+console.log(`${text.name}: ${text.radius}, ${text.km}, ${text.source}`);
+```
+
 ## Two packages: this one and chikyu-earth
 
 This package is the Sun, the planets, the dwarf planets and the moons, and where they are. [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) is the Earth in detail: its countries, day and night, places and satellites. Each works alone; install both and the Earth's line look becomes chikyu-earth's globe with the countries. The dependency runs one way: this package may use chikyu-earth, never the reverse. [Why two packages](docs/guides/two-packages.md) has the rule, a table of what lives where and how to use them together.
@@ -341,7 +353,7 @@ The reference is a site, made from the source's own doc comments: every export h
 
 | Entry point | What it gives |
 | --- | --- |
-| `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`, `starLook`, `starLineSvg`. No browser. |
+| `@johnmorrisdotca/wakusei-planets` | The pure side: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait`, `lineSvg`, `embedCode`, `lineupCode`, `lineupBodies`, `starLook`, `starLineSvg`. No browser. |
 | `.../element` | `<wakusei-body>`; three.js is loaded only for a shaded look. |
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
@@ -377,6 +389,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
 | [A star from its numbers](docs/guides/star-look.md) | Any star in 3D or as lines, what is measured and what is drawn, every way to put it in a page |
+| [The size line-up](docs/guides/size-lineup.md) | The Sun and the largest stars at true relative size, with each radius, its error and its paper, where the papers disagree, every way to put it in a page |
 | [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |
 | [Close zoom and map tiles](docs/guides/close-zoom.md) | How far each body zooms and why, the finer map tiles for a close zoom (made from public-domain maps, served beside the demo, never in the package), the generic detail, what it costs |
 | [Riding along](docs/guides/ride-along.md) | The camera on a moon, a planet or any moving point, looking at what it goes round |

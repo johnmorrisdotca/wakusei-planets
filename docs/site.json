@@ -25,6 +25,11 @@
       "ja": "<wakusei-portrait> 要素 (たくさんの天体を一つの絵に)",
       "platform": "browser"
     },
+    "./lineup": {
+      "en": "The <wakusei-lineup> element: stars at true relative size, with their radii and papers",
+      "ja": "<wakusei-lineup> 要素 (星を実際の大きさの比のままならべ、半径と論文を添える)",
+      "platform": "browser"
+    },
     "./space": {
       "en": "Where the Sun, Moon and planets are for a date, in two scales, with the camera maths",
       "ja": "日付ごとの太陽・月・惑星の位置を、二つの縮尺で。カメラの計算つき",

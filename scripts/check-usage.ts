@@ -403,6 +403,77 @@ await step("star-angular", async () => {
   });
 });
 
+// The size line-up: every way of putting it in a page.
+/** The line-up is drawn on the page's one WebGL context, with the Earth and Jupiter, on Betelgeuse, and carries its zoom slider. */
+const seesLineup = async (page: Page): Promise<void> => {
+  const lineup = page.locator("wakusei-lineup").first();
+  await lineup.waitFor({ state: "attached", timeout: 20_000 });
+  await page.waitForFunction(() => document.querySelector("wakusei-lineup")?.getAttribute("data-state") === "live", undefined, { timeout: 90_000 });
+  const label = (await lineup.getAttribute("aria-label")) ?? "";
+  if (!/Size line-up/.test(label) || !/Betelgeuse/.test(label) || !/Earth/.test(label) || !/Jupiter/.test(label)) throw new Error(`the line-up's label is wrong: ${label}`);
+  if ((await lineup.evaluate((el) => (el as unknown as { focused: string }).focused)) !== "betelgeuse") throw new Error("the camera did not start on Betelgeuse");
+  if ((await lineup.evaluate((el) => el.shadowRoot?.querySelectorAll("input[type=range]").length)) !== 1) throw new Error("the line-up has no zoom slider");
+};
+
+await step("lineup-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("lineup"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (out !== "Stephenson 2-18: 2,150 Suns (+710 −290), 1.5 billion km, Fok et al. 2012 · estimated") throw new Error(`unexpected output: ${out}`);
+});
+
+await step("lineup-cdn", async () => {
+  await opened(browser, async (page) => {
+    await page.route("https://cdn.jsdelivr.net/**", async (route) => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname !== "/npm/@johnmorrisdotca/wakusei-planets/lineup/+esm") return route.fulfill({ status: 404, body: "" });
+      return route.fulfill({ body: await bundleOf(modules("lineup/element.js")), contentType: "text/javascript" });
+    });
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("lineup"), "cdn.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    await seesLineup(page);
+  });
+});
+
+await step("lineup-iframe", async () => {
+  if (!existsSync(at("site", "embed.html"))) throw new Error("site/ is not built: `pnpm test:usage` builds it");
+  await opened(browser, async (page) => {
+    await serve(page, "https://johnmorrisdotca.github.io", at("site"), "/wakusei-planets");
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("lineup"), "iframe.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    const frame = page.frameLocator("iframe");
+    await frame.locator("wakusei-lineup").waitFor({ timeout: 20_000 });
+    if ((await frame.locator("wakusei-lineup").getAttribute("stars")) !== "bright") throw new Error("the embed ignored the stars");
+    if ((await frame.locator("wakusei-lineup").getAttribute("at")) !== "betelgeuse") throw new Error("the embed ignored where the camera starts");
+    await frame.locator("wakusei-lineup[data-state=live]").waitFor({ timeout: 60_000 });
+  });
+});
+
+const lineupApp = async (name: string, plugins: unknown[] = []): Promise<void> => {
+  const dir = examples(`lineup/${name}`);
+  const out = join(usage, "out", "lineup", name);
+  await viteBuild({ root: dir, plugins: plugins as never[], logLevel: "warn", build: { outDir: out, emptyOutDir: true }, base: "./", configFile: false });
+  await opened(browser, async (page) => {
+    await serve(page, "https://app.test", out);
+    await page.goto("https://app.test/");
+    await seesLineup(page);
+  });
+};
+await step("lineup-vite", () => lineupApp("vite"));
+await step("lineup-react", () => lineupApp("react"));
+await step("lineup-vue", async () => lineupApp("vue", [(await import("@vitejs/plugin-vue")).default()]));
+await step("lineup-svelte", async () => lineupApp("svelte", [(await import("@sveltejs/vite-plugin-svelte")).svelte()]));
+await step("lineup-angular", async () => {
+  const dir = examples("lineup/angular");
+  const out = join(usage, "out", "lineup", "angular");
+  writeFileSync(join(dir, "tsconfig.json"), JSON.stringify({ compilerOptions: { target: "ES2022", module: "esnext", experimentalDecorators: true, useDefineForClassFields: false } }));
+  await esbuild({ entryPoints: [join(dir, "main.ts")], outdir: out, bundle: true, splitting: true, format: "esm", tsconfig: join(dir, "tsconfig.json"), absWorkingDir: root, logLevel: "silent", minify: true });
+  writeFileSync(join(out, "index.html"), readFileSync(join(dir, "index.html")));
+  await opened(browser, async (page) => {
+    await serve(page, "https://app.test", out);
+    await page.goto("https://app.test/");
+    await seesLineup(page);
+  });
+});
+
 await browser.close();
 lock.release();
 
@@ -437,6 +508,17 @@ const FILES: Record<string, string[]> = {
   "star/vue/main.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "star/svelte/StarView.svelte": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "star/angular/star-view.component.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "lineup/cdn.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/iframe.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/node.mjs": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/vite/main.ts": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/vite/index.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/react/LineupView.tsx": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/react/wakusei-lineup.d.ts": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/vue/LineupView.vue": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/vue/main.ts": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/svelte/LineupView.svelte": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
+  "lineup/angular/lineup-view.component.ts": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "typescript/index.ts": ["docs/guides/typescript-and-node.md", "docs/guides/ja/typescript-and-node.md"],
   "node/server.mjs": ["docs/guides/typescript-and-node.md", "docs/guides/ja/typescript-and-node.md"],
 };
@@ -448,7 +530,7 @@ for (const [file, places] of everything ? Object.entries(FILES) : []) {
   }
 }
 const unlisted = (folder: string): string[] => readdirSync(at("examples", folder), { withFileTypes: true }).flatMap((entry) => (entry.isDirectory() ? unlisted(join(folder, entry.name)) : [relative("", join(folder, entry.name)).split("\\").join("/")]));
-const known = new Set([...Object.keys(FILES), "angular/index.html", "angular/main.ts", "star/angular/index.html", "star/angular/main.ts", "star/react/index.html", "star/react/main.tsx", "star/svelte/index.html", "star/svelte/main.ts", "star/vue/index.html", "react/index.html", "react/main.tsx", "svelte/index.html", "svelte/main.ts", "vue/index.html"]);
+const known = new Set([...Object.keys(FILES), "lineup/angular/index.html", "lineup/angular/main.ts", "lineup/react/index.html", "lineup/react/main.tsx", "lineup/svelte/index.html", "lineup/svelte/main.ts", "lineup/vue/index.html", "angular/index.html", "angular/main.ts", "star/angular/index.html", "star/angular/main.ts", "star/react/index.html", "star/react/main.tsx", "star/svelte/index.html", "star/svelte/main.ts", "star/vue/index.html", "react/index.html", "react/main.tsx", "svelte/index.html", "svelte/main.ts", "vue/index.html"]);
 for (const file of everything ? unlisted("") : []) if (!known.has(file)) failures.push(`examples/${file} is not listed in scripts/check-usage.ts: say where the guides show it`);
 
 console.log(failures.length === 0 ? `\nusage ok: ${results.length} ways to use ${NAME}` : `\n${failures.length} failure${failures.length === 1 ? "" : "s"}:\n- ${failures.join("\n- ")}`);
