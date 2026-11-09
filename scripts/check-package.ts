@@ -62,6 +62,13 @@ const starTable = await import(starsEntry);
 const sirius = starTable.starByName("Sirius");
 if (starTable.stars().length !== 5080 || sirius?.hr !== 2491 || Math.abs(sirius.declination + 16.7161) > 0.001) throw new Error("stars package entry failed");
 
+// The nearest bodies and the closest approaches through package resolution: the great conjunction of 2020 is where Horizons puts it.
+const nearestEntry = "@johnmorrisdotca/wakusei-planets/nearest";
+const near = await import(nearestEntry);
+const greatConjunction = near.closestApproach("jupiter", "saturn", { from: Date.UTC(2020, 11, 1), to: Date.UTC(2021, 0, 1) });
+if (greatConjunction.time.toISOString().slice(0, 13) !== "2020-12-21T18" || Math.abs(greatConjunction.angle - 0.102) > 0.002 || near.nearest("moon", { count: 1, date: 0 }).length !== 1) throw new Error("nearest package entry failed");
+if (JSON.stringify(Object.keys(near).sort()) !== JSON.stringify(["closestApproach", "conjunctions", "nearest", "within"])) throw new Error("nearest public API changed");
+
 // The sun and moon times through package resolution too, both conventions.
 const suncalcEntry = "@johnmorrisdotca/wakusei-planets/suncalc";
 const sunTimes = await import(suncalcEntry);

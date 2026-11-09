@@ -68,7 +68,7 @@ export function moonEquatorial(ms: number): Equatorial {
 export { greenwichSiderealTime };
 
 /** The observer's place from the Earth's centre in the true equator of date, in kilometres, with the turn of the Earth (Meeus ch. 11). */
-function observerVector(observer: Observer, ms: number): Vec {
+export function observerVector(observer: Observer, ms: number): Vec {
   const lat = observer.latitude * RAD;
   const height = (observer.heightM ?? 0) / 1000;
   const u = Math.atan((1 - EARTH_FLATTENING) * Math.tan(lat));

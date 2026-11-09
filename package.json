@@ -69,7 +69,10 @@
     "coordinates",
     "spacecraft",
     "voyager",
-    "trajectory"
+    "trajectory",
+    "conjunction",
+    "close-approach",
+    "nearest"
   ],
   "homepage": "https://johnmorrisdotca.github.io/wakusei-planets/",
   "repository": {
@@ -134,6 +137,11 @@
       "types": "./dist/stars.d.ts",
       "import": "./dist/stars.js",
       "default": "./dist/stars.js"
+    },
+    "./nearest": {
+      "types": "./dist/nearest.d.ts",
+      "import": "./dist/nearest.js",
+      "default": "./dist/nearest.js"
     },
     "./spacecraft": {
       "types": "./dist/spacecraft.d.ts",

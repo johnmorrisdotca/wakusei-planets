@@ -45,6 +45,11 @@
       "ja": "望遠鏡なしで見える5,080個の星: 名前、位置、固有運動、距離、色 (gzip で約100 kB)",
       "platform": "node"
     },
+    "./nearest": {
+      "en": "The bodies nearest to a body on a date, in the sky or in space, and when two bodies come closest: nearest, within, closestApproach and conjunctions",
+      "ja": "ある日付に、ある天体にいちばん近い天体を、空の見かけの角度か宇宙での距離でさがします。2つの天体がいちばん近づく時刻も: nearest、within、closestApproach、conjunctions",
+      "platform": "node"
+    },
     "./tables": {
       "en": "Every dwarf planet's fitted position table (Ceres and the seven slower ones) and the moon theories for Jupiter's and Saturn's moons, so heliocentric and moonVector are as close as the accuracy guide says",
       "ja": "すべての準惑星の位置の表 (ケレスと、動きの遅い7つ) と、木星と土星の衛星の理論。heliocentric と moonVector が精度ガイドの値まで正確になります",
