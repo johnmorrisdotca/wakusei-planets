@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { heliocentric, moonVector } from "../src/ephemeris.ts";
 import "../src/tables/all.ts";
 import { BODIES, BODY_IDS, type BodyId } from "../src/facts.ts";
-import { closestApproach, conjunctions, nearest, within } from "../src/nearest.ts";
+import { closestApproach, conjunctions, distance, distanceRange, nearest, within } from "../src/nearest.ts";
 import { RAD, type Vec3 } from "../src/vec.ts";
 
 type Window = { label: string; a: BodyId; b: BodyId; start: string; stepSeconds: number; queries: Record<string, Record<string, string>>; a_ra_dec: number[][]; b_ra_dec: number[][] };
@@ -312,4 +312,96 @@ test("a year's conjunction search is fast", () => {
   const start = performance.now();
   conjunctions({ from: Date.UTC(2023, 0, 1), to: Date.UTC(2024, 0, 1) });
   assert.ok(performance.now() - start < 3000, `${(performance.now() - start).toFixed(0)} ms`);
+});
+
+type Extreme = { query: Record<string, string>; ms: number[]; km: number[] };
+type DistanceFixture = { source: string; fetched: string; pairs: Array<{ a: BodyId; b: BodyId; queries: Record<string, Record<string, string>>; min: Extreme; max: Extreme }> };
+const distances = JSON.parse(readFileSync(new URL("./data/horizons-distance.json", import.meta.url), "utf8")) as DistanceFixture;
+
+/** The turning point of a table of distances: the vertex of the least squares parabola through the 41 samples (ten days) about the tabulated extreme. */
+function vertex(w: Extreme, pick: (...values: number[]) => number): { ms: number; km: number } {
+  const k = w.km.indexOf(pick(...w.km));
+  const from = Math.max(0, k - 20);
+  const t0 = w.ms[k]!;
+  const xs = w.ms.slice(from, k + 21).map((ms) => (ms - t0) / 86_400_000);
+  const ys = w.km.slice(from, k + 21);
+  const sums = [0, 1, 2, 3, 4].map((p) => xs.reduce((total, x) => total + x ** p, 0));
+  const rhs = [0, 1, 2].map((p) => xs.reduce((total, x, i) => total + ys[i]! * x ** p, 0));
+  const m = [[sums[0]!, sums[1]!, sums[2]!], [sums[1]!, sums[2]!, sums[3]!], [sums[2]!, sums[3]!, sums[4]!]];
+  const det = (n: number[][]): number => n[0]![0]! * (n[1]![1]! * n[2]![2]! - n[1]![2]! * n[2]![1]!) - n[0]![1]! * (n[1]![0]! * n[2]![2]! - n[1]![2]! * n[2]![0]!) + n[0]![2]! * (n[1]![0]! * n[2]![1]! - n[1]![1]! * n[2]![0]!);
+  const column = (j: number): number[][] => m.map((row, i) => row.map((v, c) => (c === j ? rhs[i]! : v)));
+  const d = det(m);
+  const [c0, c1, c2] = [det(column(0)) / d, det(column(1)) / d, det(column(2)) / d] as [number, number, number];
+  const x = -c1 / (2 * c2);
+  return { ms: t0 + x * 86_400_000, km: c0 + c1 * x + c2 * x * x };
+}
+
+test("the least and greatest distances of three pairs of planets from 1900 to 2100 agree with JPL Horizons", (t) => {
+  assert.equal(distances.pairs.length, 3);
+  for (const pair of distances.pairs) {
+    const found = distanceRange(pair.a, pair.b, { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) });
+    assert.equal(found.min.atEdge || found.max.atEdge, false);
+    for (const [name, pick] of [["min", Math.min], ["max", Math.max]] as const) {
+      const reference = vertex(pair[name], pick);
+      const mine = found[name];
+      const seconds = (mine.time.getTime() - reference.ms) / 1000;
+      const km = mine.distanceKm - reference.km;
+      t.diagnostic(`${pair.a}-${pair.b} ${name}: Horizons ${new Date(reference.ms).toISOString()} ${(reference.km / AU_KM).toFixed(5)} au; here ${mine.time.toISOString()} ${mine.distanceAu.toFixed(5)} au; ${seconds.toFixed(0)} s, ${km.toFixed(0)} km`);
+      assert.ok(Math.abs(km) <= mine.uncertaintyKm, `${pair.a}-${pair.b} ${name}: ${km.toFixed(0)} km from Horizons, expected within ${mine.uncertaintyKm.toFixed(0)}`);
+      assert.ok(Math.abs(seconds) < 86_400, `${pair.a}-${pair.b} ${name}: ${seconds.toFixed(0)} s from Horizons`);
+    }
+  }
+});
+
+test("Earth and Mars come to 0.37 au in August 2003 and go to 2.68 au in 2066", () => {
+  const { min, max } = distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Date.UTC(2100, 0, 1) });
+  assert.equal(min.time.toISOString().slice(0, 10), "2003-08-27");
+  assert.ok(Math.abs(min.distanceAu - 0.3727) < 0.0005, String(min.distanceAu));
+  assert.ok(Math.abs(max.distanceAu - 2.676) < 0.01, String(max.distanceAu));
+});
+
+test("distance is the straight line between two centres, either way round", () => {
+  const date = Date.UTC(2003, 7, 27, 9);
+  const forward = distance("earth", "mars", date);
+  const back = distance("mars", "earth", new Date(date));
+  assert.equal(forward.distanceKm, back.distanceKm);
+  assert.equal(forward.time, date);
+  assert.ok(Math.abs(forward.distanceAu * AU_KM - forward.distanceKm) < 1e-6);
+  const earth = heliocentric("earth", date);
+  const mars = heliocentric("mars", date);
+  assert.ok(Math.abs(forward.distanceKm - Math.hypot(earth[0] - mars[0], earth[1] - mars[1], earth[2] - mars[2]) * AU_KM) < 1e-3);
+  assert.equal(distance("sun", "earth", date).distanceAu.toFixed(2), "1.01");
+  assert.ok(Math.abs(distance("earth", "moon", date).distanceKm - nearest("earth", { by: "space", date, count: 1 })[0]!.distanceKm) < 1e-9);
+  const io = distance("jupiter", "io", date);
+  assert.ok(io.distanceKm > 4.0e5 && io.distanceKm < 4.4e5, String(io.distanceKm));
+  assert.ok(io.uncertaintyKm < 2000, "a moon and its planet share the planet's error, so only the moon's own 0.15 degree counts");
+  assert.ok(distance("mars", "ceres", date).distanceAu > 0.5);
+  assert.ok(Number.isFinite(distance("pluto", "charon", date).distanceKm));
+  assert.ok(distance("earth", "mars").time > 0, "the date defaults to now");
+  assert.throws(() => distance("mars", "mars", date), /different/);
+  assert.throws(() => distance("mars", "nowhere" as BodyId, date), /b must be a body/);
+  assert.throws(() => distance("mars", "venus", NaN), /date/);
+});
+
+test("distanceRange finds the Moon's perigee and apogee, and marks a range that only falls", () => {
+  const month = distanceRange("earth", "moon", { from: Date.UTC(2026, 10, 1), to: Date.UTC(2026, 10, 30) });
+  assert.ok(month.min.distanceKm < month.max.distanceKm && month.min.distanceKm > 356_000 && month.max.distanceKm < 407_000);
+  assert.equal(month.min.atEdge, false);
+  assert.ok(month.min.time < month.max.time || month.min.time > month.max.time);
+  // brute force at ten-minute steps agrees with the turning points
+  let low = Infinity;
+  let high = 0;
+  for (let ms = Date.UTC(2026, 10, 1); ms <= Date.UTC(2026, 10, 30); ms += 600_000) {
+    const km = distance("earth", "moon", ms).distanceKm;
+    low = Math.min(low, km);
+    high = Math.max(high, km);
+  }
+  assert.ok(month.min.distanceKm <= low + 1e-6 && low - month.min.distanceKm < 5, `${month.min.distanceKm} vs ${low}`);
+  assert.ok(month.max.distanceKm >= high - 1e-6 && month.max.distanceKm - high < 5, `${month.max.distanceKm} vs ${high}`);
+  const falling = distanceRange("earth", "mars", { from: Date.UTC(2003, 5, 1), to: Date.UTC(2003, 6, 1) });
+  assert.equal(falling.min.atEdge, true);
+  assert.equal(falling.min.time.getTime(), Date.UTC(2003, 6, 1));
+  assert.equal(falling.max.time.getTime(), Date.UTC(2003, 5, 1));
+  assert.throws(() => distanceRange("mars", "mars", { from: 0, to: 1 }), /different/);
+  assert.throws(() => distanceRange("mars", "venus", { from: 1, to: 0 }), /before/);
 });
