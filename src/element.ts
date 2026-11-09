@@ -7,9 +7,12 @@ import "./tables/ceres.ts";
 import "./tables/dwarfs.ts";
 import { loadMoonTheory } from "./tables/lazy.ts";
 import { orbitPath, nearMoons, type Pose } from "./ephemeris.ts";
-import { BODIES, ringReach, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
+import { BODIES, ringReach, type BodyFacts, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
+import { starLook, type StarLook, type StarNumbers } from "./star.ts";
+import { starLineSvg } from "./star-line.ts";
+import { starLookOf } from "./scene/look.ts";
 import { createLive, defaultTurn, REDUCED_TURN, type LiveFrame, type LiveRequest } from "./live.ts";
 import { texturePaths } from "./scene/textures.ts";
 export { TEXTURE_BASE, TEXTURE_FAR_BASE } from "./scene/textures.ts";
@@ -39,6 +42,15 @@ const num = (value: string | null, fallback: number): number => {
   return Number.isFinite(n) ? n : fallback;
 };
 
+/** A device that should get the cheaper star: little memory or two cores or fewer. `quality="full"` or `quality="low"` on the element decides it instead. */
+const weakDevice = (): boolean => {
+  const nav = typeof navigator === "undefined" ? undefined : (navigator as Navigator & { deviceMemory?: number });
+  return nav !== undefined && ((nav.deviceMemory ?? 8) <= 2 || (nav.hardwareConcurrency ?? 8) <= 2);
+};
+
+/** The attributes that carry a star's numbers beside `star`, and the number each is. */
+const STAR_ATTRS = ["temperature-k", "radius-sun", "luminosity-class", "rotation-days", "activity", "oblateness", "corona", "estimated"] as const;
+
 const readLook = (value: string | null): Look => (value === "realistic" || value === "painted" || value === "illustrated" ? value : "line");
 
 const readTime = (value: string | null): number | "now" | undefined => {
@@ -59,10 +71,9 @@ function turnPose(pose: Pose, axis: Vec3, degrees: number): void {
 /** The half-width of a body's picture, in its radii, when it has no scale of its own: the globe takes a little under half the height, so its rings, glow and haze have room round it. */
 const ROOM = 2.2;
 
-function extentOf(id: BodyId, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number; tight?: boolean }): number {
-  const f = BODIES[id];
-  if (options.moons === true && id in BODIES && f.parent === undefined && id !== "sun") {
-    const near = nearMoons(id as HostId);
+function extentOf(f: BodyFacts, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number; tight?: boolean }): number {
+  if (options.moons === true && f.parent === undefined && f.id !== "sun") {
+    const near = nearMoons(f.id as HostId);
     const far = Math.max(1.8, ringReach(f) * 1.15, ...near.map((m) => m.reach * 1.1));
     return options.range ?? far;
   }
@@ -118,7 +129,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "lang", "labels"];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "lang", "labels"];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -171,8 +182,23 @@ export class WakuseiBody extends HTMLElement {
     return (this.getBoundingClientRect().width / 2) * this.#fill();
   }
   get body(): BodyId {
+    if (this.hasAttribute("star")) return "sun";
     const id = this.getAttribute("body") as BodyId | null;
     return id !== null && id in BODIES ? id : "earth";
+  }
+  /**
+   * The star drawn instead of a body, when the `star` attribute is there: its numbers with the defaults filled in, its colour, the turn it shows, and `parts`, which says what is measured and what is invented.
+   * `undefined` for a body, or while the star's numbers are not complete (`data-error` says what is wrong). Set it to an object of numbers to draw a star, or to `null` to go back to the body.
+   */
+  get starLook(): StarLook | undefined {
+    return this.#star();
+  }
+  set star(numbers: StarNumbers | string | null | undefined) {
+    if (numbers === null || numbers === undefined) this.removeAttribute("star");
+    else this.setAttribute("star", typeof numbers === "string" ? numbers : JSON.stringify(numbers));
+  }
+  get star(): StarNumbers | undefined {
+    return this.#star()?.numbers;
   }
   get look(): Look {
     return readLook(this.getAttribute("look"));
@@ -303,6 +329,50 @@ export class WakuseiBody extends HTMLElement {
     controller.objectSize = { width: disc * 2, height: disc * 2 };
   };
 
+  // --- the star ---------------------------------------------------------------------------------------------------------------------------------------
+
+  #starKey = "";
+  #starMade: StarLook | undefined;
+
+  /** The star the attributes describe: `star` is a JSON object of numbers, the name of a star registered with `registerStarLook`, or empty with the numbers in the other attributes, which are laid over it. */
+  #star(): StarLook | undefined {
+    if (!this.hasAttribute("star")) return undefined;
+    const quality = this.getAttribute("quality") === "low" || (this.getAttribute("quality") !== "full" && weakDevice()) ? "low" : "full";
+    const key = JSON.stringify([quality, this.getAttribute("star"), ...STAR_ATTRS.map((name) => this.getAttribute(name)), starLookOf(this.getAttribute("star") ?? "")?.key]);
+    if (key === this.#starKey) return this.#starMade;
+    this.#starKey = key;
+    this.#starMade = undefined;
+    this.removeAttribute("data-error");
+    try {
+      const value = (this.getAttribute("star") ?? "").trim();
+      let base: Partial<StarNumbers> = {};
+      if (value.startsWith("{")) base = JSON.parse(value) as Partial<StarNumbers>;
+      else if (value !== "") base = starLookOf(value)?.numbers ?? { name: value };
+      const pick = (name: (typeof STAR_ATTRS)[number]): string | null => this.getAttribute(name);
+      const number = (name: (typeof STAR_ATTRS)[number]): number | undefined => (pick(name) === null ? undefined : Number(pick(name)));
+      const numbers = {
+        ...base,
+        ...(pick("temperature-k") !== null ? { temperatureK: number("temperature-k") } : {}),
+        ...(pick("radius-sun") !== null ? { radiusSun: number("radius-sun") } : {}),
+        ...(pick("luminosity-class") !== null ? { luminosityClass: pick("luminosity-class") as StarNumbers["luminosityClass"] } : {}),
+        ...(pick("rotation-days") !== null ? { rotationDays: number("rotation-days") } : {}),
+        ...(pick("activity") !== null ? { activity: number("activity") } : {}),
+        ...(pick("oblateness") !== null ? { oblateness: number("oblateness") } : {}),
+        ...(pick("corona") !== null ? { corona: number("corona") } : {}),
+        ...(pick("estimated") !== null ? { estimated: pick("estimated")!.split(",").map((part) => part.trim()).filter((part) => part !== "") as StarNumbers["estimated"] } : {}),
+      } as StarNumbers;
+      this.#starMade = starLook(numbers, { quality });
+    } catch (error) {
+      this.setAttribute("data-error", `star: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    return this.#starMade;
+  }
+
+  /** The facts of what is drawn: the body's, or the star's (the Sun's with its own size, shape and outlines). */
+  #facts(): BodyFacts {
+    return this.#star()?.facts ?? BODIES[this.body];
+  }
+
   // --- the clock ------------------------------------------------------------------------------------------------------------------------------------
 
   #clockFromAttributes(): void {
@@ -312,10 +382,11 @@ export class WakuseiBody extends HTMLElement {
   }
 
   #request(): LiveRequest {
-    const moons = this.hasAttribute("moons");
+    const star = this.#star();
+    const moons = this.hasAttribute("moons") && !this.hasAttribute("star");
     return {
       id: this.body,
-      start: this.#start ?? (moons ? Date.now() : undefined),
+      start: this.hasAttribute("star") ? undefined : (this.#start ?? (moons ? Date.now() : undefined)),
       startedAt: this.#startedAt,
       rate: Math.max(-1e7, Math.min(1e7, num(this.getAttribute("rate"), 1))),
       moons,
@@ -325,14 +396,14 @@ export class WakuseiBody extends HTMLElement {
         phase: this.hasAttribute("phase") ? num(this.getAttribute("phase"), 0) : undefined,
         spin: this.hasAttribute("meridian") ? num(this.getAttribute("meridian"), 0) : undefined,
       },
-      turn: (this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : this.getAttribute("live") === "off" ? 0 : defaultTurn(this.body)) * (this.#reduce ? REDUCED_TURN : 1),
+      turn: (this.hasAttribute("turn") ? num(this.getAttribute("turn"), 0) : this.getAttribute("live") === "off" ? 0 : star !== undefined ? star.turn.degreesPerSecond : defaultTurn(this.body)) * (this.#reduce ? REDUCED_TURN : 1),
     };
   }
 
   /** The picture moves on its own: a turn, or time running faster than the clock. */
   get #moving(): boolean {
     const r = this.#request();
-    const turning = r.turn !== 0 || ((this.#start !== undefined || r.moons) && r.rate !== 1);
+    const turning = r.turn !== 0 || (r.start !== undefined && r.rate !== 1);
     return this.#reduce ? r.turn !== 0 : turning;
   }
 
@@ -349,7 +420,7 @@ export class WakuseiBody extends HTMLElement {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
     const span = num(this.getAttribute("span-km"), 0);
-    const extent = extentOf(this.body, {
+    const extent = extentOf(this.#facts(), {
       tight: this.getAttribute("fit") === "tight",
       spanKm: span > 0 ? span : undefined,
       scaleTo: scaleTo !== null && scaleTo in BODIES ? scaleTo : undefined,
@@ -438,6 +509,12 @@ export class WakuseiBody extends HTMLElement {
     if (!this.isConnected) return;
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
+    if (this.hasAttribute("star") && this.#star() === undefined) {
+      this.#disposeView(true);
+      this.#stage.innerHTML = "";
+      this.#set("line");
+      return;
+    }
     const delegate = this.look === "line" ? delegates.get(this.body) : undefined;
     if (delegate !== undefined && (await this.#delegated(delegate))) return;
     if (this.#delegateEl !== undefined) {
@@ -452,7 +529,7 @@ export class WakuseiBody extends HTMLElement {
       if (this.look === "line") this.#set("line");
       return;
     }
-    const sig = `${this.body}|${this.look}`;
+    const sig = `${this.#star()?.key ?? this.body}|${this.look}`;
     if (this.#view !== undefined && this.#viewSig !== sig) {
       if (this.#view.live) this.#wantLive = true;
       this.#disposeView();
@@ -485,8 +562,10 @@ export class WakuseiBody extends HTMLElement {
   }
 
   #label(): string {
-    const f = BODIES[this.body];
+    const star = this.#star();
     const ja = this.getAttribute("lang") === "ja";
+    if (star !== undefined) return this.look === "line" ? (ja ? `${star.facts.name.ja}の線画。${star.disclaimer.ja}` : `${star.facts.name.en}, line drawing. ${star.disclaimer.en}`) : ja ? `${star.facts.name.ja}の陰影つきの絵。${star.disclaimer.ja}` : `${star.facts.name.en}, shaded star. ${star.disclaimer.en}`;
+    const f = BODIES[this.body];
     const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "イラスト" : "illustrated drawing" } as const;
     return ja ? `${f.name.ja}の${looks[this.look]}` : `${f.name.en}, ${looks[this.look]}`;
   }
@@ -499,7 +578,9 @@ export class WakuseiBody extends HTMLElement {
     const paper = getComputedStyle(this).getPropertyValue("--wakusei-paper").trim();
     const scene = this.#sceneOf(frame);
     const size = 480;
-    const html = lineSvg(this.body, {
+    const star = this.#star();
+    const draw = star === undefined ? (options: Parameters<typeof lineSvg>[1]) => lineSvg(this.body, options) : (options: Parameters<typeof lineSvg>[1]) => starLineSvg(star, options);
+    const html = draw({
       size,
       pose: scene.pose,
       ...(r.moons ? { moons: true, ...(frame.time !== undefined ? { time: frame.time } : {}), range: scene.extent, moonsAt: (scene.moons ?? []).map((m) => ({ id: m.id as MoonId, x: m.x, y: m.y, z: m.z, distance: Math.hypot(m.x, m.y, m.z) })), orbits: new Map((scene.moons ?? []).filter((m) => m.orbit !== undefined).map((m) => [m.id as string, m.orbit!])) } : {}),
@@ -515,7 +596,7 @@ export class WakuseiBody extends HTMLElement {
 
   #key(state: SceneState): string {
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
-    return `${this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}`;
+    return `${this.#star()?.key ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.
@@ -545,11 +626,13 @@ export class WakuseiBody extends HTMLElement {
     const state = this.#sceneOf(frame);
     this.#sceneState = state;
     this.#viewKey = this.#key(state);
-    this.#viewSig = `${this.body}|${this.look}`;
+    this.#viewSig = `${this.#star()?.key ?? this.body}|${this.look}`;
     this.#stilled = false;
     this.#stage.innerHTML = "";
+    const star = this.#star();
     const item = createBodyItem({
       id: this.body,
+      ...(star === undefined ? {} : { shaded: star.look, facts: star.facts, assetKey: `star:${star.key}` }),
       look: this.look === "illustrated" ? "realistic" : "painted",
       key: this.#viewKey,
       state: () => this.#sceneState ?? state,
@@ -594,7 +677,7 @@ export class WakuseiBody extends HTMLElement {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const span = num(this.getAttribute("span-km"), 0);
     const half = span > 0 ? span : scaleTo !== null && scaleTo in BODIES ? BODIES[scaleTo].radiusKm * 1.06 : 0;
-    return half > 0 ? Math.max(0.01, Math.min(1, BODIES[this.body].radiusKm / half)) : this.getAttribute("fit") === "tight" ? 1 : 1 / ROOM;
+    return half > 0 ? Math.max(this.hasAttribute("star") ? 0.001 : 0.01, Math.min(1, this.#facts().radiusKm / half)) : this.getAttribute("fit") === "tight" ? 1 : 1 / ROOM;
   }
 
   /** Make the view's still, once, when it is in sight. */

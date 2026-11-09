@@ -46,7 +46,7 @@ export interface LineOptions extends PortraitOptions {
   paper?: string;
 }
 
-const NAVY = "#0b1424";
+export const NAVY = "#0b1424";
 
 const hex = (c: string): [number, number, number] => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
 /**
@@ -71,7 +71,7 @@ export function mix(a: string, b: string, t: number): string {
 
 const n = (v: number): string => (Math.round(v * 100) / 100).toString();
 
-interface Frame {
+export interface Frame {
   cx: number;
   cy: number;
   r: number;
@@ -225,13 +225,12 @@ function cachedOrbit(id: MoonId, time: number): Float32Array {
   return path;
 }
 
-function bodyGroup(id: BodyId, pose: Pose, frame: Frame, o: Required<Pick<LineOptions, "stroke" | "paper">>, hair: number, ringScale: number): string {
-  const facts = BODIES[id];
+/** The body's outline, features, rings and dark side as SVG, centred in `frame`. `facts` and `clip` stand in for the table's entry and the clip path's name when a star that is not in the table is drawn. */
+export function bodyGroup(id: BodyId, pose: Pose, frame: Frame, o: Required<Pick<LineOptions, "stroke" | "paper">>, hair: number, ringScale: number, facts: BodyFacts = BODIES[id], clipId = `wk-${id}-clip`): string {
   const sil = silhouette(pose, facts.flattening, axesOf(facts));
   const disc = `<ellipse cx="${n(frame.cx)}" cy="${n(frame.cy)}" rx="${n(frame.r * sil.a)}" ry="${n(frame.r * sil.b)}" transform="rotate(${n(sil.angle)} ${n(frame.cx)} ${n(frame.cy)})"`;
   const rings = ringPaths(facts, pose, frame, o.stroke, hair, ringScale);
   const dark = id === "sun" || facts.kind === "star" ? "" : nightPath(pose, frame);
-  const clipId = `wk-${id}-clip`;
   return [
     rings.back,
     `${disc} fill="${o.paper}" stroke="${o.stroke}" stroke-width="${n(hair * 1.6)}"/>`,

@@ -1,6 +1,7 @@
 // The stars you can see without a telescope: the 5,080 of the Yale Bright Star Catalogue to visual magnitude 6.0, with their names, positions, proper motion, brightness and colour.
 // An opt-in entry point (`@johnmorrisdotca/wakusei-planets/stars`): the table is about 100 kB gzipped and nothing else imports it. Pure: no DOM, no three.js, no state beyond the parsed table.
 import { J2000_MS } from "./clock.ts";
+import { blackBodyRgb } from "./blackbody.ts";
 import { STAR_NAMES, STAR_ROWS } from "./data/stars.ts";
 import { moment, type When } from "./when.ts";
 
@@ -210,11 +211,8 @@ export function starTemperatureK(colourIndex: number): number {
  */
 export function blackBodyColour(kelvin: number): string {
   if (!Number.isFinite(kelvin) || kelvin <= 0) throw new RangeError(`kelvin must be a positive number, got ${kelvin}`);
-  const t = Math.min(40_000, Math.max(1_000, kelvin)) / 100;
-  const red = t <= 66 ? 255 : 329.698727446 * (t - 60) ** -0.1332047592;
-  const green = t <= 66 ? 99.4708025861 * Math.log(t) - 161.1195681661 : 288.1221695283 * (t - 60) ** -0.0755148492;
-  const blue = t >= 66 ? 255 : t <= 19 ? 0 : 138.5177312231 * Math.log(t - 10) - 305.0447927307;
-  const byte = (v: number): string => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0");
+  const [red, green, blue] = blackBodyRgb(kelvin);
+  const byte = (v: number): string => Math.round(v).toString(16).padStart(2, "0");
   return `#${byte(red)}${byte(green)}${byte(blue)}`;
 }
 

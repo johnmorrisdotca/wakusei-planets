@@ -3,6 +3,7 @@
 import { embedSnippet } from "@johnmorrisdotca/kazoku-ui/embed-panel";
 import { BODIES, DWARF_IDS, type BodyId, type Look } from "./facts.ts";
 import { decodeScene } from "./portrait/model.ts";
+import type { StarNumbers } from "./star.ts";
 import { VERSION } from "./version.ts";
 
 /**
@@ -43,6 +44,8 @@ export type EmbedKind = (typeof EMBED_KINDS)[number];
  */
 export interface EmbedOptions {
   body: BodyId;
+  /** A star drawn from numbers instead of the body (`body` is then ignored: give `sun`, the one star among the bodies): the `star` attribute and the numbers' attributes (`temperature-k`, `radius-sun` and the rest) are written, and no entry point besides the element is loaded. `time` and `moons` do not apply to it. */
+  star?: StarNumbers;
   look?: Look;
   /** The date and time as an ISO string, or `now`: the body as the Earth sees it then. Left out, a portrait. */
   time?: string;
@@ -84,12 +87,25 @@ export function entryOf(id: BodyId): string {
   return (DWARF_IDS as readonly string[]).includes(parent) ? "moons-dwarf" : `moons-${parent}`;
 }
 
+/** A star's numbers as the attributes that carry them, in the order they are written: the same names are the iframe's address keys. */
+function starAttributes(star: StarNumbers): [string, string][] {
+  const out: [string, string][] = [["temperature-k", String(star.temperatureK)], ["radius-sun", String(star.radiusSun)]];
+  if (star.luminosityClass !== undefined) out.push(["luminosity-class", star.luminosityClass]);
+  if (star.rotationDays !== undefined) out.push(["rotation-days", String(star.rotationDays)]);
+  if (star.activity !== undefined) out.push(["activity", String(star.activity)]);
+  if (star.oblateness !== undefined) out.push(["oblateness", String(star.oblateness)]);
+  if (star.corona !== undefined) out.push(["corona", String(star.corona)]);
+  if (star.estimated !== undefined && star.estimated.length > 0) out.push(["estimated", star.estimated.join(",")]);
+  return out;
+}
+
 /** The attributes of the element for these choices, in the order they are written. */
 function attributesOf(o: EmbedOptions): [string, string][] {
-  const out: [string, string][] = [["body", o.body], ["look", o.look ?? "realistic"]];
+  const out: [string, string][] = o.star !== undefined ? [["star", o.star.name ?? ""], ["look", o.look ?? "realistic"]] : [["body", o.body], ["look", o.look ?? "realistic"]];
   if (o.size !== undefined && o.size !== 320) out.push(["size", String(o.size)]);
-  if (o.time !== undefined) out.push(["time", o.time]);
-  if (o.moons === true && o.time !== undefined) out.push(["moons", ""]);
+  if (o.star !== undefined) out.push(...starAttributes(o.star));
+  if (o.time !== undefined && o.star === undefined) out.push(["time", o.time]);
+  if (o.moons === true && o.time !== undefined && o.star === undefined) out.push(["moons", ""]);
   if (o.turn !== undefined && o.turn > 0) out.push(["turn", String(o.turn)]);
   return out;
 }
@@ -131,9 +147,10 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
   const cdn = settings.cdn ?? CDN;
   const site = settings.site ?? SITE;
   const size = options.size ?? 320;
-  const query = new URLSearchParams({ body: options.body, look: options.look ?? "realistic" });
-  if (options.time !== undefined) query.set("time", options.time);
-  if (options.moons === true && options.time !== undefined) query.set("moons", "1");
+  const body = options.body;
+  const query = new URLSearchParams(options.star !== undefined ? { ...(options.star.name !== undefined ? { star: options.star.name } : { star: "" }), look: options.look ?? "realistic", ...Object.fromEntries(starAttributes(options.star)) } : { body, look: options.look ?? "realistic" });
+  if (options.time !== undefined && options.star === undefined) query.set("time", options.time);
+  if (options.moons === true && options.time !== undefined && options.star === undefined) query.set("moons", "1");
   if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
   if (options.zoom !== undefined && options.zoom !== 1 && Number.isFinite(options.zoom) && options.zoom > 0) query.set("zoom", String(Math.round(options.zoom * 1000) / 1000));
   return snippet(
@@ -141,10 +158,10 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
     {
       tag: "wakusei-body",
       element: "element",
-      entries: needsShading(options) ? [entryOf(options.body)] : [],
+      entries: needsShading(options) && options.star === undefined ? [entryOf(body)] : [],
       attrs: attributesOf(options),
       name: "planet",
-      iframe: { src: `${site}embed.html?${query.toString()}`, title: BODIES[options.body].name.en, width: size, height: size },
+      iframe: { src: `${site}embed.html?${query.toString()}`, title: options.star !== undefined ? (options.star.name ?? "Star") : BODIES[body].name.en, width: size, height: size },
     },
     cdn,
   );
@@ -214,6 +231,7 @@ export function portraitCode(options: PortraitEmbed, kind: EmbedKind = "html", s
  * ```
  */
 export function embedCredit(options: EmbedOptions): string {
+  if (options.star !== undefined) return "Wakusei Planets by John Morris (MIT). A star drawn from its numbers, not a photo: the colour from its temperature, the size from its radius; the surface cells, spots and glow are illustrative.";
   const base = "Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.";
   const photos = options.look !== "line" && options.look !== "illustrated";
   const painted = photos ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : "";

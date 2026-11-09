@@ -55,8 +55,9 @@ float oval(vec3 p, float lon0, float lat0, float rx, float ry, float soft) {
   return 1.0 - smoothstep(1.0 - soft, 1.0, sqrt(dx * dx + dy * dy));
 }`;
 
-/** The fragment shader of a body: the surface code goes between the prelude and `main`. */
-export function bodyFragment(surface: string, painted: boolean, world = false): string {
+/** The fragment shader of a body: the surface code goes between the prelude and `main`. `limbTint` is the colour the edge of a glowing body shifts to (default the Sun's orange). */
+export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number]): string {
+  const tint = limbTint === undefined ? "vec3(1.0, 0.55, 0.25)" : `vec3(${limbTint.map((v) => v.toFixed(4)).join(", ")})`;
   return /* glsl */ `
 precision highp float;
 uniform vec3 uLight;
@@ -87,7 +88,7 @@ void main() {
   float mu = ${world ? "clamp(dot(n, normalize(vV)), 0.0, 1.0)" : "clamp(n.z, 0.0, 1.0)"};
   if (uEmissive > 0.5) {
     float edge = pow(mu, uLimb);
-    vec3 c = s.rgb * mix(vec3(1.0, 0.55, 0.25), vec3(1.0), edge) * (0.55 + 0.45 * edge);
+    vec3 c = s.rgb * mix(${tint}, vec3(1.0), edge) * (0.55 + 0.45 * edge);
     gl_FragColor = vec4(c, 1.0);
     return;
   }
@@ -246,6 +247,52 @@ void main() {
   float streak = 0.82 + 0.18 * sin(atan(vP.y, vP.x) * 9.0 + r * 3.0);
   a *= streak * smoothstep(3.0, 1.6, r);
   gl_FragColor = vec4(uColour * a, a);
+}`;
+
+/**
+ * The glow round a star that is not the Sun, drawn on a plane behind it: a wide soft bloom, a tight bright inner bloom, a thin glowing edge (the chromosphere), and, on an active star, prominences standing off the edge
+ * with an occasional flare. `uStrength` is how bright, `uSpread` how fast the bloom fades, `uRim` the edge, `uProm` how big the prominences are, `uSeed` where they are and `uTime` moves them.
+ */
+export const STAR_GLOW_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vP;
+uniform vec3 uColour;
+uniform float uStrength;
+uniform float uSpread;
+uniform float uRim;
+uniform float uProm;
+uniform float uSeed;
+uniform float uTime;
+float h1(float n) { return fract(sin(n * 127.1 + uSeed * 91.7) * 43758.5453); }
+float n1(float x) { float i = floor(x); float f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h1(i), h1(i + 1.0), f); }
+void main() {
+  float r = length(vP);
+  if (r < 0.98) discard;
+  float x = r - 1.0;
+  float fade = smoothstep(3.0, 1.6, r);
+  float halo = exp(-x * uSpread) * uStrength;
+  float tight = exp(-x * 14.0) * uStrength * 0.9;
+  float rim = exp(-x * 60.0) * uRim;
+  vec3 col = uColour * (halo + tight) + mix(uColour, vec3(1.0), 0.4) * rim;
+  float a = halo + tight + rim;
+  if (uProm > 0.0) {
+    float ang = atan(vP.y, vP.x);
+    float site = smoothstep(0.55, 0.85, n1(ang * 2.6 + uSeed * 20.0));
+    float drift = 0.75 + 0.25 * sin(uTime * 0.5 + ang * 4.0);
+    float height = site * uProm * 0.3 * drift;
+    float strands = 0.65 + 0.35 * n1(ang * 70.0 + uTime * 0.3);
+    float pr = step(0.0, x) * pow(smoothstep(height, 0.0, x), 1.6) * site * strands * 0.9;
+    vec3 pc = mix(vec3(1.0, 0.42, 0.26), uColour, 0.2);
+    float a0 = uSeed * 6.2831853 + uTime * 0.02;
+    float da = atan(sin(ang - a0), cos(ang - a0));
+    float burst = pow(max(0.0, sin(uTime * 0.9 + uSeed * 40.0)), 24.0) * uProm;
+    float fl = exp(-da * da * 14.0) * exp(-x * 6.0) * burst * 1.6;
+    col += pc * pr + vec3(1.0, 0.92, 0.75) * fl;
+    a += pr + fl;
+  }
+  // additive blending multiplies by alpha, so the root of the light is the alpha and the colour carries the rest: the sum arrives as written
+  float s = sqrt(min(a * fade, 1.0));
+  gl_FragColor = vec4(col / max(a, 1e-4) * s, s);
 }`;
 
 /** A cheap lit ball for a moon seen small beside its planet. */

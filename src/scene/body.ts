@@ -3,9 +3,10 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type * as THREE from "three";
 import type { Pose } from "../ephemeris.ts";
-import { BODIES, type BodyId } from "../facts.ts";
+import { BODIES, type BodyFacts, type BodyId } from "../facts.ts";
+import { silhouette } from "../pose.ts";
 import { cross, type Vec3 } from "../vec.ts";
-import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, RING_FRAGMENT, RING_VERTEX, VERTEX } from "./glsl.ts";
+import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, RING_FRAGMENT, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
 import { lookOf, type BodyLook } from "./look.ts";
 import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
@@ -58,6 +59,12 @@ export interface BodyScene extends Scene3D {
 
 export interface BodyItemOptions {
   id: BodyId;
+  /** The look to draw instead of the one registered for `id`: a star made from numbers (`starLook`). */
+  shaded?: BodyLook;
+  /** The facts to draw instead of the table's for `id` (a star's size and flattening). */
+  facts?: BodyFacts;
+  /** What the renderer keeps this body's materials under, instead of `id`: a star's key, so two stars do not share a program. */
+  assetKey?: string;
   look: "realistic" | "painted";
   /** A key that changes whenever the picture would: the renderer keeps one still for each key. */
   key: string;
@@ -78,7 +85,7 @@ function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THRE
   const a = look.atmosphere;
   return new T.ShaderMaterial({
     vertexShader: VERTEX,
-    fragmentShader: bodyFragment(painted ? PAINTED_SURFACE : look.surface, painted),
+    fragmentShader: bodyFragment(painted ? PAINTED_SURFACE : look.surface, painted, false, look.limbTint),
     uniforms: {
       uLight: { value: new T.Vector3(-0.6, 0.2, 0.77) },
       uRelief: { value: (painted ? (look.painted?.relief ?? 0) : (look.relief ?? 0.6)) },
@@ -89,6 +96,7 @@ function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THRE
       uAtmosPow: { value: a?.power ?? 3 },
       uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },
+      uTime: { value: 0 },
       ...(painted ? { uMark: { value: look.painted?.turn === "hexagon" ? 2 : look.painted?.turn === "bands" ? 1 : 0 } } : {}),
       uRingN: { value: new T.Vector3(0, 1, 0) },
       uRingR: { value: new T.Vector2(1, 2) },
@@ -114,15 +122,16 @@ function setBasis(object: THREE.Object3D, x: Vec3, y: Vec3, z: Vec3, sx = 1, sy 
  * @returns The item for kazoku-ui's shared renderer.
  */
 export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
-  const facts = BODIES[options.id];
+  const facts = options.facts ?? BODIES[options.id];
+  const held = options.assetKey ?? options.id;
   return {
     key: options.key,
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
-      const look = lookOf(options.id) ?? fallbackLook(facts);
+      const look = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
       const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
       const geometry = assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 128, 64), (g) => g.dispose());
-      const shader = assets.acquire(`wk:body:${options.id}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
-      const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${options.id}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
+      const shader = assets.acquire(`wk:body:${held}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
+      const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
 
       const materials = paintedMaterial === undefined ? [shader] : [shader, paintedMaterial];
       const baseWrap = look.wrap ?? (look.atmosphere === undefined ? 0.04 : 0.3);
@@ -194,13 +203,18 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
 
       // the glow of a star
       let glow: THREE.Mesh | undefined;
+      let glowMaterialOf: THREE.ShaderMaterial | undefined;
       if (look.emissive === true) {
         const glowGeometry = assets.acquire("wk:glow", () => new T.PlaneGeometry(6, 6), (g) => g.dispose());
-        const glowMaterial = assets.acquire("wk:glowmat", () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(1, 0.7, 0.3) } } }), (m) => m.dispose());
+        const own = look.glow;
+        const glowMaterial = own === undefined
+          ? assets.acquire("wk:glowmat", () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(1, 0.7, 0.3) } } }), (m) => m.dispose())
+          : assets.acquire(`wk:glowmat:${held}`, () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 } } }), (m) => m.dispose());
         glow = new T.Mesh(glowGeometry, glowMaterial);
         glow.position.z = -5;
         glow.scale.setScalar(1);
         glow.frustumCulled = false;
+        glowMaterialOf = glowMaterial;
         scene.add(glow);
       }
 
@@ -397,7 +411,20 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           mat.uniforms.uAmbient!.value = sky ? 0.012 : baseAmbient;
           mat.uniforms.uRimBase!.value = sky ? 0.02 : 0.12;
         }
-        if (glow !== undefined) glow.scale.setScalar(1);
+        if (look.glow !== undefined) {
+          // the star's surface boils and its prominences move with the clock, but only when a frame is asked for: a star at rest draws nothing
+          const seconds = (performance.now() / 1000) % 100_000;
+          for (const mat of materials) mat.uniforms.uTime!.value = seconds;
+          if (glowMaterialOf !== undefined) glowMaterialOf.uniforms.uTime!.value = seconds;
+        }
+        if (glow !== undefined) {
+          // a flattened star is squeezed along its pole: the glow starts at its edge, not at a round one
+          if (look.glow !== undefined && facts.flattening > 0) {
+            const { b, angle } = silhouette(state.pose, facts.flattening);
+            glow.rotation.z = (-angle * Math.PI) / 180;
+            glow.scale.set(1, b, 1);
+          } else glow.scale.setScalar(1);
+        }
         requestSharperTexture(state);
       };
 

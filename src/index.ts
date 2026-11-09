@@ -6,3 +6,5 @@ export { lineSvg, mix, type LineOptions } from "./line.ts";
 export { ringStrip, type RingStrip } from "./scene/rings.ts";
 export { embedCode, embedCredit, EMBED_KINDS, portraitCode, type EmbedKind, type EmbedOptions, type EmbedSettings, type PortraitEmbed } from "./embed.ts";
 export { addBody, decodeScene, defaultPortrait, encodeScene, PRESETS as PORTRAIT_PRESETS, resolve as layoutPortrait, type Item as PortraitItem, type Placed as PlacedItem, type Portrait, type Preset as PortraitPreset, type Resolved as PortraitLayout } from "./portrait/model.ts";
+export { LUMINOSITY_CLASSES, STAR_SUN, starLook, type LuminosityClass, type StarLook, type StarNumberName, type StarNumbers, type StarPart, type StarStatus } from "./star.ts";
+export { starLineSvg } from "./star-line.ts";

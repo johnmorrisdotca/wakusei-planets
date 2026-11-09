@@ -72,6 +72,10 @@ export interface BodyLook {
   atmosphere?: Atmosphere;
   /** How much the disc darkens toward the limb, 0 to 1. Default 0. */
   limb?: number;
+  /** For a glowing body: the colour its edge shifts to as it darkens (0 to 1 each). Default the Sun's, orange. */
+  limbTint?: readonly [number, number, number];
+  /** For a glowing body: its soft corona. The colour (0 to 1 each), how strong it is and how fast it fades (higher is tighter). Default the Sun's glow. */
+  glow?: { colour: readonly [number, number, number]; strength: number; spread: number; /** How bright the thin glowing edge is. Default 0. */ rim?: number; /** How big the prominences and flares on the edge are, 0 to 1. Default 0. */ prominence?: number; /** 0 to 1: where on the edge they are. */ seed?: number };
   /** How strongly the height shows as relief, 0 to 2. Default 0.6. */
   relief?: number;
   /** How far light wraps round the terminator: 0 is a hard edge (no air), 0.3 a soft one. Default 0.04, or 0.3 with an atmosphere. */
@@ -83,7 +87,9 @@ export interface BodyLook {
   mapped?: boolean;
 }
 
-import { looks, waiting } from "./store.ts";
+import type { StarLook, StarNumbers } from "../star.ts";
+import { starLook } from "../star.ts";
+import { looks, stars, waiting } from "./store.ts";
 
 /**
  * Teach the package how to draw a body in three.js. Each body's entry point (`@johnmorrisdotca/wakusei-planets/jupiter`) calls this once as it loads; call it yourself to add or replace a look.
@@ -119,3 +125,41 @@ export function registerLook(look: BodyLook): BodyLook {
  * ```
  */
 export const lookOf = (id: BodyId): BodyLook | undefined => looks.get(id);
+
+/**
+ * Teach the package a star by name, so an element can be told `star="Betelgeuse"` and draw it from these numbers. The package holds no catalogue of stars: this is where a page puts the few it draws.
+ * The name is matched without regard to case. Registering a name again replaces it.
+ *
+ * @param name - What the star is called in the `star` attribute.
+ * @param numbers - The star's numbers.
+ * @returns The star, ready to draw.
+ *
+ * @example
+ * ```ts
+ * import { registerStarLook, starLookOf } from "@johnmorrisdotca/wakusei-planets/look";
+ *
+ * registerStarLook("Proxima Centauri", { temperatureK: 3042, radiusSun: 0.154, luminosityClass: "V", rotationDays: 83 });
+ * console.log(starLookOf("proxima centauri")?.colour);
+ * ```
+ */
+export function registerStarLook(name: string, numbers: StarNumbers): StarLook {
+  const made = starLook({ name, ...numbers });
+  stars.set(name.trim().toLowerCase(), made);
+  for (const wake of waiting) wake();
+  return made;
+}
+
+/**
+ * The star registered under a name, or `undefined`.
+ *
+ * @param name - The name given to `registerStarLook`, in any case.
+ * @returns The star, or `undefined` when none is registered by that name.
+ *
+ * @example
+ * ```ts
+ * import { starLookOf } from "@johnmorrisdotca/wakusei-planets/look";
+ *
+ * console.log(starLookOf("Vega") === undefined);
+ * ```
+ */
+export const starLookOf = (name: string): StarLook | undefined => stars.get(name.trim().toLowerCase());
