@@ -26,8 +26,8 @@ Zoom draws no more pixels: the canvas is a fixed size, inside the renderer's cap
 | Element | Range | Why |
 |---|---|---|
 | `<wakusei-body>`, line look | 0.1x to 50x | The floor leaves room to see the whole body small. The line drawing is vector (an SVG), so it has detail at any scale; 50x shows a single band or crater rim large. |
-| `<wakusei-body>`, `realistic` and `painted` | 0.1x to 8x | The sharpest painted map is 2048 pixels round the body: sharp to about 1.5x the size at Fit on a picture of the usual size, softening after that. The shader's own detail (bands, craters, ring edges) carries it to 8x, where the map is soft and the shading is what you see. Finer map tiles are a separate piece of work. |
-| `<wakusei-portrait>` | 0.1x to 8x | The same maps, in a scene. A line portrait could go further; the range is the same for both so a scene can change look. |
+| `<wakusei-body>`, `realistic` and `painted` | 0.1x up to where the body's detail runs out: 8x at least, 1000x at most | The 2048 pixel map is sharp to about twice the size at Fit; finer map tiles (for Mars, the Moon, the Earth and ten moons) and the shader's generic detail carry a body further, and every body has its own limit, the table in [Close zoom and map tiles](close-zoom.md). In a moons picture the planet is a small disc in a wide picture, so the same detail is a much larger zoom: Saturn goes to 1000x. |
+| `<wakusei-portrait>` | 0.1x to 8x | The same 2048 pixel maps, in a scene, with no tiles yet. A line portrait could go further; the range is the same for both so a scene can change look. |
 | `<wakusei-space>` | a millionth to 3x | The floor takes the camera out past Neptune in the true scale (a millionth of the Earth's size shows the planets as specks). The ceiling is where the camera reaches the body: it is held 1.05 radii from the surface (`3.4 / zoom` radii away), so past a zoom of about 3.2 nothing moves. 3x is as near as the 2048 pixel maps stay passable. |
 
 Set your own with `zoom-min` and `zoom-max` on the tag (`zoom-min` is held to 1 or less and `zoom-max` to `zoom-min` or more, so Fit is always inside):

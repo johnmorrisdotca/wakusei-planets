@@ -2,6 +2,7 @@
 // The bare element is tried on the demo's page (it registers them all), the demo and the space view with the family's bar over them, the embed page with its + and - buttons and its address, and the code builder.
 // A wheel with Ctrl is sent as an event, so every browser sees the same one; the plain wheel is the browser's own, and so is a touch pinch (Chromium's input, on a phone).
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { routeNoTiles } from "./tiles-fixture.ts";
 
 type View = { yaw?: number; tilt?: number; zoom: number; panX?: number; panY?: number };
 
@@ -98,7 +99,8 @@ test("a bare body: Ctrl and the wheel zoom about the pointer, the plain wheel sc
 
 test("a bare body stops at its zoom range: a line drawing from 0.1x to 50x, a shaded one from 0.1x to 8x, and zoom-min and zoom-max move it", async ({ page }, testInfo) => {
   software(testInfo);
-  await bare(page, { body: "saturn", look: "line" });
+  await routeNoTiles(page);
+  await bare(page, { body: "mars", look: "line" });
   await ctrlWheel(page, "#bare", -2000, 30);
   expect((await last(page))!.zoom, "a line drawing zooms in to 50").toBeCloseTo(50, 0);
   await ctrlWheel(page, "#bare", 2000, 60);
@@ -111,7 +113,7 @@ test("a bare body stops at its zoom range: a line drawing from 0.1x to 50x, a sh
   });
   await page.waitForTimeout(800);
   await ctrlWheel(page, "#bare", -2000, 30);
-  expect((await last(page))!.zoom, "a shaded body zooms in to 8").toBeCloseTo(8, 0);
+  expect((await last(page))!.zoom, "a shaded body with no tiles zooms in to 8: its 2048 picture's reach, and never less").toBeCloseTo(8, 0);
   await ctrlWheel(page, "#bare", 2000, 60);
   expect((await last(page))!.zoom, "and out to a tenth").toBeCloseTo(0.1, 2);
 
@@ -165,6 +167,7 @@ test("a finger can still scroll the page from a bare body at Fit, and a drag wit
 
 test("the demo with its bar: Ctrl and the wheel zoom the body, the plain wheel scrolls the page, and the bar takes the element's range", async ({ page }, testInfo) => {
   desk(testInfo);
+  await routeNoTiles(page);
   await page.goto(`${DEMO}?body=mars&look=line`);
   await page.waitForFunction(() => customElements.get("wakusei-body") && document.querySelector("kazoku-view-controls"));
   await page.locator("#main").evaluate((el) => el.addEventListener("wakusei-view", (event) => ((window as unknown as { __view: unknown }).__view = (event as CustomEvent).detail)));
@@ -183,7 +186,7 @@ test("the demo with its bar: Ctrl and the wheel zoom the body, the plain wheel s
   await page.locator('#looks [data-look="realistic"]').click();
   await expect(page.locator("#main")).toHaveAttribute("look", "realistic");
   await page.waitForTimeout(500);
-  expect(await limits(), "a shaded body is 0.1x to 8x").toMatchObject({ zoomMin: 0.1, zoomMax: 8 });
+  expect(await limits(), "a shaded body with no tiles is 0.1x to 8x: its 2048 picture's reach, and never less").toMatchObject({ zoomMin: 0.1, zoomMax: 8 });
 });
 
 test("the demo's pinch zooms the body with the bar over it", async ({ page, browserName }, testInfo) => {

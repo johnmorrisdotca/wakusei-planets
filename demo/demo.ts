@@ -454,6 +454,7 @@ if (main && controls && pickerBox) {
     setAttr(main!, "look", state.look);
     setAttr(main!, "lang", lang());
     setAttr(main!, "texture-base", "textures/");
+    setAttr(main!, "tiles", "tiles/");
     setAttr(main!, "time", real ? state.time : null);
     setAttr(main!, "rate", real ? String(state.speed) : null);
     setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : real ? null : "0");

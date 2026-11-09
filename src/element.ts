@@ -6,16 +6,20 @@ import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/
 import "./tables/ceres.ts";
 import "./tables/dwarfs.ts";
 import { loadMoonTheory } from "./tables/lazy.ts";
-import { orbitPath, nearMoons, type Pose } from "./ephemeris.ts";
-import { BODIES, ringReach, type BodyFacts, type BodyId, type Look, type MoonId, type HostId } from "./facts.ts";
+import { orbitPath, type Pose } from "./ephemeris.ts";
+import { BODIES, type BodyFacts, type BodyId, type Look, type MoonId } from "./facts.ts";
+import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
-import { starLookOf } from "./scene/look.ts";
+import { detailOf, lookOf, starLookOf } from "./scene/look.ts";
 import { createLive, defaultTurn, REDUCED_TURN, type LiveFrame, type LiveRequest } from "./live.ts";
-import { texturePaths } from "./scene/textures.ts";
-export { TEXTURE_BASE, TEXTURE_FAR_BASE } from "./scene/textures.ts";
+import { texturePaths, tilesBase } from "./scene/textures.ts";
+export { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE } from "./scene/textures.ts";
+import { mapWidthOf, ringWidthOf, zoomLimit } from "./scene/reach.ts";
+import type { DetailStats } from "./scene/detail.ts";
+import type { TileLevel } from "./scene/tiles.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
@@ -68,23 +72,6 @@ function turnPose(pose: Pose, axis: Vec3, degrees: number): void {
   pose.light = turnVec(pose.light, axis, degrees);
 }
 
-/** The half-width of a body's picture, in its radii, when it has no scale of its own: the globe takes a little under half the height, so its rings, glow and haze have room round it. */
-const ROOM = 2.2;
-
-function extentOf(f: BodyFacts, options: { scaleTo?: BodyId; spanKm?: number; moons?: boolean; range?: number; tight?: boolean }): number {
-  if (options.moons === true && f.parent === undefined && f.id !== "sun") {
-    const near = nearMoons(f.id as HostId);
-    const far = Math.max(1.8, ringReach(f) * 1.15, ...near.map((m) => m.reach * 1.1));
-    return options.range ?? far;
-  }
-  if (options.spanKm !== undefined) return options.spanKm / f.radiusKm;
-  if (options.scaleTo !== undefined) return (BODIES[options.scaleTo].radiusKm * 1.06) / f.radiusKm;
-  if (options.tight !== true) return ROOM;
-  // tight (a thumbnail): the picture holds the body and its rings, and an irregular body (Deimos, Phobos, Nix, Hydra) whole along its longest axis
-  const longest = f.axesKm === undefined ? 1 : Math.max(...f.axesKm) / f.radiusKm;
-  return Math.max(1.06, ringReach(f) * 1.04, longest * 1.06);
-}
-
 /** Keep the body in the picture: at least a quarter of its width stays inside the edge, however far the view is moved. `pan` is in half-widths of the picture. */
 function clampPan(pan: number, extent: number, zoom: number): number {
   const half = extent / Math.max(0.05, zoom);
@@ -94,12 +81,11 @@ function clampPan(pan: number, extent: number, zoom: number): number {
 
 /**
  * The zoom range of a body that carries its own controls. The floor is arbitrary: a tenth of Fit leaves room to see the whole body small. A line drawing is vector and has detail at any scale, so it goes to 50.
- * The shaded looks stop at 8: the sharpest painted map is 2048 pixels round the body, sharp to about 1.5 times the size at Fit on a picture of the usual size and softening after that, and 8 times is as far as
- * the shader's own detail (bands, craters, ring edges) carries before the map runs out.
+ * The shaded looks go as far as their detail does (`#limits`, `scene/reach.ts`): the real detail of a map runs out when a texel of it is wider than about a pixel and a half, and the generic detail the shader adds
+ * (noise, so a body never goes smooth) carries a rocky body twice as far and a soft one (a gas giant) three times. The widest map of a body is its finest tile level when the tiles are found, else its 2048 picture, so
+ * the limit of a body with tiles rises when they are found. No body goes below 8, the limit these looks had before the tiles, and none above 1000.
  */
 const LINE_LIMITS = { zoomMin: 0.1, zoomMax: 50, tiltMax: 90 } as const;
-const SHADED_LIMITS = { zoomMin: 0.1, zoomMax: 8, tiltMax: 90 } as const;
-
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 320px); max-width: 100%; aspect-ratio: 1 / 1; position: relative; contain: layout style; }
 #stage { position: absolute; inset: 0; }
@@ -114,7 +100,8 @@ const TEMPLATE = `<style>
  * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `span-km` (draw to scale: the half-width of the picture in kilometres, the same in every picture of a lineup), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
  *
  * It carries the shared view controls itself: a drag turns the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), the arrow keys, + and - and 0 work once it is focused.
- * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 8 for the shaded looks, 0.1 to 50 for the line drawing); a `<kazoku-view-controls for="...">` takes over and reads it.
+ * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
+ * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
  *
  * @example
@@ -129,7 +116,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "lang", "labels"];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "lang", "labels"];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -166,6 +153,9 @@ export class WakuseiBody extends HTMLElement {
   #reduce = false;
   #hands: ElementControls | undefined;
   #handsKey = "";
+  #limitKey = "";
+  #tileLevels: readonly TileLevel[] | undefined;
+  #tiles: DetailStats | undefined;
   #hover = (): void => void this.goLive();
   #onContext = (state: ContextState): void => {
     if (state === "unavailable") this.#set("unavailable");
@@ -209,8 +199,8 @@ export class WakuseiBody extends HTMLElement {
     return this.#state;
   }
   /** Numbers for a test or a status line: the state, the texture width in use and the renderer's own counts. */
-  get stats(): { state: WakuseiState; textureWidth: number; anchors: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined } {
-    return { state: this.#state, textureWidth: this.#textureWidth, anchors: this.#live.anchors, renderer: this.#renderer?.stats };
+  get stats(): { state: WakuseiState; textureWidth: number; anchors: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; tiles: DetailStats | undefined; zoomMax: number | undefined } {
+    return { state: this.#state, textureWidth: this.#textureWidth, anchors: this.#live.anchors, renderer: this.#renderer?.stats, tiles: (this.#view?.scene as BodyScene | undefined)?.detail ?? this.#tiles, zoomMax: this.#hands?.controller.limits.zoomMax };
   }
 
   connectedCallback(): void {
@@ -266,6 +256,10 @@ export class WakuseiBody extends HTMLElement {
     if (name === "time" || name === "rate") this.#clockFromAttributes();
     if (name === "live") this.#applyHover();
     if (name === "live" || name === "look" || name === "body") this.#carry();
+    if (name === "body" || name === "look" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
+      if (name === "body" || name === "look") this.#tileLevels = undefined;
+      this.#refreshLimits();
+    }
     this.#lastAnchors = -1;
     this.#queue();
   }
@@ -311,10 +305,15 @@ export class WakuseiBody extends HTMLElement {
   #carry(): void {
     const on = this.getAttribute("live") !== "off" && !(this.look === "line" && delegates.has(this.body));
     const key = `${on}|${this.look === "line"}`;
-    if (this.#handsKey === key) return;
+    if (this.#handsKey === key) {
+      this.#refreshLimits();
+      return;
+    }
     this.#hands?.unbind();
     this.#handsKey = key;
-    this.#hands = carryControls(this, { on, limits: this.look === "line" ? LINE_LIMITS : SHADED_LIMITS, grabRadius: this.discRadius, objectSize: { width: this.discRadius * 2, height: this.discRadius * 2 }, onChange: (view) => this.setView(view) });
+    const limits = this.#limits();
+    this.#limitKey = `${limits.zoomMax}|${this.look}`;
+    this.#hands = carryControls(this, { on, limits, grabRadius: this.discRadius, objectSize: { width: this.discRadius * 2, height: this.discRadius * 2 }, onChange: (view) => this.setView(view) });
     if (this.#zoom !== 1 || this.#yaw !== 0 || this.#tilt !== 0 || this.#panX !== 0 || this.#panY !== 0 || this.#roll !== 0) {
       if (!this.hasAttribute("data-kazoku-bar")) this.setView({});
     }
@@ -418,18 +417,48 @@ export class WakuseiBody extends HTMLElement {
     const roll = -this.#roll;
     if (roll !== 0) turnPose(pose, [0, 0, 1], roll);
     const r = this.#request();
+    const extent = this.#extent(r.moons);
+    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll) : undefined;
+    return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons };
+  }
+
+  /** Body radii from the middle of the picture to its edge at zoom 1, for the attributes now. */
+  #extent(moons: boolean): number {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
     const span = num(this.getAttribute("span-km"), 0);
-    const extent = extentOf(this.#facts(), {
+    return extentOf(this.#facts(), {
       tight: this.getAttribute("fit") === "tight",
       spanKm: span > 0 ? span : undefined,
       scaleTo: scaleTo !== null && scaleTo in BODIES ? scaleTo : undefined,
-      moons: r.moons,
+      moons,
       range: range !== undefined && range > 0 ? range : undefined,
     });
-    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll) : undefined;
-    return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons };
+  }
+
+  /**
+   * The zoom range now: a line drawing to 50; a shaded body as far as its detail goes (`scene/reach.ts`), which depends on how big its picture is (the radii it reaches at zoom 1: a moons picture reaches
+   * six or more), on the widest map it has (the finest tile level, once the tiles are found) and on whether its surface is soft.
+   */
+  #limits(): { zoomMin: number; zoomMax: number; tiltMax: number } {
+    if (this.look === "line") return LINE_LIMITS;
+    if (this.hasAttribute("star")) return { zoomMin: 0.1, zoomMax: zoomLimit(1, 0, false), tiltMax: 90 };
+    const moons = this.hasAttribute("moons");
+    const look = lookOf(this.body);
+    const painted = this.look !== "illustrated" && look?.painted !== undefined;
+    const width = mapWidthOf(look, painted, this.#tileLevels);
+    const smooth = look !== undefined && detailOf(look).stretch > 1;
+    return { zoomMin: 0.1, zoomMax: look?.emissive === true ? zoomLimit(1, 0, false) : zoomLimit(this.#extent(moons), width, smooth, painted ? ringWidthOf(look, BODIES[this.body].radiusKm) : 0), tiltMax: 90 };
+  }
+
+  /** Tell the shared controls the zoom range, when it has changed (a new body, the moons turned on, the tiles found). */
+  #refreshLimits(): void {
+    if (this.#hands === undefined) return;
+    const limits = this.#limits();
+    const key = `${limits.zoomMax}|${this.look}`;
+    if (key === this.#limitKey) return;
+    this.#limitKey = key;
+    this.#hands.setLimits(limits);
   }
 
   #moonsOf(frame: LiveFrame, extent: number, tilt: number, roll: number): MoonDraw[] {
@@ -639,6 +668,15 @@ export class WakuseiBody extends HTMLElement {
       state: () => this.#sceneState ?? state,
       ...texturePaths(this),
       wantedWidth: (discPx) => discPx * Math.min(2, window.devicePixelRatio || 1) * 1.6,
+      tiles: {
+        base: () => tilesBase(this),
+        ratio: () => window.devicePixelRatio || 1,
+        allowed: () => ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) > 2,
+        onLevels: (levels) => {
+          this.#tileLevels = levels;
+          this.#refreshLimits();
+        },
+      },
       redraw: () => this.#view?.invalidate(),
       report: (note) => {
         this.#textureWidth = note.width;
