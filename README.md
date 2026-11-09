@@ -290,6 +290,20 @@ A body that turns by itself and a moving sky, in HTML:
 <wakusei-portrait scene="look:painted~jupiter_0_0_0.3_0~io_0_0_0.1_0"></wakusei-portrait>
 ```
 
+## What is nearby, and when bodies come close
+
+`/nearest` answers "what is next to this?" for the Sun, the planets, the dwarf planets and the moons. `nearest` and `within` list the bodies closest to one on a date, by the angle between them in the sky (of the Earth, a place on it or another body) or by the distance between them in space. `closestApproach` and `conjunctions` search a span of time: coarse steps, then each minimum narrowed to about a second. Every result carries the accuracy the theories are held to; against JPL Horizons the great conjunction of 2020 is within 270 s and 0.3 arc-seconds, and the Moon's approaches to the planets within 8 s and 1.5 arc-seconds. [The guide](docs/guides/nearest.md) has the options and the numbers.
+
+```ts
+import { closestApproach, nearest } from "@johnmorrisdotca/wakusei-planets/nearest";
+
+const planets = nearest("moon", { kind: "planet", count: 2, date: Date.UTC(2026, 11, 27, 16) });
+console.log(planets.map((row) => `${row.id} ${row.angle.toFixed(2)} degrees`).join(", "));
+
+const great = closestApproach("jupiter", "saturn", { from: Date.UTC(2020, 11, 1), to: Date.UTC(2021, 0, 1) });
+console.log(great.time.toISOString(), great.angle?.toFixed(2), "degrees");
+```
+
 ## The space view
 
 [The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html) puts the Earth, the Moon, the Sun and the planets in their places for any date and time, in one WebGL context: the Moon's phase and the Earth's day side come out of the real Sun's light. Zoom from the Earth out to the whole solar system, in a compressed scale (every direction real, the distances squeezed) or the true one, and run time forwards or backwards. Positions come from this package's own models.
@@ -318,6 +332,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
+| `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`) and when two bodies come closest (`closestApproach`, `conjunctions`). No browser. |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
 | `.../all` | Every body's shaded look, at once. |
@@ -351,6 +366,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
 | [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |
 | [The stars you can see without a telescope](docs/guides/stars.md) | 5,080 stars with names, positions, proper motion, distance and colour |
+| [What is nearby, and when bodies come close](docs/guides/nearest.md) | The nearest bodies to a body on a date, closest approaches and conjunctions, and how close they are to Horizons |
 | [Famous spacecraft](docs/guides/spacecraft.md) | Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker and Webb: where they are and their whole voyage |
 | [The Sun and Moon from a place](docs/guides/suncalc.md) | Position, sunrise and sunset, Moon rise, set and phase; a drop-in for suncalc |
 | [Coordinate conversions](docs/guides/coordinates.md) | Pure spherical, ecliptic, equatorial and horizontal coordinate conversions |
