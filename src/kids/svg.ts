@@ -38,10 +38,10 @@ export function kidsRoom(page: PageName, orientation: Orientation = "portrait"):
 const esc = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const n = (v: number): string => (Math.round(v * 100) / 100).toString();
 
-/** The width of a text in millimetres, estimated on the wide side so a font that is wider than the rounded ones (a fallback on a server) still fits: a full-width character is as wide as the type is tall, a Latin capital or a digit 0.74 of it, a small letter 0.64, a space or a stop 0.34. */
+/** The width of a text in millimetres, estimated on the wide side so a font that is wider than the rounded ones (a fallback on a server) still fits: a full-width character is as wide as the type is tall, a Latin capital or a digit 0.82 of it, a small letter 0.7 (DejaVu Sans Bold, the usual fallback on a server, is that wide), a space or a stop 0.38. */
 export function textWidth(text: string, sizeMm: number): number {
   let total = 0;
-  for (const ch of text) total += /[\u3000-\u30ff\u4e00-\u9fff\uff00-\uffef]/.test(ch) ? sizeMm : /[ .,:;!'|]/.test(ch) ? 0.34 * sizeMm : /[A-Z0-9]/.test(ch) ? 0.74 * sizeMm : 0.64 * sizeMm;
+  for (const ch of text) total += /[\u3000-\u30ff\u4e00-\u9fff\uff00-\uffef]/.test(ch) ? sizeMm : /[ .,:;!'|]/.test(ch) ? 0.38 * sizeMm : /[A-Z0-9]/.test(ch) ? 0.82 * sizeMm : 0.7 * sizeMm;
   return total;
 }
 
