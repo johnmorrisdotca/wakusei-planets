@@ -52,20 +52,23 @@ jobs:
       - name: Every way of using it in the README and the guides, built and opened in a browser
         run: pnpm test:usage
   demo:
-    # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit. The desk's Chromium draws every body in software, so it is dealt out to six jobs (`--shard`).
+    # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit. The desk's Chromium draws every body in software, so it is dealt out to eight jobs (`--shard`).
+    # 25 minutes: shard 2 of 6 sat at 14:44 of 15 and was cancelled on 2026-11-10 (MODULES-766); eight shards and room for a slow apt mirror.
     name: demo (${{ matrix.project }} ${{ matrix.shard }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { project: chromium-desk, shard: 1/6 }
-          - { project: chromium-desk, shard: 2/6 }
-          - { project: chromium-desk, shard: 3/6 }
-          - { project: chromium-desk, shard: 4/6 }
-          - { project: chromium-desk, shard: 5/6 }
-          - { project: chromium-desk, shard: 6/6 }
+          - { project: chromium-desk, shard: 1/8 }
+          - { project: chromium-desk, shard: 2/8 }
+          - { project: chromium-desk, shard: 3/8 }
+          - { project: chromium-desk, shard: 4/8 }
+          - { project: chromium-desk, shard: 5/8 }
+          - { project: chromium-desk, shard: 6/8 }
+          - { project: chromium-desk, shard: 7/8 }
+          - { project: chromium-desk, shard: 8/8 }
           - { project: chromium-phone, shard: 1/1 }
           - { project: webkit-desk, shard: 1/1 }
           - { project: webkit-phone, shard: 1/1 }
