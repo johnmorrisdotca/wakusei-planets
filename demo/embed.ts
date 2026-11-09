@@ -7,12 +7,14 @@
 //   &tilt=  &pitch=  &phase=     a portrait's pose, degrees
 //   ?star=Betelgeuse             a star drawn from numbers instead of a body: its name, then &temperature-k=3600 &radius-sun=760 &luminosity-class=Ia &rotation-days= &oblateness= &activity= &corona= &estimated=radiusSun
 //   ?scene=...                   a scene of the portrait builder instead of one body (the text its address holds)
+//   ?lineup=1                    the size line-up instead: &stars=all|bright|largest (or ids)  &planets=1  &layout=row|stack  &zoom=0..1  &at=<id>  &turn=off  &look=painted  &labels=off
 //   &zoom=2                      how far in the picture starts; a drag, a pinch, Ctrl and the wheel, the keys and the + and - buttons zoom it, and the address keeps up (the view's tilt is `vtilt`, for `tilt` is the pose's)
 // It draws only when something changes, and nothing while it is out of sight or the tab is hidden.
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
 import type { ViewChangeDetail, ViewControlsElement } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import "../src/element.ts";
 import "../src/portrait/element.ts";
+import "../src/lineup/element.ts";
 import "../src/bodies/all.ts";
 import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
@@ -52,12 +54,26 @@ function body(): void {
   frame.append(element);
 }
 
-if (query.has("scene")) portrait();
+/** The size line-up: the element takes its own attributes from the address, and carries its own zoom slider. */
+function lineup(): void {
+  const element = document.createElement("wakusei-lineup");
+  for (const name of ["stars", "layout", "zoom", "at", "turn", "look", "lang", "labels", "controls"]) {
+    const value = query.get(name);
+    if (value !== null) element.setAttribute(name, value);
+  }
+  if (query.get("planets") === "1") element.setAttribute("planets", "");
+  element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
+  frame.classList.add("lineup");
+  frame.append(element);
+}
+
+if (query.has("lineup")) lineup();
+else if (query.has("scene")) portrait();
 else body();
 
 // the element carries the drag, pinch, wheel and keys; the bar adds the + and - buttons and keeps the view in the address, and takes the hands over while it is there. A frame under 240 pixels has no room for the bar: the hands alone.
 // The bar is added once the element has drawn (its first draw is the next microtask), so the picture is what it was and the bar's own work does not delay it.
-const view = frame.firstElementChild as (HTMLElement & { setView(view: Partial<ViewChangeDetail>): void }) | null;
+const view = query.has("lineup") ? null : (frame.firstElementChild as (HTMLElement & { setView(view: Partial<ViewChangeDetail>): void }) | null);
 if (view !== null) {
   view.id = "view";
   view.tabIndex = 0;

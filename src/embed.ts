@@ -3,6 +3,8 @@
 import { embedSnippet } from "@johnmorrisdotca/kazoku-ui/embed-panel";
 import { BODIES, DWARF_IDS, type BodyId, type Look } from "./facts.ts";
 import { decodeScene } from "./portrait/model.ts";
+import type { LineupSet } from "./lineup/data.ts";
+import type { LineupLayout } from "./lineup/layout.ts";
 import type { StarNumbers } from "./star.ts";
 import { VERSION } from "./version.ts";
 
@@ -215,6 +217,102 @@ export function portraitCode(options: PortraitEmbed, kind: EmbedKind = "html", s
     { tag: "wakusei-portrait", element: "portrait", entries, attrs, name: "portrait", iframe: { src: `${site}embed.html?${new URLSearchParams({ scene: options.scene }).toString()}`, title: "Wakusei Planets portrait", width, height: Math.round(width / scene.aspect) } },
     cdn,
   );
+}
+
+/**
+ * The size line-up to put in a page: which stars, the planets, how they stand, where the camera starts, and how wide it is.
+ *
+ * @example
+ * ```ts
+ * import { lineupCode, type LineupEmbed } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * const options: LineupEmbed = { stars: "bright", planets: true, at: "betelgeuse", width: 720 };
+ * console.log(lineupCode(options, "html"));
+ * ```
+ */
+export interface LineupEmbed {
+  /** `all` (the default), `bright` or `largest`, or a list of ids from `LINEUP_STARS`. */
+  stars?: LineupSet | readonly string[];
+  /** Add the Earth and Jupiter. */
+  planets?: boolean;
+  /** `row` (the default) or `stack`. */
+  layout?: LineupLayout;
+  /** The id of the body the camera starts on; the Sun when left out. */
+  at?: string;
+  /** Where the camera starts, 0 to 1 (over `at`). */
+  zoom?: number;
+  /** False stops the bodies turning by themselves. */
+  turn?: boolean;
+  /** The planets' look: `realistic` (the default) or `painted`. */
+  look?: "realistic" | "painted";
+  /** The words: `en` (the default) or `ja`. */
+  lang?: "en" | "ja";
+  /** Pixels across; default 720. */
+  width?: number;
+}
+
+/** The element's attributes for a line-up, in the order they are written. */
+function lineupAttributes(o: LineupEmbed): [string, string][] {
+  const out: [string, string][] = [];
+  const stars = o.stars === undefined || o.stars === "all" ? undefined : typeof o.stars === "string" ? o.stars : o.stars.join(",");
+  if (stars !== undefined) out.push(["stars", stars]);
+  if (o.planets === true) out.push(["planets", ""]);
+  if (o.layout === "stack") out.push(["layout", "stack"]);
+  if (o.zoom !== undefined && Number.isFinite(o.zoom)) out.push(["zoom", String(Math.round(o.zoom * 1000) / 1000)]);
+  else if (o.at !== undefined && o.at !== "sun") out.push(["at", o.at]);
+  if (o.turn === false) out.push(["turn", "off"]);
+  if (o.look === "painted") out.push(["look", "painted"]);
+  if (o.lang === "ja") out.push(["lang", "ja"]);
+  if (o.width !== undefined && o.width !== 720) out.push(["size", String(o.width)]);
+  return out;
+}
+
+/**
+ * The text that puts the size line-up in a page, for each way a page is made, as `embedCode` does for a single body: a script tag, an ES module, React, Vue, Angular, Svelte or an iframe of the demo's `embed.html`.
+ * Every way is built, parsed or run by the package's tests.
+ *
+ * @param options - The stars, the planets, the layout, where the camera starts and the width.
+ * @param kind - The way the page is made; `html` by default.
+ * @param settings - The CDN and the demo's address, when they are not the package's own.
+ * @returns The text to paste into the page's source.
+ *
+ * @example
+ * ```ts
+ * import { lineupCode } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(lineupCode({ stars: "largest", at: "vy-canis-majoris" }, "react"));
+ * ```
+ */
+export function lineupCode(options: LineupEmbed, kind: EmbedKind = "html", settings: EmbedSettings = {}): string {
+  const cdn = settings.cdn ?? CDN;
+  const site = settings.site ?? SITE;
+  const width = options.width ?? 720;
+  const attrs = lineupAttributes(options);
+  const query = new URLSearchParams([["lineup", "1"], ...attrs.map(([name, value]) => [name, name === "planets" ? "1" : value] as [string, string])]);
+  return snippet(
+    kind,
+    { tag: "wakusei-lineup", element: "lineup", entries: [], attrs, name: "lineup", iframe: { src: `${site}embed.html?${query.toString()}`, title: "Wakusei Planets size line-up", width, height: Math.round((width * 9) / 16) } },
+    cdn,
+  );
+}
+
+/**
+ * The credits that travel with a picture of the size line-up: the radii are from refereed papers, the stars are drawn from numbers and not photographs, and the planets' sizes are the IAU's and NASA's.
+ *
+ * @param options - The choices, so the planets and their pictures are named only when they are used.
+ * @returns A short line of credit to put near the picture.
+ *
+ * @example
+ * ```ts
+ * import { lineupCredit } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(lineupCredit({ planets: true }));
+ * ```
+ */
+export function lineupCredit(options: LineupEmbed): string {
+  const base = "Wakusei Planets by John Morris (MIT). Sizes at true relative scale; each star's radius is from a refereed paper that measured its angular diameter (sources and disagreements in the package's NOTICE.md). The stars are drawn from their numbers, not photographs: the cells, spots and glow are illustrative.";
+  const planets = options.planets === true ? " Earth and Jupiter: IAU and NASA sizes." + (options.look === "painted" ? " Surface pictures: NASA and Nestaeric (CC BY 4.0), see NOTICE.md." : "") : "";
+  return `${base}${planets}`;
 }
 
 /**
