@@ -76,7 +76,8 @@ test("Venus: the Turn button turns the body its real way, the ground goes left",
   await page.locator("#main").evaluate((el) => (el as unknown as { goLive(): Promise<boolean> }).goLive());
   await expect(page.locator("#main")).toHaveAttribute("data-state", "live");
   await page.waitForTimeout(200);
-  const turned = await movedBy(page, view, () => page.waitForTimeout(500), { settle: 100, reach: 40, window: [0.4, 0.6, 0.4, 0.6] });
+  // the two pictures of a wide stage take longer to photograph on a slow machine, and the globe goes on turning meanwhile: the search reaches well past the 30 pixels the first half second moves it
+  const turned = await movedBy(page, view, () => page.waitForTimeout(500), { settle: 100, reach: 110, window: [0.4, 0.6, 0.4, 0.6] });
   expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-3);
 });
 

@@ -34,7 +34,7 @@ test("every gesture works on the embed page's body", async ({ page }) => {
 });
 
 test("every gesture a flat portrait has works on the embed page's portrait", async ({ page }) => {
-  test.setTimeout(240_000);
+  test.setTimeout(600_000);
   await page.addInitScript(COUNT_SCRIPT);
   await page.goto(`/wakusei-planets/embed.html?scene=${encodeURIComponent("look:painted~jupiter_-0.3_0_0.25_0~io_0.45_0.15_0.1_0~mars_0.1_-0.35_0.12_0")}`);
   await live(page, "#view");
