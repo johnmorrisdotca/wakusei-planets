@@ -87,7 +87,8 @@ export interface BodyItemOptions {
   tiles?: { base(): string | undefined; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
 }
 
-function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THREE.ShaderMaterial {
+/** The shader material of a body: its surface code with the look's lighting and glow uniforms. A star made from numbers is drawn with it too (the size line-up). */
+export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THREE.ShaderMaterial {
   const a = look.atmosphere;
   // a glowing body (the Sun, a star) is drawn as it always was: no window of finer map and no generic detail
   const generic = look.emissive !== true;

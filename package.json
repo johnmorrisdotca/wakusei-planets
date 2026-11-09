@@ -89,12 +89,14 @@
   "sideEffects": [
     "./dist/element.js",
     "./dist/portrait/element.js",
+    "./dist/lineup/element.js",
     "./dist/space/element.js",
     "./dist/bodies/*.js",
     "./dist/tables/*.js",
     "./dist/craft/*.js",
     "./src/element.ts",
     "./src/portrait/element.ts",
+    "./src/lineup/element.ts",
     "./src/space/element.ts",
     "./src/bodies/*.ts",
     "./src/tables/*.ts",
@@ -118,6 +120,11 @@
       "types": "./dist/portrait/element.d.ts",
       "import": "./dist/portrait/element.js",
       "default": "./dist/portrait/element.js"
+    },
+    "./lineup": {
+      "types": "./dist/lineup/element.d.ts",
+      "import": "./dist/lineup/element.js",
+      "default": "./dist/lineup/element.js"
     },
     "./space": {
       "types": "./dist/space/index.d.ts",
