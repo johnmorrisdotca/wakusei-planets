@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-08
+
 - **Moons follow published theories, and every planet is measured on 60 dates from 1800 to 2200** (MODULES-528, 511). Io, Europa, Ganymede and Callisto come from L1.2 (Lainey, Duriez and Vienne, IMCCE) and Mimas to Iapetus from TASS1.7 (Vienne and Duriez, IMCCE; the table as Orbiter keeps it, MIT, with its notice in NOTICE.md), as optional entry points `tables/galilean` and `tables/saturn-moons` that `tables` loads and the web component fetches by dynamic import only when it draws Jupiter's or Saturn's moons (its own chunk stays 68 kB gzipped, 68,286 bytes on 0.21.0; `test/lazy-size.test.ts`); on 60 dates Io is 0.11 degree from Horizons (0.19 before), Europa 0.04 (0.15), Ganymede 0.03 (0.36), Callisto 0.014 (0.14), Mimas 1.7 (9.0), Tethys 0.21 (0.61) and Iapetus 0.03 (0.88). The fitted orbits of the other moons now use Horizons for 1800 to 2199 instead of 1950 to 2050 (Phobos 4.0 degrees to 0.4 in 1800, Ariel 1.4 to 0.2, Nereid 13.5 to 4.6). `tables/vsop` is a finer VSOP87B cut (2,581 terms, 32 kB gzipped, not in `tables`): every planet within 2 arc-seconds of Horizons on 60 dates; the default cut stays 13.8 kB and Jupiter and Neptune have their drift from DE441 taken out (Neptune 5.7 to 2.6 arc-seconds). New `test/accuracy-dense.test.ts`, `test/accuracy-fine.test.ts`, `test/moon-theories.test.ts` (the two ports reproduce IMCCE's published check values), `scripts/fetch-horizons-dense.py`, `scripts/compare/dense.mjs`; the accuracy limits only went down. A bundle of every export and optional table is 76,978 bytes gzipped, 11,318 more. GUST86 and ESAPHO/ESADEI are not used: their notice forbids passing on changed files.
 
 ## [0.21.0] - 2026-11-08
