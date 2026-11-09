@@ -409,7 +409,7 @@ test("changes to the space view give back what they took: the zooms, the scales,
       await goTo(page, place);
       await settle(page, 500);
     }
-    for (const [group, name] of [["Scale", "True"], ["Look", "Painted"], ["Earth's light", "Always lit"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"]] as const) {
+    for (const [group, name] of [["Scale", "True"], ["Look", "Painted"], ["Light", "Always lit"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Light", "The Sun's"]] as const) {
       await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
       await settle(page, 500);
       // the painted pictures arrive over the network: a round is not over until they have, so that a slow machine takes the same steps as a fast one before the baseline

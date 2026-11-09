@@ -195,12 +195,12 @@ export function createTrack(initialStepMs = 1000) {
   };
 }
 
-const PERIOD_DAYS: Record<SpacePlanet, number> = { mercury: 87.97, venus: 224.7, mars: 686.98, jupiter: 4332.6, saturn: 10_759, uranus: 30_688, neptune: 60_182, pluto: 90_560 };
+const PERIOD_DAYS: Record<SpacePlanet | "earth", number> = { mercury: 87.97, venus: 224.7, earth: 365.256, mars: 686.98, jupiter: 4332.6, saturn: 10_759, uranus: 30_688, neptune: 60_182, pluto: 90_560 };
 
 /**
- * The path a planet takes round the Sun, as `count + 1` points round one trip from where the planet is at `ms`, from the Sun, in astronomical units and the scene's axes.
+ * The path a planet or the Earth takes round the Sun, as `count + 1` points round one trip from where the planet is at `ms`, from the Sun, in astronomical units and the scene's axes.
  *
- * @param id - The planet.
+ * @param id - The planet or `earth`.
  * @param ms - The moment the path starts at, in milliseconds since the Unix epoch.
  * @param count - How many segments to cut the trip into.
  * @returns `count + 1` points; the last is near the first.
@@ -213,7 +213,7 @@ const PERIOD_DAYS: Record<SpacePlanet, number> = { mercury: 87.97, venus: 224.7,
  * console.log(points.length);
  * ```
  */
-export function planetOrbit(id: SpacePlanet, ms: number, count = 96): Vec3[] {
+export function planetOrbit(id: SpacePlanet | "earth", ms: number, count = 96): Vec3[] {
   const points: Vec3[] = [];
   for (let i = 0; i <= count; i += 1) points.push(scene(heliocentric(id, ms + (i / count) * PERIOD_DAYS[id] * DAY_MS)));
   return points;

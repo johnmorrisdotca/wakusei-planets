@@ -50,7 +50,7 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
   await expect(sky).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   const heap = () => page.evaluate(() => (globalThis as unknown as { gc?: () => void }).gc?.()).then(() => page.evaluate(() => (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize));
   const places = ["Moon", "Sun", "Inner planets", "Whole solar system", "Jupiter and its moons", "Earth"];
-  const toggles: readonly (readonly [string, string])[] = [["Scale", "True"], ["Look", "Painted"], ["Earth's light", "Always lit"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"]];
+  const toggles: readonly (readonly [string, string])[] = [["Scale", "True"], ["Look", "Painted"], ["Light", "Always lit"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Light", "The Sun's"]];
   let i = 0;
   const step = async () => {
     await page.getByRole("group", { name: "Go to" }).getByRole("button", { name: places[i % places.length]!, exact: true }).dispatchEvent("click");
@@ -65,7 +65,7 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
   // A body's shader is compiled the first time it is drawn and kept until the look changes: a bounded cache (the bodies and moons of the page). So the count is taken from a state that is the same every time:
   // first scale and light, riding nothing, the Earth reached (the glide over), then the look changed to painted and back so every body is made again with only the Earth's view in sight, and the sky held at the date the page opened on.
   const rest = async () => {
-    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Earth's light", "The Sun's"], ["Go to", "Earth"]] as const) {
+    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Light", "The Sun's"], ["Go to", "Earth"]] as const) {
       await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
       await page.waitForTimeout(600);
     }

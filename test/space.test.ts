@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Body, GeoVector, HelioVector, MakeTime } from "astronomy-engine";
 import { greenwichMeanSiderealTime } from "../src/time.ts";
-import { AU_IN_EARTH_RADII, blend, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, placeAround, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition } from "../src/space/index.ts";
+import { AU_IN_EARTH_RADII, blend, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition, type ScaleMode } from "../src/space/index.ts";
+import { MOONS_OF } from "../src/facts.ts";
 import { moonOffset } from "../src/scene/orient.ts";
 import type { Vec3 } from "../src/vec.ts";
 
@@ -66,19 +67,100 @@ test("a planet's orbit starts where it is and comes back to the same place", () 
   }
 });
 
-test("the compressed scale keeps directions and puts the Moon 10 Earth radii away and the Sun 44", () => {
+test("the compressed scale keeps directions, puts the Moon close and the Sun at the Earth's own distance", () => {
   const moon: Vec3 = [0.00257, 0, 0];
   assert.ok(Math.abs(length(compress(moon)) - MOON_COMPRESSED) < 1e-9);
   assert.deepEqual(compress([0, 0, 0]), [0, 0, 0]);
   const toward: Vec3 = [0.3, -0.4, 0.5];
   assert.ok(degrees(compress(toward), toward) < 1e-5);
-  assert.ok(Math.abs(length(placeSun("compressed", [0.6, 0.6, 0.2])) - SUN_COMPRESSED) < 1e-9);
-  assert.ok(degrees(placeSun("compressed", [0.6, 0.6, 0.2]), [0.6, 0.6, 0.2]) < 1e-5);
-  // the Earth's own distance from the Sun is the 44, Neptune's is about 200
+  const sun: Vec3 = [0.6, 0.6, 0.2];
+  assert.ok(Math.abs(length(placeSun("compressed", sun)) - SUN_COMPRESSED * length(sun) ** 0.45) < 1e-9);
+  assert.ok(degrees(placeSun("compressed", sun), sun) < 1e-5);
+  // the Earth's own distance from the Sun is the unit, Neptune's is about 4.6 of it
   assert.ok(Math.abs(length(placeAround("compressed", [0, 0, 0], [1, 0, 0])) - SUN_COMPRESSED) < 1e-9);
-  const neptune = length(placeAround("compressed", [0, 0, 0], [30, 0, 0]));
-  assert.ok(neptune > 190 && neptune < 210, `${neptune}`);
+  const neptune = length(placeAround("compressed", [0, 0, 0], [30, 0, 0])) / SUN_COMPRESSED;
+  assert.ok(neptune > 4.4 && neptune < 4.8, `${neptune}`);
   assert.deepEqual(placeAround("compressed", [1, 2, 3], [0, 0, 0]), [1, 2, 3]);
+});
+
+const SCALES: readonly ScaleMode[] = ["compressed", "true"];
+const SAMPLE_DATES = [Date.UTC(2026, 10, 2, 12), Date.UTC(2031, 2, 5), Date.UTC(2019, 8, 20, 6), Date.UTC(2044, 5, 1)];
+const ORBIT_BODIES = ["earth", ...SPACE_PLANETS] as const;
+const near = (p: Vec3, line: readonly Vec3[]): number => {
+  let best = Infinity;
+  for (let i = 0; i + 1 < line.length; i += 1) {
+    const a = line[i]!;
+    const b = line[i + 1]!;
+    const ab: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const ap: Vec3 = [p[0] - a[0], p[1] - a[1], p[2] - a[2]];
+    const t = Math.max(0, Math.min(1, (ap[0] * ab[0] + ap[1] * ab[1] + ap[2] * ab[2]) / (ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2 || 1)));
+    best = Math.min(best, Math.hypot(p[0] - a[0] - ab[0] * t, p[1] - a[1] - ab[1] * t, p[2] - a[2] - ab[2] * t));
+  }
+  return best;
+};
+
+test("every body lies on its own orbit line, at several dates and in both scales: one mapping places the bodies and the lines", () => {
+  for (const mode of SCALES) {
+    for (const ms of SAMPLE_DATES) {
+      const frame = frameAt(ms);
+      const places = placeBodies(mode, frame);
+      for (const id of ORBIT_BODIES) {
+        const line = orbitLine(mode, places.sun, planetOrbit(id, ms, 192));
+        const sunToBody = length([places[id][0] - places.sun[0], places[id][1] - places.sun[1], places[id][2] - places.sun[2]]);
+        // a body sits on its line to within what 192 straight segments leave out of a curve, and the length of the model's own error
+        assert.ok(near(places[id], line) < 0.004 * sunToBody + 1e-6, `${id} ${mode} ${new Date(ms).toISOString()}: ${near(places[id], line)} of ${sunToBody}`);
+      }
+    }
+  }
+});
+
+test("the Earth is at the centre and on its own orbit, and the Moon is nearer to it than any other orbit", () => {
+  for (const ms of SAMPLE_DATES) {
+    const frame = frameAt(ms);
+    const places = placeBodies("compressed", frame);
+    assert.deepEqual(places.earth, [0, 0, 0]);
+    const moon = length(places.moon);
+    assert.ok(moon > 3 && moon < 4, `${moon}`);
+    for (const id of ["venus", "mars"] as const) {
+      const line = orbitLine("compressed", places.sun, planetOrbit(id, ms, 192));
+      assert.ok(moon < 0.5 * near(places.earth, line), `the Moon ${moon} against the orbit of ${id} at ${near(places.earth, line)}`);
+    }
+  }
+});
+
+test("a compressed view keeps every moon's orbit well inside the gap to the neighbouring planets' orbits", () => {
+  const row = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"] as const;
+  for (const ms of SAMPLE_DATES) {
+    const places = placeBodies("compressed", frameAt(ms));
+    const lines = Object.fromEntries(row.map((id) => [id, orbitLine("compressed", places.sun, planetOrbit(id, ms, 192))])) as Record<(typeof row)[number], Vec3[]>;
+    for (const host of Object.keys(MOONS_OF) as (keyof typeof MOONS_OF)[]) {
+      if (!(row as readonly string[]).includes(host)) continue;
+      let farthest = 0;
+      for (const moon of MOONS_OF[host]) {
+        for (let i = 0; i < 48; i += 1) {
+          const d = length(moonOffset(moon, ms + i * 7 * 86_400_000));
+          farthest = Math.max(farthest, host === "earth" ? length(compress(frameAt(ms + i * 7 * 86_400_000).moon)) : moonDistance("compressed", host as (typeof SPACE_PLANETS)[number], d) * radiusIn(host as (typeof SPACE_PLANETS)[number], "compressed"));
+        }
+      }
+      for (const other of row) {
+        if (other === host) continue;
+        const gap = near(places[host as (typeof row)[number]], lines[other]);
+        assert.ok(farthest < 0.6 * gap, `${host}'s moons reach ${farthest.toFixed(1)}, the orbit of ${other} is ${gap.toFixed(1)} away, at ${new Date(ms).toISOString()}`);
+      }
+    }
+  }
+});
+
+test("compressing the moons keeps their order and leaves the true scale alone", () => {
+  for (const host of ["jupiter", "saturn", "neptune", "pluto"] as const) {
+    const moons = MOONS_OF[host];
+    const real = moons.map((moon) => length(moonOffset(moon, Date.UTC(2026, 10, 2)))).sort((a, b) => a - b);
+    const drawn = real.map((d) => moonDistance("compressed", host, d));
+    for (let i = 1; i < drawn.length; i += 1) assert.ok(drawn[i]! > drawn[i - 1]!, `${host} keeps its order`);
+    assert.ok(drawn.every((d, i) => d <= real[i]! + 1e-9));
+    assert.deepEqual(real.map((d) => moonDistance("true", host, d)), real);
+  }
+  assert.equal(moonDistance("compressed", "mars", 6.9), 6.9);
 });
 
 test("the true scale is the real distance in Earth radii", () => {

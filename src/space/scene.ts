@@ -11,7 +11,7 @@ import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { createTrack, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
-import { placeAround, placeMoon, placeSun, radiusIn, type ScaleMode } from "./scale.ts";
+import { moonDistance, orbitLine, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -22,6 +22,8 @@ const RAD = Math.PI / 180;
 export const FIT_DISTANCE = 3.4;
 const FOV = 35;
 const ORBIT_POINTS = 96;
+const ORBIT_BODIES = ["earth", ...SPACE_PLANETS] as const;
+type OrbitBody = (typeof ORBIT_BODIES)[number];
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
 const MOON_MIN_PX = 2.2;
@@ -54,7 +56,7 @@ export const SPACE_BODIES = ["earth", "sun", "moon", ...SPACE_PLANETS] as const;
 export type SpaceBody = (typeof SPACE_BODIES)[number];
 
 /**
- * How the Earth is lit: `sun` is the true light; `lit` is daylight from the camera's side, so a view of the night side is never black.
+ * How the bodies are lit: `sun` is the true light; `lit` is daylight from the camera's side on every body, so a view of a night side is never black.
  *
  * @example
  * ```ts no-run
@@ -120,7 +122,7 @@ export interface SpaceModel {
   time: number;
   mode: ScaleMode;
   /** The shared controls' yaw, tilt and zoom. */
-  view: { yaw: number; tilt: number; zoom: number };
+  view: { yaw: number; tilt: number; zoom: number; roll: number; panX: number; panY: number };
   /** The home place: the camera starts above it. */
   centre: { lon: number; lat: number };
   /** The moment the camera was last pointed at the ground: it is fixed to the stars, not to the ground. */
@@ -143,7 +145,7 @@ export interface SpaceModel {
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
   motion: number;
   /** The shared controls' view as the last draw used it, and how tall the view was (CSS pixels). */
-  drawnView: { yaw: number; tilt: number; zoom: number } | null;
+  drawnView: { yaw: number; tilt: number; zoom: number; roll: number; panX: number; panY: number } | null;
   heightPx: number;
   camera: { position: [number, number, number]; fov: number };
   /** The body or point the camera rides along with, or null. */
@@ -161,7 +163,7 @@ export interface SpaceModel {
 export const newSpaceModel = (): SpaceModel => ({
   time: Date.now(),
   mode: "compressed",
-  view: { yaw: 0, tilt: 0, zoom: 1 },
+  view: { yaw: 0, tilt: 0, zoom: 1, roll: 0, panX: 0, panY: 0 },
   centre: { lon: 0, lat: 0 },
   anchor: null,
   orbits: true,
@@ -263,12 +265,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         return slot;
       };
 
-      const orbits = new Map<SpacePlanet, { line: THREE.Line; positions: Float32Array; samples: Vec3[]; epoch: number }>();
-      for (const id of SPACE_PLANETS) {
+      const orbits = new Map<OrbitBody, { line: THREE.Line; positions: Float32Array; samples: Vec3[]; epoch: number }>();
+      for (const id of ORBIT_BODIES) {
         const positions = new Float32Array((ORBIT_POINTS + 1) * 3);
         const geometry = new three.BufferGeometry();
         geometry.setAttribute("position", new three.BufferAttribute(positions, 3));
-        const line = new three.Line(geometry, new three.LineBasicMaterial({ color: BODIES[id].colour, transparent: true, opacity: 0.55 }));
+        const line = new three.Line(geometry, new three.LineBasicMaterial({ color: id === "earth" ? "#6aa8ff" : BODIES[id].colour, transparent: true, opacity: 0.55 }));
         line.frustumCulled = false;
         scene.add(line);
         orbits.set(id, { line, positions, samples: [], epoch: Number.NaN });
@@ -293,15 +295,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             track.setStep(model.stepMs);
           }
           const mode = model.mode;
-          const sunPos = placeSun(mode, frame.sun);
-          const pos = { earth: [0, 0, 0] as Vec3, moon: placeMoon(mode, frame.moon), sun: sunPos } as Record<SpaceBody, Vec3>;
-          for (const id of SPACE_PLANETS) pos[id] = placeAround(mode, sunPos, minus(frame.planets[id], frame.sun));
+          const pos = placeBodies(mode, frame);
+          const sunPos = pos.sun;
           const radiusOf = (id: SpaceBody): number => radiusIn(id, mode);
-          const placeAll = (at: SpaceFrame): Record<SpaceBody, Vec3> => {
-            const sunAt = placeSun(mode, at.sun);
-            const all = { earth: [0, 0, 0] as Vec3, moon: placeMoon(mode, at.moon), sun: sunAt } as Record<SpaceBody, Vec3>;
-            for (const id of SPACE_PLANETS) all[id] = placeAround(mode, sunAt, minus(at.planets[id], at.sun));
-            return all;
+          const placeAll = (at: SpaceFrame): Record<SpaceBody, Vec3> => placeBodies(mode, at);
+          // where a moon is round its planet, as the view draws it: in the planet's radii, drawn nearer in a compressed view where the real distance would cross the next planet's orbit
+          const moonSite = (id: MoonId, at: number, host: SpacePlanet): Vec3 => {
+            const real = moonOffset(id, at);
+            const d = Math.hypot(real[0], real[1], real[2]);
+            const k = d === 0 ? 1 : moonDistance(mode, host, d) / d;
+            return [real[0] * k, real[1] * k, real[2] * k];
           };
           const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : frame.planets[id]));
 
@@ -342,8 +345,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               }
             } else if (typeof t === "string") {
               const id = t as MoonId;
-              const offset = moonOffset(id, model.time);
-              const later = moonOffset(id, model.time + 1000);
+              const offset = moonSite(id, model.time, around as SpacePlanet);
+              const later = moonSite(id, model.time + 1000, around as SpacePlanet);
               if (ride.view === "follow") {
                 focusPos = [centre[0] + offset[0] * unitWorld, centre[1] + offset[1] * unitWorld, centre[2] + offset[2] * unitWorld];
                 focusRadius = Math.max(1e-6, (BODIES[id].radiusKm / BODIES[around as SpacePlanet].radiusKm) * unitWorld);
@@ -415,15 +418,19 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             fovNow = glide.from.fov + (fovNow - glide.from.fov) * ease;
             if (k >= 1) model.transition = null;
           }
+          // the controls' roll turns the picture clockwise about the line of sight, and a pan moves everything by that many CSS pixels at any depth: the window of the projection moves the other way
+          if (model.view.roll !== 0) camera.rotateZ(model.view.roll * RAD);
           camera.fov = fovNow;
           camera.aspect = size.width / Math.max(1, size.height);
+          if (model.view.panX !== 0 || model.view.panY !== 0) camera.setViewOffset(size.width, size.height, -model.view.panX, -model.view.panY, size.width, size.height);
+          else camera.clearViewOffset();
           camera.updateProjectionMatrix();
           camera.updateMatrixWorld();
           const hiddenBody = rideFrom?.hiddenBody ?? null;
           const hiddenMoon = rideFrom?.hiddenMoon ?? null;
           model.camera = { position: [camera.position.x, camera.position.y, camera.position.z], fov: fovNow };
           model.pose = { p: [camera.position.x, camera.position.y, camera.position.z], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
-          model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom };
+          model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom, roll: model.view.roll, panX: model.view.panX, panY: model.view.panY };
           model.heightPx = size.height;
 
           // how many pixels across each body is: for the pictures it needs and for what is chosen
@@ -452,14 +459,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             drawing.object.position.set(pos[id][0], pos[id][1], pos[id][2]);
             drawing.object.scale.setScalar(radiusOf(id));
             if (drawing.billboard) drawing.object.quaternion.copy(camera.quaternion);
-            const lit = id === "earth" && model.light === "lit";
-            const toSun = lit ? unit([camera.position.x, camera.position.y, camera.position.z]) : toSunOf(id);
+            const lit = id !== "sun" && model.light === "lit";
+            const toSun = lit ? unit([camera.position.x - pos[id][0], camera.position.y - pos[id][1], camera.position.z - pos[id][2]]) : toSunOf(id);
             drawing.update({ toSun, ms: model.time, radiusPx: px[id] });
           }
           model.painted.bodies = paintedBodies;
 
-          // the planets' orbits round the Sun
-          for (const id of SPACE_PLANETS) {
+          // the orbits round the Sun, placed by the same mapping as the bodies
+          for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
             o.line.visible = model.orbits;
             if (!model.orbits) continue;
@@ -467,11 +474,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               o.samples = planetOrbit(id, model.time, ORBIT_POINTS);
               o.epoch = model.time;
             }
+            const line = orbitLine(mode, sunPos, o.samples);
             for (let i = 0; i <= ORBIT_POINTS; i += 1) {
-              const p = placeAround(mode, sunPos, o.samples[i]!);
-              o.positions[i * 3] = p[0];
-              o.positions[i * 3 + 1] = p[1];
-              o.positions[i * 3 + 2] = p[2];
+              o.positions[i * 3] = line[i]![0];
+              o.positions[i * 3 + 1] = line[i]![1];
+              o.positions[i * 3 + 2] = line[i]![2];
             }
             (o.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
           }
@@ -484,7 +491,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (!planet || px[id] < MOON_MIN_PLANET_PX) continue;
             const radius = radiusOf(id);
             for (const site of deps.painter().moons(id, model.time)) {
-              const at: Vec3 = [pos[id][0] + site.offset[0] * radius, pos[id][1] + site.offset[1] * radius, pos[id][2] + site.offset[2] * radius];
+              const reach = Math.hypot(site.offset[0], site.offset[1], site.offset[2]);
+              const k = reach === 0 ? 1 : moonDistance(mode, id, reach) / reach;
+              const at: Vec3 = [pos[id][0] + site.offset[0] * k * radius, pos[id][1] + site.offset[1] * k * radius, pos[id][2] + site.offset[2] * k * radius];
               projected.set(at[0], at[1], at[2]).project(camera);
               if (projected.z > 1 || Math.abs(projected.x) > 1.25 || Math.abs(projected.y) > 1.25) continue;
               const key = site.name.toLowerCase();
@@ -502,7 +511,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.object.position.set(at[0], at[1], at[2]);
               drawing.object.scale.setScalar(drawn);
               const moonPx = away <= drawn * 1.001 ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
-              drawing.update({ toSun: toSunOf(id), ms: model.time, radiusPx: moonPx });
+              drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx });
             }
           }
           let soonest = Number.POSITIVE_INFINITY;

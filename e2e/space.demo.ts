@@ -1,6 +1,7 @@
 // The space view in a real browser (Chromium, drawing in software): the right things in the right places, and the budget every live 3D view keeps.
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
+import { setLight } from "./space-ui.ts";
 
 test.describe.configure({ mode: "serial" });
 test.use({ reducedMotion: "no-preference" });
@@ -155,7 +156,7 @@ test("a body can be looked at: the camera goes to it, and choosing its name by k
   await expect(page.locator("#caption")).toContainText("Mars: radius 3,396 km");
 });
 
-test("the scale is compressed or true: the Moon is 10 Earth radii away, or 60", async ({ page }) => {
+test("the scale is compressed or true: the Moon is 3.5 Earth radii away, or 60", async ({ page }) => {
   await open(page);
   const away = async (): Promise<number> => {
     await jump(page, "Moon");
@@ -165,7 +166,9 @@ test("the scale is compressed or true: the Moon is 10 Earth radii away, or 60", 
   };
   await setOn(page, "body", "moon");
   const compressed = await away();
+  // the camera is 3.06 Moon radii from the Moon when the preset frames its orbit: three times the Moon's own distance
   expect(compressed).toBeGreaterThan(8);
+  expect(compressed).toBeLessThan(14);
   await page.getByRole("group", { name: "Scale" }).getByRole("button", { name: "True", exact: true }).dispatchEvent("click");
   await settle(page, 800);
   const real = await away();
@@ -187,7 +190,7 @@ test("Always lit shows the night side of the Earth, the true Sun leaves it dark"
   await setOn(page, "centre", { lon: 140, lat: 35 });
   await settle(page, 1200);
   const dark = await lightAtMiddle(page);
-  await page.getByRole("group", { name: "Earth's light" }).getByRole("button", { name: "Always lit", exact: true }).dispatchEvent("click");
+  await setLight(page, "Always lit");
   await expect.poll(() => lightAtMiddle(page), { timeout: 20_000 }).toBeGreaterThan(dark * 3);
 });
 
@@ -248,11 +251,11 @@ const rideOf = (page: Page): Promise<RideStats> => page.locator(SPACE).evaluate(
 const rideAlong = (page: Page, target: unknown, options: unknown = {}) => page.locator(SPACE).evaluate((el, [t, o]) => (el as unknown as { ride(t: unknown, o: unknown): void }).ride(t, o), [target, options] as const);
 const away = (s: SpaceStats): number => Math.hypot(...s.camera.position);
 
-test("riding the Moon: the camera is 10 Earth radii out when compressed and 55 to 66 when true, and the Moon is not drawn round it", async ({ page }) => {
+test("riding the Moon: the camera is 3.5 Earth radii out when compressed and 55 to 66 when true, and the Moon is not drawn round it", async ({ page }) => {
   await open(page);
   await rideAlong(page, "moon");
   await expect.poll(async () => (await rideOf(page)).ride.gliding).toBe(false);
-  expect(away(await rideOf(page))).toBeCloseTo(10, 0);
+  expect(away(await rideOf(page))).toBeCloseTo(3.5, 0);
   await setOn(page, "scale", "true");
   await settle(page, 800);
   const real = away(await rideOf(page));
@@ -359,6 +362,65 @@ test("stopping the ride gives the camera back to the body it was looking at", as
   await rideAlong(page, null, { smooth: false });
   await expect.poll(async () => (await rideOf(page)).distance).toBeCloseTo(3.4 * 1.8, 0);
   expect((await rideOf(page)).ride.riding).toBe(false);
+});
+
+const labelAt = (page: Page, id: string): Promise<{ x: number; y: number } | null> =>
+  page.locator(SPACE).evaluate((el, body) => {
+    const label = el.shadowRoot!.querySelector(`button.sp-label[data-body="${body}"]`) as HTMLElement | null;
+    const found = /translate\((-?\d+)px,\s*(-?\d+)px\)/.exec(label?.style.transform ?? "");
+    return label && !label.hidden && found ? { x: Number(found[1]), y: Number(found[2]) } : null;
+  }, id);
+
+test("Always lit lights every body, not only the Earth: the Moon and Venus show a bright face from the night side", async ({ page }) => {
+  await open(page);
+  for (const id of ["moon", "venus"] as const) {
+    await setOn(page, "body", id);
+    const brightness = async (mode: "The Sun's" | "Always lit"): Promise<number[]> => {
+      await setLight(page, mode);
+      const out: number[] = [];
+      for (const lon of [0, 90, 180, 270]) {
+        await setOn(page, "centre", { lon, lat: 0 });
+        await settle(page, 700);
+        out.push(await lightAtMiddle(page));
+      }
+      return out;
+    };
+    const sun = await brightness("The Sun's");
+    const lit = await brightness("Always lit");
+    expect(Math.min(...sun), `${id} has a dark side: ${sun}`).toBeLessThan(Math.max(...sun) / 3);
+    expect(Math.min(...lit), `${id} is lit from every side: ${lit}`).toBeGreaterThan(Math.max(...sun) * 0.5);
+  }
+});
+
+test("the view can be moved sideways and rolled: every body in the picture moves by exactly the pixels asked, at any depth, and a roll turns the picture clockwise", async ({ page }) => {
+  await open(page);
+  await jump(page, "Inner planets");
+  await settle(page, 1000);
+  const view = (v: { zoom: number; roll?: number; panX?: number; panY?: number }) => page.locator(SPACE).evaluate((el, w) => (el as unknown as { setView(v: unknown): void }).setView({ yaw: 0, tilt: 0, ...w }), v);
+  const zoom = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("inner"));
+  await view({ zoom });
+  await settle(page, 800);
+  const before = [await labelAt(page, "sun"), await labelAt(page, "earth"), await labelAt(page, "venus")];
+  expect(before.every((at) => at !== null)).toBe(true);
+  await view({ zoom, panX: 90, panY: -40 });
+  await settle(page, 800);
+  const after = [await labelAt(page, "sun"), await labelAt(page, "earth"), await labelAt(page, "venus")];
+  for (const [i, at] of after.entries()) {
+    expect(Math.abs(at!.x - before[i]!.x - 90), `body ${i} moves 90 px right`).toBeLessThanOrEqual(1);
+    expect(Math.abs(at!.y - before[i]!.y + 40), `body ${i} moves 40 px up`).toBeLessThanOrEqual(1);
+  }
+  // rolling a quarter turn clockwise takes what was at the right to the bottom
+  await view({ zoom });
+  await settle(page, 600);
+  const flat = await labelAt(page, "sun");
+  const box = (await page.locator(SPACE).boundingBox())!;
+  await view({ zoom, roll: 90 });
+  await settle(page, 800);
+  const rolled = await labelAt(page, "sun");
+  const [cx, cy] = [box.width / 2, box.height / 2];
+  const [dx, dy] = [flat!.x - cx, flat!.y - cy];
+  expect(Math.abs(rolled!.x - (cx - dy)), "a clockwise quarter turn").toBeLessThan(60);
+  expect(Math.abs(rolled!.y - (cy + dx))).toBeLessThan(60);
 });
 
 test.describe("a reader who prefers reduced motion", () => {

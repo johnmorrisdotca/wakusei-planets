@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **The compressed scale keeps the order of the orbits** (MODULES-742). The Moon was drawn outside Venus's orbit (10 Earth radii out, with the Sun 44 away) and the Earth was not on its own orbit. The Moon is now 3.5 Earth radii out and an astronomical unit is 70 Earth radii; the Sun, the bodies and the orbit lines (the Earth's too) all go through one mapping, `placeBodies` and `orbitLine`, so every body lies on its own orbit line, and the moons of Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn nearer when they would cross the next planet's orbit (`moonDistance`). Tests: every body is on its orbit line at four dates in both scales, and no moon's orbit reaches a neighbouring planet's. `SUN_COMPRESSED` is 70 (was 44) and `MOON_COMPRESSED` 3.5 (was 10).
+- **"Always lit" lights every body** (MODULES-742). It lit only the Earth; the Moon, Venus and the rest stayed dark. `light="lit"` now lights each body (and each moon) from the camera's side; the demo's row is called "Light" (was "Earth's light").
+- **The space view pans and rolls by exactly what the controls say** (MODULES-742). `setView` takes `panX`, `panY` and `roll`: everything in the picture moves by that many CSS pixels at any depth (the window of the projection moves, so near and far bodies do not slide against each other) and a roll turns the picture clockwise about the line of sight. The element is focusable (`tabindex="0"`).
 - **The GPU objects of the space view no longer depend on which came first** (MODULES-727). When a painted body's picture arrived it kept the program of its shaded fallback for as long as the body lived, so the number of programs and vertex arrays a body held depended on whether the picture or the first draw came first (a slow machine held up to 40 more). The fallback is freed when the picture is shown. The soak now counts every walk on its own, from a state that is the same each time.
 
 ## [0.25.0] - 2026-11-09

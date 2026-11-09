@@ -9,7 +9,7 @@ import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_PLANETS, type SpacePlanet } from "./frame.ts";
-import { placeAround, placeMoon, placeSun, radiusIn, type ScaleMode } from "./scale.ts";
+import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
@@ -183,6 +183,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.light = readLight(this.getAttribute("light"));
     this.#model.stepMs = Math.max(1000, Math.abs(this.#speed) * 1000);
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
+    if (!this.hasAttribute("tabindex")) this.setAttribute("tabindex", "0");
     if (!this.hasAttribute("aria-label")) this.setAttribute("aria-label", "The Earth, the Moon, the Sun and the planets in their places for the date shown");
 
     const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
@@ -330,21 +331,22 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /**
-   * The shared controls' camera: yaw and tilt turn the view (the Earth's surface moves right for a drag right and up for a drag up), zoom brings the camera in (1 shows the body looked at, less shows the sky round it). Pan is not used. A turn that
+   * The shared controls' camera: yaw and tilt turn the view (the Earth's surface moves right for a drag right and up for a drag up), zoom brings the camera in (1 shows the body looked at, less shows the sky round it), `roll` (degrees) turns the picture clockwise about the line of sight, and `panX` and `panY` move everything in the picture by exactly that many CSS pixels (right and down are positive). A turn that
    * moves nothing on the screen by half a pixel is kept for the next draw but does not cause one unless `final` is true (the default).
    *
    * @param view - The controls' yaw and tilt in degrees and zoom.
    * @param final - False for the frames of a turn that is still going on (Auto-turn, a drag); true when it has settled.
    */
-  setView(view: { yaw: number; tilt: number; zoom: number }, final = true): void {
+  setView(view: { yaw: number; tilt: number; zoom: number; roll?: number; panX?: number; panY?: number }, final = true): void {
     const now = this.#model.view;
-    if (view.yaw === now.yaw && view.tilt === now.tilt && view.zoom === now.zoom) return;
-    this.#model.view = { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom };
-    this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom } }));
+    const [roll, panX, panY] = [view.roll ?? 0, view.panX ?? 0, view.panY ?? 0];
+    if (view.yaw === now.yaw && view.tilt === now.tilt && view.zoom === now.zoom && roll === now.roll && panX === now.panX && panY === now.panY) return;
+    this.#model.view = { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY };
+    this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY } }));
     const drawn = this.#model.drawnView;
     if (drawn && !final && view.zoom === drawn.zoom) {
-      const turned = Math.max(Math.abs(view.yaw - drawn.yaw), Math.abs(view.tilt - drawn.tilt)) * RAD;
-      if (turned * (this.#model.heightPx / 2) < 0.5) return;
+      const turned = Math.max(Math.abs(view.yaw - drawn.yaw), Math.abs(view.tilt - drawn.tilt), Math.abs(roll - drawn.roll)) * RAD;
+      if (turned * (this.#model.heightPx / 2) < 0.5 && Math.max(Math.abs(panX - drawn.panX), Math.abs(panY - drawn.panY)) < 0.5) return;
     }
     this.#gate?.request();
   }
@@ -452,19 +454,19 @@ export class WakuseiSpace extends HTMLElement {
     if (preset.endsWith("-moons")) {
       const id = preset.slice(0, -6) as SpacePlanet;
       const sites = this.#painterNow().moons(id, this.#model.time);
-      const reach = Math.max(1, ...sites.map((site) => Math.hypot(...site.offset)).filter((r) => r <= 22));
+      const reach = Math.max(1, ...sites.map((site) => moonDistance(mode, id, Math.hypot(...site.offset))).filter((r) => r <= 22));
       const radius = radiusIn(id, mode);
       return Math.min(1, (FIT_DISTANCE * radius) / ((reach * radius * 1.15) / Math.tan(17.5 * RAD)));
     }
     const frame = this.#model.drawn?.frame ?? frameAt(this.#model.time);
-    const sun = placeSun(mode, frame.sun);
-    const around = (id: SpacePlanet): number => Math.hypot(...placeAround(mode, sun, [frame.planets[id][0] - frame.sun[0], frame.planets[id][1] - frame.sun[1], frame.planets[id][2] - frame.sun[2]]));
+    const places = placeBodies(mode, frame);
+    const away = (id: SpaceBody): number => Math.hypot(...places[id]);
     const reach = {
       earth: 0,
-      moon: Math.hypot(...placeMoon(mode, frame.moon)),
-      sun: Math.hypot(...sun),
-      inner: Math.max(around("mercury"), around("venus"), around("mars"), Math.hypot(...sun)),
-      "solar-system": Math.max(...SPACE_PLANETS.map(around), Math.hypot(...sun)),
+      moon: away("moon"),
+      sun: away("sun"),
+      inner: Math.max(away("mercury"), away("venus"), away("mars"), away("sun")),
+      "solar-system": Math.max(...SPACE_PLANETS.map(away), away("sun")),
     }[preset as Exclude<SpacePreset, `${string}-moons`>];
     return preset === "earth" ? 1 : FIT_DISTANCE / Math.max(FIT_DISTANCE, reach * 3.4);
   }
