@@ -25,6 +25,17 @@ const settledCounts = async (page: Page) => {
     .toBeGreaterThanOrEqual(3);
   return readCounts(page);
 };
+/** The counters after rounds of changes, once a round leaves no more objects alive than the one before: what the page keeps (pictures, programs, the first sight of each body) is all made, however slowly the machine gets there. Leaking never settles, and fails here. */
+const converged = async (page: Page, round: () => Promise<void>) => {
+  let before = Infinity;
+  for (let i = 0; i < 8; i += 1) {
+    await round();
+    const counts = await settledCounts(page);
+    if (gpuObjects(counts) <= before) return counts;
+    before = gpuObjects(counts);
+  }
+  throw new Error("the graphics objects alive were still growing after eight rounds");
+};
 const pick = (page: Page, id: string) => page.locator(`.tile[data-body="${id}"]`).click();
 
 test.use({ reducedMotion: "no-preference" });
@@ -341,10 +352,7 @@ test("changes to the space view give back what they took: the zooms, the scales,
     }
     await settle(page, 500);
   };
-  await round();
-  await round();
-  await settle(page, 2500);
-  const first = await settledCounts(page);
+  const first = await converged(page, round);
   for (let i = 0; i < 3; i += 1) await round();
   await settle(page, 2500);
   const last = await settledCounts(page);
