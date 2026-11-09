@@ -36,6 +36,15 @@ const converged = async (page: Page, round: () => Promise<void>) => {
   }
   throw new Error("the graphics objects alive were still growing after eight rounds");
 };
+/** Jobs the shared renderer has drawn so far, as its own scheduler counts them. Since kazoku-ui 0.27 it asks for an animation frame every refresh and draws at most 30 a second, so `rafRequests` is no longer the number drawn. */
+const jobsDrawn = (page: Page): Promise<number> =>
+  page.evaluate(() => {
+    for (const el of document.querySelectorAll("wakusei-body")) {
+      const drawn = (Reflect.get(el, "stats") as { renderer?: { frames?: { draws?: number } } } | undefined)?.renderer?.frames?.draws;
+      if (typeof drawn === "number") return drawn;
+    }
+    return 0;
+  });
 const pick = (page: Page, id: string) => page.locator(`.tile[data-body="${id}"]`).click();
 
 test.use({ reducedMotion: "no-preference" });
@@ -76,12 +85,13 @@ test("a turning body is drawn at most thirty times a second, one frame at a time
   await live(page);
   await settle(page, 1500);
   const before = await readCounts(page);
+  const jobsBefore = await jobsDrawn(page);
   await settle(page, 4000);
   const after = await readCounts(page);
   const draws = after.draws - before.draws;
   expect(draws).toBeGreaterThan(0);
-  // a draw may be several GL calls (the planet, its rings, a glow): count frames, not calls
-  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+  // a draw may be several GL calls (the planet, its rings, a glow): count the frames the renderer drew, not calls
+  expect((await jobsDrawn(page)) - jobsBefore).toBeLessThanOrEqual(4 * 31);
   expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
 });
 
@@ -496,10 +506,11 @@ test("a turning star, with its prominences and its boiling surface, is drawn at 
   await starLive(page);
   await settle(page, 1500);
   const before = await readCounts(page);
+  const jobsBefore = await jobsDrawn(page);
   await settle(page, 4000);
   const after = await readCounts(page);
   expect(after.draws - before.draws).toBeGreaterThan(0);
-  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+  expect((await jobsDrawn(page)) - jobsBefore).toBeLessThanOrEqual(4 * 31);
   expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
   expect(after.contexts).toBeLessThanOrEqual(1);
 });
@@ -513,10 +524,11 @@ test("a star still turns for a reader who prefers reduced motion, at a quarter o
   await starLive(page);
   await settle(page, 1500);
   const before = await readCounts(page);
+  const jobsBefore = await jobsDrawn(page);
   await settle(page, 3000);
   const after = await readCounts(page);
   expect(after.draws - before.draws, "a reduced turn is still drawn").toBeGreaterThan(0);
-  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+  expect((await jobsDrawn(page)) - jobsBefore).toBeLessThanOrEqual(4 * 31);
   await context.close();
 });
 
@@ -587,8 +599,9 @@ test("the cheaper star for weak devices is drawn the same way and says so", asyn
   expect(await star(page).evaluate((el) => (el as unknown as { starLook: { quality: string } }).starLook.quality)).toBe("low");
   await settle(page, 1500);
   const before = await readCounts(page);
+  const jobsBefore = await jobsDrawn(page);
   await settle(page, 3000);
   const after = await readCounts(page);
   expect(after.draws - before.draws).toBeGreaterThan(0);
-  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+  expect((await jobsDrawn(page)) - jobsBefore).toBeLessThanOrEqual(4 * 31);
 });
