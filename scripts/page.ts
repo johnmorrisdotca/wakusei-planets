@@ -8,7 +8,7 @@ import { FAMILY_SCRIPT, familyFooter, familyHead, familyHeader, familyUnreviewed
 const id = "wakusei-planets";
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "lineup.html", say: "pageLineup" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -42,6 +42,10 @@ export const renderSpace = (): string =>
 /** The star page. */
 export const renderStar = (): string =>
   render("star.html", "Wakusei Planets 惑星: a star from its numbers", "Any star drawn from a few numbers: its temperature gives the colour, its radius the size, its class the grain of the surface, its rotation how it turns. Line or shaded, turnable, with each part marked measured or drawn for looks, and the code to put it in your page.");
+
+/** The size line-up page. */
+export const renderLineup = (): string =>
+  render("lineup.html", "Wakusei Planets 惑星: the size line-up", "The Sun and the largest stars known side by side at true relative size, each drawn from its numbers and labelled with its radius, its error and its source. Zoom from the Sun up to the largest star, turn each star by hand, add the Earth and Jupiter, then save a picture or print a poster.");
 
 /** demo/embed.html, the frame a page puts in an iframe: plain, no family blocks. */
 export function renderEmbed(): string {

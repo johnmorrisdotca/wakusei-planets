@@ -116,3 +116,18 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .numbers .fam-field { width: 9.5rem; }
 .parts { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .parts li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+
+/* the size line-up page */
+.lineup-stage { display: grid; justify-items: center; padding: 18px 12px 10px; margin-bottom: 8px; background: #06080d; }
+.lineup-view { width: 100%; max-width: 1120px; }
+.lineup-view wakusei-lineup { --wakusei-size: 100%; width: 100%; max-width: none; }
+.go { flex-wrap: wrap; border-radius: 20px; }
+.lineup-card h2 { margin: 0 0 4px; font-size: 1.35rem; }
+.lineup-lead { margin: 0 0 8px; font-size: 1.05rem; font-weight: 600; }
+.lineup-facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 10px; }
+.lineup-facts dt { color: var(--muted); }
+.lineup-facts dd { margin: 0; overflow-wrap: anywhere; }
+.lineup-note { margin: 0 0 8px; }
+.lineup-others { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .9rem; }
+@media (max-width: 600px) { .lineup-view wakusei-lineup { --wakusei-ratio: 4 / 5; } }
+@media (max-width: 520px) { .lineup-facts { grid-template-columns: 1fr; gap: 0; } .lineup-facts dd { margin-bottom: 8px; } }

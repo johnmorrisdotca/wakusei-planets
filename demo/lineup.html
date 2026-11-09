@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b1424'/%3E%3Ccircle cx='50' cy='50' r='24' fill='%2313203a' stroke='%238fa1b8' stroke-width='4'/%3E%3Cellipse cx='50' cy='50' rx='42' ry='12' fill='none' stroke='%238fa1b8' stroke-width='3' transform='rotate(-20 50 50)'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <section class="fam-felt lineup-stage" aria-labelledby="stage-h">
+        <h2 id="stage-h" class="fam-sr" data-say="lu_stage">Size line-up</h2>
+        <div id="view" class="lineup-view">
+          <wakusei-lineup id="lineup" stars="all" data-testid="lineup"></wakusei-lineup>
+        </div>
+        <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
+        <p class="fam-fine stage-name" data-say="lu_hint">Drag a star to turn it. Slide to zoom from the Sun up to the largest star. Ctrl or Command and the wheel zooms too.</p>
+      </section>
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <span class="fam-label" data-say="lu_stars">Stars</span>
+            <div class="group fam-seg" id="stars" role="group" aria-label="Stars" data-say-label="lu_stars">
+              <button type="button" data-stars="all" aria-pressed="true" data-say="lu_all">All</button>
+              <button type="button" data-stars="bright" aria-pressed="false" data-say="lu_bright">Bright stars</button>
+              <button type="button" data-stars="largest" aria-pressed="false" data-say="lu_largest">Largest known</button>
+            </div>
+            <span class="fam-label" data-say="lu_planets">Planets</span>
+            <div class="group fam-seg" id="planets" role="group" aria-label="Planets" data-say-label="lu_planets">
+              <button type="button" data-planets="0" aria-pressed="true" data-say="lu_planets_off">None</button>
+              <button type="button" data-planets="1" aria-pressed="false" data-say="lu_planets_on">Earth and Jupiter</button>
+            </div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="lu_layout">Layout</span>
+            <div class="group fam-seg" id="layouts" role="group" aria-label="Layout" data-say-label="lu_layout">
+              <button type="button" data-layout="row" aria-pressed="true" data-say="lu_row">Side by side</button>
+              <button type="button" data-layout="stack" aria-pressed="false" data-say="lu_stack">Stacked</button>
+            </div>
+            <span class="fam-label" data-say="lu_turn">Turning</span>
+            <div class="group fam-seg" id="turns" role="group" aria-label="Turning" data-say-label="lu_turn">
+              <button type="button" data-turn="on" aria-pressed="true" data-say="lu_on">On</button>
+              <button type="button" data-turn="off" aria-pressed="false" data-say="lu_off">Off</button>
+            </div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="lu_go">Go to</span>
+            <div class="group fam-seg go" id="go" role="group" aria-label="Go to" data-say-label="lu_go" data-testid="go"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="lu_save">Save as an image</span>
+            <div class="group fam-seg" id="saves" role="group" aria-label="Save as an image" data-say-label="lu_save">
+              <button type="button" data-save="png" data-say="lu_png">PNG</button>
+              <button type="button" data-save="svg" data-say="lu_svg">SVG</button>
+            </div>
+            <span class="fam-label" data-say="lu_print">Print as a poster</span>
+            <div class="group fam-seg" id="papers" role="group" aria-label="Paper" data-say-label="lu_print">
+              <button type="button" data-paper="a4" aria-pressed="true" data-say="lu_a4">A4</button>
+              <button type="button" data-paper="letter" aria-pressed="false" data-say="lu_letter">US Letter</button>
+            </div>
+            <button type="button" class="fam-button" id="print" data-say="lu_printGo">Print / save PDF</button>
+          </div>
+          <p class="fam-fine" id="status" role="status"></p>
+        </div>
+      </div>
+
+      <section class="fam-panel bodies lineup-card" aria-labelledby="card-h" data-testid="card">
+        <h2 id="card-h"></h2>
+        <p class="lineup-lead" id="card-lead"></p>
+        <dl class="lineup-facts" id="card-facts"></dl>
+        <p class="lineup-note" id="card-note" role="note"></p>
+        <ul class="lineup-others" id="card-others"></ul>
+      </section>
+
+      <section class="more" id="embed" aria-labelledby="embed-h">
+        <h2 id="embed-h" data-say="lu_embedTitle">Put it in your page</h2>
+        <p data-say="lu_embedText">Choose the stars, the planets, how they stand and where the camera starts, then a size, and pick how your page is made. The picture beside the code is made from the same choices.</p>
+        <div class="fam-panels">
+          <div class="fam-panel">
+            <kazoku-embed-panel id="embed-panel" sizes="480 720 960" docs-href="docs/" data-testid="embed-panel"></kazoku-embed-panel>
+          </div>
+        </div>
+      </section>
+
+      <p class="fam-fine credits"><span data-say="lu_credits">Each radius is from a refereed paper that measured the star's angular diameter, or says it did not.</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts lineup.js-->
+  </body>
+</html>
