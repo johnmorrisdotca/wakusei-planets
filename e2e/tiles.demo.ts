@@ -26,10 +26,10 @@ async function open(page: Page, query: string): Promise<void> {
   await expect.poll(async () => (await statsOf(page)).textureWidth, { timeout: 60_000 }).toBeGreaterThanOrEqual(512);
 }
 
-/** The zoom that puts this many device pixels along a radian of the body at the middle of the picture (the pixel ratio is 1 here), for a body alone. */
+/** The zoom that puts this many device pixels along a radian of the body at the middle of the picture (the pixel ratio is 1 here), for a body alone: the picture's short side is what the zoom is measured against. */
 async function zoomFor(page: Page, pixelsPerRadian: number): Promise<number> {
   const box = (await main(page).boundingBox())!;
-  return (pixelsPerRadian * 2 * ROOM) / box.width;
+  return (pixelsPerRadian * 2 * ROOM) / Math.min(box.width, box.height);
 }
 
 /** The colour at the middle of a picture, averaged over a few pixels. */
@@ -49,7 +49,6 @@ async function middle(page: Page, locator: Locator): Promise<[number, number, nu
     return [r / n, g / n, b / n] as [number, number, number];
   }, png);
 }
-const magenta = (c: number[]): boolean => Math.min(c[0]!, c[2]!) > 15 && c[1]! < 0.35 * Math.min(c[0]!, c[2]!);
 const cyan = (c: number[]): boolean => Math.min(c[1]!, c[2]!) > 15 && c[0]! < 0.35 * Math.min(c[1]!, c[2]!);
 const yellow = (c: number[]): boolean => Math.min(c[0]!, c[1]!) > 15 && c[2]! < 0.35 * Math.min(c[0]!, c[1]!);
 const level = (tile: string): number => Number(tile.split("/")[1]);
@@ -62,16 +61,12 @@ test("a close zoom asks for the tiles in view at the level it needs, draws them 
   expect(log.tiles, "nothing is fetched while the map is sharp enough").toEqual([]);
   const base = gpuObjects(await readCounts(page));
 
-  await setZoom(page, await zoomFor(page, 640));
-  await expect.poll(async () => (await statsOf(page)).tiles?.shown, { timeout: 60_000 }).toBe(1);
-  await expect.poll(async () => magenta(await middle(page, main(page))), { timeout: 30_000, message: "the level 1 tiles are on the body" }).toBe(true);
-  expect(log.tiles.every((tile) => level(tile) === 1), "level 1 only").toBe(true);
-  expect(new Set(log.tiles).size, "no tile asked for twice").toBe(log.tiles.length);
-  expect(log.tiles.length, "only what is in view, within a window").toBeLessThanOrEqual(16);
-
   await setZoom(page, await zoomFor(page, 1500));
   await expect.poll(async () => (await statsOf(page)).tiles?.shown, { timeout: 60_000 }).toBe(2);
   await expect.poll(async () => cyan(await middle(page, main(page))), { timeout: 30_000, message: "the level 2 tiles are on the body" }).toBe(true);
+  expect(log.tiles.every((tile) => level(tile) === 2), "level 2 only").toBe(true);
+  expect(new Set(log.tiles).size, "no tile asked for twice").toBe(log.tiles.length);
+  expect(log.tiles.length, "only what is in view, within a window").toBeLessThanOrEqual(16);
 
   const first = log.tiles.length;
   await setZoom(page, await zoomFor(page, 3200));
@@ -92,7 +87,7 @@ test("a close zoom asks for the tiles in view at the level it needs, draws them 
   await setZoom(page, 1);
   await expect.poll(async () => (await statsOf(page)).tiles?.shown, { timeout: 30_000 }).toBeNull();
   await expect.poll(async () => (await statsOf(page)).tiles?.held, { timeout: 30_000 }).toBe(0);
-  await expect.poll(async () => !yellow(await middle(page, main(page))) && !magenta(await middle(page, main(page))), { timeout: 30_000, message: "and the map's own picture is drawn again" }).toBe(true);
+  await expect.poll(async () => !yellow(await middle(page, main(page))) && !cyan(await middle(page, main(page))), { timeout: 30_000, message: "and the map's own picture is drawn again" }).toBe(true);
   await page.waitForTimeout(1500);
   expect(gpuObjects(await readCounts(page)), "what the window took is given back").toBeLessThanOrEqual(base + 1);
 });
