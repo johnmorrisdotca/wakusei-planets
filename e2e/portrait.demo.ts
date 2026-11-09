@@ -315,6 +315,7 @@ test("two fingers: a pinch on empty space zooms the view, and a pinch on a body 
     await cdp.detach();
     await page.waitForTimeout(700);
   };
+  await page.locator("#view").scrollIntoViewIfNeeded();
   const before = await scene(page);
   const box = (await page.locator("#view").boundingBox())!;
   const mars = await centreOf(page, 0);
