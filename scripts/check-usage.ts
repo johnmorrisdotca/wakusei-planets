@@ -339,6 +339,7 @@ lock.release();
 // 4. The guides and the README hold what was tested, word for word.
 const everything = only.length === 0;
 const FILES: Record<string, string[]> = {
+  "serve/server.mjs": ["docs/guides/serve-it-yourself.md", "docs/guides/ja/serve-it-yourself.md"],
   "cdn-jsdelivr.html": ["README.md", "docs/guides/html-and-cdn.md", "docs/guides/ja/html-and-cdn.md"],
   "cdn-realistic.html": ["docs/guides/html-and-cdn.md", "docs/guides/ja/html-and-cdn.md"],
   "controls.html": ["README.md", "docs/guides/getting-started.md", "docs/guides/ja/getting-started.md"],
