@@ -31,3 +31,33 @@ jobs:
       check-command: pnpm check && pnpm test:package
       freeze-command: pnpm test:freeze
       github-release: true
+  data-files:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Check out the released tag
+        id: version
+        run: |
+          version=$(node -p "require('./package.json').version")
+          git fetch origin "refs/tags/v${version}:refs/tags/v${version}"
+          git checkout --detach "v${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm export:data
+      - run: python3 -m venv "${RUNNER_TEMP}/venv" && "${RUNNER_TEMP}/venv/bin/pip" install pyarrow
+      - run: '"${RUNNER_TEMP}/venv/bin/python" -I scripts/export-parquet.py dist-data'
+      - name: Attach the data files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          zip -qr "${RUNNER_TEMP}/wakusei-planets-data-v${VERSION}.zip" dist-data
+          gh release upload "v${VERSION}" "${RUNNER_TEMP}/wakusei-planets-data-v${VERSION}.zip" dist-data/*.csv dist-data/*.parquet dist-data/*.json dist-data/SHA256SUMS dist-data/LICENCE-DATA.md --clobber

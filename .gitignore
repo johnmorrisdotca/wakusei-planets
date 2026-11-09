@@ -10,3 +10,4 @@ playwright-report/
 .readme-examples/
 .docs-examples/
 .playwright-mcp/
+dist-data/
