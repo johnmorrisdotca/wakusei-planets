@@ -27,6 +27,8 @@ await rm(at("site/kazoku-parts.src.js"));
 await cp(at("demo/demo.css"), at("site/demo.css"));
 await cp(at("demo/family.css"), at("site/family.css"));
 if (existsSync(at("textures"))) await cp(at("textures"), at("site/textures"), { recursive: true });
+// The finer map tiles, if they have been made (`pnpm tiles`): served beside the textures at tiles/. They are in no package and no repository; the Pages workflow makes them.
+if (existsSync(at(".cache/body-tiles-out/manifest.json"))) await cp(at(".cache/body-tiles-out"), at("site/tiles"), { recursive: true });
 // The family's card in the demo's <head> (og:image, twitter:image, the icon), and the three pictures published beside it.
 const ALT = "Wakusei Planets: Mars, the Earth, Saturn with its rings, Jupiter and Neptune, shaded in 3D, side by side.";
 const pkg = JSON.parse(readFileSync(at("package.json"), "utf8"));

@@ -330,6 +330,8 @@
     "test:package": "pnpm build && node scripts/check-package.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && node scripts/check-package.ts",
     "prepublishOnly": "pnpm check",
+    "tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py build",
+    "test:tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py selftest",
     "family:readme": "node scripts/family-readme.mjs",
     "readme:images": "node scripts/readme-images.mjs",
     "site": "pnpm build && node scripts/site.ts",

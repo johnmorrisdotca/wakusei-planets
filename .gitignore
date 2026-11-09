@@ -11,3 +11,4 @@ playwright-report/
 .docs-examples/
 .playwright-mcp/
 dist-data/
+__pycache__/

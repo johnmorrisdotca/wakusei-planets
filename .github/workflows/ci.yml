@@ -16,6 +16,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Pillow and numpy, for the tile script's own test (pnpm test skips it without them)
+        run: python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy
       - run: pnpm check
       - run: node scripts/check-standard.mjs
   package:

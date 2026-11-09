@@ -26,7 +26,16 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy
       - run: pnpm check
+      - name: The body tiles, cut from the big public-domain maps (kept between runs while the script and the 2048 pictures are the same); pnpm site copies them to site/tiles
+        uses: actions/cache@v6
+        id: tiles
+        with:
+          path: .cache/body-tiles-out
+          key: body-tiles-${{ hashFiles('scripts/make-body-tiles.py', 'textures/*-2048.webp') }}
+      - if: steps.tiles.outputs.cache-hit != 'true'
+        run: pnpm tiles
       - run: pnpm site
       - run: pnpm docs:site
       - run: pnpm exec playwright install --with-deps chromium
