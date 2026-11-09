@@ -456,8 +456,8 @@ function valueAt(by: "sky" | "space", view: View, a: BodyId, b: BodyId, ms: numb
   return separation(by, at.get(a)!, at.get(b)!);
 }
 
-/** Every minimum of the separation of each pair inside [from, to]: a coarse scan, then each bracket narrowed to about a second. */
-function minima(pairs: ReadonlyArray<readonly [BodyId, BodyId]>, by: "sky" | "space", view: View, from: number, to: number): Minimum[] {
+/** Every minimum of the separation of each pair inside [from, to] (every maximum, for a sign of -1): a coarse scan, then each bracket narrowed to about a second. */
+function minima(pairs: ReadonlyArray<readonly [BodyId, BodyId]>, by: "sky" | "space", view: View, from: number, to: number, sign: 1 | -1 = 1): Minimum[] {
   const ids = [...new Set(pairs.flat())];
   const step = stepMs(ids, view);
   const count = Math.ceil((to - from) / step) + 3;
@@ -466,7 +466,7 @@ function minima(pairs: ReadonlyArray<readonly [BodyId, BodyId]>, by: "sky" | "sp
   times.forEach((ms, i) => {
     const at = sample(by, view, ids, ms);
     pairs.forEach(([a, b], p) => {
-      values[p]![i] = separation(by, at.get(a)!, at.get(b)!);
+      values[p]![i] = sign * separation(by, at.get(a)!, at.get(b)!);
     });
   });
   const found: Minimum[] = [];
@@ -474,7 +474,7 @@ function minima(pairs: ReadonlyArray<readonly [BodyId, BodyId]>, by: "sky" | "sp
     const v = values[p]!;
     for (let i = 1; i < count - 1; i += 1) {
       if (!(v[i]! <= v[i - 1]! && v[i]! < v[i + 1]!)) continue;
-      const ms = golden((t) => valueAt(by, view, a, b, t), times[i - 1]!, times[i + 1]!, 500);
+      const ms = golden((t) => sign * valueAt(by, view, a, b, t), times[i - 1]!, times[i + 1]!, 500);
       if (ms >= from && ms <= to) found.push({ a, b, ms, value: valueAt(by, view, a, b, ms) });
     }
   });
@@ -567,4 +567,124 @@ export function conjunctions(options: ConjunctionOptions): Approach[] {
     .filter((found) => found.value <= radius)
     .sort((x, y) => x.ms - y.ms)
     .map((found) => describe(by, view, found.a, found.b, found.ms, found.value, false));
+}
+
+/**
+ * The distance between two bodies at one instant: their centres, in the Sun's frame, with no light time.
+ *
+ * @example
+ * ```ts
+ * import { distance, type Distance } from "@johnmorrisdotca/wakusei-planets/nearest";
+ *
+ * const found: Distance = distance("earth", "moon", Date.UTC(2026, 10, 8));
+ * console.log(Math.round(found.distanceKm), "km");
+ * ```
+ */
+export interface Distance {
+  a: BodyId;
+  b: BodyId;
+  /** The moment, milliseconds since 1970 (UTC). */
+  time: number;
+  distanceKm: number;
+  distanceAu: number;
+  /** The accuracy to expect of `distanceKm`, kilometres: the limits the accuracy tests hold the theories to, combined. An expectation, not a bound. */
+  uncertaintyKm: number;
+}
+
+/**
+ * The least or the greatest distance of a pair over a span, and when.
+ *
+ * @example
+ * ```ts
+ * import { distanceRange, type DistanceAt } from "@johnmorrisdotca/wakusei-planets/nearest";
+ *
+ * const least: DistanceAt = distanceRange("earth", "mars", { from: Date.UTC(2003, 0, 1), to: Date.UTC(2004, 0, 1) }).min;
+ * console.log(least.time.toISOString().slice(0, 10), least.distanceAu.toFixed(3));
+ * ```
+ */
+export interface DistanceAt {
+  /** The moment, to about a second of time. */
+  time: Date;
+  distanceKm: number;
+  distanceAu: number;
+  /** The accuracy to expect of `distanceKm`, kilometres. */
+  uncertaintyKm: number;
+  /** True when this is the span's start or end, not a turning point inside it. */
+  atEdge: boolean;
+}
+
+/**
+ * Where a pair is nearest and farthest over a span.
+ *
+ * @example
+ * ```ts
+ * import { distanceRange, type DistanceRange } from "@johnmorrisdotca/wakusei-planets/nearest";
+ *
+ * const range: DistanceRange = distanceRange("venus", "earth", { from: Date.UTC(2026, 0, 1), to: Date.UTC(2028, 0, 1) });
+ * console.log(range.min.distanceAu.toFixed(2), range.max.distanceAu.toFixed(2));
+ * ```
+ */
+export interface DistanceRange {
+  a: BodyId;
+  b: BodyId;
+  min: DistanceAt;
+  max: DistanceAt;
+}
+
+/**
+ * The distance between two bodies on a date: the straight line between their centres at that instant, in kilometres and astronomical units, with no light time. Any two of the Sun, the planets, the dwarf planets and the moons.
+ *
+ * @param a - One body.
+ * @param b - The other.
+ * @param date - The moment, a `Date` or milliseconds since 1970 (UTC). Default: now.
+ * @returns The distance and the accuracy to expect of it.
+ * @throws RangeError for a body or a date that is not valid, or two bodies that are the same.
+ *
+ * @example
+ * ```ts
+ * import { distance } from "@johnmorrisdotca/wakusei-planets/nearest";
+ *
+ * const mars = distance("earth", "mars", Date.UTC(2003, 7, 27, 9));
+ * console.log(mars.distanceAu.toFixed(4), Math.round(mars.distanceKm), "km");
+ * ```
+ */
+export function distance(a: BodyId, b: BodyId, date?: When): Distance {
+  bodyOf("a", a);
+  bodyOf("b", b);
+  if (a === b) throw new RangeError(`a and b must be different bodies, got ${a} twice`);
+  const ms = date === undefined ? Date.now() : moment(date, "date");
+  const km = valueAt("space", viewOf(undefined), a, b, ms);
+  return { a, b, time: ms, distanceKm: km, distanceAu: km / AU_KM, uncertaintyKm: spaceUncertainty(a, b, ms) };
+}
+
+/**
+ * The least and the greatest distance between two bodies over a span, each with its moment: the span is scanned in coarse steps (as `closestApproach` does) and each turning point is narrowed to about a second of time by golden-section search, the greatest on the negated distance. If the distance only falls or only rises through the span, the end that is the extreme is returned and `atEdge` says so.
+ *
+ * @param a - One body.
+ * @param b - The other.
+ * @param options - `from` and `to`, the span.
+ * @returns `min` and `max`, each `{ time, distanceKm, distanceAu, uncertaintyKm, atEdge }`.
+ * @throws RangeError for a body or a span that is not valid, or two bodies that are the same.
+ *
+ * @example
+ * ```ts
+ * import { distanceRange } from "@johnmorrisdotca/wakusei-planets/nearest";
+ *
+ * const { min, max } = distanceRange("earth", "mars", { from: Date.UTC(1990, 0, 1), to: Date.UTC(2020, 0, 1) });
+ * console.log(min.time.toISOString().slice(0, 10), min.distanceAu.toFixed(3), "to", max.distanceAu.toFixed(3), "au");
+ * ```
+ */
+export function distanceRange(a: BodyId, b: BodyId, options: Pick<ApproachOptions, "from" | "to">): DistanceRange {
+  bodyOf("a", a);
+  bodyOf("b", b);
+  if (a === b) throw new RangeError(`a and b must be different bodies, got ${a} twice`);
+  const { from, to, view } = span({ ...options, by: "space" });
+  const start = valueAt("space", view, a, b, from);
+  const end = valueAt("space", view, a, b, to);
+  const pick = (sign: 1 | -1): DistanceAt => {
+    const candidates = [...minima([[a, b]], "space", view, from, to, sign).map((found) => ({ ms: found.ms, value: found.value, atEdge: false })), { ms: from, value: start, atEdge: true }, { ms: to, value: end, atEdge: true }];
+    const best = candidates.sort((x, y) => sign * (x.value - y.value) || Number(x.atEdge) - Number(y.atEdge))[0]!;
+    return { time: new Date(best.ms), distanceKm: best.value, distanceAu: best.value / AU_KM, uncertaintyKm: spaceUncertainty(a, b, best.ms), atEdge: best.atEdge };
+  };
+  return { a, b, min: pick(1), max: pick(-1) };
 }
