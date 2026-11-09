@@ -4,14 +4,14 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
-import { renderEmbed, renderIndex, renderPortrait, renderSpace } from "./page.ts";
+import { renderEmbed, renderIndex, renderKids, renderPortrait, renderSpace } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
 
 await rm(at("site/"), { recursive: true, force: true });
 await mkdir(at("site/"), { recursive: true });
 await build({
-  entryPoints: [at("demo/demo.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts")],
+  entryPoints: [at("demo/demo.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/kids.ts")],
   bundle: true,
   splitting: true,
   format: "esm",
@@ -35,5 +35,6 @@ publishThumbnails(at(""), at("site/"));
 await writeFile(at("site/embed.html"), renderEmbed(), "utf8");
 await writeFile(at("site/portrait.html"), renderPortrait(), "utf8");
 await writeFile(at("site/space.html"), renderSpace(), "utf8");
+await writeFile(at("site/kids.html"), renderKids(), "utf8");
 await cp(at("demo/builder.html"), at("site/builder.html"));
-console.log("site built: index.html, embed.html, portrait.html, space.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
+console.log("site built: index.html, embed.html, portrait.html, space.html, kids.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
