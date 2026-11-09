@@ -3,7 +3,7 @@
 // the middle of the body by as many pixels, because the view controls are told the disc's radius) and the Turn button's direction (Mars goes right, Venus, which turns backwards, goes left).
 // Real pointer events, real key presses, and the pictures compared. Chromium only, in software: the 3D looks have no software drawing in WebKit.
 import { expect, test, type Page } from "@playwright/test";
-import { checkFollowsTheHand, dragBy, movedBy } from "./ground.mjs";
+import { checkFollowsTheHand, dragBy, groundShift, movedBy } from "./ground.mjs";
 
 const URL = "/wakusei-planets/";
 const CASES: readonly (readonly [string, string])[] = [
@@ -76,8 +76,13 @@ test("Venus: the Turn button turns the body its real way, the ground goes left",
   await page.locator("#main").evaluate((el) => (el as unknown as { goLive(): Promise<boolean> }).goLive());
   await expect(page.locator("#main")).toHaveAttribute("data-state", "live");
   await page.waitForTimeout(200);
-  // the two pictures of a wide stage take longer to photograph on a slow machine, and the globe goes on turning meanwhile: the search reaches well past the 30 pixels the first half second moves it
-  const turned = await movedBy(page, view, () => page.waitForTimeout(500), { settle: 100, reach: 110, window: [0.4, 0.6, 0.4, 0.6] });
+  // The two pictures are of the middle of the globe only: photographing the whole wide stage takes seconds on a slow machine, and the globe goes on turning meanwhile.
+  const box = (await view.boundingBox())!;
+  const clip = { x: box.x + box.width / 2 - 160, y: box.y + box.height / 2 - 100, width: 320, height: 200 };
+  const before = await page.screenshot({ clip, scale: "css" });
+  await page.waitForTimeout(1000);
+  const after = await page.screenshot({ clip, scale: "css" });
+  const turned = await groundShift(page, before, after, 110, [0.3, 0.7, 0.3, 0.7]);
   expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-3);
 });
 
