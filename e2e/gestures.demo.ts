@@ -149,25 +149,28 @@ test("Shift and a drag rolls the picture clockwise on the screen, and a plain dr
         const img = new Image();
         img.src = `data:image/png;base64,${png}`;
         await img.decode();
+        const side = Math.min(img.width, img.height);
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = side;
+        canvas.height = side;
         const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0);
-        return ctx.getImageData(0, 0, img.width, img.height);
+        ctx.drawImage(img, (side - img.width) / 2, (side - img.height) / 2);
+        return ctx.getImageData(0, 0, side, side);
       };
       const turnedBy = async (png: string, quarters: number): Promise<ImageData> => {
         const img = new Image();
         img.src = `data:image/png;base64,${png}`;
         await img.decode();
+        // a wide or tall view: only the square in the middle turns into itself, so both pictures are that square
+        const side = Math.min(img.width, img.height);
         const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
+        canvas.width = side;
+        canvas.height = side;
         const ctx = canvas.getContext("2d")!;
-        ctx.translate(img.width / 2, img.height / 2);
+        ctx.translate(side / 2, side / 2);
         ctx.rotate((quarters * Math.PI) / 2);
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        return ctx.getImageData(0, 0, img.width, img.height);
+        return ctx.getImageData(0, 0, side, side);
       };
       const gap = (p: ImageData, q: ImageData): number => {
         let sum = 0;

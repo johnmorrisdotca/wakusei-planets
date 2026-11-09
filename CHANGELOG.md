@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- A planet off the middle of the view is no longer cut by a straight edge (MODULES-739).
+- A planet off the middle of the view is no longer cut by a straight edge (MODULES-739, MODULES-742 part 4). The body, the space view and their pictures fill the whole stage, and the pan, the roll and the turn agree with the shape of the view: the shaded body's pan is in the pixels the controls say on a wide or tall view (it moved by the aspect ratio too far), the portrait's 3D view no longer moves everything twice as far as a pan asks (its camera was put at the centre of the view and the window was too), and the gesture tests take the square in the middle where they turn a picture. `checkGestures` also runs on the star page and the embed page (a body, and a flat portrait).
 
 ## [0.26.0] - 2026-11-09
 

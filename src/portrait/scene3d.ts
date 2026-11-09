@@ -94,10 +94,11 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
         const slot = 7 * Math.max(1e-6, ...placed.map((p) => Math.max(p.r, MIN_RADIUS_PX / pxPerUnit)));
         const far = (placed.length + 1) * slot;
         const distance = far + 300 * Math.max(halfW, halfH);
-        camera.left = cam.x - halfW;
-        camera.right = cam.x + halfW;
-        camera.top = cam.y + halfH;
-        camera.bottom = cam.y - halfH;
+        // the camera is placed at the centre of the view below, so the window is round it: putting the centre in the window too moved everything twice as far as the view was moved
+        camera.left = -halfW;
+        camera.right = halfW;
+        camera.top = halfH;
+        camera.bottom = -halfH;
         camera.near = Math.max(1e-6, distance - far - slot);
         camera.far = distance + slot;
         camera.position.set(cam.x, cam.y, distance);

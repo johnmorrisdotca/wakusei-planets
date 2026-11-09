@@ -423,6 +423,18 @@ test("the view can be moved sideways and rolled: every body in the picture moves
   expect(Math.abs(rolled!.y - (cy + dx))).toBeLessThan(60);
 });
 
+test("the view fills the whole wide stage, not a square in the middle: the element and its canvas are wide and the camera sees the extra width", async ({ page }) => {
+  await open(page);
+  await jump(page, "Whole solar system");
+  await settle(page, 1200);
+  const box = (await page.locator(SPACE).boundingBox())!;
+  expect(box.width, "the stage is wider than it is tall").toBeGreaterThan(box.height * 1.2);
+  const stats = await statsOf(page);
+  expect(stats.canvas.width).toBeGreaterThan(stats.canvas.height * 1.2);
+  // the canvas has the element's own shape, and the projection takes its aspect from it
+  expect(await page.locator(SPACE).evaluate((el) => el.getBoundingClientRect().width / el.getBoundingClientRect().height)).toBeCloseTo(stats.canvas.width / stats.canvas.height, 1);
+});
+
 test.describe("a reader who prefers reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
   test("a ride jumps instead of gliding, and runs at about one step a second at 60 times real time", async ({ page }) => {

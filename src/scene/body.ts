@@ -300,8 +300,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const half = state.extent / Math.max(0.05, state.zoom);
         const halfW = aspect >= 1 ? half * aspect : half;
         const halfH = aspect >= 1 ? half : half / aspect;
-        const cx = state.panX * halfW;
-        const cy = state.panY * halfH;
+        // the pan is in units of the short side's half (what the element divides the pixels by), so a wide or tall view moves by the pixels asked
+        const cx = state.panX * half;
+        const cy = state.panY * half;
         camera.left = cx - halfW;
         camera.right = cx + halfW;
         camera.top = cy + halfH;
