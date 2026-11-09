@@ -129,8 +129,13 @@ test("the lineup draws the eight planets left to right at one scale, numbered in
   const k = jupiter / BODIES.jupiter.radiusKm;
   const sun = lineupFacts("en", k)[2]!;
   assert.ok(sun.includes(`${Math.round((BODIES.sun.radiusKm * 2 * k) / 10)} cm`), sun);
-  assert.equal(lineupFacts("en", k)[0], "Jupiter is the biggest: 11 times as wide as Earth.");
-  assert.equal(lineupFacts("en", k)[1], "Mercury is the smallest.");
+  assert.equal(lineupFacts("en", k)[0], "Biggest: Jupiter, 11 times as wide as Earth.");
+  assert.equal(lineupFacts("en", k)[1], "Smallest: Mercury.");
+  for (const [page, lang] of [["a4", "en"], ["a4", "ja"], ["letter", "en"], ["letter", "ja"]] as const) {
+    const wide = kidsSvg("lineup", { ...kidsRoom(page, "landscape"), lang });
+    const across = Number(/data-body="jupiter"><ellipse cx="[\d.]+" cy="[\d.]+" rx="([\d.]+)"/.exec(wide)![1]) * 2;
+    assert.ok(across >= 25, `${page} ${lang}: Jupiter is ${across.toFixed(0)} mm across`);
+  }
 });
 
 test("a sentence wraps at spaces (English) or after a full stop (Japanese) and never runs past the width", () => {

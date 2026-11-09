@@ -206,9 +206,8 @@ export function lineupFacts(lang: Lang, mmPerKm: number): string[] {
   const smallest = radii.reduce((a, b) => (b[1] < a[1] ? b : a))[0];
   const sun = Math.round((BODIES.sun.radiusKm * 2 * mmPerKm) / 10);
   const x = times(earthsWide(biggest));
-  const sunTimes = Math.round(earthsWide("sun"));
   return lang === "ja"
-    ? [`いちばん おおきいのは ${kidsSay(biggest, lang)}。ちきゅうの ${x}ばい。`, `いちばん ちいさいのは ${kidsSay(smallest, lang)}。`, `たいようは ちきゅうの ${sunTimes}ばい。この かみでは ${sun}cm も ある！`]
-    : [`${kidsSay(biggest, lang)} is the biggest: ${x} times as wide as Earth.`, `${kidsSay(smallest, lang)} is the smallest.`, `The Sun is ${sunTimes} times as wide as Earth: on this page it would be ${sun} cm across!`];
+    ? [`いちばん おおきい: ${kidsSay(biggest, lang)}。ちきゅうの ${x}ばい。`, `いちばん ちいさい: ${kidsSay(smallest, lang)}。`, `ここでは たいようは ${sun}cm にも なる！`]
+    : [`Biggest: ${kidsSay(biggest, lang)}, ${x} times as wide as Earth.`, `Smallest: ${kidsSay(smallest, lang)}.`, `The Sun would be ${sun} cm wide here!`];
 }
 
