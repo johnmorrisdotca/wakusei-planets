@@ -340,6 +340,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   const show = (t: THREE.Texture): void => {
     paintedMaterial!.uniforms.uMap!.value = t;
     mesh.material = paintedMaterial!;
+    // the shaded look was drawn only until the picture came: if it was drawn at all, its program is let go now, so what a body holds does not depend on which came first
+    shader.dispose();
     redraw();
   };
   if (wantPainted && paintedMaterial !== undefined && widths[0] !== undefined) {

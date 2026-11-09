@@ -62,11 +62,16 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
   };
   const warm = Date.now() + 60_000;
   while (Date.now() < warm) await step();
-  // A body's shader is compiled the first time it is drawn and kept until the look changes: a bounded cache (the bodies and moons of the page). The count is taken from a fresh one every time (the look
-  // changed to painted and back), with the first scale and light, riding nothing, the Earth in view and the sky held at the date the page opened on.
+  // A body's shader is compiled the first time it is drawn and kept until the look changes: a bounded cache (the bodies and moons of the page). So the count is taken from a state that is the same every time:
+  // first scale and light, riding nothing, the Earth reached (the glide over), then the look changed to painted and back so every body is made again with only the Earth's view in sight, and the sky held at the date the page opened on.
   const rest = async () => {
-    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Earth's light", "The Sun's"], ["Go to", "Earth"], ["Look", "Painted"], ["Look", "Realistic"]] as const) {
+    for (const [group, name] of [["Ride along", "Off"], ["Scale", "Compressed"], ["Earth's light", "The Sun's"], ["Go to", "Earth"]] as const) {
       await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+      await page.waitForTimeout(600);
+    }
+    await expect.poll(() => sky.evaluate((el) => Reflect.get(el, "stats").ride.gliding), { timeout: 60_000 }).toBe(false);
+    for (const name of ["Painted", "Realistic"]) {
+      await page.getByRole("group", { name: "Look" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
       await page.waitForTimeout(600);
     }
     await sky.evaluate((el) => {
@@ -83,15 +88,25 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
     }
   };
   const run = () => sky.evaluate((el) => Reflect.set(el, "speed", 3600));
+  const kinds = (c: Awaited<ReturnType<typeof readCounts>>) => JSON.stringify(Object.fromEntries(GPU_KINDS.map((k) => [k, c.created[k] - c.deleted[k]])));
   await rest();
   const start = { heap: await heap(), counts: await readCounts(page) };
   await run();
+  // A leak that depends on timing (a picture arriving as a body is let go) shows in some walks and not in others, so every walk is counted on its own, against the start, and the first one over fails.
   const end = Date.now() + MINUTES * 60_000;
-  while (Date.now() < end) await step();
-  await rest();
+  let walks = 0;
+  while (Date.now() < end || walks < 3) {
+    for (let k = 0; k < places.length; k += 1) await step();
+    walks += 1;
+    await rest();
+    const counts = await readCounts(page);
+    const held = await sky.evaluate((el) => { const s = Reflect.get(el, "stats"); return { ...s.bodies, camera: s.camera.position.map((n: number) => Math.round(n * 100) / 100) }; });
+    console.log(`space soak walk ${walks}: ${gpuObjects(counts)} (start ${gpuObjects(start.counts)}), ${kinds(counts)}, ${JSON.stringify(held)}`);
+    expect(gpuObjects(counts), `walk ${walks}, started ${kinds(start.counts)}, now ${kinds(counts)}`).toBeLessThanOrEqual(gpuObjects(start.counts) + 4);
+    await run();
+  }
   const stop = { heap: await heap(), counts: await readCounts(page) };
-  const kinds = (c: typeof start.counts) => JSON.stringify(Object.fromEntries(GPU_KINDS.map((k) => [k, c.created[k] - c.deleted[k]])));
-  console.log(`space soak ${MINUTES} min, before ${kinds(start.counts)}, after ${kinds(stop.counts)}`);
+  console.log(`space soak ${MINUTES} min, ${walks} walks, before ${kinds(start.counts)}, after ${kinds(stop.counts)}`);
   console.log(`space soak ${MINUTES} min: heap ${(start.heap / 1048576).toFixed(1)} -> ${(stop.heap / 1048576).toFixed(1)} MB, GPU objects ${gpuObjects(start.counts)} -> ${gpuObjects(stop.counts)}, contexts ${stop.counts.contexts}`);
   expect(stop.counts.contexts).toBe(1);
   expect(gpuObjects(stop.counts)).toBeLessThanOrEqual(gpuObjects(start.counts) + 4);
