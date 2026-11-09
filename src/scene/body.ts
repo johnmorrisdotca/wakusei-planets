@@ -6,8 +6,10 @@ import type { Pose } from "../ephemeris.ts";
 import { BODIES, type BodyFacts, type BodyId } from "../facts.ts";
 import { silhouette } from "../pose.ts";
 import { cross, type Vec3 } from "../vec.ts";
-import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, RING_FRAGMENT, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
-import { lookOf, type BodyLook } from "./look.ts";
+import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
+import { detailOf, lookOf, type BodyLook } from "./look.ts";
+import { createDetail, type Detail, type DetailStats } from "./detail.ts";
+import type { TileLevel } from "./tiles.ts";
 import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
 import { loadImage } from "./textures.ts";
@@ -55,6 +57,8 @@ export interface BodyScene extends Scene3D {
   /** What the scene is drawing now: the texture width in use, or 0 for the shader. */
   readonly textureWidth: number;
   readonly painted: boolean;
+  /** The window of finer map on the body, or `undefined` for a body with none (a glowing one, or one with no painted map). */
+  readonly detail: DetailStats | undefined;
 }
 
 export interface BodyItemOptions {
@@ -79,14 +83,27 @@ export interface BodyItemOptions {
   redraw(): void;
   /** The scene tells the element which way it drew (the look can fall back to the shader). */
   report?(note: { painted: boolean; width: number; failed?: boolean }): void;
+  /** Finer map tiles for a close zoom (see `scene/detail.ts`): where they are (`undefined` for none), the pixel ratio, whether this device may use them, and what to do when the tile set's levels for the body are known. */
+  tiles?: { base(): string | undefined; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
 }
 
 function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THREE.ShaderMaterial {
   const a = look.atmosphere;
+  // a glowing body (the Sun, a star) is drawn as it always was: no window of finer map and no generic detail
+  const generic = look.emissive !== true;
+  const fine = detailOf(look);
   return new T.ShaderMaterial({
     vertexShader: VERTEX,
-    fragmentShader: bodyFragment(painted ? PAINTED_SURFACE : look.surface, painted, false, look.limbTint),
+    fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic),
     uniforms: {
+      ...(generic
+        ? {
+            uTexel: { value: painted ? (2 * Math.PI) / (look.painted?.widths[0] ?? 2048) : 0.005 },
+            uDetailAmp: { value: fine.amount },
+            uDetailStretch: { value: fine.stretch },
+            ...(painted ? { uDetail: { value: null }, uDetailRect: { value: [0, 1, 1, 1] }, uDetailFade: { value: new T.Vector2(0, 0) }, uDetailOn: { value: 0 }, uDetailTexel: { value: 0.003 } } : {}),
+          }
+        : {}),
       uLight: { value: new T.Vector3(-0.6, 0.2, 0.77) },
       uRelief: { value: (painted ? (look.painted?.relief ?? 0) : (look.relief ?? 0.6)) },
       uAmbient: { value: look.ambient ?? 0.04 },
@@ -129,7 +146,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
       const look = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
       const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
-      const geometry = assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 128, 64), (g) => g.dispose());
+      const geometry = assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 192, 96), (g) => g.dispose());
       const shader = assets.acquire(`wk:body:${held}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
 
@@ -180,13 +197,13 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (photoTexture !== undefined && ringTexture !== photoTexture) photoTexture.dispose();
         const ringMaterial = (key: string, depthTest: boolean) => assets.acquire(`wk:ringmat:${ringKey}:${key}`, () => new T.ShaderMaterial({
           vertexShader: RING_VERTEX,
-          fragmentShader: RING_FRAGMENT,
+          fragmentShader: RING_FRAGMENT_DETAIL,
           side: T.DoubleSide,
           transparent: true,
           premultipliedAlpha: photoTexture === undefined,
           depthWrite: false,
           depthTest,
-          uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) } },
+          uniforms: { uRingTex: { value: ringTexture }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(0, 0, 1) }, uRingN: { value: new T.Vector3(0, 1, 0) }, uRingTexel: { value: 1 / (photoTexture !== undefined ? photo!.width : table.width) } },
         }), (m) => m.dispose());
         // 0..pi is the +Y half. The basis maps local +Y onto +east.
         const half = (key: string, depthTest: boolean) => {
@@ -254,6 +271,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (shared !== t) drop(t);
         textureWidth = w;
         paintedMaterial!.uniforms.uMap!.value = shared;
+        if (paintedMaterial!.uniforms.uTexel !== undefined) paintedMaterial!.uniforms.uTexel.value = (2 * Math.PI) / w;
         mesh.material = paintedMaterial!;
         options.report?.({ painted: true, width: w });
       };
@@ -263,6 +281,31 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         textureWidth = 0;
         options.report?.({ painted: false, width: 0, failed: true });
       };
+      // the window of finer map for a close zoom, laid over the painted map by the painted material
+      const windowUniforms = wantPainted && paintedMaterial !== undefined && look.emissive !== true && options.tiles !== undefined && look.painted !== undefined ? paintedMaterial.uniforms : undefined;
+      const detail: Detail | undefined =
+        windowUniforms === undefined || options.tiles === undefined
+          ? undefined
+          : createDetail(T, {
+              base: () => options.tiles!.base(),
+              body: look.painted!.map,
+              ratio: () => options.tiles!.ratio(),
+              allowed: () => options.tiles!.allowed(),
+              redraw: () => options.redraw(),
+              ...(options.tiles.onLevels === undefined ? {} : { onLevels: (levels: readonly TileLevel[] | undefined) => options.tiles!.onLevels!(levels) }),
+              apply: (shown) => {
+                if (shown === null) {
+                  windowUniforms.uDetailOn!.value = 0;
+                  windowUniforms.uDetail!.value = null;
+                  return;
+                }
+                windowUniforms.uDetail!.value = shown.texture;
+                windowUniforms.uDetailRect!.value = [shown.rect.u0, shown.rect.vTop, shown.rect.du, shown.rect.dv];
+                (windowUniforms.uDetailFade!.value as THREE.Vector2).set(shown.fade.u, shown.fade.v);
+                windowUniforms.uDetailTexel!.value = shown.texel;
+                windowUniforms.uDetailOn!.value = 1;
+              },
+            });
       if (wantPainted && paintedMaterial !== undefined) {
         const widths = look.painted!.widths;
         try {
@@ -427,6 +470,16 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           } else glow.scale.setScalar(1);
         }
         requestSharperTexture(state);
+        if (detail !== undefined && textureWidth > 0) {
+          const east = cross(state.pose.pole, state.pose.meridian);
+          const ax = facts.axesKm;
+          const mean = facts.radiusKm;
+          detail.sync(
+            { left: camera.left, right: camera.right, bottom: camera.bottom, top: camera.top },
+            { east, pole: state.pose.pole, meridian: state.pose.meridian, scale: [ax ? ax[1] / mean : 1, ax ? ax[2] / mean : 1 - facts.flattening, ax ? ax[0] / mean : 1] },
+            viewWidth,
+          );
+        }
       };
 
       apply(latest);
@@ -441,6 +494,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         get painted() {
           return textureWidth > 0;
         },
+        get detail() {
+          return detail?.stats;
+        },
         resize(w: number, h: number) {
           viewWidth = w;
           viewHeight = h;
@@ -453,6 +509,11 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         },
         dispose() {
           gone = true;
+          if (windowUniforms !== undefined) {
+            windowUniforms.uDetailOn!.value = 0;
+            windowUniforms.uDetail!.value = null;
+          }
+          detail?.dispose();
           for (const o of orbitLines.values()) o.line.geometry.dispose();
           orbitMaterial.dispose();
           scene.clear();

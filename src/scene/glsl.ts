@@ -55,8 +55,42 @@ float oval(vec3 p, float lon0, float lat0, float rx, float ry, float soft) {
   return 1.0 - smoothstep(1.0 - soft, 1.0, sqrt(dx * dx + dy * dy));
 }`;
 
-/** The fragment shader of a body: the surface code goes between the prelude and `main`. `limbTint` is the colour the edge of a glowing body shifts to (default the Sun's orange). */
-export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number]): string {
+/**
+ * The generic fine detail of a close view, for the fragment shader of a body (`bodyFragment` with `detail`). It is not a measured feature of the body: it is noise, put on so that a body never goes smooth when the
+ * zoom takes it past the sharpness of its map. `gTexel` is the angle one texel of the picture being read covers (radians); where a pixel is smaller than a texel (the map is enlarged more than about one and a
+ * quarter times) octaves of noise are added, each half the size of the one before, each only while its cells are still wider than about two pixels, so nothing is finer than the screen can show and nothing
+ * shimmers. `uDetailAmp` is how strong it is (0 turns it off) and `uDetailStretch` stretches it along the lines of latitude (a gas giant's streaks).
+ */
+export const MICRO_DETAIL = /* glsl */ `
+uniform float uTexel;
+uniform float uDetailAmp;
+uniform float uDetailStretch;
+float gTexel = 0.003;
+float microDetail(vec3 p) {
+  if (uDetailAmp <= 0.0) return 1.0;
+  float fw = max(length(fwidth(p)), 1e-9);
+  float mag = gTexel / fw;
+  float fade = smoothstep(1.2, 3.0, mag);
+  if (fade <= 0.0) return 1.0;
+  float sum = 0.0;
+  float amp = 1.0;
+  for (int i = 0; i < 6; i++) {
+    float cell = gTexel * 0.7 / exp2(float(i));
+    float w = smoothstep(1.4, 3.0, cell / fw);
+    if (w <= 0.0) break;
+    vec3 q = vec3(p.xy, p.z * uDetailStretch) / cell;
+    sum += w * amp * (vnoise(q + float(i) * 19.19) - 0.5);
+    amp *= 0.58;
+  }
+  return max(0.0, 1.0 + uDetailAmp * 2.0 * fade * sum);
+}
+`;
+
+/**
+ * The fragment shader of a body: the surface code goes between the prelude and `main`. `limbTint` is the colour the edge of a glowing body shifts to (default the Sun's orange). `detail` adds the generic fine
+ * detail (`MICRO_DETAIL`) that carries a body past the sharpness of its map; a body that glows never takes it, and without it the shader is the same program as before it existed.
+ */
+export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number], detail = false): string {
   const tint = limbTint === undefined ? "vec3(1.0, 0.55, 0.25)" : `vec3(${limbTint.map((v) => v.toFixed(4)).join(", ")})`;
   return /* glsl */ `
 precision highp float;
@@ -80,10 +114,11 @@ varying vec3 vN;
 varying vec3 vW;
 ${world ? "varying vec3 vV;\nuniform int uOccN;\nuniform vec4 uOcc[6];" : ""}
 ${PRELUDE}
-${surface}
+${detail ? MICRO_DETAIL : ""}${surface}
 void main() {
   vec3 p = normalize(vObj);
-  vec4 s = surface(p);
+${detail ? "  gTexel = uTexel;\n" : ""}  vec4 s = surface(p);
+${detail ? "  s.rgb *= microDetail(p);\n" : ""}
   vec3 n = normalize(vN);
   float mu = ${world ? "clamp(dot(n, normalize(vV)), 0.0, 1.0)" : "clamp(n.z, 0.0, 1.0)"};
   if (uEmissive > 0.5) {
@@ -162,6 +197,62 @@ vec4 surface(vec3 p) {
   return vec4(c, dot(c, vec3(0.3, 0.59, 0.11)));
 }`;
 
+/**
+ * A painted body's surface code with a window of finer picture (`uDetail`, placed by `uDetailRect` and softened at its edges by `uDetailFade`, `uDetailOn` is 1 while there is one), and the texel angles `micro` detail
+ * (`MICRO_DETAIL`) needs. Use it with `bodyFragment(..., true)`; a glowing body takes `PAINTED_SURFACE`.
+ */
+export const PAINTED_SURFACE_WINDOWED = /* glsl */ `
+uniform sampler2D uDetail;
+uniform vec4 uDetailRect;
+uniform vec2 uDetailFade;
+uniform float uDetailOn;
+uniform float uDetailTexel;
+vec4 surface(vec3 p) {
+  float u1 = atan(p.y, p.x) / 6.2831853 + 0.5;
+  float u2 = fract(u1 + 0.5) - 0.5;
+  float v = asin(clamp(p.z, -1.0, 1.0)) / 3.1415927 + 0.5;
+  vec2 a = vec2(u1, v); vec2 b = vec2(u2, v);
+  vec2 ax = dFdx(a); vec2 ay = dFdy(a); vec2 bx = dFdx(b); vec2 by = dFdy(b);
+  bool useA = dot(ax, ax) + dot(ay, ay) <= dot(bx, bx) + dot(by, by);
+  vec3 c = textureGrad(uMap, useA ? a : b, useA ? ax : bx, useA ? ay : by).rgb;
+  // The window of finer picture laid over the map: tiles of a sharper level, where they are loaded (see scene/detail.ts). Longitude is measured east of the window's west edge, so a window may cross the seam;
+  // the gradients are those of the continuous variant, so the picture is filtered the same on both sides of it.
+  gTexel = uTexel;
+  if (uDetailOn > 0.5) {
+    vec2 q = useA ? a : b;
+    vec2 gx = useA ? ax : bx;
+    vec2 gy = useA ? ay : by;
+    float rx = fract(q.x - uDetailRect.x) / uDetailRect.z;
+    float ry = (uDetailRect.y - q.y) / uDetailRect.w;
+    if (rx < 1.0 && ry > 0.0 && ry < 1.0) {
+      float fx = uDetailFade.x > 0.0 ? min(smoothstep(0.0, uDetailFade.x, rx), smoothstep(0.0, uDetailFade.x, 1.0 - rx)) : 1.0;
+      float fy = uDetailFade.y > 0.0 ? min(smoothstep(0.0, uDetailFade.y, ry), smoothstep(0.0, uDetailFade.y, 1.0 - ry)) : 1.0;
+      vec3 d = textureGrad(uDetail, vec2(rx, ry), vec2(gx.x / uDetailRect.z, -gx.y / uDetailRect.w), vec2(gy.x / uDetailRect.z, -gy.y / uDetailRect.w)).rgb;
+      c = mix(c, d, fx * fy);
+      gTexel = mix(uTexel, uDetailTexel, fx * fy);
+    }
+  }
+  // A map of plain bands is the same at every longitude, so the body turns and the picture does not. The wave, the spot and the polar hexagon move with the surface.
+  if (uMark > 0.5) {
+    float lon = atan(p.y, p.x);
+    float lat = asin(clamp(p.z, -1.0, 1.0));
+    float wave = sin(lon * 4.0 + lat * 6.0);
+    float belt = 1.0 - smoothstep(1.15, 1.45, abs(lat));
+    c *= 0.86 + 0.22 * (0.5 + 0.5 * wave) * belt;
+    if (uMark > 1.5) {
+      float ang = atan(p.y, p.x);
+      float radius = length(p.xy);
+      float hexR = 0.26 + 0.045 * cos(ang * 6.0);
+      float hex = (1.0 - smoothstep(0.0, 0.028, abs(radius - hexR))) * smoothstep(0.42, 0.68, p.z);
+      c = mix(c, vec3(0.45, 0.55, 0.68), hex);
+    } else {
+      float spot = exp(-pow((lat - 0.32) / 0.2, 2.0) - pow(lon / 0.5, 2.0));
+      c = mix(c, c * vec3(0.28, 0.34, 0.5), clamp(spot, 0.0, 1.0));
+    }
+  }
+  return vec4(c, dot(c, vec3(0.3, 0.59, 0.11)));
+}`;
+
 export const RING_FRAGMENT = /* glsl */ `
 precision highp float;
 uniform sampler2D uRingTex;
@@ -184,6 +275,33 @@ void main() {
   vec3 c = pow(t.rgb, vec3(2.2)) * bright * (1.0 - 0.93 * shadow);
   gl_FragColor = vec4(pow(c, vec3(1.0 / 2.2)), t.a);
 }`;
+
+/**
+ * The ring's fragment shader with generic ringlets for a close view: where a texel of the ring's strip (`uRingTexel`, its width as a fraction of the ring's span) is more than about a pixel and a quarter wide, noise
+ * along the radius, octave by octave, finer than the strip, only while its cells are still two or more pixels wide. It is not a measured feature of the rings: the strip's own opacity and colour, its gaps and the planet's
+ * shadow stay as they were, and the detail only makes the strip's blur ringlets. Where a texel is smaller than a pixel it changes nothing.
+ */
+export const RING_FRAGMENT_DETAIL = RING_FRAGMENT.replace("uniform vec3 uRingN;\nvarying", "uniform vec3 uRingN;\nuniform float uRingTexel;\nvarying")
+  .replace("void main() {", `float rhash(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
+float rnoise(float x) { float i = floor(x); float f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(rhash(i), rhash(i + 1.0), f); }
+void main() {`)
+  .replace("  vec4 t = texture2D(uRingTex, vec2(u, 0.5));\n", `  vec4 t = texture2D(uRingTex, vec2(u, 0.5));
+  float du = max(fwidth(u), 1e-9);
+  float fade = smoothstep(1.2, 3.0, uRingTexel / du);
+  if (fade > 0.0 && t.a > 0.02) {
+    float sum = 0.0;
+    float amp = 1.0;
+    for (int i = 0; i < 7; i++) {
+      float cell = uRingTexel * 0.7 / exp2(float(i));
+      float w = smoothstep(1.4, 3.0, cell / du);
+      if (w <= 0.0) break;
+      sum += w * amp * (rnoise(u / cell + float(i) * 17.0) - 0.5);
+      amp *= 0.62;
+    }
+    float k = max(0.0, 1.0 + 1.4 * fade * sum);
+    t = vec4(t.rgb * k, clamp(t.a * k, 0.0, 1.0));
+  }
+`);
 
 export const RING_VERTEX = /* glsl */ `
 varying vec3 vL;

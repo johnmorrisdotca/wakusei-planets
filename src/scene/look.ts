@@ -82,6 +82,11 @@ export interface BodyLook {
   wrap?: number;
   /** How much of the night side shows (0 to 1). Default 0.04. */
   ambient?: number;
+  /**
+   * The generic fine detail of a close view (noise, not a measured feature): how strong (0 to 1, default 0.32; 0 for none) and how much it is stretched along the lines of latitude (1 is none; a gas giant's streaks 3). A glowing body takes none.
+   * Where a map or a shader is enlarged more than about a quarter, octaves of it are added so the body does not go smooth.
+   */
+  detail?: { amount?: number; stretch?: number };
   painted?: PaintedMap;
   /** Draw the painted map in the realistic look too: for a body with no honest drawing from numbers (the Earth's continents). */
   mapped?: boolean;
@@ -90,6 +95,36 @@ export interface BodyLook {
 import type { StarLook, StarNumbers } from "../star.ts";
 import { starLook } from "../star.ts";
 import { looks, stars, waiting } from "./store.ts";
+
+const SMOOTH: Partial<Record<BodyId, { amount: number; stretch: number }>> = {
+  jupiter: { amount: 0.11, stretch: 7 },
+  saturn: { amount: 0.06, stretch: 12 },
+  uranus: { amount: 0.04, stretch: 8 },
+  neptune: { amount: 0.05, stretch: 8 },
+  venus: { amount: 0.07, stretch: 4 },
+  titan: { amount: 0.06, stretch: 4 },
+  earth: { amount: 0.2, stretch: 1 },
+};
+
+/**
+ * The strength and stretch of a body's generic fine detail: its own `detail`, else the table's for a body that is smooth (the gas giants, Venus, Titan) or the rocky default.
+ *
+ * @param look - The body's look.
+ * @returns How strong it is (0 to 1) and how much it is stretched along the lines of latitude.
+ *
+ * @example
+ * ```ts
+ * import { detailOf, lookOf } from "@johnmorrisdotca/wakusei-planets/look";
+ *
+ * const look = lookOf("mars");
+ * console.log(look === undefined ? "no look" : detailOf(look).amount);
+ * ```
+ */
+export function detailOf(look: BodyLook): { amount: number; stretch: number } {
+  if (look.emissive === true) return { amount: 0, stretch: 1 };
+  const own = SMOOTH[look.id];
+  return { amount: look.detail?.amount ?? own?.amount ?? 0.32, stretch: look.detail?.stretch ?? own?.stretch ?? 1 };
+}
 
 /**
  * Teach the package how to draw a body in three.js. Each body's entry point (`@johnmorrisdotca/wakusei-planets/jupiter`) calls this once as it loads; call it yourself to add or replace a look.
