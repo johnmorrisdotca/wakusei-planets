@@ -69,6 +69,11 @@ const greatConjunction = near.closestApproach("jupiter", "saturn", { from: Date.
 if (greatConjunction.time.toISOString().slice(0, 13) !== "2020-12-21T18" || Math.abs(greatConjunction.angle - 0.102) > 0.002 || near.nearest("moon", { count: 1, date: 0 }).length !== 1) throw new Error("nearest package entry failed");
 if (JSON.stringify(Object.keys(near).sort()) !== JSON.stringify(["closestApproach", "conjunctions", "distance", "distanceRange", "nearest", "within"])) throw new Error("nearest public API changed");
 
+// The colouring sheets through package resolution: a sheet for each body and the lineup, with their three facts and the paper's room.
+const sheetsEntry = "@johnmorrisdotca/wakusei-planets/sheets";
+const sheets = await import(sheetsEntry);
+if (sheets.KIDS_SHEETS.length !== 19 || !sheets.kidsSvg("saturn", { ...sheets.kidsRoom("a4"), lang: "en" }).includes("Colour me!") || sheets.kidsFacts("jupiter", "en").length !== 3) throw new Error("sheets package entry failed");
+
 // The sun and moon times through package resolution too, both conventions.
 const suncalcEntry = "@johnmorrisdotca/wakusei-planets/suncalc";
 const sunTimes = await import(suncalcEntry);
