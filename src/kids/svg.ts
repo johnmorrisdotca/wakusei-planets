@@ -107,7 +107,7 @@ function swatches(id: KidsBody, lang: Lang, width: number, y: number): Block {
   const headWidth = 52;
   const cell = (width - headWidth) / list.length;
   const square = 14;
-  const out = [text(0, y + square / 2 + head * 0.35, head, SAY[lang].colour, ' data-colour-head=""')];
+  const out = [text(1.2, y + square / 2 + head * 0.35, head, SAY[lang].colour, ' data-colour-head=""')];
   list.forEach((one, i) => {
     const cx = headWidth + cell * i + cell / 2;
     out.push(`<rect x="${n(cx - square / 2 - 1)}" y="${n(y)}" width="${n(square + 2)}" height="${n(square)}" rx="3" fill="${one.hex}" stroke="#000" stroke-width="${LINE_MM}" data-swatch="${one.hex}"/>`);
