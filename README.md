@@ -307,6 +307,23 @@ const mars = distanceRange("earth", "mars", { from: Date.UTC(1900, 0, 1), to: Da
 console.log(mars.min.distanceAu.toFixed(2), "to", mars.max.distanceAu.toFixed(2), "au");
 ```
 
+## For children: your weight and age on other worlds
+
+`/kids` says what you weigh and how old you are on the Sun, the planets, Pluto and the moons. `weightOn` is your weight there (from each world's surface gravity, GM over the radius squared, with the source named per world; for Jupiter, Saturn, Uranus and Neptune it is at the cloud tops, 1 bar); `ageOn` is your age in that world's years (its orbit period) and days (its solar day); `nextBirthdayOn` is the date of your next birthday there. [The kids page](https://johnmorrisdotca.github.io/wakusei-planets/kids.html) has a big friendly card for each world with its line drawing, in English and Japanese; what you type is kept nowhere. See [the guide](docs/guides/kids.md).
+
+```ts
+import { ageOn, nextBirthdayOn, weightOn } from "@johnmorrisdotca/wakusei-planets/kids";
+
+const born = Date.UTC(2016, 10, 8);
+const today = Date.UTC(2026, 10, 8);
+
+console.log(weightOn("moon", 30).toFixed(1), "kg on the Moon");
+console.log(weightOn("jupiter", 30).toFixed(1), "kg at Jupiter's cloud tops");
+console.log(ageOn("earth", born, today)?.wholeYears, "years on the Earth");
+console.log(ageOn("mars", born, today)?.years.toFixed(1), "years on Mars");
+console.log(nextBirthdayOn("mars", born, today)?.date.toISOString().slice(0, 10), "is the next Mars birthday");
+```
+
 ## The space view
 
 [The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html) puts the Earth, the Moon, the Sun and the planets in their places for any date and time, in one WebGL context: the Moon's phase and the Earth's day side come out of the real Sun's light. Zoom from the Earth out to the whole solar system, in a compressed scale (every direction real, the distances squeezed) or the true one, and run time forwards or backwards. Positions come from this package's own models.
@@ -336,6 +353,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
 | `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
+| `.../kids` | For children: your weight (`weightOn`) and age (`ageOn`) on the Sun, the planets, Pluto and the moons, your next birthday there (`nextBirthdayOn`) and the pull of each world (`surfaceGravity`). No browser. |
 | `.../look` | What a body needs to be drawn with three.js. |
 | `.../painter` | The bodies as objects for a scene of your own. |
 | `.../all` | Every body's shaded look, at once. |
@@ -370,6 +388,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |
 | [The stars you can see without a telescope](docs/guides/stars.md) | 5,080 stars with names, positions, proper motion, distance and colour |
 | [What is nearby, and when bodies come close](docs/guides/nearest.md) | The nearest bodies to a body on a date, closest approaches and conjunctions, and how close they are to Horizons |
+| [For children: your weight and age on other worlds](docs/guides/kids.md) | Weight from each world's surface gravity, age in its years and days, the next birthday there; the kids page |
 | [Famous spacecraft](docs/guides/spacecraft.md) | Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker and Webb: where they are and their whole voyage |
 | [The Sun and Moon from a place](docs/guides/suncalc.md) | Position, sunrise and sunset, Moon rise, set and phase; a drop-in for suncalc |
 | [Coordinate conversions](docs/guides/coordinates.md) | Pure spherical, ecliptic, equatorial and horizontal coordinate conversions |

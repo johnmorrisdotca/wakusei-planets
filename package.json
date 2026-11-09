@@ -73,7 +73,10 @@
     "trajectory",
     "conjunction",
     "close-approach",
-    "nearest"
+    "nearest",
+    "kids",
+    "weight-on-other-planets",
+    "age-on-other-planets"
   ],
   "homepage": "https://johnmorrisdotca.github.io/wakusei-planets/",
   "repository": {
@@ -143,6 +146,11 @@
       "types": "./dist/nearest.d.ts",
       "import": "./dist/nearest.js",
       "default": "./dist/nearest.js"
+    },
+    "./kids": {
+      "types": "./dist/kids.d.ts",
+      "import": "./dist/kids.js",
+      "default": "./dist/kids.js"
     },
     "./spacecraft": {
       "types": "./dist/spacecraft.d.ts",

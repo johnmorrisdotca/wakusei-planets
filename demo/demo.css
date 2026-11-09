@@ -93,3 +93,25 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .portrait-panel .field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; }
 .portrait-keys { margin-top: 12px; }
 .portrait-panel .fam-button, .portrait-panel .fam-seg button { min-height: 48px; }
+
+/* kids.html: big friendly cards. */
+.kids .kids-intro h2 { font-size: 1.6rem; }
+.kids .kids-intro p { font-size: 1.15rem; }
+.kids-form { margin: 14px 0; }
+.kids-field { display: grid; gap: 6px; font-size: 1.15rem; font-weight: 700; }
+.kids-form .fam-field { min-height: 56px; font-size: 1.4rem; padding: 0 14px; width: min(100%, 14rem); border-width: 2px; border-radius: 16px; }
+.kids-form .fam-seg button { min-width: 56px; min-height: 56px; font-size: 1.2rem; }
+.kids-warn { margin: 0; padding: 10px 14px; border: 2px solid var(--bad); border-radius: 14px; font-weight: 700; }
+.kids-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.kids-card { display: grid; justify-items: center; gap: 8px; padding: 18px 16px; text-align: center; border: 3px solid var(--rule); border-radius: 28px; background: var(--surface); font-family: ui-rounded, "Hiragino Maru Gothic ProN", "Arial Rounded MT Bold", "M PLUS Rounded 1c", system-ui, sans-serif; }
+.kids-card h3 { margin: 0; font-size: 1.9rem; line-height: 1.1; }
+.kids-art svg { display: block; width: 160px; height: 160px; }
+.kids-card p { margin: 0; }
+.kids-pull { font-size: 1rem; color: var(--muted); }
+.kids-cloud { font-size: .9rem; color: var(--muted); }
+.kids-answer { display: grid; gap: 2px; width: 100%; padding: 10px; border-radius: 18px; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.kids-label { font-size: .95rem; font-weight: 700; color: var(--muted); }
+.kids-big { font-size: 2rem; font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+.kids-small { font-size: 1rem; }
+.kids-none { font-size: 1rem; color: var(--muted); }
+.kids-note { margin: 10px 0 0; font-size: 1rem; }

@@ -69,6 +69,12 @@ const greatConjunction = near.closestApproach("jupiter", "saturn", { from: Date.
 if (greatConjunction.time.toISOString().slice(0, 13) !== "2020-12-21T18" || Math.abs(greatConjunction.angle - 0.102) > 0.002 || near.nearest("moon", { count: 1, date: 0 }).length !== 1) throw new Error("nearest package entry failed");
 if (JSON.stringify(Object.keys(near).sort()) !== JSON.stringify(["closestApproach", "conjunctions", "distance", "distanceRange", "nearest", "within"])) throw new Error("nearest public API changed");
 
+// Your weight and age on other worlds through package resolution: the Moon pulls about a sixth, a Martian year is 687 days.
+const kidsEntry = "@johnmorrisdotca/wakusei-planets/kids";
+const kids = await import(kidsEntry);
+if (Math.abs(kids.weightOn("moon", 30) - 4.97) > 0.01 || Math.abs(kids.ageOn("mars", Date.UTC(2000, 0, 1), Date.UTC(2000, 0, 1) + 686.98 * 86_400_000).years - 1) > 1e-9) throw new Error("kids package entry failed");
+if (JSON.stringify(Object.keys(kids).sort()) !== JSON.stringify(["WORLD_IDS", "ageOn", "nextBirthdayOn", "surfaceGravity", "weightOn"])) throw new Error("kids public API changed");
+
 // The sun and moon times through package resolution too, both conventions.
 const suncalcEntry = "@johnmorrisdotca/wakusei-planets/suncalc";
 const sunTimes = await import(suncalcEntry);
