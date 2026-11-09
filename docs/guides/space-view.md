@@ -66,7 +66,7 @@ A planet's nearer moons appear round it once the planet is a few pixels across, 
 
 ## Properties, events, stats
 
-Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale`, `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`. Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-time` (while time runs), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera` and `bodies`.
+Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale`, `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`. Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-timechange` (the date, four times a second at most while time runs, and once when it holds: `{ time, running }`), `wakusei-time` (every step the clock takes), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera` and `bodies`.
 
 ## Riding along
 

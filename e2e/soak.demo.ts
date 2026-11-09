@@ -7,7 +7,7 @@ test.use({ reducedMotion: "no-preference" });
 
 test(`${MINUTES} minutes of changes leave memory, GPU objects and contexts flat`, async ({ page }) => {
   await page.addInitScript(COUNT_SCRIPT);
-  await page.goto("/wakusei-planets/?body=jupiter&sky=real&moons=1&speed=3600");
+  await page.goto("/wakusei-planets/?body=jupiter&sky=real&moons=1&play=on&speed=3600");
   const main = page.locator("#main");
   await main.hover();
   await expect(main).toHaveAttribute("data-state", "live", { timeout: 120_000 });
@@ -45,7 +45,7 @@ test(`${MINUTES} minutes of changes leave memory, GPU objects and contexts flat`
 
 test(`${MINUTES} minutes in the space view, going from the Earth to the planets and back with the clock running, leave memory, GPU objects and contexts flat`, async ({ page }) => {
   await page.addInitScript(COUNT_SCRIPT);
-  await page.goto("/wakusei-planets/space.html?t=2026-11-02T14:00Z&speed=3600");
+  await page.goto("/wakusei-planets/space.html?t=2026-11-02T14:00Z&play=on&speed=3600");
   const sky = page.locator("wakusei-space");
   await expect(sky).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   const heap = () => page.evaluate(() => (globalThis as unknown as { gc?: () => void }).gc?.()).then(() => page.evaluate(() => (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize));

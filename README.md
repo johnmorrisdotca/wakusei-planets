@@ -180,7 +180,7 @@ A page full of bodies stays light: one WebGL context for the page through kazoku
 | `size` | The width in pixels. | `320` |
 | `time` | `now` or an ISO date: the body as the Earth sees it then. Left out, a portrait. | portrait |
 | `moons` | A planet with its moons on their orbits (with a date). | off |
-| `rate` | Simulated seconds for each real second. | `1` |
+| `rate` | Simulated seconds for each real second; `0` holds the clock and draws nothing. A dated picture sends `wakusei-timechange` (`{ time, running }`) while the clock runs and once when it holds. | `1` |
 | `turn` | A portrait turns this many degrees a second. | `0` |
 | `tilt`, `pitch`, `phase`, `meridian` | A portrait's pose in degrees. | the body's own |
 | `scale-to` | Draw to scale with another body. | fills its box |

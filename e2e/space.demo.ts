@@ -129,7 +129,7 @@ test("time runs backwards", async ({ page }) => {
 });
 
 test("out of sight or hidden, a game clock running at a day a second draws nothing", async ({ page }) => {
-  await open(page, `t=${NOV2}&speed=86400`);
+  await open(page, `t=${NOV2}&play=on&speed=86400`);
   await page.evaluate(() => {
     const spacer = document.createElement("div");
     spacer.style.height = "6000px";

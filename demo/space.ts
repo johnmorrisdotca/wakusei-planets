@@ -1,8 +1,10 @@
-// The space view page: one <wakusei-space> (one WebGL context for every body in it) with the family's view controls and speed buttons around it. The choices are kept in the address.
+// The space view page: one <wakusei-space> (one WebGL context for every body in it) with the family's view controls and replay bar around it. The choices are kept in the address.
+// The date box follows the clock: <wakusei-space> sends `wakusei-timechange` while time runs and once when it holds, and the box shows it (never while the reader is typing in it).
+// Play runs the clock from the date shown; Pause holds it there and writes it to the address (`t`); Back goes to the date the reader chose. `play=on` and `speed` stay in the address.
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
-import "@johnmorrisdotca/kazoku-ui/speed-buttons/define";
-import type { SpeedButtonsElement } from "@johnmorrisdotca/kazoku-ui/speed-buttons/element";
+import "@johnmorrisdotca/kazoku-ui/replay-bar/define";
+import type { ReplayBarElement, ReplayDetail } from "@johnmorrisdotca/kazoku-ui/replay-bar/element";
 import type { ViewControlsElement, ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { setThreeLoader, type BodyInfo, type SpacePreset, type WakuseiSpace } from "../src/space/element.ts";
 import { WORDS } from "./words.js";
@@ -14,7 +16,7 @@ setThreeLoader(() => import("./three-subset.ts"));
 
 const space = document.querySelector<WakuseiSpace>("#space")!;
 const controls = document.querySelector<ViewControlsElement>("kazoku-view-controls")!;
-const speeds = document.querySelector<SpeedButtonsElement>("#speeds")!;
+const replay = document.querySelector<ReplayBarElement>("#replay")!;
 const when = document.querySelector<HTMLInputElement>("#when")!;
 const nowButton = document.querySelector<HTMLButtonElement>("#now")!;
 const caption = document.querySelector<HTMLElement>("#caption")!;
@@ -23,13 +25,17 @@ const $$ = (selector: string): HTMLButtonElement[] => [...document.querySelector
 
 const address = createAddressState({ defaults: {} });
 const pick = <T extends string>(value: string | null, allowed: readonly T[], fallback: T): T => (allowed.includes(value as T) ? (value as T) : fallback);
+const DEFAULT_SPEED = 3600;
 const state = {
   scale: pick(address.get("scale"), ["compressed", "true"], "compressed"),
   look: pick(address.get("look"), ["realistic", "painted"], "realistic"),
   light: pick(address.get("light"), ["sun", "lit"], "sun"),
   orbits: address.get("orbits") !== "0",
   names: address.get("names") !== "0",
-  speed: Number(address.get("speed") ?? 0) || 0,
+  /** Playing: the clock runs from the date shown at `speed` times real time. Reduced motion leaves it off (the bar sees to that). */
+  play: address.get("play") === "on",
+  /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
+  speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
   time: address.get("t") ?? "now",
   ride: pick(address.get("ride"), ["", "moon", "mars", "io"], ""),
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
@@ -42,6 +48,11 @@ const pressed = (button: HTMLElement, on: boolean): void => {
 };
 const localValue = (ms: number): string => new Date(ms - new Date(ms).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
+const isoSecond = (ms: number): string => new Date(ms).toISOString().slice(0, 19) + "Z";
+/** The date the reader chose (the address, the box or Now): Back returns to it. */
+let origin = state.time === "now" ? Date.now() : Date.parse(state.time);
+if (!Number.isFinite(origin)) origin = Date.now();
+
 let applied: string | undefined;
 let appliedRide: string | undefined;
 
@@ -51,11 +62,14 @@ function render(): void {
   space.light = state.light;
   space.orbits = state.orbits;
   space.labels = state.names;
-  space.speed = state.speed;
+  if (replay.playing !== state.play) replay.playing = state.play;
+  state.play = replay.playing;
   if (applied !== state.time) {
     applied = state.time;
     space.time = state.time === "now" ? "now" : Date.parse(state.time);
   }
+  // the speed is set after the date, so a clock that holds tells the page the date it was set to
+  space.speed = state.play ? state.speed : 0;
   for (const b of $$("#scales [data-scale]")) pressed(b, b.dataset["scale"] === state.scale);
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
   for (const b of $$("#lights [data-light]")) pressed(b, b.dataset["light"] === state.light);
@@ -69,15 +83,18 @@ function render(): void {
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
   pressed(nowButton, state.time === "now");
-  speeds.value = state.speed;
-  when.value = localValue(state.time === "now" ? Date.now() : Date.parse(state.time));
+  if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
+  replay.setAttribute("lang", chooser()?.lang ?? "en");
+  replay.words = { start: say("sp_back") };
+  if (!state.play && document.activeElement !== when) when.value = localValue(state.time === "now" ? space.time : Date.parse(state.time));
   scaleNote.textContent = say(state.scale === "true" ? "sp_note_true" : "sp_note_compressed");
   address.set("scale", state.scale === "compressed" ? null : state.scale);
   address.set("look", state.look === "realistic" ? null : state.look);
   address.set("light", state.light === "sun" ? null : state.light);
   address.set("orbits", state.orbits ? null : "0");
   address.set("names", state.names ? null : "0");
-  address.set("speed", state.speed === 0 ? null : String(state.speed));
+  address.set("play", state.play ? "on" : null);
+  address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
   address.set("goto", state.goto === "earth" ? null : state.goto);
   address.set("ride", state.ride === "" ? null : state.ride);
@@ -95,23 +112,66 @@ for (const b of $$("#scales [data-scale]")) b.addEventListener("click", () => ((
 for (const b of $$("#looks [data-look]")) b.addEventListener("click", () => ((state.look = b.dataset["look"] as typeof state.look), render()));
 for (const b of $$("#lights [data-light]")) b.addEventListener("click", () => ((state.light = b.dataset["light"] as typeof state.light), render()));
 for (const b of $$("#gotos [data-goto]")) b.addEventListener("click", () => goTo(b.dataset["goto"] as SpacePreset));
-for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((state.ride = b.dataset["ride"] as typeof state.ride), render()));
+// riding along is for watching it go by: a ride starts the clock (Play), and the date box moves with it
+for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((state.ride = b.dataset["ride"] as typeof state.ride), (state.play = state.play || state.ride !== ""), render()));
 for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
-nowButton.addEventListener("click", () => ((state.time = "now"), render()));
+nowButton.addEventListener("click", () => {
+  state.time = "now";
+  origin = Date.now();
+  applied = undefined;
+  render();
+  when.value = localValue(space.time);
+});
 when.addEventListener("change", () => {
   const ms = Date.parse(when.value);
   if (Number.isFinite(ms)) {
-    state.time = new Date(ms).toISOString().slice(0, 16) + "Z";
+    state.time = isoSecond(ms);
+    origin = ms;
+    applied = undefined;
     render();
   }
 });
-speeds.addEventListener("kazoku-speedchange", (event) => {
+// the clock: the element tells the date while time runs (a few times a second) and once when it holds
+space.addEventListener("wakusei-timechange", (event) => {
+  const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
+  if (document.activeElement !== when) when.value = localValue(time);
+  if (running) return;
+  // the clock holds: the date it stopped on is the date shown, and the address keeps it
+  state.time = isoSecond(time);
+  applied = state.time;
+  address.set("t", state.time);
+  pressed(nowButton, false);
+});
+replay.addEventListener("kazoku-replay", (event) => {
+  const { action, playing, reason } = (event as CustomEvent<ReplayDetail>).detail;
+  if (reason !== "user") return;
+  if (action === "start") {
+    // Back: the date the reader chose, held
+    state.play = false;
+    state.time = isoSecond(origin);
+    applied = undefined;
+    render();
+    when.value = localValue(origin);
+    return;
+  }
+  if (action === "repeat") return;
+  state.play = playing;
+  if (playing && document.activeElement !== when) when.value = localValue(space.time);
+  render();
+});
+replay.addEventListener("kazoku-speedchange", (event) => {
   const { value, reason } = (event as CustomEvent<{ value: number; reason: string }>).detail;
   if (reason !== "user") return;
   state.speed = value;
   render();
+});
+// leaving while the clock runs: the date it had reached goes into the address, so a returning reader is where they were
+addEventListener("pagehide", () => {
+  if (!state.play) return;
+  address.set("t", isoSecond(space.time));
+  address.flush();
 });
 controls.addEventListener("kazoku-viewchange", (event) => {
   const detail = (event as CustomEvent<ViewChangeDetail>).detail;

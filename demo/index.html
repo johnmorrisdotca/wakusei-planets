@@ -59,13 +59,13 @@
             </div>
           </div>
 
-          <div class="fam-row" id="time-row" hidden data-help-en="Choose the date and time, or go back to now. The buttons are multiples of real time (3600 is an hour a second, 86400 a day a second)." data-help-ja="日付と時刻を選びます。「今」に戻すこともできます。ボタンは実際の時間の何倍かを表します（3600は1秒で1時間、86400は1秒で1日）。">
+          <div class="fam-row" id="time-row" hidden data-help-en="Choose the date and time, or go back to now. Play runs the clock from the date shown and the date follows it; the speeds are multiples of real time (3600 is an hour a second, 86400 a day a second)." data-help-ja="日付と時刻を選びます。「今」に戻すこともできます。「再生」で表示している日時から時計が進み、日付もいっしょに進みます。速さは実際の時間の何倍かです（3600は1秒で1時間、86400は1秒で1日）。">
             <label class="field">
               <span data-say="when">Date and time</span>
               <input type="datetime-local" id="when" class="fam-field" />
             </label>
             <button type="button" class="fam-button" id="now" aria-pressed="true" data-say="now">Now</button>
-            <kazoku-speed-buttons id="speeds" data-testid="speeds" steps="1 3600 86400" value="1"></kazoku-speed-buttons>
+            <kazoku-replay-bar id="replay" data-testid="replay" steps="1 3600 86400" speed="3600"></kazoku-replay-bar>
           </div>
           <p class="fam-fine" id="status" role="status" hidden></p>
         </div>

@@ -374,7 +374,7 @@ test("zooming the space view from a millionth to its surface and back leaves con
 });
 
 test("the space view at a day a second: at most thirty frames a second, one frame at a time, a lookup about once a second, and nothing out of sight", async ({ page }) => {
-  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&speed=86400`);
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400`);
   await liveSky(page);
   await settle(page, 1500);
   const before = await readCounts(page);
@@ -438,7 +438,7 @@ test("changes to the space view give back what they took: the zooms, the scales,
 });
 
 test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
-  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&speed=86400&ride=mars`);
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&ride=mars`);
   await liveSky(page);
   await settle(page, 2500);
   const s0 = await skyStats(page);

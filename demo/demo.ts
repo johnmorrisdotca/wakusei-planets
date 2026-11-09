@@ -1,5 +1,7 @@
 import "@johnmorrisdotca/kazoku-ui/view-controls/define";
 import "@johnmorrisdotca/kazoku-ui/speed-buttons/define";
+import "@johnmorrisdotca/kazoku-ui/replay-bar/define";
+import type { ReplayBarElement, ReplayDetail } from "@johnmorrisdotca/kazoku-ui/replay-bar/element";
 import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
 import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
 import type { SpeedButtonsElement } from "@johnmorrisdotca/kazoku-ui/speed-buttons/element";
@@ -46,7 +48,7 @@ if (main && controls && pickerBox) {
   const address = createAddressState({ defaults: { body: "jupiter", look: "realistic" } });
   const looks = [...document.querySelectorAll<HTMLButtonElement>("#looks [data-look]")];
   const skies = [...document.querySelectorAll<HTMLButtonElement>("#skies [data-sky]")];
-  const speeds = document.querySelector<SpeedButtonsElement>("#speeds")!;
+  const replay = document.querySelector<ReplayBarElement>("#replay")!;
   const spinSpeed = document.querySelector<SpeedButtonsElement>("#spin-speed")!;
   const moonsButton = document.querySelector<HTMLButtonElement>("#moons")!;
   const scaleButton = document.querySelector<HTMLButtonElement>("#scale")!;
@@ -63,6 +65,7 @@ if (main && controls && pickerBox) {
 
   const asAlso = (value: string | null): BodyId[] => (value ?? "").split(",").filter((id): id is BodyId => id in BODIES);
   const asBody = (value: string | null): BodyId => (value !== null && value in BODIES ? (value as BodyId) : "jupiter");
+  const DEFAULT_SPEED = 3600;
   const state = {
     body: asBody(address.get("body")),
     look: (["line", "realistic", "painted", "illustrated"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
@@ -73,7 +76,10 @@ if (main && controls && pickerBox) {
     relative: address.get("rel") === "1",
     ref: (["planet", "earth", "sun"].includes(address.get("ref") ?? "") ? address.get("ref") : "earth") as "planet" | "earth" | "sun",
     spin: address.get("spin") === "1",
-    speed: Number(address.get("speed") ?? 1) || 1,
+    /** Playing: the clock runs from the date shown at `speed` times real time (the replay bar; reduced motion leaves it off). */
+    play: address.get("play") === "on",
+    /** Times real time while playing. */
+    speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
     spinSpeed: Number(address.get("spinspeed") ?? 1) || 1,
     time: address.get("t") ?? "now",
   };
@@ -103,7 +109,7 @@ if (main && controls && pickerBox) {
     ["#moons", "note_moons"],
     ["#scale", "note_scale"],
     ["#now", "note_now"],
-    ["#speeds", "note_speeds"],
+    ["#replay", "note_speeds"],
   ];
   const noteLines: { button: HTMLElement; line: HTMLElement; key: string }[] = [];
   for (const [selector, key] of NOTES) {
@@ -283,6 +289,15 @@ if (main && controls && pickerBox) {
 
   const hasMoons = (): boolean => state.body in MOONS_OF;
   const timeMs = (): number => (state.time === "now" ? Date.now() : Date.parse(state.time));
+  const isoSecond = (ms: number): string => new Date(ms).toISOString().slice(0, 19) + "Z";
+  /** The date the reader chose (the address, the box or Now): Back returns to it. */
+  let origin = timeMs();
+  /** Where the clock is while it runs: the picture's own moment, the date shown in the box. */
+  const shown = (): number => (state.play ? (main.time ?? timeMs()) : timeMs());
+  /** Fold the moment reached into the chosen start before the clock's rate changes, so a new speed or a pause goes on from the date shown, not from where Play began. */
+  const rebase = (): void => {
+    if (state.play) state.time = isoSecond(shown());
+  };
 
   function describe(): void {
     if (state.scale) return;
@@ -437,13 +452,16 @@ if (main && controls && pickerBox) {
     pressed(spinButton, state.spin);
     timeRow.hidden = !(state.real || state.moons);
     pressed(nowButton, state.time === "now");
-    if (speeds.value !== state.speed) speeds.value = state.speed;
+    if (replay.playing !== state.play) replay.playing = state.play;
+    state.play = replay.playing;
+    if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
+    replay.setAttribute("lang", lang());
+    replay.words = { start: say("back") };
     if (spinSpeed.value !== state.spinSpeed) spinSpeed.value = state.spinSpeed;
     spinSpeed.hidden = !state.spin || state.real || (state.moons && hasMoons());
-    for (const box of [speeds, spinSpeed]) box.setAttribute("lang", lang());
-    speeds.setAttribute("label", say("timeSpeed"));
+    spinSpeed.setAttribute("lang", lang());
     spinSpeed.setAttribute("label", say("turnSpeed"));
-    if (document.activeElement !== when) when.value = localValue(timeMs());
+    if (document.activeElement !== when) when.value = localValue(shown());
 
     const setAttr = (el: Element, name: string, value: string | null): void => {
       if (value === null) el.removeAttribute(name);
@@ -456,8 +474,9 @@ if (main && controls && pickerBox) {
     setAttr(main!, "texture-base", "textures/");
     setAttr(main!, "tiles", "tiles/");
     setAttr(main!, "time", real ? state.time : null);
-    setAttr(main!, "rate", real ? String(state.speed) : null);
-    setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : real ? null : "0");
+    setAttr(main!, "rate", real ? String(state.play ? state.speed : 0) : null);
+    // a dated picture turns with its own date's clock, so Play is what moves it; nothing is drawn while it holds
+    setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : "0");
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     for (const picker of pickers) picker.sync();
@@ -499,7 +518,8 @@ if (main && controls && pickerBox) {
     address.set("scale", state.scale ? "1" : null);
     address.set("ref", state.scale && state.ref !== "earth" ? state.ref : null);
     address.set("spin", state.spin ? "1" : null);
-    address.set("speed", state.speed !== 1 ? String(state.speed) : null);
+    address.set("play", state.play ? "on" : null);
+    address.set("speed", state.speed !== DEFAULT_SPEED ? String(state.speed) : null);
     address.set("spinspeed", state.spinSpeed !== 1 ? String(state.spinSpeed) : null);
     address.set("t", state.time !== "now" ? state.time : null);
   }
@@ -546,19 +566,63 @@ if (main && controls && pickerBox) {
   relativeButton.addEventListener("click", () => ((state.relative = !state.relative), render()));
   for (const b of scaleRefs.querySelectorAll<HTMLButtonElement>("[data-ref]")) b.addEventListener("click", () => ((state.ref = (b.dataset["ref"] ?? "earth") as typeof state.ref), render()));
   spinButton.addEventListener("click", () => ((state.spin = !state.spin), render()));
-  nowButton.addEventListener("click", () => ((state.time = "now"), render()));
+  nowButton.addEventListener("click", () => {
+    state.time = "now";
+    origin = Date.now();
+    render();
+  });
   when.addEventListener("change", () => {
     const ms = Date.parse(when.value);
     if (Number.isFinite(ms)) {
       state.time = new Date(ms).toISOString();
+      origin = ms;
       render();
     }
   });
-  speeds.addEventListener("kazoku-speedchange", (event) => {
+  // the clock: the picture tells the date while time runs (a few times a second) and once when it holds
+  main.addEventListener("wakusei-timechange", (event) => {
+    const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
+    if (document.activeElement !== when) when.value = localValue(time);
+    if (running) return;
+    // the clock holds: the date it stopped on is the date shown, and the address keeps it
+    state.time = isoSecond(time);
+    address.set("t", state.time);
+    pressed(nowButton, false);
+    describe();
+  });
+  replay.addEventListener("kazoku-replay", (event) => {
+    const { action, playing, reason } = (event as CustomEvent<ReplayDetail>).detail;
+    if (reason !== "user") return;
+    if (action === "start") {
+      // Back: the date the reader chose, held
+      state.play = false;
+      state.time = isoSecond(origin);
+      render();
+      return;
+    }
+    if (action === "repeat") return;
+    if (playing) {
+      // Play starts from the date shown: "now" becomes that moment, so the clock does not jump to a later now
+      if (state.time === "now") state.time = new Date().toISOString();
+      state.play = true;
+    } else {
+      rebase();
+      state.play = false;
+    }
+    render();
+  });
+  replay.addEventListener("kazoku-speedchange", (event) => {
     const { value, reason } = (event as CustomEvent<{ value: number; reason: string }>).detail;
     if (reason !== "user") return;
+    rebase();
     state.speed = value;
     render();
+  });
+  // leaving while the clock runs: the date it had reached goes into the address, so a returning reader is where they were
+  addEventListener("pagehide", () => {
+    if (!state.play) return;
+    address.set("t", isoSecond(shown()));
+    address.flush();
   });
   spinSpeed.addEventListener("kazoku-speedchange", (event) => {
     const { value, reason } = (event as CustomEvent<{ value: number; reason: string }>).detail;

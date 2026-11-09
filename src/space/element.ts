@@ -99,6 +99,8 @@ export type Riding = RideState;
 const readLight = (value: string | null): SpaceLight => (value === "lit" ? "lit" : "sun");
 const RAD = Math.PI / 180;
 const REAL_TIME_TICK_MS = 60_000;
+/** The least time between two `wakusei-timechange` events while time runs: a few a second at most, however fast the picture is drawn. */
+const TIME_EVENT_MS = 250;
 
 const readCentre = (value: string | null): { lon: number; lat: number } | null => {
   if (!value) return null;
@@ -133,13 +135,20 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * It carries the shared view controls itself: a drag turns the camera round the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page), and the arrow keys, + and - and 0 work once it is
  * focused. `controls="none"` turns them off; `zoom-min` and `zoom-max` set the range (a millionth to 3 by default); a `<kazoku-view-controls for="...">` takes over and reads it.
  *
+ * While time runs (`speed` is not 0) it sends `wakusei-timechange` with `detail: { time, running: true }`, `time` being the moment shown in milliseconds since 1970, at most four times a second however fast the picture is
+ * drawn, and once with `running: false` when the clock holds (`speed` set to 0): a page writes the date into its date box from it. It is not sent for a `time` the page sets itself. `wakusei-time` is sent at every step the clock takes.
+ *
  * @example
  * ```ts no-run
  * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
  *
  * const space = document.createElement("wakusei-space") as WakuseiSpace;
  * space.setAttribute("time", "2026-11-02T12:00Z");
- * space.setAttribute("speed", "0");
+ * space.setAttribute("speed", "86400");
+ * space.addEventListener("wakusei-timechange", (event) => {
+ *   const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
+ *   console.log(new Date(time).toISOString(), running ? "running" : "held");
+ * });
  * document.body.append(space);
  * ```
  */
@@ -157,6 +166,7 @@ export class WakuseiSpace extends HTMLElement {
   #state: SpaceState = "loading";
   #timer: ReturnType<typeof setTimeout> | undefined;
   #last = 0;
+  #announced = -Infinity;
   #pool = new Map<SpaceBody, HTMLElement>();
   #places: Record<SpaceBody, BodyPlace | null> | undefined;
   #names: Partial<Record<SpaceBody, string>> = {};
@@ -279,11 +289,15 @@ export class WakuseiSpace extends HTMLElement {
     return this.#speed;
   }
   set speed(value: number) {
+    // time up to this moment is worked out at the old speed, so a hold keeps the moment the reader saw last
+    if (this.#speed !== 0 && this.isConnected) this.#advance(performance.now());
+    const was = this.#speed;
     this.#speed = Number.isFinite(value) ? value : 1;
     this.#model.stepMs = Math.max(1000, Math.abs(this.#speed) * 1000);
     this.#last = performance.now();
     this.#schedule();
     this.#gate?.request();
+    if (this.#speed === 0 && was !== 0) this.#announce(false);
   }
 
   /** `compressed` (the default: every direction real, the distances squeezed) or `true` (real distances and sizes). */
@@ -525,14 +539,27 @@ export class WakuseiSpace extends HTMLElement {
     this.#timer = setTimeout(this.#tick, wait);
   }
 
-  #tick = (): void => {
-    const now = performance.now();
+  /** Bring the moment shown up to `now` (the page's own clock, in milliseconds) at the speed it has run at. */
+  #advance(now: number): void {
     if (this.#speed === 1 && this.#mode === "now") this.#model.time = Date.now();
     else this.#model.time += (now - this.#last) * this.#speed;
     this.#last = now;
+  }
+
+  /** Tell the page the moment shown: at most four times a second while time runs (`running`), and once, at once, when it holds. */
+  #announce(running: boolean): void {
+    const now = performance.now();
+    if (running && now - this.#announced < TIME_EVENT_MS) return;
+    this.#announced = running ? now : -Infinity;
+    this.dispatchEvent(new CustomEvent("wakusei-timechange", { detail: { time: this.#model.time, running } }));
+  }
+
+  #tick = (): void => {
+    this.#advance(performance.now());
     this.#gate?.request();
     this.#schedule();
     this.dispatchEvent(new CustomEvent("wakusei-time", { detail: { time: this.#model.time } }));
+    this.#announce(this.#speed !== 0);
   };
 
   // --- labels --------------------------------------------------------------------------------------------------------------------------------------

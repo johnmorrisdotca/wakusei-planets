@@ -17,6 +17,8 @@ space.ride({ at: (ms) => ({ position: [6778, 0, 0], velocity: [0, 7.66, 0] }) },
 space.ride(null);
 ```
 
+A ride goes on with the clock: at `speed="0"` the camera holds still at the moment shown, so the demo starts the clock (Play) when a ride is chosen, and its date box follows it through `wakusei-timechange` (see [Moons and time](moons-and-time.md)).
+
 ## What can be ridden
 
 - **A body of the view** (`"moon"`, `"sun"`, `"mars"`, ...): it goes round the Earth. The camera is at its place in the view's scale and looks at the Earth.

@@ -103,6 +103,9 @@ const TEMPLATE = `<style>
  * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
+ * A dated picture (a `time`, or `moons`) has a clock: `rate` is the simulated seconds for each real second, and `rate="0"` holds it, drawing nothing. While it runs (`rate` not 0), `wakusei-timechange` carries
+ * `detail: { time, running: true }` (`time` is the moment shown in milliseconds since 1970; four times a second, once a second at real time; only while the tab is shown, whether or not the picture is on screen), and once with
+ * `running: false` when the clock is held: a page writes the date into its date box from it. The `time` property reads the moment shown, and `undefined` for a portrait with no date.
  *
  * @example
  * ```ts no-run
@@ -132,6 +135,8 @@ export class WakuseiBody extends HTMLElement {
   #visible = typeof IntersectionObserver !== "function";
   #io: IntersectionObserver | undefined;
   #tick: ReturnType<typeof setTimeout> | undefined;
+  #clockTimer: ReturnType<typeof setTimeout> | undefined;
+  #clockRan = false;
   #refreshQueued = false;
   #gate: Gate | undefined;
   #live = createLive();
@@ -165,7 +170,14 @@ export class WakuseiBody extends HTMLElement {
   #onHidden = (): void => {
     if (document.visibilityState === "hidden") this.#stopTick();
     else this.#resume();
+    this.#syncClock();
   };
+
+  /** The moment the dated picture shows, in milliseconds since 1970, or `undefined` for a portrait with no date. */
+  get time(): number | undefined {
+    const r = this.#request();
+    return r.start === undefined ? undefined : r.start + (performance.now() - r.startedAt) * r.rate;
+  }
 
   /** The radius of the body's disc on the screen in CSS pixels, at the picture's own size: what `grab-radius` on the shared view controls wants for a drag that keeps the touched point under the pointer. */
   get discRadius(): number {
@@ -227,6 +239,7 @@ export class WakuseiBody extends HTMLElement {
       this.#io.observe(this);
     }
     document.addEventListener("visibilitychange", this.#onHidden);
+    this.#syncClock();
     this.#unsub = onRegister(() => {
       this.#carry();
       this.#queue();
@@ -238,6 +251,8 @@ export class WakuseiBody extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    clearTimeout(this.#clockTimer);
+    this.#clockTimer = undefined;
     this.#stopTick();
     this.#gate?.cancel();
     this.#io?.disconnect();
@@ -253,7 +268,10 @@ export class WakuseiBody extends HTMLElement {
 
   attributeChangedCallback(name: string): void {
     if (!this.isConnected) return;
-    if (name === "time" || name === "rate") this.#clockFromAttributes();
+    if (name === "time" || name === "rate") {
+      this.#clockFromAttributes();
+      this.#syncClock(true);
+    }
     if (name === "live") this.#applyHover();
     if (name === "live" || name === "look" || name === "body") this.#carry();
     if (name === "body" || name === "look" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
@@ -381,6 +399,31 @@ export class WakuseiBody extends HTMLElement {
     this.#start = t === "now" ? Date.now() : t;
   }
 
+  /**
+   * Tell the page the moment shown while a dated clock runs (`rate` not 0): `wakusei-timechange` with `{ time, running: true }` four times a second (once a second at real time), only while the
+   * tab is shown (the date box is often below the picture), and once with `running: false` when the clock holds. `loud` says the clock was just set (a new `time` or `rate`), so a hold is announced.
+   */
+  #syncClock(loud = false): void {
+    clearTimeout(this.#clockTimer);
+    this.#clockTimer = undefined;
+    const r = this.#request();
+    const dated = r.start !== undefined;
+    const running = dated && r.rate !== 0;
+    if (!this.isConnected) return;
+    if (!running) {
+      if (loud && dated && this.#clockRan) this.dispatchEvent(new CustomEvent("wakusei-timechange", { detail: { time: this.time, running: false } }));
+      this.#clockRan = false;
+      return;
+    }
+    this.#clockRan = true;
+    if (document.visibilityState === "hidden") return;
+    const step = (): void => {
+      this.dispatchEvent(new CustomEvent("wakusei-timechange", { detail: { time: this.time, running: true } }));
+      this.#clockTimer = setTimeout(step, Math.abs(this.#request().rate) === 1 ? 1000 : 250);
+    };
+    step();
+  }
+
   #request(): LiveRequest {
     const star = this.#star();
     const moons = this.hasAttribute("moons") && !this.hasAttribute("star");
@@ -400,10 +443,10 @@ export class WakuseiBody extends HTMLElement {
     };
   }
 
-  /** The picture moves on its own: a turn, or time running faster than the clock. */
+  /** The picture moves on its own: a turn, or time running faster (or backwards) than the clock. A held clock (`rate="0"`) moves nothing. */
   get #moving(): boolean {
     const r = this.#request();
-    const turning = r.turn !== 0 || (r.start !== undefined && r.rate !== 1);
+    const turning = r.turn !== 0 || (r.start !== undefined && r.rate !== 1 && r.rate !== 0);
     return this.#reduce ? r.turn !== 0 : turning;
   }
 
