@@ -1,6 +1,7 @@
 // <wakusei-space>: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through kazoku-ui's shared renderer. Optional: the line drawings and
 // the single bodies need none of it. It draws only when something changes, at most 30 times a second, and nothing while it is out of sight.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
+import { carryControls, type ElementControls, type ViewController } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import { BODIES, MOONS_OF, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
@@ -115,6 +116,12 @@ const readBody = (value: string): SpaceBody | undefined => {
   return (SPACE_BODIES as readonly string[]).includes(id) ? (id as SpaceBody) : undefined;
 };
 
+/**
+ * The zoom range of the space view when it carries its own controls. The floor, a millionth, takes the camera out past Neptune in the true scale. The ceiling is where the camera reaches the body: it is held at
+ * 1.05 radii from the surface (`FIT_DISTANCE` over the zoom), so past a zoom of about 3.2 nothing moves; 3 shows the surface as sharp as the painted maps (2048 pixels round) and the shader allow.
+ */
+const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3, tiltMax: 90 } as const;
+
 const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}</style><div id="stage"></div><div id="labels"></div>`;
 
 /**
@@ -122,6 +129,9 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * (`"lon,lat"`), `time` (`now` or an ISO date), `speed` (1 is real time, 0 holds, 86400 is a day a second, negative runs backwards), `scale` (`compressed` or `true`), `look` (`realistic` or `painted`),
  * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), and `texture-base`, `texture-far-base` and `max-texture`. Positions come from this package's own models. It draws
  * only when something changes, and nothing while it is out of sight.
+ *
+ * It carries the shared view controls itself: a drag turns the camera round the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page), and the arrow keys, + and - and 0 work once it is
+ * focused. `controls="none"` turns them off; `zoom-min` and `zoom-max` set the range (a millionth to 3 by default); a `<kazoku-view-controls for="...">` takes over and reads it.
  *
  * @example
  * ```ts no-run
@@ -154,6 +164,12 @@ export class WakuseiSpace extends HTMLElement {
   #painter: WakuseiPainter | undefined;
   #focusBeforeRide: SpaceBody = "earth";
   #lostTold = false;
+  #hands: ElementControls | undefined;
+
+  /** The shared controller behind the element's own hands: for a page that moves the view itself, such as `controller.set({ zoom: space.zoomFor("moon") })`. It is there while the element is connected, whether `controls` is `none` or not. */
+  get controller(): ViewController | undefined {
+    return this.#hands?.controller;
+  }
 
   connectedCallback(): void {
     this.#model.centre = readCentre(this.getAttribute("center")) ?? this.#model.centre;
@@ -204,11 +220,14 @@ export class WakuseiSpace extends HTMLElement {
     this.#last = performance.now();
     this.#schedule();
     this.addEventListener("pointerdown", this.#down);
+    this.#hands = carryControls(this, { limits: CARRIED_LIMITS, initial: { drag: "turn" }, onChange: (view, info) => this.setView(view, info.final) });
     this.#labelBox.addEventListener("click", this.#labelClick);
     this.#labelBox.addEventListener("focusin", this.#labelFocus);
   }
 
   disconnectedCallback(): void {
+    this.#hands?.unbind();
+    this.#hands = undefined;
     this.removeEventListener("pointerdown", this.#down);
     window.removeEventListener("pointerup", this.#up, true);
     clearTimeout(this.#timer);
@@ -321,6 +340,7 @@ export class WakuseiSpace extends HTMLElement {
     const now = this.#model.view;
     if (view.yaw === now.yaw && view.tilt === now.tilt && view.zoom === now.zoom) return;
     this.#model.view = { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom };
+    this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom } }));
     const drawn = this.#model.drawnView;
     if (drawn && !final && view.zoom === drawn.zoom) {
       const turned = Math.max(Math.abs(view.yaw - drawn.yaw), Math.abs(view.tilt - drawn.tilt)) * RAD;

@@ -2,6 +2,7 @@
 // three.js scene, drawn through kazoku-ui's shared renderer (one WebGL context for the page). It draws only when something changes, at most 30 times a second while it moves, and nothing while
 // it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; a turn of 0 is the only stop. The same element is the portrait builder's canvas: the page sets `portrait`, `editing`, and asks `pick`.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
+import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import { BODIES } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import type { ThreeParts } from "../scene/body.ts";
@@ -30,6 +31,12 @@ export { setThreeLoader };
  */
 export type PortraitState = "line" | "loading" | "still" | "live" | "lost" | "unavailable";
 
+/**
+ * The zoom range of a portrait that carries its own controls. The floor is arbitrary: a tenth of Fit leaves room to see the whole scene small. The ceiling is the painted maps: the sharpest is 2048 pixels round
+ * a body, which stays sharp to a few times the size at Fit and softens after that; 8 times is as far as the bodies' own shader detail goes. A scene of a line look has detail at any scale.
+ */
+const CARRIED_LIMITS = { zoomMin: 0.1, zoomMax: 8 } as const;
+
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 720px); max-width: 100%; aspect-ratio: var(--wakusei-ratio, 16 / 9); position: relative; overflow: hidden; contain: layout style; touch-action: none; user-select: none; }
 #bg, #stage, #over { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -47,6 +54,9 @@ const num = (value: string | null, fallback: number): number => {
  *
  * Attributes: `scene` (the scene as the portrait builder writes it in its address), `look` (`line`, `realistic` or `painted`: replaces the scene's), `size` (pixels across), `lang` (`en` or `ja`: the names),
  * `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` and `texture-far-base` (where the surface pictures are).
+ *
+ * It carries the shared view controls itself: a drag moves the picture, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), and the arrow keys, + and - and 0 work once it is focused.
+ * `controls="none"` turns them off (the portrait builder does, for it edits the scene by dragging its bodies); `zoom-min` and `zoom-max` set the range (0.1 to 8 by default); a `<kazoku-view-controls for="...">` takes over and reads it.
  *
  * @example
  * ```ts no-run
@@ -84,6 +94,10 @@ export class WakuseiPortrait extends HTMLElement {
   #edit: { selected?: number; guides?: readonly Guide[] } = {};
   #overKey = "";
   #lineKey = "";
+  #zoom = 1;
+  #panX = 0;
+  #panY = 0;
+  #hands: ElementControls | undefined;
   #hover = (): void => void this.goLive();
   #onContext = (state: ContextState): void => {
     if (state === "unavailable") this.#set("unavailable");
@@ -167,6 +181,7 @@ export class WakuseiPortrait extends HTMLElement {
     document.addEventListener("visibilitychange", this.#onHidden);
     this.#applyHover();
     this.#readAttributes();
+    this.#hands = carryControls(this, { turnable: false, limits: CARRIED_LIMITS, onChange: (view) => this.setView(view) });
     this.#queue();
   }
 
@@ -175,6 +190,8 @@ export class WakuseiPortrait extends HTMLElement {
     this.#io?.disconnect();
     document.removeEventListener("visibilitychange", this.#onHidden);
     this.#applyHover(false);
+    this.#hands?.unbind();
+    this.#hands = undefined;
     this.#disposeView(true);
   }
 
@@ -183,6 +200,24 @@ export class WakuseiPortrait extends HTMLElement {
     if (name === "live") this.#applyHover();
     if (name === "scene" || name === "look") this.#readAttributes();
     this.#queue();
+  }
+
+  /** The shared controllers' camera over the scene's own (and a `wakusei-view` event with the `zoom`, `panX` and `panY`): `zoom` scales the picture about its middle, `panX` and `panY` move it by that many CSS pixels. The scene's camera, and what `portrait` holds, are left as they are. */
+  setView(view: { zoom?: number; panX?: number; panY?: number }): void {
+    this.#zoom = Math.max(1e-6, view.zoom ?? 1);
+    this.#panX = view.panX ?? 0;
+    this.#panY = view.panY ?? 0;
+    this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { zoom: this.#zoom, panX: this.#panX, panY: this.#panY } }));
+    this.#changed();
+  }
+
+  /** The scene's resolved camera with the view's zoom and pan put over it. */
+  #resolveNow(): Resolved {
+    const resolved = resolve(this.#portrait);
+    if (this.#zoom === 1 && this.#panX === 0 && this.#panY === 0) return resolved;
+    const h = resolved.camera.h / this.#zoom;
+    const scale = this.#size().height / (2 * h);
+    return { ...resolved, camera: { x: resolved.camera.x - this.#panX / scale, y: resolved.camera.y + this.#panY / scale, h } };
   }
 
   /** Take the page's one WebGL context and draw the scene on it. Resolves true when it is live; a line scene has nothing to take and resolves false. */
@@ -282,7 +317,7 @@ export class WakuseiPortrait extends HTMLElement {
   #changed(): void {
     if (!this.isConnected) return;
     if (this.#view?.live === true && !this.#queued) {
-      this.#resolved = resolve(this.#portrait);
+      this.#resolved = this.#resolveNow();
       this.#style();
       this.#gate?.request();
     } else this.#queue();
@@ -322,7 +357,7 @@ export class WakuseiPortrait extends HTMLElement {
   async #refresh(): Promise<void> {
     if (!this.isConnected) return;
     const p = this.#portrait;
-    this.#resolved = resolve(p);
+    this.#resolved = this.#resolveNow();
     this.#style();
     this.setAttribute("aria-label", this.#label());
     const wants3d = p.look !== "line" && this.#state !== "unavailable" && p.items.length > 0;
@@ -377,7 +412,7 @@ export class WakuseiPortrait extends HTMLElement {
   #drawLine(): void {
     const { width, height } = this.#size();
     const markup = this.#lineBody(width, height);
-    const key = `${width}x${height}|${markup.length}|${this.#portrait.light.az}`;
+    const key = `${width}x${height}|${markup.length}|${this.#portrait.light.az}|${this.#zoom.toFixed(3)},${this.#panX.toFixed(1)},${this.#panY.toFixed(1)}`;
     if (this.#portrait.look !== "line") {
       if (this.#stage.firstChild !== null && this.#lineKey !== "") this.#stage.innerHTML = "";
       this.#lineKey = "";
@@ -390,7 +425,7 @@ export class WakuseiPortrait extends HTMLElement {
 
   #key(): string {
     const { width } = this.#size();
-    return `${encodeScene(this.#portrait)}|${width}`;
+    return `${encodeScene(this.#portrait)}|${width}|${this.#zoom.toFixed(3)},${this.#panX.toFixed(1)},${this.#panY.toFixed(1)}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.
@@ -453,7 +488,7 @@ export class WakuseiPortrait extends HTMLElement {
   // --- moving -------------------------------------------------------------------------------------------------------------------------------------------
 
   #frame(): void {
-    this.#resolved = resolve(this.#portrait);
+    this.#resolved = this.#resolveNow();
     this.#paintOver();
     if (this.#portrait.look === "line") {
       this.#drawLine();

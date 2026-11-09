@@ -2,6 +2,7 @@
 // kazoku-ui's shared renderer (one WebGL context for the whole page), and need the body's own entry point loaded (`@johnmorrisdotca/wakusei-planets/jupiter`). It draws only when
 // something changes, at most 30 times a second while it moves, and nothing while it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; `turn="0"` is the only stop.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
+import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import "./tables/ceres.ts";
 import "./tables/dwarfs.ts";
 import { loadMoonTheory } from "./tables/lazy.ts";
@@ -80,6 +81,14 @@ function clampPan(pan: number, extent: number, zoom: number): number {
   return Math.max(-limit, Math.min(limit, pan));
 }
 
+/**
+ * The zoom range of a body that carries its own controls. The floor is arbitrary: a tenth of Fit leaves room to see the whole body small. A line drawing is vector and has detail at any scale, so it goes to 50.
+ * The shaded looks stop at 8: the sharpest painted map is 2048 pixels round the body, sharp to about 1.5 times the size at Fit on a picture of the usual size and softening after that, and 8 times is as far as
+ * the shader's own detail (bands, craters, ring edges) carries before the map runs out.
+ */
+const LINE_LIMITS = { zoomMin: 0.1, zoomMax: 50, tiltMax: 90 } as const;
+const SHADED_LIMITS = { zoomMin: 0.1, zoomMax: 8, tiltMax: 90 } as const;
+
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 320px); max-width: 100%; aspect-ratio: 1 / 1; position: relative; contain: layout style; }
 #stage { position: absolute; inset: 0; }
@@ -92,6 +101,10 @@ const TEMPLATE = `<style>
  * Attributes: `body` (a name, such as `jupiter`), `look` (`line`, `realistic` or `painted`), `size` (pixels across), `time` (`now` or an ISO date: the body as the Earth sees it then; leave it out for a portrait),
  * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second; left out, 12 a second, backwards when the body is, and a date keeps its orientation and adds this turn; `live="off"` stays still unless this is set; `0` stays still; reduced motion keeps a quarter of it), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
  * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `span-km` (draw to scale: the half-width of the picture in kilometres, the same in every picture of a lineup), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
+ *
+ * It carries the shared view controls itself: a drag turns the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), the arrow keys, + and - and 0 work once it is focused.
+ * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 8 for the shaded looks, 0.1 to 50 for the line drawing); a `<kazoku-view-controls for="...">` takes over and reads it.
+ * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
  *
  * @example
  * ```ts no-run
@@ -140,6 +153,8 @@ export class WakuseiBody extends HTMLElement {
   #sceneState: SceneState | undefined;
   #unsub: (() => void) | undefined;
   #reduce = false;
+  #hands: ElementControls | undefined;
+  #handsKey = "";
   #hover = (): void => void this.goLive();
   #onContext = (state: ContextState): void => {
     if (state === "unavailable") this.#set("unavailable");
@@ -195,8 +210,13 @@ export class WakuseiBody extends HTMLElement {
       this.#io.observe(this);
     }
     document.addEventListener("visibilitychange", this.#onHidden);
-    this.#unsub = onRegister(() => this.#queue());
+    this.#unsub = onRegister(() => {
+      this.#carry();
+      this.#queue();
+    });
     this.#applyHover();
+    for (const name of ["pointerdown", "wheel", "keydown"]) this.addEventListener(name, this.#measure, true);
+    this.#carry();
     this.#queue();
   }
 
@@ -207,6 +227,10 @@ export class WakuseiBody extends HTMLElement {
     document.removeEventListener("visibilitychange", this.#onHidden);
     this.#unsub?.();
     this.#applyHover(false);
+    for (const name of ["pointerdown", "wheel", "keydown"]) this.removeEventListener(name, this.#measure, true);
+    this.#hands?.unbind();
+    this.#hands = undefined;
+    this.#handsKey = "";
     this.#disposeView(true);
   }
 
@@ -214,6 +238,7 @@ export class WakuseiBody extends HTMLElement {
     if (!this.isConnected) return;
     if (name === "time" || name === "rate") this.#clockFromAttributes();
     if (name === "live") this.#applyHover();
+    if (name === "live" || name === "look" || name === "body") this.#carry();
     this.#lastAnchors = -1;
     this.#queue();
   }
@@ -254,8 +279,32 @@ export class WakuseiBody extends HTMLElement {
     this.#zoom = view.zoom ?? 1;
     this.#panX = -(view.panX ?? 0) / half;
     this.#panY = (view.panY ?? 0) / half;
+    this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: this.#yaw, tilt: this.#tilt, roll: this.#roll, zoom: this.#zoom, panX: view.panX ?? 0, panY: view.panY ?? 0 } }));
     this.#queue(true);
   }
+
+  /** Take the shared hands, unless the picture is a still (`live="off"`) or another package's drawing (the Earth's line look); the look decides the zoom range, so a new look takes new hands. */
+  #carry(): void {
+    const on = this.getAttribute("live") !== "off" && !(this.look === "line" && delegates.has(this.body));
+    const key = `${on}|${this.look === "line"}`;
+    if (this.#handsKey === key) return;
+    this.#hands?.unbind();
+    this.#handsKey = key;
+    this.#hands = carryControls(this, { on, limits: this.look === "line" ? LINE_LIMITS : SHADED_LIMITS, grabRadius: this.discRadius, objectSize: { width: this.discRadius * 2, height: this.discRadius * 2 }, onChange: (view) => this.setView(view) });
+    if (this.#zoom !== 1 || this.#yaw !== 0 || this.#tilt !== 0 || this.#panX !== 0 || this.#panY !== 0 || this.#roll !== 0) {
+      if (!this.hasAttribute("data-kazoku-bar")) this.setView({});
+    }
+  }
+
+  /** The disc is a different size on the screen after the picture or the page is resized: a gesture is told before it starts. */
+  #measure = (): void => {
+    const controller = this.#hands?.controller;
+    if (controller === undefined) return;
+    const disc = this.discRadius;
+    if (disc <= 0) return;
+    controller.grabRadius = disc;
+    controller.objectSize = { width: disc * 2, height: disc * 2 };
+  };
 
   // --- the clock ------------------------------------------------------------------------------------------------------------------------------------
 
