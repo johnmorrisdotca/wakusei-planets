@@ -1,6 +1,6 @@
 // The size line-up must never ask a lot of the machine. Played in headless Chromium (drawing WebGL in software, never on the graphics card), these fail on a draw loop that runs when nothing moves or more than once a frame, on
 // WebGL contexts or graphics memory (buffers, vertex arrays, textures, programs) that grow with each change, on a canvas past its pixel budget on a 5K screen, on a frame drawn out of sight, and on a frame asked for twice.
-// There is no cap on the frame rate here, on purpose: the shared renderer owns it (KAZOKU-UI-91), so these hold whether it draws every frame the browser offers or thirty a second.
+// There is no cap on the frame rate in this package, on purpose: the shared renderer owns it (kazoku-ui 0.27 draws at most 30 jobs a second), and these count the jobs the renderer drew, so they hold wherever the cap lives.
 import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
 
@@ -9,6 +9,9 @@ const element = (page: Page) => page.locator("wakusei-lineup#lineup");
 const live = (page: Page) => expect(element(page)).toHaveAttribute("data-state", "live", { timeout: 90_000 });
 const settle = (page: Page, ms: number) => page.waitForTimeout(ms);
 type Lineup = HTMLElement & { zoomTo(target: string | number, options?: { smooth?: boolean }): Promise<void>; bodies: { id: string }[]; stats: { drawn: string[] } };
+
+/** Jobs the shared renderer has drawn so far, as its own scheduler counts them (it asks for an animation frame every refresh and draws at most 30 a second, so `rafRequests` is not the number of frames drawn). */
+const jobsDrawn = (page: Page): Promise<number> => element(page).evaluate((el) => (el as unknown as { stats: { renderer?: { frames?: { draws?: number } } } }).stats.renderer?.frames?.draws ?? 0);
 
 /** The counters once the graphics objects alive have stopped changing: the same number on four reads a quarter of a second apart. */
 const settledCounts = async (page: Page) => {
@@ -57,16 +60,17 @@ test("a live line-up that is not turning draws nothing, and its frames are never
   expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
 });
 
-test("a turning line-up is drawn one frame at a time, as often as the shared renderer allows and no more than the browser offers", async ({ page }) => {
+test("a turning line-up is drawn at most thirty times a second, one frame at a time", async ({ page }) => {
   await page.goto(URL);
   await live(page);
   await settle(page, 1500);
   const before = await readCounts(page);
+  const jobsBefore = await jobsDrawn(page);
   await settle(page, 4000);
   const after = await readCounts(page);
   expect(after.draws - before.draws).toBeGreaterThan(0);
-  // sixty frames a second at most (thirty once the shared renderer caps it); a draw may be several GL calls (a star, its glow), so frames are counted, not calls
-  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 61);
+  // a draw may be several GL calls (a star, its glow): count the jobs the renderer drew, not calls
+  expect((await jobsDrawn(page)) - jobsBefore).toBeLessThanOrEqual(4 * 31);
   expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
   expect(after.contexts).toBe(1);
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length) + (await element(page).evaluate((el) => el.shadowRoot!.querySelectorAll("canvas").length))).toBeLessThanOrEqual(1);
