@@ -182,6 +182,8 @@ The pure side has no DOM: `BODIES`, `apparent(id, time)`, `system(planet, time)`
 
 Sizes, flattening, poles and rotation are the IAU's and NASA's; Mercury to Neptune are VSOP87B, cut down, and Pluto is a table fitted to Horizons; the Moon's are the lunar solution ELP2000-82B cut down; Jupiter's four big moons are the theory L1.2 and Saturn's seven inner ones TASS1.7, and the others are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
 
+The same data comes as files for other languages: every release attaches CSV and Parquet tables of the bodies, their orbital elements, the spacecraft and their events, each with a schema, the data licence and checksums, for pandas, polars, R or Rust ([data files](docs/guides/data-files.md)). [Serve it yourself](docs/guides/serve-it-yourself.md) is a small Node server that answers a body's facts, its position on a date and the distance between two bodies; we host nothing, you run it.
+
 ## Examples
 
 Every `ts` block in this README is type-checked and run against the package as npm packs it (`pnpm test:readme`).
@@ -370,6 +372,8 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [The stars you can see without a telescope](docs/guides/stars.md) | 5,080 stars with names, positions, proper motion, distance and colour |
 | [What is nearby, and when bodies come close](docs/guides/nearest.md) | The nearest bodies to a body on a date, closest approaches and conjunctions, and how close they are to Horizons |
 | [Famous spacecraft](docs/guides/spacecraft.md) | Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker and Webb: where they are and their whole voyage |
+| [Data files](docs/guides/data-files.md) | CSV and Parquet tables of the bodies, orbits and spacecraft, for Python, R and Rust |
+| [Serve it yourself](docs/guides/serve-it-yourself.md) | A small Node server over the package, that you host |
 | [The Sun and Moon from a place](docs/guides/suncalc.md) | Position, sunrise and sunset, Moon rise, set and phase; a drop-in for suncalc |
 | [Coordinate conversions](docs/guides/coordinates.md) | Pure spherical, ecliptic, equatorial and horizontal coordinate conversions |
 | [TypeScript and Node](docs/guides/typescript-and-node.md) | Types and the pure side |
