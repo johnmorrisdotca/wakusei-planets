@@ -221,7 +221,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#last = performance.now();
     this.#schedule();
     this.addEventListener("pointerdown", this.#down);
-    this.#hands = carryControls(this, { limits: CARRIED_LIMITS, initial: { drag: "turn" }, onChange: (view, info) => this.setView(view, info.final) });
+    this.#hands = carryControls(this, { limits: CARRIED_LIMITS, onChange: (view, info) => this.setView(view, info.final) });
     this.#labelBox.addEventListener("click", this.#labelClick);
     this.#labelBox.addEventListener("focusin", this.#labelFocus);
   }

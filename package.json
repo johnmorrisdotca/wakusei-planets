@@ -387,7 +387,7 @@
   },
   "packageManager": "pnpm@10.28.0",
   "dependencies": {
-    "@johnmorrisdotca/kazoku-ui": "^0.24.0"
+    "@johnmorrisdotca/kazoku-ui": "^0.26.0"
   },
   "peerDependencies": {
     "@johnmorrisdotca/chikyu-earth": ">=0.10.0",

@@ -56,7 +56,7 @@ test("the page offers a sheet for every body and the lineup, in clicks in a row,
   expect(errors).toEqual([]);
 });
 
-test("the sheet's picture is drawn at the size it prints: one millimetre of the picture is one millimetre of the page, every line of text is inside it and the lines are 2.5 mm", async ({ page }) => {
+test("the sheet's picture is drawn at the size it prints: one millimetre of the picture is one millimetre of the page, every line of text is inside it and the lines are 1 mm", async ({ page }) => {
   await open(page);
   // a wider font than the sheet's rounded ones, as a server's fallback is: the picture was drawn with room to spare
   await page.addInitScript(() => {
@@ -85,7 +85,7 @@ test("the sheet's picture is drawn at the size it prints: one millimetre of the 
       expect(got.scale, `${id} ${paper}: the picture's scale`).toBeGreaterThan(0.99);
       expect(got.scale, `${id} ${paper}`).toBeLessThan(1.01);
       expect(got.inside, `${id} ${paper}: the text is inside the picture`).toBe(true);
-      expect(got.thin, `${id} ${paper}: the thinnest line`).toBeGreaterThanOrEqual(id === "lineup" ? 0.8 : 2.5);
+      expect(got.thin, `${id} ${paper}: the thinnest line`).toBeGreaterThanOrEqual(id === "lineup" ? 0.8 : 1);
     }
   }
 });

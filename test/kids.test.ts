@@ -39,16 +39,16 @@ test("every sheet renders on every paper, in both languages, drawn for the room 
   }
 });
 
-test("every line of a colouring picture is at least 2.5 mm thick, the outline 3 mm", () => {
+test("every line of a colouring picture is at least 1 mm thick, the outline 1.2 mm", () => {
   assert.equal(OUTLINE_MM, TYPE_PRESETS.kid.lineMm);
-  assert.ok(LINE_MM >= 2.5);
+  assert.ok(LINE_MM >= 1);
   for (const id of KIDS_BODIES) {
     const svg = kidsSvg(id, { ...kidsRoom("a4"), lang: "en" });
     const widths = numbers(svg, "stroke-width");
     assert.ok(widths.length >= 5, `${id} has lines`);
-    assert.ok(Math.min(...widths) >= 2.5, `${id}: thinnest line ${Math.min(...widths)} mm`);
-    assert.ok(Math.max(...widths) <= 3, id);
-    assert.ok(svg.includes(`stroke-width="${OUTLINE_MM}"`), `${id} has its 3 mm outline`);
+    assert.ok(Math.min(...widths) >= 1, `${id}: thinnest line ${Math.min(...widths)} mm`);
+    assert.ok(Math.max(...widths) <= 1.2, id);
+    assert.ok(svg.includes(`stroke-width="${OUTLINE_MM}"`), `${id} has its 1.2 mm outline`);
   }
 });
 

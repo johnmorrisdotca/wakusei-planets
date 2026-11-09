@@ -7,8 +7,8 @@ import type { Pose } from "../ephemeris.ts";
 import { OWN_FEATURES } from "./land.ts";
 
 /** The thickness of the outline of a body and of every line inside it, in millimetres. */
-export const OUTLINE_MM = 3;
-export const LINE_MM = 2.5;
+export const OUTLINE_MM = 1.2;
+export const LINE_MM = 1;
 /** The smallest radius of a shape to colour, in millimetres, and the least between two lines. */
 const MIN_SHAPE_MM = 8;
 const MIN_GAP_MM = 12;
@@ -225,8 +225,8 @@ function rays(frame: Frame, line: number): string {
 }
 
 /**
- * A body as a colouring picture: thick black outlines on white (the outline 3 mm, every line inside 2.5 mm), its big features, its rings, and the Sun's rays. The picture is drawn at its centre `(cx, cy)` with `r`
- * millimetres for the body's radius. `outline` is the outline's thickness; the lines inside are 2.5 mm or, for a thinner outline, a little less.
+ * A body as a colouring picture: thick black outlines on white (the outline 1.2 mm, every line inside 1 mm), its big features, its rings, and the Sun's rays. The picture is drawn at its centre `(cx, cy)` with `r`
+ * millimetres for the body's radius. `outline` is the outline's thickness; the lines inside are 1 mm or, for a thinner outline, a little less.
  * @param id - The body's name.
  * @param cx - The centre's place, in millimetres.
  * @param cy - The centre's place, in millimetres.

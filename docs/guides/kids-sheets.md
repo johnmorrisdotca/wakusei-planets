@@ -5,9 +5,9 @@ order: 20
 description: Printable colouring sheets of the Sun, the planets and the big moons, with thick lines, the real colours and three facts, on A4 or US Letter, in English and Japanese, and the ready-made PDFs.
 ---
 
-`/sheets` makes one printable sheet for each of the Sun, the eight planets, Pluto, the Moon, Io, Europa, Ganymede, Callisto, Titan, Triton and Charon, and one sheet with all the planets in a row at one scale. A sheet is for a child who colours: a big picture in thick black lines (the outline 3 mm, every line inside 2.5 mm), a row of squares in the body's real colours with their names, and three facts in large type. The picture is drawn from the package's own numbers (sizes, tilt, rings, features), never traced or copied, and the facts are worked out from the same numbers.
+`/sheets` makes one printable sheet for each of the Sun, the eight planets, Pluto, the Moon, Io, Europa, Ganymede, Callisto, Titan, Triton and Charon, and one sheet with all the planets in a row at one scale. A sheet is for a child who colours: a big picture in thick black lines (the outline 1.2 mm, every line inside 1 mm), a row of squares in the body's real colours with their names, and three facts in large type. The picture is drawn from the package's own numbers (sizes, tilt, rings, features), never traced or copied, and the facts are worked out from the same numbers.
 
-The page around the picture (the header with the brand "Space Program X", the package and the title and a "Name:" box, and the footer with the credits, the version, the date and a QR code back to the demo) is kazoku-ui's print part, in its `kid` type: names 28 pt, body 18 pt, lines 3 mm.
+The page around the picture (the header with the brand "Space Program X", the package and the title and a "Name:" box, and the footer with the credits, the version, the date and a QR code back to the demo) is kazoku-ui's print part, in its `kid` type: names 28 pt, body 18 pt, lines 1.2 mm.
 
 ## The ready-made PDFs
 
