@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230b1424'/%3E%3Ccircle cx='50' cy='50' r='24' fill='%2313203a' stroke='%238fa1b8' stroke-width='4'/%3E%3Cellipse cx='50' cy='50' rx='42' ry='12' fill='none' stroke='%238fa1b8' stroke-width='3' transform='rotate(-20 50 50)'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <section class="fam-felt kids-stage" aria-labelledby="stage-h">
+        <h1 id="stage-h" class="portrait-title"><span data-say="kd_title">Colouring sheets for children</span></h1>
+        <p class="fam-fine portrait-lede" data-say="kd_lede">Pick a sheet, pick the paper, then print it or save it as a PDF.</p>
+        <div class="kids-picks">
+          <div class="fam-row">
+            <span class="fam-label" data-say="kd_g_bodies">Sun and planets</span>
+            <div class="group fam-seg kids-seg" id="bodies" role="group" aria-label="Sun and planets" data-say-label="kd_g_bodies"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="kd_g_moons">Big moons</span>
+            <div class="group fam-seg kids-seg" id="moons" role="group" aria-label="Big moons" data-say-label="kd_g_moons"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="kd_g_all">All together</span>
+            <div class="group fam-seg kids-seg" id="all" role="group" aria-label="All together" data-say-label="kd_g_all"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="kd_paper">Paper</span>
+            <div class="group fam-seg" id="papers" role="group" aria-label="Paper" data-say-label="kd_paper">
+              <button type="button" data-paper="a4" aria-pressed="true" data-say="kd_a4">A4</button>
+              <button type="button" data-paper="letter" aria-pressed="false" data-say="kd_letter">US Letter</button>
+              <button type="button" data-paper="a3" aria-pressed="false" data-say="kd_a3">A3</button>
+              <button type="button" data-paper="tabloid" aria-pressed="false" data-say="kd_tabloid">Tabloid</button>
+            </div>
+            <button type="button" class="fam-button" id="print" data-primary="true">Print / save PDF</button>
+          </div>
+        </div>
+        <p class="fam-fine" id="info" role="status"></p>
+        <p class="fam-fine"><span data-say="kd_pdfs">Ready-made PDFs for every sheet and paper:</span> <a id="pdfs" href="pdf/" data-say="kd_pdflink">PDF list</a></p>
+        <div id="paper" class="kids-paper" role="group" aria-label="Preview of the sheet" data-say-label="kd_preview"><div id="paper-inner"></div></div>
+      </section>
+      <p class="fam-fine credits"><span data-say="credits">Sizes, tilt and rotation: the IAU and NASA fact sheets.</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts kids.js-->
+  </body>
+</html>

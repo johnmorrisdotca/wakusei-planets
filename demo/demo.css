@@ -93,3 +93,18 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .portrait-panel .field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; }
 .portrait-keys { margin-top: 12px; }
 .portrait-panel .fam-button, .portrait-panel .fam-seg button { min-height: 48px; }
+
+/* the colouring sheets */
+.kids-stage { display: grid; justify-items: center; gap: 10px; padding: 18px 12px 14px; margin-bottom: 8px; background: #06080d; }
+.kids-picks { display: grid; gap: 8px; justify-items: center; }
+.kids-picks .fam-row { justify-content: center; }
+.kids-picks .fam-label, .kids-stage .fam-fine { color: #9fb0c6; }
+.kids-picks .fam-seg, .kids-picks .fam-button { background: #0d1320; color: #c9d4e3; }
+.kids-picks .fam-seg button { color: #c9d4e3; min-height: 48px; min-width: 48px; font-family: inherit; }
+.kids-picks .fam-seg button[aria-pressed="true"] { background: #e7eefc; color: #06080d; }
+.kids-picks .fam-button { min-height: 48px; min-width: 48px; font-family: inherit; }
+.kids-picks .fam-button[data-primary="true"] { background: #e7eefc; color: #06080d; }
+.kids-seg { flex-wrap: wrap; justify-content: center; border-radius: 24px; }
+.kids-paper { width: min(1100px, 100%); overflow: hidden; position: relative; border-radius: 6px; background: #1a2233; }
+#paper-inner { transform-origin: 0 0; display: flex; flex-direction: column; gap: 6mm; width: max-content; }
+#paper-inner .kazoku-sheet { display: flex; flex-direction: column; gap: 6mm; }
