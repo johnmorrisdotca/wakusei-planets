@@ -584,10 +584,7 @@ if (main && controls && pickerBox) {
     const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
     if (document.activeElement !== when) when.value = localValue(time);
     if (running) return;
-    // the clock holds: the date it stopped on is the date shown, and the address keeps it
-    state.time = isoSecond(time);
-    address.set("t", state.time);
-    pressed(nowButton, false);
+    // the clock holds: the sky text is worked out for the date it stopped on (a Pause has already folded that date into the address)
     describe();
   });
   replay.addEventListener("kazoku-replay", (event) => {
