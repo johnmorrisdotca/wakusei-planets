@@ -469,3 +469,126 @@ test("the space view's canvas stays within 6 million pixels and 4096 a side on a
   expect(withinPixelBudget(await canvasSize(page))).toBe(true);
   await context.close();
 });
+
+// --- a star drawn from numbers: the same renderer, the same rules ------------------------------------------------------------------------------------------------------------------------------
+const STAR = "/wakusei-planets/star.html";
+const star = (page: Page) => page.locator("#star");
+const starLive = (page: Page) => expect(star(page)).toHaveAttribute("data-state", "live", { timeout: 90_000 });
+const presets = ["sun", "sirius-a", "vega", "betelgeuse", "rigel", "proxima", "altair", "white-dwarf"];
+
+test("a star at rest draws nothing, with one WebGL context and one canvas", async ({ page }) => {
+  await page.goto(`${STAR}?star=proxima`);
+  await star(page).hover();
+  await starLive(page);
+  await settle(page, 2000);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.contexts).toBeLessThanOrEqual(1);
+  expect(after.draws - before.draws).toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
+  expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
+});
+
+test("a turning star, with its prominences and its boiling surface, is drawn at most thirty times a second, one frame at a time", async ({ page }) => {
+  await page.goto(`${STAR}?star=proxima&spin=1`);
+  await star(page).hover();
+  await starLive(page);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 4000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws).toBeGreaterThan(0);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+  expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
+  expect(after.contexts).toBeLessThanOrEqual(1);
+});
+
+test("a star still turns for a reader who prefers reduced motion, at a quarter of the rate", async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  await page.addInitScript(COUNT_SCRIPT);
+  await page.goto(`${STAR}?star=proxima&spin=1`);
+  await star(page).hover();
+  await starLive(page);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "a reduced turn is still drawn").toBeGreaterThan(0);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+  await context.close();
+});
+
+test("choosing star after star gives back what each took: contexts, buffers, vertex arrays, textures and programs do not grow", async ({ page }) => {
+  await page.goto(`${STAR}?star=sun`);
+  await star(page).hover();
+  await starLive(page);
+  const round = async () => {
+    for (const id of presets) {
+      await page.locator(`#presets [data-preset="${id}"]`).click();
+      await star(page).hover();
+      await starLive(page);
+      await settle(page, 400);
+    }
+    await page.locator('#looks [data-look="line"]').click();
+    await settle(page, 300);
+    await page.locator('#looks [data-look="realistic"]').click();
+    await star(page).hover();
+    await starLive(page);
+  };
+  await round();
+  await round();
+  await settle(page, 2500);
+  const first = await settledCounts(page);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
+});
+
+test("the star's canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 5120, height: 2880 }, deviceScaleFactor: 2, reducedMotion: "no-preference" });
+  const page = await context.newPage();
+  await page.addInitScript(COUNT_SCRIPT);
+  await page.goto(`${STAR}?star=betelgeuse`);
+  await star(page).hover();
+  await starLive(page);
+  await settle(page, 800);
+  expect(withinPixelBudget(await canvasSize(page))).toBe(true);
+  await context.close();
+});
+
+test("a star out of sight draws nothing, even while it is told to keep turning", async ({ page }) => {
+  await page.goto(`${STAR}?star=proxima&spin=1`);
+  await star(page).hover();
+  await starLive(page);
+  await page.evaluate(() => {
+    const spacer = document.createElement("div");
+    spacer.style.height = "6000px";
+    document.body.append(spacer);
+    window.scrollTo(0, 5000);
+  });
+  await settle(page, 2500);
+  const before = await readCounts(page);
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws).toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(1);
+});
+
+test("the cheaper star for weak devices is drawn the same way and says so", async ({ page }) => {
+  await page.goto(`${STAR}?star=proxima&spin=1`);
+  await star(page).evaluate((el) => el.setAttribute("quality", "low"));
+  await star(page).hover();
+  await starLive(page);
+  expect(await star(page).evaluate((el) => (el as unknown as { starLook: { quality: string } }).starLook.quality)).toBe("low");
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws).toBeGreaterThan(0);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31);
+});
