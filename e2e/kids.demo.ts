@@ -58,6 +58,8 @@ test("the page offers a sheet for every body and the lineup, in clicks in a row,
 
 test("the sheet's picture is drawn at the size it prints: one millimetre of the picture is one millimetre of the page, every line of text is inside it and the lines are 2.5 mm", async ({ page }) => {
   await open(page);
+  // a wider font than the sheet's rounded ones, as a server's fallback is: the picture was drawn with room to spare
+  await page.addStyleTag({ content: '.kazoku-sheet { font-family: Verdana, "DejaVu Sans", sans-serif !important; }' });
   for (const [paper] of PAPERS) {
     for (const id of ["saturn", "mercury", "lineup"]) {
       await page.goto(`/wakusei-planets/kids.html?sheet=${id}&paper=${paper}`);

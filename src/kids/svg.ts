@@ -10,8 +10,9 @@ const BODY_MM = KID.bodyPt * PT;
 const NAME_MM = KID.namePt * PT;
 /** The planets' names on the lineup: the least size the kid type allows for a name, 24 pt. */
 const LABEL_MM = 24 * PT;
-/** What the sheet's header, footer and gaps take from the page's height, in millimetres, as measured on A4 and Letter; a browser measures the real room (`kidsSheet`). */
+/** What the sheet's header, footer and gaps take from the page's height, in millimetres, as measured (a narrow page's footer is taller, for its address wraps); a browser measures the real room (`kidsSheet`). */
 const FRAME_MM = 89;
+const WIDE_FRAME_MM = 77;
 
 /** The lineup is wide, so it is printed on its side. */
 export const kidsOrientation = (id: KidsSheet): Orientation => (id === "lineup" ? "landscape" : "portrait");
@@ -31,16 +32,16 @@ export const kidsOrientation = (id: KidsSheet): Orientation => (id === "lineup" 
  */
 export function kidsRoom(page: PageName, orientation: Orientation = "portrait"): { widthMm: number; heightMm: number } {
   const size = printableSize(page, orientation, DEFAULT_MARGIN_MM);
-  return { widthMm: size.widthMm, heightMm: size.heightMm - FRAME_MM };
+  return { widthMm: size.widthMm, heightMm: size.heightMm - (size.widthMm >= 240 ? WIDE_FRAME_MM : FRAME_MM) };
 }
 
 const esc = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const n = (v: number): string => (Math.round(v * 100) / 100).toString();
 
-/** The width of a text in millimetres, estimated: a full-width character is as wide as the type is tall; a Latin one about 0.58 of it (the sheet's rounded, heavy type). */
+/** The width of a text in millimetres, estimated on the wide side so a font that is wider than the rounded ones (a fallback on a server) still fits: a full-width character is as wide as the type is tall, a Latin capital or a digit 0.74 of it, a small letter 0.64, a space or a stop 0.34. */
 export function textWidth(text: string, sizeMm: number): number {
   let total = 0;
-  for (const ch of text) total += /[\u3000-ヿ一-鿿＀-￯]/.test(ch) ? sizeMm : ch === " " ? 0.3 * sizeMm : /[A-Z0-9]/.test(ch) ? 0.66 * sizeMm : 0.58 * sizeMm;
+  for (const ch of text) total += /[\u3000-\u30ff\u4e00-\u9fff\uff00-\uffef]/.test(ch) ? sizeMm : /[ .,:;!'|]/.test(ch) ? 0.34 * sizeMm : /[A-Z0-9]/.test(ch) ? 0.74 * sizeMm : 0.64 * sizeMm;
   return total;
 }
 
@@ -146,7 +147,7 @@ function lineupSheet(lang: Lang, width: number, height: number): string {
     const spare = width - 2 * badge - reachKm * k - gapsAt(k).reduce((t, g) => t + g, 0);
     if (spare < 0) k += spare / reachKm;
   }
-  k = Math.min(k, (height - factsFor(k).height - rows * pitch - 2 * badge - 20) / tall(1));
+  k = Math.min(k, (height - factsFor(k).height - rows * pitch - 2 * badge - 12) / tall(1));
   const gaps = gapsAt(k);
   const extra = (width - 2 * badge - reachKm * k - gaps.reduce((t, g) => t + g, 0)) / gaps.length;
   const axis = tall(k) / 2 + OUTLINE_MM / 2;
