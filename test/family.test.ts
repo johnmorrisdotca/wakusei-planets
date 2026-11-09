@@ -29,8 +29,8 @@ const id = pkg.name.replace(/^@[^/]+\//, "");
 
 // The template of 2026-11-02c is the one of 2026-11-02b (chikyu-earth's) with this package added to the list (thirty-four packages, geography group, a line in English and Japanese), and
 // the README writer's number words reaching thirty-four. The other packages take the same two files when they are next touched.
-const TEMPLATE = { version: "2026-11-02c", sha256: "63c66c37cf009409b6d2119cc938f089a59c0ba755434ca1c24adb42157c9f35" };
-const WRITER_SHA = "e6a9632dd16ba44f2c201d34900c41c1fbb9e06bf6f98e65e94ff17bd5a772d7";
+const TEMPLATE = { version: "2026-11-09", sha256: "75ca7e7da99092f360e5a539e34b109b14c92e9c04e7ad98f9e4b1e715c9240e" };
+const WRITER_SHA = "dfd4c27b70fe5d7d5f82724180cc739812f0dd13d209c41c053dbdc61bf90188";
 const CSS_SHA = "31df0a58f422070ca4023d5498566b26bc55a5f9a0751f1520d36c61bbb562c9";
 
 test("the family template, the README writer and family.css are the recorded files, byte for byte", () => {
@@ -41,7 +41,7 @@ test("the family template, the README writer and family.css are the recorded fil
 });
 
 test("it lists every package of the family, in order, each with its Japanese name and a line on it", () => {
-  assert.equal(template.FAMILY.length, 34);
+  assert.equal(template.FAMILY.length, 41);
   assert.deepEqual(template.FAMILY_GROUPS.flatMap((group) => group.members), template.FAMILY.map((one) => one.id));
   for (const group of template.FAMILY_GROUPS) assert.deepEqual(group.members, [...group.members].sort());
   for (const one of template.FAMILY) {
