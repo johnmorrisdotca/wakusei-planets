@@ -8,7 +8,7 @@ const URL = "/wakusei-planets/";
 const main = (page: Page) => page.locator("#main");
 const live = (page: Page) => expect(main(page)).toHaveAttribute("data-state", "live", { timeout: 90_000 });
 const settle = (page: Page, ms: number) => page.waitForTimeout(ms);
-/** The counters once the graphics objects alive have stopped changing: the same number on four reads a quarter of a second apart, so a baseline is not taken while textures are still arriving (a slow machine). */
+/** The counters once the graphics objects alive have stopped changing: the same number on four reads a quarter of a second apart. The page lets go of what it holds after it has been idle a while, so a baseline and the count after a run of changes are both read once that has happened, not after a fixed wait that a slow machine may not have finished. */
 const settledCounts = async (page: Page) => {
   let held = -1;
   let same = 0;
@@ -95,7 +95,7 @@ test("changes give back what they took: contexts, buffers, vertex arrays, textur
   const first = await settledCounts(page);
   for (let i = 0; i < 3; i += 1) await round();
   await settle(page, 2500);
-  const last = await readCounts(page);
+  const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
@@ -233,7 +233,7 @@ test("changes to the portrait give back what they took: adding and removing bodi
   const first = await settledCounts(page);
   for (let i = 0; i < 2; i += 1) await round();
   await settle(page, 3000);
-  const last = await readCounts(page);
+  const last = await settledCounts(page);
   // a context is made again only after the page has been in the line look for longer than the renderer's second of grace, and the one let go is lost at once: never more than one live
   expect(last.contexts).toBeLessThanOrEqual(first.contexts);
   expect(last.contexts).toBeLessThanOrEqual(2);
@@ -330,6 +330,8 @@ test("changes to the space view give back what they took: the zooms, the scales,
     for (const [group, name] of [["Scale", "True"], ["Look", "Painted"], ["Earth's light", "Always lit"], ["Scale", "Compressed"], ["Look", "Realistic"], ["Earth's light", "The Sun's"]] as const) {
       await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
       await settle(page, 500);
+      // the painted pictures arrive over the network: a round is not over until they have, so that a slow machine takes the same steps as a fast one before the baseline
+      if (name === "Painted") await expect.poll(async () => (await skyStats(page)).bodies.painted, { timeout: 60_000 }).toBe(11);
     }
     await page.locator("#orbits").dispatchEvent("click");
     await page.locator("#orbits").dispatchEvent("click");
@@ -345,7 +347,7 @@ test("changes to the space view give back what they took: the zooms, the scales,
   const first = await settledCounts(page);
   for (let i = 0; i < 3; i += 1) await round();
   await settle(page, 2500);
-  const last = await readCounts(page);
+  const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
