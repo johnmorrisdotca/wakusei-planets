@@ -453,7 +453,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 
 If this package helps a paper, a talk or a class, please cite it as software. GitHub's "Cite this repository" button reads [CITATION.cff](CITATION.cff) and gives BibTeX and APA; in plain text:
 
-> Morris, J. (2026). *Wakusei Planets* (version 0.29.0) [Computer software]. https://github.com/johnmorrisdotca/wakusei-planets
+> Morris, J. (2026). *Wakusei Planets* (version 0.30.0) [Computer software]. https://github.com/johnmorrisdotca/wakusei-planets
 
 Cite the version you used (`npm ls @johnmorrisdotca/wakusei-planets`), and cite the sources of the numbers you use as well: [NOTICE.md](NOTICE.md) names each one, with the paper or the page it was read from (the IAU working group's report for sizes and poles, VSOP87B, ELP2000-82B, L1.2 and TASS1.7 for positions, and NASA's JPL Horizons for the fits and the spacecraft).
 
