@@ -19,10 +19,12 @@ import "../src/bodies/all.ts";
 import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
+import { frameCredit } from "./frame-credit.ts";
 
 setThreeLoader(() => import("./three-subset.ts"));
 const query = new URLSearchParams(location.search);
 const frame = document.getElementById("frame")!;
+frameCredit(query.get("lang") === "ja");
 
 function portrait(): void {
   const view = document.createElement("wakusei-portrait");

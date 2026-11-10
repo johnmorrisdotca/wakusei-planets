@@ -6,6 +6,11 @@ import { WORDS } from "../demo/words.js";
 import { FAMILY_SCRIPT, familyFooter, familyHead, familyHeader, familyUnreviewed } from "./family-template.mjs";
 
 const id = "wakusei-planets";
+/** Where every data credit is written in full. */
+const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md";
+
+/** The family's footer, with a link to every credit beside the one-line credit, so a reader need not open anything to find the sources. */
+const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"></span>', `<span><span data-say="foot"></span> <a href="${NOTICE}" data-say="creditsAll"></a></span>`);
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
 const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "lineup.html", say: "pageLineup" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
@@ -21,7 +26,7 @@ function render(file: string, title: string, description: string): string {
     .replace("<!--family:head-->", familyHead({ id, title, description }))
     .replace("<!--family:header-->", familyHeader({ id, links: LINKS }))
     .replace("<!--family:unreviewed-->", familyUnreviewed({ id }))
-    .replace("<!--family:footer-->", familyFooter({ id }))
+    .replace("<!--family:footer-->", footer())
     .replace(/<!--family:scripts ([\w.-]+)-->/, (_, script: string) => scripts(script));
 }
 
