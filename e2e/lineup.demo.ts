@@ -41,7 +41,7 @@ const settled = (page: Page) => page.waitForTimeout(400);
 /** The picture once it has stopped changing: two shots half a second apart that are the same (a rebuilt scene takes a while to compile in software). */
 const stable = async (page: Page): Promise<Buffer> => {
   let last = await lineup(page).screenshot();
-  for (let i = 0; i < 40; i += 1) {
+  for (let i = 0; i < 120; i += 1) {
     await page.waitForTimeout(500);
     const now = await lineup(page).screenshot();
     if (now.equals(last)) return now;
@@ -175,6 +175,7 @@ test("the labels give each body's name, and the big ones their radius, kilometre
 });
 
 test("a drag on a star turns it by hand, a press on the empty sky holds nothing; a double click puts it back", async ({ page }) => {
+  test.setTimeout(180_000);
   await open(page, "?turn=off");
   // the cheap star has a still surface: the full one boils with the clock, so two draws of the same turn differ a little
   await lineup(page).evaluate((el) => el.setAttribute("quality", "low"));
