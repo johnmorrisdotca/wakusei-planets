@@ -327,7 +327,9 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     // read once the view has settled, and only if the body is still drawn from this source: a page that changes `tiles` just after the element starts is not asked for a manifest it has just said it does not want
     setTimeout(() => {
       if (gone || active !== source || deps.source() !== source) {
+        // not wanted now: ask again for whatever the view is drawn from, so that nothing waits for a draw that may not come
         if (!gone && active === source) levelsAsked = false;
+        if (!gone) replay?.();
         return;
       }
       void Promise.resolve()
@@ -358,20 +360,21 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
   const take = (): BodyMapSource | undefined => {
     const source = deps.source();
     if (source === active) return source;
+    // the new source is the active one before anything is told to draw, so a draw that comes back here finds nothing more to change
+    active = source;
     cancelPending();
     cancelLoading();
     dropTiles();
-    if (held !== undefined) {
-      release();
-      deps.apply(null);
-      deps.redraw();
-    }
     failed.clear();
     wantKey = "";
     levels = undefined;
     levelsRead = false;
     levelsAsked = false;
-    active = source;
+    if (held !== undefined) {
+      release();
+      deps.apply(null);
+      deps.redraw();
+    }
     if (source === undefined) deps.onLevels?.(undefined);
     return source;
   };

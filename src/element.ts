@@ -784,6 +784,8 @@ export class WakuseiBody extends HTMLElement {
         },
       },
       redraw: () => {
+        // the tile levels were read, or a window is ready: look at the view again (the window is chosen at a sync), then draw
+        if (this.#view?.live === true) this.#sync();
         this.#view?.invalidate();
         this.#door.announce();
       },
