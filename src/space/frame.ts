@@ -218,3 +218,32 @@ export function planetOrbit(id: SpacePlanet | "earth", ms: number, count = 96): 
   for (let i = 0; i <= count; i += 1) points.push(scene(heliocentric(id, ms + (i / count) * PERIOD_DAYS[id] * DAY_MS)));
   return points;
 }
+
+/** The Moon's sidereal month, in days: the time it takes to go once round the Earth against the stars. */
+const MOON_MONTH_DAYS = 27.321661;
+
+/**
+ * The path the Moon takes round the Earth, as `count + 1` points round one sidereal month from where the Moon is at `ms`, from the Earth's centre, in astronomical units and the scene's axes. The first
+ * point is the Moon's own place at `ms` and the last is the first again, so the line is closed and passes through the Moon.
+ *
+ * @param ms - The moment the path starts at, in milliseconds since the Unix epoch.
+ * @param count - How many segments to cut the month into.
+ * @returns `count + 1` points; the last is the first.
+ *
+ * @example
+ * ```ts
+ * import { moonOrbit } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const ring = moonOrbit(Date.UTC(2026, 10, 2), 48);
+ * console.log(ring.length, Math.hypot(...ring[0]!).toFixed(4));
+ * ```
+ */
+export function moonOrbit(ms: number, count = 96): Vec3[] {
+  const points: Vec3[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const m = moonGeocentric(ms + (i / count) * MOON_MONTH_DAYS * DAY_MS);
+    points.push(scene([m[0] / AU_KM, m[1] / AU_KM, m[2] / AU_KM]));
+  }
+  points.push(points[0]!);
+  return points;
+}

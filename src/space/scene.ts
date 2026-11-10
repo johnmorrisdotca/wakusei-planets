@@ -9,9 +9,9 @@ import { type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
-import { createTrack, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createTrack, moonOrbit, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
-import { moonDistance, orbitLine, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
+import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -22,7 +22,9 @@ const RAD = Math.PI / 180;
 export const FIT_DISTANCE = 3.4;
 const FOV = 35;
 const ORBIT_POINTS = 96;
-const ORBIT_BODIES = ["earth", ...SPACE_PLANETS] as const;
+const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, "moon"] as const;
+/** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
+const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
@@ -142,6 +144,8 @@ export interface SpaceModel {
   painted: { bodies: number; moons: number; held: number };
   /** What the windows of finer map tiles on the bodies are doing, summed at the last draw: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
   tiles: { requested: number; loading: number; failed: number; shown: number | null };
+  /** The orbit lines drawn at the last draw, and how far each body is from its own line as a fraction of the line's radius (0 when it is on it). */
+  rings: { drawn: string[]; miss: Record<string, number> };
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -177,6 +181,7 @@ export const newSpaceModel = (): SpaceModel => ({
   drawn: null,
   painted: { bodies: 0, moons: 0, held: 0 },
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
+  rings: { drawn: [], miss: {} },
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -223,11 +228,27 @@ export interface SpaceDeps {
   onPainterError?: (error: unknown) => void;
 }
 
+const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+
+/** How far a place is from the nearest point of a line through `points`, in the line's units. */
+function distanceToLine(place: Vec3, points: readonly Vec3[]): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (let i = 0; i + 1 < points.length; i += 1) {
+    const a = points[i]!;
+    const b = points[i + 1]!;
+    const ab = minus(b, a);
+    const am = minus(place, a);
+    const len2 = ab[0] * ab[0] + ab[1] * ab[1] + ab[2] * ab[2];
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, (am[0] * ab[0] + am[1] * ab[1] + am[2] * ab[2]) / len2));
+    best = Math.min(best, Math.hypot(place[0] - (a[0] + ab[0] * t), place[1] - (a[1] + ab[1] * t), place[2] - (a[2] + ab[2] * t)));
+  }
+  return best;
+}
+
 const unit = (v: Vec3): Vec3 => {
   const l = Math.hypot(v[0], v[1], v[2]) || 1;
   return [v[0] / l, v[1] / l, v[2] / l];
 };
-const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
 export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<ThreeParts> {
   return {
@@ -285,7 +306,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         const positions = new Float32Array((ORBIT_POINTS + 1) * 3);
         const geometry = new three.BufferGeometry();
         geometry.setAttribute("position", new three.BufferAttribute(positions, 3));
-        const line = new three.Line(geometry, new three.LineBasicMaterial({ color: id === "earth" ? "#6aa8ff" : BODIES[id].colour, transparent: true, opacity: 0.55 }));
+        const line = new three.Line(geometry, new three.LineBasicMaterial({ color: id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour, transparent: true, opacity: 0.55 }));
         line.frustumCulled = false;
         scene.add(line);
         orbits.set(id, { line, positions, samples: [], epoch: Number.NaN });
@@ -482,22 +503,32 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           model.painted.bodies = paintedBodies;
 
           // the orbits round the Sun, placed by the same mapping as the bodies
+          const drawnRings: string[] = [];
+          const miss: Record<string, number> = {};
           for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
             o.line.visible = model.orbits;
             if (!model.orbits) continue;
-            if (!Number.isFinite(o.epoch) || Math.abs(model.time - o.epoch) > 365 * 86_400_000) {
-              o.samples = planetOrbit(id, model.time, ORBIT_POINTS);
+            const keep = id === "moon" ? MOON_RING_KEEP_MS : 365 * 86_400_000;
+            if (!Number.isFinite(o.epoch) || Math.abs(model.time - o.epoch) > keep) {
+              o.samples = id === "moon" ? moonOrbit(model.time, ORBIT_POINTS) : planetOrbit(id, model.time, ORBIT_POINTS);
               o.epoch = model.time;
             }
-            const line = orbitLine(mode, sunPos, o.samples);
+            // the Moon's ring is round the Earth, which is the middle of the view; the others are round the Sun
+            const line = id === "moon" ? o.samples.map((p) => placeMoon(mode, p)) : orbitLine(mode, sunPos, o.samples);
             for (let i = 0; i <= ORBIT_POINTS; i += 1) {
               o.positions[i * 3] = line[i]![0];
               o.positions[i * 3 + 1] = line[i]![1];
               o.positions[i * 3 + 2] = line[i]![2];
             }
             (o.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+            // how far the body is from its own line, against the line's size: the check that it sits on it
+            const centre: Vec3 = id === "moon" ? pos.earth : sunPos;
+            const radius = Math.hypot(...minus(line[0]!, centre)) || 1;
+            drawnRings.push(id);
+            miss[id] = distanceToLine(pos[id as SpaceBody], line) / radius;
           }
+          model.rings = { drawn: drawnRings, miss };
 
           // the moons of a planet, once it is big enough on the screen to show them
           const now = performance.now();

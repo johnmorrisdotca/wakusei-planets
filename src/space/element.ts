@@ -531,6 +531,8 @@ export class WakuseiSpace extends HTMLElement {
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
     tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
+    /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
+    orbits: { drawn: string[]; miss: Record<string, number> };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -546,6 +548,7 @@ export class WakuseiSpace extends HTMLElement {
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
+      orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss } },
     };
   }
 

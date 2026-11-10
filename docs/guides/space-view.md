@@ -64,7 +64,7 @@ The element carries the drag, the pinch, Ctrl and the wheel, and the keys itself
 
 No two names overlap: when the boxes of two names would cross, the one that matters less is left out, and a name that is left out takes its ring with it. The order is the body looked at, the Sun, the planets, then the Moon; a tie goes to the body that is bigger on the screen. A moon gives way to its planet and a planet to the Sun, and zooming in brings the names back. `chooseLabels(boxes)` from `@johnmorrisdotca/wakusei-planets/space` is the same rule on plain boxes.
 
-A planet's nearer moons appear round it once the planet is a few pixels across, at the places the package's moon models give (`zoomFor("jupiter-moons")`). The paths of the Earth and the planets round the Sun are drawn unless `orbits="off"`.
+A planet's nearer moons appear round it once the planet is a few pixels across, at the places the package's moon models give (`zoomFor("jupiter-moons")`). The paths of the Earth and the planets round the Sun, and the Moon's path round the Earth, are drawn unless `orbits="off"`. Every line goes through the same mapping as the bodies, so each body lies on its own line in both scales; `stats.orbits` says which lines were drawn and how far each body is from its own, as a fraction of the line's radius (under 0.01 for a body on its line). The Moon's line is one sidereal month from the Moon's own place and is worked out again every few days of the clock; `moonOrbit(ms)` gives its points.
 
 ## Properties, events, stats
 

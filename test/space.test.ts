@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Body, GeoVector, HelioVector, MakeTime } from "astronomy-engine";
 import { greenwichMeanSiderealTime } from "../src/time.ts";
-import { AU_IN_EARTH_RADII, blend, chooseLabels, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition, type ScaleMode } from "../src/space/index.ts";
+import { AU_IN_EARTH_RADII, blend, chooseLabels, compress, createTrack, frameAt, moonOrbit, groundDirection, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition, type ScaleMode } from "../src/space/index.ts";
 import { MOONS_OF } from "../src/facts.ts";
 import { moonOffset } from "../src/scene/orient.ts";
 import type { Vec3 } from "../src/vec.ts";
@@ -299,6 +299,33 @@ test("on or inside the body the angular radius is a quarter turn", () => {
 test("in the compressed scale the Moon keeps its true size beside the Earth, a quarter of it, so it never looks as big", () => {
   const ratio = radiusIn("moon", "compressed") / radiusIn("earth", "compressed");
   assert.ok(Math.abs(ratio - radiusIn("moon", "true") / radiusIn("earth", "true")) < 0.005, `${ratio}`);
+});
+
+test("the Moon's ring is closed, round the Earth at the Moon's own distance, passes through the Moon and keeps near it for days", () => {
+  const start = Date.UTC(2026, 10, 2, 14);
+  const ring = moonOrbit(start, 96);
+  assert.equal(ring.length, 97);
+  assert.deepEqual(ring[0], ring[96]);
+  assert.deepEqual(ring[0], frameAt(start).moon);
+  for (const mode of ["true", "compressed"] as ScaleMode[]) {
+    const line = ring.map((p) => placeMoon(mode, p));
+    const radius = length(line[0]!);
+    for (const days of [0, 1, 3, 5]) {
+      const moon = placeMoon(mode, frameAt(start + days * 86_400_000).moon);
+      let near = Infinity;
+      for (let i = 0; i < 96; i += 1) {
+        const a = line[i]!;
+        const b = line[i + 1]!;
+        const ab: Vec3 = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+        const am: Vec3 = [moon[0] - a[0], moon[1] - a[1], moon[2] - a[2]];
+        const t = Math.max(0, Math.min(1, (am[0] * ab[0] + am[1] * ab[1] + am[2] * ab[2]) / (ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2)));
+        near = Math.min(near, Math.hypot(moon[0] - a[0] - ab[0] * t, moon[1] - a[1] - ab[1] * t, moon[2] - a[2] - ab[2] * t));
+      }
+      assert.ok(near / radius < 0.01, `${mode}, ${days} days on: ${(near / radius).toFixed(4)} of the ring's radius off`);
+    }
+  }
+  const km = ring.map((p) => length(p) * AU_IN_EARTH_RADII * 6378.137);
+  assert.ok(Math.min(...km) > 350_000 && Math.max(...km) < 410_000);
 });
 
 test("names that touch: the surer one is kept, a moon gives way to its planet and a planet to the Sun, and apart they all stay", () => {
