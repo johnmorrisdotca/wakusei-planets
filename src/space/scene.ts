@@ -470,7 +470,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                 const ends = track.ends();
                 const was = ends ? placeAll(ends[0])[id] : pos[id];
                 const will = ends ? placeAll(ends[1])[id] : pos[id];
-                position = pos[id];
+                // from the centre of the body it goes round (the places are relative to the origin the scene was moved to)
+                position = minus(pos[id], centre);
                 velocity = minus(will, was);
                 perSecond = ends ? Math.max(1e-3, (ends[1].ms - ends[0].ms) / 1000) : 1;
                 hiddenBody = id;
