@@ -6,6 +6,7 @@ import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
 import type { ViewChangeDetail, ViewControlsElement } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
+import { LINEUP_STARS } from "../src/lineup/data.ts";
 import { registerStarLook } from "../src/scene/look.ts";
 import { LUMINOSITY_CLASSES, starLook, STAR_SUN, type LuminosityClass, type StarNumbers } from "../src/star.ts";
 import "../src/element.ts";
@@ -18,16 +19,25 @@ const lang = (): "en" | "ja" => chooser()?.lang ?? "en";
 
 setThreeLoader(() => import("./three-subset.ts"));
 
+/** A star of the size line-up as the star page draws it: the line-up's radius, temperature and the rest, so the two pages agree. */
+const fromLineup = (id: string, extra: Partial<StarNumbers> = {}): StarNumbers => {
+  const row = LINEUP_STARS.find((one) => one.id === id);
+  if (row === undefined) throw new Error(`the size line-up has no star called ${id}`);
+  const estimated = row.basis === "luminosity" || row.basis === "weak-distance" ? (["radiusSun"] as const) : [];
+  return { ...row.look, name: row.name.en, radiusSun: row.radiusSun, ...extra, estimated: [...estimated, ...(extra.estimated ?? [])] };
+};
+
 /**
- * The stars to start from. The numbers are published values (Sun: IAU nominal; Vega: Monnier et al. 2012; Sirius A: Bond et al. 2017; Betelgeuse: Joyce et al. 2020; Rigel: Moravveji et al. 2013; Proxima: Ribas et al. 2017 and Kiraga and Stepien 2007;
- * Altair: Monnier et al. 2007; Sirius B: Bond et al. 2017). A number that is only roughly known is marked `estimated`, and a rotation nobody has measured is left out.
+ * The stars to start from. Sirius A, Vega, Rigel and Betelgeuse are the size line-up's own rows (`LINEUP_STARS`: radius, temperature and the rest, each from its paper; Betelgeuse is the measured angle at Harper et al.'s
+ * 222 pc, and Joyce et al. 2020's 764 Suns from stellar models is a value the line-up names and does not use). The others: Sun: IAU nominal; Proxima: Ribas et al. 2017 and Kiraga and Stepien 2007; Altair: Monnier et al. 2007;
+ * Sirius B: Bond et al. 2017. A number that is only roughly known is marked `estimated`, and a rotation nobody has measured is left out.
  */
 const PRESETS: readonly { id: string; numbers: StarNumbers; ja: string }[] = [
   { id: "sun", numbers: { ...STAR_SUN }, ja: "太陽" },
-  { id: "sirius-a", numbers: { name: "Sirius A", temperatureK: 9940, radiusSun: 1.711, luminosityClass: "V", rotationDays: 5.5, estimated: ["rotationDays"] }, ja: "シリウスA" },
-  { id: "betelgeuse", numbers: { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab", estimated: ["radiusSun"] }, ja: "ベテルギウス" },
-  { id: "rigel", numbers: { name: "Rigel", temperatureK: 12100, radiusSun: 78.9, luminosityClass: "Ia" }, ja: "リゲル" },
-  { id: "vega", numbers: { name: "Vega", temperatureK: 9602, radiusSun: 2.362, luminosityClass: "V", rotationDays: 0.68, oblateness: 0.11 }, ja: "ベガ" },
+  { id: "sirius-a", numbers: fromLineup("sirius-a", { rotationDays: 5.5, estimated: ["rotationDays"] }), ja: "シリウスA" },
+  { id: "betelgeuse", numbers: fromLineup("betelgeuse"), ja: "ベテルギウス" },
+  { id: "rigel", numbers: fromLineup("rigel"), ja: "リゲル" },
+  { id: "vega", numbers: fromLineup("vega"), ja: "ベガ" },
   { id: "proxima", numbers: { name: "Proxima Centauri", temperatureK: 3042, radiusSun: 0.154, luminosityClass: "V", rotationDays: 83.5 }, ja: "プロキシマ・ケンタウリ" },
   { id: "altair", numbers: { name: "Altair", temperatureK: 7550, radiusSun: 1.79, luminosityClass: "V", rotationDays: 0.45, oblateness: 0.2, estimated: ["rotationDays"] }, ja: "アルタイル" },
   { id: "white-dwarf", numbers: { name: "Sirius B", temperatureK: 25200, radiusSun: 0.0084, luminosityClass: "D" }, ja: "白色矮星 (シリウスB)" },

@@ -7,7 +7,7 @@ import { Component, CUSTOM_ELEMENTS_SCHEMA, Input, OnInit } from "@angular/core"
   template: `<wakusei-body [attr.star]="json" [attr.look]="look"></wakusei-body>`,
 })
 export class StarViewComponent implements OnInit {
-  @Input() star = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" };
+  @Input() star = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" };
   @Input() look: "line" | "realistic" = "line";
 
   get json(): string {

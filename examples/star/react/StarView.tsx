@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const BETELGEUSE = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" };
+const BETELGEUSE = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" };
 
 export function StarView({ star = BETELGEUSE, look = "line" }: { star?: typeof BETELGEUSE; look?: "line" | "realistic" }) {
   useEffect(() => {

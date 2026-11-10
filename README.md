@@ -113,12 +113,12 @@ Every body has its real size relative to the others (`scale-to="jupiter"`), its 
 
 ## A star from its numbers
 
-`<wakusei-body star="Betelgeuse" temperature-k="3600" radius-sun="764" luminosity-class="Iab">` draws any star in 3D or as a line drawing, from a few numbers and with no catalogue: the temperature gives the colour, the radius the size beside the Sun, the luminosity class the grain of the surface, the rotation how it turns, and a flattened star such as Vega or Altair is squashed with hotter poles. Granulation boils, an active star has spots, prominences and flares, and a soft corona glows round it, all through the same shared renderer, with a cheaper `quality="low"` for weak devices. Every star says which parts are measured and which are drawn for looks: *drawn from its numbers, not a photo*. The Sun keeps its own look. See [A star from its numbers](docs/guides/star-look.md) and the [star page](https://johnmorrisdotca.github.io/wakusei-planets/star.html).
+`<wakusei-body star="Betelgeuse" temperature-k="3650" radius-sun="1057" luminosity-class="Iab">` draws any star in 3D or as a line drawing, from a few numbers and with no catalogue: the temperature gives the colour, the radius the size beside the Sun, the luminosity class the grain of the surface, the rotation how it turns, and a flattened star such as Vega or Altair is squashed with hotter poles. Granulation boils, an active star has spots, prominences and flares, and a soft corona glows round it, all through the same shared renderer, with a cheaper `quality="low"` for weak devices. Every star says which parts are measured and which are drawn for looks: *drawn from its numbers, not a photo*. The Sun keeps its own look. See [A star from its numbers](docs/guides/star-look.md) and the [star page](https://johnmorrisdotca.github.io/wakusei-planets/star.html).
 
 ```ts
 import { starLook } from "@johnmorrisdotca/wakusei-planets";
 
-const vega = starLook({ name: "Vega", temperatureK: 9602, radiusSun: 2.362, oblateness: 0.11, rotationDays: 0.68 });
+const vega = starLook({ name: "Vega", temperatureK: 9660, radiusSun: 2.726, oblateness: 0.113, rotationDays: 0.71 });
 console.log(vega.colour, vega.parts.map((part) => part.status).join(", "));
 ```
 

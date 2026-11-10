@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The star page's presets are the size line-up's rows** (MODULES-795). Sirius A, Betelgeuse, Rigel and Vega on the star page now read `LINEUP_STARS`, so the two pages agree: Betelgeuse 1,057 Suns (the measured angle at 222 pc, 3,650 K), Sirius A 1.7144 (9,845 K) and Vega 2.726 equatorial (9,660 K, flattening 0.113, turning in 0.71 days). They were 764 (Joyce et al. 2020, a value from stellar models that the line-up names and does not use), 1.711 and 2.362. The README, the star-look guide (English and Japanese) and the examples that named those numbers use the line-up's. The size line-up guide no longer says the star page's preset is the model value.
+
 ## [0.29.0] - 2026-11-10
 
 - **Time keeps up on slow machines** (MODULES-797). `<wakusei-space>`'s clock now lives in `createGameClock` (`src/space/clock.ts`, internal): it advances by the time the page's clock says passed, never by a frame, so 86400x is a day for every real second whether the machine draws 60 frames a second or 5 (a unit test with a 5-frames-a-second clock moves 2 days in 2 s within 1 percent). There is no cap on a long gap: a tab that was hidden or a laptop that slept finds the date where the speed would have taken it. Three faults found on the way: the `time` property and `stats.time` read the moment of the last step, up to a long draw old, and now read the moment now; a picture drawn late showed the moment of the last step and now shows the moment it is drawn at; and starting, switching or stopping a ride dropped the time since the last step (up to a minute at real time on a held date). The speed, Pause, Back and the `wakusei-timechange` events are as they were. The date-play test times the clock against the page's own clock again.

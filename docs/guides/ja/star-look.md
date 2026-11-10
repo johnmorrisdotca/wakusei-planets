@@ -10,7 +10,7 @@ description: どんな星も、温度・半径・階級・自転などの数字�
 | 数字 | 決めるもの |
 |---|---|
 | `temperatureK` | 色 (その温度の黒体の色。3,600 K は赤、太陽は白っぽい黄色、ベガは青白い)。ふちの暗さも |
-| `radiusSun` | 太陽と並べたときの大きさ。線画では、星のまわりに太陽・地球の軌道・木星の軌道の輪も描きます。ベテルギウスは太陽の約764倍の**半径**です。質量の11〜20倍は、別の数字です |
+| `radiusSun` | 太陽と並べたときの大きさ。線画では、星のまわりに太陽・地球の軌道・木星の軌道の輪も描きます。ベテルギウスは太陽の約1,057倍の**半径**です ([大きさくらべ](size-lineup.md)と同じ、測った角直径と距離222 pcから。Joyce ほか 2020 の764倍は星のモデルから出した値で、使いません)。質量の11〜20倍は、別の数字です |
 | `luminosityClass` | 表面の細かさ: `Ia`・`Iab`・`Ib` は大きなセルが少し、`III` はあらい、`V` は細かい、`D` (白色矮星) はなめらか |
 | `rotationDays` | ページでの回り方: 速く自転する星ほど速く回ります。速さは実際より上げていて、そう書いてあります (太陽は実際の73,000倍)。数字がないときはゆっくり回し、そう書きます |
 | `activity` | 黒点と、ふちのプロミネンス・フレア。ないときは、温度と階級から決めます。熱い星はなし、冷たい星や赤色矮星は多め |
@@ -32,12 +32,12 @@ description: どんな星も、温度・半径・階級・自転などの数字�
     <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/element/+esm"></script>
   </head>
   <body>
-    <wakusei-body star="Betelgeuse" temperature-k="3600" radius-sun="764" luminosity-class="Iab" look="realistic" size="320"></wakusei-body>
+    <wakusei-body star="Betelgeuse" temperature-k="3650" radius-sun="1057" luminosity-class="Iab" look="realistic" size="320"></wakusei-body>
   </body>
 </html>
 ```
 
-`star` には、数字を JSON で入れることもできます (`star='{"temperatureK":3600,"radiusSun":764}'`)。`registerStarLook` (下) で登録した星の名前でも構いません。横に書いた属性が優先です。`star` プロパティにはオブジェクトを渡せます。数字が合わないときは、`data-error` に理由が出て、何も描きません。
+`star` には、数字を JSON で入れることもできます (`star='{"temperatureK":3650,"radiusSun":1057}'`)。`registerStarLook` (下) で登録した星の名前でも構いません。横に書いた属性が優先です。`star` プロパティにはオブジェクトを渡せます。数字が合わないときは、`data-error` に理由が出て、何も描きません。
 
 ## ES モジュールで
 
@@ -61,7 +61,7 @@ import "@johnmorrisdotca/wakusei-planets/element";
 import type { WakuseiBody } from "@johnmorrisdotca/wakusei-planets/element";
 import { starLook, type StarNumbers } from "@johnmorrisdotca/wakusei-planets";
 
-const betelgeuse: StarNumbers = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab", estimated: ["radiusSun"] };
+const betelgeuse: StarNumbers = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab", estimated: ["radiusSun"] };
 
 const star = document.querySelector<WakuseiBody>("wakusei-body")!;
 star.star = betelgeuse;
@@ -73,7 +73,7 @@ console.log(starLook(betelgeuse).parts.map((part) => `${part.part}: ${part.statu
 ```tsx
 import { useEffect } from "react";
 
-const BETELGEUSE = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" };
+const BETELGEUSE = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" };
 
 export function StarView({ star = BETELGEUSE, look = "line" }: { star?: typeof BETELGEUSE; look?: "line" | "realistic" }) {
   useEffect(() => {
@@ -105,7 +105,7 @@ declare module "react" {
 import { onMounted } from "vue";
 
 withDefaults(defineProps<{ star?: object; look?: "line" | "realistic" }>(), {
-  star: () => ({ name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" }),
+  star: () => ({ name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" }),
   look: "line",
 });
 
@@ -143,7 +143,7 @@ import { Component, CUSTOM_ELEMENTS_SCHEMA, Input, OnInit } from "@angular/core"
   template: `<wakusei-body [attr.star]="json" [attr.look]="look"></wakusei-body>`,
 })
 export class StarViewComponent implements OnInit {
-  @Input() star = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" };
+  @Input() star = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" };
   @Input() look: "line" | "realistic" = "line";
 
   get json(): string {
@@ -163,7 +163,7 @@ export class StarViewComponent implements OnInit {
 <script lang="ts">
   import { onMount } from "svelte";
 
-  let { star = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" }, look = "line" }: { star?: object; look?: "line" | "realistic" } = $props();
+  let { star = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" }, look = "line" }: { star?: object; look?: "line" | "realistic" } = $props();
 
   // The element needs a browser: onMount never runs on the server.
   onMount(() => {
@@ -188,7 +188,7 @@ export class StarViewComponent implements OnInit {
   </head>
   <body>
     <iframe
-      src="https://johnmorrisdotca.github.io/wakusei-planets/embed.html?star=Betelgeuse&temperature-k=3600&radius-sun=764&luminosity-class=Iab&look=line"
+      src="https://johnmorrisdotca.github.io/wakusei-planets/embed.html?star=Betelgeuse&temperature-k=3650&radius-sun=1057&luminosity-class=Iab&look=line"
       title="Betelgeuse, drawn from its numbers"
       width="420"
       height="420"
@@ -208,7 +208,7 @@ export class StarViewComponent implements OnInit {
 ```js
 import { starLineSvg, starLook } from "@johnmorrisdotca/wakusei-planets";
 
-const betelgeuse = starLook({ name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab", estimated: ["radiusSun"] });
+const betelgeuse = starLook({ name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab", estimated: ["radiusSun"] });
 const drawn = betelgeuse.parts.filter((part) => part.status === "illustrative").map((part) => part.part);
 
 console.log(betelgeuse.colour, starLineSvg(betelgeuse).startsWith("<svg"), drawn.join(","));

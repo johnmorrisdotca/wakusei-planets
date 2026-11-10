@@ -10,7 +10,7 @@ import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
 import { embedCode, embedCredit, EMBED_KINDS, LUMINOSITY_CLASSES, STAR_SUN, starLineSvg, starLook, type EmbedOptions, type StarNumbers } from "../src/index.ts";
 import { registerStarLook, starLookOf } from "../src/scene/look.ts";
 
-const BETELGEUSE: StarNumbers = { name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab", estimated: ["radiusSun"] };
+const BETELGEUSE: StarNumbers = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab", estimated: ["radiusSun"] };
 const RIGEL: StarNumbers = { name: "Rigel", temperatureK: 12100, radiusSun: 78.9, luminosityClass: "Ia" };
 const PROXIMA: StarNumbers = { name: "Proxima Centauri", temperatureK: 3042, radiusSun: 0.154, luminosityClass: "V", rotationDays: 83.5 };
 const ALTAIR: StarNumbers = { name: "Altair", temperatureK: 7550, radiusSun: 1.79, luminosityClass: "V", rotationDays: 0.45, oblateness: 0.2 };
@@ -124,11 +124,11 @@ test("the line drawing: an outline, cells and spots as line work, and the Sun an
   assert.match(svg, /aria-label="Line drawing of Betelgeuse, drawn from its numbers"/);
   assert.match(svg, /Jupiter's orbit/);
   assert.match(svg, /Earth's orbit/);
-  assert.match(svg, /764 × Sun · 3,600 K · Iab/);
+  assert.match(svg, /1,057 × Sun · 3,650 K · Iab/);
   assert.ok((svg.match(/<path/g) ?? []).length > 5, "cells and spots");
   const ja = starLineSvg(BETELGEUSE, { size: 320, lang: "ja" });
   assert.match(ja, /地球の軌道/);
-  assert.match(ja, /太陽の764倍/);
+  assert.match(ja, /太陽の1,057倍/);
   // a star the size of the Sun has no ring of its own size, and a white dwarf beside the Sun is outlined in the Sun's ring
   assert.doesNotMatch(starLineSvg(STAR_SUN, { size: 320 }), />Sun</);
   assert.match(starLineSvg(DWARF, { size: 320, fill: 0.0079 }), />Sun</);
@@ -167,7 +167,7 @@ const CHOICES: EmbedOptions[] = [
 test("the code that puts a star in a page: the element's attributes, no body entry point, and every kind of page", () => {
   for (const kind of EMBED_KINDS) assert.ok(embedCode(CHOICES[0]!, kind).includes("Betelgeuse") || kind === "module", kind);
   const html = embedCode(CHOICES[0]!, "html");
-  assert.match(html, /<wakusei-body star="Betelgeuse" look="realistic" temperature-k="3600" radius-sun="764" luminosity-class="Iab" estimated="radiusSun"><\/wakusei-body>/);
+  assert.match(html, /<wakusei-body star="Betelgeuse" look="realistic" temperature-k="3650" radius-sun="1057" luminosity-class="Iab" estimated="radiusSun"><\/wakusei-body>/);
   assert.equal((html.match(/<script/g) ?? []).length, 1, "only the element is loaded: the star look is in it");
   assert.doesNotMatch(html, /sun\/\+esm|body=/);
   assert.match(embedCode({ body: "sun", star: { temperatureK: 5000, radiusSun: 1 } }, "html"), /<wakusei-body star look="realistic" temperature-k="5000" radius-sun="1">/);

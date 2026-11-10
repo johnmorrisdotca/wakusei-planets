@@ -2,7 +2,7 @@
 import { onMounted } from "vue";
 
 withDefaults(defineProps<{ star?: object; look?: "line" | "realistic" }>(), {
-  star: () => ({ name: "Betelgeuse", temperatureK: 3600, radiusSun: 764, luminosityClass: "Iab" }),
+  star: () => ({ name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab" }),
   look: "line",
 });
 
