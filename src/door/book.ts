@@ -85,6 +85,8 @@ export interface SourceBook {
   /** Calls `listener` when something changed that a view may want to draw again for: a source added, removed or switched, a tile arrived or failed, records read. Returns the function that stops it. */
   onChange(listener: () => void): () => void;
   stats(): SourceStats;
+  /** Resolves when every record source has been read and no tile is loading or waiting. */
+  ready(): Promise<void>;
   /** Frees everything: aborts every load, frees every tile and record. The book is not used again. */
   dispose(): void;
 }
@@ -121,6 +123,7 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
   const accounts = new Map<string, Set<string>>();
   const loaders = new Map<string, { source: BodyMapSource; loader: TileLoader<ImageTile> }>();
   const listeners = new Set<() => void>();
+  const reading = new Set<Promise<void>>();
   let onlyOwn = false;
   let gone = false;
   const notify = (): void => {
@@ -154,11 +157,13 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
     if (source.kind !== "records" || controllers.has(source.info.id)) return;
     const controller = new AbortController();
     controllers.set(source.info.id, controller);
-    void readSmallBodies(source as RecordSource<SmallBody>, controller.signal).then((read) => {
+    const done: Promise<void> = readSmallBodies(source as RecordSource<SmallBody>, controller.signal).then((read) => {
+      reading.delete(done);
       if (controllers.get(source.info.id) !== controller || read.status === "aborted") return;
       reads.set(source.info.id, read);
       notify();
     });
+    reading.add(done);
   };
 
   const check = (source: unknown): DataSource => {
@@ -260,6 +265,10 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
       const records: SourceStats["records"] = {};
       for (const [id, read] of reads) records[id] = { status: read.status, kept: read.records.length, skipped: read.skipped };
       return { ...store.stats(), records };
+    },
+    async ready() {
+      await Promise.all([...reading]);
+      await store.idle();
     },
     dispose() {
       if (gone) return;

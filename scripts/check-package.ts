@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -84,3 +84,9 @@ if (!(london.sunrise instanceof Date) || london.sunrise.getTime() >= london.suns
 const polar = oldTimes.getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 69.65, 18.96);
 if (!Number.isNaN(polar.sunrise.getTime())) throw new Error("suncalc legacy package entry failed");
 
+// The data door through package resolution: the package's own credits, and a source of small bodies.
+const doorEntry = "@johnmorrisdotca/wakusei-planets/door";
+const door = await import(doorEntry);
+if (door.OWN_SOURCES.map((one: { id: string }) => one.id).join() !== "wakusei-pictures,wakusei-tiles,wakusei-orbits") throw new Error("the data door's own sources are wrong");
+if (door.creditLine([door.ownCredit("wakusei-tiles", 1)], "en") !== "Finer map tiles: maps by NASA, USGS and JPL (public domain), cut by Wakusei Planets (Public domain).") throw new Error("the data door's credit line is wrong");
+if (door.tilesSource("/tiles").info.id !== "wakusei-tiles" || door.createSourceBook().sources.length !== 0) throw new Error("the data door cannot make a source or a book");

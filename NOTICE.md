@@ -132,6 +132,11 @@ Not tiled, because no finer public-domain map was found that this package can us
 
 The generic detail of a close zoom (docs/guides/close-zoom.md) is noise made in the shader. It is no data and takes nothing from any source.
 
+## The data door
+
+- **The package's own credits (`OWN_SOURCES` in `@johnmorrisdotca/wakusei-planets/door`, MODULES-831, written 2026-11-10)**: three rows, written from the entries of this file and read nowhere else. `wakusei-pictures` is the surface pictures (Surface pictures above: NASA, USGS and JPL maps that are public domain, and Solar System Scope's and Nestaeric's maps, CC BY 4.0; its licence name is the stricter, "CC BY 4.0", read 2026-11-02). `wakusei-tiles` is the finer map tiles (Finer map tiles above: public domain, read 2026-11-09). `wakusei-orbits` is the series and tables the positions come from (The numbers above: IMCCE's VSOP87B and ELP2000-82B, which "carry no licence text" and are published for use with the credit, and JPL Horizons, NASA/JPL-Caltech, read 2026-11-07; its licence name says "Published for use with credit"). A test holds that none of the three is marked non-commercial or share-alike.
+- **Data a caller hands in is not part of this package.** A source passed to `addSource` or `sources` carries its own credit and licence, and the credit line prints them (with "non-commercial" or "share-alike" where the source says so). This package bundles no such data and takes none as a dependency. The small-body source is a list of orbital elements a caller supplies; this package holds no catalogue of them.
+
 ## Orbiter's MIT notice
 
 The TASS1.7 table above was read from Orbiter (https://github.com/orbitersim/orbiter), whose licence is:

@@ -313,6 +313,59 @@ A body that turns by itself and a moving sky, in HTML:
 <wakusei-body body="venus" look="realistic" time="2026-11-02T12:00:00Z" turn="12" live="hover"></wakusei-body>
 ```
 
+## Outside data
+
+The package draws; you bring the data. `@johnmorrisdotca/wakusei-planets/door` takes a finer map of a body, or a list of small bodies, as a **source**: a small object that carries its own licence and credit, so the page can always say whose data is on the screen. Without a source the package draws exactly what it did before, from its own pictures, tiles and series. A source of yours may be non-commercial or share-alike; the credit line says so beside the licence, and the package never bundles one.
+
+```js
+import { createSourceBook, creditLine, smallBodyAt } from "@johnmorrisdotca/wakusei-planets/door";
+
+// A source of your own: here two small bodies held in memory (the second has a number that is not one, so it is left out). A real one would read a catalogue, and says whose it is and under what licence.
+const mine = {
+  kind: "records",
+  info: {
+    id: "my-rocks",
+    name: { en: "My rocks", ja: "私の小天体" },
+    credit: { en: "My rocks, A. Person (2026)", ja: "私の小天体（A. Person、2026年）" },
+    licence: { name: "CC BY-NC 4.0", url: "https://creativecommons.org/licenses/by-nc/4.0/", nonCommercial: true },
+    url: "https://example.org/my-rocks",
+    retrieved: "2026-11-10",
+  },
+  records: () => [
+    { name: "Ceres", a: 2.7656, e: 0.0795, i: 10.588, node: 80.25, peri: 73.3, M0: 291.4, epoch: 2461000.5, H: 3.34 },
+    { name: "Broken", a: Number.NaN, e: 0.1, i: 5, node: 0, peri: 0, M0: 0, epoch: 2461000.5, H: 12 },
+  ],
+};
+
+// An element keeps a book like this one: `space.addSource(mine)` is `book.addSource(mine)`.
+const book = createSourceBook();
+book.addSource(mine);
+await book.ready();
+const [ceres] = book.smallBodies();
+const [x, y, z] = smallBodyAt(ceres, 2461000.5);
+console.log(`${book.smallBodies().length} small body, ${book.stats().records["my-rocks"].skipped} left out: ${ceres.name} is ${Math.hypot(x, y, z).toFixed(2)} au from the Sun`);
+const credits = [{ source: mine.info, own: false, used: book.smallBodies().length }];
+console.log(creditLine(credits, "en"));
+console.log(creditLine(credits, "ja"));
+
+book.enableSource("my-rocks", false);
+console.log(`${book.smallBodies().length} small bodies with the source off`);
+```
+
+`<wakusei-space>` draws small bodies as points in one instanced draw, and `<wakusei-body>` and `<wakusei-space>` both take a map of a body to lay over its own picture. Both have `sources` and `addSource(source)`, which checks the source at once and returns the way to remove it, `removeSource(id)`, `enableSource(id, false)` and the attribute `data="own"` to switch outside sources off (their loads abort and their tiles are freed), and `credits()` with the event `wakusei-creditschange` for the credit line.
+
+```js no-run
+import { creditLine, tilesSource } from "@johnmorrisdotca/wakusei-planets/door";
+import "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector("wakusei-space");
+space.addSource(mine); // the source above: its points are in the next frame
+space.addSource(tilesSource("/my-tiles/")); // what tiles="/my-tiles/" means
+space.addEventListener("wakusei-creditschange", () => console.log(creditLine(space.credits(), "en")));
+```
+
+The tiles of every body share one 48 MB budget, six loads at a time for a source, and nothing is sent at rest. `OWN_SOURCES` and `ownCredit` give the package's own credits, `mapKeys` helps a source of your own name the tiles of a place, and `readSmallBodies` and `smallBodyAt` read a list of small bodies and say where one is on a date. The [guide](docs/guides/data-door.md) has the shapes and the rules.
+
 ## The code builder
 
 [The code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) is one screen: choose which planet's system, the body, the look, the size, the sky and the turning, then pick how your page is made and copy the code. It is the family's embed panel with those choices inside it, built from `embedCode`, so it writes what the package writes. [Put it in your page](docs/guides/put-it-in-your-page.md) is its guide.
@@ -409,6 +462,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [The size line-up](docs/guides/size-lineup.md) | The Sun and the largest stars at true relative size, with each radius, its error and its paper, where the papers disagree, every way to put it in a page |
 | [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |
 | [Close zoom and map tiles](docs/guides/close-zoom.md) | How far each body zooms and why, the finer map tiles for a close zoom (made from public-domain maps, served beside the demo, never in the package), the generic detail, what it costs |
+| [Outside data, the data door](docs/guides/data-door.md) | Hand the package your own maps of a body or small bodies with their licence and credit, switch them off, and show whose data is on the screen |
 | [Riding along](docs/guides/ride-along.md) | The camera on a moon, a planet or any moving point, looking at what it goes round |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |

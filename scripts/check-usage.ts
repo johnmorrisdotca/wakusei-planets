@@ -347,6 +347,14 @@ const seesStar = async (page: Page): Promise<void> => {
   if (!/Betelgeuse/.test(label ?? "") || !/not a photo/.test(label ?? "")) throw new Error(`the star's label is wrong: ${label}`);
 };
 
+await step("door-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("door"), "source.mjs")], { cwd: usage, encoding: "utf8" }).trim().split("\n");
+  if (out.length !== 4 || !/^1 small body, 1 left out: Ceres is 2\.\d\d au from the Sun$/.test(out[0]!)) throw new Error(`the source was not read: ${out.join(" | ")}`);
+  if (!/CC BY-NC 4\.0; non-commercial/.test(out[1]!)) throw new Error(`the English credit does not say non-commercial beside the licence: ${out[1]}`);
+  if (!/CC BY-NC 4\.0、非営利のみ/.test(out[2]!)) throw new Error(`the Japanese credit does not say 非営利のみ beside the licence: ${out[2]}`);
+  if (out[3] !== "0 small bodies with the source off") throw new Error(`switching the source off did not bring back the first picture: ${out[3]}`);
+});
+
 await step("star-node", () => {
   const out = execFileSync(process.execPath, [join(examples("star"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
   if (!/^#[0-9a-f]{6} true surface,spots,rotation,prominences,glow$/.test(out)) throw new Error(`unexpected output: ${out}`);
@@ -506,6 +514,7 @@ const FILES: Record<string, string[]> = {
   "vue/main.ts": ["docs/guides/frameworks.md", "docs/guides/ja/frameworks.md"],
   "svelte/WakuseiBody.svelte": ["docs/guides/frameworks.md", "docs/guides/ja/frameworks.md"],
   "angular/wakusei-body.component.ts": ["docs/guides/frameworks.md", "docs/guides/ja/frameworks.md"],
+  "door/source.mjs": ["README.md", "docs/guides/data-door.md", "docs/guides/ja/data-door.md"],
   "star/cdn.html": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "star/iframe.html": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "star/node.mjs": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
