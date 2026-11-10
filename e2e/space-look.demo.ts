@@ -110,10 +110,11 @@ for (const [name, url] of [["panel", "/wakusei-planets/space.html"], ["full scre
   });
 }
 
-test("panel: with reduced motion it opens still, with Play ready", async ({ browser }) => {
-  const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1440, height: 900 } });
+test("panel: with reduced motion it opens still, with Play ready", async ({ browser, baseURL }) => {
+  // the page's address comes from the config's base URL, not from a port written here
+  const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1440, height: 900 }, baseURL });
   const page = await context.newPage();
-  await page.goto("http://127.0.0.1:" + (process.env.TEST_PORT ?? "8226") + "/wakusei-planets/space.html");
+  await page.goto("/wakusei-planets/space.html");
   await page.locator(`${SPACE}[data-state=live]`).waitFor({ timeout: 90_000 });
   await settle(page, 1000);
   const t0 = (await statsOf(page)).time;
