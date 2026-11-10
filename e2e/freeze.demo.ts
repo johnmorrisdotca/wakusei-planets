@@ -318,7 +318,13 @@ test("a moving drag of a body draws at most thirty frames a second", async ({ pa
   await settle(page, 500);
   const after = await readCounts(page);
   expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(Math.ceil(seconds * 31) + 4);
-  expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
+  // at rest at most one frame is still asked for; on a loaded runner the software GPU can hold the last frames of the drag for a moment (CI run 42775802160 saw 2 just after the 500 ms settle), so wait for it rather than read it once
+  await expect
+    .poll(async () => {
+      const now = await readCounts(page);
+      return now.rafRequests - now.rafCallbacks;
+    }, { timeout: 10_000, message: "frames still asked for at rest" })
+    .toBeLessThanOrEqual(1);
 });
 
 test("the portrait canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
