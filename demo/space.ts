@@ -8,6 +8,7 @@ import type { ReplayBarElement, ReplayDetail } from "@johnmorrisdotca/kazoku-ui/
 import type { ViewControlsElement, ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { setThreeLoader, type BodyInfo, type SpacePreset, type WakuseiSpace } from "../src/space/element.ts";
 import type { BodyId } from "../src/facts.ts";
+import { findBody } from "../src/space/bodies.ts";
 import { WORDS } from "./words.js";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
@@ -217,6 +218,67 @@ space.addEventListener("wakusei-hop", (event) => {
   showHop();
   render();
 });
+// the picker: a kind (the Sun and planets, dwarf planets, moons), for a moon the planet it goes round, then the body; or a search by name. A choice goes there.
+const choice = { kind: "planet" as "planet" | "dwarf-planet" | "moon", host: "" };
+const kindOf = (info: BodyInfo): "planet" | "dwarf-planet" | "moon" => (info.kind === "star" ? "planet" : info.kind);
+const labelled = (button: HTMLButtonElement, info: BodyInfo, on: boolean): void => {
+  button.dataset["id"] = info.id;
+  button.textContent = info.name;
+  button.setAttribute("aria-pressed", String(on));
+  button.classList.toggle("on", on);
+};
+function renderPicker(): void {
+  const all = space.bodyList();
+  const here = space.body;
+  const hereInfo = all.find((info) => info.id === here);
+  const hosts = [...new Set(all.filter((info) => info.kind === "moon").map((info) => info.host as BodyId))];
+  if (choice.kind === "moon" && (!choice.host || !hosts.includes(choice.host as BodyId))) choice.host = hosts[0] ?? "";
+  for (const b of $$("#kinds [data-kind]")) pressed(b, b.dataset["kind"] === choice.kind);
+  document.querySelector<HTMLElement>("#hosts-row")!.hidden = choice.kind !== "moon";
+  document.querySelector<HTMLElement>("#hosts")!.replaceChildren(
+    ...hosts.map((id) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      labelled(button, all.find((info) => info.id === id) ?? space.bodyInfo(id), id === choice.host);
+      button.addEventListener("click", () => ((choice.host = id), renderPicker()));
+      return button;
+    }),
+  );
+  const choices = all.filter((info) => kindOf(info) === choice.kind && (choice.kind !== "moon" || info.host === choice.host));
+  document.querySelector<HTMLElement>("#choices")!.replaceChildren(
+    ...choices.map((info) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      labelled(button, info, info.id === here);
+      button.addEventListener("click", () => space.goTo(info.id));
+      return button;
+    }),
+  );
+  // the search list holds every body's name, in the page's language
+  document.querySelector("#find-list")!.replaceChildren(...all.map((info) => Object.assign(document.createElement("option"), { value: info.name })));
+  document.querySelector<HTMLInputElement>("#find")!.placeholder = say("sp_search_placeholder");
+  // a planet with moons can be shown with them
+  const system = document.querySelector<HTMLButtonElement>("#system")!;
+  const hasMoons = hereInfo !== undefined && hereInfo.kind !== "moon" && hosts.includes(hereInfo.id);
+  system.hidden = !hasMoons;
+  if (hasMoons) system.dataset["body"] = hereInfo.id;
+}
+document.querySelector("#find")!.addEventListener("change", (event) => {
+  const input = event.target as HTMLInputElement;
+  const found = findBody(input.value);
+  if (found && space.goTo(found)) input.value = "";
+});
+document.querySelector("#system")!.addEventListener("click", (event) => {
+  const id = (event.currentTarget as HTMLElement).dataset["body"] as BodyId | undefined;
+  if (!id) return;
+  const preset = (id === "earth" ? "moon" : `${id}-moons`) as SpacePreset;
+  space.goTo(id, { zoom: space.zoomFor(preset) });
+});
+for (const b of $$("#kinds [data-kind]")) b.addEventListener("click", () => ((choice.kind = b.dataset["kind"] as typeof choice.kind), renderPicker()));
+space.addEventListener("wakusei-hop", renderPicker);
+window.addEventListener("wakusei-language", () => queueMicrotask(renderPicker));
+space.addEventListener("wakusei-ready", renderPicker);
+renderPicker();
 export type { BodyId };
 window.addEventListener("wakusei-language", () => {
   space.setAttribute("lang", chooser()?.lang ?? "en");

@@ -13,10 +13,10 @@ interface Orbits {
   miss: Record<string, number>;
 }
 const orbitsOf = async (page: import("@playwright/test").Page): Promise<Orbits> => ((await statsOf(page)) as unknown as { orbits: Orbits }).orbits;
-const ALL = ["earth", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon"];
+const ALL = ["earth", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna", "moon"];
 
 for (const scale of ["true", "compressed"] as const) {
-  test(`with Orbits on, the Earth is on its ring and the Moon on its ring round the Earth, and so is every planet (${scale} scale)`, async ({ page }) => {
+  test(`with Orbits on, the Earth is on its ring and the Moon on its ring round the Earth, and so is every planet and dwarf planet (${scale} scale)`, async ({ page }) => {
     await openSpace(page, `t=2026-11-02T14:00Z&scale=${scale}`);
     const first = await orbitsOf(page);
     expect([...first.drawn].sort()).toEqual([...ALL].sort());

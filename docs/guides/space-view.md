@@ -5,7 +5,7 @@ order: 16
 description: The Earth, the Moon, the Sun and the planets in their places for any date, with the Moon's phase and the Earth's day side coming from the real Sun. Two scales, time both ways, a zoom from the Earth out to the whole solar system.
 ---
 
-`@johnmorrisdotca/wakusei-planets/space/element` registers `<wakusei-space>`: the Earth, the Moon, the Sun, the seven other planets and Pluto in their places for a date and time, drawn with three.js through the page's one shared WebGL context. The Moon's phase and the Earth's sunlit side come out of the light, not out of a table. Zoom from the Earth out to the whole solar system and back, and run time forwards or backwards.
+`@johnmorrisdotca/wakusei-planets/space/element` registers `<wakusei-space>`: the Earth, the Moon, the Sun, the seven other planets, Pluto and the eight other dwarf planets in their places for a date and time, with every moon the package knows round its planet, drawn with three.js through the page's one shared WebGL context. The Moon's phase and the Earth's sunlit side come out of the light, not out of a table. Zoom from the Earth out to the whole solar system and back, and run time forwards or backwards.
 
 ```html
 <!doctype html>
@@ -65,6 +65,12 @@ The element carries the drag, the pinch, Ctrl and the wheel, and the keys itself
 No two names overlap: when the boxes of two names would cross, the one that matters less is left out, and a name that is left out takes its ring with it. The order is the body looked at, the Sun, the planets, then the Moon; a tie goes to the body that is bigger on the screen. A moon gives way to its planet and a planet to the Sun, and zooming in brings the names back. `chooseLabels(boxes)` from `@johnmorrisdotca/wakusei-planets/space` is the same rule on plain boxes.
 
 A planet's nearer moons appear round it once the planet is a few pixels across, at the places the package's moon models give (`zoomFor("jupiter-moons")`). The paths of the Earth and the planets round the Sun, and the Moon's path round the Earth, are drawn unless `orbits="off"`. Every line goes through the same mapping as the bodies, so each body lies on its own line in both scales; `stats.orbits` says which lines were drawn and how far each body is from its own, as a fraction of the line's radius (under 0.01 for a body on its line). The Moon's line is one sidereal month from the Moon's own place and is worked out again every few days of the clock; `moonOrbit(ms)` gives its points.
+
+## Every body
+
+The view offers every body the package knows, 47 of them: the Sun, the eight planets, the nine dwarf planets (Pluto, Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna) and the 29 moons. `SPACE_BODIES` from `/space/element` lists the nineteen it places in the middle of its scene (the dwarf planets from their osculating elements, good for a few years either side of 2026), and every moon is placed round its host, in its real orbit. Any of them can be at the middle of the view, gone to, hopped to and ridden (`space.ride("ceres")`, `space.ride("titan")`, `space.ride("vanth")`). A dwarf planet too small on the screen to see (under half a pixel across its radius) is not drawn, only named and ringed, and its picture is not made until it is looked at; a moon is drawn once its planet is a few pixels across. With `orbits` on the dwarf planets have their lines too. `space.zoomFor("mars-moons")` (also `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `orcus`, `haumea`, `eris`) gives the zoom that shows a planet with its nearer moons.
+
+The demo's picker is three clicks in a row: a kind (the Sun and planets, dwarf planets, moons), for a moon the planet it goes round, then the body, with a search by name (English or Japanese) beside them and a "With its moons" button for a planet that has some. `space.bodyList()` is the data for any picker of your own.
 
 ## Going to a body, and the hopper
 

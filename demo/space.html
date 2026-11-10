@@ -35,6 +35,24 @@
             </div>
           </div>
           <div class="fam-row">
+            <span class="fam-label" data-say="sp_find">Find a body</span>
+            <div class="group fam-seg" id="kinds" role="group" aria-label="Kind" data-say-label="sp_kind">
+              <button type="button" data-kind="planet" aria-pressed="true" data-say="sp_kind_planet">Sun and planets</button>
+              <button type="button" data-kind="dwarf-planet" aria-pressed="false" data-say="sp_kind_dwarf">Dwarf planets</button>
+              <button type="button" data-kind="moon" aria-pressed="false" data-say="sp_kind_moon">Moons</button>
+            </div>
+            <label class="field"><span class="fam-sr" data-say="sp_search">Search by name</span><input type="search" id="find" list="find-list" class="fam-field" autocomplete="off" /></label>
+            <datalist id="find-list"></datalist>
+          </div>
+          <div class="fam-row" id="hosts-row" hidden>
+            <span class="fam-label" data-say="sp_host">Planet</span>
+            <div class="group fam-seg" id="hosts" role="group" aria-label="Planet" data-say-label="sp_host"></div>
+          </div>
+          <div class="fam-row">
+            <div class="group fam-seg" id="choices" role="group" aria-label="Body" data-say-label="sp_body"></div>
+            <button type="button" class="fam-button" id="system" hidden data-say="sp_system">With its moons</button>
+          </div>
+          <div class="fam-row">
             <span class="fam-label" data-say="sp_hop">Hop</span>
             <div class="group fam-seg" id="hops" role="group" aria-label="Hop" data-say-label="sp_hop">
               <button type="button" id="hop-prev" aria-label="Previous body">&#8249; <span id="hop-prev-name"></span></button>

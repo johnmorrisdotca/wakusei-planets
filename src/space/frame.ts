@@ -1,6 +1,8 @@
 // Where the Sun, the Moon and the planets are, as seen from the centre of the Earth, for any date, from this package's own models (VSOP87B planets, the Pluto table, ELP2000 Moon).
 // Positions are geometric (no aberration or nutation, about 20 arc-seconds), in the painter's axes: J2000 equatorial, x to the vernal equinox, y north. Pure: no DOM, no three.js.
 import { heliocentric, moonGeocentric } from "../ephemeris.ts";
+import { DWARF_IDS, type DwarfId } from "../facts.ts";
+import { DWARF_ELEMENTS } from "../data/dwarf.ts";
 import { OBLIQUITY, RAD, type Vec3 } from "../vec.ts";
 import { earthPosition } from "../theory.ts";
 import { DAY_MS } from "../clock.ts";
@@ -56,6 +58,31 @@ export const AU_IN_EARTH_RADII = AU_KM / EARTH_RADIUS_KM;
 export const SPACE_PLANETS = ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const;
 
 /**
+ * The dwarf planets besides Pluto that the space view places: Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna.
+ *
+ * @example
+ * ```ts
+ * import { SPACE_DWARFS } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(SPACE_DWARFS.join(", "));
+ * ```
+ */
+export const SPACE_DWARFS = DWARF_IDS;
+
+/**
+ * One of the dwarf planets in `SPACE_DWARFS`.
+ *
+ * @example
+ * ```ts
+ * import { planetOrbit, type SpaceDwarf } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const dwarf: SpaceDwarf = "eris";
+ * console.log(planetOrbit(dwarf, Date.UTC(2026, 10, 2), 8).length);
+ * ```
+ */
+export type SpaceDwarf = DwarfId;
+
+/**
  * One of the planets in `SPACE_PLANETS`.
  *
  * @example
@@ -84,6 +111,8 @@ export interface SpaceFrame {
   sun: Vec3;
   moon: Vec3;
   planets: Record<SpacePlanet, Vec3>;
+  /** The dwarf planets besides Pluto, from their osculating elements (good for a few years either side of 2026). */
+  dwarfs: Record<SpaceDwarf, Vec3>;
 }
 
 /** An ecliptic J2000 vector in the scene's axes (equatorial J2000, y north). */
@@ -114,8 +143,13 @@ export function frameAt(ms: number): SpaceFrame {
     const h = heliocentric(id, ms);
     planets[id] = scene([h[0] - earth[0], h[1] - earth[1], h[2] - earth[2]]);
   }
+  const dwarfs = {} as Record<SpaceDwarf, Vec3>;
+  for (const id of SPACE_DWARFS) {
+    const h = heliocentric(id, ms);
+    dwarfs[id] = scene([h[0] - earth[0], h[1] - earth[1], h[2] - earth[2]]);
+  }
   const moon = moonGeocentric(ms);
-  return { ms, sun: scene([-earth[0], -earth[1], -earth[2]]), moon: scene([moon[0] / AU_KM, moon[1] / AU_KM, moon[2] / AU_KM]), planets };
+  return { ms, sun: scene([-earth[0], -earth[1], -earth[2]]), moon: scene([moon[0] / AU_KM, moon[1] / AU_KM, moon[2] / AU_KM]), planets, dwarfs };
 }
 
 const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -140,7 +174,9 @@ const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [a[0] + (b[0] - a[0]) * t, 
 export function blend(a: SpaceFrame, b: SpaceFrame, t: number): SpaceFrame {
   const planets = {} as Record<SpacePlanet, Vec3>;
   for (const id of SPACE_PLANETS) planets[id] = lerp3(a.planets[id], b.planets[id], t);
-  return { ms: a.ms + (b.ms - a.ms) * t, sun: lerp3(a.sun, b.sun, t), moon: lerp3(a.moon, b.moon, t), planets };
+  const dwarfs = {} as Record<SpaceDwarf, Vec3>;
+  for (const id of SPACE_DWARFS) dwarfs[id] = lerp3(a.dwarfs[id], b.dwarfs[id], t);
+  return { ms: a.ms + (b.ms - a.ms) * t, sun: lerp3(a.sun, b.sun, t), moon: lerp3(a.moon, b.moon, t), planets, dwarfs };
 }
 
 /**
@@ -195,12 +231,16 @@ export function createTrack(initialStepMs = 1000) {
   };
 }
 
-const PERIOD_DAYS: Record<SpacePlanet | "earth", number> = { mercury: 87.97, venus: 224.7, earth: 365.256, mars: 686.98, jupiter: 4332.6, saturn: 10_759, uranus: 30_688, neptune: 60_182, pluto: 90_560 };
+const PERIOD_DAYS: Record<SpacePlanet | SpaceDwarf | "earth", number> = {
+  mercury: 87.97, venus: 224.7, earth: 365.256, mars: 686.98, jupiter: 4332.6, saturn: 10_759, uranus: 30_688, neptune: 60_182, pluto: 90_560,
+  // a dwarf planet's own: a full turn of its mean motion
+  ...(Object.fromEntries(SPACE_DWARFS.map((id) => [id, 360 / DWARF_ELEMENTS[id].n])) as Record<SpaceDwarf, number>),
+};
 
 /**
  * The path a planet or the Earth takes round the Sun, as `count + 1` points round one trip from where the planet is at `ms`, from the Sun, in astronomical units and the scene's axes.
  *
- * @param id - The planet or `earth`.
+ * @param id - The planet, the dwarf planet or `earth`.
  * @param ms - The moment the path starts at, in milliseconds since the Unix epoch.
  * @param count - How many segments to cut the trip into.
  * @returns `count + 1` points; the last is near the first.
@@ -213,7 +253,7 @@ const PERIOD_DAYS: Record<SpacePlanet | "earth", number> = { mercury: 87.97, ven
  * console.log(points.length);
  * ```
  */
-export function planetOrbit(id: SpacePlanet | "earth", ms: number, count = 96): Vec3[] {
+export function planetOrbit(id: SpacePlanet | SpaceDwarf | "earth", ms: number, count = 96): Vec3[] {
   const points: Vec3[] = [];
   for (let i = 0; i <= count; i += 1) points.push(scene(heliocentric(id, ms + (i / count) * PERIOD_DAYS[id] * DAY_MS)));
   return points;

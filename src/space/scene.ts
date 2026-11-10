@@ -11,7 +11,7 @@ import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
-import { createTrack, moonOrbit, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 
@@ -24,7 +24,9 @@ const RAD = Math.PI / 180;
 export const FIT_DISTANCE = 3.4;
 const FOV = 35;
 const ORBIT_POINTS = 96;
-const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, "moon"] as const;
+const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, "moon"] as const;
+/** A dwarf planet is drawn once it is this many CSS pixels across its radius, or when it is the body looked at: Sedna at true scale is never anything but a speck, and its picture is not made for it. */
+const DWARF_MIN_PX = 0.4;
 /** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
 const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
@@ -37,7 +39,7 @@ const MOON_MIN_PX = 2.2;
 const MOON_KEEP_MS = 4000;
 
 /**
- * The eleven bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets and Pluto.
+ * The nineteen bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets, Pluto and the eight other dwarf planets. The moons of the planets and of the dwarf planets are placed round their hosts.
  *
  * @example
  * ```ts no-run
@@ -46,7 +48,7 @@ const MOON_KEEP_MS = 4000;
  * console.log(SPACE_BODIES.join(", "));
  * ```
  */
-export const SPACE_BODIES = ["earth", "sun", "moon", ...SPACE_PLANETS] as const;
+export const SPACE_BODIES = ["earth", "sun", "moon", ...SPACE_PLANETS, ...SPACE_DWARFS] as const;
 
 /**
  * One of the bodies in `SPACE_BODIES`, by the package's usual lower-case name.
@@ -341,13 +343,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const radiusOf = (id: SpaceBody): number => radiusIn(id, mode);
           const placeAll = (at: SpaceFrame): Record<SpaceBody, Vec3> => placeBodies(mode, at);
           // where a moon is round its planet, as the view draws it: in the planet's radii, drawn nearer in a compressed view where the real distance would cross the next planet's orbit
-          const moonSite = (id: MoonId, at: number, host: SpacePlanet): Vec3 => {
+          const moonSite = (id: MoonId, at: number, host: SpacePlanet | SpaceDwarf): Vec3 => {
             const real = moonOffset(id, at);
             const d = Math.hypot(real[0], real[1], real[2]);
             const k = d === 0 ? 1 : moonDistance(mode, host, d) / d;
             return [real[0] * k, real[1] * k, real[2] * k];
           };
-          const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : frame.planets[id]));
+          const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : (SPACE_DWARFS as readonly string[]).includes(id) ? frame.dwarfs[id as SpaceDwarf] : frame.planets[id as SpacePlanet]));
 
           // riding along: the camera sits at a moving point and looks at the body it goes round (a moon over its planet, a point over any body). The point's place and way of going are in radii of
           // that body, from its centre; the body is drawn at `centre` with the radius `unitWorld`, so the same numbers place the camera in the scene.
@@ -361,7 +363,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             focusRadius = radiusOf(focus as SpaceBody);
           } else {
             // a moon of a planet: its place round the planet, in the planet's radii as the view draws them
-            const host = (hostOf(focus) ?? "earth") as SpacePlanet;
+            const host = (hostOf(focus) ?? "earth") as SpacePlanet | SpaceDwarf;
             const offset = moonSite(focus as MoonId, model.time, host);
             const hostRadius = radiusOf(host);
             focusPos = [pos[host][0] + offset[0] * hostRadius, pos[host][1] + offset[1] * hostRadius, pos[host][2] + offset[2] * hostRadius];
@@ -404,8 +406,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               }
             } else if (typeof t === "string") {
               const id = t as MoonId;
-              const offset = moonSite(id, model.time, around as SpacePlanet);
-              const later = moonSite(id, model.time + 1000, around as SpacePlanet);
+              const offset = moonSite(id, model.time, around as SpacePlanet | SpaceDwarf);
+              const later = moonSite(id, model.time + 1000, around as SpacePlanet | SpaceDwarf);
               if (ride.view === "beside") {
                 const there: Vec3 = [centre[0] + offset[0] * unitWorld, centre[1] + offset[1] * unitWorld, centre[2] + offset[2] * unitWorld];
                 const radius = Math.max(1e-6, (BODIES[id].radiusKm / BODIES[around as SpacePlanet].radiusKm) * unitWorld);
@@ -528,6 +530,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           let paintedBodies = 0;
           for (const id of SPACE_BODIES) {
             const slot = slotOf(id);
+            // a dwarf planet too small to see is not made, and one that was made but has shrunk away is hidden
+            const unseen = (SPACE_DWARFS as readonly string[]).includes(id) && px[id] < DWARF_MIN_PX && focus !== id && model.focus !== id;
+            if (unseen) {
+              if (slot.drawing) slot.drawing.object.visible = false;
+              continue;
+            }
             fill(id, slot);
             const drawing = slot.drawing;
             if (!drawing) continue;
@@ -574,7 +582,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const now = performance.now();
           const seen = new Set<string>();
           const moonPlaces: Record<string, BodyPlace> = {};
-          for (const id of SPACE_PLANETS) {
+          for (const id of [...SPACE_PLANETS, ...SPACE_DWARFS]) {
             const planet = slotOf(id).drawing;
             if (!planet || px[id] < MOON_MIN_PLANET_PX) continue;
             const radius = radiusOf(id);

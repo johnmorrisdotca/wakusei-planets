@@ -92,7 +92,8 @@ test("the Sun, the Moon and the planets are named, and every body is drawn", asy
   expect(await names(page)).toEqual(expect.arrayContaining(["Earth", "Moon"]));
   await jump(page, "Whole solar system");
   await expect.poll(() => names(page), { timeout: 30_000 }).toEqual(expect.arrayContaining(["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Neptune", "Pluto"]));
-  await expect.poll(async () => (await statsOf(page)).bodies.painted).toBe(11);
+  // the eleven bodies of the first view, and any dwarf planet large enough on the screen to be made
+  await expect.poll(async () => (await statsOf(page)).bodies.painted).toBeGreaterThanOrEqual(11);
 });
 
 test("the names can be in Japanese and a page's own words", async ({ page }) => {

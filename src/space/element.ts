@@ -11,7 +11,7 @@ import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
-import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_PLANETS, type SpacePlanet } from "./frame.ts";
+import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_PLANETS, type SpaceDwarf, type SpacePlanet } from "./frame.ts";
 import { moonOffset } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
@@ -79,7 +79,7 @@ export type SpaceState = "loading" | "live" | "unavailable" | "lost";
  * console.log(typeof zoomTo);
  * ```
  */
-export type SpacePreset = "earth" | "moon" | "sun" | "inner" | "solar-system" | `${Exclude<SpacePlanet, "mercury" | "venus">}-moons`;
+export type SpacePreset = "earth" | "moon" | "sun" | "inner" | "solar-system" | `${Exclude<SpacePlanet, "mercury" | "venus">}-moons` | `${"orcus" | "haumea" | "eris"}-moons`;
 
 /**
  * How a ride along is done: `view` `from` (the default) puts the camera at the target looking at the body it goes round, `beside` (for a moon) puts it beyond the moon and off the line to its planet, the moon large in the foreground and the planet in view behind it, `follow` keeps it a distance from the target looking at it (`distanceKm`,
@@ -519,9 +519,10 @@ export class WakuseiSpace extends HTMLElement {
     else if (id === "sun") geo = frame.sun;
     else if (id === "moon") geo = frame.moon;
     else if ((SPACE_PLANETS as readonly string[]).includes(id)) geo = frame.planets[id as SpacePlanet];
-    else if (host !== undefined && (SPACE_PLANETS as readonly string[]).includes(host)) {
+    else if ((SPACE_DWARFS as readonly string[]).includes(id)) geo = frame.dwarfs[id as SpaceDwarf];
+    else if (host !== undefined && ((SPACE_PLANETS as readonly string[]).includes(host) || (SPACE_DWARFS as readonly string[]).includes(host))) {
       // a moon: its planet's place and its offset in the planet's radii
-      const at = frame.planets[host as SpacePlanet];
+      const at = (SPACE_DWARFS as readonly string[]).includes(host) ? frame.dwarfs[host as SpaceDwarf] : frame.planets[host as SpacePlanet];
       const offset = moonOffset(id as MoonId, this.#model.time);
       const radius = BODIES[host].radiusKm / km;
       geo = [at[0] + offset[0] * radius, at[1] + offset[1] * radius, at[2] + offset[2] * radius];
@@ -600,7 +601,7 @@ export class WakuseiSpace extends HTMLElement {
   zoomFor(preset: SpacePreset): number {
     const mode = this.#model.mode;
     if (preset.endsWith("-moons")) {
-      const id = preset.slice(0, -6) as SpacePlanet;
+      const id = preset.slice(0, -6) as SpacePlanet | SpaceDwarf;
       const sites = this.#painterNow().moons(id, this.#model.time);
       const reach = Math.max(1, ...sites.map((site) => moonDistance(mode, id, Math.hypot(...site.offset))).filter((r) => r <= 22));
       const radius = radiusIn(id, mode);
