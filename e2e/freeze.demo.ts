@@ -3,6 +3,7 @@
 // 5K screen, on a frame drawn out of sight, and on a moving picture drawn faster than thirty times a second.
 import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
+import { addRocks } from "./door-fixture.ts";
 import { routeTiles } from "./tiles-fixture.ts";
 
 const URL = "/wakusei-planets/";
@@ -697,4 +698,33 @@ test("the space view zoomed in to its map tiles and out again: one context, grap
   expect(after.rafRequests - before.rafRequests).toBe(0);
   expect(log.tiles.length, "nothing is fetched at rest").toBe(asked);
   expect(log.manifests, "the tile set is read once").toBe(1);
+});
+
+// --- the data door: a source added to the space view costs nothing at rest and keeps to thirty frames a second --------------------------------------------------------------------------
+test("the space view with a source of 20,000 small bodies: nothing is drawn at rest, nothing is requested, and the records are read once", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&scale=compressed`);
+  await liveSky(page);
+  await addRocks(page, "wakusei-space", 20_000);
+  await expect.poll(async () => sky(page).evaluate((el) => (el as unknown as { stats: { door: { points: number } } }).stats.door.points), { timeout: 60_000 }).toBe(20_000);
+  await settle(page, 2500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws).toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
+  expect(await page.evaluate(() => (Reflect.get(window, "__rocks") as { count: number }).count), "the records were read once").toBe(1);
+});
+
+test("the space view at a day a second with a source of 20,000 small bodies: at most thirty frames a second, and the records are not read again", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&scale=compressed`);
+  await liveSky(page);
+  await addRocks(page, "wakusei-space", 20_000);
+  await expect.poll(async () => sky(page).evaluate((el) => (el as unknown as { stats: { door: { points: number } } }).stats.door.points), { timeout: 60_000 }).toBe(20_000);
+  await settle(page, 1500);
+  const s0 = await skyStats(page);
+  await settle(page, 4000);
+  const s1 = await skyStats(page);
+  expect(s1.draws - s0.draws).toBeGreaterThan(0);
+  expect(s1.draws - s0.draws).toBeLessThanOrEqual(4 * 31);
+  expect(await page.evaluate(() => (Reflect.get(window, "__rocks") as { count: number }).count)).toBe(1);
 });

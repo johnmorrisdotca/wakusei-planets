@@ -4,6 +4,9 @@ import type * as THREE from "three";
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
+import type { SourceBook } from "../door/book.ts";
+import { createSmallBodyPoints, type PointsThree } from "../door/points.ts";
+import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset } from "../scene/orient.ts";
 import { type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
@@ -170,6 +173,8 @@ export interface SpaceModel {
   arrowPx: number;
   /** What the help arrow drew at the last draw, or null: the body, the axis it spins about (right-hand rule), the north pole, and the axis the drawn arc itself turns about (measured from its points). */
   helpDrawn: { body: BodyId; axis: Vec3; pole: Vec3; retrograde: boolean; arcTurn: Vec3 } | null;
+  /** The data door at the last draw: how many small bodies are in the one instanced draw, and how many tiles or marks each source gave (by id): the credits. */
+  door: { points: number; used: Record<string, number> };
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -210,6 +215,7 @@ export const newSpaceModel = (): SpaceModel => ({
   help: false,
   arrowPx: 0,
   helpDrawn: null,
+  door: { points: 0, used: {} },
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -242,6 +248,8 @@ export interface BodyPlace {
 
 export interface SpaceDeps {
   painter: () => WakuseiPainter;
+  /** The view's sources (the data door): small bodies are drawn as points from it. Left out, none are. */
+  book?: SourceBook;
   cap: () => number;
   invalidate: () => void;
   /** Bring the model's time up to the page's clock; called at the start of each draw, so a picture drawn late shows the moment it is drawn at and not the one of the last tick. */
@@ -289,6 +297,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const track = createTrack(model.stepMs);
       let trackStep = model.stepMs;
       const scene = new three.Scene();
+      // the small bodies of the record sources, in one instanced draw (a page's own subset of three needs the two instanced classes for it)
+      const points = deps.book !== undefined && typeof (three as Partial<PointsThree>).InstancedBufferGeometry === "function" ? createSmallBodyPoints(three as unknown as PointsThree) : undefined;
+      if (points !== undefined) scene.add(points.object);
+      let pointsVersion = -1;
       const camera = new three.PerspectiveCamera(FOV, width / Math.max(1, height), 0.05, 1000);
       const target = new three.Vector3();
       const projected = new three.Vector3();
@@ -630,6 +642,15 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             drawing.update({ toSun, ms: model.time, radiusPx: px[id], view: { camera, width: size.width, height: size.height } });
           }
           model.painted.bodies = paintedBodies;
+          if (points !== undefined && deps.book !== undefined) {
+            if (pointsVersion !== deps.book.version) {
+              pointsVersion = deps.book.version;
+              points.set(deps.book.smallBodies());
+            }
+            const ratio = model.ratio();
+            points.update({ jd: toTerrestrialTime(model.time) / 86_400_000 + 2_440_587.5, mode, sun: sunPos, width: size.width * ratio, height: size.height * ratio, ratio });
+            model.door.points = points.count;
+          }
 
           // the orbits round the Sun, placed by the same mapping as the bodies
           const drawnRings: string[] = [];
@@ -809,6 +830,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (stats.shown !== null) tiles.shown = Math.max(tiles.shown ?? 0, stats.shown);
           }
           model.tiles = tiles;
+          const used: Record<string, number> = {};
+          for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) {
+            const shown = painting?.tiles;
+            if (shown?.source !== undefined) used[shown.source.id] = (used[shown.source.id] ?? 0) + shown.used;
+          }
+          if (points !== undefined && deps.book !== undefined && points.count > 0) for (const [id, read] of deps.book.recordReads()) used[id] = read.records.length;
+          model.door.used = used;
 
           if (deps.onLabels && model.labels) {
             const places: Record<string, BodyPlace | null> = { ...moonPlaces };
@@ -826,6 +854,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           size = { width: w, height: h };
         },
         dispose() {
+          points?.dispose();
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);

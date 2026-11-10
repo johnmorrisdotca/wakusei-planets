@@ -4,13 +4,39 @@
 import type * as THREE from "three";
 import { OBLIQUITY, RAD, type Vec3 } from "../vec.ts";
 import { AU_IN_EARTH_RADII } from "../space/frame.ts";
-import { MAX_POINTS, packSmallBodies, type SmallBody } from "./small-bodies.ts";
+import { placeAround, type ScaleMode } from "../space/scale.ts";
+import { MAX_POINTS, packSmallBodies, smallBodyAt, type SmallBody } from "./small-bodies.ts";
 
 /** The parts of three.js the points use, over and above the ones every body needs. A page's own subset of three that lacks the two instanced classes cannot draw them. */
 export type PointsThree = Pick<typeof THREE, "BufferAttribute" | "InstancedBufferAttribute" | "InstancedBufferGeometry" | "Mesh" | "ShaderMaterial" | "Vector2" | "Vector3">;
 
 /** How the view places a body round the Sun in a compressed view: its distance in astronomical units to the power `SPREAD`, times `SUN_COMPRESSED` Earth radii (the same two numbers as `space/scale.ts`). */
 export const POINT_SCALE = { sunCompressed: 70, spread: 0.45 } as const;
+
+/**
+ * Where the space view draws a small body: its place on the date (`smallBodyAt`, ecliptic of J2000) turned into the view's axes (equatorial, y north) and placed round the Sun by the same mapping as the planets (`placeAround`). The
+ * point's shader does the same sum on the graphics card; this is the one a test or a page can check it against.
+ *
+ * @param mode - The scale of the view.
+ * @param sun - Where the Sun is drawn, in Earth radii.
+ * @param body - The small body.
+ * @param jd - The date, as a Julian date (TT).
+ * @returns Where to draw it, in Earth radii.
+ *
+ * @example
+ * ```ts
+ * import { smallBodyPlace } from "@johnmorrisdotca/wakusei-planets/door";
+ *
+ * const place = smallBodyPlace("compressed", [70, 0, 0], { name: "T", a: 2, e: 0, i: 0, node: 0, peri: 0, M0: 0, epoch: 2461000.5, H: 9 }, 2461000.5);
+ * console.log(place.map(Math.round));
+ * ```
+ */
+export function smallBodyPlace(mode: ScaleMode, sun: Vec3, body: SmallBody, jd: number): Vec3 {
+  const [x, y, z] = smallBodyAt(body, jd);
+  const c = Math.cos(OBLIQUITY * RAD);
+  const s = Math.sin(OBLIQUITY * RAD);
+  return placeAround(mode, sun, [x, y * s + z * c, -(y * c - z * s)]);
+}
 
 /** What the points need to know at each draw. */
 export interface PointsState {

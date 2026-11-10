@@ -8,6 +8,9 @@ import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
+import type { Credit, DataSource } from "../data-door.ts";
+import { createDoorHost, type DoorHost } from "../door/host.ts";
+import { ownCredit } from "../door/own.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
@@ -178,7 +181,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang"];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data"];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -199,6 +202,22 @@ export class WakuseiSpace extends HTMLElement {
   #scaleLine: HTMLElement | undefined;
   #hint = "choose to look at it";
   #painter: WakuseiPainter | undefined;
+  #door: DoorHost = createDoorHost(
+    this,
+    {
+      // the package's own: the pictures and the positions of the bodies drawn, and the finer tiles of a window on a body (the folder's: a source of a page's is counted by its id)
+      own: () => {
+        const own: Credit[] = [];
+        const drawn = this.#model.painted.bodies;
+        if (drawn > 0) own.push(ownCredit("wakusei-pictures", drawn), ownCredit("wakusei-orbits", drawn));
+        for (const [id, used] of Object.entries(this.#model.door.used)) if (this.#door.book.get(id) === undefined) own.push(ownCredit(id, used));
+        return own;
+      },
+      used: () => new Map(Object.entries(this.#model.door.used)),
+    },
+    { kinds: ["tiles", "records"] },
+    () => this.#gate?.request(),
+  );
   #focusBeforeRide: BodyId = "earth";
   #lostTold = false;
   #hands: ElementControls | undefined;
@@ -218,6 +237,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
+    this.#door.book.ownOnly(this.getAttribute("data") === "own");
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
     if (!this.hasAttribute("tabindex")) this.setAttribute("tabindex", "0");
@@ -243,10 +263,14 @@ export class WakuseiSpace extends HTMLElement {
     this.#taken = taken;
     const item = createSpaceItem(this.#model, {
       painter: () => this.#painterNow(),
+      book: this.#door.book,
       cap: () => this.#textureCap(),
       invalidate: () => this.#gate?.request(),
       advance: () => this.#advance(),
-      onLabels: (places) => this.#placeLabels(places),
+      onLabels: (places) => {
+        this.#placeLabels(places);
+        this.#door.announce();
+      },
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
@@ -293,6 +317,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
+    else if (name === "data") this.#door.book.ownOnly(value === "own");
     else if (name === "lang") {
       for (const [id, button] of this.#pool) this.#nameLabel(button, id);
       this.#nameScale();
@@ -643,6 +668,36 @@ export class WakuseiSpace extends HTMLElement {
     return preset === "moon" && mode === "compressed" ? zoom * (radiusIn("moon", mode) / 0.9) : zoom;
   }
 
+  /**
+   * The outside sources of this view (the data door): maps of a body, which take the place of the folder of tiles for it, and records of small bodies, which are drawn as points in one instanced draw. Each carries its own
+   * licence and credit. Assign a list to replace them; a source `validateSource` refuses throws a `TypeError` and changes nothing. A property, not an attribute: data is not text.
+   */
+  get sources(): readonly DataSource[] {
+    return this.#door.sources();
+  }
+  set sources(list: readonly DataSource[]) {
+    this.#door.setSources(list);
+  }
+  /** Adds one source (checked at once: a `TypeError` for an empty credit, no licence, a clashing id or a map source with no body). Returns the function that removes it. */
+  addSource(source: DataSource): () => void {
+    return this.#door.book.addSource(source);
+  }
+  /** Removes a source by id: its loads are aborted, its tiles and records freed, its points and window taken off the picture, and its credit goes. Returns whether there was one. */
+  removeSource(id: string): boolean {
+    return this.#door.book.removeSource(id);
+  }
+  /** Switches a source off (`false`) or on, for a layers panel. */
+  enableSource(id: string, on: boolean): void {
+    this.#door.book.enableSource(id, on);
+  }
+  /**
+   * The sources whose data was in the last drawn frame, the package's own first: the surface pictures and the positions of the bodies, the finer map tiles where a window of them is on a body, and each source of yours that
+   * gave points or tiles. `creditLine(credits, "en" | "ja")` from `@johnmorrisdotca/wakusei-planets/door` writes them with the licences. `wakusei-creditschange` fires when this set changes (not at each frame), with `detail: { credits }`.
+   */
+  credits(): Credit[] {
+    return this.#door.credits();
+  }
+
   /** What the element is doing, for a page or a test. */
   get stats(): {
     state: SpaceState;
@@ -662,6 +717,8 @@ export class WakuseiSpace extends HTMLElement {
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
     tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
+    /** The data door: the small bodies in the one instanced draw, and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
+    door: { points: number; sources: ReturnType<DoorHost["book"]["stats"]> };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
     orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
@@ -684,6 +741,7 @@ export class WakuseiSpace extends HTMLElement {
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
+      door: { points: this.#model.door.points, sources: this.#door.book.stats() },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden] },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
@@ -906,7 +964,7 @@ export class WakuseiSpace extends HTMLElement {
 
   // --- the rest --------------------------------------------------------------------------------------------------------------------------------------
   #painterNow(): WakuseiPainter {
-    return (this.#painter ??= createPainter({ textureBase: texturePaths(this).textureBase(), farBase: texturePaths(this).farBase(), tiles: tilesBase(this) ?? "off" }));
+    return (this.#painter ??= createPainter({ textureBase: texturePaths(this).textureBase(), farBase: texturePaths(this).farBase(), tiles: tilesBase(this) ?? "off", book: this.#door.book }));
   }
 
   #textureCap(): number {

@@ -8,6 +8,8 @@ export {
   DataTexture,
   DoubleSide,
   Group,
+  InstancedBufferAttribute,
+  InstancedBufferGeometry,
   Line,
   LineBasicMaterial,
   LineSegments,

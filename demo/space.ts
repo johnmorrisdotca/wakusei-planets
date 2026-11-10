@@ -9,6 +9,7 @@ import type { ViewControlsElement, ViewChangeDetail } from "@johnmorrisdotca/kaz
 import { setThreeLoader, type BodyInfo, type SpacePreset, type WakuseiSpace } from "../src/space/element.ts";
 import type { BodyId } from "../src/facts.ts";
 import { findBody } from "../src/space/bodies.ts";
+import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
@@ -293,5 +294,16 @@ window.addEventListener("wakusei-language", () => {
   render();
   showHop();
 });
+// whose data is on the screen: the credit line of the view, in the page's language (the data door); `?data=own` ignores every outside source at once
+const doorLine = document.querySelector<HTMLElement>("#door-credit");
+if (doorLine) {
+  const show = (): void => {
+    doorLine.textContent = creditLine(space.credits(), chooser()?.lang ?? "en");
+  };
+  space.addEventListener("wakusei-creditschange", show);
+  window.addEventListener("wakusei-language", show);
+  show();
+}
+if (new URLSearchParams(location.search).get("data") === "own") space.setAttribute("data", "own");
 render();
 showHop();

@@ -85,6 +85,8 @@ export interface SourceBook {
   /** Calls `listener` when something changed that a view may want to draw again for: a source added, removed or switched, a tile arrived or failed, records read. Returns the function that stops it. */
   onChange(listener: () => void): () => void;
   stats(): SourceStats;
+  /** A number that changes whenever the records in use change (a source read, switched, added or removed), so a view repacks its points only then. */
+  readonly version: number;
   /** Resolves when every record source has been read and no tile is loading or waiting. */
   ready(): Promise<void>;
   /** Frees everything: aborts every load, frees every tile and record. The book is not used again. */
@@ -126,6 +128,7 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
   const reading = new Set<Promise<void>>();
   let onlyOwn = false;
   let gone = false;
+  let version = 0;
   const notify = (): void => {
     for (const listener of [...listeners]) listener();
   };
@@ -144,7 +147,7 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
   const release = (id: string): void => {
     controllers.get(id)?.abort();
     controllers.delete(id);
-    reads.delete(id);
+    if (reads.delete(id)) version += 1;
     for (const account of accounts.get(id) ?? []) {
       store.drop(account);
       loaders.delete(account);
@@ -161,6 +164,7 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
       reading.delete(done);
       if (controllers.get(source.info.id) !== controller || read.status === "aborted") return;
       reads.set(source.info.id, read);
+      version += 1;
       notify();
     });
     reading.add(done);
@@ -265,6 +269,9 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
       const records: SourceStats["records"] = {};
       for (const [id, read] of reads) records[id] = { status: read.status, kept: read.records.length, skipped: read.skipped };
       return { ...store.stats(), records };
+    },
+    get version() {
+      return version;
     },
     async ready() {
       await Promise.all([...reading]);

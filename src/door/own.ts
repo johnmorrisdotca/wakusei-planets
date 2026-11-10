@@ -26,7 +26,7 @@ export const OWN_SOURCES: readonly SourceInfo[] = freeze([
     name: { en: "Surface pictures", ja: "表面の地図" },
     credit: {
       en: "Surface pictures: maps by NASA, USGS and JPL (public domain), Solar System Scope and Nestaeric",
-      ja: "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System Scope、Nestaeric",
+      ja: "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System ScopeとNestaericの地図",
     },
     licence: { name: "CC BY 4.0", url: `${NOTICE}#surface-pictures`, spdx: "CC-BY-4.0" },
     url: "https://github.com/johnmorrisdotca/wakusei-planets/tree/main/textures",
@@ -37,7 +37,7 @@ export const OWN_SOURCES: readonly SourceInfo[] = freeze([
     name: { en: "Finer map tiles", ja: "細かい地図のタイル" },
     credit: {
       en: "Finer map tiles: maps by NASA, USGS and JPL (public domain), cut by Wakusei Planets",
-      ja: "細かい地図のタイル：NASA、USGS、JPLの地図（パブリックドメイン）、惑星パッケージで切り出したもの",
+      ja: "細かい地図のタイル：NASA、USGS、JPLの地図（パブリックドメイン）、Wakusei Planetsで切り出したもの",
     },
     licence: { name: "Public domain", url: `${NOTICE}#finer-map-tiles` },
     url: "https://johnmorrisdotca.github.io/wakusei-planets/tiles/",
@@ -45,7 +45,7 @@ export const OWN_SOURCES: readonly SourceInfo[] = freeze([
   },
   {
     id: "wakusei-orbits",
-    name: { en: "Positions", ja: "位置" },
+    name: { en: "Positions", ja: "天体の位置" },
     credit: {
       en: "Positions: VSOP87B and ELP2000-82B (IMCCE, Observatoire de Paris), JPL Horizons (NASA/JPL-Caltech)",
       ja: "位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）",

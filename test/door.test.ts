@@ -26,6 +26,8 @@ import {
   type SourceBook,
 } from "../src/door/index.ts";
 import { createDoorHost } from "../src/door/host.ts";
+import { POINT_SCALE, smallBodyPlace } from "../src/door/points.ts";
+import { placeAround, SUN_COMPRESSED } from "../src/space/scale.ts";
 import { forgetManifests } from "../src/scene/detail.ts";
 import { createPainter, type PaintInfo, type Painting } from "../src/scene/painter.ts";
 
@@ -234,6 +236,19 @@ test("2d. the credits-changed event fires when the set of credited sources chang
   assert.deepEqual(host.sources().map((one) => one.info.id), ["c"], "assigning replaces");
   assert.throws(() => host.setSources([fakeMap("d").source, fakeMap("d").source]), /already used/);
   assert.deepEqual(host.sources().map((one) => one.info.id), ["c"], "and a refused list changes nothing");
+});
+
+test("2e. a small body is placed round the Sun by the space view's own mapping, in both scales, and the points' constants are the view's", () => {
+  assert.equal(POINT_SCALE.sunCompressed, SUN_COMPRESSED);
+  const circle = rock("c", { a: 2, e: 0, i: 0, node: 0, peri: 0, M0: 0 });
+  const sun: [number, number, number] = [10, 20, 30];
+  const compressed = smallBodyPlace("compressed", sun, circle, circle.epoch);
+  const expected = placeAround("compressed", sun, [2, 0, 0]);
+  assert.deepEqual(compressed.map((v) => Math.round(v * 1e6)), expected.map((v) => Math.round(v * 1e6)), "on the ecliptic's x axis, which is the scene's x axis");
+  const far = smallBodyPlace("true", sun, circle, circle.epoch + 91.3125 / 1);
+  const [dx, dy, dz] = [far[0] - 10, far[1] - 20, far[2] - 30];
+  assert.ok(Math.abs(Math.hypot(dx, dy, dz) - 2 * 23454.78) < 5, "true scale: 2 au in Earth radii");
+  assert.ok(Math.abs(dy) > 0 || Math.abs(dz) > 0, "a quarter orbit later it has left the x axis");
 });
 
 // ----- 3: off -----
@@ -496,7 +511,7 @@ test("7. the package's own sources are clear to pass on: none is non-commercial 
   assert.equal(tilesSource("/tiles/").info, OWN_SOURCES[1]);
   assert.equal(ownCredit("wakusei-tiles", 3).own, true);
   assert.throws(() => ownCredit("fake", 1), RangeError);
-  assert.equal(creditLine([ownCredit("wakusei-pictures", 1), ownCredit("wakusei-orbits", 5)], "ja"), "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System Scope、Nestaeric（CC BY 4.0）／位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）（Published for use with credit）");
+  assert.equal(creditLine([ownCredit("wakusei-pictures", 1), ownCredit("wakusei-orbits", 5)], "ja"), "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System ScopeとNestaericの地図（CC BY 4.0）／位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）（Published for use with credit）");
 });
 
 // ----- 8: the template -----
