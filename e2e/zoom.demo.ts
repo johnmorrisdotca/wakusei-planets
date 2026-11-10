@@ -199,12 +199,12 @@ test("the demo's pinch zooms the body with the bar over it", async ({ page, brow
   expect((await last(page))!.zoom, "fingers apart zoom in").toBeGreaterThan(1.3);
 });
 
-test("the space view carries the controls: a millionth to 3x, Ctrl and the wheel, the keys", async ({ page }, testInfo) => {
+test("the space view carries the controls: a millionth to 3.6x, Ctrl and the wheel, the keys", async ({ page }, testInfo) => {
   software(testInfo);
   await page.goto("/wakusei-planets/space.html");
   await page.locator("wakusei-space[data-state=live]").waitFor({ timeout: 90_000 });
   await page.locator("#space").evaluate((el) => el.addEventListener("wakusei-view", (event) => ((window as unknown as { __view: unknown }).__view = (event as CustomEvent).detail)));
-  expect(await page.locator("#controls").evaluate((el) => ({ ...(Reflect.get(el, "controller") as { limits: object }).limits })), "the bar reads the element's range").toMatchObject({ zoomMin: 1e-6, zoomMax: 3 });
+  expect(await page.locator("#controls").evaluate((el) => ({ ...(Reflect.get(el, "controller") as { limits: object }).limits })), "the bar reads the element's range").toMatchObject({ zoomMin: 1e-6, zoomMax: 3.6 });
   await ctrlWheel(page, "#space", 600);
   expect((await last(page))!.zoom, "Ctrl and the wheel down zooms out").toBeLessThan(1);
   await page.locator("#space").focus();
@@ -212,7 +212,7 @@ test("the space view carries the controls: a millionth to 3x, Ctrl and the wheel
   await page.keyboard.press("+");
   expect((await last(page))!.zoom, "+ zooms in").toBeGreaterThan(1);
   await ctrlWheel(page, "#space", -3000, 30);
-  expect((await last(page))!.zoom, "the camera stops at the surface").toBeLessThanOrEqual(3);
+  expect((await last(page))!.zoom, "the camera stops at the surface").toBeLessThanOrEqual(3.6);
   await ctrlWheel(page, "#space", 3000, 80);
   expect((await last(page))!.zoom, "and out at a millionth").toBeCloseTo(1e-6, 7);
   await page.locator("#space").evaluate((el) => el.setAttribute("controls", "none"));

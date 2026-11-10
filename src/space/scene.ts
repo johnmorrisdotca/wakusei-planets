@@ -23,7 +23,7 @@ export type SpaceThree = ThreeParts & Pick<typeof THREE, "PerspectiveCamera">;
 
 const RAD = Math.PI / 180;
 /** The camera's distance, in radii of the body it looks at, at which that body fills the view at zoom 1. */
-export const FIT_DISTANCE = 3.4;
+export const FIT_DISTANCE = 4.1;
 const FOV = 35;
 const ORBIT_POINTS = 96;
 const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, "moon"] as const;
@@ -33,11 +33,13 @@ const DWARF_MIN_PX = 0.4;
 const rgb = (hex: string): [number, number, number] => [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
 /** How long each arrowhead on an orbit line is, in CSS pixels: small, so it reads at every zoom and never hides a body. */
 const ARROW_PX = 9;
+/** A body whose disc is this many CSS pixels across its radius is "close": the orbit lines that are not its own are hidden. */
+const CLOSE_UP_PX = 30;
 /** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
 const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
 /** How many radii across the picture of a body is at zoom 1 when it has more than its globe: Saturn's rings (to 2.27 radii) are inside the view, not cut by it. */
-const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.4 };
+const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.3 };
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
 const MOON_MIN_PX = 2.2;
@@ -159,7 +161,7 @@ export interface SpaceModel {
   /** What the windows of finer map tiles on the bodies are doing, summed at the last draw: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
   tiles: { requested: number; loading: number; failed: number; shown: number | null };
   /** The orbit lines drawn at the last draw, and how far each body is from its own line as a fraction of the line's radius (0 when it is on it). */
-  rings: { drawn: string[]; miss: Record<string, number> };
+  rings: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
   /** The arrowheads on the orbit lines at the last draw, by line: where each is and the way it points. */
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
@@ -203,7 +205,7 @@ export const newSpaceModel = (): SpaceModel => ({
   drawn: null,
   painted: { bodies: 0, moons: 0, held: 0 },
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
-  rings: { drawn: [], miss: {} },
+  rings: { drawn: [], miss: {}, hidden: [] },
   arrows: {},
   help: false,
   arrowPx: 0,
@@ -329,15 +331,20 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         return slot;
       };
 
-      const orbits = new Map<OrbitBody, { line: THREE.Line; positions: Float32Array; samples: Vec3[]; epoch: number }>();
+      // each line has its colour and a fade (the fourth number of the colour) at every point, so that near the body looked at the part of a line that would cross it is let go
+      const orbits = new Map<OrbitBody, { line: THREE.Line; positions: Float32Array; colours: Float32Array; faded: boolean; samples: Vec3[]; epoch: number }>();
       for (const id of ORBIT_BODIES) {
         const positions = new Float32Array((ORBIT_POINTS + 1) * 3);
+        const colours = new Float32Array((ORBIT_POINTS + 1) * 4);
+        const base = rgb(id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
+        for (let i = 0; i <= ORBIT_POINTS; i += 1) colours.set([base[0], base[1], base[2], 1], i * 4);
         const geometry = new three.BufferGeometry();
         geometry.setAttribute("position", new three.BufferAttribute(positions, 3));
-        const line = new three.Line(geometry, new three.LineBasicMaterial({ color: id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour, transparent: true, opacity: 0.55 }));
+        geometry.setAttribute("color", new three.BufferAttribute(colours, 4));
+        const line = new three.Line(geometry, new three.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55 }));
         line.frustumCulled = false;
         scene.add(line);
-        orbits.set(id, { line, positions, samples: [], epoch: Number.NaN });
+        orbits.set(id, { line, positions, colours, faded: false, samples: [], epoch: Number.NaN });
       }
       // the arrowheads of every orbit line: two strokes each, in the colour of the line, in one object; and the help mode's axis and curved arrow in another (drawn over the body, not hidden by it)
       const ARROW_VERTICES = ORBIT_BODIES.length * ARROWS_PER_ORBIT * 4;
@@ -626,10 +633,17 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
 
           // the orbits round the Sun, placed by the same mapping as the bodies
           const drawnRings: string[] = [];
+          const hiddenRings: string[] = [];
           const miss: Record<string, number> = {};
+          // Close to a body (its disc is a few dozen pixels across) the other orbit lines are seen edge-on, long straight scratches across it: only the lines of its own system are kept, and of those the part near it fades
+          const nearId = (rideFrom ? rideFrom.around : (SPACE_BODIES as readonly string[]).includes(focus) ? focus : (hostOf(focus) ?? "earth")) as SpaceBody;
+          const closeUp = px[nearId] >= CLOSE_UP_PX;
+          const ownLine = (id: OrbitBody): boolean => id === nearId || (id === "moon" && (nearId === "earth" || nearId === "moon"));
+          const nearRadius = radiusOf(nearId);
           for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
-            o.line.visible = model.orbits;
+            const hide = closeUp && !ownLine(id);
+            o.line.visible = model.orbits && !hide;
             if (!model.orbits) continue;
             const keep = id === "moon" ? MOON_RING_KEEP_MS : 365 * 86_400_000;
             if (!Number.isFinite(o.epoch) || Math.abs(model.time - o.epoch) > keep) {
@@ -644,13 +658,25 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               o.positions[i * 3 + 2] = line[i]![2];
             }
             (o.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+            // the part of its own line near the body is let go, from 3 radii out to 12 (a close view sees a few radii across): never a line across the disc
+            const fade = closeUp && ownLine(id);
+            if (fade || o.faded) {
+              for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+                const away = Math.hypot(line[i]![0] - pos[nearId][0], line[i]![1] - pos[nearId][1], line[i]![2] - pos[nearId][2]) / nearRadius;
+                const t = Math.max(0, Math.min(1, (away - 3) / 9));
+                o.colours[i * 4 + 3] = fade ? t * t * (3 - 2 * t) : 1;
+              }
+              (o.line.geometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
+              o.faded = fade;
+            }
+            if (hide) hiddenRings.push(id);
             // how far the body is from its own line, against the line's size: the check that it sits on it
             const centre: Vec3 = id === "moon" ? pos.earth : sunPos;
             const radius = Math.hypot(...minus(line[0]!, centre)) || 1;
             drawnRings.push(id);
             miss[id] = distanceToLine(pos[id as SpaceBody], line) / radius;
           }
-          model.rings = { drawn: drawnRings, miss };
+          model.rings = { drawn: drawnRings, miss, hidden: hiddenRings };
 
           // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)
           const e = camera.matrixWorld.elements;
@@ -666,12 +692,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           arrowPositions.fill(0);
           ORBIT_BODIES.forEach((id, k) => {
             const o = orbits.get(id)!;
-            if (!model.orbits || !drawnRings.includes(id)) return;
+            if (!model.orbits || !drawnRings.includes(id) || hiddenRings.includes(id)) return;
             const line: Vec3[] = [];
             for (let i = 0; i <= ORBIT_POINTS; i += 1) line.push([o.positions[i * 3]!, o.positions[i * 3 + 1]!, o.positions[i * 3 + 2]!]);
             const sites = arrowSites(line);
             arrowsNow[id] = sites;
             sites.forEach((site, j) => {
+              // an arrow on the faded part of a line goes with it
+              if (closeUp && Math.hypot(site.position[0] - pos[nearId][0], site.position[1] - pos[nearId][1], site.position[2] - pos[nearId][2]) < 12 * nearRadius) return;
               const head = chevron(site.position, site.direction, camRight, camUp, ARROW_PX * pixel(site.position));
               if (!head) return;
               const base = (k * ARROWS_PER_ORBIT + j) * 4 * 3;

@@ -192,7 +192,7 @@ test("out of sight or hidden, a game clock running at a day a second draws nothi
 test("a body can be looked at: the camera goes to it, and choosing its name by keyboard twice does the same and says how big and far it is", async ({ page }) => {
   await open(page);
   await setOn(page, "body", "jupiter");
-  await expect.poll(async () => (await statsOf(page)).distance).toBeCloseTo(3.4 * 1.8, 0);
+  await expect.poll(async () => (await statsOf(page)).distance).toBeCloseTo(4.1 * 1.8, 0);
   await jump(page, "Whole solar system");
   await settle(page, 1000);
   await page.locator(SPACE).evaluate((el) => (el.shadowRoot!.querySelector('button.sp-label[data-body="mars"]') as HTMLButtonElement).focus());
@@ -200,7 +200,7 @@ test("a body can be looked at: the camera goes to it, and choosing its name by k
   await page.keyboard.press("Enter");
   await expect(page.locator("#caption")).toContainText("Mars: radius 3,396 km");
   await page.keyboard.press("Enter");
-  await expect.poll(async () => (await statsOf(page)).distance).toBeCloseTo(3.4 * 0.6, 0);
+  await expect.poll(async () => (await statsOf(page)).distance).toBeCloseTo(4.1 * 0.6, 0);
   await expect(page.locator("#caption")).toContainText("Mars: radius 3,396 km");
 });
 
@@ -362,7 +362,7 @@ test("a point that cannot be placed: the ride is lost, the ordinary camera is us
   });
   await expect.poll(async () => (await rideOf(page)).ride.lost).toBe(true);
   expect(await page.evaluate(() => Reflect.get(window, "__lost"))).toBe(1);
-  expect(away(await rideOf(page))).toBeCloseTo(3.4, 0);
+  expect(away(await rideOf(page))).toBeCloseTo(4.1, 0);
 });
 
 test("switching glides and ends in about a second, then (the moons let go) nothing is drawn", async ({ page }) => {
@@ -409,7 +409,7 @@ test("stopping the ride gives the camera back to the body it was looking at", as
   await rideAlong(page, "moon", { smooth: false });
   await settle(page, 600);
   await rideAlong(page, null, { smooth: false });
-  await expect.poll(async () => (await rideOf(page)).distance).toBeCloseTo(3.4 * 1.8, 0);
+  await expect.poll(async () => (await rideOf(page)).distance).toBeCloseTo(4.1 * 1.8, 0);
   expect((await rideOf(page)).ride.riding).toBe(false);
 });
 

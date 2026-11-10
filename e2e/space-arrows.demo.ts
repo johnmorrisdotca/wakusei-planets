@@ -50,6 +50,9 @@ for (const scale of ["true", "compressed"] as const) {
   test(`${scale} scale: every orbit line has its arrows, and on the Earth's, Venus's, Uranus's and the Moon's every arrow points the way the body goes, with the clock running either way`, async ({ page }) => {
     test.setTimeout(240_000);
     await openSpace(page, `t=2026-11-02T14:00Z&scale=${scale}`);
+    // seen from afar: close to a body only its own system's lines are drawn
+    await page.locator(SPACE).evaluate((el) => (el as unknown as { setView(v: unknown): void; zoomFor(p: string): number }).setView({ yaw: 0, tilt: 0, zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") }));
+    await settle(page, 800);
     for (const speed of [0, -86400]) {
       await setOn(page, "speed", speed);
       await settle(page, speed === 0 ? 500 : 1500);

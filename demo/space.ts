@@ -36,8 +36,8 @@ const state = {
   light: pick(address.get("light"), ["sun", "lit"], "sun"),
   orbits: address.get("orbits") !== "0",
   names: address.get("names") !== "0",
-  /** Playing: the clock runs from the date shown at `speed` times real time. Reduced motion leaves it off (the bar sees to that). */
-  play: address.get("play") === "on",
+  /** Playing: the clock runs from the date shown at `speed` times real time. A page opened with no date, speed or play in its address opens playing, from now, an hour a second (the first speed at which the Earth's turn shows); a link that names a date or a speed, and a reader who asked for reduced motion, get it still with Play ready. */
+  play: address.get("play") === "on" || (!["play", "t", "speed"].some((key) => address.get(key) !== null) && !matchMedia("(prefers-reduced-motion: reduce)").matches),
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
   speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
   time: address.get("t") ?? "now",

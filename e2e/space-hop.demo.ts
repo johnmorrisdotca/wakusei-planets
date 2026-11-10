@@ -42,7 +42,7 @@ test("setting `body` to a planet's name in any case puts that planet at the midd
     await setOn(page, "body", name);
     expect(await bodyOf(page), name).toBe("saturn");
     const at = await centred(page, "saturn");
-    expect(at.r, "Saturn fills the view at zoom 1").toBeGreaterThan(100);
+    expect(at.r, "Saturn is large in the view at zoom 1").toBeGreaterThan(80);
   }
   await setOn(page, "body", "nowhere");
   expect(await bodyOf(page), "a name that is no body changes nothing").toBe("saturn");

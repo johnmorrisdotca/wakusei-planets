@@ -27,7 +27,7 @@ for (const body of ["mars", "moon"] as const) {
     await page.locator(SPACE).evaluate((el, id) => {
       const s = el as unknown as { body: string; setView(v: unknown): void };
       s.body = id;
-      s.setView({ yaw: 0, tilt: 0, zoom: 3.1 });
+      s.setView({ yaw: 0, tilt: 0, zoom: 3.6 });
     }, body);
     await expect.poll(async () => (await statsOf(page) as unknown as { tiles: { shown: number | null } }).tiles.shown, { timeout: 90_000 }).toBe(3);
     expect(log.tiles.length).toBeGreaterThan(0);

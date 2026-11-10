@@ -166,7 +166,7 @@ for (const [body, colour] of [["earth", yellow], ["mars", yellow], ["moon", yell
     expect(log.tiles).toEqual([]);
 
     // a first visit makes what the page keeps (the body's own pictures and program); what the window takes is measured against the page after it
-    await goTo(page, body, 3.1);
+    await goTo(page, body, 3.6);
     await expect.poll(async () => (await spaceStats(page)).tiles.shown, { timeout: 90_000 }).toBe(3);
     await goTo(page, "earth", 1);
     await expect.poll(async () => (await spaceStats(page)).tiles.shown, { timeout: 30_000 }).toBeNull();
@@ -174,7 +174,7 @@ for (const [body, colour] of [["earth", yellow], ["mars", yellow], ["moon", yell
     const base = gpuObjects(await readCounts(page));
     log.tiles.length = 0;
 
-    await goTo(page, body, 3.1);
+    await goTo(page, body, 3.6);
     await expect.poll(async () => (await spaceStats(page)).tiles.shown, { timeout: 90_000 }).toBe(3);
     await expect.poll(async () => colour(await middle(page, space(page))), { timeout: 30_000, message: `the level 3 tiles of the ${body} are on it` }).toBe(true);
     expect(log.manifests, "the tile set is read once").toBe(1);
@@ -201,7 +201,7 @@ for (const [body, colour] of [["earth", yellow], ["mars", yellow], ["moon", yell
 test("the space view: the far view keeps the package's own pictures, and a tile set that cannot be read leaves the surface as it was", async ({ page }) => {
   await routeNoTiles(page);
   await openSpace(page);
-  await goTo(page, "earth", 3.1);
+  await goTo(page, "earth", 3.6);
   await settle(page, 3000);
   const stats = (await spaceStats(page)).tiles;
   expect(stats.requested).toBe(0);

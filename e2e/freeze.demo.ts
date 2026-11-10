@@ -673,7 +673,7 @@ test("the space view zoomed in to its map tiles and out again: one context, grap
     );
   const round = async (): Promise<void> => {
     for (const body of ["earth", "mars", "moon"]) {
-      await go(body, 3.1);
+      await go(body, 3.6);
       await expect.poll(async () => (await stats()).shown, { timeout: 90_000 }).toBe(3);
       await go(body, 1);
       await expect.poll(async () => (await stats()).shown, { timeout: 30_000 }).toBeNull();

@@ -61,3 +61,35 @@ for (const [name, url, frame, element] of PAGES) {
     });
   }
 }
+
+// The body looked at is whole in its frame with a margin: its disc is about 80% of the frame's shorter side across, centred, at every shape, in the panel and full screen.
+for (const [name, url, element] of [
+  ["panel", "/wakusei-planets/space.html?t=2026-11-02T14:00Z", "wakusei-space"],
+  ["full screen", "/wakusei-planets/space-full.html?t=2026-11-02T14:00Z&speed=0", "wakusei-space"],
+] as const) {
+  for (const [shape, width, height] of SIZES) {
+    test(`${name}, ${shape} (${width} by ${height}): the Earth is whole in the frame with a margin, about 80% of the shorter side across`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await page.setViewportSize({ width, height });
+      await page.goto(url);
+      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
+      await page.locator(element).scrollIntoViewIfNeeded();
+      await page.waitForTimeout(1500);
+      const seen = await page.evaluate((e) => {
+        const el = document.querySelector(e)!;
+        const place = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf("earth");
+        return { place, width: el.clientWidth, height: el.clientHeight };
+      }, element);
+      expect(seen.place, "the Earth is on the screen").not.toBeNull();
+      const { x, y, r } = seen.place!;
+      const shorter = Math.min(seen.width, seen.height);
+      expect(x - r, "left edge inside").toBeGreaterThan(0);
+      expect(x + r, "right edge inside").toBeLessThan(seen.width);
+      expect(y - r, "top edge inside").toBeGreaterThan(0);
+      expect(y + r, "bottom edge inside").toBeLessThan(seen.height);
+      expect((2 * r) / shorter, `${name}, ${shape}: the disc is ${((200 * r) / shorter).toFixed(0)}% of the shorter side`).toBeGreaterThan(0.72);
+      expect((2 * r) / shorter).toBeLessThan(0.88);
+      expect(Math.abs(x - seen.width / 2) + Math.abs(y - seen.height / 2), "centred").toBeLessThan(3);
+    });
+  }
+}
