@@ -40,6 +40,11 @@
       "ja": "<wakusei-space> 要素 (地球・月・太陽・惑星をその位置に)",
       "platform": "browser"
     },
+    "./door": {
+      "en": "The data door: hand the package your own maps of a body or small bodies as a source with its own licence and credit, and see whose data is on the screen",
+      "ja": "データの入口（自分で用意した天体の地図や小天体を、ライセンスと出典つきのソースとして渡し、いま画面にあるのは誰のデータかを示します）",
+      "platform": "neutral"
+    },
     "./time": {
       "en": "Julian dates (and the julian package's functions), calendars, time scales, sidereal time and Mars time",
       "ja": "ユリウス日 (julian パッケージの関数も)、暦、時刻系、恒星時、火星の時刻",

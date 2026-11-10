@@ -8,6 +8,8 @@ import { silhouette } from "../pose.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
 import { detailOf, lookOf, type BodyLook } from "./look.ts";
+import type { SourceBook } from "../door/book.ts";
+import type { BodyMapSource } from "../door/map.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import type { TileLevel } from "./tiles.ts";
 import { fallbackLook } from "./fallback.ts";
@@ -84,7 +86,7 @@ export interface BodyItemOptions {
   /** The scene tells the element which way it drew (the look can fall back to the shader). */
   report?(note: { painted: boolean; width: number; failed?: boolean }): void;
   /** Finer map tiles for a close zoom (see `scene/detail.ts`): where they are (`undefined` for none), the pixel ratio, whether this device may use them, and what to do when the tile set's levels for the body are known. */
-  tiles?: { base(): string | undefined; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
+  tiles?: { source(body: string): BodyMapSource | undefined; book: SourceBook; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
 }
 
 /** The shader material of a body: its surface code with the look's lighting and glow uniforms. A star made from numbers is drawn with it too (the size line-up). */
@@ -288,7 +290,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         windowUniforms === undefined || options.tiles === undefined
           ? undefined
           : createDetail(T, {
-              base: () => options.tiles!.base(),
+              source: () => options.tiles!.source(look.painted!.map),
+              book: options.tiles.book,
               body: look.painted!.map,
               ratio: () => options.tiles!.ratio(),
               allowed: () => options.tiles!.allowed(),

@@ -5,7 +5,8 @@ import type * as THREE from "three";
 import "../bodies/all.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../facts.ts";
 import { writeBasis } from "./basis.ts";
-import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, tilesAllowed } from "./textures.ts";
+import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, mapSourceFor, tilesAllowed } from "./textures.ts";
+import { createSourceBook, type SourceBook } from "../door/book.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import type { ThreeParts } from "./body.ts";
 import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
@@ -173,6 +174,8 @@ export interface PainterOptions {
   farBase?: string;
   /** Where the finer map tiles are (a folder address that ends in a slash; `off` for none). Left out, the demo site's (`TILES_BASE`) unless `textureBase` is given, in which case there are none. They are laid over a body that is big in the view, when the caller gives `PaintInfo.view`. */
   tiles?: string;
+  /** The sources of the view that owns the painter (the data door): a map source in it takes the place of the folder of tiles for its body. Left out, the painter has a book of its own and draws from the folder alone. */
+  book?: SourceBook;
 }
 
 const titled = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
@@ -248,7 +251,7 @@ function sightOf(T: PainterThree, view: PaintView): Sight {
   };
 }
 
-function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined }): Painting {
+function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined; book: SourceBook; shared: boolean }): Painting {
   const facts = BODIES[id];
   const look = lookOf(id) ?? fallbackLook(facts);
   const wantPainted = (context.look === "painted" || look.mapped === true || context.mapped === true) && look.painted !== undefined;
@@ -474,12 +477,13 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   };
 
   // the window of finer map tiles for a close view, laid over the painted map by the painted material (see `scene/detail.ts`); only for a body that is told which camera sees it
-  const windowUniforms = wantPainted && paintedMaterial !== undefined && generic && bases.tiles !== undefined && look.painted !== undefined ? paintedMaterial.uniforms : undefined;
+  const windowUniforms = wantPainted && paintedMaterial !== undefined && generic && (bases.tiles !== undefined || bases.shared) && look.painted !== undefined ? paintedMaterial.uniforms : undefined;
   const detail: Detail | undefined =
     windowUniforms === undefined
       ? undefined
       : createDetail(T, {
-          base: () => bases.tiles,
+          source: () => mapSourceFor(bases.book, bases.tiles, look.painted!.map),
+          book: bases.book,
           body: look.painted!.map,
           ratio: () => ratio,
           allowed: tilesAllowed,
@@ -601,9 +605,10 @@ export function createPainter(options: PainterOptions = {}): WakuseiPainter {
   const far = slash(options.farBase ?? (options.textureBase !== undefined ? options.textureBase : TEXTURE_FAR_BASE));
   const own = options.tiles;
   const tiles = own === "off" || own === "none" || own === "" ? undefined : own !== undefined ? slash(own) : options.textureBase !== undefined ? undefined : TILES_BASE;
+  const book = options.book ?? createSourceBook({ kinds: ["tiles"] });
   return {
     looks: LOOKS,
-    make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far, tiles }),
+    make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far, tiles, book, shared: options.book !== undefined }),
     moons(planet, ms) {
       const radius = BODIES[idOf(planet) as HostId]?.radiusKm;
       if (radius === undefined) return [];

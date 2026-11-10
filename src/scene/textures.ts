@@ -1,4 +1,6 @@
 import type * as THREE from "three";
+import type { SourceBook } from "../door/book.ts";
+import { tilesSource, type BodyMapSource } from "../door/map.ts";
 import { VERSION } from "../version.ts";
 
 /**
@@ -47,6 +49,21 @@ export function tilesBase(element: Element): string | undefined {
   if (own === "off" || own === "none") return undefined;
   if (own !== null && own !== "") return slash(own);
   return element.hasAttribute("texture-base") ? undefined : TILES_BASE;
+}
+
+const folders = new Map<string, BodyMapSource>();
+
+/**
+ * The map source a body is drawn from: the last colour source a page added for it (`addSource`), else the package's own folder of tiles at `base` (the `tiles` attribute), else `undefined`, and the body keeps its own
+ * 2048 pixel picture. One folder source is made for each address, so every element of a page shares it.
+ */
+export function mapSourceFor(book: SourceBook, base: string | undefined, body: string): BodyMapSource | undefined {
+  const added = book.mapSources(body, "colour")[0];
+  if (added !== undefined) return added;
+  if (base === undefined) return undefined;
+  let own = folders.get(base);
+  if (own === undefined) folders.set(base, (own = tilesSource(base)));
+  return own;
 }
 
 export function texturePaths(element: Element): { textureBase(): string; farBase(): string } {

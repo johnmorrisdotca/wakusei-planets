@@ -141,6 +141,11 @@
       "import": "./dist/time.js",
       "default": "./dist/time.js"
     },
+    "./door": {
+      "types": "./dist/door/index.d.ts",
+      "import": "./dist/door/index.js",
+      "default": "./dist/door/index.js"
+    },
     "./stars": {
       "types": "./dist/stars.d.ts",
       "import": "./dist/stars.js",

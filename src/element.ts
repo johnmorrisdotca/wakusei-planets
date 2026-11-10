@@ -15,7 +15,10 @@ import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
 import { detailOf, lookOf, starLookOf } from "./scene/look.ts";
 import { createLive, defaultTurn, REDUCED_TURN, type LiveFrame, type LiveRequest } from "./live.ts";
-import { texturePaths, tilesBase } from "./scene/textures.ts";
+import { mapSourceFor, texturePaths, tilesBase } from "./scene/textures.ts";
+import type { Credit, DataSource } from "./data-door.ts";
+import { createDoorHost, type DoorHost } from "./door/host.ts";
+import { ownCredit } from "./door/own.ts";
 export { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE } from "./scene/textures.ts";
 import { mapWidthOf, ringWidthOf, zoomLimit } from "./scene/reach.ts";
 import type { DetailStats } from "./scene/detail.ts";
@@ -119,7 +122,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "lang", "labels"];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels"];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -161,6 +164,25 @@ export class WakuseiBody extends HTMLElement {
   #limitKey = "";
   #tileLevels: readonly TileLevel[] | undefined;
   #tiles: DetailStats | undefined;
+  #door: DoorHost = createDoorHost(
+    this,
+    {
+      own: () => {
+        // the body's own pictures and, where a window of the package's own tiles is on it, those
+        const own: Credit[] = [];
+        if (this.look !== "line" && this.#view !== undefined && this.#textureWidth > 0) own.push(ownCredit("wakusei-pictures", 1));
+        const shown = (this.#view?.scene as BodyScene | undefined)?.detail;
+        if (shown?.source !== undefined && this.#door.book.get(shown.source.id) === undefined) own.push(ownCredit(shown.source.id, shown.used));
+        return own;
+      },
+      used: () => {
+        const shown = (this.#view?.scene as BodyScene | undefined)?.detail;
+        return shown?.source === undefined ? new Map() : new Map([[shown.source.id, shown.used]]);
+      },
+    },
+    { kinds: ["tiles"] },
+    () => this.#view?.invalidate(),
+  );
   #hover = (): void => void this.goLive();
   #onContext = (state: ContextState): void => {
     if (state === "unavailable") this.#set("unavailable");
@@ -172,6 +194,40 @@ export class WakuseiBody extends HTMLElement {
     else this.#resume();
     this.#syncClock();
   };
+
+  /**
+   * The outside sources of map for this body (the data door): each carries its own licence and credit, and a map source for the body takes the place of the folder of tiles. Assign a list to replace them; a source that
+   * `validateSource` refuses, or that is not a map source, throws a `TypeError` and changes nothing. A property, not an attribute: data is not text.
+   */
+  get sources(): readonly DataSource[] {
+    return this.#door.sources();
+  }
+  set sources(list: readonly DataSource[]) {
+    this.#door.setSources(list);
+  }
+  /** Adds one source (checked at once: a `TypeError` for an empty credit, no licence, a clashing id or a source that is not a map source). Returns the function that removes it. */
+  addSource(source: DataSource): () => void {
+    return this.#door.book.addSource(source);
+  }
+  /** Removes a source by id: its loads are aborted and its tiles freed, and its credit goes. Returns whether there was one. */
+  removeSource(id: string): boolean {
+    return this.#door.book.removeSource(id);
+  }
+  /** Switches a source off (`false`) or on, for a layers panel. Off aborts its loads, frees its tiles and drops its credit. */
+  enableSource(id: string, on: boolean): void {
+    this.#door.book.enableSource(id, on);
+  }
+  /**
+   * The sources whose data is in the last drawn frame, the package's own first: the surface picture, the finer map tiles when a window of them is on the body, and each source of yours that gave tiles. `creditLine(credits, "en" | "ja")`
+   * from `@johnmorrisdotca/wakusei-planets/door` writes them as a line with the licences. `wakusei-creditschange` fires when this set changes (not at each frame) with `detail: { credits }`.
+   */
+  credits(): Credit[] {
+    return this.#door.credits();
+  }
+  /** What the sources have done: tile loads started, failed and refused, and the bytes held. */
+  get sourceStats(): ReturnType<DoorHost["book"]["stats"]> {
+    return this.#door.book.stats();
+  }
 
   /** The moment the dated picture shows, in milliseconds since 1970, or `undefined` for a portrait with no date. */
   get time(): number | undefined {
@@ -220,6 +276,7 @@ export class WakuseiBody extends HTMLElement {
     root.innerHTML = TEMPLATE;
     this.#stage = root.getElementById("stage")!;
     this.#startedAt = performance.now();
+    this.#door.book.ownOnly(this.getAttribute("data") === "own");
     this.#reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.#clockFromAttributes();
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
@@ -272,6 +329,7 @@ export class WakuseiBody extends HTMLElement {
       this.#clockFromAttributes();
       this.#syncClock(true);
     }
+    if (name === "data") this.#door.book.ownOnly(this.getAttribute("data") === "own");
     if (name === "live") this.#applyHover();
     if (name === "live" || name === "look" || name === "body") this.#carry();
     if (name === "body" || name === "look" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
@@ -712,7 +770,8 @@ export class WakuseiBody extends HTMLElement {
       ...texturePaths(this),
       wantedWidth: (discPx) => discPx * Math.min(2, window.devicePixelRatio || 1) * 1.6,
       tiles: {
-        base: () => tilesBase(this),
+        source: (body) => mapSourceFor(this.#door.book, tilesBase(this), body),
+        book: this.#door.book,
         ratio: () => window.devicePixelRatio || 1,
         allowed: () => ((navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8) > 2,
         onLevels: (levels) => {
@@ -723,6 +782,7 @@ export class WakuseiBody extends HTMLElement {
       redraw: () => this.#view?.invalidate(),
       report: (note) => {
         this.#textureWidth = note.width;
+        this.#door.announce();
         if (note.failed === true) this.setAttribute("data-fallback", "shader");
         else this.removeAttribute("data-fallback");
       },
@@ -789,6 +849,7 @@ export class WakuseiBody extends HTMLElement {
     this.#sceneState = state;
     scene.apply(state);
     this.#textureWidth = scene.textureWidth;
+    this.#door.announce();
   }
 
   // --- moving ---------------------------------------------------------------------------------------------------------------------------------------
@@ -824,6 +885,7 @@ export class WakuseiBody extends HTMLElement {
     this.#state = state;
     this.setAttribute("data-state", state);
     this.dispatchEvent(new CustomEvent("wakusei-state", { detail: { state } }));
+    this.#door.announce();
     if (state === "unavailable") this.#drawLine();
   }
 }

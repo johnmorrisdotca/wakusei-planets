@@ -1,8 +1,12 @@
-// A window of finer map laid over a body's 2048 pixel map: only the tiles in view, at the level the zoom needs, fetched a few at a time, put together into one picture (at most 16 tiles, a 2048 pixel square
-// or 4096 by 1024 round a pole: about 22 MB of graphics memory with its mipmaps), freed a few seconds after the view no longer needs it. Nothing here draws: a window that is ready asks for one draw, and
+// A window of finer map laid over a body's 2048 pixel map: only the tiles in view, at the level the zoom needs, put together into one picture (at most 16 tiles, a 2048 pixel square or 4096 by 1024 round a pole:
+// about 22 MB of graphics memory with its mipmaps), freed a few seconds after the view no longer needs it. The tiles come from a map source of the data door (`BodyMapSource`: the package's own folder, or a caller's) and are
+// held in the view's one tile store, under its one budget, a few at a time, and nothing is sent at rest: a load starts only because the window changed. Nothing here draws: a window that is ready asks for one draw, and
 // the draw's `apply` puts it on the body. three.js is passed in; nothing here imports it. See scripts/make-body-tiles.py for the tiles and docs/guides/close-zoom.md for the whole picture.
 import type * as THREE from "three";
-import { chooseWindow, covers, parseManifest, tilePath, visibleRegion, windowRect, windowTiles, BASE_WIDTH, TEXEL_SLACK, TILE_SIZE, texelAngle, type Axes, type Region, type Seen, type TileLevel, type TileManifest, type TileWindow, type ViewBox } from "./tiles.ts";
+import type { SourceInfo } from "../data-door.ts";
+import { accountOf, type SourceBook } from "../door/book.ts";
+import { DEFAULT_LEVELS, forgetManifests as forgetFolders, tileKeyParts, type BodyMapSource } from "../door/map.ts";
+import { chooseWindow, covers, visibleRegion, windowRect, windowTiles, BASE_WIDTH, TEXEL_SLACK, TILE_SIZE, texelAngle, type Axes, type Region, type Seen, type TileLevel, type TileWindow, type ViewBox } from "./tiles.ts";
 
 type Three = Pick<typeof THREE, "ClampToEdgeWrapping" | "DataTexture" | "LinearFilter" | "NoColorSpace">;
 
@@ -10,28 +14,31 @@ type Three = Pick<typeof THREE, "ClampToEdgeWrapping" | "DataTexture" | "LinearF
 export const DETAIL_KEEP_MS = 4000;
 /** Milliseconds a changed view must stay changed before a new window is fetched, so a drag or a pinch does not fetch what it passes. */
 export const DETAIL_SETTLE_MS = 140;
-/** Decoded tiles kept (about a megabyte each), those of the window first. */
-export const DETAIL_TILES_KEPT = 48;
+/** Decoded tiles a view's store keeps by default (about a megabyte and a half each), those of the window first: the view's 48 MB budget (`TILE_BUDGET_BYTES`). */
+export const DETAIL_TILES_KEPT = 34;
+/** Milliseconds a levels read that failed waits before it is asked again, and only when a view wants more than the body's own picture. */
 const RETRY_MS = 30_000;
-const IN_FLIGHT = 6;
 
 /** What a window is doing, for a page or a test. */
 export interface DetailStats {
-  /** A readable tile set was found (a body with levels in it, or not). */
+  /** The source's levels for this body were read (a body with levels in it, or not). */
   ready: boolean;
   /** The level the view wants now, or `null` when the body's own picture is sharp enough. */
   level: number | null;
   /** The level on the body now, or `null`. */
   shown: number | null;
-  /** Tiles held decoded, and tiles being fetched. */
+  /** Tiles of the window held decoded, and tiles of it being fetched. */
   held: number;
   loading: number;
-  /** Tiles or windows that could not be made and are not tried again for a while. */
+  /** Windows that could not be made: they are tried again only when the view changes. */
   failed: number;
   /** Tile fetches made. */
   requested: number;
   /** The width and height in pixels of the window's picture now, or 0. */
   pixels: number;
+  /** The source whose tiles are on the body now, and how many tiles of the window it gave: for the credit line. `undefined` for none. */
+  source: SourceInfo | undefined;
+  used: number;
 }
 
 /** What a window gives the body when one is ready or let go: the picture and where it lies, or `null` for none. */
@@ -46,8 +53,10 @@ export interface DetailWindow {
 }
 
 export interface DetailDeps {
-  /** Where the tile set is, ending with a slash, or `undefined` for none. Read at every draw. */
-  base: () => string | undefined;
+  /** The map source the body is drawn from now, or `undefined` for none (the body's own 2048 pixel picture). Read at every draw, so a source added, removed or switched off is taken up at the next one. */
+  source: () => BodyMapSource | undefined;
+  /** The view's sources: their tiles are held in its one store, under its one budget. */
+  book: SourceBook;
   /** The body's name in the tile set. */
   body: string;
   /** Device pixels to a CSS pixel. */
@@ -56,7 +65,7 @@ export interface DetailDeps {
   allowed: () => boolean;
   /** Ask for one draw. */
   redraw: () => void;
-  /** Told when the tile set's levels for this body are known (`undefined` when it has none), so the zoom range can follow. */
+  /** Told when the source's levels for this body are known (`undefined` when it has none), so the zoom range can follow. */
   onLevels?: (levels: readonly TileLevel[] | undefined) => void;
   /** Put the window on the body, or take it off (`null`). */
   apply: (window: DetailWindow | null) => void;
@@ -64,10 +73,10 @@ export interface DetailDeps {
 }
 
 export interface Detail {
-  /** Called at each draw with where the camera is and the body's axes (an orthographic camera looking straight at the body, as `<wakusei-body>` has). The tile set is read at the first call. */
+  /** Called at each draw with where the camera is and the body's axes (an orthographic camera looking straight at the body, as `<wakusei-body>` has). The source's levels are read at the first call. */
   sync(box: ViewBox, axes: Axes, viewWidth: number): void;
   /**
-   * Called at each draw of a body seen by any camera (`seenRegion`): what the camera sees of it, or `undefined` for none. The tile set is read only once the 2048 pixel map is not sharp enough for the view.
+   * Called at each draw of a body seen by any camera (`seenRegion`): what the camera sees of it, or `undefined` for none. The source's levels are read only once the 2048 pixel map is not sharp enough for the view.
    */
   follow(seen: Seen | undefined): void;
   /** Called at a draw when the body is too small in the view to want tiles at all: nothing is read, and what is held is let go after a few seconds. */
@@ -76,62 +85,71 @@ export interface Detail {
   dispose(): void;
 }
 
-// One manifest read for each tile set of the page, shared by every element.
-const manifests = new Map<string, { at: number; value: Promise<TileManifest | undefined> }>();
-
-function readManifest(base: string, now: number): Promise<TileManifest | undefined> {
-  const held = manifests.get(base);
-  if (held !== undefined && now - held.at < RETRY_MS) return held.value;
-  const value = fetch(`${base}manifest.json`, { mode: "cors" }).then(
-    async (response) => (response.ok ? parseManifest(await response.json().catch(() => undefined)) : undefined),
-    () => undefined,
-  );
-  manifests.set(base, { at: now, value });
-  return value;
-}
-
-/** Forget what was read of the tile sets (for a test that serves different ones). */
-export function forgetManifests(): void {
-  manifests.clear();
-}
+/**
+ * Forget what was read of the tile folders (for a test that serves different ones).
+ *
+ * @example
+ * ```ts no-run
+ * import { forgetManifests } from "@johnmorrisdotca/wakusei-planets/door";
+ *
+ * forgetManifests();
+ * ```
+ */
+export const forgetManifests = forgetFolders;
 
 interface Held {
   key: string;
   window: TileWindow;
   texture: THREE.Texture;
   canvas: HTMLCanvasElement;
+  source: SourceInfo;
+  tiles: number;
 }
 
 const keyOf = (w: TileWindow): string => `${w.level}:${w.col0}:${w.cols}:${w.row0}:${w.rows}`;
 
+/** The window as a place on the map, in degrees, pulled in a hair so that a tile's own edge does not count as the next tile. */
+function placeOf(window: TileWindow): { lonMin: number; lonMax: number; latMin: number; latMax: number } {
+  const lonMin = (window.col0 / window.columns - 0.5) * 360;
+  const latMax = 90 - (window.row0 / window.rowsTotal) * 180;
+  const inset = 1e-6;
+  return { lonMin: lonMin + inset, lonMax: lonMin + (window.cols / window.columns) * 360 - inset, latMax: latMax - inset, latMin: latMax - (window.rows / window.rowsTotal) * 180 + inset };
+}
+
 /** Make the window of finer map for one body. */
 export function createDetail(T: Three, deps: DetailDeps): Detail {
   const clock = deps.now ?? (() => performance.now());
-  const cache = new Map<string, { bitmap: ImageBitmap; used: number }>();
-  const inFlight = new Map<string, AbortController>();
+  const store = deps.book.store;
   const failed = new Map<string, number>();
-  let manifest: TileManifest | undefined;
-  let manifestFor = "";
-  let manifestAsked = false;
-  let askedAt = 0;
+  /** The bitmaps this body has seen come out of the store, to close the ones the store has let go. */
+  const seen = new Map<string, { image: { close?(): void }; account: string }>();
+  let active: BodyMapSource | undefined;
   let levels: readonly TileLevel[] | undefined;
+  let levelsRead = false;
+  let levelsAsked = false;
+  let askedAt = 0;
   let held: Held | undefined;
-  let loading: { key: string; window: TileWindow } | undefined;
+  let loading: { key: string; window: TileWindow; keys: readonly string[]; tiles: ReadonlyMap<string, string>; source: BodyMapSource } | undefined;
   let pending: { key: string; timer: ReturnType<typeof setTimeout> } | undefined;
   let freeTimer: ReturnType<typeof setTimeout> | undefined;
   let wantLevel: number | null = null;
+  let wantKey = "";
   let requested = 0;
   let gone = false;
+  let lastKeys: { account: string; keys: readonly string[] } | undefined;
+  let watching = false;
   // The Texture class of the three.js module the page handed over: `DataTexture` extends it, and a page's subset of three need not name it.
   const TextureClass = Object.getPrototypeOf(T.DataTexture) as new (image: unknown) => THREE.Texture;
 
-  const forgetTiles = (keep: ReadonlySet<string>): void => {
-    if (cache.size <= DETAIL_TILES_KEPT) return;
-    const order = [...cache.entries()].filter(([k]) => !keep.has(k)).sort((a, b) => a[1].used - b[1].used);
-    for (const [k, entry] of order) {
-      if (cache.size <= DETAIL_TILES_KEPT) break;
-      entry.bitmap.close();
-      cache.delete(k);
+  const heldTiles = (): number => (lastKeys === undefined ? 0 : lastKeys.keys.filter((key) => store.get(lastKeys!.account, key) !== undefined).length);
+
+  /** Closes the bitmaps the store no longer holds. */
+  const prune = (): void => {
+    for (const [key, one] of seen) {
+      const at = key.indexOf("\u0000");
+      if (store.get(one.account, key.slice(at + 1)) !== undefined) continue;
+      one.image.close?.();
+      seen.delete(key);
     }
   };
 
@@ -148,23 +166,40 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     pending = undefined;
   };
 
+  /** Stops the window being fetched: its loads are aborted (the tiles already here stay in the store until it needs the room). */
   const cancelLoading = (): void => {
-    for (const controller of inFlight.values()) controller.abort();
-    inFlight.clear();
+    if (loading !== undefined) {
+      const at = accountOf(loading.source, deps.body);
+      if (lastKeys?.account === at) store.want(deps.book.loader(loading.source, deps.body), []);
+    }
     loading = undefined;
   };
 
-  const install = (window: TileWindow): void => {
-    const tiles = windowTiles(window);
+  /** Frees every tile of this body held in the store, and the bitmaps. */
+  const dropTiles = (): void => {
+    if (lastKeys !== undefined) store.drop(lastKeys.account);
+    for (const one of seen.values()) one.image.close?.();
+    seen.clear();
+    lastKeys = undefined;
+  };
+
+  const install = (window: TileWindow, source: BodyMapSource, tiles: ReadonlyMap<string, string>): boolean => {
+    const placed = windowTiles(window);
     const canvas = document.createElement("canvas");
     canvas.width = window.cols * TILE_SIZE;
     canvas.height = window.rows * TILE_SIZE;
     const context = canvas.getContext("2d");
-    if (context === null) return;
-    for (const tile of tiles) {
-      const entry = cache.get(tilePath(deps.body, tile));
-      if (entry === undefined) return;
-      context.drawImage(entry.bitmap, tile.x, tile.y);
+    if (context === null) return false;
+    const account = accountOf(source, deps.body);
+    for (const tile of placed) {
+      const key = tiles.get(`${tile.level}:${tile.col}:${tile.row}`);
+      const got = key === undefined ? undefined : store.get(account, key);
+      if (got === undefined) return false;
+      try {
+        context.drawImage(got.image as unknown as CanvasImageSource, tile.x, tile.y, TILE_SIZE, TILE_SIZE);
+      } catch {
+        return false;
+      }
     }
     const texture = new TextureClass(canvas);
     texture.flipY = false;
@@ -175,7 +210,7 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     texture.anisotropy = 4;
     texture.needsUpdate = true;
     const old = held;
-    held = { key: keyOf(window), window, texture, canvas };
+    held = { key: keyOf(window), window, texture, canvas, source: source.info, tiles: placed.length };
     const rect = windowRect(window);
     const full = window.cols >= window.columns;
     // a window that reaches a pole has no edge there: its rectangle goes a little past the pole and the picture is clamped
@@ -195,77 +230,77 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
       old.canvas.width = 0;
       old.canvas.height = 0;
     }
-    forgetTiles(new Set(tiles.map((t) => tilePath(deps.body, t))));
     deps.redraw();
+    return true;
   };
 
-  const load = (window: TileWindow): void => {
+  /** Looks at the window being fetched: whole, it goes on the body; if nothing more is coming and it is not whole, it failed. */
+  const check = (): void => {
+    if (gone || loading === undefined) return;
+    const now = loading;
+    const loader = deps.book.loader(now.source, deps.body);
+    const got = store.want(loader, now.keys);
+    const account = accountOf(now.source, deps.body);
+    for (const [key, tile] of got) seen.set(`${account}\u0000${key}`, { image: tile.image as { close?(): void }, account });
+    if (now.keys.every((key) => got.has(key))) {
+      loading = undefined;
+      if (!install(now.window, now.source, now.tiles)) failed.set(now.key, clock());
+      prune();
+      return;
+    }
+    const stats = store.stats();
+    if (stats.inFlight === 0 && stats.queued === 0) {
+      // a tile that cannot be had spoils the window: leave the picture as it is, and try again only when the view has changed
+      failed.set(now.key, clock());
+      cancelLoading();
+      prune();
+      return;
+    }
+    // the store says a tile has failed before it has let go of it: look again when nothing is running
+    if (!watching) {
+      watching = true;
+      void store.idle().then(() => {
+        watching = false;
+        check();
+      });
+    }
+  };
+
+  const unwatch = deps.book.onChange(check);
+
+  const load = (window: TileWindow, source: BodyMapSource): void => {
     const key = keyOf(window);
     if (loading?.key === key) return;
     cancelLoading();
-    loading = { key, window };
-    const base = deps.base();
-    if (base === undefined) return;
-    const tiles = windowTiles(window).map((t) => ({ t, path: tilePath(deps.body, t) }));
-    const todo = tiles.filter(({ path }) => !cache.has(path));
-    for (const { path } of tiles) {
-      const entry = cache.get(path);
-      if (entry !== undefined) entry.used = clock();
-    }
-    const done = (): void => {
-      if (gone || loading?.key !== key) return;
-      if (tiles.every(({ path }) => cache.has(path))) {
-        loading = undefined;
-        install(window);
-      }
-    };
-    if (todo.length === 0) {
-      done();
+    let keys: readonly string[];
+    try {
+      const wanted = source.need({ ...placeOf(window), body: deps.body }, window.columns * TILE_SIZE);
+      keys = Array.isArray(wanted) ? wanted.filter((one): one is string => typeof one === "string") : [];
+    } catch {
+      failed.set(key, clock());
       return;
     }
-    let next = 0;
-    const start = (): void => {
-      while (inFlight.size < IN_FLIGHT && next < todo.length) {
-        const { path } = todo[next]!;
-        next += 1;
-        const controller = new AbortController();
-        inFlight.set(path, controller);
-        requested += 1;
-        void fetch(`${base}${path}.webp`, { mode: "cors", signal: controller.signal })
-          .then((response) => (response.ok ? response.blob() : Promise.reject(new Error(String(response.status)))))
-          .then((blob) => createImageBitmap(blob))
-          .then(
-            (bitmap) => {
-              inFlight.delete(path);
-              if (gone || loading?.key !== key) {
-                bitmap.close();
-                return;
-              }
-              cache.set(path, { bitmap, used: clock() });
-              start();
-              done();
-            },
-            (error: unknown) => {
-              inFlight.delete(path);
-              if (gone || (error instanceof DOMException && error.name === "AbortError")) return;
-              // a tile that cannot be had spoils the window: leave the picture as it is and try again after a while
-              failed.set(key, clock());
-              cancelLoading();
-            },
-          );
-      }
-    };
-    start();
-  };
-
-  const dropTiles = (): void => {
-    for (const entry of cache.values()) entry.bitmap.close();
-    cache.clear();
+    const tiles = new Map<string, string>();
+    for (const one of keys) {
+      const at = tileKeyParts(one);
+      if (at !== undefined) tiles.set(`${at.level}:${at.col}:${at.row}`, one);
+    }
+    const need = windowTiles(window);
+    if (!need.every((tile) => tiles.has(`${tile.level}:${tile.col}:${tile.row}`))) {
+      failed.set(key, clock());
+      return;
+    }
+    const wanted = need.map((tile) => tiles.get(`${tile.level}:${tile.col}:${tile.row}`)!);
+    loading = { key, window, keys: wanted, tiles, source };
+    lastKeys = { account: accountOf(source, deps.body), keys: wanted };
+    // the store starts what is not held and aborts what is no longer wanted; what is held comes back at once
+    store.want(deps.book.loader(source, deps.body, () => (requested += 1)), wanted);
+    check();
   };
 
   // not wanted any more (zoomed out, or out of sight): after a few seconds the picture and every decoded tile are let go
   const scheduleFree = (): void => {
-    if ((held === undefined && cache.size === 0) || freeTimer !== undefined) return;
+    if ((held === undefined && lastKeys === undefined) || freeTimer !== undefined) return;
     freeTimer = setTimeout(() => {
       freeTimer = undefined;
       if (gone) return;
@@ -282,18 +317,23 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     freeTimer = undefined;
   };
 
-  const ask = (base: string): void => {
-    if (manifestAsked && manifestFor === base && (manifest !== undefined || clock() - askedAt < RETRY_MS)) return;
-    manifestAsked = true;
-    manifestFor = base;
+  const ask = (source: BodyMapSource): void => {
+    if (levelsAsked && (levelsRead || clock() - askedAt < RETRY_MS)) return;
+    levelsAsked = true;
     askedAt = clock();
-    void readManifest(base, clock()).then((read) => {
-      if (gone || manifestFor !== base) return;
-      manifest = read;
-      levels = read?.bodies[deps.body];
-      deps.onLevels?.(levels);
-      if (levels !== undefined) deps.redraw();
-    });
+    const controller = new AbortController();
+    void Promise.resolve()
+      .then(() => (source.levels === undefined ? DEFAULT_LEVELS : source.levels(deps.body, controller.signal)))
+      .then(
+        (read) => {
+          if (gone || active !== source) return;
+          levelsRead = read !== undefined;
+          levels = read !== undefined && read.length > 0 ? read : undefined;
+          deps.onLevels?.(levels);
+          if (levels !== undefined) deps.redraw();
+        },
+        () => undefined,
+      );
   };
 
   const idle = (): void => {
@@ -302,8 +342,30 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     scheduleFree();
   };
 
+  /** The source for this draw. A change of source (one added, removed or switched off) lets go of the window of the old one and starts again with the new. */
+  const take = (): BodyMapSource | undefined => {
+    const source = deps.source();
+    if (source === active) return source;
+    cancelPending();
+    cancelLoading();
+    dropTiles();
+    if (held !== undefined) {
+      release();
+      deps.apply(null);
+      deps.redraw();
+    }
+    failed.clear();
+    wantKey = "";
+    levels = undefined;
+    levelsRead = false;
+    levelsAsked = false;
+    active = source;
+    if (source === undefined) deps.onLevels?.(undefined);
+    return source;
+  };
+
   // what the view needs, whoever works out the region: the window, loaded after the view has settled
-  const track = (region: Region | undefined, inside: Region | undefined, radiansPixels: number): void => {
+  const track = (source: BodyMapSource, region: Region | undefined, inside: Region | undefined, radiansPixels: number): void => {
     const want = region === undefined ? undefined : chooseWindow(region, levels!, radiansPixels);
     wantLevel = want?.level ?? null;
     if (want === undefined) {
@@ -318,14 +380,18 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     }
     const key = keyOf(want);
     if (held?.key === key || loading?.key === key || pending?.key === key) return;
-    const lastFailed = failed.get(key);
-    if (lastFailed !== undefined && clock() - lastFailed < RETRY_MS) return;
+    // a window that failed is not asked for again while the view wants the same one; a changed view clears it
+    if (key !== wantKey) {
+      if (wantKey !== "") failed.clear();
+      wantKey = key;
+    }
+    if (failed.has(key)) return;
     cancelPending();
     pending = {
       key,
       timer: setTimeout(() => {
         pending = undefined;
-        if (!gone) load(want);
+        if (!gone && active === source) load(want, source);
       }, DETAIL_SETTLE_MS),
     };
   };
@@ -333,49 +399,52 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
   return {
     sync(box, axes, viewWidth) {
       if (gone) return;
-      const base = deps.base();
-      if (base === undefined || !deps.allowed()) {
+      const source = take();
+      if (source === undefined || !deps.allowed()) {
         idle();
         return;
       }
-      ask(base);
+      ask(source);
       if (levels === undefined) return;
       const region = visibleRegion(box, axes);
-      track(region, region === undefined ? undefined : visibleRegion(box, axes, 0), (deps.ratio() * viewWidth) / Math.max(1e-9, box.right - box.left));
+      track(source, region, region === undefined ? undefined : visibleRegion(box, axes, 0), (deps.ratio() * viewWidth) / Math.max(1e-9, box.right - box.left));
     },
-    follow(seen) {
+    follow(seen_) {
       if (gone) return;
-      const base = deps.base();
-      if (base === undefined || !deps.allowed()) {
+      const source = take();
+      if (source === undefined || !deps.allowed()) {
         idle();
         return;
       }
-      // the tile set is read when the view wants more than the 2048 pixel map gives, not before: a page that never gets that close fetches nothing
-      const radiansPixels = seen === undefined ? 0 : seen.radiansPixels * deps.ratio();
-      if (seen !== undefined && radiansPixels / TEXEL_SLACK > BASE_WIDTH / (2 * Math.PI)) ask(base);
+      // the levels are read when the view wants more than the 2048 pixel map gives, not before: a page that never gets that close fetches nothing
+      const radiansPixels = seen_ === undefined ? 0 : seen_.radiansPixels * deps.ratio();
+      if (seen_ !== undefined && radiansPixels / TEXEL_SLACK > BASE_WIDTH / (2 * Math.PI)) ask(source);
       if (levels === undefined) {
         idle();
         return;
       }
-      track(seen?.region, seen?.inside, radiansPixels);
+      track(source, seen_?.region, seen_?.inside, radiansPixels);
     },
     rest() {
       if (!gone) idle();
     },
     get stats() {
       return {
-        ready: manifest !== undefined,
+        ready: levelsRead,
         level: wantLevel,
         shown: held?.window.level ?? null,
-        held: cache.size,
-        loading: inFlight.size,
+        held: heldTiles(),
+        loading: loading === undefined ? 0 : loading.keys.filter((key) => store.get(accountOf(loading!.source, deps.body), key) === undefined).length,
         failed: failed.size,
         requested,
         pixels: held === undefined ? 0 : held.window.cols * TILE_SIZE * held.window.rows * TILE_SIZE,
+        source: held?.source,
+        used: held?.tiles ?? 0,
       };
     },
     dispose() {
       gone = true;
+      unwatch();
       cancelPending();
       cancelLoading();
       cancelFree();
