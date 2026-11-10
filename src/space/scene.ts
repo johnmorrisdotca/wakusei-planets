@@ -140,6 +140,8 @@ export interface SpaceModel {
   drawn: { frame: SpaceFrame; distance: number; radiusPx: number } | null;
   /** What the painter has made now: the bodies drawn, and the moons shown. */
   painted: { bodies: number; moons: number; held: number };
+  /** What the windows of finer map tiles on the bodies are doing, summed at the last draw: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
+  tiles: { requested: number; loading: number; failed: number; shown: number | null };
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -174,6 +176,7 @@ export const newSpaceModel = (): SpaceModel => ({
   look: "realistic",
   drawn: null,
   painted: { bodies: 0, moons: 0, held: 0 },
+  tiles: { requested: 0, loading: 0, failed: 0, shown: null },
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -464,7 +467,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (drawing.billboard) drawing.object.quaternion.copy(camera.quaternion);
             const lit = id !== "sun" && model.light === "lit";
             const toSun = lit ? unit([camera.position.x - pos[id][0], camera.position.y - pos[id][1], camera.position.z - pos[id][2]]) : toSunOf(id);
-            drawing.update({ toSun, ms: model.time, radiusPx: px[id] });
+            drawing.update({ toSun, ms: model.time, radiusPx: px[id], view: { camera, width: size.width, height: size.height } });
           }
           model.painted.bodies = paintedBodies;
 
@@ -514,7 +517,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.object.position.set(at[0], at[1], at[2]);
               drawing.object.scale.setScalar(drawn);
               const moonPx = away <= drawn * 1.001 ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
-              drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx });
+              drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
             }
           }
           let soonest = Number.POSITIVE_INFINITY;
@@ -533,6 +536,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const held of moonSlots.values()) if (held.slot.drawing?.object.visible) paintedMoons += 1;
           model.painted.moons = paintedMoons;
           model.painted.held = moonSlots.size;
+          const tiles: SpaceModel["tiles"] = { requested: 0, loading: 0, failed: 0, shown: null };
+          for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) {
+            const stats = painting?.tiles;
+            if (stats === undefined) continue;
+            tiles.requested += stats.requested;
+            tiles.loading += stats.loading;
+            tiles.failed += stats.failed;
+            if (stats.shown !== null) tiles.shown = Math.max(tiles.shown ?? 0, stats.shown);
+          }
+          model.tiles = tiles;
 
           if (deps.onLabels && model.labels) {
             const places = {} as Record<SpaceBody, BodyPlace | null>;

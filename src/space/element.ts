@@ -8,7 +8,7 @@ import { createGameClock, type GameClock } from "./clock.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
-import { texturePaths } from "../scene/textures.ts";
+import { texturePaths, tilesBase } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_PLANETS, type SpacePlanet } from "./frame.ts";
 import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
@@ -121,7 +121,7 @@ const readBody = (value: string): SpaceBody | undefined => {
 
 /**
  * The zoom range of the space view when it carries its own controls. The floor, a millionth, takes the camera out past Neptune in the true scale. The ceiling is where the camera reaches the body: it is held at
- * 1.05 radii from the surface (`FIT_DISTANCE` over the zoom), so past a zoom of about 3.2 nothing moves; 3 shows the surface as sharp as the painted maps (2048 pixels round) and the shader allow.
+ * 1.05 radii from the surface (`FIT_DISTANCE` over the zoom), so past a zoom of about 3.2 nothing moves; 3 is where the finest map tiles of the Earth, Mars and the Moon (16384 pixels round) run out of detail too, so it is the same ceiling for both.
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3, tiltMax: 90 } as const;
 
@@ -130,7 +130,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
  * (`"lon,lat"`), `time` (`now` or an ISO date), `speed` (1 is real time, 0 holds, 86400 is a day a second, negative runs backwards), `scale` (`compressed` or `true`), `look` (`realistic` or `painted`),
- * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), and `texture-base`, `texture-far-base` and `max-texture`. Positions come from this package's own models. It draws
+ * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), and `texture-base`, `texture-far-base`, `max-texture` and `tiles` (where the finer map tiles are, for a close zoom; `off` for none). Positions come from this package's own models. It draws
  * only when something changes, and nothing while it is out of sight.
  *
  * It carries the shared view controls itself: a drag turns the camera round the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page), and the arrow keys, + and - and 0 work once it is
@@ -497,6 +497,8 @@ export class WakuseiSpace extends HTMLElement {
     camera: { position: [number, number, number]; fov: number };
     /** What the painter has made at the last draw: the bodies with a drawing, the moons shown round a planet that is near, and the moons made and not yet let go. */
     bodies: { look: string; painted: number; moons: number; held: number };
+    /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
+    tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
   } {
     const stats = this.#taken?.renderer.stats;
@@ -511,6 +513,7 @@ export class WakuseiSpace extends HTMLElement {
       lookups: this.#model.lookups,
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
+      tiles: { ...this.#model.tiles },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
     };
   }
@@ -633,7 +636,7 @@ export class WakuseiSpace extends HTMLElement {
 
   // --- the rest --------------------------------------------------------------------------------------------------------------------------------------
   #painterNow(): WakuseiPainter {
-    return (this.#painter ??= createPainter({ textureBase: texturePaths(this).textureBase(), farBase: texturePaths(this).farBase() }));
+    return (this.#painter ??= createPainter({ textureBase: texturePaths(this).textureBase(), farBase: texturePaths(this).farBase(), tiles: tilesBase(this) ?? "off" }));
   }
 
   #textureCap(): number {

@@ -5,6 +5,7 @@ import type { Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { BodyId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { createPainter, type Painting } from "../scene/painter.ts";
+import type { TileLevel } from "../scene/tiles.ts";
 import "../bodies/all.ts";
 import { lightVector, type Placed, type Resolved } from "./model.ts";
 import { poseOf } from "./pose.ts";
@@ -28,6 +29,8 @@ export interface PortraitScene extends Scene3D {
   afterDraw(fn: () => void): void;
   /** The paintings the scene holds now. */
   readonly bodies: number;
+  /** What the windows of finer map tiles on the bodies are doing, summed: tile fetches made, tiles being fetched, windows and the finest level on a body now (`null` for none), and windows or tiles that failed. */
+  readonly tiles: { requested: number; loading: number; failed: number; shown: number | null };
 }
 
 export interface PortraitItemOptions {
@@ -36,6 +39,10 @@ export interface PortraitItemOptions {
   state(): PortraitDraw;
   textureBase(): string;
   farBase(): string;
+  /** Where the finer map tiles are, or `undefined` for none. */
+  tilesBase(): string | undefined;
+  /** Told when a body's tile levels are known (`undefined` when it has none), so the zoom range can follow. */
+  onLevels(body: BodyId, levels: readonly TileLevel[] | undefined): void;
   redraw(): void;
 }
 
@@ -64,7 +71,7 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
   return {
     key: options.key,
     build({ three: T, width, height }): PortraitScene {
-      const painter = createPainter({ textureBase: options.textureBase(), farBase: options.farBase() });
+      const painter = createPainter({ textureBase: options.textureBase(), farBase: options.farBase(), tiles: options.tilesBase() ?? "off" });
       const scene = new T.Scene();
       const camera = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
       const held = new Map<BodyId, { painting: Painting; look: string }>();
@@ -103,11 +110,12 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
         camera.far = distance + slot;
         camera.position.set(cam.x, cam.y, distance);
         camera.updateProjectionMatrix();
+        camera.updateMatrixWorld();
         const toSun = lightVector(state.light);
         placed.forEach((p, i) => {
           let one = held.get(p.body);
           if (one === undefined) {
-            const painting = painter.make(T, p.body, { look: state.look, invalidate: () => options.redraw(), ratio: ratio(), maxTexture: placed.length > 6 ? 1024 : 2048 });
+            const painting = painter.make(T, p.body, { look: state.look, invalidate: () => options.redraw(), ratio: ratio(), maxTexture: placed.length > 6 ? 1024 : 2048, onLevels: (levels) => options.onLevels(p.body, levels) });
             scene.add(painting.object);
             one = { painting, look: state.look };
             held.set(p.body, one);
@@ -122,6 +130,7 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
             radiusPx: r * pxPerUnit,
             pose: { pole: pose.pole, meridian: pose.meridian },
             ...(state.shadows ? { occluders: occludersFor(placed, i) } : {}),
+            view: { camera, width: viewWidth, height: viewHeight },
           });
         });
       };
@@ -133,6 +142,21 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
         apply,
         get bodies() {
           return held.size;
+        },
+        get tiles() {
+          let requested = 0;
+          let loading = 0;
+          let failed = 0;
+          let shown: number | null = null;
+          for (const one of held.values()) {
+            const stats = one.painting.tiles;
+            if (stats === undefined) continue;
+            requested += stats.requested;
+            loading += stats.loading;
+            failed += stats.failed;
+            if (stats.shown !== null) shown = Math.max(shown ?? 0, stats.shown);
+          }
+          return { requested, loading, failed, shown };
         },
         afterDraw(fn: () => void) {
           after.push(fn);

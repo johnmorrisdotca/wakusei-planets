@@ -28,6 +28,7 @@ function portrait(): void {
   const view = document.createElement("wakusei-portrait");
   view.setAttribute("scene", query.get("scene") ?? "");
   view.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
+  view.setAttribute("tiles", query.get("tiles") ?? "tiles/");
   const lang = query.get("lang");
   if (lang !== null) view.setAttribute("lang", lang);
   frame.classList.add("portrait");

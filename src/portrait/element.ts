@@ -9,7 +9,10 @@ import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared.ts";
 // /portrait has always registered the body element as well.
 import "../element.ts";
-import { texturePaths } from "../scene/textures.ts";
+import { texturePaths, tilesBase } from "../scene/textures.ts";
+import { detailOf, lookOf } from "../scene/look.ts";
+import { mapWidthOf, ringWidthOf, zoomLimit } from "../scene/reach.ts";
+import type { TileLevel } from "../scene/tiles.ts";
 import { backgroundCss, drawShapes, lineScene, paintBackground, shapesOf, shapesSvg, starfield } from "./overlay.ts";
 import { decodeScene, defaultPortrait, encodeScene, fromScreen, hitTest, resolve, toScreen, type Guide, type Placed, type Portrait, type Resolved } from "./model.ts";
 import { REDUCED_TURN } from "../live.ts";
@@ -32,8 +35,9 @@ export { setThreeLoader };
 export type PortraitState = "line" | "loading" | "still" | "live" | "lost" | "unavailable";
 
 /**
- * The zoom range of a portrait that carries its own controls. The floor is arbitrary: a tenth of Fit leaves room to see the whole scene small. The ceiling is the painted maps: the sharpest is 2048 pixels round
- * a body, which stays sharp to a few times the size at Fit and softens after that; 8 times is as far as the bodies' own shader detail goes. A scene of a line look has detail at any scale.
+ * The zoom range of a portrait that carries its own controls, before it knows what its bodies have. The floor is arbitrary: a tenth of Fit leaves room to see the whole scene small. The ceiling is as far as the
+ * bodies' own pictures go: 8 times is where the 2048 pixel maps and the shader detail run out. A shaded scene goes further where a body has finer map tiles (`#limits`), as far as the farthest-reaching body in it;
+ * a scene of a line look stays here, so a scene can change look without the range changing under it.
  */
 const CARRIED_LIMITS = { zoomMin: 0.1, zoomMax: 8 } as const;
 
@@ -53,10 +57,10 @@ const num = (value: string | null, fallback: number): number => {
  * The `<wakusei-portrait>` custom element: a scene of bodies arranged on one picture.
  *
  * Attributes: `scene` (the scene as the portrait builder writes it in its address), `look` (`line`, `realistic` or `painted`: replaces the scene's), `size` (pixels across), `lang` (`en` or `ja`: the names),
- * `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` and `texture-far-base` (where the surface pictures are).
+ * `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` and `texture-far-base` (where the surface pictures are), and `tiles` (where the finer map tiles are, for a close zoom; `off` for none).
  *
  * It carries the shared view controls itself: a drag moves the picture, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), and the arrow keys, + and - and 0 work once it is focused.
- * `controls="none"` turns them off (the portrait builder does, for it edits the scene by dragging its bodies); `zoom-min` and `zoom-max` set the range (0.1 to 8 by default); a `<kazoku-view-controls for="...">` takes over and reads it.
+ * `controls="none"` turns them off (the portrait builder does, for it edits the scene by dragging its bodies); `zoom-min` and `zoom-max` set the range (0.1 to 8 by default, and further for a body with finer map tiles: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  *
  * @example
  * ```ts no-run
@@ -95,6 +99,8 @@ export class WakuseiPortrait extends HTMLElement {
   #overKey = "";
   #lineKey = "";
   #zoom = 1;
+  #tileLevels = new Map<string, readonly TileLevel[] | undefined>();
+  #limitKey = "";
   #panX = 0;
   #panY = 0;
   #hands: ElementControls | undefined;
@@ -116,6 +122,7 @@ export class WakuseiPortrait extends HTMLElement {
   set portrait(value: Portrait) {
     this.#portrait = value;
     this.#fromAttributes = false;
+    this.#refreshLimits();
     this.#changed();
   }
 
@@ -130,8 +137,8 @@ export class WakuseiPortrait extends HTMLElement {
   }
 
   /** Numbers for a test or a status line. */
-  get stats(): { state: PortraitState; bodies: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined } {
-    return { state: this.#state, bodies: this.#resolved.placed.length, renderer: this.#renderer?.stats };
+  get stats(): { state: PortraitState; bodies: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; tiles: PortraitScene["tiles"] | undefined; zoomMax: number | undefined } {
+    return { state: this.#state, bodies: this.#resolved.placed.length, renderer: this.#renderer?.stats, tiles: (this.#view?.scene as PortraitScene | undefined)?.tiles, zoomMax: this.#hands?.controller.limits.zoomMax };
   }
 
   /** Where everything is on the page now: the picture's size in pixels, pixels to a scene unit, and the bodies (back to front). */
@@ -182,6 +189,7 @@ export class WakuseiPortrait extends HTMLElement {
     this.#applyHover();
     this.#readAttributes();
     this.#hands = carryControls(this, { turnable: false, limits: CARRIED_LIMITS, onChange: (view) => this.setView(view) });
+    this.#refreshLimits();
     this.#queue();
   }
 
@@ -282,6 +290,40 @@ export class WakuseiPortrait extends HTMLElement {
     const look = this.getAttribute("look");
     if (look === "line" || look === "realistic" || look === "painted" || look === "illustrated") p.look = look;
     this.#portrait = p;
+    this.#refreshLimits();
+  }
+
+  /**
+   * The zoom range now: a line scene, or one of bodies with no finer maps, `CARRIED_LIMITS`; a shaded scene as far as its farthest-reaching body goes by the table of `scene/reach.ts` (each body measured in the
+   * radii its picture reaches at zoom 1, from the middle of the short side of the view to its edge, on the widest map it has, the finest tile level once the tiles are found, and on whether its surface is soft).
+   */
+  #limits(): { zoomMin: number; zoomMax: number } {
+    const p = this.#portrait;
+    if (p.look === "line") return CARRIED_LIMITS;
+    const { placed, camera } = resolve(p);
+    const { width, height } = this.#size();
+    const half = camera.h * Math.min(1, width / Math.max(1, height));
+    let zoomMax: number = CARRIED_LIMITS.zoomMax;
+    for (const one of placed) {
+      if (one.r <= 0) continue;
+      const look = lookOf(one.body);
+      if (look === undefined) continue;
+      const painted = p.look !== "illustrated" && look.painted !== undefined;
+      const smooth = detailOf(look).stretch > 1;
+      const extent = half / one.r;
+      zoomMax = Math.max(zoomMax, look.emissive === true ? zoomLimit(1, 0, false) : zoomLimit(extent, mapWidthOf(look, painted, this.#tileLevels.get(one.body)), smooth, painted ? ringWidthOf(look, BODIES[one.body].radiusKm) : 0));
+    }
+    return { zoomMin: CARRIED_LIMITS.zoomMin, zoomMax };
+  }
+
+  /** Tell the shared controls the zoom range, when it has changed (a new scene, the tiles of a body found). */
+  #refreshLimits(): void {
+    if (this.#hands === undefined) return;
+    const limits = this.#limits();
+    const key = `${limits.zoomMax}`;
+    if (key === this.#limitKey) return;
+    this.#limitKey = key;
+    this.#hands.setLimits(limits);
   }
 
   #lang(): "en" | "ja" {
@@ -457,6 +499,11 @@ export class WakuseiPortrait extends HTMLElement {
       key: this.#viewKey,
       state: () => this.#draw(),
       ...texturePaths(this),
+      tilesBase: () => tilesBase(this),
+      onLevels: (body, levels) => {
+        this.#tileLevels.set(body, levels);
+        this.#refreshLimits();
+      },
       redraw: () => this.#view?.invalidate(),
     });
     this.#view = this.#renderer!.view(this.#stage, item);
