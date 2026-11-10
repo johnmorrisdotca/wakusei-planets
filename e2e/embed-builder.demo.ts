@@ -102,13 +102,18 @@ test("the picture fits its box at every size, on a phone and on a desk", async (
   await page.goto(`${URL}?look=line&body=venus`);
   for (const size of [160, 240, 320, 480]) {
     await page.locator(`#embed-panel button[data-size="${size}"]`).click();
-    await page.waitForTimeout(150);
-    const fits = await page.evaluate(() => {
-      const inside = document.querySelector("#embed-panel")!.shadowRoot!;
-      const box = inside.querySelector('[part="preview"]')!.getBoundingClientRect();
-      const body = inside.querySelector('[part="preview"] wakusei-body')!.getBoundingClientRect();
-      return body.left >= box.left - 0.5 && body.right <= box.right + 0.5 && body.top >= box.top - 0.5 && body.bottom <= box.bottom + 0.5;
-    });
-    expect(fits, `${size}`).toBe(true);
+    // The panel lays the picture out and scales it to its box on the next animation frame after a choice, so how soon it fits depends on the machine: wait for that, then it must fit exactly.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const inside = document.querySelector("#embed-panel")!.shadowRoot!;
+            const box = inside.querySelector('[part="preview"]')!.getBoundingClientRect();
+            const body = inside.querySelector('[part="preview"] wakusei-body')!.getBoundingClientRect();
+            return body.left >= box.left - 0.5 && body.right <= box.right + 0.5 && body.top >= box.top - 0.5 && body.bottom <= box.bottom + 0.5;
+          }),
+        { message: `${size} fits its box`, timeout: 30_000 },
+      )
+      .toBe(true);
   }
 });

@@ -3,7 +3,6 @@ import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui
 import { expect, test, type Page } from "@playwright/test";
 import { setLight } from "./space-ui.ts";
 
-test.describe.configure({ mode: "serial" });
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
   void page;
@@ -25,6 +24,24 @@ interface SpaceStats {
 }
 const statsOf = (page: Page): Promise<SpaceStats> => page.locator(SPACE).evaluate((el) => Reflect.get(el, "stats") as SpaceStats);
 const settle = (page: Page, ms = 600) => page.waitForTimeout(ms);
+/**
+ * Wait until the view has stopped drawing: no GL draw call for `quietMs`. A fresh view draws as its pictures arrive (the Earth's 512 then 1024 pixel map, each one frame), and how soon they come
+ * depends on the machine, so a test of "nothing is drawn" starts from the moment the load is over, not from a fixed time after it began. A view that never stops drawing never gets here and fails.
+ */
+async function untilQuiet(page: Page, quietMs = 1500): Promise<void> {
+  let last = (await readCounts(page)).draws;
+  let since = Date.now();
+  const stop = Date.now() + 30_000;
+  while (Date.now() - since < quietMs) {
+    if (Date.now() > stop) throw new Error(`the view was still drawing after 30 s (${last} draw calls)`);
+    await page.waitForTimeout(100);
+    const now = (await readCounts(page)).draws;
+    if (now !== last) {
+      last = now;
+      since = Date.now();
+    }
+  }
+}
 const setOn = (page: Page, key: string, value: unknown) => page.locator(SPACE).evaluate((el, [k, v]) => Reflect.set(el, k as string, v), [key, value] as const);
 
 async function open(page: Page, query = `t=${NOV2}`): Promise<void> {
@@ -87,6 +104,9 @@ test("the names can be in Japanese and a page's own words", async ({ page }) => 
 
 test("paused, nothing is drawn and no frame is asked for; at real time, at most one draw in 6 seconds", async ({ page }) => {
   await open(page);
+  // the Earth's finer map comes after the first picture, and draws one frame when it arrives: wait for it, then for the view to be quiet
+  await page.waitForFunction(() => performance.getEntriesByType("resource").some((e) => /earth-1024/.test(e.name) && (e as PerformanceResourceTiming).responseEnd > 0), undefined, { polling: 100, timeout: 60_000 });
+  await untilQuiet(page);
   const before = await readCounts(page);
   await page.waitForTimeout(4000);
   const after = await readCounts(page);
@@ -117,6 +137,28 @@ test("a day a second: time runs at that rate, at most 30 draws a second, an ephe
   expect(perSecond).toBeLessThan(1.25);
   expect(draws).toBeLessThanOrEqual(31);
   expect(lookups).toBeLessThanOrEqual(2.6);
+});
+
+test("time is the page's clock: the moment read at any time, and across a ride that starts and stops, is what the speed gives for the time that passed", async ({ page }) => {
+  await open(page);
+  await setOn(page, "speed", 3600);
+  // read the element's moment and the page's clock together, so a slow draw between reads cannot spoil the count
+  const read = () => page.locator(SPACE).evaluate((el) => ({ time: (el as unknown as { time: number }).time, at: performance.now() }));
+  const from = await read();
+  await page.locator(SPACE).evaluate(async (el) => {
+    const space = el as unknown as { ride(target: string | null, options?: { smooth?: boolean }): void };
+    for (const target of ["moon", null, "mars", null]) {
+      space.ride(target, { smooth: false });
+      await new Promise((done) => setTimeout(done, 150));
+    }
+  });
+  const to = await read();
+  const seconds = (to.at - from.at) / 1000;
+  // a ride used to start the count again from the last step, and the time since that step was lost each time
+  const rate = (to.time - from.time) / 3_600_000 / seconds; // hours of game time for each real second: 1 at a speed of 3600
+  expect(rate, `${((to.time - from.time) / 3_600_000).toFixed(3)} hours in ${seconds.toFixed(2)} s`).toBeGreaterThan(0.99);
+  expect(rate).toBeLessThan(1.01);
+  expect((await statsOf(page)).time, "the stats read the same clock").toBeGreaterThanOrEqual(to.time);
 });
 
 test("time runs backwards", async ({ page }) => {
@@ -394,16 +436,33 @@ test("Always lit lights every body, not only the Earth: the Moon and Venus show 
 
 test("the view can be moved sideways and rolled: every body in the picture moves by exactly the pixels asked, at any depth, and a roll turns the picture clockwise", async ({ page }) => {
   await open(page);
+  /** Draw calls so far, and a poll that waits for one more: a change is on the screen only once a frame has drawn it, and on a busy machine the next frame is seconds away, not 800 ms. */
+  const draws = async (): Promise<number> => (await statsOf(page)).draws;
+  const untilDrawn = async (before: number, what: string): Promise<void> => {
+    await expect.poll(draws, { message: `a frame draws ${what}`, timeout: 60_000 }).toBeGreaterThan(before);
+  };
+  const toInner = await draws();
   await jump(page, "Inner planets");
-  await settle(page, 1000);
-  const view = (v: { zoom: number; roll?: number; panX?: number; panY?: number }) => page.locator(SPACE).evaluate((el, w) => (el as unknown as { setView(v: unknown): void }).setView({ yaw: 0, tilt: 0, ...w }), v);
+  await untilDrawn(toInner, "the Inner planets");
+  /** Set the view and wait for the frame that draws it. A view the element already has asks for no frame (it sends no `wakusei-view`), and none is waited for. */
+  const view = async (v: { zoom: number; roll?: number; panX?: number; panY?: number }): Promise<void> => {
+    const sent = await page.locator(SPACE).evaluate((el, w) => {
+      const space = el as unknown as { setView(v: unknown): void; stats: { draws: number } };
+      let changed = false;
+      const mark = (): void => void (changed = true);
+      el.addEventListener("wakusei-view", mark);
+      const before = space.stats.draws;
+      space.setView({ yaw: 0, tilt: 0, ...w });
+      el.removeEventListener("wakusei-view", mark);
+      return { changed, before };
+    }, v);
+    if (sent.changed) await untilDrawn(sent.before, "the new view");
+  };
   const zoom = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("inner"));
   await view({ zoom });
-  await settle(page, 800);
   const before = [await labelAt(page, "sun"), await labelAt(page, "earth"), await labelAt(page, "venus")];
   expect(before.every((at) => at !== null)).toBe(true);
   await view({ zoom, panX: 90, panY: -40 });
-  await settle(page, 800);
   const after = [await labelAt(page, "sun"), await labelAt(page, "earth"), await labelAt(page, "venus")];
   for (const [i, at] of after.entries()) {
     expect(Math.abs(at!.x - before[i]!.x - 90), `body ${i} moves 90 px right`).toBeLessThanOrEqual(1);
@@ -411,11 +470,9 @@ test("the view can be moved sideways and rolled: every body in the picture moves
   }
   // rolling a quarter turn clockwise takes what was at the right to the bottom
   await view({ zoom });
-  await settle(page, 600);
   const flat = await labelAt(page, "sun");
   const box = (await page.locator(SPACE).boundingBox())!;
   await view({ zoom, roll: 90 });
-  await settle(page, 800);
   const rolled = await labelAt(page, "sun");
   const [cx, cy] = [box.width / 2, box.height / 2];
   const [dx, dy] = [flat!.x - cx, flat!.y - cy];
@@ -439,13 +496,19 @@ test.describe("a reader who prefers reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
   test("a ride jumps instead of gliding, and runs at about one step a second at 60 times real time", async ({ page }) => {
     await open(page);
+    // the Earth's finer map draws one frame when it arrives, which is not a step of the clock: let it come before counting
+    await page.waitForFunction(() => performance.getEntriesByType("resource").some((e) => /earth-1024/.test(e.name) && (e as PerformanceResourceTiming).responseEnd > 0), undefined, { polling: 100, timeout: 60_000 });
     await rideAlong(page, "moon");
     expect((await rideOf(page)).ride.gliding).toBe(false);
     await setOn(page, "speed", 60);
     await settle(page, 800);
-    const s0 = await statsOf(page);
+    // The draws are counted over the real time between the two reads, taken with the page's own clock: a wait of 4000 ms on a busy machine is 5 s or more by the time the second read
+    // is made,, and a count divided by the 4 it was meant to be overstates the rate (CI read 7 draws as 1.75 a second).
+    const read = () => page.locator(SPACE).evaluate((el) => ({ draws: (Reflect.get(el, "stats") as { draws: number }).draws, at: performance.now() }));
+    const s0 = await read();
     await page.waitForTimeout(4000);
-    const s1 = await statsOf(page);
-    expect((s1.draws - s0.draws) / 4).toBeLessThanOrEqual(1.6);
+    const s1 = await read();
+    const seconds = (s1.at - s0.at) / 1000;
+    expect((s1.draws - s0.draws) / seconds, `${s1.draws - s0.draws} draws in ${seconds.toFixed(2)} s`).toBeLessThanOrEqual(1.6);
   });
 });

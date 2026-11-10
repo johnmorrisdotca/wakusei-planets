@@ -75,9 +75,10 @@ test.describe("the space page", () => {
       await page.getByRole("group", { name: "Ride along" }).getByRole("button", { name: label, exact: true }).dispatchEvent("click");
       await expect(play(page)).toHaveAttribute("aria-pressed", "true");
       await expect.poll(async () => (await boxMs(page)) - before, { message: `the box moved on while riding ${ride}`, timeout: 8000 }).toBeGreaterThanOrEqual(3600_000);
+      // "keeps moving": it reaches a later minute again. The box is written from the element's events, and a long draw of the ride can hold them back for a second or two on a busy machine, so
+      // it is the box moving on that is waited for (a box that stopped for good fails at the end of the wait), not a fixed 1.5 s.
       const later = await boxMs(page);
-      await page.waitForTimeout(1500);
-      expect(await boxMs(page), "and keeps moving").toBeGreaterThan(later);
+      await expect.poll(() => boxMs(page), { message: "and keeps moving", timeout: 15_000 }).toBeGreaterThan(later);
     });
   }
 
@@ -91,9 +92,9 @@ test.describe("the space page", () => {
 
     await play(page).click();
     expect((await addressOf(page)).get("play")).toBe("on");
-    await page.waitForTimeout(2000);
+    // a lower bound, waited for: the box is written from the element's events, which a long draw can hold back on a busy machine
+    await expect.poll(() => boxMs(page), { message: "Play moves the date on from the date shown", timeout: 15_000 }).toBeGreaterThan(start + 3600_000);
     const running = await boxMs(page);
-    expect(running, "Play moves the date on from the date shown").toBeGreaterThan(start + 3600_000);
 
     await play(page).click();
     await expect(play(page)).toHaveAttribute("aria-pressed", "false");
@@ -109,8 +110,7 @@ test.describe("the space page", () => {
 
     // Play again goes on from there, and Back goes to the date the reader chose, not where Pause was
     await play(page).click();
-    await page.waitForTimeout(1500);
-    expect(await boxMs(page), "Play goes on from the date it was held on").toBeGreaterThan(held + 1800_000);
+    await expect.poll(() => boxMs(page), { message: "Play goes on from the date it was held on", timeout: 15_000 }).toBeGreaterThan(held + 1800_000);
     await back(page).click();
     await expect(play(page)).toHaveAttribute("aria-pressed", "false");
     expect(await boxMs(page), "Back returns to the chosen date").toBe(start);
@@ -167,9 +167,7 @@ test.describe("the body page", () => {
     expect(await boxMs(page), "held until Play").toBe(start);
     await play(page).click();
     await expect(page.locator("#main")).toHaveAttribute("rate", "86400");
-    await page.waitForTimeout(2200);
-    const later = await boxMs(page);
-    expect(later - start, "the box reads a later day").toBeGreaterThanOrEqual(DAY);
+    await expect.poll(async () => (await boxMs(page)) - start, { message: "the box reads a later day", timeout: 15_000 }).toBeGreaterThanOrEqual(DAY);
     await play(page).click();
     await page.waitForTimeout(400);
     const held = await boxMs(page);
