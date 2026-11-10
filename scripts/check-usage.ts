@@ -378,7 +378,7 @@ await step("star-iframe", async () => {
     const frame = page.frameLocator("iframe");
     await frame.locator("wakusei-body svg").waitFor({ timeout: 20_000 });
     if ((await frame.locator("wakusei-body").getAttribute("star")) !== "Betelgeuse") throw new Error("the embed ignored the star");
-    if ((await frame.locator("wakusei-body").getAttribute("temperature-k")) !== "3600") throw new Error("the embed ignored the star's numbers");
+    if ((await frame.locator("wakusei-body").getAttribute("temperature-k")) !== "3650") throw new Error("the embed ignored the star's numbers");
   });
 });
 
