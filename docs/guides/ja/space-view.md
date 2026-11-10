@@ -60,11 +60,17 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 この要素は、ドラッグ、ピンチ、Ctrl とホイール、キーを自分で受けます ([ズームと移動](zoom-and-pan.md))。範囲は100万分の1 (太陽系ぜんぶが見えるところまでカメラを引く) から3倍までです。上限は、カメラが天体に着くところです。カメラは、見ている天体の半径の `3.4 / zoom` 倍の所にいて、ズーム1でその天体が画面いっぱいになります。カメラは表面から1.05半径より近づかないので、約3.2を超えても何も動きません。3倍では、表面は地図のタイルがいちばん細かいところまでくっきり見えます (タイルがあるのは、地球と、`painted` の見た目の火星と月です。[近づくズームと地図のタイル](close-zoom.md))。タイルは、カメラがそこまで近づいたときだけ、見えている部分ぶんを取ります。ボタンがほしいときは、ファミリーの `<kazoku-view-controls for="space">` を横に置きます。バーも同じ範囲を読みます。`zoom-min` と `zoom-max` はどちらにつけても範囲が変わり、`controls="none"` で要素自身の手を外せます。`space.zoomFor("moon" | "sun" | "inner" | "solar-system" | "earth" | "jupiter-moons")` は、いまの縮尺と時刻で、空のその部分が収まるズームを返します。`space.controller.set({ zoom })` (バーがあるときは `controls.controller.set({ zoom }, true, "jump")`) でそこへ行きます。`space.setView(コントロールの値)` は、カメラを天体のまわりで回します (`roll` は画面を時計まわりに回し、`panX` と `panY` は、絵の中のすべてをちょうどそのCSSピクセル分、右と下を正として、奥行きに関係なく動かします)。カメラは星に固定されているので、時間が進むと地球はカメラの下で回ります。
 
-`space.body = "jupiter"` で、カメラをその天体に向けます (`earth`、`sun`、`moon`、`mercury` から `neptune`、`pluto`)。各天体の横の名前はボタンです (Tab と Enter)。ドラッグではない押し方で天体を押すと、`wakusei-body-click` が `{ id, name, radiusKm, distanceKm }` つきで発火します (キーボードでは `wakusei-body-focus`)。同じ値は `space.bodyInfo(id)` でも得られます。`space.bodyNames = { mars: "火星" }` や `lang="ja"` で表示する言葉を変えられます。
+`space.body = "jupiter"` で、カメラをその天体に向けます。大文字でも小文字でも、英語でも日本語でも、この表示にある天体ならどれでも使えます (`earth`、`sun`、`moon`、`mercury` から `neptune`、`pluto`、それに `titan` のような惑星の衛星)。天体でない名前を入れても何も変わりません。各天体の横の名前はボタンです (Tab と Enter)。ドラッグではない押し方で天体を押すと、`wakusei-body-click` が `{ id, name, kind, host, radiusKm, distanceKm }` つきで発火します (キーボードでは `wakusei-body-focus`)。同じ値は `space.bodyInfo(id)` でも得られます。`space.bodyNames = { mars: "火星" }` や `lang="ja"` で表示する言葉を変えられます。
 
 名前は重なりません。2つの名前の枠が重なるときは、大事なほうだけを出し、出さない名前は輪も出しません。優先は、見ている天体、太陽、惑星、月の順で、同じ順なら画面で大きいほうが残ります。衛星は惑星に、惑星は太陽に場所をゆずり、ズームインすると名前が戻ります。`@johnmorrisdotca/wakusei-planets/space` の `chooseLabels(boxes)` は、同じ決まりを四角形の一覧にそのまま使えます。
 
 惑星が数ピクセルの大きさになると、そのまわりに近い衛星が現れます。位置はこのパッケージの衛星モデルが出します (`zoomFor("jupiter-moons")`)。地球と惑星が太陽のまわりを回る道と、月が地球のまわりを回る道は、`orbits="off"` にしない限り描きます。どの線も天体と同じ変換を通るので、どちらの縮尺でも、天体は自分の線の上にいます。`stats.orbits` は、描いた線と、各天体が自分の線からどれだけ離れているか (線の半径に対する割合。線の上なら0.01未満) を返します。月の線は、月がいる場所から恒星月1つぶんの道で、時計が数日進むたびに計算し直します。点は `moonOrbit(ms)` で得られます。
+
+## 天体へ行く、天体をめぐる
+
+天体かその名前を最初に押すと、その天体が選ばれます。同じ内容の `wakusei-body-select` が発火し (ページのカードに使えます)、`space.selected` で読めますが、表示は動きません。選ばれた天体をもう一度押すか、`space.goTo("saturn")` を呼ぶと、その天体が表示の中心になります。カメラは約1秒でそこへ滑るように動き (動きを減らす設定の人や `{ smooth: false }` のときは一瞬で移ります)、ズームは1に戻って天体ぜんたいが見え (`{ zoom }` で別の値も指定できます)、時間が進んでもその天体を追います。押してほかの場所に飛ぶことはなく、すでに中心にある天体を押しても何も起こりません。`goTo` は、そこへ行けるかどうかを返します。`<kazoku-view-controls>` を要素に結びつけているときは、ズームの状態をバーが持つので、イベントが運ぶ値をページが `controls.controller.set({ zoom }, true, "jump")` で反映します。
+
+めぐる順番は一つに決まっています。太陽、水星、金星、地球、月、火星、フォボス、ダイモス、木星とその衛星、と外へ進み、各惑星の次にその衛星が近い順に来ます (全体は `/space` の `HOP_ORDER` です)。`space.next()` と `space.previous()` は、次の天体と前の天体へ行き、最後からは太陽にもどります。どちらも、行った先の `BodyInfo` を返します。中心が変わるたびに `wakusei-hop` が `{ current, previous, next }` (それぞれ `BodyInfo`。`goTo` やめぐる操作がズームを求めたときは `zoom` も) つきで発火するので、矢印を2つ置いて、それぞれの行き先の名前を見せられます。`space.hopper` はいつでも同じ値を返します。`space.bodyList()` はジャンプ用の一覧で、行けるすべての天体を順番に、種類 (`kind`: `star`、`planet`、`dwarf-planet`、`moon`) と、衛星なら `host` つきで返します。`/space` の `findBody("Saturn")` と `findBody("土星")` は、人が入力した言葉から天体を読み取ります。
 
 ## 全画面
 

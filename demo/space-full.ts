@@ -38,7 +38,25 @@ for (const button of document.querySelectorAll<HTMLButtonElement>("[data-goto]")
     for (const other of document.querySelectorAll<HTMLButtonElement>("[data-goto]")) other.setAttribute("aria-pressed", String(other === button));
   });
 }
+// the hopper: two arrows with the names of where each leads; the bar holds the zoom, so the page applies the one a hop asks for
+const say = (key: string): string => chooser()?.word(key) ?? key;
+const showHop = (): void => {
+  const { previous, next } = space.hopper;
+  document.querySelector("#hop-prev-name")!.textContent = previous.name;
+  document.querySelector("#hop-next-name")!.textContent = next.name;
+  document.querySelector("#hop-prev")!.setAttribute("aria-label", `${say("sp_hop_prev")}: ${previous.name}`);
+  document.querySelector("#hop-next")!.setAttribute("aria-label", `${say("sp_hop_next")}: ${next.name}`);
+};
+document.querySelector("#hop-prev")!.addEventListener("click", () => space.previous());
+document.querySelector("#hop-next")!.addEventListener("click", () => space.next());
+space.addEventListener("wakusei-hop", (event) => {
+  const { zoom } = (event as CustomEvent<{ zoom?: number }>).detail;
+  if (zoom !== undefined) controls.controller.set({ zoom }, true, "jump");
+  showHop();
+});
+showHop();
 window.addEventListener("wakusei-language", () => {
+  showHop();
   space.setAttribute("lang", chooser()?.lang ?? "en");
   controls.setAttribute("lang", chooser()?.lang ?? "en");
   show(space.time);

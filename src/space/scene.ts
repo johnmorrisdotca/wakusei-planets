@@ -2,13 +2,14 @@
 // Sun, so the Moon's phase and the Earth's day side come out of the light, not out of a table. Draws only when asked; holds no clock.
 import type * as THREE from "three";
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
-import { BODIES, type MoonId } from "../facts.ts";
+import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { moonOffset } from "../scene/orient.ts";
 import { type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
+import { hostOf } from "./bodies.ts";
 import { createTrack, moonOrbit, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
@@ -135,8 +136,8 @@ export interface SpaceModel {
   labels: boolean;
   /** Milliseconds of game time one second of wall time covers (the ephemeris is looked up once per such span). */
   stepMs: number;
-  /** The body the camera looks at, and (in `zoom`) fills the view with at 1x. */
-  focus: SpaceBody;
+  /** The body the camera looks at, and (in `zoom`) fills the view with at 1x: any body the package knows that the view can place (the eleven of `SPACE_BODIES` and the moons of the planets). */
+  focus: BodyId;
   light: SpaceLight;
   /** How the painter draws the bodies (`realistic` or `painted`). */
   look: string;
@@ -221,7 +222,7 @@ export interface SpaceDeps {
   /** Bring the model's time up to the page's clock; called at the start of each draw, so a picture drawn late shows the moment it is drawn at and not the one of the last tick. */
   advance?: () => void;
   /** Where each body is on the screen, in CSS pixels in the box, or null when it is behind the camera. Called at each draw. */
-  onLabels?: (places: Record<SpaceBody, BodyPlace | null>) => void;
+  onLabels?: (places: Record<string, BodyPlace | null>) => void;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
   onMoving?: () => void;
   /** The target of the ride could not be placed at this draw. */
@@ -351,9 +352,20 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           // that body, from its centre; the body is drawn at `centre` with the radius `unitWorld`, so the same numbers place the camera in the scene.
           model.rideLost = false;
           model.rideMotion = 0;
-          let focus: SpaceBody = model.focus;
-          let focusPos: Vec3 = pos[focus];
-          let focusRadius = radiusOf(focus);
+          let focus: BodyId = model.focus;
+          let focusPos: Vec3;
+          let focusRadius: number;
+          if ((SPACE_BODIES as readonly string[]).includes(focus)) {
+            focusPos = pos[focus as SpaceBody];
+            focusRadius = radiusOf(focus as SpaceBody);
+          } else {
+            // a moon of a planet: its place round the planet, in the planet's radii as the view draws them
+            const host = (hostOf(focus) ?? "earth") as SpacePlanet;
+            const offset = moonSite(focus as MoonId, model.time, host);
+            const hostRadius = radiusOf(host);
+            focusPos = [pos[host][0] + offset[0] * hostRadius, pos[host][1] + offset[1] * hostRadius, pos[host][2] + offset[2] * hostRadius];
+            focusRadius = Math.max(1e-9, (BODIES[focus].radiusKm / BODIES[host].radiusKm) * hostRadius);
+          }
           let aimWay = 1;
           let rideFrom: { around: SpaceBody; centre: Vec3; unitWorld: number; position: Vec3; velocity: Vec3; perSecond: number; hiddenBody: SpaceBody | null; hiddenMoon: string | null } | null = null;
           const ride = model.ride;
@@ -437,7 +449,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const lat = Math.max(-90, Math.min(90, model.centre.lat - aimWay * model.view.tilt));
             const aim = groundDirection(lon, lat, model.anchor);
             // at zoom 1 the whole picture of the body fits the shorter side of the view, in any shape: a tall view is as far again as it is taller than wide, and a ringed body is framed with its rings
-            const across = focusRadius * (FRAMED[focus] ?? 1) * Math.max(1, size.height / Math.max(1, size.width));
+            const across = focusRadius * (FRAMED[focus as SpaceBody] ?? 1) * Math.max(1, size.height / Math.max(1, size.width));
             distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * across) / Math.max(1e-9, model.view.zoom));
             target.set(focusPos[0], focusPos[1], focusPos[2]);
             camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
@@ -537,17 +549,19 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           // the moons of a planet, once it is big enough on the screen to show them
           const now = performance.now();
           const seen = new Set<string>();
+          const moonPlaces: Record<string, BodyPlace> = {};
           for (const id of SPACE_PLANETS) {
             const planet = slotOf(id).drawing;
             if (!planet || px[id] < MOON_MIN_PLANET_PX) continue;
             const radius = radiusOf(id);
-            for (const site of deps.painter().moons(id, model.time)) {
+            for (const moon of (MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? []) {
+              const site = { name: moon as string, offset: moonOffset(moon, model.time), radius: BODIES[moon].radiusKm / BODIES[id].radiusKm };
               const reach = Math.hypot(site.offset[0], site.offset[1], site.offset[2]);
               const k = reach === 0 ? 1 : moonDistance(mode, id, reach) / reach;
               const at: Vec3 = [pos[id][0] + site.offset[0] * k * radius, pos[id][1] + site.offset[1] * k * radius, pos[id][2] + site.offset[2] * k * radius];
               projected.set(at[0], at[1], at[2]).project(camera);
               if (projected.z > 1 || Math.abs(projected.x) > 1.25 || Math.abs(projected.y) > 1.25) continue;
-              const key = site.name.toLowerCase();
+              const key = site.name;
               if (key === hiddenMoon) continue;
               let held = moonSlots.get(key);
               if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false }, seen: now }));
@@ -563,6 +577,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.object.scale.setScalar(drawn);
               const moonPx = away <= drawn * 1.001 ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
               drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
+              const spot = labelFor(at);
+              if (spot) moonPlaces[key] = { x: spot.x, y: spot.y, r: moonPx };
             }
           }
           let soonest = Number.POSITIVE_INFINITY;
@@ -593,7 +609,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           model.tiles = tiles;
 
           if (deps.onLabels && model.labels) {
-            const places = {} as Record<SpaceBody, BodyPlace | null>;
+            const places: Record<string, BodyPlace | null> = { ...moonPlaces };
             for (const id of SPACE_BODIES) {
               const at = id === hiddenBody || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
               places[id] = at ? { x: at.x, y: at.y, r: px[id] } : null;

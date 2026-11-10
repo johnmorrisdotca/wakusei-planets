@@ -41,6 +41,10 @@
           <button type="button" class="pill" data-goto="inner" aria-pressed="false" data-say="sp_goto_inner">Inner planets</button>
           <button type="button" class="pill" data-goto="solar-system" aria-pressed="false" data-say="sp_goto_solar">Whole solar system</button>
         </div>
+        <div class="group" role="group" aria-label="Hop" data-say-label="sp_hop">
+          <button type="button" class="pill" id="hop-prev" aria-label="Previous body">&#8249; <span id="hop-prev-name"></span></button>
+          <button type="button" class="pill" id="hop-next" aria-label="Next body"><span id="hop-next-name"></span> &#8250;</button>
+        </div>
       </div>
       <kazoku-view-controls id="controls" for="space" layout="compact" overlay tilt-max="90"></kazoku-view-controls>
     </main>

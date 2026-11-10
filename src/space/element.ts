@@ -2,15 +2,17 @@
 // the single bodies need none of it. It draws only when something changes, at most 30 times a second, and nothing while it is out of sight.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { carryControls, type ElementControls, type ViewController } from "@johnmorrisdotca/kazoku-ui/view-controls";
-import { BODIES, MOONS_OF, type MoonId } from "../facts.ts";
+import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
+import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_PLANETS, type SpacePlanet } from "./frame.ts";
+import { moonOffset } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
@@ -40,9 +42,13 @@ const RING_BELOW_PX = 4;
  * ```
  */
 export interface BodyInfo {
-  id: SpaceBody;
+  id: BodyId;
   /** The name shown beside the body. */
   name: string;
+  /** The Sun, a planet, a dwarf planet or a moon. */
+  kind: SpaceKind;
+  /** For a moon, the planet it goes round. */
+  host?: BodyId;
   /** Mean radius, kilometres. */
   radiusKm: number;
   /** Distance from the Earth's centre now, kilometres (0 for the Earth). */
@@ -128,9 +134,11 @@ const readTime = (value: string | null): number | "now" => {
   const ms = Date.parse(value);
   return Number.isFinite(ms) ? ms : "now";
 };
-const readBody = (value: string): SpaceBody | undefined => {
-  const id = value.toLowerCase();
-  return (SPACE_BODIES as readonly string[]).includes(id) ? (id as SpaceBody) : undefined;
+/** A body the view can put at its middle: the eleven of `SPACE_BODIES` and the moons of the planets in them. */
+const canCentre = (id: BodyId): boolean => (SPACE_BODIES as readonly string[]).includes(id) || (BODIES[id].kind === "moon" && (SPACE_BODIES as readonly string[]).includes(hostOf(id) ?? ""));
+const readBody = (value: string): BodyId | undefined => {
+  const id = findBody(value);
+  return id !== undefined && canCentre(id) ? id : undefined;
 };
 
 /**
@@ -182,15 +190,16 @@ export class WakuseiSpace extends HTMLElement {
   #state: SpaceState = "loading";
   #timer: ReturnType<typeof setTimeout> | undefined;
   #announced = -Infinity;
-  #pool = new Map<SpaceBody, HTMLElement>();
-  #places: Record<SpaceBody, BodyPlace | null> | undefined;
-  #names: Partial<Record<SpaceBody, string>> = {};
+  #pool = new Map<string, HTMLElement>();
+  #places: Record<string, BodyPlace | null> | undefined;
+  #names: Partial<Record<string, string>> = {};
+  #selected: BodyId | null = null;
   #scaleNames: Partial<Record<ScaleMode, string>> = {};
-  #rings = new Map<SpaceBody, HTMLElement>();
+  #rings = new Map<string, HTMLElement>();
   #scaleLine: HTMLElement | undefined;
   #hint = "choose to look at it";
   #painter: WakuseiPainter | undefined;
-  #focusBeforeRide: SpaceBody = "earth";
+  #focusBeforeRide: BodyId = "earth";
   #lostTold = false;
   #hands: ElementControls | undefined;
 
@@ -400,22 +409,93 @@ export class WakuseiSpace extends HTMLElement {
     this.#gate?.request();
   }
 
-  /** The body the camera looks at (`earth`, `sun`, `moon`, `mercury` to `neptune`, `pluto`): at zoom 1 it fills the view; the yaw and tilt turn the camera round it. */
-  get body(): SpaceBody {
+  /** The body the camera looks at: any body the view places, by name in any case (`earth`, `sun`, `moon`, `mercury` to `neptune`, `pluto`, and the moons of the planets such as `titan`). At zoom 1 it fills the view; the yaw and tilt turn the camera round it. Setting it moves the camera there at once and keeps the zoom; `goTo` glides and brings the body into view. */
+  get body(): BodyId {
     return this.#model.focus;
   }
-  set body(name: SpaceBody) {
+  set body(name: BodyId | string) {
     const id = readBody(name);
     if (!id) return;
+    this.#centre(id);
+  }
+
+  /** Move the camera to `id` (not yet drawn) and tell the page. */
+  #centre(id: BodyId): void {
+    const was = this.#model.focus;
     this.#model.focus = id;
     this.#gate?.request();
+    if (was !== id) this.#announceHop();
+  }
+
+  /** What the hopper can do from where it is: the body at the middle, and the bodies the previous and next hop lead to. */
+  get hopper(): { current: BodyInfo; previous: BodyInfo; next: BodyInfo } {
+    const here = this.#model.focus;
+    return { current: this.bodyInfo(here), previous: this.bodyInfo(hopFrom(here, -1, canCentre)), next: this.bodyInfo(hopFrom(here, 1, canCentre)) };
+  }
+
+  /**
+   * Go to a body: it becomes the middle of the view and the zoom brings it whole into view (`zoom`, 1 by default; a planet's `-moons` preset for its system), gliding there from where the camera is unless `smooth` is
+   * false or the reader asked for reduced motion. `wakusei-hop` tells the page where it went and where the next and previous hops lead. A name in any case, in English or Japanese, works.
+   *
+   * @param target - A body's name (`"saturn"`, `"Saturn"`, `"土星"`).
+   * @param options - `smooth` (true by default) and `zoom` (1 by default).
+   * @returns Whether the view can go there.
+   */
+  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number } = {}): boolean {
+    const id = readBody(target);
+    if (!id) return false;
+    const model = this.#model;
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pose = model.pose;
+    const glide = (options.smooth ?? true) && !reduced && pose.valid && model.ride === null;
+    if (model.ride !== null) this.ride(null, { smooth: false });
+    model.transition = glide ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    this.#selected = id;
+    this.#model.focus = id;
+    const zoom = options.zoom ?? 1;
+    // a bar bound to the element holds the view's state: it applies the zoom the page hears in the event; without one the element's own hands do
+    if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set({ zoom }, true, "jump");
+    this.#schedule();
+    this.#gate?.request();
+    this.#announceHop(zoom);
+    return true;
+  }
+
+  /** Go to the next body in the order of `bodyList()` (the Sun, Mercury, Venus, the Earth, the Moon, Mars, Phobos, Deimos, Ceres, Jupiter, its moons, and on), round to the Sun after the last. */
+  next(options: { smooth?: boolean } = {}): BodyInfo {
+    this.goTo(hopFrom(this.#model.focus, 1, canCentre), options);
+    return this.bodyInfo(this.#model.focus);
+  }
+
+  /** Go to the previous body in the same order. */
+  previous(options: { smooth?: boolean } = {}): BodyInfo {
+    this.goTo(hopFrom(this.#model.focus, -1, canCentre), options);
+    return this.bodyInfo(this.#model.focus);
+  }
+
+  /** Every body the view can go to, in the hopper's order, with its kind and, for a moon, its planet: a page's jump list. */
+  bodyList(): BodyInfo[] {
+    return HOP_ORDER.filter(canCentre).map((id) => this.bodyInfo(id));
+  }
+
+  /** The body a press has chosen and the page may be showing a card for, or null. A second press on it, or `goTo`, makes it the middle of the view. */
+  get selected(): BodyId | null {
+    return this.#selected;
+  }
+  set selected(id: BodyId | null) {
+    this.#selected = id;
+  }
+
+  /** `zoom` is the zoom the page should bring the view to: given by `goTo`, left out when the body was only set (the zoom stays). */
+  #announceHop(zoom?: number): void {
+    this.dispatchEvent(new CustomEvent("wakusei-hop", { detail: { ...this.hopper, zoom }, bubbles: true, composed: true }));
   }
 
   /** The words shown beside each body, for a page in another language (`{ mars: "火星" }`). A body left out keeps its name in the element's `lang`. */
-  get bodyNames(): Partial<Record<SpaceBody, string>> {
+  get bodyNames(): Partial<Record<string, string>> {
     return { ...this.#names };
   }
-  set bodyNames(value: Partial<Record<SpaceBody, string>>) {
+  set bodyNames(value: Partial<Record<string, string>>) {
     this.#names = { ...value };
     for (const [id, button] of this.#pool) this.#nameLabel(button, id);
   }
@@ -430,10 +510,25 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /** The name, radius and distance from the Earth of a body now, for a page's own caption. */
-  bodyInfo(id: SpaceBody): BodyInfo {
+  bodyInfo(id: BodyId): BodyInfo {
     const frame = this.#model.drawn?.frame ?? frameAt(this.#model.time);
-    const geo = id === "earth" ? ([0, 0, 0] as const) : id === "sun" ? frame.sun : id === "moon" ? frame.moon : frame.planets[id];
-    return { id, name: this.#nameOf(id), radiusKm: BODIES[id].radiusKm, distanceKm: Math.hypot(geo[0], geo[1], geo[2]) * AU_IN_EARTH_RADII * EARTH_RADIUS_KM };
+    const km = AU_IN_EARTH_RADII * EARTH_RADIUS_KM;
+    let geo: readonly [number, number, number] = [Number.NaN, Number.NaN, Number.NaN];
+    const host = hostOf(id);
+    if (id === "earth") geo = [0, 0, 0];
+    else if (id === "sun") geo = frame.sun;
+    else if (id === "moon") geo = frame.moon;
+    else if ((SPACE_PLANETS as readonly string[]).includes(id)) geo = frame.planets[id as SpacePlanet];
+    else if (host !== undefined && (SPACE_PLANETS as readonly string[]).includes(host)) {
+      // a moon: its planet's place and its offset in the planet's radii
+      const at = frame.planets[host as SpacePlanet];
+      const offset = moonOffset(id as MoonId, this.#model.time);
+      const radius = BODIES[host].radiusKm / km;
+      geo = [at[0] + offset[0] * radius, at[1] + offset[1] * radius, at[2] + offset[2] * radius];
+    }
+    const info: BodyInfo = { id, name: this.#nameOf(id), kind: bodyKindOf(id), radiusKm: BODIES[id].radiusKm, distanceKm: Math.hypot(geo[0], geo[1], geo[2]) * km };
+    if (host !== undefined) info.host = host;
+    return info;
   }
 
   // --- riding along -------------------------------------------------------------------------------------------------------------------------------
@@ -601,17 +696,18 @@ export class WakuseiSpace extends HTMLElement {
   };
 
   // --- labels --------------------------------------------------------------------------------------------------------------------------------------
-  #nameOf(id: SpaceBody): string {
-    return this.#names[id] ?? BODIES[id].name[this.getAttribute("lang") === "ja" ? "ja" : "en"];
+  #nameOf(id: string): string {
+    return this.#names[id] ?? BODIES[id as BodyId].name[this.getAttribute("lang") === "ja" ? "ja" : "en"];
   }
 
-  #placeLabels(places: Record<SpaceBody, BodyPlace | null>): void {
+  #placeLabels(places: Record<string, BodyPlace | null>): void {
     this.#places = places;
     const box = this.#labelBox;
     if (!box) return;
     const wanted: LabelBox[] = [];
-    const spots = new Map<SpaceBody, { x: number; y: number; small: boolean }>();
-    for (const id of SPACE_BODIES) {
+    const spots = new Map<string, { x: number; y: number; small: boolean }>();
+    const ids = [...new Set([...SPACE_BODIES, ...this.#pool.keys(), ...Object.keys(places)])];
+    for (const id of ids) {
       let label = this.#pool.get(id);
       const at = places[id];
       if (!label) {
@@ -642,7 +738,7 @@ export class WakuseiSpace extends HTMLElement {
     }
     // no two names overlap: a moon gives way to its planet and a planet to the Sun
     const shown = chooseLabels(wanted);
-    for (const id of SPACE_BODIES) {
+    for (const id of ids) {
       const label = this.#pool.get(id);
       const ring = this.#rings.get(id);
       if (!label || !ring) continue;
@@ -661,10 +757,11 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /** How sure a body's name is of its place: the body looked at first, then the Sun, the planets, the dwarf planets and the moons. */
-  #rank(id: SpaceBody): number {
+  #rank(id: string): number {
     if (id === this.#model.focus) return 0;
     if (id === "sun") return 1;
-    return id === "moon" ? 4 : 2;
+    const kind = bodyKindOf(id as BodyId);
+    return kind === "moon" ? 4 : kind === "dwarf-planet" ? 3 : 2;
   }
 
   #widths = new WeakMap<HTMLElement, number>();
@@ -689,12 +786,12 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /** Where a body is on the screen now: its centre and radius in CSS pixels in the element, or `null` when it is behind the camera or not drawn. */
-  placeOf(id: SpaceBody): BodyPlace | null {
+  placeOf(id: BodyId): BodyPlace | null {
     const at = this.#places?.[id];
     return at ? { ...at } : null;
   }
 
-  #nameLabel(button: HTMLElement, id: SpaceBody): void {
+  #nameLabel(button: HTMLElement, id: string): void {
     const text = this.#nameOf(id);
     button.textContent = text;
     this.#widths.delete(button);
@@ -734,25 +831,38 @@ export class WakuseiSpace extends HTMLElement {
     const rect = this.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
-    let best: SpaceBody | undefined;
+    let best: BodyId | undefined;
     let bestD = Infinity;
-    for (const id of SPACE_BODIES) {
-      const at = this.#places[id];
+    for (const [id, at] of Object.entries(this.#places)) {
       if (!at) continue;
       const d = Math.hypot(x - at.x, y - at.y);
       if (d <= Math.max(at.r, 14) && d < bestD) {
-        best = id;
+        best = id as BodyId;
         bestD = d;
       }
     }
-    if (best) this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(best), bubbles: true, composed: true }));
+    if (best) this.#press(best);
   };
   #labelClick = (event: Event): void => {
-    const id = (event.target as HTMLElement | null)?.dataset?.["body"] as SpaceBody | undefined;
-    if (id) this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
+    if (id) this.#press(id);
   };
+
+  /**
+   * A press on a body or its name. `wakusei-body-click` tells the page every time. The first press on a body selects it (`wakusei-body-select`, for the page's card); a second press on the body that is selected makes it
+   * the middle of the view (`goTo`), unless it already is, so a press never sends the view anywhere else.
+   */
+  #press(id: BodyId): void {
+    this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    if (this.#selected === id) {
+      if (canCentre(id) && this.#model.focus !== id) this.goTo(id);
+      return;
+    }
+    this.#selected = id;
+    this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+  }
   #labelFocus = (event: Event): void => {
-    const id = (event.target as HTMLElement | null)?.dataset?.["body"] as SpaceBody | undefined;
+    const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
     if (id) this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
   };
 

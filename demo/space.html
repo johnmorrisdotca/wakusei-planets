@@ -35,6 +35,15 @@
             </div>
           </div>
           <div class="fam-row">
+            <span class="fam-label" data-say="sp_hop">Hop</span>
+            <div class="group fam-seg" id="hops" role="group" aria-label="Hop" data-say-label="sp_hop">
+              <button type="button" id="hop-prev" aria-label="Previous body">&#8249; <span id="hop-prev-name"></span></button>
+              <button type="button" id="hop-next" aria-label="Next body"><span id="hop-next-name"></span> &#8250;</button>
+            </div>
+            <span class="fam-fine" id="hop-now" role="status"></span>
+            <button type="button" class="fam-button" id="go-there" hidden data-say="sp_go">Go there</button>
+          </div>
+          <div class="fam-row">
             <span class="fam-label" data-say="sp_scale">Scale</span>
             <div class="group fam-seg" id="scales" role="group" aria-label="Scale" data-say-label="sp_scale">
               <button type="button" data-scale="true" aria-pressed="true" data-say="sp_scale_true">True</button>

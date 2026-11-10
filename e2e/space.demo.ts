@@ -187,13 +187,16 @@ test("out of sight or hidden, a game clock running at a day a second draws nothi
   expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(1);
 });
 
-test("a body can be looked at: the camera goes to it, and choosing its name by keyboard does the same and says how big and far it is", async ({ page }) => {
+test("a body can be looked at: the camera goes to it, and choosing its name by keyboard twice does the same and says how big and far it is", async ({ page }) => {
   await open(page);
   await setOn(page, "body", "jupiter");
   await expect.poll(async () => (await statsOf(page)).distance).toBeCloseTo(3.4 * 1.8, 0);
   await jump(page, "Whole solar system");
   await settle(page, 1000);
   await page.locator(SPACE).evaluate((el) => (el.shadowRoot!.querySelector('button.sp-label[data-body="mars"]') as HTMLButtonElement).focus());
+  // the first press selects it (and says how big and far it is); the second goes there
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#caption")).toContainText("Mars: radius 3,396 km");
   await page.keyboard.press("Enter");
   await expect.poll(async () => (await statsOf(page)).distance).toBeCloseTo(3.4 * 0.6, 0);
   await expect(page.locator("#caption")).toContainText("Mars: radius 3,396 km");

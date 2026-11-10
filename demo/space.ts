@@ -7,6 +7,7 @@ import "@johnmorrisdotca/kazoku-ui/replay-bar/define";
 import type { ReplayBarElement, ReplayDetail } from "@johnmorrisdotca/kazoku-ui/replay-bar/element";
 import type { ViewControlsElement, ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { setThreeLoader, type BodyInfo, type SpacePreset, type WakuseiSpace } from "../src/space/element.ts";
+import type { BodyId } from "../src/facts.ts";
 import { WORDS } from "./words.js";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
@@ -96,7 +97,7 @@ function render(): void {
   address.set("play", state.play ? "on" : null);
   address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
-  address.set("goto", state.goto === "earth" ? null : state.goto);
+  address.set("goto", state.goto === "earth" || (state.goto as string) === "" ? null : state.goto);
   address.set("ride", state.ride === "" ? null : state.ride);
   address.set("rlook", state.rideLook === "down" ? null : state.rideLook);
 }
@@ -180,14 +181,45 @@ controls.addEventListener("kazoku-viewchange", (event) => {
 space.addEventListener("wakusei-body-click", (event) => {
   const info = (event as CustomEvent<BodyInfo>).detail;
   caption.textContent = say("sp_picked", { name: info.name, radius: Math.round(info.radiusKm).toLocaleString("en-US"), distance: Math.round(info.distanceKm).toLocaleString("en-US") });
-  // pressing the body already looked at changes nothing: the two presses of a double press (zoom in, zoom out) must not each start the view over
-  if (space.body !== info.id) {
-    space.body = info.id;
-    controls.controller.set({ zoom: 1 }, true, "jump");
-  }
 });
+// the first press on a body selects it and offers to go there; a second press on it goes, and so does the button. A press never sends the view anywhere else.
+const goThere = document.querySelector<HTMLButtonElement>("#go-there")!;
+space.addEventListener("wakusei-body-select", (event) => {
+  const info = (event as CustomEvent<BodyInfo>).detail;
+  goThere.hidden = info.id === space.body;
+  goThere.textContent = `${say("sp_go")}: ${info.name}`;
+});
+goThere.addEventListener("click", () => {
+  if (space.selected) space.goTo(space.selected);
+});
+// the hopper: two arrows with the names of where each leads. The bar holds the zoom, so the page applies the one the hop asks for.
+const hopPrev = document.querySelector<HTMLButtonElement>("#hop-prev")!;
+const hopNext = document.querySelector<HTMLButtonElement>("#hop-next")!;
+function showHop(): void {
+  const { current, previous, next } = space.hopper;
+  document.querySelector("#hop-prev-name")!.textContent = previous.name;
+  document.querySelector("#hop-next-name")!.textContent = next.name;
+  hopPrev.setAttribute("aria-label", `${say("sp_hop_prev")}: ${previous.name}`);
+  hopNext.setAttribute("aria-label", `${say("sp_hop_next")}: ${next.name}`);
+  document.querySelector("#hop-now")!.textContent = say("sp_hop_now", { name: current.name });
+  goThere.hidden = space.selected === null || space.selected === current.id;
+}
+hopPrev.addEventListener("click", () => space.previous());
+hopNext.addEventListener("click", () => space.next());
+space.addEventListener("wakusei-hop", (event) => {
+  const { zoom } = (event as CustomEvent<{ zoom?: number }>).detail;
+  if (zoom !== undefined) {
+    controls.controller.set({ zoom }, true, "jump");
+    (state as { goto: string }).goto = "";
+  }
+  showHop();
+  render();
+});
+export type { BodyId };
 window.addEventListener("wakusei-language", () => {
   space.setAttribute("lang", chooser()?.lang ?? "en");
   render();
+  showHop();
 });
 render();
+showHop();
