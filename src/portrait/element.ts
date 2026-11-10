@@ -503,6 +503,8 @@ export class WakuseiPortrait extends HTMLElement {
       onLevels: (body, levels) => {
         this.#tileLevels.set(body, levels);
         this.#refreshLimits();
+        // the bodies are told of the camera when the scene is applied, not when it is drawn: once the tile set is read, apply it again so the window the view needs is asked for
+        this.#changed();
       },
       redraw: () => this.#view?.invalidate(),
     });
