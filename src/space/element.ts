@@ -612,8 +612,11 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /** The zoom that shows a part of the sky: the Earth alone, the Moon's orbit, the Sun, the planets out to Mars, all of them, or a planet's nearer moons, at this scale and moment. */
-  zoomFor(preset: SpacePreset): number {
+  zoomFor(named: SpacePreset | string): number {
     const mode = this.#model.mode;
+    // a name in any case; one that is no preset gives 1, the zoom that fills the view with the body looked at, not NaN
+    const preset = String(named).toLowerCase() as SpacePreset;
+    if (!["earth", "moon", "sun", "inner", "solar-system"].includes(preset) && !(preset.endsWith("-moons") && findBody(preset.slice(0, -6)) !== undefined)) return 1;
     if (preset.endsWith("-moons")) {
       const id = preset.slice(0, -6) as SpacePlanet | SpaceDwarf;
       const sites = this.#painterNow().moons(id, this.#model.time);

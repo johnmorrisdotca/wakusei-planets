@@ -48,6 +48,18 @@ test("setting `body` to a planet's name in any case puts that planet at the midd
   expect(await bodyOf(page), "a name that is no body changes nothing").toBe("saturn");
 });
 
+test("a preset in any case works: zoomFor('Saturn-moons') is the zoom of 'saturn-moons', and a name that is no preset gives 1", async ({ page }) => {
+  await openSpace(page);
+  const zoom = (name: string): Promise<number> => page.locator(SPACE).evaluate((el, n) => (el as unknown as { zoomFor(p: string): number }).zoomFor(n), name);
+  const lower = await zoom("saturn-moons");
+  expect(lower).toBeGreaterThan(0);
+  expect(lower).toBeLessThanOrEqual(1);
+  expect(await zoom("Saturn-moons")).toBe(lower);
+  expect(await zoom("Moon")).toBe(await zoom("moon"));
+  expect(await zoom("nonsense")).toBe(1);
+  expect(await zoom("nowhere-moons")).toBe(1);
+});
+
 test("the hopper goes through every body in order, each at the middle within three pixels, and back again", async ({ page }) => {
   test.setTimeout(600_000);
   await openSpace(page);
