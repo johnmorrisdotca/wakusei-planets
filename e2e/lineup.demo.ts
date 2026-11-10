@@ -38,6 +38,17 @@ const open = async (page: Page, query = "", waitLive = true): Promise<string[]> 
 };
 const focused = (page: Page) => lineup(page).evaluate((el) => (el as Lineup).focused);
 const settled = (page: Page) => page.waitForTimeout(400);
+/** The picture once it has stopped changing: two shots half a second apart that are the same (a rebuilt scene takes a while to compile in software). */
+const stable = async (page: Page): Promise<Buffer> => {
+  let last = await lineup(page).screenshot();
+  for (let i = 0; i < 40; i += 1) {
+    await page.waitForTimeout(500);
+    const now = await lineup(page).screenshot();
+    if (now.equals(last)) return now;
+    last = now;
+  }
+  throw new Error("the picture never stopped changing");
+};
 
 test("the page has its choices in rows of clicks, no fold-open sections, a button for each body, and nothing scrolls sideways", async ({ page }) => {
   const errors = await open(page);
@@ -168,11 +179,10 @@ test("a drag on a star turns it by hand and nothing else moves; a double click p
   // the cheap star has a still surface: the full one boils with the clock, so two draws of the same turn differ a little
   await lineup(page).evaluate((el) => el.setAttribute("quality", "low"));
   await live(page);
-  await page.waitForTimeout(800);
   const box = (await lineup(page).boundingBox())!;
   const sun = (await lineup(page).evaluate((el) => (el as Lineup).metrics.dots)).find((dot) => dot.id === "sun")!;
   const at = { x: box.x + sun.cx, y: box.y + sun.cy };
-  const before = await lineup(page).screenshot();
+  const before = await stable(page);
   await page.waitForTimeout(400);
   expect((await lineup(page).screenshot()).equals(before), "a star at rest does not change").toBe(true);
   await page.mouse.move(at.x, at.y);
@@ -182,8 +192,7 @@ test("a drag on a star turns it by hand and nothing else moves; a double click p
   for (let i = 1; i <= 8; i += 1) await page.mouse.move(at.x + i * 14, at.y + i * 3);
   await page.mouse.up();
   await expect(lineup(page)).not.toHaveAttribute("data-held", "");
-  await page.waitForTimeout(500);
-  const turned = await lineup(page).screenshot();
+  const turned = await stable(page);
   expect(turned.equals(before), "the star's surface turned").toBe(false);
   // the zoom did not move, and a press where there is no star turns nothing
   expect(await focused(page)).toBe("sun");
@@ -199,8 +208,7 @@ test("a drag on a star turns it by hand and nothing else moves; a double click p
     expect((await lineup(page).screenshot()).equals(turned), "a press on the empty sky turns nothing").toBe(true);
   }
   await page.mouse.dblclick(at.x, at.y);
-  await page.waitForTimeout(500);
-  expect((await lineup(page).screenshot()).equals(before), "a double click puts the star back").toBe(true);
+  expect((await stable(page)).equals(before), "a double click puts the star back").toBe(true);
 });
 
 test("the bodies turn by themselves unless turning is off", async ({ browser }) => {
