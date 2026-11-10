@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import { BODIES, BODY_IDS, stopPlaceAu } from "@johnmorrisdotca/wakusei-planets";
 import { distance } from "@johnmorrisdotca/wakusei-planets/nearest";
 
-const port = Number(process.env.PORT ?? 8240);
+const port = Number(process.env.PORT ?? 8310);
 createServer((request, response) => {
   const send = (status, value) => {
     response.writeHead(status, { "content-type": "application/json; charset=utf-8" });

@@ -7,13 +7,13 @@ import { test } from "node:test";
 
 test("the self-hosted example answers queries and rejects bad input", async () => {
   const probe = createServer();
-  await new Promise<void>((resolve, reject) => { probe.once("error", reject); probe.listen(8240, "127.0.0.1", resolve); });
+  await new Promise<void>((resolve, reject) => { probe.once("error", reject); probe.listen(8310, "127.0.0.1", resolve); });
   await new Promise<void>((resolve, reject) => probe.close((error) => error ? reject(error) : resolve()));
   if (!existsSync("dist/index.js")) execFileSync("pnpm", ["build"], { stdio: "pipe" });
-  const server = spawn(process.execPath, ["examples/serve/server.mjs"], { env: { ...process.env, PORT: "8240" }, stdio: ["ignore", "pipe", "pipe"] });
+  const server = spawn(process.execPath, ["examples/serve/server.mjs"], { env: { ...process.env, PORT: "8310" }, stdio: ["ignore", "pipe", "pipe"] });
   try {
     await Promise.race([once(server.stdout, "data"), once(server, "exit").then(([code]) => { throw new Error(`server exited: ${String(code)}`); })]);
-    const get = (path: string) => fetch(`http://127.0.0.1:8240${path}`);
+    const get = (path: string) => fetch(`http://127.0.0.1:8310${path}`);
     const body = await get("/body?id=mars"); assert.equal(body.status, 200); assert.equal((await body.json() as { id: string }).id, "mars");
     const position = await get("/position?body=mars&date=2026-11-08T00:00Z"); assert.equal(position.status, 200);
     const point = await position.json() as { xAu: number; yAu: number; zAu: number; frame: string };

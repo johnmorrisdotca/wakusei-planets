@@ -1,13 +1,13 @@
 // The ready-made PDFs of every colouring sheet, printed from the built demo (site/kids.html) by Chromium's page.pdf: A4 and US Letter, English and Japanese, into site/pdf/ with a list page for each language.
 //   pnpm site && node scripts/make-pdfs.mjs
-// The server is this package's picture-script port, 8227. One headless browser, under the browser lock, drawing in software; it is closed when the last PDF is written.
+// The server is this package's picture-script port, 8302. One headless browser, under the browser lock, drawing in software; it is closed when the last PDF is written.
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { chromium } from "@playwright/test";
 import { SOFTWARE_GL_ARGS, withBrowserLock } from "@johnmorrisdotca/kazoku-ui/testing";
 
-const PORT = Number(process.env.PDF_PORT ?? 8227);
+const PORT = Number(process.env.PDF_PORT ?? 8302);
 const site = new URL("../site/", import.meta.url).pathname;
 const SHEETS = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon", "io", "europa", "ganymede", "callisto", "titan", "triton", "charon", "lineup"];
 const PAPERS = ["a4", "letter"];
