@@ -198,6 +198,8 @@ export interface SpaceDeps {
   painter: () => WakuseiPainter;
   cap: () => number;
   invalidate: () => void;
+  /** Bring the model's time up to the page's clock; called at the start of each draw, so a picture drawn late shows the moment it is drawn at and not the one of the last tick. */
+  advance?: () => void;
   /** Where each body is on the screen, in CSS pixels in the box, or null when it is behind the camera. Called at each draw. */
   onLabels?: (places: Record<SpaceBody, BodyPlace | null>) => void;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
@@ -288,6 +290,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         scene,
         camera,
         update() {
+          deps.advance?.();
           const frame = track.at(model.time);
           model.lookups = track.lookups;
           if (model.stepMs !== trackStep) {

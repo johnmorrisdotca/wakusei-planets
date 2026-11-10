@@ -42,12 +42,20 @@ test.describe("the space page", () => {
     });
     await openSpace(page, `t=${START}&play=on&speed=86400`);
     await expect(play(page)).toHaveAttribute("aria-pressed", "true");
-    // the box follows the clock: it reaches a later day. How soon depends on the frames the machine draws (a frame's step is capped, MODULES-797),
-    // so this waits for the day rather than timing two seconds; on a desk machine it takes about one.
-    const before = await boxMs(page);
-    await expect
-      .poll(async () => (await boxMs(page)) - before, { timeout: 15_000, message: "the box moves on a whole day" })
-      .toBeGreaterThanOrEqual(DAY);
+    // Time is the page's clock, not the frames drawn (MODULES-797): in two seconds of real time the element's own moment moves on two days, within 1 percent, however slowly this machine draws.
+    // It is read from the element and timed with the page's clock at both reads, so a slow draw between them cannot spoil it.
+    const clock = () => page.evaluate(() => ({ time: (document.querySelector("wakusei-space") as unknown as { time: number }).time, at: performance.now() }));
+    const from = await clock();
+    await page.waitForTimeout(2200);
+    const to = await clock();
+    const seconds = (to.at - from.at) / 1000;
+    expect((to.time - from.time) / DAY / seconds, `the clock moved ${((to.time - from.time) / DAY).toFixed(3)} days in ${seconds.toFixed(2)} s`).toBeGreaterThan(0.99);
+    expect((to.time - from.time) / DAY / seconds).toBeLessThan(1.01);
+    expect(to.time - from.time, "at least one day in 2.2 s").toBeGreaterThanOrEqual(DAY);
+    // the box follows the clock: it is written from the element's events (a few a second), so it is never more than the moment of the last event behind. A long draw can hold an event back,
+    // so it is the catching up that is waited for, not the clock of the test: the box reaches the moment the element had at the second read.
+    await expect.poll(async () => await boxMs(page), { timeout: 15_000, message: "the box reaches the moment the clock had" }).toBeGreaterThanOrEqual(to.time - 60_000);
+    expect(await boxMs(page), "and is a later day than it started").toBeGreaterThanOrEqual(from.time + DAY);
     const log = (await page.evaluate(() => Reflect.get(window, "__timechange"))) as { at: number; running: boolean }[];
     const running = log.filter((e) => e.running);
     expect(running.length, "told while time runs").toBeGreaterThanOrEqual(3);

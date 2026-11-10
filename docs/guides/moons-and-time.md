@@ -24,6 +24,7 @@ A page that has a date box needs to know the date the clock has reached. `<wakus
 - While the clock runs (`rate` or `speed` not 0) it is sent four times a second at most, however fast the picture is drawn (once a second at real time), and only while the tab is shown (the date box is often below the picture, so the picture need not be on screen).
 - When the clock holds, it is sent once with `running: false`, so a page writes the date it stopped on into its address.
 - It is not sent for a `time` the page sets itself, and `wakusei-body`'s `time` property reads the moment shown at any moment.
+- The speed is kept on a slow machine too. Time follows the page's own clock, not the frames drawn: at `86400` a day passes for every real second whether the machine draws 60 frames a second or 5, `<wakusei-space>`'s `time` reads the moment now, and a picture drawn late shows the moment it is drawn at. A slow machine sends the event later and the date moves in bigger steps; it never runs slower. There is no cap on a long gap: a tab that was hidden, or a laptop that slept, finds the date where the speed would have taken it.
 
 ```ts no-run
 import "@johnmorrisdotca/wakusei-planets/element";

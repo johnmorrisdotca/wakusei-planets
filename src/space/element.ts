@@ -4,6 +4,7 @@ import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { carryControls, type ElementControls, type ViewController } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import { BODIES, MOONS_OF, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
+import { createGameClock, type GameClock } from "./clock.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
@@ -156,8 +157,7 @@ export class WakuseiSpace extends HTMLElement {
   static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "look", "light", "lang"];
 
   #model: SpaceModel = newSpaceModel();
-  #mode: number | "now" = "now";
-  #speed = 1;
+  #clock: GameClock = createGameClock("now", 1);
   #view: View | undefined;
   #gate: Gate | undefined;
   #taken: { renderer: SharedRenderer<ThreeParts>; release(): void } | undefined;
@@ -165,7 +165,6 @@ export class WakuseiSpace extends HTMLElement {
   #labelBox: HTMLElement | undefined;
   #state: SpaceState = "loading";
   #timer: ReturnType<typeof setTimeout> | undefined;
-  #last = 0;
   #announced = -Infinity;
   #pool = new Map<SpaceBody, HTMLElement>();
   #places: Record<SpaceBody, BodyPlace | null> | undefined;
@@ -183,15 +182,14 @@ export class WakuseiSpace extends HTMLElement {
 
   connectedCallback(): void {
     this.#model.centre = readCentre(this.getAttribute("center")) ?? this.#model.centre;
-    this.#mode = readTime(this.getAttribute("time"));
-    this.#model.time = this.#mode === "now" ? Date.now() : this.#mode;
-    this.#speed = this.#readSpeed();
+    this.#clock = createGameClock(readTime(this.getAttribute("time")), this.#readSpeed());
+    this.#model.time = this.#clock.time;
     this.#model.mode = this.getAttribute("scale") === "true" ? "true" : "compressed";
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
-    this.#model.stepMs = Math.max(1000, Math.abs(this.#speed) * 1000);
+    this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
     if (!this.hasAttribute("tabindex")) this.setAttribute("tabindex", "0");
     if (!this.hasAttribute("aria-label")) this.setAttribute("aria-label", "The Earth, the Moon, the Sun and the planets in their places for the date shown");
@@ -215,6 +213,7 @@ export class WakuseiSpace extends HTMLElement {
       painter: () => this.#painterNow(),
       cap: () => this.#textureCap(),
       invalidate: () => this.#gate?.request(),
+      advance: () => this.#advance(),
       onLabels: (places) => this.#placeLabels(places),
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
@@ -228,7 +227,6 @@ export class WakuseiSpace extends HTMLElement {
         this.dispatchEvent(new CustomEvent("wakusei-ready"));
       } else if (this.#state === "loading") this.#set("unavailable");
     });
-    this.#last = performance.now();
     this.#schedule();
     this.addEventListener("pointerdown", this.#down);
     this.#hands = carryControls(this, { limits: CARRIED_LIMITS, onChange: (view, info) => this.setView(view, info.final) });
@@ -273,31 +271,30 @@ export class WakuseiSpace extends HTMLElement {
 
   /** The moment shown: milliseconds since the epoch, or "now" to follow the clock. Setting it points the camera at the same place on the ground again. */
   get time(): number {
+    this.#advance();
     return this.#model.time;
   }
   set time(value: number | Date | "now") {
-    this.#mode = value instanceof Date ? value.getTime() : value;
-    this.#model.time = this.#mode === "now" ? Date.now() : this.#mode;
+    this.#clock.set(value instanceof Date ? value.getTime() : value);
+    this.#model.time = this.#clock.time;
     this.#model.anchor = null;
-    this.#last = performance.now();
     this.#schedule();
     this.#gate?.request();
   }
 
   /** Seconds of game time per second: 1 is real time, 0 holds still, negative runs backwards. */
   get speed(): number {
-    return this.#speed;
+    return this.#clock.speed;
   }
   set speed(value: number) {
-    // time up to this moment is worked out at the old speed, so a hold keeps the moment the reader saw last
-    if (this.#speed !== 0 && this.isConnected) this.#advance(performance.now());
-    const was = this.#speed;
-    this.#speed = Number.isFinite(value) ? value : 1;
-    this.#model.stepMs = Math.max(1000, Math.abs(this.#speed) * 1000);
-    this.#last = performance.now();
+    // time up to this moment is worked out at the old speed (the clock does that), so a hold keeps the moment the reader saw last
+    const was = this.#clock.speed;
+    this.#clock.setSpeed(value);
+    if (this.isConnected) this.#model.time = this.#clock.time;
+    this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
     this.#schedule();
     this.#gate?.request();
-    if (this.#speed === 0 && was !== 0) this.#announce(false);
+    if (this.#clock.speed === 0 && was !== 0) this.#announce(false);
   }
 
   /** `compressed` (the default: every direction real, the distances squeezed) or `true` (real distances and sizes). */
@@ -429,7 +426,6 @@ export class WakuseiSpace extends HTMLElement {
     this.#lostTold = false;
     const pose = model.pose;
     model.transition = (options.smooth ?? true) && !reduced && pose.valid ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
-    this.#last = performance.now();
     this.#schedule();
     this.#gate?.request();
     this.dispatchEvent(new CustomEvent("wakusei-ride", { detail: this.riding }));
@@ -511,7 +507,7 @@ export class WakuseiSpace extends HTMLElement {
       canvas: stats?.canvas ?? { width: 0, height: 0, pixels: 0 },
       distance: this.#model.drawn?.distance ?? 0,
       assets: { entries: stats?.assets.entries ?? 0, refs: stats?.assets.refs ?? 0 },
-      time: this.#model.time,
+      time: this.time,
       lookups: this.#model.lookups,
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
@@ -530,20 +526,18 @@ export class WakuseiSpace extends HTMLElement {
   #schedule(): void {
     clearTimeout(this.#timer);
     this.#timer = undefined;
-    if (!this.isConnected || this.#speed === 0) return;
+    if (!this.isConnected || this.#clock.speed === 0) return;
     const riding = this.#model.ride !== null;
-    const pixels = Math.max(this.#model.motion || 0.015, this.#model.rideMotion) * Math.abs(this.#speed);
+    const pixels = Math.max(this.#model.motion || 0.015, this.#model.rideMotion) * Math.abs(this.#clock.speed);
     let perSecond = Math.min(30, Math.max(1, pixels));
     if (riding && typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) perSecond = 1;
-    const wait = !riding && this.#speed === 1 ? REAL_TIME_TICK_MS : 1000 / perSecond;
+    const wait = !riding && this.#clock.speed === 1 ? REAL_TIME_TICK_MS : 1000 / perSecond;
     this.#timer = setTimeout(this.#tick, wait);
   }
 
-  /** Bring the moment shown up to `now` (the page's own clock, in milliseconds) at the speed it has run at. */
-  #advance(now: number): void {
-    if (this.#speed === 1 && this.#mode === "now") this.#model.time = Date.now();
-    else this.#model.time += (now - this.#last) * this.#speed;
-    this.#last = now;
+  /** Bring the moment shown up to the page's clock, by the time that really passed at the speed it has run at, however few frames were drawn (`createGameClock`). */
+  #advance(): void {
+    if (this.isConnected) this.#model.time = this.#clock.advance();
   }
 
   /** Tell the page the moment shown: at most four times a second while time runs (`running`), and once, at once, when it holds. */
@@ -555,11 +549,11 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   #tick = (): void => {
-    this.#advance(performance.now());
+    this.#advance();
     this.#gate?.request();
     this.#schedule();
     this.dispatchEvent(new CustomEvent("wakusei-time", { detail: { time: this.#model.time } }));
-    this.#announce(this.#speed !== 0);
+    this.#announce(this.#clock.speed !== 0);
   };
 
   // --- labels --------------------------------------------------------------------------------------------------------------------------------------
