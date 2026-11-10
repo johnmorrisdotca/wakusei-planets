@@ -35,10 +35,12 @@ test("every gesture works on the body view in its shaded look", async ({ page })
 // The same check with the finer map tiles on the body: the made-up tile set with blocks of colour (a flat picture cannot be told from a shifted one), and the window of tiles awaited before each picture.
 type TileStats = { requested: number; loading: number; failed: number; shown: number | null };
 const tilesAre = (page: Page, selector: string) => async (): Promise<void> => {
-  await expect
-    .poll(async () => page.locator(selector).evaluate((el) => (el as unknown as { stats: { tiles: TileStats | undefined } }).stats.tiles).then((t) => t !== undefined && t.shown !== null && t.loading === 0), { timeout: 60_000, message: "a window of tiles is on the body" })
-    .toBe(true);
+  // the view settles for 140 ms before a window is fetched: wait that out, then for what is being fetched, then for the picture it makes
   await page.waitForTimeout(450);
+  await expect
+    .poll(async () => page.locator(selector).evaluate((el) => (el as unknown as { stats: { tiles: TileStats | undefined } }).stats.tiles?.loading ?? 0), { timeout: 60_000, message: "no tile is on its way" })
+    .toBe(0);
+  await page.waitForTimeout(350);
 };
 
 test("every gesture works on the space view at its ceiling, with its map tiles on the Earth", async ({ page }) => {
@@ -59,7 +61,10 @@ test("every gesture a flat portrait has works on the embed page's portrait zoome
   await page.goto(`/wakusei-planets/embed.html?scene=${encodeURIComponent("look:painted~earth_0_0_0.6_0")}`);
   await live(page, "#view");
   await expect(page.locator("kazoku-view-controls")).toBeAttached();
-  // 20x: past the 8x a portrait stopped at, and in reach of the Earth's finest level
+  // 8x brings the tile set in, and with it the range: the Earth goes on to about 25x. The gestures are then made at 20x, past the 8x a portrait stopped at.
+  await page.locator("kazoku-view-controls").evaluate((el) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ zoom: 8 }, true, "set"));
+  await expect.poll(() => page.locator("#view").evaluate((el) => (el as unknown as { stats: { zoomMax: number } }).stats.zoomMax), { timeout: 60_000 }).toBeGreaterThan(20);
+  await page.locator("kazoku-view-controls").evaluate((el) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ zoom: 1 }, true, "set"));
   const flat = "a portrait is a flat picture: it has no turn and no roll";
   await checkGestures(page, "#view", { lacks: { turn: flat, roll: flat, "key-turn": flat }, window: [0, 1, 0, 1], zoom: 20, ready: tilesAre(page, "#view") });
   expect(log.tiles.length, "the tiles were used").toBeGreaterThan(0);

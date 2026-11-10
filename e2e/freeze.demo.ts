@@ -623,11 +623,10 @@ test("the portrait zoomed in to its map tiles and out again: one context, graphi
   await page.goto(`${EMBED}?scene=${encodeURIComponent("look:painted~earth_0_0_0.6_0")}`);
   await expect(page.locator("#view")).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   const stats = (): Promise<TileStats | undefined> => page.locator("#view").evaluate((el) => (el as unknown as { stats: { tiles: TileStats | undefined } }).stats.tiles);
-  const zoomFor = async (pixelsPerRadian: number): Promise<number> => {
-    const m = await page.locator("#view").evaluate((el) => (el as unknown as { metrics: { scale: number; placed: { r: number }[] } }).metrics);
-    return pixelsPerRadian / (m.scale * m.placed[0]!.r);
-  };
-  const zoomTo = async (zoom: number): Promise<void> => void (await page.locator("#view").evaluate((el, z) => (el as unknown as { setView(v: unknown): void }).setView({ zoom: z }), zoom));
+  // a zoom is measured against the picture at Fit, whatever the view has done since
+  const fit = await page.locator("#view").evaluate((el) => (el as unknown as { metrics: { scale: number; placed: { r: number }[] } }).metrics);
+  const zoomFor = async (pixelsPerRadian: number): Promise<number> => pixelsPerRadian / (fit.scale * fit.placed[0]!.r);
+  const zoomTo = async (zoom: number): Promise<void> => void (await page.locator("kazoku-view-controls").evaluate((el, z) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ zoom: z }, true, "set"), zoom));
   const round = async (): Promise<void> => {
     await zoomTo(await zoomFor(1500));
     await expect.poll(async () => (await stats())?.shown, { timeout: 60_000 }).toBe(2);

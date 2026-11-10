@@ -45,18 +45,23 @@ const view = (page: Page): Locator => page.locator("#view");
 type PortraitMetrics = { width: number; height: number; scale: number; camera: { h: number }; placed: { r: number }[] };
 const portraitStats = (page: Page): Promise<{ tiles: Tiles | undefined; zoomMax: number | undefined }> => view(page).evaluate((el) => (el as unknown as { stats: { tiles: Tiles | undefined; zoomMax: number | undefined } }).stats);
 const metrics = (page: Page): Promise<PortraitMetrics> => view(page).evaluate((el) => (el as unknown as { metrics: PortraitMetrics }).metrics);
-const setPortraitZoom = (page: Page, zoom: number): Promise<void> => view(page).evaluate((el, z) => (el as unknown as { setView(v: unknown): void }).setView({ zoom: z }), zoom);
+/** The zoom the way a reader asks for it, through the embed page's bar (its controller holds the view and clamps it to the range the element reports). */
+const setPortraitZoom = (page: Page, zoom: number): Promise<void> => page.locator("kazoku-view-controls").evaluate((el, z) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ zoom: z }, true, "set"), zoom);
+
+/** The picture at Fit, read once it is open: a zoom is measured against it, whatever the view has done since. */
+let atFit: PortraitMetrics;
 
 async function openPortrait(page: Page, scene: string): Promise<void> {
   await page.goto(`${PORTRAIT}?scene=${encodeURIComponent(scene)}`);
   await expect(view(page)).toHaveAttribute("data-state", "live", { timeout: 90_000 });
   await settle(page, 800);
+  atFit = await metrics(page);
 }
 
 /** The zoom that puts this many device pixels along a radian of the first body (the pixel ratio is 1 here). */
 async function portraitZoomFor(page: Page, pixelsPerRadian: number): Promise<number> {
-  const m = await metrics(page);
-  return pixelsPerRadian / (m.scale * m.placed[0]!.r);
+  void page;
+  return pixelsPerRadian / (atFit.scale * atFit.placed[0]!.r);
 }
 
 test("the portrait: a far view fetches nothing, a close one fetches the tiles in view once each, draws them, frees them, and the zoom range follows what the body has", async ({ page }) => {
@@ -65,6 +70,7 @@ test("the portrait: a far view fetches nothing, a close one fetches the tiles in
   await settle(page, 1500);
   expect(log.manifests, "a portrait that never zooms in does not read the tile set").toBe(0);
   expect(log.tiles).toEqual([]);
+  const fit = atFit;
   const before = await portraitStats(page);
   expect(before.zoomMax, "the range is what the 2048 pixel map allows until the tiles are found").toBe(8);
   const base = gpuObjects(await readCounts(page));
@@ -73,8 +79,8 @@ test("the portrait: a far view fetches nothing, a close one fetches the tiles in
   await setPortraitZoom(page, await portraitZoomFor(page, 1500));
   await expect.poll(async () => (await portraitStats(page)).tiles?.shown, { timeout: 60_000 }).toBe(2);
   expect(log.manifests, "the tile set is read once").toBe(1);
-  const m = await metrics(page);
-  const extent = (m.camera.h * Math.min(1, m.width / m.height)) / m.placed[0]!.r;
+  // the radii from the middle of the short side to the edge at Fit: measured before the zoom
+  const extent = (fit.camera.h * Math.min(1, fit.width / fit.height)) / fit.placed[0]!.r;
   expect((await portraitStats(page)).zoomMax, "the finest level lifts the body's zoom range").toBe(zoomLimit(extent, 16384, detailOf(lookOf("earth")!).stretch > 1));
   await expect.poll(async () => cyan(await middle(page, view(page))), { timeout: 30_000, message: "the level 2 tiles are on the body" }).toBe(true);
   expect(log.tiles.every((tile) => level(tile) === 2)).toBe(true);
@@ -106,7 +112,7 @@ test("the portrait: a far view fetches nothing, a close one fetches the tiles in
   expect(log.manifests, "the tile set was read once in all").toBe(1);
 });
 
-test("the portrait: the Moon beside the Earth gets its tiles only when it is big in the view, and a tile that cannot be had is not asked for in a loop", async ({ page }) => {
+test("the portrait: a tile that cannot be had leaves the map as it was, and is not asked for in a loop", async ({ page }) => {
   const log = await routeTiles(page, (tile) => level(tile) === 3);
   await openPortrait(page, "look:painted~moon_0_0_0.6_0");
   await setPortraitZoom(page, await portraitZoomFor(page, 3200));
@@ -158,7 +164,15 @@ for (const [body, colour] of [["earth", yellow], ["mars", yellow], ["moon", yell
     await settle(page, 1500);
     expect(log.manifests, "a view that never gets near reads nothing").toBe(0);
     expect(log.tiles).toEqual([]);
+
+    // a first visit makes what the page keeps (the body's own pictures and program); what the window takes is measured against the page after it
+    await goTo(page, body, 3.1);
+    await expect.poll(async () => (await spaceStats(page)).tiles.shown, { timeout: 90_000 }).toBe(3);
+    await goTo(page, "earth", 1);
+    await expect.poll(async () => (await spaceStats(page)).tiles.shown, { timeout: 30_000 }).toBeNull();
+    await settle(page, 2500);
     const base = gpuObjects(await readCounts(page));
+    log.tiles.length = 0;
 
     await goTo(page, body, 3.1);
     await expect.poll(async () => (await spaceStats(page)).tiles.shown, { timeout: 90_000 }).toBe(3);
