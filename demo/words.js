@@ -367,7 +367,7 @@ export const WORDS = {
     sp_hop: "めぐる",
     sp_hop_prev: "前の天体",
     sp_hop_next: "次の天体",
-    sp_hop_now: "いま {name}",
+    sp_hop_now: "いま{name}にいます",
     sp_go: "そこへ行く",
     sf_title: "全画面の宇宙",
     sf_back: "宇宙の表示にもどる",
