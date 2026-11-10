@@ -424,8 +424,11 @@ await step("lineup-cdn", async () => {
   await opened(browser, async (page) => {
     await page.route("https://cdn.jsdelivr.net/**", async (route) => {
       const { pathname } = new URL(route.request().url());
-      if (pathname !== "/npm/@johnmorrisdotca/wakusei-planets/lineup/+esm") return route.fulfill({ status: 404, body: "" });
-      return route.fulfill({ body: await bundleOf(modules("lineup/element.js")), contentType: "text/javascript" });
+      if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/lineup/+esm") return route.fulfill({ body: await bundleOf(modules("lineup/element.js")), contentType: "text/javascript" });
+      // the Earth's own map, which its look always draws
+      const picture = pathname.split("/").pop() ?? "";
+      if (picture.endsWith(".webp") && existsSync(at("textures", picture))) return route.fulfill({ body: readFileSync(at("textures", picture)), contentType: "image/webp" });
+      return route.fulfill({ status: 404, body: "" });
     });
     await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("lineup"), "cdn.html")), contentType: "text/html" }));
     await page.goto("https://page.test/");

@@ -640,6 +640,21 @@ export class WakuseiLineup extends HTMLElement {
 
   /** The canvas as a PNG address, taken right after a draw, in the same task, while it still holds the picture. */
   async #pixels(): Promise<string> {
+    // the shared renderer draws nothing out of sight, so a picture asked for while the element is scrolled away brings it into view for the moment it takes, and puts the page back
+    const [x, y] = [window.scrollX, window.scrollY];
+    const away = !this.#visible;
+    if (away) {
+      this.scrollIntoView({ block: "center", behavior: "instant" });
+      for (let i = 0; i < 40 && !this.#visible; i += 1) await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    try {
+      return await this.#readPixels();
+    } finally {
+      if (away) window.scrollTo(x, y);
+    }
+  }
+
+  async #readPixels(): Promise<string> {
     if (this.#view?.live !== true && !(await this.goLive())) throw new Error("the 3D picture is not available here");
     return new Promise<string>((done, reject) => {
       const view = this.#view;
