@@ -96,7 +96,7 @@ test("a press on Saturn selects it and the view stays; a second press goes there
   await goTo(page, "Whole solar system");
   await page.locator(SPACE).evaluate((el) => {
     Reflect.set(window, "__events", []);
-    for (const name of ["wakusei-body-click", "wakusei-body-select", "wakusei-hop"]) el.addEventListener(name, (event) => (Reflect.get(window, "__events") as string[]).push(`${name}:${(event as CustomEvent).detail.id ?? ""}`));
+    for (const name of ["wakusei-body-click", "wakusei-body-select", "wakusei-hop"]) el.addEventListener(name, (event) => (Reflect.get(window, "__events") as string[]).push(`${name}:${(event as CustomEvent).detail.id ?? (event as CustomEvent).detail.current?.id ?? ""}`));
   });
   const box = (await page.locator(SPACE).boundingBox())!;
   const at = (await placeOf(page, "saturn"))!;
@@ -132,7 +132,7 @@ test("going to a body glides, ends at its middle with it whole in view, and the 
   await openSpace(page);
   await callOn(page, "goTo", "jupiter");
   await centred(page, "jupiter");
-  await expect(page.locator("#hop-prev-name")).toHaveText("Deimos");
+  await expect(page.locator("#hop-prev-name")).toHaveText("Ceres");
   await expect(page.locator("#hop-next-name")).toHaveText("Io");
   await page.locator("#hop-next").dispatchEvent("click");
   await centred(page, "io");

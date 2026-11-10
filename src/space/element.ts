@@ -617,7 +617,10 @@ export class WakuseiSpace extends HTMLElement {
     if (preset.endsWith("-moons")) {
       const id = preset.slice(0, -6) as SpacePlanet | SpaceDwarf;
       const sites = this.#painterNow().moons(id, this.#model.time);
-      const reach = Math.max(1, ...sites.map((site) => moonDistance(mode, id, Math.hypot(...site.offset))).filter((r) => r <= 22));
+      const distances = sites.map((site) => moonDistance(mode, id, Math.hypot(...site.offset)));
+      // the moons within 22 radii; a system whose moons are all farther (a dwarf planet's) is framed by them all
+      const near = distances.filter((r) => r <= 22);
+      const reach = Math.max(1, ...(near.length > 0 ? near : distances));
       const radius = radiusIn(id, mode);
       return Math.min(1, (FIT_DISTANCE * radius) / ((reach * radius * 1.15) / Math.tan(17.5 * RAD)));
     }
@@ -631,7 +634,10 @@ export class WakuseiSpace extends HTMLElement {
       inner: Math.max(away("mercury"), away("venus"), away("mars"), away("sun")),
       "solar-system": Math.max(...SPACE_PLANETS.map(away), away("sun")),
     }[preset as Exclude<SpacePreset, `${string}-moons`>];
-    return preset === "earth" ? 1 : FIT_DISTANCE / Math.max(FIT_DISTANCE, reach * 3.4);
+    if (preset === "earth") return 1;
+    const zoom = FIT_DISTANCE / Math.max(FIT_DISTANCE, reach * 3.4);
+    // the Moon's own picture is a quarter of the Earth's in the compressed scale (it was drawn as 0.9 of it): the view of its orbit is still the one that holds the Earth too, three Moon-distances out
+    return preset === "moon" && mode === "compressed" ? zoom * (radiusIn("moon", mode) / 0.9) : zoom;
   }
 
   /** What the element is doing, for a page or a test. */

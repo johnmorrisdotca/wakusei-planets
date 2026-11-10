@@ -91,7 +91,8 @@ test("the Sun, the Moon and the planets are named, and every body is drawn", asy
   await settle(page, 1200);
   expect(await names(page)).toEqual(expect.arrayContaining(["Earth", "Moon"]));
   await jump(page, "Whole solar system");
-  await expect.poll(() => names(page), { timeout: 30_000 }).toEqual(expect.arrayContaining(["Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Neptune", "Pluto"]));
+  // the names that fit: the Sun and the inner planets crowd the Earth's name in this scale, and a name that would cover a surer one is left out (see space-names.demo.ts)
+  await expect.poll(() => names(page), { timeout: 30_000 }).toEqual(expect.arrayContaining(["Mars", "Jupiter", "Saturn", "Neptune", "Pluto"]));
   // the eleven bodies of the first view, and any dwarf planet large enough on the screen to be made
   await expect.poll(async () => (await statsOf(page)).bodies.painted).toBeGreaterThanOrEqual(11);
 });
@@ -101,7 +102,7 @@ test("the names can be in Japanese and a page's own words", async ({ page }) => 
   await setOn(page, "bodyNames", { mars: "火星" });
   await page.locator(SPACE).evaluate((el) => el.setAttribute("lang", "ja"));
   await jump(page, "Whole solar system");
-  await expect.poll(() => names(page), { timeout: 30_000 }).toEqual(expect.arrayContaining(["火星", "木星", "太陽"]));
+  await expect.poll(() => names(page), { timeout: 30_000 }).toEqual(expect.arrayContaining(["火星", "木星", "土星"]));
 });
 
 test("paused, nothing is drawn and no frame is asked for; at real time, at most one draw in 6 seconds", async ({ page }) => {
@@ -223,9 +224,10 @@ test("the scale is compressed or true: the Moon is 3.5 Earth radii away, or 60",
   expect(real).toBeLessThan(75);
 });
 
-test("the painted look draws all eleven bodies in one context, and Jupiter's moons are there when zoomed in", async ({ page }) => {
+test("the painted look draws all nineteen bodies in one context, and Jupiter's moons are there when zoomed in", async ({ page }) => {
   await open(page, `t=${NOV2}&look=painted`);
-  await expect.poll(async () => (await statsOf(page)).bodies.painted, { timeout: 30_000 }).toBe(11);
+  // in the compressed scale the dwarf planets are specks a pixel or two across, and are made
+  await expect.poll(async () => (await statsOf(page)).bodies.painted, { timeout: 30_000 }).toBe(19);
   expect((await statsOf(page)).bodies.look).toBe("painted");
   await jump(page, "Jupiter and its moons");
   await expect.poll(async () => (await statsOf(page)).bodies.moons, { timeout: 30_000 }).toBeGreaterThanOrEqual(2);
@@ -465,20 +467,29 @@ test("the view can be moved sideways and rolled: every body in the picture moves
   };
   const zoom = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("inner"));
   await view({ zoom });
-  const before = [await labelAt(page, "sun"), await labelAt(page, "earth"), await labelAt(page, "venus")];
-  expect(before.every((at) => at !== null)).toBe(true);
+  // three bodies whose names are shown (a name that would cover a surer one is left out, so which they are depends on the day)
+  const shown: string[] = [];
+  const before: { x: number; y: number }[] = [];
+  for (const id of ["sun", "earth", "venus", "mars", "mercury"]) {
+    const at = await labelAt(page, id);
+    if (at && shown.length < 3) {
+      shown.push(id);
+      before.push(at);
+    }
+  }
+  expect(shown.length, "three names are shown").toBe(3);
   await view({ zoom, panX: 90, panY: -40 });
-  const after = [await labelAt(page, "sun"), await labelAt(page, "earth"), await labelAt(page, "venus")];
+  const after = await Promise.all(shown.map((id) => labelAt(page, id)));
   for (const [i, at] of after.entries()) {
-    expect(Math.abs(at!.x - before[i]!.x - 90), `body ${i} moves 90 px right`).toBeLessThanOrEqual(1);
-    expect(Math.abs(at!.y - before[i]!.y + 40), `body ${i} moves 40 px up`).toBeLessThanOrEqual(1);
+    expect(Math.abs(at!.x - before[i]!.x - 90), `${shown[i]} moves 90 px right`).toBeLessThanOrEqual(1);
+    expect(Math.abs(at!.y - before[i]!.y + 40), `${shown[i]} moves 40 px up`).toBeLessThanOrEqual(1);
   }
   // rolling a quarter turn clockwise takes what was at the right to the bottom
   await view({ zoom });
-  const flat = await labelAt(page, "sun");
+  const flat = await labelAt(page, shown[0]!);
   const box = (await page.locator(SPACE).boundingBox())!;
   await view({ zoom, roll: 90 });
-  const rolled = await labelAt(page, "sun");
+  const rolled = await labelAt(page, shown[0]!);
   const [cx, cy] = [box.width / 2, box.height / 2];
   const [dx, dy] = [flat!.x - cx, flat!.y - cy];
   expect(Math.abs(rolled!.x - (cx - dy)), "a clockwise quarter turn").toBeLessThan(60);

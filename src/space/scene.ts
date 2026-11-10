@@ -41,6 +41,8 @@ const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.4 };
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
 const MOON_MIN_PX = 2.2;
+/** ...or a planet's moons are shown when the planet is smaller than that but its farthest moon is this many CSS pixels from it. */
+const MOON_MIN_SYSTEM_PX = 30;
 /** A moon that has been out of sight this long is let go (its pictures too). */
 const MOON_KEEP_MS = 4000;
 
@@ -581,7 +583,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const id of SPACE_BODIES) {
             const slot = slotOf(id);
             // a dwarf planet too small to see is not made, and one that was made but has shrunk away is hidden
-            const unseen = (SPACE_DWARFS as readonly string[]).includes(id) && px[id] < DWARF_MIN_PX && focus !== id && model.focus !== id;
+            const unseen = (SPACE_DWARFS as readonly string[]).includes(id) && px[id] < DWARF_MIN_PX && focus !== id && model.focus !== id && hostOf(model.focus) !== id;
             if (unseen) {
               if (slot.drawing) slot.drawing.object.visible = false;
               continue;
@@ -698,10 +700,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const moonPlaces: Record<string, BodyPlace> = {};
           for (const id of [...SPACE_PLANETS, ...SPACE_DWARFS]) {
             const planet = slotOf(id).drawing;
-            if (!planet || px[id] < MOON_MIN_PLANET_PX) continue;
+            if (!planet) continue;
+            const sites = ((MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? []).map((moon) => ({ name: moon as string, offset: moonOffset(moon, model.time), radius: BODIES[moon].radiusKm / BODIES[id].radiusKm }));
+            // the moons are shown once the planet is a few pixels across, or the system round it is wide enough on the screen to tell its moons from the planet, or one of its moons is the body looked at
+            let spread = 1;
+            for (const site of sites) spread = Math.max(spread, moonDistance(mode, id, Math.hypot(site.offset[0], site.offset[1], site.offset[2])));
+            if (px[id] < MOON_MIN_PLANET_PX && px[id] * spread < MOON_MIN_SYSTEM_PX && hostOf(model.focus) !== id) continue;
             const radius = radiusOf(id);
-            for (const moon of (MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? []) {
-              const site = { name: moon as string, offset: moonOffset(moon, model.time), radius: BODIES[moon].radiusKm / BODIES[id].radiusKm };
+            for (const site of sites) {
               const reach = Math.hypot(site.offset[0], site.offset[1], site.offset[2]);
               const k = reach === 0 ? 1 : moonDistance(mode, id, reach) / reach;
               const at: Vec3 = [pos[id][0] + site.offset[0] * k * radius, pos[id][1] + site.offset[1] * k * radius, pos[id][2] + site.offset[2] * k * radius];

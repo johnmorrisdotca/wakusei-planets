@@ -16,6 +16,8 @@ const rings = (page: import("@playwright/test").Page) =>
     for (const ring of el.shadowRoot!.querySelectorAll<HTMLElement>(".sp-ring:not([hidden])")) {
       const id = ring.dataset["ring"]!;
       const at = (el as unknown as { placeOf(id: string): { x: number; y: number } | null }).placeOf(id);
+      // one outside the view is not on the screen
+      if (!at || at.x < 0 || at.y < 0 || at.x > el.clientWidth || at.y > el.clientHeight) continue;
       const m = /translate\((-?\d+)px,\s*(-?\d+)px\)/.exec(ring.style.transform)!;
       out.push({ id, x: Number(m[1]) - (at?.x ?? 0), y: Number(m[2]) - (at?.y ?? 0) });
     }
