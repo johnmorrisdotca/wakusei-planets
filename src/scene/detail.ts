@@ -2,7 +2,7 @@
 // or 4096 by 1024 round a pole: about 22 MB of graphics memory with its mipmaps), freed a few seconds after the view no longer needs it. Nothing here draws: a window that is ready asks for one draw, and
 // the draw's `apply` puts it on the body. three.js is passed in; nothing here imports it. See scripts/make-body-tiles.py for the tiles and docs/guides/close-zoom.md for the whole picture.
 import type * as THREE from "three";
-import { chooseWindow, covers, parseManifest, tilePath, visibleRegion, windowRect, windowTiles, TILE_SIZE, texelAngle, type Axes, type TileLevel, type TileManifest, type TileWindow, type ViewBox } from "./tiles.ts";
+import { chooseWindow, covers, parseManifest, tilePath, visibleRegion, windowRect, windowTiles, BASE_WIDTH, TEXEL_SLACK, TILE_SIZE, texelAngle, type Axes, type Region, type Seen, type TileLevel, type TileManifest, type TileWindow, type ViewBox } from "./tiles.ts";
 
 type Three = Pick<typeof THREE, "ClampToEdgeWrapping" | "DataTexture" | "LinearFilter" | "NoColorSpace">;
 
@@ -64,8 +64,14 @@ export interface DetailDeps {
 }
 
 export interface Detail {
-  /** Called at each draw with where the camera is and the body's axes. */
+  /** Called at each draw with where the camera is and the body's axes (an orthographic camera looking straight at the body, as `<wakusei-body>` has). The tile set is read at the first call. */
   sync(box: ViewBox, axes: Axes, viewWidth: number): void;
+  /**
+   * Called at each draw of a body seen by any camera (`seenRegion`): what the camera sees of it, or `undefined` for none. The tile set is read only once the 2048 pixel map is not sharp enough for the view.
+   */
+  follow(seen: Seen | undefined): void;
+  /** Called at a draw when the body is too small in the view to want tiles at all: nothing is read, and what is held is let go after a few seconds. */
+  rest(): void;
   readonly stats: DetailStats;
   dispose(): void;
 }
@@ -290,44 +296,71 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     });
   };
 
+  const idle = (): void => {
+    wantLevel = null;
+    cancelPending();
+    scheduleFree();
+  };
+
+  // what the view needs, whoever works out the region: the window, loaded after the view has settled
+  const track = (region: Region | undefined, inside: Region | undefined, radiansPixels: number): void => {
+    const want = region === undefined ? undefined : chooseWindow(region, levels!, radiansPixels);
+    wantLevel = want?.level ?? null;
+    if (want === undefined) {
+      cancelPending();
+      scheduleFree();
+      return;
+    }
+    cancelFree();
+    if (held !== undefined && held.window.level >= want.level && inside !== undefined && covers(held.window, inside)) {
+      cancelPending();
+      return;
+    }
+    const key = keyOf(want);
+    if (held?.key === key || loading?.key === key || pending?.key === key) return;
+    const lastFailed = failed.get(key);
+    if (lastFailed !== undefined && clock() - lastFailed < RETRY_MS) return;
+    cancelPending();
+    pending = {
+      key,
+      timer: setTimeout(() => {
+        pending = undefined;
+        if (!gone) load(want);
+      }, DETAIL_SETTLE_MS),
+    };
+  };
+
   return {
     sync(box, axes, viewWidth) {
       if (gone) return;
       const base = deps.base();
       if (base === undefined || !deps.allowed()) {
-        wantLevel = null;
-        scheduleFree();
+        idle();
         return;
       }
       ask(base);
       if (levels === undefined) return;
       const region = visibleRegion(box, axes);
-      const radiansPixels = (deps.ratio() * viewWidth) / Math.max(1e-9, box.right - box.left);
-      const want = region === undefined ? undefined : chooseWindow(region, levels, radiansPixels);
-      wantLevel = want?.level ?? null;
-      if (want === undefined) {
-        cancelPending();
-        scheduleFree();
+      track(region, region === undefined ? undefined : visibleRegion(box, axes, 0), (deps.ratio() * viewWidth) / Math.max(1e-9, box.right - box.left));
+    },
+    follow(seen) {
+      if (gone) return;
+      const base = deps.base();
+      if (base === undefined || !deps.allowed()) {
+        idle();
         return;
       }
-      cancelFree();
-      const inside = visibleRegion(box, axes, 0);
-      if (held !== undefined && held.window.level >= want.level && inside !== undefined && covers(held.window, inside)) {
-        cancelPending();
+      // the tile set is read when the view wants more than the 2048 pixel map gives, not before: a page that never gets that close fetches nothing
+      const radiansPixels = seen === undefined ? 0 : seen.radiansPixels * deps.ratio();
+      if (seen !== undefined && radiansPixels / TEXEL_SLACK > BASE_WIDTH / (2 * Math.PI)) ask(base);
+      if (levels === undefined) {
+        idle();
         return;
       }
-      const key = keyOf(want);
-      if (held?.key === key || loading?.key === key || pending?.key === key) return;
-      const lastFailed = failed.get(key);
-      if (lastFailed !== undefined && clock() - lastFailed < RETRY_MS) return;
-      cancelPending();
-      pending = {
-        key,
-        timer: setTimeout(() => {
-          pending = undefined;
-          if (!gone) load(want);
-        }, DETAIL_SETTLE_MS),
-      };
+      track(seen?.region, seen?.inside, radiansPixels);
+    },
+    rest() {
+      if (!gone) idle();
     },
     get stats() {
       return {

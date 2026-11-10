@@ -71,3 +71,6 @@ export function loadImage(three: Pick<typeof THREE, "TextureLoader">, url: strin
     loader.load(url, resolve, undefined, (error) => reject(error instanceof Error ? error : new Error("texture failed")));
   });
 }
+
+/** False on a device that says it has 2 GB of memory or less: it keeps to the package's own pictures. */
+export const tilesAllowed = (): boolean => ((typeof navigator === "undefined" ? undefined : (navigator as Navigator & { deviceMemory?: number }).deviceMemory) ?? 8) > 2;

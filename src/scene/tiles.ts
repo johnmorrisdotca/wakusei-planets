@@ -142,6 +142,23 @@ export function visibleRegion(box: ViewBox, axes: Axes, pad = 0.06): Region | un
   }
   if (lons.length === 0) return undefined;
 
+  const raw = closeRegion(lons, lats, ref, poleIn(box, axes, 1), poleIn(box, axes, -1));
+  return padRegion(raw, pad);
+}
+
+/** True when the pole (`sign` 1 north, -1 south) lies on the front of the disc and inside the box. */
+function poleIn(box: ViewBox, axes: Axes, sign: 1 | -1): boolean {
+  const px = axes.pole[0] * axes.scale[1] * sign;
+  const py = axes.pole[1] * axes.scale[1] * sign;
+  const pz = axes.pole[2] * sign;
+  return pz > 0 && px >= box.left && px <= box.right && py >= box.bottom && py <= box.top;
+}
+
+/**
+ * The longitudes and latitudes of the points seen, as a region with no margin: the stretch of longitude measured from `ref` (the longitude of the point nearest the middle of the view, so a spread across the antimeridian is
+ * one stretch), the whole turn when a pole is in view or the spread is nearly all of it, and the poles' latitudes when they are in view.
+ */
+function closeRegion(lons: readonly number[], lats: readonly number[], ref: number, north: boolean, south: boolean): Region {
   let lo = Infinity;
   let hi = -Infinity;
   for (const lon of lons) {
@@ -149,36 +166,35 @@ export function visibleRegion(box: ViewBox, axes: Axes, pad = 0.06): Region | un
     if (rel < lo) lo = rel;
     if (rel > hi) hi = rel;
   }
-  let latMin = Math.min(...lats);
-  let latMax = Math.max(...lats);
-  // a pole in the box: its point is on the front of the disc (it faces the viewer) and inside the box
-  let polar = false;
-  for (const sign of [1, -1]) {
-    const px = axes.pole[0] * axes.scale[1] * sign;
-    const py = axes.pole[1] * axes.scale[1] * sign;
-    const pz = axes.pole[2] * sign;
-    if (pz > 0 && px >= box.left && px <= box.right && py >= box.bottom && py <= box.top) {
-      polar = true;
-      if (sign > 0) latMax = Math.PI / 2;
-      else latMin = -Math.PI / 2;
-    }
+  let latMin = Infinity;
+  let latMax = -Infinity;
+  for (const lat of lats) {
+    if (lat < latMin) latMin = lat;
+    if (lat > latMax) latMax = lat;
   }
+  if (north) latMax = Math.PI / 2;
+  if (south) latMin = -Math.PI / 2;
   let lonMin = ref + lo;
   let lonMax = ref + hi;
-  if (polar || hi - lo > TAU * 0.98) {
+  if (north || south || hi - lo > TAU * 0.98) {
     lonMin = ref - Math.PI;
     lonMax = ref + Math.PI;
   }
-  // a margin, so a small turn or pan does not at once leave the window
+  return { lonMin, lonMax, latMin, latMax };
+}
+
+/** A margin all round a region, so a small turn or pan does not at once leave the window: a fraction of its size, and at least two degrees when `pad` is not 0. */
+function padRegion(region: Region, pad: number): Region {
+  let { lonMin, lonMax } = region;
   const padLon = pad > 0 ? Math.max(2 * RAD, (lonMax - lonMin) * pad) : 0;
-  const padLat = pad > 0 ? Math.max(2 * RAD, (latMax - latMin) * pad) : 0;
+  const padLat = pad > 0 ? Math.max(2 * RAD, (region.latMax - region.latMin) * pad) : 0;
   if (lonMax - lonMin < TAU) {
     const spread = Math.min(TAU, lonMax - lonMin + 2 * padLon);
     const middle = (lonMin + lonMax) / 2;
     lonMin = middle - spread / 2;
     lonMax = middle + spread / 2;
   }
-  return { lonMin, lonMax, latMin: Math.max(-Math.PI / 2, latMin - padLat), latMax: Math.min(Math.PI / 2, latMax + padLat) };
+  return { lonMin, lonMax, latMin: Math.max(-Math.PI / 2, region.latMin - padLat), latMax: Math.min(Math.PI / 2, region.latMax + padLat) };
 }
 
 /** A window of picture: tiles of one level, `cols` across starting at column `col0` (the columns wrap round the far edge) and `rows` down from row `row0`. */
@@ -268,3 +284,163 @@ export function covers(window: TileWindow, region: Region): boolean {
 
 /** The angle one texel of a level covers, in radians along the equator (`2 pi / width`). */
 export const texelAngle = (width: number): number => TAU / width;
+
+/**
+ * A camera as the region maths needs it: where the eye is, which way it looks, the ray through any point of the view and where a world point lands in it. The parts of a three.js camera are all it takes (`unproject` and `project`),
+ * so an orthographic camera (the portrait) and a perspective one (the space view) are the same to the maths below.
+ */
+export interface Sight {
+  /** Where the eye is, or `null` for a camera whose rays are parallel (orthographic). */
+  eye: Vec3 | null;
+  /** The way the camera looks, a unit vector. */
+  forward: Vec3;
+  /** The ray through a point of the view, `x` and `y` from -1 (left, bottom) to 1 (right, top): its origin and a unit direction. */
+  ray(x: number, y: number): { origin: Vec3; direction: Vec3 };
+  /** Where a world point lies in the view, `x` and `y` from -1 to 1, or `undefined` when it is behind the camera or beyond what the camera draws. */
+  project(point: Vec3): { x: number; y: number } | undefined;
+  /** The view's width and height in CSS pixels. */
+  width: number;
+  height: number;
+}
+
+/** Where a body is in the camera's world: its centre, its mean radius, and its axes (`east`, `pole` and `meridian` in the world, `scale` the lengths of its semi-axes in radii, in that order). */
+export interface Placing {
+  centre: Vec3;
+  radius: number;
+  axes: Axes;
+}
+
+/** What a camera sees of a body: the part of the surface in view with a margin and without, and how many device pixels (at a pixel ratio of 1) run along a radian of the surface where it is nearest the camera. */
+export interface Seen {
+  region: Region;
+  inside: Region;
+  radiansPixels: number;
+}
+
+const sub3 = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const norm3 = (a: Vec3): Vec3 => {
+  const l = Math.hypot(a[0], a[1], a[2]) || 1;
+  return [a[0] / l, a[1] / l, a[2] / l];
+};
+const cross3 = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const GRID = 17;
+const CAP = 33;
+const RING = 64;
+
+/**
+ * The part of a body's surface a camera sees: rays through a grid of the view are met with the body (turned into its own frame, where the surface is the unit sphere), and so are points of the cap that faces the eye (they
+ * find a small patch at a deep zoom, and the whole near side when the body is small in the view), with its edge, and the poles are looked for separately. The region is a little too large rather than too small. The same maths
+ * works for an orthographic camera and a perspective one, and for a body off to one side of the view.
+ *
+ * @param sight - The camera.
+ * @param placing - Where the body is.
+ * @param pad - The margin added all round, as a fraction of the region (and at least two degrees when it is not 0). Default 0.06.
+ * @returns The region with its margin, the region without, and the finest device pixels along a radian anywhere in view; or `undefined` when the camera sees none of the body.
+ */
+export function seenRegion(sight: Sight, placing: Placing, pad = 0.06): Seen | undefined {
+  const { centre, radius, axes } = placing;
+  const [se, sp, sm] = axes.scale;
+  // a world vector in the body's frame: x along the prime meridian, y east, z along the pole, the surface the unit sphere
+  const inBody = (v: Vec3): Vec3 => [dot(axes.meridian, v) / (radius * sm), dot(axes.east, v) / (radius * se), dot(axes.pole, v) / (radius * sp)];
+  const around = (unitSphere: Vec3): Vec3 => {
+    const m = dot(axes.meridian, unitSphere);
+    const e = dot(axes.east, unitSphere);
+    const q = dot(axes.pole, unitSphere);
+    return [
+      centre[0] + radius * (sm * m * axes.meridian[0] + se * e * axes.east[0] + sp * q * axes.pole[0]),
+      centre[1] + radius * (sm * m * axes.meridian[1] + se * e * axes.east[1] + sp * q * axes.pole[1]),
+      centre[2] + radius * (sm * m * axes.meridian[2] + se * e * axes.east[2] + sp * q * axes.pole[2]),
+    ];
+  };
+  const first = sight.ray(0, 0).origin;
+  const lons: number[] = [];
+  const lats: number[] = [];
+  let middle = Infinity;
+  let ref = 0;
+  let depth = Infinity;
+  let nearest: Vec3 | undefined;
+  const take = (h: Vec3, at: { x: number; y: number }, world: Vec3): void => {
+    const length = Math.hypot(h[0], h[1], h[2]) || 1;
+    const lon = Math.atan2(h[1], h[0]);
+    const d = at.x * at.x + at.y * at.y;
+    if (d < middle) {
+      middle = d;
+      ref = lon;
+    }
+    const away = dot(sub3(world, first), sight.forward);
+    if (away < depth) {
+      depth = away;
+      nearest = world;
+    }
+    lons.push(lon);
+    lats.push(Math.asin(Math.max(-1, Math.min(1, h[2] / length))));
+  };
+
+  // rays through a grid of the view
+  for (let i = 0; i < GRID; i += 1) {
+    for (let j = 0; j < GRID; j += 1) {
+      const x = -1 + (2 * i) / (GRID - 1);
+      const y = -1 + (2 * j) / (GRID - 1);
+      const { origin, direction } = sight.ray(x, y);
+      const o = inBody(sub3(origin, centre));
+      const d = inBody(direction);
+      const a = dot(d, d);
+      const b = dot(o, d);
+      const c = dot(o, o) - 1;
+      const disc = b * b - a * c;
+      if (disc <= 0 || a === 0) continue;
+      const t = (-b - Math.sqrt(disc)) / a;
+      if (t < 0) continue;
+      take([o[0] + t * d[0], o[1] + t * d[1], o[2] + t * d[2]], { x, y }, [origin[0] + t * direction[0], origin[1] + t * direction[1], origin[2] + t * direction[2]]);
+    }
+  }
+
+  // the cap that faces the eye, and the edge of it: the part of the body a small view of a distant body, or a view at its edge, shows
+  const eye = sight.eye;
+  const distance = eye === null ? Infinity : Math.hypot(eye[0] - centre[0], eye[1] - centre[1], eye[2] - centre[2]) / radius;
+  if (distance <= 1.0001) return undefined;
+  const n0: Vec3 = eye === null ? [-sight.forward[0], -sight.forward[1], -sight.forward[2]] : norm3(sub3(eye, centre));
+  const helper: Vec3 = Math.abs(n0[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0];
+  const t1 = norm3(cross3(helper, n0));
+  const t2 = cross3(n0, t1);
+  const reach = eye === null ? 1 : Math.sqrt(1 - 1 / (distance * distance));
+  const tryCap = (a: number, b: number): void => {
+    const u = a * reach;
+    const v = b * reach;
+    const w = Math.sqrt(Math.max(0, 1 - u * u - v * v));
+    const n: Vec3 = [u * t1[0] + v * t2[0] + w * n0[0], u * t1[1] + v * t2[1] + w * n0[1], u * t1[2] + v * t2[2] + w * n0[2]];
+    const world = around(n);
+    const at = sight.project(world);
+    if (at === undefined || Math.abs(at.x) > 1 || Math.abs(at.y) > 1) return;
+    take([dot(axes.meridian, n), dot(axes.east, n), dot(axes.pole, n)], at, world);
+  };
+  for (let i = 0; i < CAP; i += 1) {
+    for (let j = 0; j < CAP; j += 1) {
+      const a = -1 + (2 * i) / (CAP - 1);
+      const b = -1 + (2 * j) / (CAP - 1);
+      if (a * a + b * b <= 1) tryCap(a, b);
+    }
+  }
+  for (let k = 0; k < RING; k += 1) tryCap(Math.cos((k / RING) * TAU), Math.sin((k / RING) * TAU));
+  if (lons.length === 0 || nearest === undefined) return undefined;
+
+  // a pole in view: it faces the camera and lands inside the view
+  const poleSeen = (sign: 1 | -1): boolean => {
+    const normal: Vec3 = [axes.pole[0] * sign, axes.pole[1] * sign, axes.pole[2] * sign];
+    const point: Vec3 = [centre[0] + radius * sp * normal[0], centre[1] + radius * sp * normal[1], centre[2] + radius * sp * normal[2]];
+    const toEye = eye === null ? ([-sight.forward[0], -sight.forward[1], -sight.forward[2]] as Vec3) : sub3(eye, point);
+    if (dot(normal, toEye) <= 0) return false;
+    const at = sight.project(point);
+    return at !== undefined && Math.abs(at.x) <= 1 && Math.abs(at.y) <= 1;
+  };
+  const inside = closeRegion(lons, lats, ref, poleSeen(1), poleSeen(-1));
+
+  // how many pixels run along a radian of the surface where it is nearest: a small step across the line of sight, projected
+  const across = norm3(cross3(sight.forward, Math.abs(sight.forward[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
+  const step = radius * 0.01;
+  const a = sight.project(nearest);
+  const b = sight.project([nearest[0] + across[0] * step, nearest[1] + across[1] * step, nearest[2] + across[2] * step]);
+  if (a === undefined || b === undefined) return undefined;
+  const pixels = Math.hypot(((b.x - a.x) * sight.width) / 2, ((b.y - a.y) * sight.height) / 2) / step;
+  return { region: padRegion(inside, pad), inside, radiansPixels: pixels * radius * ((se + sp + sm) / 3) };
+}

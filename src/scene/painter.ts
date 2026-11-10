@@ -5,12 +5,14 @@ import type * as THREE from "three";
 import "../bodies/all.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../facts.ts";
 import { writeBasis } from "./basis.ts";
-import { TEXTURE_BASE, TEXTURE_FAR_BASE, slash, loadImage } from "./textures.ts";
+import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, tilesAllowed } from "./textures.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import type { ThreeParts } from "./body.ts";
-import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
+import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
 import { fallbackLook } from "./fallback.ts";
-import { lookOf } from "./look.ts";
+import { createDetail, type Detail, type DetailStats } from "./detail.ts";
+import { detailOf, lookOf } from "./look.ts";
+import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
 
@@ -65,6 +67,29 @@ export interface PaintContext {
   ratio?: number;
   /** The widest picture the GPU should be given, in pixels; default 2048. */
   maxTexture?: number;
+  /** Told when the finer map tiles' levels for this body are known (`undefined` when it has none), so a view can raise its zoom range. Only called for a painter that has a tile set and a view in `PaintInfo`. */
+  onLevels?(levels: readonly TileLevel[] | undefined): void;
+}
+
+/**
+ * The camera that draws a body and the size of its view, so the painter can tell which part of the body's surface is in view and lay finer map tiles over it. The camera's world and projection matrices must be
+ * current. Without it a body is drawn from its own pictures, as it always was.
+ *
+ * @example
+ * ```ts no-run
+ * import type { PaintView } from "@johnmorrisdotca/wakusei-planets/painter";
+ * import * as THREE from "three";
+ *
+ * const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+ * const view: PaintView = { camera, width: 420, height: 420 };
+ * console.log(view.width);
+ * ```
+ */
+export interface PaintView {
+  camera: THREE.Camera;
+  /** The view's width and height in CSS pixels. */
+  width: number;
+  height: number;
 }
 
 /**
@@ -86,6 +111,8 @@ export interface PaintInfo {
   pose?: { pole: Vec3; meridian: Vec3 };
   /** Spheres that may shade this body from the Sun: x, y, z (from this body's centre) and radius, all in this body's radii, in the scene's axes. At most six are used. */
   occluders?: readonly (readonly [number, number, number, number])[];
+  /** The camera, so that a body big in the view gets finer map tiles for the part in view (see `PaintView`). Left out, none are used. */
+  view?: PaintView;
 }
 
 /**
@@ -105,6 +132,8 @@ export interface Painting {
   billboard?: boolean;
   /** Call at each draw, after the object has been placed and scaled. */
   update(info: PaintInfo): void;
+  /** What the window of finer map tiles on this body is doing, or `undefined` for a body with none (a glowing one, one with no painted map, or a painter with no tile set). */
+  readonly tiles?: DetailStats;
   dispose(): void;
 }
 
@@ -140,6 +169,8 @@ export interface MoonSite {
 export interface PainterOptions {
   textureBase?: string;
   farBase?: string;
+  /** Where the finer map tiles are (a folder address that ends in a slash; `off` for none). Left out, the demo site's (`TILES_BASE`) unless `textureBase` is given, in which case there are none. They are laid over a body that is big in the view, when the caller gives `PaintInfo.view`. */
+  tiles?: string;
 }
 
 const titled = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
@@ -185,7 +216,37 @@ const moonsOf = (planet: string): readonly MoonId[] => {
   return id === "earth" ? [] : id in MOONS_OF ? MOONS_OF[id as keyof typeof MOONS_OF] : [];
 };
 
-function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string }): Painting {
+/** A body whose disc is at least this many device pixels across its radius is worked out for tiles; a smaller one cannot want them, and is not looked at. */
+const TILES_FROM_PX = 150;
+
+/** A three.js camera as the region maths sees it. */
+function sightOf(T: PainterThree, view: PaintView): Sight {
+  const { camera, width, height } = view;
+  camera.updateMatrixWorld();
+  const a = new T.Vector3();
+  const b = new T.Vector3();
+  const perspective = (camera as THREE.PerspectiveCamera).isPerspectiveCamera === true;
+  const eye = perspective ? camera.getWorldPosition(new T.Vector3()) : undefined;
+  const forward = camera.getWorldDirection(new T.Vector3());
+  return {
+    eye: eye === undefined ? null : [eye.x, eye.y, eye.z],
+    forward: [forward.x, forward.y, forward.z],
+    width,
+    height,
+    ray(x, y) {
+      a.set(x, y, -1).unproject(camera);
+      b.set(x, y, 1).unproject(camera);
+      b.sub(a).normalize();
+      return { origin: [a.x, a.y, a.z], direction: [b.x, b.y, b.z] };
+    },
+    project(point) {
+      a.set(point[0], point[1], point[2]).project(camera);
+      return a.z < -1 || a.z > 1 ? undefined : { x: a.x, y: a.y };
+    },
+  };
+}
+
+function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined }): Painting {
   const facts = BODIES[id];
   const look = lookOf(id) ?? fallbackLook(facts);
   const wantPainted = (context.look === "painted" || look.mapped === true) && look.painted !== undefined;
@@ -201,9 +262,20 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   const group = new T.Group();
   group.name = facts.name.en;
 
+  // a glowing body (the Sun) is drawn as it always was: no window of finer map and no generic detail
+  const generic = look.emissive !== true;
+  const fine = detailOf(look);
   const uniforms = (painted: boolean): Record<string, THREE.IUniform> => {
     const a = look.atmosphere;
     return {
+      ...(generic
+        ? {
+            uTexel: { value: painted ? (2 * Math.PI) / (look.painted?.widths[0] ?? 2048) : 0.005 },
+            uDetailAmp: { value: fine.amount },
+            uDetailStretch: { value: fine.stretch },
+            ...(painted ? { uDetail: { value: null }, uDetailRect: { value: [0, 1, 1, 1] }, uDetailFade: { value: new T.Vector2(0, 0) }, uDetailOn: { value: 0 }, uDetailTexel: { value: 0.003 } } : {}),
+          }
+        : {}),
       uLight: { value: new T.Vector3(1, 0, 0) },
       uRelief: { value: painted ? (look.painted?.relief ?? 0) : (look.relief ?? 0.6) },
       uAmbient: { value: look.ambient ?? 0.04 },
@@ -224,7 +296,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     };
   };
   const material = (painted: boolean): THREE.ShaderMaterial => {
-    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? PAINTED_SURFACE : look.surface, painted, true), uniforms: uniforms(painted) });
+    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, undefined, generic), uniforms: uniforms(painted) });
     disposables.push(m);
     return m;
   };
@@ -337,8 +409,9 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     t.colorSpace = T.NoColorSpace;
     return t;
   };
-  const show = (t: THREE.Texture): void => {
+  const show = (t: THREE.Texture, w: number): void => {
     paintedMaterial!.uniforms.uMap!.value = t;
+    if (paintedMaterial!.uniforms.uTexel !== undefined) paintedMaterial!.uniforms.uTexel.value = (2 * Math.PI) / w;
     mesh.material = paintedMaterial!;
     // the shaded look was drawn only until the picture came: if it was drawn at all, its program is let go now, so what a body holds does not depend on which came first
     shader.dispose();
@@ -352,7 +425,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           return;
         }
         small = prepare(t);
-        if (sharp === undefined) show(small);
+        if (sharp === undefined) show(small, widths[0]!);
       },
       () => {
         failed = true;
@@ -376,7 +449,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           const old = sharp;
           sharp = prepare(t);
           sharpWidth = next;
-          show(sharp);
+          show(sharp, next);
           old?.dispose();
         },
         () => {
@@ -388,7 +461,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       const now = Date.now();
       if (tooBigSince === 0) tooBigSince = now;
       else if (now - tooBigSince > 4000) {
-        show(small);
+        show(small, widths[0]!);
         sharp.dispose();
         sharp = undefined;
         sharpWidth = 0;
@@ -397,6 +470,32 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       }
     } else tooBigSince = 0;
   };
+
+  // the window of finer map tiles for a close view, laid over the painted map by the painted material (see `scene/detail.ts`); only for a body that is told which camera sees it
+  const windowUniforms = wantPainted && paintedMaterial !== undefined && generic && bases.tiles !== undefined && look.painted !== undefined ? paintedMaterial.uniforms : undefined;
+  const detail: Detail | undefined =
+    windowUniforms === undefined
+      ? undefined
+      : createDetail(T, {
+          base: () => bases.tiles,
+          body: look.painted!.map,
+          ratio: () => ratio,
+          allowed: tilesAllowed,
+          redraw,
+          ...(context.onLevels === undefined ? {} : { onLevels: (levels: readonly TileLevel[] | undefined) => context.onLevels!(levels) }),
+          apply: (shown) => {
+            if (shown === null) {
+              windowUniforms.uDetailOn!.value = 0;
+              windowUniforms.uDetail!.value = null;
+              return;
+            }
+            windowUniforms.uDetail!.value = shown.texture;
+            windowUniforms.uDetailRect!.value = [shown.rect.u0, shown.rect.vTop, shown.rect.du, shown.rect.dv];
+            (windowUniforms.uDetailFade!.value as THREE.Vector2).set(shown.fade.u, shown.fade.v);
+            windowUniforms.uDetailTexel!.value = shown.texel;
+            windowUniforms.uDetailOn!.value = 1;
+          },
+        });
 
   const axes = facts.axesKm;
   const scaleX = axes ? axes[1] / facts.radiusKm : 1;
@@ -408,12 +507,20 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   return {
     object: group,
     ...(look.emissive === true ? { billboard: true } : {}),
+    get tiles() {
+      return detail?.stats;
+    },
     update(info) {
       light.set(info.toSun[0], info.toSun[1], info.toSun[2]);
       const scale = group.scale.x || 1;
       if (look.emissive !== true) {
         const { pole, meridian } = info.pose ?? orientation(id, info.ms);
         const east = cross(pole, meridian);
+        if (detail !== undefined) {
+          // a body big enough in the view, seen by a camera we were told of, is worked out for a window of finer map; any other keeps the pictures it has
+          if (info.view === undefined || mesh.material !== paintedMaterial || info.radiusPx * ratio < TILES_FROM_PX) detail.rest();
+          else detail.follow(seenRegion(sightOf(T, info.view), { centre: [group.position.x, group.position.y, group.position.z], radius: scale, axes: { east, pole, meridian, scale: [scaleX, scaleY, scaleZ] } }));
+        }
         writeBasis(mesh.matrix, east, pole, meridian, scaleX, scaleY, scaleZ);
         if (ringMesh !== undefined) writeBasis(ringMesh.matrix, meridian, east, pole);
         poleVec.set(pole[0], pole[1], pole[2]);
@@ -437,6 +544,11 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     },
     dispose() {
       gone = true;
+      if (windowUniforms !== undefined) {
+        windowUniforms.uDetailOn!.value = 0;
+        windowUniforms.uDetail!.value = null;
+      }
+      detail?.dispose();
       small?.dispose();
       sharp?.dispose();
       ringTexture?.dispose();
@@ -485,9 +597,11 @@ export interface WakuseiPainter {
 export function createPainter(options: PainterOptions = {}): WakuseiPainter {
   const near = slash(options.textureBase ?? TEXTURE_BASE);
   const far = slash(options.farBase ?? (options.textureBase !== undefined ? options.textureBase : TEXTURE_FAR_BASE));
+  const own = options.tiles;
+  const tiles = own === "off" || own === "none" || own === "" ? undefined : own !== undefined ? slash(own) : options.textureBase !== undefined ? undefined : TILES_BASE;
   return {
     looks: LOOKS,
-    make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far }),
+    make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far, tiles }),
     moons(planet, ms) {
       const radius = BODIES[idOf(planet) as HostId]?.radiusKm;
       if (radius === undefined) return [];
