@@ -37,7 +37,7 @@ const RING_BELOW_PX = 4;
  * ```ts no-run
  * import type { BodyInfo } from "@johnmorrisdotca/wakusei-planets/space/element";
  *
- * const info: BodyInfo = { id: "mars", name: "Mars", radiusKm: 3389.5, distanceKm: 225_000_000 };
+ * const info: BodyInfo = { id: "mars", name: "Mars", kind: "planet", radiusKm: 3389.5, distanceKm: 225_000_000 };
  * console.log(`${info.name}: ${info.radiusKm} km`);
  * ```
  */
