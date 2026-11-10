@@ -295,3 +295,8 @@ test("on or inside the body the angular radius is a quarter turn", () => {
   assert.equal(rideOf({ position: [0.9, 0, 0] }).bodyRadiusDegrees, 90);
   assert.equal(rideOf({ position: [1, 0, 0] }).bodyRadiusDegrees, 90);
 });
+
+test("in the compressed scale the Moon keeps its true size beside the Earth, a quarter of it, so it never looks as big", () => {
+  const ratio = radiusIn("moon", "compressed") / radiusIn("earth", "compressed");
+  assert.ok(Math.abs(ratio - radiusIn("moon", "true") / radiusIn("earth", "true")) < 0.005, `${ratio}`);
+});

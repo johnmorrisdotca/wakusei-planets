@@ -41,14 +41,14 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## Two scales
 
-Space is mostly empty, so a picture at true scale shows two dots. The element has both and says which with `scale`:
+Space is mostly empty, so a picture at true scale is mostly black, with the bodies as specks. The element has both and says which with `scale`; it opens at true distances (`true`, the default):
 
 | `scale` | Distances | Sizes |
 |---|---|---|
-| `compressed` (default) | Every direction is real. The Moon is drawn 3.5 Earth radii away (it is 60); the Sun 70 (it is 23,500); each planet is drawn in its real direction from the Sun at 70 radii times its distance in astronomical units to the power 0.45, so the Earth's own orbit is the 70 and Neptune's about 320 (it is 30 times as far). The Sun, the bodies and their orbit lines all go through the one mapping (`placeBodies`, `orbitLine`), so every body, the Earth too, lies on its own orbit line. The moons of a planet are drawn nearer when their real distance would cross the next planet's orbit (`moonDistance`): the farthest at a third of the gap, the others in the order they are | the Sun 5, the Moon 0.9 and the planets 0.4 to 1.8 Earth radii (larger than life) |
-| `true` | Real distances and sizes, the Earth's equatorial radius for a unit | real: the planets are specks and the Sun is a dot with a glow; names mark where they are |
+| `true` (default) | Real distances and sizes, the Earth's equatorial radius for a unit | real: the planets are specks and the Sun is a dot with a glow. A body whose disc is under 4 CSS pixels across its radius is marked with a ring round its place as well as its name, so no planet is lost |
+| `compressed` | Every direction is real. The Moon is drawn 3.5 Earth radii away (it is 60); the Sun 70 (it is 23,500); each planet is drawn in its real direction from the Sun at 70 radii times its distance in astronomical units to the power 0.45, so the Earth's own orbit is the 70 and Neptune's about 320 (it is 30 times as far). The Sun, the bodies and their orbit lines all go through the one mapping (`placeBodies`, `orbitLine`), so every body, the Earth too, lies on its own orbit line. The moons of a planet are drawn nearer when their real distance would cross the next planet's orbit (`moonDistance`): the farthest at a third of the gap, the others in the order they are | the Sun 5, the Moon 0.273 (its true size beside the Earth: a quarter of it) and the planets 0.4 to 1.8 Earth radii (larger than life) |
 
-Say "compressed scale" on the page whenever the compressed one is on; the demo does.
+The element always names the scale in use on its own view: "True distances" or "Distances squeezed to fit" (`lang="ja"` gives the Japanese, `space.scaleNames = { true: "..." }` a page's own words, and `::part(scale)` styles the line). A page that wants the old opening writes `scale="compressed"`. `space.placeOf(id)` says where a body is on the screen now (its centre and radius in CSS pixels in the element).
 
 ## Time
 
@@ -66,7 +66,7 @@ A planet's nearer moons appear round it once the planet is a few pixels across, 
 
 ## Properties, events, stats
 
-Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale`, `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`, `tiles` (where the finer map tiles are; `off` for none). Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-timechange` (the date, four times a second at most while time runs, and once when it holds: `{ time, running }`), `wakusei-time` (every step the clock takes), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera`, `bodies` and `tiles`.
+Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale` (`true`, the default, or `compressed`), `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`, `tiles` (where the finer map tiles are; `off` for none). Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-timechange` (the date, four times a second at most while time runs, and once when it holds: `{ time, running }`), `wakusei-time` (every step the clock takes), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera`, `bodies` and `tiles`.
 
 ## Riding along
 

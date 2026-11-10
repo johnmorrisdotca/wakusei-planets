@@ -164,7 +164,7 @@ export interface SpaceModel {
 
 export const newSpaceModel = (): SpaceModel => ({
   time: Date.now(),
-  mode: "compressed",
+  mode: "true",
   view: { yaw: 0, tilt: 0, zoom: 1, roll: 0, panX: 0, panY: 0 },
   centre: { lon: 0, lat: 0 },
   anchor: null,
@@ -190,7 +190,17 @@ export const newSpaceModel = (): SpaceModel => ({
   ratio: () => Math.min(globalThis.devicePixelRatio || 1, 2),
 });
 
-/** Where a body is on the screen: its centre and its apparent radius, in CSS pixels in the box. */
+/**
+ * Where a body is on the screen: its centre and its apparent radius, in CSS pixels in the box.
+ *
+ * @example
+ * ```ts no-run
+ * import type { BodyPlace } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const centre: BodyPlace = { x: 320, y: 200, r: 48 };
+ * console.log(centre.r);
+ * ```
+ */
 export interface BodyPlace {
   x: number;
   y: number;

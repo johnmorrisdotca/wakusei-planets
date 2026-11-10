@@ -27,7 +27,7 @@ const address = createAddressState({ defaults: {} });
 const pick = <T extends string>(value: string | null, allowed: readonly T[], fallback: T): T => (allowed.includes(value as T) ? (value as T) : fallback);
 const DEFAULT_SPEED = 3600;
 const state = {
-  scale: pick(address.get("scale"), ["compressed", "true"], "compressed"),
+  scale: pick(address.get("scale"), ["compressed", "true"], "true"),
   look: pick(address.get("look"), ["realistic", "painted"], "realistic"),
   light: pick(address.get("light"), ["sun", "lit"], "sun"),
   orbits: address.get("orbits") !== "0",
@@ -88,7 +88,7 @@ function render(): void {
   replay.words = { start: say("sp_back") };
   if (!state.play && document.activeElement !== when) when.value = localValue(state.time === "now" ? space.time : Date.parse(state.time));
   scaleNote.textContent = say(state.scale === "true" ? "sp_note_true" : "sp_note_compressed");
-  address.set("scale", state.scale === "compressed" ? null : state.scale);
+  address.set("scale", state.scale === "true" ? null : state.scale);
   address.set("look", state.look === "realistic" ? null : state.look);
   address.set("light", state.light === "sun" ? null : state.light);
   address.set("orbits", state.orbits ? null : "0");

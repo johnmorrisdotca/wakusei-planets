@@ -142,8 +142,8 @@ export function placeAround(mode: ScaleMode, sun: Vec3, helio: Vec3): Vec3 {
 
 type BaseBody = "sun" | "earth" | "moon" | SpacePlanet;
 
-/** The sizes a compressed view gives bodies large enough to see, in Earth radii. */
-const COMPRESSED_RADIUS: Record<"sun" | "earth" | "moon" | SpacePlanet, number> = { sun: 5, earth: 1, moon: 0.9, mercury: 0.5, venus: 0.8, mars: 0.6, jupiter: 1.8, saturn: 1.6, uranus: 1.0, neptune: 1.0, pluto: 0.4 };
+/** The sizes a compressed view gives bodies large enough to see, in Earth radii. The Moon is at its true size beside the Earth (0.273 of it), so it never looks as big as the Earth. */
+const COMPRESSED_RADIUS: Record<"sun" | "earth" | "moon" | SpacePlanet, number> = { sun: 5, earth: 1, moon: 0.273, mercury: 0.5, venus: 0.8, mars: 0.6, jupiter: 1.8, saturn: 1.6, uranus: 1.0, neptune: 1.0, pluto: 0.4 };
 
 /**
  * A body's radius in Earth radii: the real one, or one large enough to see in a compressed view.

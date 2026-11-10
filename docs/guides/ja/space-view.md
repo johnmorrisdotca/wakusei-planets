@@ -41,14 +41,14 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## 縮尺は二通り
 
-宇宙はほとんど空っぽなので、本当の縮尺では点が2つ見えるだけです。この要素は両方を持っていて、`scale` で切り替えます。
+宇宙はほとんど空っぽなので、本当の縮尺ではほとんど真っ暗で、天体は点に見えます。この要素は両方を持っていて、`scale` で切り替えます。初期値は本当の距離 (`true`) です。
 
 | `scale` | 距離 | 大きさ |
 |---|---|---|
-| `compressed` (初期値) | 向きはすべて本物です。月は地球の半径の3.5倍の所に (本当は60倍)、太陽は70倍の所に (本当は23,500倍) 描きます。惑星は太陽から本物の向きに、70に天文単位の距離の0.45乗をかけた半径の所へ置くので、地球の軌道が70、海王星が約320です (本当は30倍)。太陽・天体・軌道の線は同じ一つの変換 (`placeBodies`、`orbitLine`) を通るので、地球もふくめ、どの天体も自分の軌道の線の上にいます。惑星の衛星は、本当の距離だとなりの惑星の軌道をこえてしまうときは近くに描きます (`moonDistance`)。いちばん遠い衛星はすき間の3分の1、ほかは順番をそのままに | 太陽が5、月が0.9、惑星が0.4から1.8 (地球の半径を1として。実際より大きめ) |
-| `true` | 距離も大きさも本物で、地球の赤道半径が1です | 本物の大きさ。惑星は点のように小さく、太陽は光る点です。名前で場所を示します |
+| `true` (初期値) | 距離も大きさも本物で、地球の赤道半径が1です | 本物の大きさ。惑星は点のように小さく、太陽は光る点です。半径が画面で4CSSピクセルに満たない天体には、名前に加えて、その場所のまわりに輪も描くので、どの惑星も見失いません |
+| `compressed` | 向きはすべて本物です。月は地球の半径の3.5倍の所に (本当は60倍)、太陽は70倍の所に (本当は23,500倍) 描きます。惑星は太陽から本物の向きに、70に天文単位の距離の0.45乗をかけた半径の所へ置くので、地球の軌道が70、海王星が約320です (本当は30倍)。太陽・天体・軌道の線は同じ一つの変換 (`placeBodies`、`orbitLine`) を通るので、地球もふくめ、どの天体も自分の軌道の線の上にいます。惑星の衛星は、本当の距離だとなりの惑星の軌道をこえてしまうときは近くに描きます (`moonDistance`)。いちばん遠い衛星はすき間の3分の1、ほかは順番をそのままに | 太陽が5、月が0.273 (地球と並べたときの本当の大きさ。地球の4分の1ほど)、惑星が0.4から1.8 (地球の半径を1として。実際より大きめ) |
 
-縮めた縮尺のときは、ページに「縮めた縮尺」と書いておきます。デモもそうしています。
+いま使っている縮尺の名前は、要素の画面にいつも表示されます。「本当の距離」か「距離を縮めて表示」です (`lang="ja"` なら日本語になり、`space.scaleNames = { true: "..." }` でページ独自の言葉にでき、`::part(scale)` で行の見た目を変えられます)。以前の初期値のままにしたいページは `scale="compressed"` と書きます。`space.placeOf(id)` は、天体がいま画面のどこにあるか (要素の中での中心と半径、CSSピクセル) を返します。
 
 ## 時間
 
@@ -66,7 +66,7 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale`、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 乗って見る
 

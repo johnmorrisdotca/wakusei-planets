@@ -16,6 +16,17 @@ import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPl
 
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type SpaceBody, type SpaceLight };
 
+/** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
+export type { BodyPlace };
+
+/** The words the view says on itself for the scale in use. A page in another language gives its own with `scaleNames`. */
+const SCALE_WORDS = {
+  en: { true: "True distances", compressed: "Distances squeezed to fit" },
+  ja: { true: "本当の距離", compressed: "距離を縮めて表示" },
+} as const;
+/** A body whose disc is smaller than this many CSS pixels across its radius is marked with a ring as well as its name. */
+const RING_BELOW_PX = 4;
+
 /**
  * What a page can tell a reader about a body now.
  *
@@ -125,7 +136,7 @@ const readBody = (value: string): SpaceBody | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}</style><div id="stage"></div><div id="labels"></div>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
@@ -169,6 +180,9 @@ export class WakuseiSpace extends HTMLElement {
   #pool = new Map<SpaceBody, HTMLElement>();
   #places: Record<SpaceBody, BodyPlace | null> | undefined;
   #names: Partial<Record<SpaceBody, string>> = {};
+  #scaleNames: Partial<Record<ScaleMode, string>> = {};
+  #rings = new Map<SpaceBody, HTMLElement>();
+  #scaleLine: HTMLElement | undefined;
   #hint = "choose to look at it";
   #painter: WakuseiPainter | undefined;
   #focusBeforeRide: SpaceBody = "earth";
@@ -184,7 +198,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.centre = readCentre(this.getAttribute("center")) ?? this.#model.centre;
     this.#clock = createGameClock(readTime(this.getAttribute("time")), this.#readSpeed());
     this.#model.time = this.#clock.time;
-    this.#model.mode = this.getAttribute("scale") === "true" ? "true" : "compressed";
+    this.#model.mode = this.getAttribute("scale") === "compressed" ? "compressed" : "true";
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
@@ -198,7 +212,10 @@ export class WakuseiSpace extends HTMLElement {
     root.innerHTML = STYLE;
     this.#stage = root.getElementById("stage")!;
     this.#labelBox = root.getElementById("labels")!;
+    this.#scaleLine = root.querySelector<HTMLElement>(".sp-scale")!;
+    this.#nameScale();
     this.#pool.clear();
+    this.#rings.clear();
 
     const nav = navigator as Navigator & { deviceMemory?: number };
     this.#gate = createGate(1000 / frameCap(30, { deviceMemory: nav.deviceMemory, hardwareConcurrency: nav.hardwareConcurrency }), () => this.#view?.invalidate());
@@ -252,12 +269,15 @@ export class WakuseiSpace extends HTMLElement {
     if (name === "center") this.centre = readCentre(value) ?? { lon: 0, lat: 0 };
     else if (name === "time") this.time = readTime(value);
     else if (name === "speed") this.speed = this.#readSpeed();
-    else if (name === "scale") this.scale = value === "true" ? "true" : "compressed";
+    else if (name === "scale") this.scale = value === "compressed" ? "compressed" : "true";
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
-    else if (name === "lang") for (const [id, button] of this.#pool) this.#nameLabel(button, id);
+    else if (name === "lang") {
+      for (const [id, button] of this.#pool) this.#nameLabel(button, id);
+      this.#nameScale();
+    }
   }
 
   /** The home place the camera starts above, as longitude and latitude in degrees. */
@@ -297,13 +317,23 @@ export class WakuseiSpace extends HTMLElement {
     if (this.#clock.speed === 0 && was !== 0) this.#announce(false);
   }
 
-  /** `compressed` (the default: every direction real, the distances squeezed) or `true` (real distances and sizes). */
+  /** `true` (the default: real distances and sizes; a body too small to see is marked with a ring and its name) or `compressed` (every direction real, the distances squeezed). The scale in use is always named on the view. */
   get scale(): ScaleMode {
     return this.#model.mode;
   }
   set scale(value: ScaleMode) {
     this.#model.mode = value;
+    this.#nameScale();
     this.#gate?.request();
+  }
+
+  /** The words naming the scale on the view, for a page in another language (`{ true: "距離はそのまま" }`). A scale left out keeps its words in the element's `lang`. */
+  get scaleNames(): Partial<Record<ScaleMode, string>> {
+    return { ...this.#scaleNames };
+  }
+  set scaleNames(value: Partial<Record<ScaleMode, string>>) {
+    this.#scaleNames = { ...value };
+    this.#nameScale();
   }
 
   get labels(): boolean {
@@ -311,7 +341,7 @@ export class WakuseiSpace extends HTMLElement {
   }
   set labels(value: boolean) {
     this.#model.labels = value;
-    if (!value) for (const label of this.#pool.values()) label.hidden = true;
+    if (!value) for (const label of [...this.#pool.values(), ...this.#rings.values()]) label.hidden = true;
     this.#gate?.request();
   }
 
@@ -582,13 +612,40 @@ export class WakuseiSpace extends HTMLElement {
         this.#pool.set(id, button);
         label = button;
       }
+      let ring = this.#rings.get(id);
+      if (!ring) {
+        ring = box.ownerDocument.createElement("div");
+        ring.className = "sp-ring";
+        ring.dataset["ring"] = id;
+        ring.hidden = true;
+        box.append(ring);
+        this.#rings.set(id, ring);
+      }
       if (!at) {
         if (!label.hidden) label.hidden = true;
+        if (!ring.hidden) ring.hidden = true;
         continue;
       }
       if (label.hidden) label.hidden = false;
       label.style.transform = `translate(${Math.round(at.x + Math.max(4, Math.min(at.r, 40)))}px,${Math.round(at.y - 8)}px)`;
+      // a body too small to see is marked: a ring round the place it is, as well as its name
+      const small = at.r < RING_BELOW_PX;
+      if (ring.hidden === small) ring.hidden = !small;
+      if (small) ring.style.transform = `translate(${Math.round(at.x)}px,${Math.round(at.y)}px)`;
     }
+  }
+
+  /** Say which scale is on, on the view itself. */
+  #nameScale(): void {
+    if (!this.#scaleLine) return;
+    const words = SCALE_WORDS[this.getAttribute("lang") === "ja" ? "ja" : "en"];
+    this.#scaleLine.textContent = this.#scaleNames[this.#model.mode] ?? words[this.#model.mode];
+  }
+
+  /** Where a body is on the screen now: its centre and radius in CSS pixels in the element, or `null` when it is behind the camera or not drawn. */
+  placeOf(id: SpaceBody): BodyPlace | null {
+    const at = this.#places?.[id];
+    return at ? { ...at } : null;
   }
 
   #nameLabel(button: HTMLElement, id: SpaceBody): void {
