@@ -257,6 +257,8 @@ export interface SpaceDeps {
 const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
 /** How far a place is from the nearest point of a line through `points`, in the line's units. */
+const plus = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+
 function distanceToLine(place: Vec3, points: readonly Vec3[]): number {
   let best = Number.POSITIVE_INFINITY;
   for (let i = 0; i + 1 < points.length; i += 1) {
@@ -391,15 +393,32 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           const mode = model.mode;
           const pos = placeBodies(mode, frame);
-          const sunPos = pos.sun;
           const radiusOf = (id: SpaceBody): number => radiusIn(id, mode);
-          const placeAll = (at: SpaceFrame): Record<SpaceBody, Vec3> => placeBodies(mode, at);
           // where a moon is round its planet, as the view draws it: in the planet's radii, drawn nearer in a compressed view where the real distance would cross the next planet's orbit
           const moonSite = (id: MoonId, at: number, host: SpacePlanet | SpaceDwarf): Vec3 => {
             const real = moonOffset(id, at);
             const d = Math.hypot(real[0], real[1], real[2]);
             const k = d === 0 ? 1 : moonDistance(mode, host, d) / d;
             return [real[0] * k, real[1] * k, real[2] * k];
+          };
+          // The places are in Earth radii from the Earth's centre, which at a dwarf planet is millions: a body a few hundredths of a radius across (Phobos, Eris seen close) would be lost to the GPU's single-precision
+          // numbers, which the bodies' shaders use for world positions. So the whole scene is moved to put the body looked at (or the target of a ride) at the origin: every place below is relative to it, and the
+          // camera's place that is reported, and kept for a glide, has it added back.
+          const absoluteSite = (id: BodyId): Vec3 => {
+            if ((SPACE_BODIES as readonly string[]).includes(id)) return pos[id as SpaceBody];
+            const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
+            const offset = moonSite(id as MoonId, model.time, host);
+            const hostRadius = radiusOf(host);
+            return [pos[host][0] + offset[0] * hostRadius, pos[host][1] + offset[1] * hostRadius, pos[host][2] + offset[2] * hostRadius];
+          };
+          const held = model.ride;
+          const origin: Vec3 = absoluteSite(held ? (typeof held.target === "string" ? (held.target as BodyId) : held.around) : model.focus);
+          for (const id of Object.keys(pos) as (keyof typeof pos)[]) pos[id] = minus(pos[id], origin);
+          const sunPos = pos.sun;
+          const placeAll = (at: SpaceFrame): Record<SpaceBody, Vec3> => {
+            const placed = placeBodies(mode, at);
+            for (const id of Object.keys(placed) as (keyof typeof placed)[]) placed[id] = minus(placed[id], origin);
+            return placed;
           };
           const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : (SPACE_DWARFS as readonly string[]).includes(id) ? frame.dwarfs[id as SpaceDwarf] : frame.planets[id as SpacePlanet]));
 
@@ -543,7 +562,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const k = Math.min(1, (performance.now() - glide.start) / glide.duration);
             const ease = k * k * (3 - 2 * k);
             desiredQ.copy(camera.quaternion);
-            camera.position.set(glide.from.p[0] + (camera.position.x - glide.from.p[0]) * ease, glide.from.p[1] + (camera.position.y - glide.from.p[1]) * ease, glide.from.p[2] + (camera.position.z - glide.from.p[2]) * ease);
+            // the pose the last draw left is absolute (from the Earth's centre); the scene is now relative to the new origin
+            const [fx, fy, fz] = [glide.from.p[0] - origin[0], glide.from.p[1] - origin[1], glide.from.p[2] - origin[2]];
+            camera.position.set(fx + (camera.position.x - fx) * ease, fy + (camera.position.y - fy) * ease, fz + (camera.position.z - fz) * ease);
             fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
             camera.quaternion.copy(fromQ.slerp(desiredQ, ease));
             fovNow = glide.from.fov + (fovNow - glide.from.fov) * ease;
@@ -559,8 +580,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           camera.updateMatrixWorld();
           const hiddenBody = rideFrom?.hiddenBody ?? null;
           const hiddenMoon = rideFrom?.hiddenMoon ?? null;
-          model.camera = { position: [camera.position.x, camera.position.y, camera.position.z], fov: fovNow };
-          model.pose = { p: [camera.position.x, camera.position.y, camera.position.z], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
+          model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow };
+          model.pose = { p: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
           model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom, roll: model.view.roll, panX: model.view.panX, panY: model.view.panY };
           model.heightPx = size.height;
 
@@ -615,7 +636,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               o.epoch = model.time;
             }
             // the Moon's ring is round the Earth, which is the middle of the view; the others are round the Sun
-            const line = id === "moon" ? o.samples.map((p) => placeMoon(mode, p)) : orbitLine(mode, sunPos, o.samples);
+            const line = id === "moon" ? o.samples.map((p) => plus(placeMoon(mode, p), pos.earth)) : orbitLine(mode, sunPos, o.samples);
             for (let i = 0; i <= ORBIT_POINTS; i += 1) {
               o.positions[i * 3] = line[i]![0];
               o.positions[i * 3 + 1] = line[i]![1];

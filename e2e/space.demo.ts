@@ -304,12 +304,12 @@ test("riding the Moon: the camera is 3.5 Earth radii out when compressed and 55 
   await open(page);
   await rideAlong(page, "moon");
   await expect.poll(async () => (await rideOf(page)).ride.gliding).toBe(false);
+  // the camera is where the last draw left it: wait for the draw that puts it there (on a busy machine the next frame is seconds away)
+  await expect.poll(async () => away(await rideOf(page)), { timeout: 60_000 }).toBeGreaterThan(3);
   expect(away(await rideOf(page))).toBeCloseTo(3.5, 0);
   await setOn(page, "scale", "true");
-  await settle(page, 800);
-  const real = away(await rideOf(page));
-  expect(real).toBeGreaterThan(55);
-  expect(real).toBeLessThan(66);
+  await expect.poll(async () => away(await rideOf(page)), { timeout: 60_000 }).toBeGreaterThan(55);
+  expect(away(await rideOf(page))).toBeLessThan(66);
 });
 
 test("riding a moon: the camera is at the moon's real place round its planet", async ({ page }) => {
