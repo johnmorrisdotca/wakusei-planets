@@ -26,6 +26,8 @@ const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, "moon"] as const;
 /** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
 const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
+/** How many radii across the picture of a body is at zoom 1 when it has more than its globe: Saturn's rings (to 2.27 radii) are inside the view, not cut by it. */
+const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.4 };
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
 const MOON_MIN_PX = 2.2;
@@ -434,7 +436,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const lon = model.centre.lon - aimWay * model.view.yaw;
             const lat = Math.max(-90, Math.min(90, model.centre.lat - aimWay * model.view.tilt));
             const aim = groundDirection(lon, lat, model.anchor);
-            distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * focusRadius) / Math.max(1e-9, model.view.zoom));
+            // at zoom 1 the whole picture of the body fits the shorter side of the view, in any shape: a tall view is as far again as it is taller than wide, and a ringed body is framed with its rings
+            const across = focusRadius * (FRAMED[focus] ?? 1) * Math.max(1, size.height / Math.max(1, size.width));
+            distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * across) / Math.max(1e-9, model.view.zoom));
             target.set(focusPos[0], focusPos[1], focusPos[2]);
             camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
             camera.up.set(0, 1, 0);

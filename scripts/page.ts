@@ -39,6 +39,10 @@ export const renderKids = (): string => render("kids.html", "Wakusei Planets 惑
 export const renderSpace = (): string =>
   render("space.html", "Wakusei Planets 惑星: the space view", "The Earth, the Moon, the Sun and the planets in their places for any date and time, with the Moon's phase and the Earth's day side coming out of the light. Zoom from the Earth out to the whole solar system.");
 
+/** The full-screen space page: the element on its own, filling the window. */
+export const renderSpaceFull = (): string =>
+  render("space-full.html", "Wakusei Planets 惑星: the space view, full screen", "The Earth, the Moon, the Sun and the planets filling the whole window: drag anywhere to turn, the wheel to zoom, from the Earth out to the whole solar system.");
+
 /** The star page. */
 export const renderStar = (): string =>
   render("star.html", "Wakusei Planets 惑星: a star from its numbers", "Any star drawn from a few numbers: its temperature gives the colour, its radius the size, its class the grain of the surface, its rotation how it turns. Line or shaded, turnable, with each part marked measured or drawn for looks, and the code to put it in your page.");

@@ -66,6 +66,20 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 惑星が数ピクセルの大きさになると、そのまわりに近い衛星が現れます。位置はこのパッケージの衛星モデルが出します (`zoomFor("jupiter-moons")`)。地球と惑星が太陽のまわりを回る道と、月が地球のまわりを回る道は、`orbits="off"` にしない限り描きます。どの線も天体と同じ変換を通るので、どちらの縮尺でも、天体は自分の線の上にいます。`stats.orbits` は、描いた線と、各天体が自分の線からどれだけ離れているか (線の半径に対する割合。線の上なら0.01未満) を返します。月の線は、月がいる場所から恒星月1つぶんの道で、時計が数日進むたびに計算し直します。点は `moonOrbit(ms)` で得られます。
 
+## 全画面
+
+`immersive` (属性、または `space.immersive`) をつけると、要素は全画面の表示になります。入れ物の大きさに、どんな形でもぴったり広がり (`width: 100%; height: 100%`。ページが幅と高さを決めれば、属性なしでも同じです)、ホイールだけで拡大縮小し、どこをドラッグしても (タッチのドラッグも) 回ります。ページはスクロールしません。`immersive` がないときは kazoku-ui の決まりのままで、Ctrl、Command、Alt のどれかを押しながらホイールを回すと拡大縮小し、ホイールだけならページがスクロールします。ズーム1では、見ている天体は表示の短いほうの辺に収まるので、縦長の窓でも横長の窓でも切れません (土星は環ごと収まります)。`zoom-min` まで引くと、カメラは太陽系ぜんぶが見えるところまで下がります。
+
+```html
+<style>
+  html, body { margin: 0; height: 100%; background: #04060c; }
+  wakusei-space { position: fixed; inset: 0; }
+</style>
+<wakusei-space immersive time="now" speed="3600"></wakusei-space>
+```
+
+ページ [space-full.html](https://johnmorrisdotca.github.io/wakusei-planets/space-full.html) がこの形で、下にファミリーの表示コントロールが重なります。`@johnmorrisdotca/kazoku-ui/testing` の `checkGestures` は、このページで通ります。例外は1つだけで、ホイールだけでの移動 (パン) です。このページではホイールだけで拡大縮小するためです。
+
 ## プロパティ、イベント、stats
 
 属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。

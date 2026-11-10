@@ -66,6 +66,20 @@ No two names overlap: when the boxes of two names would cross, the one that matt
 
 A planet's nearer moons appear round it once the planet is a few pixels across, at the places the package's moon models give (`zoomFor("jupiter-moons")`). The paths of the Earth and the planets round the Sun, and the Moon's path round the Earth, are drawn unless `orbits="off"`. Every line goes through the same mapping as the bodies, so each body lies on its own line in both scales; `stats.orbits` says which lines were drawn and how far each body is from its own, as a fraction of the line's radius (under 0.01 for a body on its line). The Moon's line is one sidereal month from the Moon's own place and is worked out again every few days of the clock; `moonOrbit(ms)` gives its points.
 
+## Full screen
+
+`immersive` (an attribute, and `space.immersive`) makes the element a full-screen view: it fills the box it is in, whatever the shape (it is `width: 100%; height: 100%`, and a page that gives it any width and height does the same without the attribute), and a plain wheel zooms and a drag anywhere on it turns it, a touch drag included, instead of scrolling the page. Without `immersive` kazoku-ui's rules stand: Ctrl, Command or Alt with the wheel zooms and the plain wheel scrolls the page. At zoom 1 the body looked at is framed by the shorter side of the view, in a tall window as in a wide one, so it is never cut off (Saturn is framed with its rings), and `zoom-min` takes the camera as far out as the whole solar system.
+
+```html
+<style>
+  html, body { margin: 0; height: 100%; background: #04060c; }
+  wakusei-space { position: fixed; inset: 0; }
+</style>
+<wakusei-space immersive time="now" speed="3600"></wakusei-space>
+```
+
+The page [space-full.html](https://johnmorrisdotca.github.io/wakusei-planets/space-full.html) is this, with the family's view controls over the bottom. `checkGestures` from `@johnmorrisdotca/kazoku-ui/testing` passes on it, with one named exception: the plain wheel's pan, because there the plain wheel zooms.
+
 ## Properties, events, stats
 
 Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale` (`true`, the default, or `compressed`), `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `lang`, `texture-base`, `texture-far-base`, `max-texture`, `tiles` (where the finer map tiles are; `off` for none). Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-timechange` (the date, four times a second at most while time runs, and once when it holds: `{ time, running }`), `wakusei-time` (every step the clock takes), `wakusei-body-click`, `wakusei-body-focus`. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera`, `bodies` and `tiles`.
