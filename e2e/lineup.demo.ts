@@ -233,8 +233,9 @@ test("save as an image: a PNG and an SVG of the picture on the screen, labels an
   const bytes = (await import("node:fs")).readFileSync(path);
   expect([...bytes.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   const [width, height] = [bytes.readUInt32BE(16), bytes.readUInt32BE(20)];
-  expect(width).toBeGreaterThan(1000);
-  expect(width / height).toBeCloseTo(16 / 9, 1);
+  const shown = (await lineup(page).boundingBox())!;
+  expect(width, "twice the picture's pixels").toBeGreaterThanOrEqual(Math.floor(shown.width * 1.9));
+  expect(width / height).toBeCloseTo(shown.width / shown.height, 1);
   const svg = page.waitForEvent("download", { timeout: 60_000 });
   await page.locator('#saves [data-save="svg"]').click();
   const svgFile = await svg;

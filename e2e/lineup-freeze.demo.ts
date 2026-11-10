@@ -101,6 +101,8 @@ test("a line-up out of sight draws nothing, even while it is told to keep turnin
 });
 
 test("zooming from the smallest body to the largest and back, changing the stars, the planets and the layout, and turning stars by hand give back what they took: contexts, buffers, vertex arrays, textures and programs do not grow", async ({ page }) => {
+  // every change of the set makes the scene again, and in software every star's shader is compiled again: rounds of them take minutes
+  test.setTimeout(300_000);
   await page.goto(`${URL}?turn=off`);
   await live(page);
   const ids = () => element(page).evaluate((el) => (el as Lineup).bodies.map((body) => body.id));
