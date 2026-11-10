@@ -3,6 +3,7 @@
 // 5K screen, on a frame drawn out of sight, and on a moving picture drawn faster than thirty times a second.
 import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
+import { routeTiles } from "./tiles-fixture.ts";
 
 const URL = "/wakusei-planets/";
 const main = (page: Page) => page.locator("#main");
@@ -610,4 +611,91 @@ test("the cheaper star for weak devices is drawn the same way and says so", asyn
   const after = await readCounts(page);
   expect(after.draws - before.draws).toBeGreaterThan(0);
   expect((await jobsDrawn(page)) - jobsBefore).toBeLessThanOrEqual(4 * 31);
+});
+
+
+// --- the finer map tiles in the portrait and the space view: zooming to them and back gives back what it took, and draws and fetches nothing at rest -------------------------------------------------------
+const EMBED = "/wakusei-planets/embed.html";
+type TileStats = { requested: number; loading: number; failed: number; shown: number | null };
+
+test("the portrait zoomed in to its map tiles and out again: one context, graphics memory flat, nothing drawn or fetched at rest, the canvas in budget", async ({ page }) => {
+  const log = await routeTiles(page);
+  await page.goto(`${EMBED}?scene=${encodeURIComponent("look:painted~earth_0_0_0.6_0")}`);
+  await expect(page.locator("#view")).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+  const stats = (): Promise<TileStats | undefined> => page.locator("#view").evaluate((el) => (el as unknown as { stats: { tiles: TileStats | undefined } }).stats.tiles);
+  const zoomFor = async (pixelsPerRadian: number): Promise<number> => {
+    const m = await page.locator("#view").evaluate((el) => (el as unknown as { metrics: { scale: number; placed: { r: number }[] } }).metrics);
+    return pixelsPerRadian / (m.scale * m.placed[0]!.r);
+  };
+  const zoomTo = async (zoom: number): Promise<void> => void (await page.locator("#view").evaluate((el, z) => (el as unknown as { setView(v: unknown): void }).setView({ zoom: z }), zoom));
+  const round = async (): Promise<void> => {
+    await zoomTo(await zoomFor(1500));
+    await expect.poll(async () => (await stats())?.shown, { timeout: 60_000 }).toBe(2);
+    await zoomTo(await zoomFor(3200));
+    await expect.poll(async () => (await stats())?.shown, { timeout: 60_000 }).toBe(3);
+    await zoomTo(1);
+    await expect.poll(async () => (await stats())?.shown, { timeout: 30_000 }).toBeNull();
+  };
+  await round();
+  await round();
+  await settle(page, 2500);
+  const first = await settledCounts(page);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  expect(withinPixelBudget(await canvasSize(page))).toBe(true);
+  expect(await page.locator("#view").evaluate((el) => el.shadowRoot!.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
+  const asked = log.tiles.length;
+  const before = await readCounts(page);
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing is drawn at rest").toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(1);
+  expect(log.tiles.length, "nothing is fetched at rest").toBe(asked);
+  expect(log.manifests, "the tile set is read once").toBe(1);
+});
+
+test("the space view zoomed in to its map tiles and out again: one context, graphics memory flat, nothing drawn or fetched at rest, the canvas in budget", async ({ page }) => {
+  const log = await routeTiles(page);
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&look=painted`);
+  await liveSky(page);
+  await expect.poll(async () => (await skyStats(page)).bodies.painted, { timeout: 60_000 }).toBe(11);
+  const stats = (): Promise<TileStats> => sky(page).evaluate((el) => (el as unknown as { stats: { tiles: TileStats } }).stats.tiles);
+  const go = (body: string, zoom: number): Promise<void> =>
+    sky(page).evaluate(
+      (el, [id, z]) => {
+        const s = el as unknown as { body: string; setView(v: unknown): void };
+        s.body = id as string;
+        s.setView({ yaw: 0, tilt: 0, zoom: z });
+      },
+      [body, zoom],
+    );
+  const round = async (): Promise<void> => {
+    for (const body of ["earth", "mars", "moon"]) {
+      await go(body, 3.1);
+      await expect.poll(async () => (await stats()).shown, { timeout: 90_000 }).toBe(3);
+      await go(body, 1);
+      await expect.poll(async () => (await stats()).shown, { timeout: 30_000 }).toBeNull();
+    }
+  };
+  await round();
+  await settle(page, 2500);
+  const first = await settledCounts(page);
+  for (let i = 0; i < 2; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 6);
+  expect(withinPixelBudget(await canvasSize(page))).toBe(true);
+  expect(await sky(page).evaluate((el) => el.shadowRoot!.querySelectorAll("canvas").length)).toBe(1);
+  const asked = log.tiles.length;
+  const before = await readCounts(page);
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing is drawn at rest").toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
+  expect(log.tiles.length, "nothing is fetched at rest").toBe(asked);
+  expect(log.manifests, "the tile set is read once").toBe(1);
 });
