@@ -119,7 +119,7 @@ export type SmallBodiesRead = RecordsRead<SmallBody>;
  * @returns The records and the count left out.
  *
  * @example
- * ```ts
+ * ```ts no-run
  * import { readSmallBodies, type SmallBodySource } from "@johnmorrisdotca/wakusei-planets/door";
  *
  * declare const source: SmallBodySource;

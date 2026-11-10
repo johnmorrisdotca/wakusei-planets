@@ -181,7 +181,11 @@ export class WakuseiBody extends HTMLElement {
       },
     },
     { kinds: ["tiles"] },
-    () => this.#view?.invalidate(),
+    // a source added, removed or switched, or a tile arrived: look at the view again (the window is chosen at a sync), then draw
+    () => {
+      if (this.#view?.live === true) this.#sync();
+      this.#view?.invalidate();
+    },
   );
   #hover = (): void => void this.goLive();
   #onContext = (state: ContextState): void => {
@@ -779,7 +783,10 @@ export class WakuseiBody extends HTMLElement {
           this.#refreshLimits();
         },
       },
-      redraw: () => this.#view?.invalidate(),
+      redraw: () => {
+        this.#view?.invalidate();
+        this.#door.announce();
+      },
       report: (note) => {
         this.#textureWidth = note.width;
         this.#door.announce();

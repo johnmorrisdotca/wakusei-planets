@@ -138,6 +138,8 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
   let gone = false;
   let lastKeys: { account: string; keys: readonly string[] } | undefined;
   let watching = false;
+  /** Looks at the view again with what it was told last, once the levels are read, so a window is not waited for until the next draw. */
+  let replay: (() => void) | undefined;
   // The Texture class of the three.js module the page handed over: `DataTexture` extends it, and a page's subset of three need not name it.
   const TextureClass = Object.getPrototypeOf(T.DataTexture) as new (image: unknown) => THREE.Texture;
 
@@ -330,7 +332,10 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
           levelsRead = read !== undefined;
           levels = read !== undefined && read.length > 0 ? read : undefined;
           deps.onLevels?.(levels);
-          if (levels !== undefined) deps.redraw();
+          if (levels !== undefined) {
+            replay?.();
+            deps.redraw();
+          }
         },
         () => undefined,
       );
@@ -404,6 +409,7 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
         idle();
         return;
       }
+      replay = () => this.sync(box, axes, viewWidth);
       ask(source);
       if (levels === undefined) return;
       const region = visibleRegion(box, axes);
@@ -417,6 +423,7 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
         return;
       }
       // the levels are read when the view wants more than the 2048 pixel map gives, not before: a page that never gets that close fetches nothing
+      replay = () => this.follow(seen_);
       const radiansPixels = seen_ === undefined ? 0 : seen_.radiansPixels * deps.ratio();
       if (seen_ !== undefined && radiansPixels / TEXEL_SLACK > BASE_WIDTH / (2 * Math.PI)) ask(source);
       if (levels === undefined) {

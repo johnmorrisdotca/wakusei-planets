@@ -1,4 +1,4 @@
-// A source of small bodies made in the page, as the README shows a source of one's own: `count` bodies on one circle of 3 astronomical units, spread round it, in the ecliptic. Not a test file.
+// A source of small bodies made in the page, as the README shows a source of one's own: `count` bodies on one circle of 1 astronomical unit (the Earth's own orbit, so a few are in the view of the Earth), spread round it, in the ecliptic. Not a test file.
 import type { Page } from "@playwright/test";
 
 /** Adds the source to the element that matches `selector`, and keeps the count of times `records()` was called in `window.__rocks`. */
@@ -18,7 +18,7 @@ export async function addRocks(page: Page, selector: string, count: number): Pro
       },
       records() {
         reads.count += 1;
-        return Array.from({ length: n }, (_, k) => ({ name: `R${k}`, a: 3, e: 0, i: 0, node: 0, peri: 0, M0: (360 * k) / n, epoch: 2461000.5, H: 8 }));
+        return Array.from({ length: n }, (_, k) => ({ name: `R${k}`, a: 1, e: 0, i: 0, node: 0, peri: 0, M0: (360 * k) / n, epoch: 2461000.5, H: 8 }));
       },
     };
     (el as unknown as { addSource(s: unknown): void }).addSource(source);

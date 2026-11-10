@@ -171,7 +171,7 @@ test("a source that is refused throws at once, in the page, and changes nothing"
     const body = el as unknown as { addSource(s: unknown): void; sources: unknown[] };
     const good = { kind: "tiles", body: "mars", layer: "colour", info: { id: "x", name: { en: "x", ja: "x" }, credit: { en: "", ja: "x" }, licence: { name: "CC0", url: "https://creativecommons.org/publicdomain/zero/1.0/" }, url: "https://example.org", retrieved: "2026-11-10" }, need: () => [], load: async () => ({}), bytes: () => 1 };
     const errors: string[] = [];
-    for (const source of [good, { ...good, info: { ...good.info, credit: { en: "x", ja: "x" }, licence: undefined } }, { ...good, kind: "records", records: () => [] }]) {
+    for (const source of [good, { ...good, info: { ...good.info, credit: { en: "x", ja: "x" }, licence: undefined } }, { ...good, info: { ...good.info, credit: { en: "x", ja: "x" } }, kind: "records", records: () => [] }]) {
       try {
         body.addSource(source);
       } catch (error) {
