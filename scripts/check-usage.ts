@@ -69,8 +69,14 @@ const opened = async (browser: Browser, run: (page: Page, errors: string[]) => P
   const context = await browser.newContext({ viewport: { width: 800, height: 700 }, reducedMotion: "reduce" });
   const page = await context.newPage();
   const errors: string[] = [];
+  // The package's pictures come from the CDN at its own version, and a release commit names a version that is not on npm yet: answer them from the files in this checkout, so the test never depends on the network or on a publish. A step that routes the CDN itself comes later and so is asked first.
+  await page.route(/^https:\/\/cdn\.jsdelivr\.net\/(npm|gh)\/@?johnmorrisdotca\/wakusei-planets@.*\.webp$/, (route) => {
+    const picture = new URL(route.request().url()).pathname.split("/").pop() ?? "";
+    return existsSync(at("textures", picture)) ? route.fulfill({ body: readFileSync(at("textures", picture)), contentType: "image/webp" }) : route.fulfill({ status: 404, body: "" });
+  });
   page.on("pageerror", (error) => errors.push(String(error)));
-  page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
+  page.on("console", (message) => message.type() === "error" && errors.push(`${message.text()} (${message.location().url || "no url"})`));
+  page.on("response", (response) => response.status() >= 400 && errors.push(`${response.status()} ${response.request().method()} ${response.url()} (asked for as a ${response.request().resourceType()})`));
   try {
     await run(page, errors);
   } finally {

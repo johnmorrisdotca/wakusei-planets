@@ -38,12 +38,18 @@ const open = async (page: Page, query = "", waitLive = true): Promise<string[]> 
 };
 const focused = (page: Page) => lineup(page).evaluate((el) => (el as Lineup).focused);
 const settled = (page: Page) => page.waitForTimeout(400);
+/**
+ * The line-up as a picture, with the label cards masked. A card is a translucent box over the 3D canvas, and the browser's software compositor blends the pixels under its text
+ * to a value one level off from one shot to the next (one pixel, one channel, on some CI runs), so two shots of a motionless picture were not byte for byte the same.
+ * These tests look at the star's surface, which the cards do not cover.
+ */
+const shot = (page: Page): Promise<Buffer> => lineup(page).screenshot({ mask: [lineup(page).locator("[data-label]")] });
 /** The picture once it has stopped changing: two shots half a second apart that are the same (a rebuilt scene takes a while to compile in software). */
 const stable = async (page: Page): Promise<Buffer> => {
-  let last = await lineup(page).screenshot();
+  let last = await shot(page);
   for (let i = 0; i < 120; i += 1) {
     await page.waitForTimeout(500);
-    const now = await lineup(page).screenshot();
+    const now = await shot(page);
     if (now.equals(last)) return now;
     last = now;
   }
@@ -185,7 +191,7 @@ test("a drag on a star turns it by hand, a press on the empty sky holds nothing;
   const at = { x: box.x + sun.cx, y: box.y + sun.cy };
   const before = await stable(page);
   await page.waitForTimeout(400);
-  expect((await lineup(page).screenshot()).equals(before), "a star at rest does not change").toBe(true);
+  expect((await shot(page)).equals(before), "a star at rest does not change").toBe(true);
   await page.mouse.move(at.x, at.y);
   await expect(lineup(page)).toHaveAttribute("data-hand", "");
   await page.mouse.down();
@@ -217,15 +223,15 @@ test("the bodies turn by themselves unless turning is off", async ({ browser }) 
   const page = await context.newPage();
   await page.goto("/wakusei-planets/lineup.html");
   await live(page);
-  const a = await lineup(page).screenshot();
+  const a = await shot(page);
   await page.waitForTimeout(1200);
-  const b = await lineup(page).screenshot();
+  const b = await shot(page);
   expect(a.equals(b), "the Sun turns").toBe(false);
   await page.locator('#turns [data-turn="off"]').click();
   await page.waitForTimeout(600);
-  const c = await lineup(page).screenshot();
+  const c = await shot(page);
   await page.waitForTimeout(1000);
-  expect((await lineup(page).screenshot()).equals(c), "turning off stops it").toBe(true);
+  expect((await shot(page)).equals(c), "turning off stops it").toBe(true);
   await context.close();
 });
 

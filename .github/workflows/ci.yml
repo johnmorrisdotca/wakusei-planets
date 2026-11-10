@@ -84,8 +84,9 @@ jobs:
       - name: The demo and the docs site, played in one browser at one width (pnpm test:demo plays all four)
         run: pnpm test:demo:one --project=${{ matrix.project }} --shard=${{ matrix.shard }}
   freeze:
+    # 25 minutes: the 33 freeze tests (9 minutes), the one-minute soak (two tests, 4 to 5 minutes) and a 2-minute browser install came to 15 on 2026-11-10 and the job was cancelled.
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
