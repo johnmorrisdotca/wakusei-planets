@@ -14,6 +14,7 @@ const when = document.querySelector<HTMLElement>("#when")!;
 const params = new URLSearchParams(location.search);
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+controls.setAttribute("lang", chooser()?.lang ?? "en");
 // links with a date or a speed are respected; otherwise it moves
 if (params.has("t")) space.setAttribute("time", params.get("t")!);
 if (params.has("scale")) space.setAttribute("scale", params.get("scale")!);
@@ -54,11 +55,14 @@ space.addEventListener("wakusei-hop", (event) => {
   if (zoom !== undefined) controls.controller.set({ zoom }, true, "jump");
   showHop();
 });
-showHop();
-window.addEventListener("wakusei-language", () => {
-  showHop();
+const speak = (): void => {
   space.setAttribute("lang", chooser()?.lang ?? "en");
   controls.setAttribute("lang", chooser()?.lang ?? "en");
+};
+speak();
+showHop();
+window.addEventListener("wakusei-language", () => {
+  speak();
+  showHop();
   show(space.time);
 });
-space.setAttribute("lang", chooser()?.lang ?? "en");

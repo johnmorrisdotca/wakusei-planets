@@ -25,6 +25,8 @@ const caption = document.querySelector<HTMLElement>("#caption")!;
 const scaleNote = document.querySelector<HTMLElement>("#scale-note")!;
 const $$ = (selector: string): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>(selector)];
 
+// the element names bodies and the scale in the page's language from the start, not only after the reader changes it
+space.setAttribute("lang", chooser()?.lang ?? "en");
 const address = createAddressState({ defaults: {} });
 const pick = <T extends string>(value: string | null, allowed: readonly T[], fallback: T): T => (allowed.includes(value as T) ? (value as T) : fallback);
 const DEFAULT_SPEED = 3600;
