@@ -27,6 +27,19 @@ A ride goes on with the clock: at `speed="0"` the camera holds still at the mome
 
 `look` is `down` (straight at the centre of the body: the ground goes by under the camera) or `horizon` (tipped forward along the way it is going until the horizon is a little above the middle). The way of going is the point's velocity less the part that points at the body; for a moon it comes from its places a second apart. `view: "follow"` keeps the camera a distance from the target and looks at it instead (`distanceKm` for a point of your own; a body or a moon is kept at the distance the zoom says).
 
+## From beside a moon
+
+`space.ride("moon", { view: "beside" })` (or `space.ride("io", { view: "beside" })`, for any moon of a planet in the view) puts the camera beyond the moon, on the side away from its planet and a little off the line to it. The moon is large in the foreground, about 20 degrees across its radius, and the planet is in view behind it at the angular size it really has from there (the Earth is about two degrees across from the Moon in the true scale). It opens off the line, from 25 degrees, until the two discs no longer touch, so the moon never hides the planet; it sits on the Sun's side of that line where it can, so the moon shows a lit face; it turns the picture so the planet is to the side of the moon; and it widens the field of view until both fit the narrower side of the view, on a phone as on a desk. A drag swings the camera round the line from the planet through the moon (yaw) and opens the angle (tilt); the zoom goes closer and further (1 is 5.8 moon radii away). It glides there from where the camera was, and `ride(null)` glides back to the body it was looking at. The pure maths is `besideMoon` in `@johnmorrisdotca/wakusei-planets/space`:
+
+```ts
+import { besideMoon } from "@johnmorrisdotca/wakusei-planets/space";
+
+const view = besideMoon({ moon: [60.3, 0, 0], moonRadius: 0.2724, host: [0, 0, 0], hostRadius: 1, sun: [-23_000, 5000, 9000], aspect: 1.6, zoom: 1, yaw: 0, tilt: 0 });
+console.log(view.distance.toFixed(2), view.separation.toFixed(0));
+```
+
+The view is for a moon: a planet or a point of your own with `view: "beside"` is refused. The demo's Ride along row has it as "Beside the Moon", which also makes a good end for an opening pull-back from the Moon out to the Earth.
+
 ## The camera
 
 ```ts

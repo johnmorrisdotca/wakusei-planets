@@ -38,7 +38,7 @@ const state = {
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
   speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
   time: address.get("t") ?? "now",
-  ride: pick(address.get("ride"), ["", "moon", "mars", "io"], ""),
+  ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io"], ""),
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
 };
@@ -79,7 +79,9 @@ function render(): void {
   for (const b of $$("#ride-looks [data-ride-look]")) pressed(b, b.dataset["rideLook"] === state.rideLook);
   if (appliedRide !== `${state.ride}|${state.rideLook}`) {
     appliedRide = `${state.ride}|${state.rideLook}`;
-    space.ride(state.ride === "" ? null : (state.ride as "moon" | "mars" | "io"), { look: state.rideLook });
+    // "moon:beside" is the Moon seen from beyond it, with the Earth in view behind
+    const [target, view] = state.ride.split(":") as ["moon" | "mars" | "io" | "", "beside" | undefined];
+    space.ride(target === "" ? null : target, { look: state.rideLook, ...(view ? { view } : {}) });
   }
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);

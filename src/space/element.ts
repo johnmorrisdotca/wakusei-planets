@@ -82,7 +82,7 @@ export type SpaceState = "loading" | "live" | "unavailable" | "lost";
 export type SpacePreset = "earth" | "moon" | "sun" | "inner" | "solar-system" | `${Exclude<SpacePlanet, "mercury" | "venus">}-moons`;
 
 /**
- * How a ride along is done: `view` `from` (the default) puts the camera at the target looking at the body it goes round, `follow` keeps it a distance from the target looking at it (`distanceKm`,
+ * How a ride along is done: `view` `from` (the default) puts the camera at the target looking at the body it goes round, `beside` (for a moon) puts it beyond the moon and off the line to its planet, the moon large in the foreground and the planet in view behind it, `follow` keeps it a distance from the target looking at it (`distanceKm`,
  * 3000 by default, for a point of your own; a body or a moon is kept at the distance the zoom says); `look` `down` (the default) or `horizon` is where a camera at the target points; `around` is the
  * body a point of your own goes round (the Earth by default); `smooth` (the default) glides from the old camera to the new one in about a second and a bit, and jumps instead for a reader who asked for reduced motion.
  *
@@ -95,7 +95,7 @@ export type SpacePreset = "earth" | "moon" | "sun" | "inner" | "solar-system" | 
  * ```
  */
 export interface RideOptions {
-  view?: "from" | "follow";
+  view?: "from" | "follow" | "beside";
   look?: RideLook;
   distanceKm?: number;
   around?: SpaceBody;
@@ -569,10 +569,15 @@ export class WakuseiSpace extends HTMLElement {
     const distanceKm = Math.max(100, options.distanceKm ?? 3000);
     if (typeof target !== "string") {
       const around = options.around && (SPACE_BODIES as readonly string[]).includes(options.around) ? options.around : "earth";
+      if (options.view === "beside") return undefined;
       return { target, around, view: options.view ?? "from", look, distanceKm };
     }
     const id = target.toLowerCase();
-    if ((SPACE_BODIES as readonly string[]).includes(id)) return { target: id as SpaceBody, around: "earth", view: id === "earth" ? "follow" : (options.view ?? "from"), look, distanceKm };
+    if ((SPACE_BODIES as readonly string[]).includes(id)) {
+      // the view from beside a moon is for a moon: of the bodies of the view only the Moon is one
+      if (options.view === "beside" && id !== "moon") return undefined;
+      return { target: id as SpaceBody, around: "earth", view: id === "earth" ? "follow" : (options.view ?? "from"), look, distanceKm };
+    }
     for (const [planet, moons] of Object.entries(MOONS_OF)) {
       if (!(moons as readonly string[]).includes(id) || !(SPACE_BODIES as readonly string[]).includes(planet) || planet === "earth") continue;
       return { target: id as MoonId, around: planet as SpaceBody, view: options.view ?? "from", look, distanceKm };

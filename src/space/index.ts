@@ -5,3 +5,4 @@ export { groundDirection } from "./aim.ts";
 export { RIDE_FOV, ridePose, type RideInput, type RideLook, type RidePose } from "./ride.ts";
 export { chooseLabels, LABEL_GAP, type LabelBox } from "./labels.ts";
 export { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, type SpaceKind } from "./bodies.ts";
+export { besideMoon, BESIDE_RADII, type BesideCamera, type BesideInput } from "./beside.ts";

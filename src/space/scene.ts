@@ -10,6 +10,7 @@ import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
+import { besideMoon, type BesideInput } from "./beside.ts";
 import { createTrack, moonOrbit, planetOrbit, SPACE_PLANETS, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
@@ -108,7 +109,7 @@ export interface RideState {
   /** The body the target goes round: the Earth for a body of the view or a point (unless said), the planet for a moon. */
   around: SpaceBody;
   /** `from`: the camera is at the target, looking at the body it goes round. `follow`: the camera keeps a distance from it, looking at it. */
-  view: "from" | "follow";
+  view: "from" | "follow" | "beside";
   look: RideLook;
   /** For `follow` a point: how far the camera keeps, in kilometres. */
   distanceKm: number;
@@ -367,6 +368,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             focusRadius = Math.max(1e-9, (BODIES[focus].radiusKm / BODIES[host].radiusKm) * hostRadius);
           }
           let aimWay = 1;
+          let besideIn: Omit<BesideInput, "aspect" | "zoom" | "yaw" | "tilt"> | null = null;
           let rideFrom: { around: SpaceBody; centre: Vec3; unitWorld: number; position: Vec3; velocity: Vec3; perSecond: number; hiddenBody: SpaceBody | null; hiddenMoon: string | null } | null = null;
           const ride = model.ride;
           if (ride) {
@@ -381,7 +383,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             let hiddenMoon: string | null = null;
             if (typeof t === "string" && (SPACE_BODIES as readonly string[]).includes(t)) {
               const id = t as SpaceBody;
-              if (ride.view === "follow") {
+              if (ride.view === "beside") {
+                // beyond the Moon and off the line to the Earth, the Earth in view behind it
+                if (id === "moon") besideIn = { moon: pos.moon, moonRadius: radiusOf("moon"), host: pos.earth, hostRadius: radiusOf("earth"), sun: pos.sun };
+                focus = id;
+                focusPos = pos[id];
+                focusRadius = radiusOf(id);
+              } else if (ride.view === "follow") {
                 focus = id;
                 focusPos = pos[id];
                 focusRadius = radiusOf(id);
@@ -398,7 +406,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const id = t as MoonId;
               const offset = moonSite(id, model.time, around as SpacePlanet);
               const later = moonSite(id, model.time + 1000, around as SpacePlanet);
-              if (ride.view === "follow") {
+              if (ride.view === "beside") {
+                const there: Vec3 = [centre[0] + offset[0] * unitWorld, centre[1] + offset[1] * unitWorld, centre[2] + offset[2] * unitWorld];
+                const radius = Math.max(1e-6, (BODIES[id].radiusKm / BODIES[around as SpacePlanet].radiusKm) * unitWorld);
+                besideIn = { moon: there, moonRadius: radius, host: centre, hostRadius: unitWorld, sun: pos.sun };
+                focus = id;
+                focusPos = there;
+                focusRadius = radius;
+              } else if (ride.view === "follow") {
                 focusPos = [centre[0] + offset[0] * unitWorld, centre[1] + offset[1] * unitWorld, centre[2] + offset[2] * unitWorld];
                 focusRadius = Math.max(1e-6, (BODIES[id].radiusKm / BODIES[around as SpacePlanet].radiusKm) * unitWorld);
               } else {
@@ -427,7 +442,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
 
           let fovNow = FOV;
           let distance = 0;
-          if (rideFrom) {
+          if (besideIn) {
+            const view = besideMoon({ ...besideIn, aspect: size.width / Math.max(1, size.height), zoom: model.view.zoom, yaw: model.view.yaw, tilt: model.view.tilt });
+            camera.position.set(view.position[0], view.position[1], view.position[2]);
+            camera.up.set(view.up[0], view.up[1], view.up[2]);
+            camera.lookAt(view.position[0] + view.forward[0], view.position[1] + view.forward[1], view.position[2] + view.forward[2]);
+            fovNow = view.fov;
+            distance = view.distance;
+            camera.near = Math.max(1e-4, (view.distance - besideIn.moonRadius) * 0.1);
+            camera.far = Math.max(2000, 400 + (mode === "true" ? 40 * 23_481 : 0));
+          } else if (rideFrom) {
             const pose = ridePose({ position: rideFrom.position, velocity: rideFrom.velocity, radius: 1, look: ride!.look, yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom });
             const { centre, unitWorld } = rideFrom;
             camera.position.set(centre[0] + pose.position[0] * unitWorld, centre[1] + pose.position[1] * unitWorld, centre[2] + pose.position[2] * unitWorld);
