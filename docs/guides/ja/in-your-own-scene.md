@@ -26,5 +26,6 @@ console.log(scene.children.length);
 - 太陽には `billboard: true` が付きます。光の輪が丸く見えるよう、カメラのほうへ向けてください。
 - `painter.moons("Jupiter", ms)` は、惑星から見た各衛星の位置 (惑星の半径が単位) と大きさを近い順に返します。衛星も同じように `painter.make(THREE, "Io")` で作り、惑星の位置に、`offset` と描いた惑星の半径をかけたものを足した場所に置きます。
 - 画像は標準では jsDelivr から読みます。`createPainter({ textureBase, farBase })` で自分のフォルダを指せます。
+- 近いビューでは、`update` にカメラを渡します。`jupiter.update({ toSun, ms, radiusPx, view: { camera, width, height } })` のように書き、カメラの行列は最新の状態にして、大きさはCSSピクセルで渡します。ビューで大きく見える天体には、カメラに見えている部分の細かい地図のタイルが載ります。タイルはデモサイトの `tiles/` フォルダから、または `createPainter({ tiles: "/tiles/" })` で指したところから読みます (`"off"` でなし。自分の `textureBase` を渡したペインターは、場所を教えるまでタイルを使いません)。`painting.tiles` は窓がしていることを返し、`context.onLevels` はその天体のタイルのレベルを教えてくれます。`view` を渡さなければ、これまでどおり天体自身の絵で描きます。しくみは [近づくズームと地図のタイル](close-zoom.md) にあります。
 
 渡す three.js には、天体が使う部品と `Group` が必要です。chikyu-earth の宇宙ビューは `setBodyPainter(painter)` でこのペインターを受け取り、太陽・惑星・冥王星・衛星を描きます (そちらのガイド「本物の惑星」を見てください)。
