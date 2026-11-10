@@ -15,6 +15,7 @@ import "../src/bodies/all.ts";
 import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
+import { creditLine } from "../src/door/index.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
 
@@ -628,6 +629,18 @@ if (main && controls && pickerBox) {
     render();
   });
   window.addEventListener("wakusei-language", () => render());
+  // whose data is on the screen: the credit line of the big view, in the page's language (the data door)
+  const doorLine = document.querySelector<HTMLElement>("#door-credit");
+  if (doorLine) {
+    const show = (): void => {
+      doorLine.textContent = creditLine(main.credits(), lang());
+    };
+    main.addEventListener("wakusei-creditschange", show);
+    window.addEventListener("wakusei-language", show);
+    show();
+  }
+  // `?data=own` ignores every outside source at once
+  if (new URLSearchParams(location.search).get("data") === "own") main.setAttribute("data", "own");
   main.addEventListener("wakusei-state", (event) => {
     const { state: s } = (event as CustomEvent<{ state: string }>).detail;
     if (s === "unavailable") notice(say("noWebgl"));

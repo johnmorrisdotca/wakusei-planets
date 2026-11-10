@@ -25,6 +25,7 @@ import {
   type SmallBodySource,
   type SourceBook,
 } from "../src/door/index.ts";
+import { createDoorHost } from "../src/door/host.ts";
 import { forgetManifests } from "../src/scene/detail.ts";
 import { createPainter, type PaintInfo, type Painting } from "../src/scene/painter.ts";
 
@@ -206,6 +207,33 @@ test("2c. a small body is where its elements put it: on its ellipse, back where 
   assert.equal(packed.length, 16);
   assert.equal(packed[6], 10, "the days from the epoch to the date the shader counts from");
   assert.equal(isSmallBody(ceres) && !isSmallBody({ ...ceres, e: 1 }) && !isSmallBody({ ...ceres, a: 0 }) && !isSmallBody({ ...ceres, name: 3 }), true);
+});
+
+test("2d. the credits-changed event fires when the set of credited sources changes, not at each draw, and `sources` is all or nothing", () => {
+  const target = new EventTarget();
+  const seen: string[][] = [];
+  target.addEventListener("wakusei-creditschange", (event) => seen.push((event as CustomEvent<{ credits: Credit[] }>).detail.credits.map((credit) => credit.source.id)));
+  let used = new Map<string, number>();
+  let redraws = 0;
+  const host = createDoorHost(target, { own: () => [ownCredit("wakusei-pictures", 1)], used: () => used }, { kinds: ["tiles"] }, () => (redraws += 1));
+  for (let n = 0; n < 5; n += 1) host.announce();
+  assert.deepEqual(seen, [["wakusei-pictures"]]);
+  host.book.addSource(fakeMap("one").source);
+  used = new Map([["one", 4]]);
+  host.announce();
+  host.announce();
+  assert.deepEqual(seen, [["wakusei-pictures"], ["wakusei-pictures", "one"]]);
+  assert.ok(redraws >= 1, "a source added asks for a draw");
+  host.book.removeSource("one");
+  assert.deepEqual(seen.at(-1), ["wakusei-pictures"]);
+  assert.throws(() => host.setSources([fakeMap("a").source, { ...fakeMap("b").source, info: sourceInfo("b", { credit: { en: "", ja: "" } }) }]), TypeError);
+  assert.deepEqual(host.sources(), [], "nothing was set");
+  host.setSources([fakeMap("a").source, fakeMap("b").source]);
+  assert.deepEqual(host.sources().map((one) => one.info.id), ["a", "b"]);
+  host.setSources([fakeMap("c").source]);
+  assert.deepEqual(host.sources().map((one) => one.info.id), ["c"], "assigning replaces");
+  assert.throws(() => host.setSources([fakeMap("d").source, fakeMap("d").source]), /already used/);
+  assert.deepEqual(host.sources().map((one) => one.info.id), ["c"], "and a refused list changes nothing");
 });
 
 // ----- 3: off -----
