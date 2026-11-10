@@ -15,9 +15,33 @@ A clean line drawing, a shaded realistic drawing, or a painted surface map, with
 
 <p align="center"><a href="https://johnmorrisdotca.github.io/wakusei-planets/"><strong>Open the demo →</strong></a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/embed.html">Embed page</a> · <a href="https://johnmorrisdotca.github.io/wakusei-planets/docs/">Docs</a></p>
 
-<p align="center"><img alt="Jupiter and Saturn drawn in the realistic look, and Saturn as a line drawing" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.30.0/docs/images/hero-desk.png" width="640"></p>
+Wakusei Planets runs in the browser of a phone, a tablet or a computer: nothing to install, no account, and it is free.
+
+<p align="center"><img alt="The demo on a desk: Saturn in the painted look, turning in the big view, with the page's links to the portrait builder, the colouring sheets, the space view, the star page and the size line-up above it, and the choice of body and its moons below" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/home-desk.webp" width="620"> <img alt="The same page on a phone: the same links in rows, and Saturn in the painted look below them" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/home-phone.webp" width="200"></p>
 
 <p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.30.0/docs/images/lineup-desk.png" width="640"></p>
+
+## Who it is for
+
+- **Teachers and students:** [the size line-up](https://johnmorrisdotca.github.io/wakusei-planets/lineup.html) puts the Sun and the largest stars side by side at true relative size, each with its radius, its error and its paper, and [colouring sheets](https://johnmorrisdotca.github.io/wakusei-planets/kids.html) of the Sun, the planets and the big moons print on A4 or US Letter in English and Japanese, with the real colours and three facts each.
+- **Space enthusiasts:** [the space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html) puts the Earth, the Moon, the Sun and the planets where they are now, or on any date you set, and zooms out to the whole solar system; [Jupiter and its moons as the Earth sees them now](https://johnmorrisdotca.github.io/wakusei-planets/?body=jupiter&sky=real&moons=1) is one click. The ten famous spacecraft (Voyager 1 and 2, New Horizons, Cassini, Juno, the Webb telescope and the rest) and where each is on any date are in [the spacecraft guide](https://johnmorrisdotca.github.io/wakusei-planets/docs/guides/spacecraft.html): that is code and a table, and there is no demo page for it yet.
+- **Researchers and outreach staff:** every planet and the Moon is held within 6 arc-seconds of NASA's JPL Horizons on 60 dates from 1800 to 2200, and Jupiter's four big moons within 0.15 degree; [the accuracy guide](https://johnmorrisdotca.github.io/wakusei-planets/docs/guides/accuracy.html) gives each body's number and [NOTICE.md](NOTICE.md) names every source. The tables download as CSV and Parquet ([data files](https://johnmorrisdotca.github.io/wakusei-planets/docs/guides/data-files.html)). Read [Limits](#limits) first, and see [How to cite](#how-to-cite).
+- **Writers, museums and site owners:** [the code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) and [the portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) write the code that puts a body, or a picture of several, in your page as an `<iframe>` or a tag, with no build step.
+- **Developers:** one `<wakusei-body>` tag, an SVG string with no browser at all, and typed data for the sizes, tilts, poles and places, and the bodies as objects for a three.js scene of your own; [One minute](#one-minute) and the [API](#api) are below.
+
+## Try it now, nothing to install
+
+**Learn:** **[Colouring sheets to print](https://johnmorrisdotca.github.io/wakusei-planets/kids.html)** · **[Saturn's sheet](https://johnmorrisdotca.github.io/wakusei-planets/kids.html?sheet=saturn)** · **[The size line-up, the Sun to the largest stars](https://johnmorrisdotca.github.io/wakusei-planets/lineup.html)**
+
+**Look:** **[Saturn, painted](https://johnmorrisdotca.github.io/wakusei-planets/?body=saturn&look=painted)** · **[Jupiter and its moons now](https://johnmorrisdotca.github.io/wakusei-planets/?body=jupiter&sky=real&moons=1)** · **[The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html)** · **[A star from its numbers: Vega](https://johnmorrisdotca.github.io/wakusei-planets/star.html?star=vega)**
+
+**Make:** **[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html)** · **[The code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html)**
+
+**Language:** **[日本語](https://johnmorrisdotca.github.io/wakusei-planets/?lang=ja)** · **[English](https://johnmorrisdotca.github.io/wakusei-planets/?lang=en)**
+
+## For teachers and families
+
+Wakusei Planets works on a phone or a tablet as well as on a computer, in the browser, and it is free: the code is MIT-licensed, and nothing is installed or signed up for. [The colouring-sheets guide](https://johnmorrisdotca.github.io/wakusei-planets/docs/guides/kids-sheets.html) says what each sheet is and how to print it, and [the size line-up guide](https://johnmorrisdotca.github.io/wakusei-planets/docs/guides/size-lineup.html) says where each star's radius comes from. Every source is credited in [NOTICE.md](NOTICE.md) and at the foot of each demo page.
 
 ## One minute
 
@@ -69,13 +93,6 @@ Every view already turns, zooms and pans with a drag, a pinch, Ctrl and the whee
 ```
 
 A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (and `import { lineSvg } from "@johnmorrisdotca/wakusei-planets"` for the SVG string, which needs no browser). For the shaded look add the body's own entry point, `import "@johnmorrisdotca/wakusei-planets/jupiter"`, and `three` (an optional peer).
-
-## Who it is for
-
-- **A developer who wants a planet on a page** with one tag, no build step, and a drawing that is an SVG before any 3D has loaded.
-- **A teacher, writer or museum** who needs the Sun, the planets and their moons at their real sizes and tilts, with every number traceable to the IAU, NASA or JPL.
-- **A maker of sky tools** who wants a planet's pole, phase, ring opening and its moons' places for any date and time as plain data, on a server or in a browser.
-- **A three.js developer** who wants the bodies as objects for a scene of their own.
 
 ## Features
 
@@ -418,12 +435,27 @@ import { BODIES } from "@johnmorrisdotca/wakusei-planets";
 BODIES.pluto.kind; // "dwarf-planet"
 ```
 
-- A fact with no source is left out, never guessed. The Moon is within 2 arc-seconds of JPL Horizons, and the planets within a few arc-seconds on 60 dates from 1800 to 2200; the moons are within a degree or two on the orbit for almost every moon, about the size of the moon on screen, and Jupiter's four within a few hundredths of a degree; [accuracy](docs/guides/accuracy.md) has each body's number.
+- **What it is for.** Pictures, charts, teaching and stories about the sky. It is not an ephemeris for pointing a telescope or planning a flight: for that use [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) itself, which every position here is checked against.
+- **The planets** (Mercury to Neptune, VSOP87B cut to 995 of its 35,080 terms) are within 5 arc-seconds of Horizons on 60 dates from 1800 to 2200, Mars the worst at 4.8, and the tests hold each to 6 or less; the series is good for the years 1750 to 2250 and slowly worse beyond. Pluto's table is within 0.2.
+- **The Moon** (ELP2000-82B cut to its 540 largest terms) is within 4.7 arc-seconds on the same 60 dates, held to 5.8.
+- **The moons** are less exact: Jupiter's four big moons are within 0.15 degree and Saturn's seven inner ones within 2.1, Uranus's Miranda within 3 and Neptune's Nereid within 6.3; one degree on a moon's orbit is about the width of the moon on a screen. [Accuracy](docs/guides/accuracy.md) has each moon's number.
+- **The dwarf planets** are within 0.2 arc-seconds of Horizons in the years their tables cover (1800 to 2200, Ceres 1900 to 2100); outside them the positions are plain ellipses, good for a few years either side of June 2026. Their moons other than Pluto's are not checked against Horizons, and a dwarf planet's pole is estimated where it is not measured (NOTICE.md says which).
+- **The spacecraft** follow Horizons' own record, within 1,000 km near a planet and elsewhere a millionth of the distance from the Sun; a path after today is Horizons' prediction, not a fact.
+- **Star sizes** in the line-up are each from a refereed paper, with the paper's error; WOH G64's and Stephenson 2-18's are estimated (from the spectrum and the brightness, and from a dust-shell fit) and not measured, and UY Scuti's distance is not a parallax. A star's surface (cells, spots, glow) is drawn for looks and says so.
+- **Nothing is guessed.** A fact with no source is left out. [Accuracy](docs/guides/accuracy.md) has each body's number and how to run the check yourself.
 - `realistic` and `painted` are the photo maps (`painted` is the same maps, so an older page still works). `illustrated` is the shaded drawing from the numbers, and it is not a default. Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mercury uses the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0). Mars stays on the Viking mosaic, graded toward a butterscotch ochre, with the frost in Hellas toned to the basin and the polar ice left. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Jupiter, Saturn, Uranus and Neptune have their rings drawn.
 - A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. A picture with a date keeps that orientation and adds the same turn. `turn="0"` stays still.
 - Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
+
+## How to cite
+
+If this package helps a paper, a talk or a class, please cite it as software. GitHub's "Cite this repository" button reads [CITATION.cff](CITATION.cff) and gives BibTeX and APA; in plain text:
+
+> Morris, J. (2026). *Wakusei Planets* (version 0.29.0) [Computer software]. https://github.com/johnmorrisdotca/wakusei-planets
+
+Cite the version you used (`npm ls @johnmorrisdotca/wakusei-planets`), and cite the sources of the numbers you use as well: [NOTICE.md](NOTICE.md) names each one, with the paper or the page it was read from (the IAU working group's report for sizes and poles, VSOP87B, ELP2000-82B, L1.2 and TASS1.7 for positions, and NASA's JPL Horizons for the fits and the spacecraft).
 
 ## Accessibility
 
