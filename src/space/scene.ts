@@ -287,7 +287,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         empty(slot);
         slot.look = model.look;
         try {
-          const made = deps.painter().make(three, id, { look: model.look, invalidate: () => deps.invalidate(), ratio: model.ratio(), maxTexture: deps.cap() });
+          const made = deps.painter().make(three, id, { look: model.look, mapped: true, invalidate: () => deps.invalidate(), ratio: model.ratio(), maxTexture: deps.cap() });
           if (ended) {
             made.dispose();
             return;

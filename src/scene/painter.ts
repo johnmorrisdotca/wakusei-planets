@@ -61,6 +61,8 @@ export type PainterLook = (typeof LOOKS)[number];
 export interface PaintContext {
   /** `realistic` (the default) or `painted`. */
   look?: string;
+  /** True to draw every body that has a surface picture from it, in any look (the space view does: a planet or a moon with a real map never shows the shaded look instead). A body with no picture is still shaded. */
+  mapped?: boolean;
   /** Ask for a new draw: a sharper picture has arrived. */
   invalidate?(): void;
   /** Device pixels to a CSS pixel; default 1. */
@@ -249,7 +251,7 @@ function sightOf(T: PainterThree, view: PaintView): Sight {
 function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined }): Painting {
   const facts = BODIES[id];
   const look = lookOf(id) ?? fallbackLook(facts);
-  const wantPainted = (context.look === "painted" || look.mapped === true) && look.painted !== undefined;
+  const wantPainted = (context.look === "painted" || look.mapped === true || context.mapped === true) && look.painted !== undefined;
   const ratio = context.ratio ?? 1;
   const maxWidth = context.maxTexture ?? 2048;
   const redraw = (): void => context.invalidate?.();

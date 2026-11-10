@@ -93,3 +93,24 @@ test("a time a day later moves the moon, and the same time gives the same place"
   assert.deepEqual(moonOffset("europa", ms), moonOffset("europa", ms));
   assert.notDeepEqual(moonOffset("europa", ms), moonOffset("europa", ms + 86_400_000));
 });
+
+test("a painter told to map every body asks for each body's picture in the realistic look too, and asks for none of a body that has no picture", () => {
+  const asked = (id: string, context: Record<string, unknown>): string[] => {
+    const urls: string[] = [];
+    class Recorder {
+      setCrossOrigin(): void {}
+      load(url: string): void {
+        urls.push(url);
+      }
+    }
+    const body = painter.make({ ...THREE, TextureLoader: Recorder } as unknown as typeof THREE, id, context);
+    body.dispose();
+    return urls;
+  };
+  for (const [id, map] of [["mars", "mars"], ["moon", "moon"], ["mercury", "mercury"], ["venus", "venus"], ["jupiter", "jupiter"], ["saturn", "saturn"], ["uranus", "uranus"], ["neptune", "neptune"], ["pluto", "pluto"], ["io", "io"], ["titan", "titan"], ["triton", "triton"], ["charon", "charon"]] as const) {
+    assert.deepEqual(asked(id, { look: "realistic" }), [], `${id} is shaded in the realistic look, with no picture asked for, unless told to map`);
+    const urls = asked(id, { look: "realistic", mapped: true });
+    assert.ok(urls.some((url) => new RegExp(`/${map}-\\d+\\.webp$`).test(url)), `${id} asks for its map when told to map every body: ${urls.join(" ")}`);
+  }
+  for (const id of ["phobos", "deimos", "miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
+});

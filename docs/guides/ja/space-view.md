@@ -22,7 +22,7 @@ description: 地球・月・太陽・惑星を、好きな日時の場所に置�
 </html>
 ```
 
-three が必要です (任意の peer 依存)。「表面の地図」の見た目の絵は、jsDelivr か、`texture-base` で指定したフォルダから読み込みます。天体はすべてこのパッケージの描画部品で描くので、`<wakusei-body>` と同じ見た目です ([自分の three.js シーンで使う](in-your-own-scene.md))。
+three が必要です (任意の peer 依存)。表面の絵は、jsDelivr か、`texture-base` で指定したフォルダから読み込みます。この表示では、表面の絵を持つ天体は、どちらの見た目 (`look="realistic"` と `look="painted"`) でもその絵で描かれ、月も火星も同じです。カメラが近づくと、細かい地図のタイルもつきます。絵のない天体 (フォボス、ダイモス、天王星の衛星) は、数字から陰影をつけて描きます。自分の three.js のシーンで同じにするには、painter の context に `mapped: true` を渡します。天体はすべてこのパッケージの描画部品で描くので、`<wakusei-body>` と同じ見た目です ([自分の three.js シーンで使う](in-your-own-scene.md))。
 
 ## 位置
 

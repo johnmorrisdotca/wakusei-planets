@@ -22,7 +22,7 @@ description: The Earth, the Moon, the Sun and the planets in their places for an
 </html>
 ```
 
-The element needs `three` (an optional peer). The pictures of a painted look come from jsDelivr, or from the folder named by `texture-base`. Everything is drawn by the package's own painter ([in your own three.js scene](in-your-own-scene.md)), so the looks are the same as in `<wakusei-body>`.
+The element needs `three` (an optional peer). The pictures come from jsDelivr, or from the folder named by `texture-base`. In this view every body that has a surface picture is drawn from it in both looks (`look="realistic"` and `look="painted"`), the Moon and Mars too, and the finer map tiles come to them when the camera is near; a body with no picture (Phobos, Deimos, Uranus's moons) is shaded from its numbers. Your own three.js scene gets the same with `mapped: true` in the painter's context. Everything is drawn by the package's own painter ([in your own three.js scene](in-your-own-scene.md)), so the looks are the same as in `<wakusei-body>`.
 
 ## Where things are
 
