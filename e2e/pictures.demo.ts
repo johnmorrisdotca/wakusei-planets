@@ -40,6 +40,8 @@ test("a small dwarf planet in the realistic look is smooth: soft craters, no pix
       await page.goto(`${URL}embed.html?scene=${encodeURIComponent(`look:realistic~bg:black~labels:0~orbits:0~${body}_0_0_0.3_0`)}`);
       await expect(page.locator("wakusei-portrait")).toHaveAttribute("data-state", "live", { timeout: 90_000 });
       await page.waitForTimeout(800);
+      // The frame's credit (frame-credit.ts) is text in the corner, not the dwarf planet: take it off so only the body is looked at.
+      await page.getByTestId("frame-credit").evaluate((el) => el.remove());
       const png = (await page.screenshot()).toString("base64");
       // a speck is a lit pixel that differs from the middle one of its eight neighbours by more than a fifth of the brightness range
       const specks = await page.evaluate(async (data) => {

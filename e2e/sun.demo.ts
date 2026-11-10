@@ -20,6 +20,8 @@ for (const look of ["realistic", "painted", "illustrated"] as const) {
     await expect(sun).toHaveAttribute("data-state", "live", { timeout: 90_000 });
     if (look !== "illustrated") await expect.poll(() => sun.evaluate((el) => (el as unknown as { stats: { textureWidth: number } }).stats.textureWidth), { timeout: 60_000 }).toBeGreaterThanOrEqual(512);
     await page.waitForTimeout(1200);
+    // The frame's credit sits in its corner (frame-credit.ts) and is not the Sun: take it off so the picture compared is the Sun's alone.
+    await page.getByTestId("frame-credit").evaluate((el) => el.remove());
     const shot = await page.screenshot();
     const file = `${GOLDEN}/sun-${look}.png`;
     if (process.env.UPDATE_GOLDEN === "1") {
