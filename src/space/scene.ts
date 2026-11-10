@@ -10,7 +10,9 @@ import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
+import { arrowSites, ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
+import { spinAxis } from "./spin.ts";
 import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
@@ -27,6 +29,10 @@ const ORBIT_POINTS = 96;
 const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, "moon"] as const;
 /** A dwarf planet is drawn once it is this many CSS pixels across its radius, or when it is the body looked at: Sedna at true scale is never anything but a speck, and its picture is not made for it. */
 const DWARF_MIN_PX = 0.4;
+/** A colour as three numbers from 0 to 1, from `#rrggbb`. */
+const rgb = (hex: string): [number, number, number] => [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
+/** How long each arrowhead on an orbit line is, in CSS pixels: small, so it reads at every zoom and never hides a body. */
+const ARROW_PX = 9;
 /** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
 const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
@@ -152,6 +158,14 @@ export interface SpaceModel {
   tiles: { requested: number; loading: number; failed: number; shown: number | null };
   /** The orbit lines drawn at the last draw, and how far each body is from its own line as a fraction of the line's radius (0 when it is on it). */
   rings: { drawn: string[]; miss: Record<string, number> };
+  /** The arrowheads on the orbit lines at the last draw, by line: where each is and the way it points. */
+  arrows: Record<string, OrbitArrow[]>;
+  /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
+  help: boolean;
+  /** How long an arrowhead drawn at the last draw is on the screen, in CSS pixels (measured from its own points), or 0 when none was drawn. */
+  arrowPx: number;
+  /** What the help arrow drew at the last draw, or null: the body, the axis it spins about (right-hand rule), the north pole, and the axis the drawn arc itself turns about (measured from its points). */
+  helpDrawn: { body: BodyId; axis: Vec3; pole: Vec3; retrograde: boolean; arcTurn: Vec3 } | null;
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -188,6 +202,10 @@ export const newSpaceModel = (): SpaceModel => ({
   painted: { bodies: 0, moons: 0, held: 0 },
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
   rings: { drawn: [], miss: {} },
+  arrows: {},
+  help: false,
+  arrowPx: 0,
+  helpDrawn: null,
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -316,6 +334,38 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         line.frustumCulled = false;
         scene.add(line);
         orbits.set(id, { line, positions, samples: [], epoch: Number.NaN });
+      }
+      // the arrowheads of every orbit line: two strokes each, in the colour of the line, in one object; and the help mode's axis and curved arrow in another (drawn over the body, not hidden by it)
+      const ARROW_VERTICES = ORBIT_BODIES.length * ARROWS_PER_ORBIT * 4;
+      const arrowPositions = new Float32Array(ARROW_VERTICES * 3);
+      const arrowColours = new Float32Array(ARROW_VERTICES * 3);
+      const arrowGeometry = new three.BufferGeometry();
+      arrowGeometry.setAttribute("position", new three.BufferAttribute(arrowPositions, 3));
+      arrowGeometry.setAttribute("color", new three.BufferAttribute(arrowColours, 3));
+      const arrowLines = new three.LineSegments(arrowGeometry, new three.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95 }));
+      arrowLines.frustumCulled = false;
+      scene.add(arrowLines);
+      ORBIT_BODIES.forEach((id, k) => {
+        const c = rgb(id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
+        for (let v = 0; v < ARROWS_PER_ORBIT * 4; v += 1) arrowColours.set(c, (k * ARROWS_PER_ORBIT * 4 + v) * 3);
+      });
+      const HELP_SEGMENTS = 28;
+      const HELP_VERTICES = (1 + HELP_SEGMENTS + 2) * 2;
+      const helpPositions = new Float32Array(HELP_VERTICES * 3);
+      const helpColours = new Float32Array(HELP_VERTICES * 3);
+      const helpGeometry = new three.BufferGeometry();
+      helpGeometry.setAttribute("position", new three.BufferAttribute(helpPositions, 3));
+      helpGeometry.setAttribute("color", new three.BufferAttribute(helpColours, 3));
+      const helpLines = new three.LineSegments(helpGeometry, new three.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.95, depthTest: false }));
+      helpLines.frustumCulled = false;
+      helpLines.renderOrder = 10;
+      helpLines.visible = false;
+      scene.add(helpLines);
+      const AXIS_COLOUR = rgb("#9fd0ff");
+      const SPIN_COLOUR = rgb("#ffd24a");
+      for (let v = 0; v < HELP_VERTICES; v += 1) {
+        const c = v < 2 ? AXIS_COLOUR : SPIN_COLOUR;
+        helpColours.set(c, v * 3);
       }
       const moonSlots = new Map<string, { slot: Slot; seen: number }>();
       let releaseTimer: ReturnType<typeof setTimeout> | undefined;
@@ -578,6 +628,70 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           model.rings = { drawn: drawnRings, miss };
 
+          // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)
+          const e = camera.matrixWorld.elements;
+          const camRight: Vec3 = [e[0]!, e[1]!, e[2]!];
+          const camUp: Vec3 = [e[4]!, e[5]!, e[6]!];
+          const camForward: Vec3 = [-e[8]!, -e[9]!, -e[10]!];
+          const pixel = (at: Vec3): number => {
+            const d = (at[0] - camera.position.x) * camForward[0] + (at[1] - camera.position.y) * camForward[1] + (at[2] - camera.position.z) * camForward[2];
+            return d <= 0 ? 0 : (d * 2 * half) / Math.max(1, size.height);
+          };
+          const arrowsNow: Record<string, OrbitArrow[]> = {};
+          let measured = 0;
+          arrowPositions.fill(0);
+          ORBIT_BODIES.forEach((id, k) => {
+            const o = orbits.get(id)!;
+            if (!model.orbits || !drawnRings.includes(id)) return;
+            const line: Vec3[] = [];
+            for (let i = 0; i <= ORBIT_POINTS; i += 1) line.push([o.positions[i * 3]!, o.positions[i * 3 + 1]!, o.positions[i * 3 + 2]!]);
+            const sites = arrowSites(line);
+            arrowsNow[id] = sites;
+            sites.forEach((site, j) => {
+              const head = chevron(site.position, site.direction, camRight, camUp, ARROW_PX * pixel(site.position));
+              if (!head) return;
+              const base = (k * ARROWS_PER_ORBIT + j) * 4 * 3;
+              arrowPositions.set([...head[0], ...head[1], ...head[0], ...head[2]], base);
+              if (measured === 0) {
+                const tip = labelFor(head[0]);
+                const wing = labelFor(head[1]);
+                if (tip && wing) measured = Math.hypot(tip.x - wing.x, tip.y - wing.y);
+              }
+            });
+          });
+          model.arrows = arrowsNow;
+          model.arrowPx = measured;
+          arrowLines.visible = model.orbits;
+          (arrowGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+          (arrowGeometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
+
+          // help mode: on the body looked at, the line of its axis and a curved arrow round it the way it turns
+          helpLines.visible = model.help;
+          model.helpDrawn = null;
+          if (model.help) {
+            const turn = spinAxis(focus, model.time);
+            const spin = spinArrow(focusPos, turn.axis, 1.3 * focusRadius, 0.4 * focusRadius, HELP_SEGMENTS);
+            const reach = 1.8 * focusRadius;
+            const segments: Vec3[] = [
+              [focusPos[0] - turn.pole[0] * reach, focusPos[1] - turn.pole[1] * reach, focusPos[2] - turn.pole[2] * reach],
+              [focusPos[0] + turn.pole[0] * reach, focusPos[1] + turn.pole[1] * reach, focusPos[2] + turn.pole[2] * reach],
+            ];
+            for (let i = 0; i < HELP_SEGMENTS; i += 1) segments.push(spin.arc[i]!, spin.arc[i + 1]!);
+            const tip = spin.arc[HELP_SEGMENTS]!;
+            segments.push(tip, spin.head[0], tip, spin.head[1]);
+            segments.forEach((p, i) => helpPositions.set(p, i * 3));
+            (helpGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+            // the axis the drawn arc turns about, measured from its own points, round the middle of its circle
+            const middle: Vec3 = [focusPos[0] + turn.axis[0] * 0.4 * focusRadius, focusPos[1] + turn.axis[1] * 0.4 * focusRadius, focusPos[2] + turn.axis[2] * 0.4 * focusRadius];
+            let sum: Vec3 = [0, 0, 0];
+            for (let i = 0; i < HELP_SEGMENTS; i += 1) {
+              const a = minus(spin.arc[i]!, middle);
+              const b = minus(spin.arc[i + 1]!, middle);
+              sum = [sum[0] + a[1] * b[2] - a[2] * b[1], sum[1] + a[2] * b[0] - a[0] * b[2], sum[2] + a[0] * b[1] - a[1] * b[0]];
+            }
+            model.helpDrawn = { body: focus, axis: turn.axis, pole: turn.pole, retrograde: turn.retrograde, arcTurn: unit(sum) };
+          }
+
           // the moons of a planet, once it is big enough on the screen to show them
           const now = performance.now();
           const seen = new Set<string>();
@@ -665,6 +779,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const o of orbits.values()) {
             o.line.geometry.dispose();
             (o.line.material as THREE.Material).dispose();
+          }
+          for (const lines of [arrowLines, helpLines]) {
+            lines.geometry.dispose();
+            (lines.material as THREE.Material).dispose();
           }
         },
       };

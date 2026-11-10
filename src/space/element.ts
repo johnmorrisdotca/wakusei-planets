@@ -178,7 +178,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "look", "light", "lang"];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang"];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -215,6 +215,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.mode = this.getAttribute("scale") === "compressed" ? "compressed" : "true";
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
+    this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
@@ -289,6 +290,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "scale") this.scale = value === "compressed" ? "compressed" : "true";
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
+    else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
     else if (name === "lang") {
@@ -367,6 +369,18 @@ export class WakuseiSpace extends HTMLElement {
   }
   set orbits(value: boolean) {
     this.#model.orbits = value;
+    this.#gate?.request();
+  }
+
+  /**
+   * Help mode (the `help` attribute; off by default): on the body looked at, a line along its axis and a curved arrow round it showing which way it spins, by the right-hand rule about the axis it really turns about, so it is
+   * right for Venus and Uranus, which turn backwards, and for Uranus on its side. It is about learning, so the arrow is drawn over the body.
+   */
+  get help(): boolean {
+    return this.#model.help;
+  }
+  set help(value: boolean) {
+    this.#model.help = value;
     this.#gate?.request();
   }
 
@@ -641,6 +655,12 @@ export class WakuseiSpace extends HTMLElement {
     ride: { riding: boolean; lost: boolean; gliding: boolean };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
     orbits: { drawn: string[]; miss: Record<string, number> };
+    /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
+    arrows: Record<string, { position: [number, number, number]; direction: [number, number, number] }[]>;
+    /** How long an arrowhead on an orbit line is on the screen at the last draw, in CSS pixels (0 when none is drawn): the same at every zoom. */
+    arrowPx: number;
+    /** What help mode drew at the last draw, or null: the body, the axis it spins about, its north pole, and the axis the drawn arrow itself turns about. */
+    help: { body: string; axis: [number, number, number]; pole: [number, number, number]; retrograde: boolean; arcTurn: [number, number, number] } | null;
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -657,6 +677,9 @@ export class WakuseiSpace extends HTMLElement {
       tiles: { ...this.#model.tiles },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss } },
+      arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
+      arrowPx: this.#model.arrowPx,
+      help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
     };
   }
 

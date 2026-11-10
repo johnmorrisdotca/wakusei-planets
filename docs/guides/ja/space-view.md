@@ -92,9 +92,15 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ページ [space-full.html](https://johnmorrisdotca.github.io/wakusei-planets/space-full.html) がこの形で、下にファミリーの表示コントロールが重なります。`@johnmorrisdotca/kazoku-ui/testing` の `checkGestures` は、このページで通ります。例外は1つだけで、ホイールだけでの移動 (パン) です。このページではホイールだけで拡大縮小するためです。
 
+## どちらへ進むか、矢印とヘルプモード
+
+`orbits` がオンのとき、各軌道の線に沿って小さな矢じりが6つあり、天体が回る向きを指します (月の線にもあります)。長さはズームに関係なく約9CSSピクセルなので、太陽系ぜんたいから月まで見え、天体をかくすほど太くなることはなく、天体のすぐそばには出ません。天体が本当に進む向きを示すので、時間を逆に進めても矢印は変わりません。そのときは、天体が矢印と反対に動きます。`/space` の `arrowSites(line)` と `chevron(...)` が、場所と形です。`stats.orbits` と `stats.arrows` で、各矢印の場所と向きが分かります。
+
+`help` (属性、または `space.help`。初期値はオフ) はヘルプモードで、見ている天体に、軸にそった線と、回る向きを示す曲がった矢印を、天体の上に重ねて描きます。矢印は、天体が本当に回る軸のまわりを、右ねじの向きにまわります。その軸は、`spinAxis(id, ms)` が本初子午線の動きから求めます。地球、火星、木星やほとんどの天体は北極のほうで、金星と天王星は逆まわりなので極と反対向きです。横だおしの天王星は、軸が黄道にほぼそって見えます。いつも同じ面を惑星に向ける衛星は、軌道を1周するあいだに1回まわり、公転と同じ向きです。デモでは、ヘッダーのファミリー共通の「説明」スイッチと結んでいます。`stats.help` は、どの天体か、その軸、描いた矢印がまわる軸を返します。
+
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 乗って見る
 

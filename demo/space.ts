@@ -218,6 +218,12 @@ space.addEventListener("wakusei-hop", (event) => {
   showHop();
   render();
 });
+// the family's Help switch is the element's help mode: with it on, the body looked at shows its axis and a curved arrow for the way it spins
+const followHelp = (): void => {
+  space.help = document.documentElement.getAttribute("data-help") === "on";
+};
+document.addEventListener("family-help", followHelp);
+followHelp();
 // the picker: a kind (the Sun and planets, dwarf planets, moons), for a moon the planet it goes round, then the body; or a search by name. A choice goes there.
 const choice = { kind: "planet" as "planet" | "dwarf-planet" | "moon", host: "" };
 const kindOf = (info: BodyInfo): "planet" | "dwarf-planet" | "moon" => (info.kind === "star" ? "planet" : info.kind);

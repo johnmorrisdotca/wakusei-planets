@@ -10,6 +10,7 @@ export {
   Group,
   Line,
   LineBasicMaterial,
+  LineSegments,
   LinearFilter,
   Mesh,
   NoColorSpace,
