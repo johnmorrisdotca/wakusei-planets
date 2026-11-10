@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Body, GeoVector, HelioVector, MakeTime } from "astronomy-engine";
 import { greenwichMeanSiderealTime } from "../src/time.ts";
-import { AU_IN_EARTH_RADII, blend, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition, type ScaleMode } from "../src/space/index.ts";
+import { AU_IN_EARTH_RADII, blend, chooseLabels, compress, createTrack, frameAt, groundDirection, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition, type ScaleMode } from "../src/space/index.ts";
 import { MOONS_OF } from "../src/facts.ts";
 import { moonOffset } from "../src/scene/orient.ts";
 import type { Vec3 } from "../src/vec.ts";
@@ -299,4 +299,17 @@ test("on or inside the body the angular radius is a quarter turn", () => {
 test("in the compressed scale the Moon keeps its true size beside the Earth, a quarter of it, so it never looks as big", () => {
   const ratio = radiusIn("moon", "compressed") / radiusIn("earth", "compressed");
   assert.ok(Math.abs(ratio - radiusIn("moon", "true") / radiusIn("earth", "true")) < 0.005, `${ratio}`);
+});
+
+test("names that touch: the surer one is kept, a moon gives way to its planet and a planet to the Sun, and apart they all stay", () => {
+  const box = (id: string, x: number, y: number, rank: number, size = 1) => ({ id, x, y, width: 40, height: 16, rank, size });
+  assert.deepEqual([...chooseLabels([box("moon", 30, 12, 4), box("earth", 10, 10, 2)])], ["earth"]);
+  assert.deepEqual([...chooseLabels([box("venus", 10, 10, 2, 5), box("sun", 20, 14, 1, 1)])], ["sun"]);
+  // the same rank: the bigger one on the screen
+  assert.deepEqual([...chooseLabels([box("a", 10, 10, 2, 3), box("b", 20, 10, 2, 9)])], ["b"]);
+  // a chain: the Sun beats the planet it covers, so a moon that touched only the planet is free again
+  assert.deepEqual([...chooseLabels([box("sun", 0, 0, 1), box("mars", 30, 0, 2), box("phobos", 60, 0, 4)])].sort(), ["phobos", "sun"]);
+  // apart, with the gap kept
+  assert.deepEqual([...chooseLabels([box("a", 0, 0, 2), box("b", 44, 0, 2)])].sort(), ["a", "b"]);
+  assert.deepEqual([...chooseLabels([box("a", 0, 0, 2), box("b", 41, 0, 2)])], ["a"]);
 });

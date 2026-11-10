@@ -62,6 +62,8 @@ The element carries the drag, the pinch, Ctrl and the wheel, and the keys itself
 
 `space.body = "jupiter"` points the camera at a body (`earth`, `sun`, `moon`, `mercury` to `neptune`, `pluto`). The name beside each body is a button (Tab, Enter). A press on a body that is not a drag fires `wakusei-body-click` (`wakusei-body-focus` for the keyboard) with `{ id, name, radiusKm, distanceKm }`; `space.bodyInfo(id)` gives the same. `space.bodyNames = { mars: "火星" }` and `lang="ja"` change the words.
 
+No two names overlap: when the boxes of two names would cross, the one that matters less is left out, and a name that is left out takes its ring with it. The order is the body looked at, the Sun, the planets, then the Moon; a tie goes to the body that is bigger on the screen. A moon gives way to its planet and a planet to the Sun, and zooming in brings the names back. `chooseLabels(boxes)` from `@johnmorrisdotca/wakusei-planets/space` is the same rule on plain boxes.
+
 A planet's nearer moons appear round it once the planet is a few pixels across, at the places the package's moon models give (`zoomFor("jupiter-moons")`). The paths of the Earth and the planets round the Sun are drawn unless `orbits="off"`.
 
 ## Properties, events, stats

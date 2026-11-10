@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **No two names of the space view overlap** (MODULES-855). The names of the bodies are chosen by rank (the body looked at, the Sun, the planets, the Moon) and one that would cover a surer one is left out, with its ring: a moon gives way to its planet and a planet to the Sun, and zooming in brings the names back. `chooseLabels(boxes)` and `LABEL_GAP` (new, `/space`) are the rule on plain boxes.
 - **The space view opens at true distances, and says so** (MODULES-856). `scale` is `true` by default (it was `compressed`); the scale in use is named on the view itself ("True distances" or "Distances squeezed to fit", in the element's `lang`, with `scaleNames` for a page's own words and `::part(scale)` to style the line); a body whose disc is under 4 CSS pixels across its radius is marked with a ring as well as its name; and in the compressed scale the Moon is drawn at its true 0.273 of the Earth (it was 0.9, nearly as big as the Earth). A page that relied on the old default writes `scale="compressed"`. `space.placeOf(id)` (new) says where a body is on the screen.
 
 ## [0.30.0] - 2026-11-10

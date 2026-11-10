@@ -62,6 +62,8 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 `space.body = "jupiter"` で、カメラをその天体に向けます (`earth`、`sun`、`moon`、`mercury` から `neptune`、`pluto`)。各天体の横の名前はボタンです (Tab と Enter)。ドラッグではない押し方で天体を押すと、`wakusei-body-click` が `{ id, name, radiusKm, distanceKm }` つきで発火します (キーボードでは `wakusei-body-focus`)。同じ値は `space.bodyInfo(id)` でも得られます。`space.bodyNames = { mars: "火星" }` や `lang="ja"` で表示する言葉を変えられます。
 
+名前は重なりません。2つの名前の枠が重なるときは、大事なほうだけを出し、出さない名前は輪も出しません。優先は、見ている天体、太陽、惑星、月の順で、同じ順なら画面で大きいほうが残ります。衛星は惑星に、惑星は太陽に場所をゆずり、ズームインすると名前が戻ります。`@johnmorrisdotca/wakusei-planets/space` の `chooseLabels(boxes)` は、同じ決まりを四角形の一覧にそのまま使えます。
+
 惑星が数ピクセルの大きさになると、そのまわりに近い衛星が現れます。位置はこのパッケージの衛星モデルが出します (`zoomFor("jupiter-moons")`)。地球と惑星が太陽のまわりを回る道は、`orbits="off"` にしない限り描きます。
 
 ## プロパティ、イベント、stats

@@ -5,6 +5,7 @@ import { carryControls, type ElementControls, type ViewController } from "@johnm
 import { BODIES, MOONS_OF, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
+import { chooseLabels, type LabelBox } from "./labels.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
@@ -598,6 +599,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#places = places;
     const box = this.#labelBox;
     if (!box) return;
+    const wanted: LabelBox[] = [];
+    const spots = new Map<SpaceBody, { x: number; y: number; small: boolean }>();
     for (const id of SPACE_BODIES) {
       let label = this.#pool.get(id);
       const at = places[id];
@@ -621,18 +624,51 @@ export class WakuseiSpace extends HTMLElement {
         box.append(ring);
         this.#rings.set(id, ring);
       }
-      if (!at) {
+      if (!at) continue;
+      const x = Math.round(at.x + Math.max(4, Math.min(at.r, 40)));
+      const y = Math.round(at.y - 8);
+      spots.set(id, { x, y, small: at.r < RING_BELOW_PX });
+      wanted.push({ id, x, y, width: this.#widthOf(label), height: 16, rank: this.#rank(id), size: at.r });
+    }
+    // no two names overlap: a moon gives way to its planet and a planet to the Sun
+    const shown = chooseLabels(wanted);
+    for (const id of SPACE_BODIES) {
+      const label = this.#pool.get(id);
+      const ring = this.#rings.get(id);
+      if (!label || !ring) continue;
+      const spot = spots.get(id);
+      if (!spot || !shown.has(id)) {
         if (!label.hidden) label.hidden = true;
         if (!ring.hidden) ring.hidden = true;
         continue;
       }
       if (label.hidden) label.hidden = false;
-      label.style.transform = `translate(${Math.round(at.x + Math.max(4, Math.min(at.r, 40)))}px,${Math.round(at.y - 8)}px)`;
+      label.style.transform = `translate(${spot.x}px,${spot.y}px)`;
       // a body too small to see is marked: a ring round the place it is, as well as its name
-      const small = at.r < RING_BELOW_PX;
-      if (ring.hidden === small) ring.hidden = !small;
-      if (small) ring.style.transform = `translate(${Math.round(at.x)}px,${Math.round(at.y)}px)`;
+      if (ring.hidden === spot.small) ring.hidden = !spot.small;
+      if (spot.small) ring.style.transform = `translate(${Math.round(places[id]!.x)}px,${Math.round(places[id]!.y)}px)`;
     }
+  }
+
+  /** How sure a body's name is of its place: the body looked at first, then the Sun, the planets, the dwarf planets and the moons. */
+  #rank(id: SpaceBody): number {
+    if (id === this.#model.focus) return 0;
+    if (id === "sun") return 1;
+    return id === "moon" ? 4 : 2;
+  }
+
+  #widths = new WeakMap<HTMLElement, number>();
+  /** The width of a name's box on the screen, measured when its words change and not at every frame. */
+  #widthOf(label: HTMLElement): number {
+    let width = this.#widths.get(label);
+    if (width === undefined) {
+      const hidden = label.hidden;
+      if (hidden) label.hidden = false;
+      width = label.offsetWidth;
+      if (hidden) label.hidden = true;
+      if (width > 0) this.#widths.set(label, width);
+    }
+    return width;
   }
 
   /** Say which scale is on, on the view itself. */
@@ -651,6 +687,7 @@ export class WakuseiSpace extends HTMLElement {
   #nameLabel(button: HTMLElement, id: SpaceBody): void {
     const text = this.#nameOf(id);
     button.textContent = text;
+    this.#widths.delete(button);
     button.setAttribute("aria-label", `${text}: ${this.#hint}`);
   }
 
