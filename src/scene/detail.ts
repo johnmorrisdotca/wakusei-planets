@@ -324,21 +324,28 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     levelsAsked = true;
     askedAt = clock();
     const controller = new AbortController();
-    void Promise.resolve()
-      .then(() => (source.levels === undefined ? DEFAULT_LEVELS : source.levels(deps.body, controller.signal)))
-      .then(
-        (read) => {
-          if (gone || active !== source) return;
-          levelsRead = read !== undefined;
-          levels = read !== undefined && read.length > 0 ? read : undefined;
-          deps.onLevels?.(levels);
-          if (levels !== undefined) {
-            replay?.();
-            deps.redraw();
-          }
-        },
-        () => undefined,
-      );
+    // read once the view has settled, and only if the body is still drawn from this source: a page that changes `tiles` just after the element starts is not asked for a manifest it has just said it does not want
+    setTimeout(() => {
+      if (gone || active !== source || deps.source() !== source) {
+        if (!gone && active === source) levelsAsked = false;
+        return;
+      }
+      void Promise.resolve()
+        .then(() => (source.levels === undefined ? DEFAULT_LEVELS : source.levels(deps.body, controller.signal)))
+        .then(
+          (read) => {
+            if (gone || active !== source) return;
+            levelsRead = read !== undefined;
+            levels = read !== undefined && read.length > 0 ? read : undefined;
+            deps.onLevels?.(levels);
+            if (levels !== undefined) {
+              replay?.();
+              deps.redraw();
+            }
+          },
+          () => undefined,
+        );
+    }, DETAIL_SETTLE_MS);
   };
 
   const idle = (): void => {
