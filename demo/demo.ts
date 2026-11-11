@@ -18,6 +18,7 @@ import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { creditLine } from "../src/door/index.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
+import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 
 type Look = "line" | "realistic" | "painted" | "illustrated";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
@@ -85,6 +86,7 @@ if (main && controls && pickerBox) {
     spinSpeed: Number(address.get("spinspeed") ?? 1) || 1,
     time: address.get("t") ?? "now",
   };
+  const bodyLabel = readBodyLabelState(address);
 
   const localValue = (ms: number): string => {
     const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000);
@@ -481,6 +483,7 @@ if (main && controls && pickerBox) {
     setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : "0");
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
+    renderBodyLabelRow(bodyLabel, main!, address);
     for (const picker of pickers) picker.sync();
     syncGrab();
     renderNotes();
@@ -568,6 +571,7 @@ if (main && controls && pickerBox) {
   relativeButton.addEventListener("click", () => ((state.relative = !state.relative), render()));
   for (const b of scaleRefs.querySelectorAll<HTMLButtonElement>("[data-ref]")) b.addEventListener("click", () => ((state.ref = (b.dataset["ref"] ?? "earth") as typeof state.ref), render()));
   spinButton.addEventListener("click", () => ((state.spin = !state.spin), render()));
+  bindBodyLabelRow(bodyLabel, render);
   nowButton.addEventListener("click", () => {
     state.time = "now";
     origin = Date.now();

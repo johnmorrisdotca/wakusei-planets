@@ -16,15 +16,16 @@ import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
 import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
+import { createNameLabel, nameLabelKey, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 
 export { fallbackLook } from "./fallback.ts";
 
-/** The parts of three.js the bodies use: a page may hand over a module with only these (see `setThreeLoader`). */
+/** The parts of three.js the bodies use: a page may hand over a module with only these (see `setThreeLoader`). `CanvasTexture`, `SRGBColorSpace` and `NormalBlending` are needed only for a name written on a body (`body-label`). */
 export type ThreeParts = Pick<
   typeof THREE,
   | "AdditiveBlending" | "BufferAttribute" | "BufferGeometry" | "ClampToEdgeWrapping" | "DataTexture" | "DoubleSide" | "Group" | "Line" | "LineBasicMaterial" | "LineSegments" | "LinearFilter" | "Mesh" | "NoColorSpace"
   | "OrthographicCamera" | "PlaneGeometry" | "RepeatWrapping" | "RGBAFormat" | "RingGeometry" | "Scene" | "ShaderMaterial" | "SphereGeometry" | "TextureLoader" | "Vector2" | "Vector3" | "WebGLRenderer"
->;
+> & Partial<Pick<typeof THREE, "CanvasTexture" | "SRGBColorSpace" | "NormalBlending">>;
 
 /** One moon in a system view: its place in planet radii (viewer's frame) and the points of its orbit, if they changed. */
 export interface MoonDraw {
@@ -51,6 +52,8 @@ export interface SceneState {
   minMoonPx?: number;
   /** The colour of the orbit lines, `#rrggbb`. */
   orbitColour?: string;
+  /** The body's name written on its globe: the text and the look, or none. */
+  label?: ({ text: string } & NameLabelOptions) | null;
 }
 
 /** The scene the shared renderer draws, with the one call that moves it. */
@@ -61,6 +64,8 @@ export interface BodyScene extends Scene3D {
   readonly painted: boolean;
   /** The window of finer map on the body, or `undefined` for a body with none (a glowing one, or one with no painted map). */
   readonly detail: DetailStats | undefined;
+  /** The name on the globe now: whether it is drawn (made, its font in, and the body big enough), its text, and its turn about the pole in radians (for `facing`); `null` for none. */
+  readonly label: { shown: boolean; text: string; turn: number } | null;
 }
 
 export interface BodyItemOptions {
@@ -431,6 +436,28 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         }
       };
 
+      // the name on the globe: a child of the mesh, so it turns with the body
+      let label: NameLabel | undefined;
+      let labelKey = "";
+      const syncLabel = (state: SceneState): void => {
+        const key = state.label ? nameLabelKey(state.label.text, state.label) : "";
+        if (key === labelKey) return;
+        labelKey = key;
+        if (!state.label) {
+          if (label !== undefined) {
+            mesh.remove(label.object);
+            label.dispose();
+            label = undefined;
+          }
+          return;
+        }
+        const { text, ...rest } = state.label;
+        if (label === undefined) {
+          label = createNameLabel(T, text, rest, look.emissive === true, () => options.redraw());
+          mesh.add(label.object);
+        } else label.set(text, rest);
+      };
+
       const light = new T.Vector3();
       const pole = new T.Vector3();
       const apply = (state: SceneState): void => {
@@ -438,6 +465,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         orient(state);
         frame(state);
         place(state);
+        syncLabel(state);
         light.set(...state.pose.light);
         if (ringHalves !== undefined) {
           pole.set(...state.pose.pole);
@@ -474,6 +502,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           } else glow.scale.setScalar(1);
         }
         requestSharperTexture(state);
+        // the disc's radius on the screen in CSS pixels: the short side's half at zoom 1 over the extent
+        if (label !== undefined) label.update(camera, ((aspect >= 1 ? viewHeight : viewWidth) / 2) * (state.zoom / state.extent), state.pose.light);
         if (detail !== undefined && textureWidth > 0) {
           const east = cross(state.pose.pole, state.pose.meridian);
           const ax = facts.axesKm;
@@ -501,6 +531,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         get detail() {
           return detail?.stats;
         },
+        get label() {
+          const inner = label?.object.children[0] as THREE.Object3D | undefined;
+          return label === undefined || latest.label === undefined || latest.label === null ? null : { shown: label.ready && inner !== undefined && inner.visible, text: latest.label.text, turn: inner?.rotation.y ?? 0 };
+        },
         resize(w: number, h: number) {
           viewWidth = w;
           viewHeight = h;
@@ -518,6 +552,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             windowUniforms.uDetail!.value = null;
           }
           detail?.dispose();
+          label?.dispose();
+          label = undefined;
           for (const o of orbitLines.values()) o.line.geometry.dispose();
           orbitMaterial.dispose();
           scene.clear();

@@ -11,6 +11,7 @@ import type { BodyId } from "../src/facts.ts";
 import { findBody } from "../src/space/bodies.ts";
 import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
+import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
 const say = (key: string, values: Record<string, string | number> = {}): string => (chooser()?.word(key) ?? WORDS.en[key] ?? key).replace(/\{(\w+)\}/g, (all, name: string) => String(values[name] ?? all));
@@ -46,6 +47,7 @@ const state = {
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
 };
+const bodyLabel = readBodyLabelState(address);
 
 const pressed = (button: HTMLElement, on: boolean): void => {
   button.setAttribute("aria-pressed", String(on));
@@ -89,6 +91,7 @@ function render(): void {
   }
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
+  renderBodyLabelRow(bodyLabel, space, address);
   pressed(nowButton, state.time === "now");
   if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
   replay.setAttribute("lang", chooser()?.lang ?? "en");
@@ -124,6 +127,7 @@ for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((st
 for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
+bindBodyLabelRow(bodyLabel, render);
 nowButton.addEventListener("click", () => {
   state.time = "now";
   origin = Date.now();

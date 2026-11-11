@@ -457,6 +457,68 @@ test("changes to the space view give back what they took: the zooms, the scales,
   expect(gpuObjects(gone)).toBeLessThanOrEqual(8);
 });
 
+/** The "Name on the body" row's choices, one after another: every look, how many, where, facing and off, so each texture is drawn again and the old one let go. */
+const labelRound = async (page: Page): Promise<void> => {
+  const press = async (group: string, name: string): Promise<void> => {
+    await page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+    await settle(page, 400);
+  };
+  for (const name of ["Etched", "Outline", "Burned in", "Painted"]) await press("Name on the body", name);
+  for (const name of ["Both sides", "All round", "Once"]) await press("How many", name);
+  for (const name of ["North", "South", "Equator"]) await press("Where", name);
+  for (const name of ["Full", "Half"]) await press("Strength", name);
+  await page.locator("#body-label-facing").dispatchEvent("click");
+  await settle(page, 400);
+  await page.locator("#body-label-facing").dispatchEvent("click");
+  await settle(page, 400);
+  await press("Name on the body", "Off");
+  await press("Name on the body", "Painted");
+};
+
+test("a body with its name on it draws nothing at rest, and every change of the name gives back what it took", async ({ page }) => {
+  await page.goto(`${URL}?body=mars&bl=painted`);
+  await main(page).hover();
+  await live(page);
+  const label = () => main(page).evaluate((el) => (Reflect.get(el, "stats") as { label: { shown: boolean } | null }).label?.shown ?? false);
+  await expect.poll(label, { timeout: 60_000 }).toBe(true);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the name on").toBe(0);
+  const first = await converged(page, () => labelRound(page));
+  for (let i = 0; i < 3; i += 1) await labelRound(page);
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+});
+
+test("the space view with names on the bodies draws nothing at rest, and every change of the name, and a move to another body, gives back what it took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&bl=painted`);
+  await liveSky(page);
+  const focusShown = async () => ((await skyStats(page)) as unknown as { bodyLabels: { focus: { shown: boolean } | null } }).bodyLabels.focus?.shown ?? false;
+  await expect.poll(focusShown, { timeout: 60_000 }).toBe(true);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the names on").toBe(0);
+  const round = async () => {
+    await labelRound(page);
+    for (const place of ["Moon", "Jupiter and its moons", "Earth"]) {
+      await goTo(page, place);
+      await settle(page, 500);
+    }
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+});
+
 test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&ride=mars`);
   await liveSky(page);

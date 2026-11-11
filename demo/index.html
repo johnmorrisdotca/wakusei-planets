@@ -44,6 +44,32 @@
             <kazoku-speed-buttons id="spin-speed" data-testid="spin-speed" steps="0.5 1 2" value="1" hidden></kazoku-speed-buttons>
           </div>
 
+          <div class="fam-row" data-help-en="Name on the body writes each body's name on its globe, like a title laid over the thing it names: it turns with the body (or faces you), once or on both sides, at the equator or near a pole, in four looks and three strengths. Nothing is drawn on a body too small on the screen." data-help-ja="「天体に名前」は、天体の名前をその球面に書きます。映画のタイトルのように天体に重なり、天体とともに回ります (「こちらを向く」なら見る人のほうを向いたまま)。一つか両側か、赤道か極の近くか、四つの見た目と三つの強さを選べます。画面上で小さい天体には描きません。">
+            <span class="fam-label" data-say="bl">Name on the body</span>
+            <div class="group fam-seg" id="body-labels" role="group" aria-label="Name on the body" data-say-label="bl">
+              <button type="button" data-bl="" aria-pressed="true" data-say="bl_off">Off</button>
+              <button type="button" data-bl="painted" aria-pressed="false" data-say="bl_painted">Painted</button>
+              <button type="button" data-bl="etched" aria-pressed="false" data-say="bl_etched">Etched</button>
+              <button type="button" data-bl="outline" aria-pressed="false" data-say="bl_outline">Outline</button>
+              <button type="button" data-bl="burned" aria-pressed="false" data-say="bl_burned">Burned in</button>
+            </div>
+            <div class="group fam-seg" id="body-label-repeats" role="group" aria-label="How many" data-say-label="bl_repeat">
+              <button type="button" data-blr="once" aria-pressed="true" data-say="bl_once">Once</button>
+              <button type="button" data-blr="both" aria-pressed="false" data-say="bl_both">Both sides</button>
+              <button type="button" data-blr="around" aria-pressed="false" data-say="bl_around">All round</button>
+            </div>
+            <div class="group fam-seg" id="body-label-wheres" role="group" aria-label="Where" data-say-label="bl_where">
+              <button type="button" data-bll="0" aria-pressed="true" data-say="bl_equator">Equator</button>
+              <button type="button" data-bll="55" aria-pressed="false" data-say="bl_north">North</button>
+              <button type="button" data-bll="-55" aria-pressed="false" data-say="bl_south">South</button>
+            </div>
+            <div class="group fam-seg" id="body-label-strengths" role="group" aria-label="Strength" data-say-label="bl_strength">
+              <button type="button" data-bls="0.25" aria-pressed="false" data-say="bl_faint">Faint</button>
+              <button type="button" data-bls="0.5" aria-pressed="true" data-say="bl_half">Half</button>
+              <button type="button" data-bls="1" aria-pressed="false" data-say="bl_full">Full</button>
+            </div>
+            <button type="button" class="fam-button" id="body-label-facing" aria-pressed="false" data-say="bl_facing">Facing you</button>
+          </div>
           <div class="fam-row" data-help-en="Show the body as the Earth sees it at a date and time (its real tilt, its rings, how much is lit), or as a portrait. With moons on, the planet is drawn with its moons where they are then." data-help-ja="ある日時に地球から見える姿 (実際の傾き、輪、光の当たり方) か、飾りのない肖像のどちらかで描きます。衛星をオンにすると、その時刻の衛星の位置も描きます。">
             <span class="fam-label" data-say="sky">Sky</span>
             <div class="group fam-seg" id="skies" role="group" aria-label="Sky" data-say-label="sky">

@@ -1,9 +1,10 @@
-// The parts of three.js the bodies use, and nothing else: the demo hands this to the element so the bundle holds a few hundred kilobytes of three instead of all of it. A page does the
+// The parts of three.js the bodies use (CanvasTexture, SRGBColorSpace and NormalBlending for a name written on a body), and nothing else: the demo hands this to the element so the bundle holds a few hundred kilobytes of three instead of all of it. A page does the
 // same with `setThreeLoader(() => import("./three-subset"))`.
 export {
   AdditiveBlending,
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   ClampToEdgeWrapping,
   DataTexture,
   DoubleSide,
@@ -16,6 +17,7 @@ export {
   LinearFilter,
   Mesh,
   NoColorSpace,
+  NormalBlending,
   OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
@@ -25,6 +27,7 @@ export {
   Scene,
   ShaderMaterial,
   SphereGeometry,
+  SRGBColorSpace,
   TextureLoader,
   Vector2,
   Vector3,

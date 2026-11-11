@@ -10,6 +10,7 @@ import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
+import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
 import type { Credit, DataSource } from "../data-door.ts";
 import { createDoorHost, type DoorHost } from "../door/host.ts";
 import { ownCredit } from "../door/own.ts";
@@ -183,7 +184,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows"];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -240,6 +241,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
+    this.#relabel();
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
@@ -325,7 +327,28 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "lang") {
       for (const [id, button] of this.#pool) this.#nameLabel(button, id);
       this.#nameScale();
-    }
+      this.#relabel();
+    } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
+  }
+
+  #bodyLabel: NameLabelOptions | null | undefined;
+  /**
+   * The name written on each body's globe (`{ look: "painted", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: "Michroma", fallbackFont: "" }`), or `null` for none. Set, it takes the place of the
+   * `body-label` attributes; set to `undefined` the attributes are read again. The text is each body's own name in the element's `lang` (capitals in English). A body too small on the screen (24 CSS pixels of radius by default) carries none.
+   */
+  get bodyLabel(): NameLabelOptions | null {
+    return this.#bodyLabel !== undefined ? this.#bodyLabel : readNameLabel(this);
+  }
+  set bodyLabel(value: NameLabelOptions | null | undefined) {
+    this.#bodyLabel = value;
+    this.#relabel();
+  }
+  /** Tell the scene the name on the globes changed (the attributes, the property or the language): each body is told once at the next draw. */
+  #relabel(): void {
+    const options = this.bodyLabel;
+    this.#model.label = options === null ? null : { ...options, lang: this.getAttribute("lang") === "ja" ? "ja" : "en" };
+    this.#model.labelVersion += 1;
+    this.#gate?.request();
   }
 
   /** The home place the camera starts above, as longitude and latitude in degrees. */
@@ -741,6 +764,8 @@ export class WakuseiSpace extends HTMLElement {
     arrowPx: number;
     /** What help mode drew at the last draw, or null: the body, the axis it spins about, its north pole, and the axis the drawn arrow itself turns about. */
     help: { body: string; axis: [number, number, number]; pole: [number, number, number]; retrograde: boolean; arcTurn: [number, number, number] } | null;
+    /** The names on the globes at the last draw: how many are drawn (made, their font in, and the body big enough on the screen), and the one on the body looked at (its text and its turn about the pole in radians), or null. */
+    bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -761,6 +786,7 @@ export class WakuseiSpace extends HTMLElement {
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
+      bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
     };
   }
 

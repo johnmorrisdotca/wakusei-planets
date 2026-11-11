@@ -8,7 +8,7 @@ import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, type PointsThree } from "../door/points.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset } from "../scene/orient.ts";
-import { type Painting, type WakuseiPainter } from "../scene/painter.ts";
+import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
@@ -171,6 +171,11 @@ export interface SpaceModel {
   help: boolean;
   /** How many arrowheads each orbit line carries: 0 to `MAX_ARROWS_PER_ORBIT`, two by default. */
   arrowCount: number;
+  /** The name written on each body's globe, or null for none; `labelVersion` goes up whenever it (or the language) changes, so each body is told once. */
+  label: PaintLabel | null;
+  labelVersion: number;
+  /** The names on the globes at the last draw: how many are drawn (made, their font in, and big enough on the screen), and the one on the body looked at, or null. */
+  labelsDrawn: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
   /** How long an arrowhead drawn at the last draw is on the screen, in CSS pixels (measured from its own points), or 0 when none was drawn. */
   arrowPx: number;
   /** What the help arrow drew at the last draw, or null: the body, the axis it spins about (right-hand rule), the north pole, and the axis the drawn arc itself turns about (measured from its points). */
@@ -217,6 +222,9 @@ export const newSpaceModel = (): SpaceModel => ({
   help: false,
   arrowPx: 0,
   arrowCount: ARROWS_PER_ORBIT,
+  label: null,
+  labelVersion: 0,
+  labelsDrawn: { count: 0, focus: null },
   helpDrawn: null,
   door: { points: 0, used: {} },
   lookups: 0,
@@ -315,6 +323,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         drawing: Painting | undefined;
         look: string | null;
         failed: boolean;
+        /** The `model.labelVersion` the drawing was last told of. */
+        labelled: number;
       }
       const slots = new Map<string, Slot>();
       const empty = (slot: Slot): void => {
@@ -328,12 +338,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         empty(slot);
         slot.look = model.look;
         try {
-          const made = deps.painter().make(three, id, { look: model.look, mapped: true, invalidate: () => deps.invalidate(), ratio: model.ratio(), maxTexture: deps.cap() });
+          const made = deps.painter().make(three, id, { look: model.look, mapped: true, invalidate: () => deps.invalidate(), ratio: model.ratio(), maxTexture: deps.cap(), label: model.label });
           if (ended) {
             made.dispose();
             return;
           }
           slot.drawing = made;
+          slot.labelled = model.labelVersion;
           scene.add(made.object);
         } catch (error) {
           slot.failed = true;
@@ -342,8 +353,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       };
       const slotOf = (id: string): Slot => {
         let slot = slots.get(id);
-        if (!slot) slots.set(id, (slot = { drawing: undefined, look: null, failed: false }));
+        if (!slot) slots.set(id, (slot = { drawing: undefined, look: null, failed: false, labelled: -1 }));
         return slot;
+      };
+      /** A body whose name setting changed since it was made is told the new one (once). */
+      const relabel = (slot: Slot): void => {
+        if (slot.drawing === undefined || slot.labelled === model.labelVersion) return;
+        slot.labelled = model.labelVersion;
+        slot.drawing.setLabel(model.label);
       };
 
       // each line has its colour and a fade (the fourth number of the colour) at every point, so that near the body looked at the part of a line that would cross it is let go
@@ -633,6 +650,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               continue;
             }
             fill(id, slot);
+            relabel(slot);
             const drawing = slot.drawing;
             if (!drawing) continue;
             paintedBodies += 1;
@@ -790,10 +808,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const key = site.name;
               if (key === hiddenMoon) continue;
               let held = moonSlots.get(key);
-              if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false }, seen: now }));
+              if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false, labelled: -1 }, seen: now }));
               held.seen = now;
               seen.add(key);
               fill(key, held.slot);
+              relabel(held.slot);
               const drawing = held.slot.drawing;
               if (!drawing) continue;
               const away = Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z);
@@ -823,6 +842,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const held of moonSlots.values()) if (held.slot.drawing?.object.visible) paintedMoons += 1;
           model.painted.moons = paintedMoons;
           model.painted.held = moonSlots.size;
+          let labelsDrawn = 0;
+          for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) if (painting?.object.visible && painting.label?.shown) labelsDrawn += 1;
+          model.labelsDrawn = { count: labelsDrawn, focus: (slots.get(focus)?.drawing ?? moonSlots.get(focus)?.slot.drawing)?.label ?? null };
           const tiles: SpaceModel["tiles"] = { requested: 0, loading: 0, failed: 0, shown: null };
           for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) {
             const stats = painting?.tiles;

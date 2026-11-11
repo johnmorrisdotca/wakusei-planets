@@ -27,6 +27,8 @@ await rm(at("site/kazoku-parts.src.js"));
 await cp(at("demo/demo.css"), at("site/demo.css"));
 await cp(at("demo/family.css"), at("site/family.css"));
 if (existsSync(at("textures"))) await cp(at("textures"), at("site/textures"), { recursive: true });
+// Michroma, for a name written on a body: kazoku-ui's copy and its licence, beside the scripts, where the label fetches it from (`new URL("./fonts/…", import.meta.url)` in the bundled chunk).
+await cp(at("node_modules/@johnmorrisdotca/kazoku-ui/dist/body-label/fonts"), at("site/fonts"), { recursive: true });
 // The finer map tiles, if they have been made (`pnpm tiles`): served beside the textures at tiles/. They are in no package and no repository; the Pages workflow makes them.
 if (existsSync(at(".cache/body-tiles-out/manifest.json"))) await cp(at(".cache/body-tiles-out"), at("site/tiles"), { recursive: true });
 // The family's card in the demo's <head> (og:image, twitter:image, the icon), and the three pictures published beside it.

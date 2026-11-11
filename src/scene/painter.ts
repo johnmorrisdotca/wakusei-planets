@@ -16,8 +16,10 @@ import { detailOf, lookOf } from "./look.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
+import { createNameLabel, nameLabelText, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 
 export { moonOffset, orientation };
+export { nameLabelText, readNameLabel, setBodyLabelFontUrl, type NameLabelOptions } from "./name-label.ts";
 
 // The parts of three.js the painter uses: the ones the bodies use, and `Group`.
 type PainterThree = ThreeParts & Pick<typeof THREE, "Group">;
@@ -72,6 +74,26 @@ export interface PaintContext {
   maxTexture?: number;
   /** Told when the finer map tiles' levels for this body are known (`undefined` when it has none), so a view can raise its zoom range. Only called for a painter that has a tile set and a view in `PaintInfo`. */
   onLevels?(levels: readonly TileLevel[] | undefined): void;
+  /** The body's name written on its globe (see `PaintLabel`), or none. `setLabel` on the painting changes it later. */
+  label?: PaintLabel | null;
+}
+
+/**
+ * The name on a body the painter makes: the family's `NameLabelOptions`, with the language the name is written in (`en`, in capitals, by default) or a `text` of your own instead of the body's name.
+ *
+ * @example
+ * ```ts no-run
+ * import type { PaintLabel } from "@johnmorrisdotca/wakusei-planets/painter";
+ *
+ * const label: PaintLabel = { look: "painted", lang: "ja" };
+ * console.log(label.lang);
+ * ```
+ */
+export interface PaintLabel extends NameLabelOptions {
+  /** The language of the name: `en` (capitals) or `ja`. Default `en`. */
+  lang?: "en" | "ja";
+  /** Written instead of the body's name. */
+  text?: string;
 }
 
 /**
@@ -137,6 +159,10 @@ export interface Painting {
   update(info: PaintInfo): void;
   /** What the window of finer map tiles on this body is doing, or `undefined` for a body with none (a glowing one, one with no painted map, or a painter with no tile set). */
   readonly tiles?: DetailStats;
+  /** Write the body's name on its globe, change how, or take it off (`null`). The name is drawn when the font is in, and `context.invalidate` is called then. */
+  setLabel(label: PaintLabel | null): void;
+  /** The name on the globe now: whether one is drawn (made and big enough on the screen at the last `update`), the text, and the group's turn about the pole in radians (for `facing`). */
+  readonly label: { shown: boolean; text: string; turn: number } | null;
   dispose(): void;
 }
 
@@ -510,9 +536,36 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   const light = new T.Vector3();
   const poleVec = new T.Vector3();
 
+  // the name on the globe: a child of the mesh, so it turns with the body; made when asked, drawn once its font is in
+  let label: NameLabel | undefined;
+  let labelText = "";
+  let labelShown = false;
+  const setLabel = (next: PaintLabel | null): void => {
+    if (next === null || next === undefined || gone) {
+      if (label !== undefined) {
+        mesh.remove(label.object);
+        label.dispose();
+        label = undefined;
+        labelShown = false;
+      }
+      return;
+    }
+    const { lang, text, ...options } = next;
+    labelText = text ?? nameLabelText(facts.name, lang ?? "en");
+    if (label === undefined) {
+      label = createNameLabel(T, labelText, options, look.emissive === true, redraw);
+      mesh.add(label.object);
+    } else label.set(labelText, options);
+  };
+  if (context.label) setLabel(context.label);
+
   return {
     object: group,
     ...(look.emissive === true ? { billboard: true } : {}),
+    setLabel,
+    get label() {
+      return label === undefined ? null : { shown: labelShown, text: labelText, turn: label.object.children[0] !== undefined ? (label.object.children[0] as THREE.Object3D).rotation.y : 0 };
+    },
     get tiles() {
       return detail?.stats;
     },
@@ -547,9 +600,14 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
         ringMaterial.uniforms.uScale!.value = scale;
       }
       keepSized(info.radiusPx);
+      if (label !== undefined) {
+        label.update(info.view?.camera, info.radiusPx, info.toSun);
+        labelShown = label.object.children[0] !== undefined && (label.object.children[0] as THREE.Object3D).visible;
+      }
     },
     dispose() {
       gone = true;
+      setLabel(null);
       if (windowUniforms !== undefined) {
         windowUniforms.uDetailOn!.value = 0;
         windowUniforms.uDetail!.value = null;

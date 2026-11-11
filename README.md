@@ -151,6 +151,10 @@ const text = lineupText(largest, "en");
 console.log(`${text.name}: ${text.radius}, ${text.km}, ${text.source}`);
 ```
 
+## A name on the body
+
+`body-label="painted"` writes the body's name on its own globe, large and in capitals, lying on the surface and turning with it, as a film lays a title over the thing it names: on `<wakusei-body>` and on every body of `<wakusei-space>`, in the page's language, in Michroma by default or a font of yours. Four looks (`painted`, `etched`, `outline`, `burned`), once or on both sides, at the equator or near a pole, turning with the body or always facing you; nothing on a body too small on the screen. [A name on the body](docs/guides/name-on-the-body.md) has the attributes.
+
 ## Two packages: this one and chikyu-earth
 
 This package is the Sun, the planets, the dwarf planets and the moons, and where they are. [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth) is the Earth in detail: its countries, day and night, places and satellites. Each works alone; install both and the Earth's line look becomes chikyu-earth's globe with the countries. The dependency runs one way: this package may use chikyu-earth, never the reverse. [Why two packages](docs/guides/two-packages.md) has the rule, a table of what lives where and how to use them together.
@@ -455,6 +459,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Put it in your page](docs/guides/put-it-in-your-page.md) | Set up a body and copy the code |
 | [The portrait builder](docs/guides/portrait-builder.md) | Many bodies in one picture |
 | [Looks and bodies](docs/guides/looks-and-bodies.md) | The looks and each body's entry point |
+| [A name on the body](docs/guides/name-on-the-body.md) | The body's name written on its globe: looks, how many, where, facing you, the font |
 | [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |

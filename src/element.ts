@@ -24,6 +24,7 @@ import { mapWidthOf, ringWidthOf, zoomLimit } from "./scene/reach.ts";
 import type { DetailStats } from "./scene/detail.ts";
 import type { TileLevel } from "./scene/tiles.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
+import { NAME_LABEL_ATTRIBUTES, nameLabelKey, nameLabelText, readNameLabel, type NameLabelOptions } from "./scene/name-label.ts";
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
 import { turn as turnVec, type Vec3 } from "./vec.ts";
@@ -106,6 +107,7 @@ const TEMPLATE = `<style>
  * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
+ * `body-label` writes the body's name on its globe in the shaded looks (`painted`, `etched`, `outline` or `burned`; absent for none), with `body-label-strength`, `-repeat`, `-latitude`, `-facing`, `-font` and `-fallback-font` beside it, and the `bodyLabel` property takes the same as an object: see the guide "A name on the body".
  * A dated picture (a `time`, or `moons`) has a clock: `rate` is the simulated seconds for each real second, and `rate="0"` holds it, drawing nothing. While it runs (`rate` not 0), `wakusei-timechange` carries
  * `detail: { time, running: true }` (`time` is the moment shown in milliseconds since 1970; four times a second, once a second at real time; only while the tab is shown, whether or not the picture is on screen), and once with
  * `running: false` when the clock is held: a page writes the date into its date box from it. The `time` property reads the moment shown, and `undefined` for a portrait with no date.
@@ -122,7 +124,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels"];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -164,6 +166,7 @@ export class WakuseiBody extends HTMLElement {
   #limitKey = "";
   #tileLevels: readonly TileLevel[] | undefined;
   #tiles: DetailStats | undefined;
+  #bodyLabel: NameLabelOptions | null | undefined;
   #door: DoorHost = createDoorHost(
     this,
     {
@@ -266,13 +269,25 @@ export class WakuseiBody extends HTMLElement {
   get look(): Look {
     return readLook(this.getAttribute("look"));
   }
+  /**
+   * The name written on the body's globe in the shaded looks, as an object (`{ look: "painted", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: "Michroma", fallbackFont: "" }`), or `null` for none.
+   * Set, it takes the place of the `body-label` attributes; set to `undefined` the attributes are read again. The text is the body's own name in the element's `lang`, in capitals in English.
+   */
+  get bodyLabel(): NameLabelOptions | null {
+    return this.#bodyLabel !== undefined ? this.#bodyLabel : readNameLabel(this);
+  }
+  set bodyLabel(value: NameLabelOptions | null | undefined) {
+    this.#bodyLabel = value;
+    this.#lastAnchors = -1;
+    this.#queue();
+  }
   /** What the element is doing now. */
   get state(): WakuseiState {
     return this.#state;
   }
   /** Numbers for a test or a status line: the state, the texture width in use and the renderer's own counts. */
-  get stats(): { state: WakuseiState; textureWidth: number; anchors: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; tiles: DetailStats | undefined; zoomMax: number | undefined } {
-    return { state: this.#state, textureWidth: this.#textureWidth, anchors: this.#live.anchors, renderer: this.#renderer?.stats, tiles: (this.#view?.scene as BodyScene | undefined)?.detail ?? this.#tiles, zoomMax: this.#hands?.controller.limits.zoomMax };
+  get stats(): { state: WakuseiState; textureWidth: number; anchors: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; tiles: DetailStats | undefined; zoomMax: number | undefined; label: BodyScene["label"] | null } {
+    return { state: this.#state, textureWidth: this.#textureWidth, anchors: this.#live.anchors, renderer: this.#renderer?.stats, tiles: (this.#view?.scene as BodyScene | undefined)?.detail ?? this.#tiles, zoomMax: this.#hands?.controller.limits.zoomMax, label: (this.#view?.scene as BodyScene | undefined)?.label ?? null };
   }
 
   connectedCallback(): void {
@@ -524,7 +539,14 @@ export class WakuseiBody extends HTMLElement {
     const r = this.#request();
     const extent = this.#extent(r.moons);
     const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll) : undefined;
-    return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons };
+    const label = this.#labelNow();
+    return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, label };
+  }
+
+  /** The name on the globe the attributes or the property ask for, with its text in the element's language. */
+  #labelNow(): ({ text: string } & NameLabelOptions) | null {
+    const options = this.bodyLabel;
+    return options === null ? null : { ...options, text: nameLabelText(this.#facts().name, this.getAttribute("lang") === "ja" ? "ja" : "en") };
   }
 
   /** Body radii from the middle of the picture to its edge at zoom 1, for the attributes now. */
@@ -739,7 +761,7 @@ export class WakuseiBody extends HTMLElement {
 
   #key(state: SceneState): string {
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
-    return `${this.#star()?.key ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}`;
+    return `${this.#star()?.key ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${state.label ? nameLabelKey(state.label.text, state.label) : ""}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.
