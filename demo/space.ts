@@ -46,6 +46,8 @@ const state = {
   ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io"], ""),
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
+  /** How the camera travels between bodies: one of the package's named transitions, kept in the address so John can try each. */
+  transition: pick(address.get("tr"), ["turn-travel", "direct", "look-back", "auto", "cut"], "turn-travel"),
 };
 const bodyLabel = readBodyLabelState(address);
 
@@ -69,6 +71,7 @@ function render(): void {
   space.light = state.light;
   space.orbits = state.orbits;
   space.labels = state.names;
+  space.transition = state.transition;
   if (replay.playing !== state.play) replay.playing = state.play;
   state.play = replay.playing;
   if (applied !== state.time) {
@@ -80,6 +83,7 @@ function render(): void {
   for (const b of $$("#scales [data-scale]")) pressed(b, b.dataset["scale"] === state.scale);
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
   for (const b of $$("#lights [data-light]")) pressed(b, b.dataset["light"] === state.light);
+  for (const b of $$("#transitions [data-transition]")) pressed(b, b.dataset["transition"] === state.transition);
   for (const b of $$("#gotos [data-goto]")) pressed(b, b.dataset["goto"] === state.goto);
   for (const b of $$("#rides [data-ride]")) pressed(b, b.dataset["ride"] === state.ride);
   for (const b of $$("#ride-looks [data-ride-look]")) pressed(b, b.dataset["rideLook"] === state.rideLook);
@@ -101,6 +105,7 @@ function render(): void {
   address.set("scale", state.scale === "true" ? null : state.scale);
   address.set("look", state.look === "realistic" ? null : state.look);
   address.set("light", state.light === "sun" ? null : state.light);
+  address.set("tr", state.transition === "turn-travel" ? null : state.transition);
   address.set("orbits", state.orbits ? null : "0");
   address.set("names", state.names ? null : "0");
   address.set("play", state.play ? "on" : null);
@@ -121,6 +126,7 @@ function goTo(preset: SpacePreset): void {
 for (const b of $$("#scales [data-scale]")) b.addEventListener("click", () => ((state.scale = b.dataset["scale"] as typeof state.scale), render()));
 for (const b of $$("#looks [data-look]")) b.addEventListener("click", () => ((state.look = b.dataset["look"] as typeof state.look), render()));
 for (const b of $$("#lights [data-light]")) b.addEventListener("click", () => ((state.light = b.dataset["light"] as typeof state.light), render()));
+for (const b of $$("#transitions [data-transition]")) b.addEventListener("click", () => ((state.transition = b.dataset["transition"] as typeof state.transition), render()));
 for (const b of $$("#gotos [data-goto]")) b.addEventListener("click", () => goTo(b.dataset["goto"] as SpacePreset));
 // riding along is for watching it go by: a ride starts the clock (Play), and the date box moves with it
 for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((state.ride = b.dataset["ride"] as typeof state.ride), (state.play = state.play || state.ride !== ""), render()));

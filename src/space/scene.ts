@@ -13,7 +13,7 @@ import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
-import { DEFAULT_LAUNCH_MS, DEFAULT_TURN_MS, glideDuration, glideProgress, turnProgress, type Transition } from "./glide.ts";
+import { DEFAULT_LAUNCH_MS, DEFAULT_TURN_MS, glideDuration, glideProgress, swingProgress, travelProgress, turnProgress, type Transition } from "./glide.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
@@ -199,7 +199,9 @@ export interface SpaceModel {
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
   rideLost: boolean;
   /** A camera move in progress from where the last draw left it: when it began (ms of the page's clock), how long it takes. */
-  transition: { start: number; kind: "direct" | "look-back"; launchMs: number; turnMs: number; /** The body the camera is leaving, which `look-back` keeps in view. */ leaving: BodyId | null; from: { p: SpaceVec3; q: [number, number, number, number]; fov: number } } | null;
+  transition: { start: number; kind: "turn-travel" | "direct" | "look-back"; launchMs: number; turnMs: number; /** The body the camera is leaving, which `look-back` and `turn-travel` keep in view. */ leaving: BodyId | null; from: { p: SpaceVec3; q: [number, number, number, number]; fov: number }; /** `turn-travel` only: the swing's end, once worked out (the first draw of the trip does it), and the leg the trip is in. */ swing?: { angleDeg: number; end: SpaceVec3; leg: "turn" | "travel"; travelStart: number } } | null;
+  /** What the last draw of a `turn-travel` trip did: which leg, and how far along it, for a test; null when no trip is on. */
+  travelling: { leg: "turn" | "travel"; progress: number } | null;
   /** How the camera leaves a body for the next (`goTo`, the hopper): the name, how long the slow launch lasts and how long the turn lasts, in milliseconds. */
   leave: { transition: Transition; launchMs: number; turnMs: number };
   pose: CameraPose;
@@ -242,6 +244,7 @@ export const newSpaceModel = (): SpaceModel => ({
   ride: null,
   rideLost: false,
   transition: null,
+  travelling: null,
   leave: { transition: "direct", launchMs: DEFAULT_LAUNCH_MS, turnMs: DEFAULT_TURN_MS },
   pose: { p: [0, 0, 0], q: [0, 0, 0, 1], fov: FOV, valid: false },
   rideMotion: 0,
@@ -610,7 +613,74 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
 
           // a ride that changed: glide from where the last draw left the camera
           const glide = model.transition;
-          if (glide) {
+          model.travelling = null;
+          if (glide && glide.kind === "turn-travel" && glide.leaving !== null) {
+            // turn then travel: the camera first swings round the body it is leaving, at the distance it had, until the destination is in the frame beside that body, then travels to the destination
+            // with it in frame the whole way (slow to leave, fast in the middle, slow to arrive), so no frame of the trip is empty
+            const now = performance.now();
+            const left = absoluteSite(glide.leaving);
+            const [fx, fy, fz] = [glide.from.p[0] - origin[0], glide.from.p[1] - origin[1], glide.from.p[2] - origin[2]];
+            const toD = unit(minus(focusPos, left));
+            const fromDir = minus([fx, fy, fz], left);
+            const held = Math.hypot(...fromDir) || 1;
+            const a0 = unit(fromDir);
+            if (glide.swing === undefined) {
+              // the swing's end: beyond the body being left as seen from the destination, a little to the side so the destination shows beside it and not behind it, the short way round
+              let side = minus(a0, [toD[0] * (a0[0] * toD[0] + a0[1] * toD[1] + a0[2] * toD[2]), toD[1] * (a0[0] * toD[0] + a0[1] * toD[1] + a0[2] * toD[2]), toD[2] * (a0[0] * toD[0] + a0[1] * toD[1] + a0[2] * toD[2])]);
+              if (Math.hypot(...side) < 1e-6) side = Math.abs(toD[1]) < 0.9 ? [toD[2], 0, -toD[0]] : [0, toD[2], -toD[1]];
+              side = unit(side);
+              const a1 = unit([-toD[0] + 0.25 * side[0], -toD[1] + 0.25 * side[1], -toD[2] + 0.25 * side[2]]);
+              const dot = Math.max(-1, Math.min(1, a0[0] * a1[0] + a0[1] * a1[1] + a0[2] * a1[2]));
+              glide.swing = { angleDeg: (Math.acos(dot) * 180) / Math.PI, end: [left[0] + a1[0] * held + origin[0], left[1] + a1[1] * held + origin[1], left[2] + a1[2] * held + origin[2]], leg: "turn", travelStart: 0 };
+            }
+            const swing = glide.swing;
+            const endRel: Vec3 = [swing.end[0] - origin[0], swing.end[1] - origin[1], swing.end[2] - origin[2]];
+            desiredQ.copy(camera.quaternion);
+            const destination: Vec3 = [camera.position.x, camera.position.y, camera.position.z];
+            const lookAtBetween = (p: Vec3, share: number): void => {
+              // look between the body being left and the destination: at the body first, then the bisector of the two as the swing ends
+              const toL = unit(minus(left, p));
+              const toDest = unit(minus(focusPos, p));
+              const look = unit([toL[0] + (toDest[0] - toL[0]) * 0.5 * share, toL[1] + (toDest[1] - toL[1]) * 0.5 * share, toL[2] + (toDest[2] - toL[2]) * 0.5 * share]);
+              camera.position.set(p[0], p[1], p[2]);
+              camera.up.set(0, 1, 0);
+              camera.lookAt(p[0] + look[0], p[1] + look[1], p[2] + look[2]);
+            };
+            if (swing.leg === "turn") {
+              const t = swingProgress(now - glide.start, glide.turnMs, swing.angleDeg);
+              const a1 = unit(minus(endRel, left));
+              // a great-circle swing from a0 to a1 at the distance held
+              const cosA = Math.max(-1, Math.min(1, a0[0] * a1[0] + a0[1] * a1[1] + a0[2] * a1[2]));
+              const angle = Math.acos(cosA);
+              let dir: Vec3;
+              if (angle < 1e-6) dir = a1;
+              else {
+                const sa = Math.sin(angle);
+                const w0 = Math.sin((1 - t) * angle) / sa;
+                const w1 = Math.sin(t * angle) / sa;
+                dir = unit([a0[0] * w0 + a1[0] * w1, a0[1] * w0 + a1[1] * w1, a0[2] * w0 + a1[2] * w1]);
+              }
+              const p: Vec3 = [left[0] + dir[0] * held, left[1] + dir[1] * held, left[2] + dir[2] * held];
+              lookAtBetween(p, t);
+              fovNow = glide.from.fov;
+              model.travelling = { leg: "turn", progress: t };
+              if (t >= 1) {
+                swing.leg = "travel";
+                swing.travelStart = now;
+              }
+            }
+            if (swing.leg === "travel") {
+              const s = travelProgress(now - swing.travelStart, glide.launchMs);
+              // from the swing's end to the destination's own camera place, looking from "both bodies" round to the destination
+              lookAtBetween(endRel, 1);
+              fromQ.copy(camera.quaternion);
+              camera.position.set(endRel[0] + (destination[0] - endRel[0]) * s, endRel[1] + (destination[1] - endRel[1]) * s, endRel[2] + (destination[2] - endRel[2]) * s);
+              camera.quaternion.copy(fromQ.slerp(desiredQ, s));
+              fovNow = glide.from.fov + (fovNow - glide.from.fov) * s;
+              model.travelling = { leg: "travel", progress: s };
+              if (s >= 1) model.transition = null;
+            }
+          } else if (glide) {
             const elapsed = performance.now() - glide.start;
             const k = Math.min(1, elapsed / glideDuration(glide.launchMs));
             // the camera leaves slowly (the launch), speeds up and settles: the share of the way covered

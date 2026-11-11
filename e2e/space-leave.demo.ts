@@ -1,4 +1,4 @@
-// Leaving a body gently (MODULES-912): a slow launch so the departure is seen, and the named transitions (direct, look-back, auto, cut) chosen by an attribute, a property and a call. Chromium, drawing in software.
+// Leaving a body gently (MODULES-912): a slow launch so the departure is seen, and the named transitions (turn-travel, direct, look-back, auto, cut) chosen by an attribute, a property and a call. Chromium, drawing in software.
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, setOn, settle, SPACE, statsOf } from "./space-ui.ts";
 
@@ -16,7 +16,7 @@ const prop = (page: Page, name: string) => page.locator(SPACE).evaluate((el, key
 
 test("the transition, the launch and the turn are attributes and properties, read in any case, with sensible limits", async ({ page }) => {
   await openSpace(page);
-  expect(await prop(page, "transition")).toBe("direct");
+  expect(await prop(page, "transition")).toBe("turn-travel");
   expect(await prop(page, "launchMs")).toBe(500);
   expect(await prop(page, "turnMs")).toBe(700);
   await page.locator(SPACE).evaluate((el) => {
@@ -52,7 +52,7 @@ test("cut goes at once, a call can choose for one trip, and look-back keeps the 
   await openSpace(page);
   await callOn(page, "goTo", "mars", { transition: "cut" });
   expect(await gliding(page), "cut is not a glide").toBe(false);
-  expect(await prop(page, "transition"), "the call did not change the setting").toBe("direct");
+  expect(await prop(page, "transition"), "the call did not change the setting").toBe("turn-travel");
   await settle(page, 800);
   await callOn(page, "goTo", "earth", { smooth: false });
   await settle(page, 600);

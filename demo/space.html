@@ -110,6 +110,16 @@
             </div>
             <button type="button" class="fam-button" id="body-label-facing" aria-pressed="false" data-say="bl_facing">Facing you</button>
           </div>
+          <div class="fam-row" data-help-en="How the camera travels from one body to the next. Turn then travel swings round the body you are leaving until the next one is in the frame, then travels to it with it in view the whole way. Direct heads straight there. Look back pulls away watching the body you left, then turns. Auto picks direct when the next body is already in view. Cut jumps." data-help-ja="カメラがある天体から次の天体へどう移動するかです。「回ってから進む」は、離れる天体のまわりを回り込んで次の天体を画面に入れ、それを見たまま進みます。「まっすぐ」はそのまま向かいます。「振り返る」は離れた天体を見ながら引いて、それから向きを変えます。「自動」は次の天体がもう見えていれば「まっすぐ」を選びます。「切り替え」は一気に移ります。">
+            <span class="fam-label" data-say="sp_transition">Travel</span>
+            <div class="group fam-seg" id="transitions" role="group" aria-label="Travel" data-say-label="sp_transition">
+              <button type="button" data-transition="turn-travel" aria-pressed="true" data-say="sp_tr_turn">Turn then travel</button>
+              <button type="button" data-transition="direct" aria-pressed="false" data-say="sp_tr_direct">Direct</button>
+              <button type="button" data-transition="look-back" aria-pressed="false" data-say="sp_tr_lookback">Look back</button>
+              <button type="button" data-transition="auto" aria-pressed="false" data-say="sp_tr_auto">Auto</button>
+              <button type="button" data-transition="cut" aria-pressed="false" data-say="sp_tr_cut">Cut</button>
+            </div>
+          </div>
           <div class="fam-row">
             <span class="fam-label" data-say="sp_ride">Ride along</span>
             <div class="group fam-seg" id="rides" role="group" aria-label="Ride along" data-say-label="sp_ride">

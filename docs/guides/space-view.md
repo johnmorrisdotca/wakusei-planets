@@ -88,9 +88,10 @@ Every trip to another body (`goTo`, the hopper's `next` and `previous`, a ride) 
 
 | Name | What it does |
 |---|---|
-| `direct` | The default. The slow launch, then straight at the destination, which stays in view and grows. |
+| `turn-travel` | The default. First the camera swings round the body it is leaving, at the distance it had and keeping that body in view, until the destination is in the frame beside it (a point, or a marked dot when it is too small to see); then it travels to the destination with it in the frame the whole way, slow to leave, fast in the middle and slow to arrive; then it settles. No frame of the trip is empty: one of the two bodies is always on the screen. A quarter swing takes `turn` milliseconds, a wider one longer in proportion; the travel takes the length `launch` sets. |
+| `direct` | The slow launch, then straight at the destination, which stays in view and grows (the way it went before). |
 | `look-back` | Pull away watching the body being left, then turn to the destination over the last part of the trip. |
-| `auto` | `direct` when the destination is in view where the trip starts, `look-back` when it is not (it needs the names on: they say where the bodies are on the screen). |
+| `auto` | `direct` when the destination is in view where the trip starts, `turn-travel` when it is not (it needs the names on: they say where the bodies are on the screen). |
 | `cut` | No glide: the view is at the destination at once. A reader who prefers reduced motion always gets this. |
 
 Two settings tune them, both in milliseconds: `launch` (the attribute, and `space.launchMs`: how long the slow launch lasts, 500 by default; 0 is a quick glide, a longer one is a longer trip) and `turn` (`space.turnMs`: how long the turn at the end of a `look-back` takes, 700 by default). `TRANSITIONS` lists the names and `glideProgress` and `turnProgress` are the curves, for a page that wants to draw them.

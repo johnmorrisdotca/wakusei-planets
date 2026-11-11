@@ -615,7 +615,8 @@ export class WakuseiSpace extends HTMLElement {
     const glide = (options.smooth ?? true) && !reduced && pose.valid && model.ride === null && kind !== "cut";
     const leaving = model.focus === id ? null : model.focus;
     if (model.ride !== null) this.ride(null, { smooth: false });
-    model.transition = glide ? { start: performance.now(), kind: kind === "look-back" ? "look-back" : "direct", launchMs: model.leave.launchMs, turnMs: model.leave.turnMs, leaving, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    // turn-travel needs a body to swing round: leaving nowhere (the same body, or no body yet) it goes direct
+    model.transition = glide ? { start: performance.now(), kind: kind === "turn-travel" && leaving !== null ? "turn-travel" : kind === "look-back" ? "look-back" : "direct", launchMs: model.leave.launchMs, turnMs: model.leave.turnMs, leaving, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
     this.#selected = id;
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
@@ -846,6 +847,8 @@ export class WakuseiSpace extends HTMLElement {
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
     tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
+    /** The `turn-travel` trip at the last draw: which leg (`turn` round the body being left, or `travel` to the destination) and how far along it, from 0 to 1; null when no such trip is on. */
+    travelling: { leg: "turn" | "travel"; progress: number } | null;
     /** The data door: the small bodies in the one instanced draw, and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
     door: { points: number; sources: ReturnType<DoorHost["book"]["stats"]> };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
@@ -874,6 +877,7 @@ export class WakuseiSpace extends HTMLElement {
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, sources: this.#door.book.stats() },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
+      travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden] },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,

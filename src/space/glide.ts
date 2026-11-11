@@ -1,12 +1,13 @@
 // How the camera leaves one body for the next: the named transitions John picks between, and the curves of a glide. Pure: numbers in, numbers out; the scene turns them into a camera.
 //
-//   direct     a slow launch, then straight at the destination, which stays in view and grows (the way it always went, with a gentler start)
-//   look-back  pull away watching the body being left, then turn to the destination over the last part of the trip
-//   auto       `direct` when the destination is in view where the trip starts, `look-back` when it is not
-//   cut        no glide: the view is at the destination at once (what a reader who prefers reduced motion gets)
+//   turn-travel  the default: swing round the body being left until the destination is in the frame beside it, then travel to it with the destination in frame the whole way
+//   direct       a slow launch, then straight at the destination (the way it went before, with a gentler start)
+//   look-back    pull away watching the body being left, then turn to the destination over the last part of the trip
+//   auto         `direct` when the destination is in view where the trip starts, `turn-travel` when it is not
+//   cut          no glide: the view is at the destination at once (what a reader who prefers reduced motion gets)
 
 /**
- * The names of the transitions: `direct`, `look-back`, `auto` and `cut`.
+ * The names of the transitions: `turn-travel` (the default), `direct`, `look-back`, `auto` and `cut`.
  *
  * @example
  * ```ts
@@ -15,10 +16,13 @@
  * console.log(TRANSITIONS.join(", "));
  * ```
  */
-export const TRANSITIONS = ["direct", "look-back", "auto", "cut"] as const;
+export const TRANSITIONS = ["turn-travel", "direct", "look-back", "auto", "cut"] as const;
 
 /**
  * One of the names in `TRANSITIONS`.
+ *
+ * `turn-travel` never shows an empty frame: the camera first swings round the body it is leaving, keeping that body in view, until the destination is in the frame beside it (a point or a marked dot when it is
+ * too small to see); then it travels toward the destination, which stays in the frame and grows, with the leaving and the arrival slow and the middle fast; then it settles. At every moment one of the two bodies is on the screen.
  *
  * @example
  * ```ts
@@ -58,7 +62,7 @@ export const DEFAULT_TURN_MS = 700;
  * Reads a transition from what a page or an attribute says: a name in `TRANSITIONS` in any case, else `fallback`.
  *
  * @param value - The text.
- * @param fallback - What to answer for text that is none of the names (`direct` by default).
+ * @param fallback - What to answer for text that is none of the names (`turn-travel` by default).
  * @returns The transition.
  *
  * @example
@@ -68,7 +72,7 @@ export const DEFAULT_TURN_MS = 700;
  * console.log(readTransition("Look-Back"), readTransition("sideways"), readTransition(null, "auto"));
  * ```
  */
-export function readTransition(value: unknown, fallback: Transition = "direct"): Transition {
+export function readTransition(value: unknown, fallback: Transition = "turn-travel"): Transition {
   const name = typeof value === "string" ? value.trim().toLowerCase() : "";
   return (TRANSITIONS as readonly string[]).includes(name) ? (name as Transition) : fallback;
 }
@@ -94,11 +98,11 @@ export function readMs(value: unknown, fallback: number): number {
 }
 
 /**
- * The transition a trip really takes: `auto` is `direct` when the destination is in view where the trip starts and `look-back` when it is not; the others are themselves.
+ * The transition a trip really takes: `auto` is `direct` when the destination is in view where the trip starts and `turn-travel` when it is not; the others are themselves.
  *
  * @param wanted - What was asked for.
  * @param destinationInView - Whether the destination is on the screen now.
- * @returns `direct`, `look-back` or `cut`.
+ * @returns `turn-travel`, `direct`, `look-back` or `cut`.
  *
  * @example
  * ```ts
@@ -107,9 +111,64 @@ export function readMs(value: unknown, fallback: number): number {
  * console.log(chooseTransition("auto", true), chooseTransition("auto", false), chooseTransition("cut", false));
  * ```
  */
-export function chooseTransition(wanted: Transition, destinationInView: boolean): "direct" | "look-back" | "cut" {
-  if (wanted === "auto") return destinationInView ? "direct" : "look-back";
+export function chooseTransition(wanted: Transition, destinationInView: boolean): "turn-travel" | "direct" | "look-back" | "cut" {
+  if (wanted === "auto") return destinationInView ? "direct" : "turn-travel";
   return wanted;
+}
+
+/**
+ * How far round the body being left the camera has swung in `turn-travel`, from 0 to 1, after `elapsedMs`: a smooth swing over `turnMs`, scaled up for a wide angle so a half turn is not hurried (a quarter turn takes `turnMs`).
+ *
+ * @param elapsedMs - Time since the trip began.
+ * @param turnMs - How long a quarter turn takes.
+ * @param angleDeg - How far the camera must swing, in degrees.
+ * @returns 0 at the start, 1 once the destination is framed.
+ *
+ * @example
+ * ```ts
+ * import { swingProgress } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(swingProgress(0, 700, 90), swingProgress(700, 700, 90), swingProgress(700, 700, 180).toFixed(2));
+ * ```
+ */
+export function swingProgress(elapsedMs: number, turnMs: number, angleDeg: number): number {
+  return smooth(elapsedMs / swingDuration(turnMs, angleDeg));
+}
+
+/**
+ * How long the swing of `turn-travel` takes for an angle: `turnMs` for a quarter turn or less, longer in proportion for more, never under 150 milliseconds.
+ *
+ * @param turnMs - How long a quarter turn takes.
+ * @param angleDeg - The swing's angle in degrees.
+ * @returns Milliseconds.
+ *
+ * @example
+ * ```ts
+ * import { swingDuration } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(swingDuration(700, 30), swingDuration(700, 180));
+ * ```
+ */
+export function swingDuration(turnMs: number, angleDeg: number): number {
+  return Math.max(150, turnMs * Math.max(1, angleDeg / 90));
+}
+
+/**
+ * How far along the travel leg of `turn-travel` the camera is, from 0 to 1, with the leaving and the arrival slow and the middle fast: a smoothstep of a smoothstep over `glideDuration(launchMs)`.
+ *
+ * @param elapsedMs - Time since the travel leg began.
+ * @param launchMs - The launch time, which sets the leg's length as `glideDuration` does.
+ * @returns The share of the way covered.
+ *
+ * @example
+ * ```ts
+ * import { travelProgress } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(travelProgress(0, 500), travelProgress(430, 500).toFixed(2), travelProgress(5000, 500));
+ * ```
+ */
+export function travelProgress(elapsedMs: number, launchMs: number): number {
+  return smooth(smooth(elapsedMs / glideDuration(launchMs)));
 }
 
 /** The smoothstep of `x` from 0 to 1. */
