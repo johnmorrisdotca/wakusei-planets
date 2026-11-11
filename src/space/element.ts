@@ -141,6 +141,8 @@ const readPace = (value: unknown, fallback: number): number => {
   const n = typeof value === "number" ? value : typeof value === "string" ? Number.parseFloat(value) : Number.NaN;
   return Number.isFinite(n) && n > 0 ? Math.min(20, Math.max(0.05, n)) : fallback;
 };
+/** A zoom event less than this many milliseconds after the one before is of the same gesture (the family's own window for a turn of the wheel). */
+const GESTURE_GAP_MS = 300;
 const REGION_IDS: readonly SunRegion[] = SUN_REGIONS.map((region) => region.id);
 const readRegion = (value: unknown): SunRegion | undefined => (typeof value === "string" && (REGION_IDS as readonly string[]).includes(value.trim().toLowerCase()) ? (value.trim().toLowerCase() as SunRegion) : undefined);
 const RAD = Math.PI / 180;
@@ -269,6 +271,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#relabel();
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
+    this.#model.speed = this.#clock.speed;
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
     if (!this.hasAttribute("tabindex")) this.setAttribute("tabindex", "0");
     if (!this.hasAttribute("aria-label")) this.setAttribute("aria-label", "The Earth, the Moon, the Sun and the planets in their places for the date shown");
@@ -417,6 +420,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#clock.setSpeed(value);
     if (this.isConnected) this.#model.time = this.#clock.time;
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
+    this.#model.speed = this.#clock.speed;
     this.#schedule();
     this.#gate?.request();
     if (this.#clock.speed === 0 && was !== 0) this.#announce(false);
@@ -452,8 +456,8 @@ export class WakuseiSpace extends HTMLElement {
 
   #travel: { kind: TravelKind; pace: number } = { kind: "turn-travel", pace: 1 };
   #regionLine: HTMLElement | undefined;
-  /** When the last step out or in from a zoom gesture was taken (ms of the page's clock): one gesture is one step. */
-  #regionStepAt = 0;
+  /** When the last zoom event was heard at a stage out from the Sun (ms of the page's clock). The events of one gesture (a pinch, a turn of the wheel) come less than `GESTURE_GAP_MS` apart: one gesture is one step. */
+  #regionZoomAt = Number.NEGATIVE_INFINITY;
   /**
    * How the camera moves from one view to the next: `turn-travel` (the default: turn beside the body being left until the next is in the picture, then travel to it, never an empty frame), `direct` (a straight
    * eased glide), `look-back` (straight, watching the body left until the end), `auto` (`turn-travel`), `cut` (no move). The attribute `transition` says the same; `goTo` and `ride` take one for a single move. A
@@ -574,8 +578,9 @@ export class WakuseiSpace extends HTMLElement {
       // at a stage out from the Sun a zoom gesture is a step: out to the next stage, in to the one before (or the Sun); one gesture, one step, and the controls go back to holding zoom 1 (the element's own
       // hands are set here; a bar bound to the element hears `wakusei-hop` with zoom 1, which a step or a refused gesture both announce)
       const at = performance.now();
-      if (this.#model.transition === null && at - this.#regionStepAt > 600) {
-        this.#regionStepAt = at;
+      const fresh = at - this.#regionZoomAt > GESTURE_GAP_MS;
+      this.#regionZoomAt = at;
+      if (fresh && this.#model.transition === null) {
         if (view.zoom < 1) this.stepOut();
         else this.stepIn();
       } else this.#announceHop(1);
@@ -693,6 +698,7 @@ export class WakuseiSpace extends HTMLElement {
       leavingReach,
       input: null,
       plan: null,
+      origin: [0, 0, 0],
     };
   }
 
