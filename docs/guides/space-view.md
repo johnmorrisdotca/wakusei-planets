@@ -46,7 +46,7 @@ Space is mostly empty, so a picture at true scale is mostly black, with the bodi
 | `scale` | Distances | Sizes |
 |---|---|---|
 | `true` (default) | Real distances and sizes, the Earth's equatorial radius for a unit | real: the planets are specks and the Sun is a dot with a glow. A body whose disc is under 4 CSS pixels across its radius is marked with a ring round its place as well as its name, so no planet is lost |
-| `compressed` | Every direction is real. The Moon is drawn 3.5 Earth radii away (it is 60); the Sun 70 (it is 23,500); each planet is drawn in its real direction from the Sun at 70 radii times its distance in astronomical units to the power 0.45, so the Earth's own orbit is the 70 and Neptune's about 320 (it is 30 times as far). The Sun, the bodies and their orbit lines all go through the one mapping (`placeBodies`, `orbitLine`), so every body, the Earth too, lies on its own orbit line. The moons of a planet are drawn nearer when their real distance would cross the next planet's orbit (`moonDistance`): the farthest at a third of the gap, the others in the order they are | the Sun 5, the Moon 0.273 (its true size beside the Earth: a quarter of it) and the planets 0.4 to 1.8 Earth radii (larger than life) |
+| `compressed` | Every direction is real. The Moon is drawn 3.5 Earth radii away (it is 60); the Sun 70 (it is 23,500); each planet is drawn in its real direction from the Sun at 70 radii times its distance in astronomical units to the power 0.45, so the Earth's own orbit is the 70 and Neptune's about 320 (it is 30 times as far). The Sun, the bodies and their orbit lines all go through the one mapping (`placeBodies`, `orbitLine`), so every body, the Earth too, lies on its own orbit line. The moons of a planet are drawn nearer when their real distance would cross the next planet's orbit (`moonDistance`): the farthest at a third of the gap, the others in the order they are, and none nearer than 1.5 radii or inside the planet's rings, so a camera at a moon is never in the ring plane | the Sun 5, the Moon 0.273 (its true size beside the Earth: a quarter of it) and the planets 0.4 to 1.8 Earth radii (larger than life) |
 
 The element always names the scale in use on its own view: "True distances" or "Distances squeezed to fit" (`lang="ja"` gives the Japanese, `space.scaleNames = { true: "..." }` a page's own words, and `::part(scale)` styles the line). A page that wants the old opening writes `scale="compressed"`. `space.placeOf(id)` says where a body is on the screen now (its centre and radius in CSS pixels in the element).
 
@@ -107,6 +107,8 @@ Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale` (`true`, the defaul
 ## Riding along
 
 `space.ride("moon")`, `space.ride("io")` or `space.ride({ at })` puts the camera on a moving point and looks at the body it goes round: see [Riding along](ride-along.md).
+
+Beside a moon, north is up, always: the picture's up is the scene's north laid across the line of sight (`stats.camera.up` reports it), whatever the date and wherever the Sun is, and both discs are framed above or beside each other as that leaves them.
 
 ## The budget
 
