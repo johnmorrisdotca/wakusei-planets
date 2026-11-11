@@ -146,7 +146,7 @@ SOURCES = {
         "file": "Map of Mimas 2010-02 PIA12780.jpg",
         "credit": "NASA / JPL / Space Science Institute (Cassini, PIA12780)",
         # the box the 2048 picture was cut from, in the 3840 pixel wide copy the script of the pictures used (x0, y0, x1, y1), and that copy's width
-        "crop": (201, 163, 3736, 1951, 3840), "quality": 74,
+        "crop": (226, 183, 3718, 1926, 3840), "quality": 74,
     },
 }
 # The pole rows a strip does not reach and the margin kept off every edge of real data, in degrees.
