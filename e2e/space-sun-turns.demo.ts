@@ -76,6 +76,46 @@ async function changed(page: Page, a: string, b: string): Promise<number> {
   );
 }
 
+/** A picture of the view and where the Sun is in it, so two pictures can be compared disc to disc wherever the Sun sits in each. */
+async function sunPicture(page: Page): Promise<{ data: string; x: number; y: number; r: number }> {
+  const data = await shot(page);
+  const place = await sunPlace(page);
+  expect(place, "the Sun is drawn").not.toBeNull();
+  return { data, ...place! };
+}
+
+/** How many pixels of the Sun's disc differ between two pictures, each disc taken at its own place (the smaller radius of the two). */
+async function changedBetween(page: Page, a: { data: string; x: number; y: number; r: number }, b: { data: string; x: number; y: number; r: number }): Promise<number> {
+  return page.evaluate(
+    async ({ pa, pb }) => {
+      const read = async (data: string): Promise<{ px: Uint8ClampedArray; width: number; height: number }> => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = canvas.getContext("2d")!;
+        context.drawImage(bitmap, 0, 0);
+        return { px: context.getImageData(0, 0, bitmap.width, bitmap.height).data, width: bitmap.width, height: bitmap.height };
+      };
+      const [x, y] = [await read(pa.data), await read(pb.data)];
+      const ratio = x.width / (document.querySelector("wakusei-space")?.clientWidth ?? x.width);
+      const r = Math.min(pa.r, pb.r) * ratio * 0.8;
+      const [ax, ay, bx, by] = [pa.x * ratio, pa.y * ratio, pb.x * ratio, pb.y * ratio];
+      let n = 0;
+      for (let dy = -r; dy <= r; dy += 1) {
+        for (let dx = -r; dx <= r; dx += 1) {
+          if (Math.hypot(dx, dy) > r) continue;
+          const [i, j, k, l] = [Math.round(ax + dx), Math.round(ay + dy), Math.round(bx + dx), Math.round(by + dy)];
+          if (i < 0 || j < 0 || k < 0 || l < 0 || i >= x.width || k >= y.width || j >= x.height || l >= y.height) continue;
+          const p = (j * x.width + i) * 4;
+          const q = (l * y.width + k) * 4;
+          if (Math.abs(x.px[p]! - y.px[q]!) + Math.abs(x.px[p + 1]! - y.px[q + 1]!) + Math.abs(x.px[p + 2]! - y.px[q + 2]!) > 60) n += 1;
+        }
+      }
+      return n;
+    },
+    { pa: a, pb: b },
+  );
+}
+
 for (const [look, scale] of [["realistic", "true"], ["painted", "compressed"]] as const) {
   test(`${look}, ${scale} scale: the Sun's face changes when the view turns (yaw, tilt, roll) and when days pass, and not when nothing turns`, async ({ page }) => {
     test.setTimeout(240_000);
@@ -106,22 +146,27 @@ for (const [look, scale] of [["realistic", "true"], ["painted", "compressed"]] a
   });
 }
 
-test("seen from another body (Mercury, the distances squeezed): the Sun's face still changes when the view turns, by a share of its smaller disc", async ({ page }) => {
+test("seen from another body (Mercury, the distances squeezed): the Sun's face still turns in place when the view rolls and when days pass", async ({ page }) => {
   test.setTimeout(240_000);
   await openSpace(page, "t=2026-11-02T14:00Z&scale=compressed&look=painted&play=off");
   await drawn(page, () => callOn(page, "goTo", "mercury", { smooth: false }));
-  // out from Mercury until the Sun is in the view, as a disc a few pixels across
+  // out from Mercury to the zoom that frames the inner planets: the Sun is in the view as a small disc
   const inner = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("inner"));
-  const home = { ...(await viewNow(page)), zoom: inner * 3 };
+  const home = { ...(await viewNow(page)), zoom: inner };
   await setView(page, home);
-  const place = await sunPlace(page);
-  expect(place, "the Sun is in the view").not.toBeNull();
-  expect(place!.r, "the Sun's disc is a few pixels across").toBeGreaterThan(4);
-  const disc = Math.PI * (0.8 * place!.r) ** 2;
-  const first = await shot(page);
-  await setView(page, { ...home, yaw: home.yaw + 90 });
-  const turned = await changed(page, first, await shot(page));
-  expect(turned, `the view turned a quarter: ${turned} of the Sun's ${Math.round(disc)} pixels changed`).toBeGreaterThan(disc * 0.1);
+  const first = await sunPicture(page);
+  const box = await page.locator(SPACE).boundingBox();
+  expect(first.x > first.r && first.y > first.r && first.x < box!.width - first.r && first.y < box!.height - first.r, `the Sun is inside the view (at ${first.x.toFixed(0)}, ${first.y.toFixed(0)}, radius ${first.r.toFixed(0)} in ${box!.width}x${box!.height})`).toBe(true);
+  expect(first.r, "the Sun's disc is a few pixels across").toBeGreaterThan(4);
+  const disc = Math.PI * (0.8 * first.r) ** 2;
+  // the view rolls a quarter about the line of sight: the Sun stays where it is on the screen and its face turns in place, while its glow, round, does not
+  await setView(page, { ...home, roll: home.roll + 90 });
+  const rolled = await changedBetween(page, first, await sunPicture(page));
+  expect(rolled, `the view rolled a quarter: ${rolled} of the Sun's ${Math.round(disc)} pixels changed`).toBeGreaterThan(disc * 0.1);
   await setView(page, home);
-  expect(await changed(page, first, await shot(page)), "turned back, the same face").toBeLessThan(disc * 0.05 + 20);
+  expect(await changedBetween(page, first, await sunPicture(page)), "rolled back, the same face").toBeLessThan(disc * 0.05 + 20);
+  // five days on: Mercury has moved along its orbit, so the Sun sits elsewhere on the screen, and its own face has turned about 70 degrees
+  await drawn(page, () => setOn(page, "time", Date.UTC(2026, 10, 7, 14)));
+  const later = await changedBetween(page, first, await sunPicture(page));
+  expect(later, `five days on: ${later} of the Sun's ${Math.round(disc)} pixels changed`).toBeGreaterThan(disc * 0.1);
 });
