@@ -2,7 +2,7 @@
 title: データファイル
 section: how-to
 order: 30
-description: 天体、軌道、探査機の表を使います。
+description: 天体、軌道、探査機、場所の表を使います。
 ---
 
 [English](../data-files.md)
@@ -15,6 +15,7 @@ description: 天体、軌道、探査機の表を使います。
 - `orbital-elements`: `id`、`parent`、`elementKind`、`frame`、`epochMs`、`aAu`、`aKm`、`eccentricity`、`inclination`、`node`、`argumentPeriapsis`、`meanAnomaly`、`meanLongitudeRate`、`periapsisRate`、`nodeRate`、`acceleration`、`poleRa`、`poleDec`、`waveAmplitude`、`wavePeriodDays`、`wavePhase`、`source`。角度は度です。速度と基準時の単位はスキーマを見てください。惑星には元データにある平均軌道長半径だけが入り、ほかの要素は空です。準惑星とその衛星は瞬間軌道要素、ほかの衛星は平均または近似した平均要素です。
 - `spacecraft`: `id`、`nameEn`、`nameJa`、`agency`、`launchMs`、`launchPrecision`、`launchSiteEn`、`launchSiteJa`、`launchVehicle`、`endMs`、`status`、`url`、`horizonsId`、`recordStartMs`、`recordEndMs`、`joins`（JSON 配列）。
 - `spacecraft-events`: `craftId`、`order`、`kind`、`dateMs`、`precision`、`nameEn`、`nameJa`、`body`、`distanceKm`。
+- `places`: `id`、`body`、`kind`、`nameEn`、`nameJa`、`lat`、`lon`、`approximate`、`famous`、`date`、`until`、`mission`、`operator`、`country`、`outcome`、`site`、`featureType`、`featureWordEn`、`featureWordJa`、`diameterKm`、`approved`、`origin`、`plannedDate`、`plannedDateOf`、`plannedStatus`、`plannedRead`、`sourceId`、`sourceRead`、`sourceUrl`、`sourceLatitude`、`sourceFrame`。`/places` にある33の天体の場所すべてです (ガイド「月、火星と31の天体の場所」を見てください)。緯度は天体の中心から見た緯度、経度は東経で -180 から 180 です。各行のクレジットは、その `sourceId` のものが `LICENCE-DATA.md` にあります。
 
 コードは MIT ライセンスです。データには各出典の条件があり、正確なクレジットと条件は `LICENCE-DATA.md` にあります。再配布の条件が未確定の理論係数表は含めていません。
 
