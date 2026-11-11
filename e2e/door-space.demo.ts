@@ -19,7 +19,8 @@ const doorOf = (page: Page) => sky(page).evaluate((el) => (Reflect.get(el, "stat
 const line = (page: Page) => page.getByTestId("door-credit");
 
 async function open(page: Page, query = ""): Promise<void> {
-  await page.goto(`${PAGE}?t=2026-11-02T14:00Z&scale=compressed&play=off${query}`);
+  // the package's own belts are off here (belts=0): these tests are of a page's own sources, which a view with none draws as it always did
+  await page.goto(`${PAGE}?t=2026-11-02T14:00Z&scale=compressed&play=off&belts=0${query}`);
   await expect(sky(page)).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   await expect.poll(async () => (await creditsOf(page)).length, { timeout: 60_000 }).toBeGreaterThan(0);
   await page.waitForTimeout(1500);

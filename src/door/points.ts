@@ -8,7 +8,7 @@ import { placeAround, type ScaleMode } from "../space/scale.ts";
 import { MAX_POINTS, packSmallBodies, smallBodyAt, type SmallBody } from "./small-bodies.ts";
 
 /** The parts of three.js the points use, over and above the ones every body needs. A page's own subset of three that lacks the two instanced classes cannot draw them. */
-export type PointsThree = Pick<typeof THREE, "BufferAttribute" | "InstancedBufferAttribute" | "InstancedBufferGeometry" | "Mesh" | "ShaderMaterial" | "Vector2" | "Vector3">;
+export type PointsThree = Pick<typeof THREE, "BufferAttribute" | "Group" | "InstancedBufferAttribute" | "InstancedBufferGeometry" | "Mesh" | "ShaderMaterial" | "Vector2" | "Vector3">;
 
 /** How the view places a body round the Sun in a compressed view: its distance in astronomical units to the power `SPREAD`, times `SUN_COMPRESSED` Earth radii (the same two numbers as `space/scale.ts`). */
 export const POINT_SCALE = { sunCompressed: 70, spread: 0.45 } as const;
@@ -55,13 +55,22 @@ export interface PointsState {
 /** The points of a view's small bodies. */
 export interface SmallBodyPoints {
   readonly object: THREE.Object3D;
-  /** The bodies drawn: the records of every record source in use, as many as `MAX_POINTS`. Packs them for the graphics card. */
+  /** The bodies drawn: the records of every record source in use, as many as `MAX_POINTS`. Packs them for the graphics card. A body with a `belt` is drawn with the others of its belt in one instanced draw of its colour; the rest are drawn together. */
   set(bodies: readonly SmallBody[]): void;
   /** Called at each draw. */
   update(state: PointsState): void;
-  /** How many bodies are in the one draw. */
+  /** How many bodies are drawn in all. */
   readonly count: number;
+  /** How many instanced draws there are: one for each belt that has a body, and one for the bodies with no belt. */
+  readonly draws: number;
+  /** How many bodies each belt has (the bodies with no belt are under `""`). */
+  countOf(belt: string): number;
   dispose(): void;
+}
+
+/** What `createSmallBodyPoints` is told: the colour of each belt's points (`#rrggbb`, by belt name), where a belt has none the points are the plain pale colour. */
+export interface PointsOptions {
+  colours?: Readonly<Record<string, string>>;
 }
 
 /** The days from the date the bodies were packed at after which they are packed again, so the mean anomaly a float holds keeps its digits. */
@@ -118,22 +127,24 @@ void main() {
 `;
 
 const FRAGMENT = /* glsl */ `
+uniform vec3 uColour;
 varying vec2 vCorner;
 varying float vFade;
 void main() {
   float d = length(vCorner);
   if (d > 1.0 || vFade < 0.5) discard;
-  gl_FragColor = vec4(0.86, 0.84, 0.78, 0.9 * smoothstep(1.0, 0.45, d));
+  gl_FragColor = vec4(uColour, 0.9 * smoothstep(1.0, 0.45, d));
 }
 `;
 
 /**
- * Makes the points: one instanced draw of a quad for each small body.
+ * Makes the points: one instanced draw of a quad for each small body, one draw for each belt.
  *
  * @param T - The parts of three.js.
+ * @param options - The colour of each belt's points.
  * @returns The points, with no bodies yet.
  */
-export function createSmallBodyPoints(T: PointsThree): SmallBodyPoints {
+export function createSmallBodyPoints(T: PointsThree, options: PointsOptions = {}): SmallBodyPoints {
   const fresh = (count: number, data?: Float32Array): THREE.InstancedBufferGeometry => {
     const made = new T.InstancedBufferGeometry();
     made.setAttribute("position", new T.BufferAttribute(new Float32Array(12), 3));
@@ -150,64 +161,110 @@ export function createSmallBodyPoints(T: PointsThree): SmallBodyPoints {
     made.instanceCount = count;
     return made;
   };
-  const material = new T.ShaderMaterial({
-    vertexShader: VERTEX,
-    fragmentShader: FRAGMENT,
-    transparent: true,
-    depthWrite: false,
-    uniforms: {
-      uDays: { value: 0 },
-      uTrue: { value: 0 },
-      uSun: { value: new T.Vector3() },
-      uViewport: { value: new T.Vector2(1, 1) },
-      uRatio: { value: 1 },
-      uAu: { value: AU_IN_EARTH_RADII },
-      uSunCompressed: { value: POINT_SCALE.sunCompressed },
-      uSpread: { value: POINT_SCALE.spread },
-      uObliquity: { value: new T.Vector2(Math.sin(OBLIQUITY * RAD), Math.cos(OBLIQUITY * RAD)) },
-    },
-  });
-  const mesh = new T.Mesh(fresh(0), material);
-  mesh.frustumCulled = false;
-  mesh.renderOrder = -1;
-  mesh.visible = false;
+  const colourOf = (belt: string): [number, number, number] => {
+    const hex = options.colours?.[belt];
+    if (hex === undefined || !/^#[0-9a-f]{6}$/i.test(hex)) return [0.86, 0.84, 0.78];
+    return [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
+  };
+  const material = (belt: string): THREE.ShaderMaterial =>
+    new T.ShaderMaterial({
+      vertexShader: VERTEX,
+      fragmentShader: FRAGMENT,
+      transparent: true,
+      depthWrite: false,
+      uniforms: {
+        uDays: { value: 0 },
+        uTrue: { value: 0 },
+        uSun: { value: new T.Vector3() },
+        uViewport: { value: new T.Vector2(1, 1) },
+        uRatio: { value: 1 },
+        uAu: { value: AU_IN_EARTH_RADII },
+        uSunCompressed: { value: POINT_SCALE.sunCompressed },
+        uSpread: { value: POINT_SCALE.spread },
+        uObliquity: { value: new T.Vector2(Math.sin(OBLIQUITY * RAD), Math.cos(OBLIQUITY * RAD)) },
+        uColour: { value: new T.Vector3(...colourOf(belt)) },
+      },
+    });
+  const group = new T.Group();
+  group.visible = false;
+  // one instanced draw for each belt
+  const draws = new Map<string, { mesh: THREE.Mesh; material: THREE.ShaderMaterial; count: number }>();
   let jd0 = 0;
   let count = 0;
   let bodies: readonly SmallBody[] = [];
   let packed = false;
+  const beltOf = (body: SmallBody): string => (body as SmallBody & { belt?: string }).belt ?? "";
   const pack = (jd: number): void => {
     // the shader counts days from the date the bodies were packed at: close to the one being drawn, so a float has the digits
     jd0 = jd;
-    const data = packSmallBodies(bodies, jd0);
-    count = data.length / 8;
-    const old = mesh.geometry;
-    mesh.geometry = fresh(count, data);
-    old.dispose();
-    mesh.visible = count > 0;
+    const by = new Map<string, SmallBody[]>();
+    for (const body of bodies) {
+      const belt = beltOf(body);
+      const list = by.get(belt);
+      if (list === undefined) by.set(belt, [body]);
+      else list.push(body);
+    }
+    for (const [belt, held] of draws) {
+      if (by.has(belt)) continue;
+      group.remove(held.mesh);
+      held.mesh.geometry.dispose();
+      held.material.dispose();
+      draws.delete(belt);
+    }
+    count = 0;
+    for (const [belt, list] of by) {
+      const data = packSmallBodies(list, jd0);
+      let held = draws.get(belt);
+      if (held === undefined) {
+        const m = material(belt);
+        const mesh = new T.Mesh(fresh(0), m);
+        mesh.frustumCulled = false;
+        mesh.renderOrder = -1;
+        group.add(mesh);
+        draws.set(belt, (held = { mesh, material: m, count: 0 }));
+      }
+      const old = held.mesh.geometry;
+      held.count = data.length / 8;
+      held.mesh.geometry = fresh(held.count, data);
+      old.dispose();
+      held.mesh.visible = held.count > 0;
+      count += held.count;
+    }
+    group.visible = count > 0;
     packed = true;
   };
   return {
-    object: mesh,
+    object: group,
     set(next) {
+      // the cap is of all the bodies together; the order is the sources' order, so the package's own come first
       bodies = next.length > MAX_POINTS ? next.slice(0, MAX_POINTS) : next;
       packed = false;
     },
-    update(state) {
-      if (!packed || Math.abs(state.jd - jd0) > REPACK_DAYS) pack(state.jd);
-      const u = material.uniforms;
-      u.uDays!.value = state.jd - jd0;
-      u.uTrue!.value = state.mode === "true" ? 1 : 0;
-      (u.uSun!.value as THREE.Vector3).set(state.sun[0], state.sun[1], state.sun[2]);
-      (u.uViewport!.value as THREE.Vector2).set(Math.max(1, state.width), Math.max(1, state.height));
-      u.uRatio!.value = state.ratio;
+    update(now) {
+      if (!packed || Math.abs(now.jd - jd0) > REPACK_DAYS) pack(now.jd);
+      for (const held of draws.values()) {
+        const u = held.material.uniforms;
+        u.uDays!.value = now.jd - jd0;
+        u.uTrue!.value = now.mode === "true" ? 1 : 0;
+        (u.uSun!.value as THREE.Vector3).set(now.sun[0], now.sun[1], now.sun[2]);
+        (u.uViewport!.value as THREE.Vector2).set(Math.max(1, now.width), Math.max(1, now.height));
+        u.uRatio!.value = now.ratio;
+      }
     },
     get count() {
       return count;
     },
+    get draws() {
+      return [...draws.values()].filter((held) => held.count > 0).length;
+    },
+    countOf: (belt) => draws.get(belt)?.count ?? 0,
     dispose() {
-      mesh.geometry.dispose();
-      material.dispose();
-      mesh.visible = false;
+      for (const held of draws.values()) {
+        held.mesh.geometry.dispose();
+        held.material.dispose();
+      }
+      draws.clear();
+      group.visible = false;
     },
   };
 }

@@ -37,12 +37,14 @@ const state = {
   light: pick(address.get("light"), ["sun", "lit"], "sun"),
   orbits: address.get("orbits") !== "0",
   names: address.get("names") !== "0",
+  /** The asteroid belts and the Kuiper belt, drawn from NASA/JPL's Small-Body Database. */
+  belts: address.get("belts") !== "0",
   /** Playing: the clock runs from the date shown at `speed` times real time. A page opened with no date, speed or play in its address opens playing, from now, an hour a second (the first speed at which the Earth's turn shows); a link that names a date or a speed, and a reader who asked for reduced motion, get it still with Play ready. */
   play: address.get("play") === "on" || (!["play", "t", "speed"].some((key) => address.get(key) !== null) && !matchMedia("(prefers-reduced-motion: reduce)").matches),
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
   speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
   time: address.get("t") ?? "now",
-  ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io"], ""),
+  ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io", "belt:main"], ""),
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
 };
@@ -67,6 +69,7 @@ function render(): void {
   space.light = state.light;
   space.orbits = state.orbits;
   space.labels = state.names;
+  space.belts = state.belts ? ["main", "hilda", "trojan", "centaur", "classical", "resonant", "scattered"] : [];
   if (replay.playing !== state.play) replay.playing = state.play;
   state.play = replay.playing;
   if (applied !== state.time) {
@@ -84,11 +87,18 @@ function render(): void {
   if (appliedRide !== `${state.ride}|${state.rideLook}`) {
     appliedRide = `${state.ride}|${state.rideLook}`;
     // "moon:beside" is the Moon seen from beyond it, with the Earth in view behind
-    const [target, view] = state.ride.split(":") as ["moon" | "mars" | "io" | "", "beside" | undefined];
-    space.ride(target === "" ? null : target, { look: state.rideLook, ...(view ? { view } : {}) });
+    const [target, view] = state.ride.split(":") as ["moon" | "mars" | "io" | "belt" | "", "beside" | "main" | undefined];
+    // "belt:main" flies through the main belt, looking the way it goes; the others ride a body
+    if (target === "belt") space.enterBelt("main");
+    else if (target === "") {
+      if (space.flyingThrough === null) space.ride(null);
+      else space.leaveBelt();
+    }
+    else space.ride(target, { look: state.rideLook, ...(view === "beside" ? { view } : {}) });
   }
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
+  pressed(document.querySelector<HTMLElement>("#belts")!, state.belts);
   pressed(nowButton, state.time === "now");
   if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
   replay.setAttribute("lang", chooser()?.lang ?? "en");
@@ -100,6 +110,7 @@ function render(): void {
   address.set("light", state.light === "sun" ? null : state.light);
   address.set("orbits", state.orbits ? null : "0");
   address.set("names", state.names ? null : "0");
+  address.set("belts", state.belts ? null : "0");
   address.set("play", state.play ? "on" : null);
   address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
@@ -124,6 +135,7 @@ for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((st
 for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
+document.querySelector("#belts")!.addEventListener("click", () => ((state.belts = !state.belts), render()));
 nowButton.addEventListener("click", () => {
   state.time = "now";
   origin = Date.now();

@@ -14,6 +14,7 @@ import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import type { Credit, DataSource } from "../data-door.ts";
 import { createDoorHost, type DoorHost } from "../door/host.ts";
 import { ownCredit } from "../door/own.ts";
+import { BELT_IDS, BELTS, beltFlight, beltNote, beltsSource, beltSpacing, loadBeltBodies, OORT, type BeltId } from "../belts/index.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
@@ -123,6 +124,15 @@ export interface RideOptions {
  */
 export type Riding = RideState;
 
+/** The id of the package's own source of the belts: it is in every view, but is not one of `sources`. */
+const BELTS_SOURCE_ID = "wakusei-belts";
+/** The belts the attribute `belts` names: all of them where it is left out or says `all`, none for `off`, else a list of names separated by commas or spaces. */
+const readBelts = (value: string | null): readonly BeltId[] => {
+  if (value === null || value.trim() === "" || value.trim() === "all") return BELT_IDS;
+  if (value.trim() === "off" || value.trim() === "none") return [];
+  const named = value.split(/[\s,]+/).filter((id): id is BeltId => (BELT_IDS as readonly string[]).includes(id));
+  return BELT_IDS.filter((id) => named.includes(id));
+};
 const readLight = (value: string | null): SpaceLight => (value === "lit" ? "lit" : "sun");
 const RAD = Math.PI / 180;
 const REAL_TIME_TICK_MS = 60_000;
@@ -155,7 +165,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
@@ -186,7 +196,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", "transition", "launch", "turn", "help-through"];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", "transition", "launch", "turn", "help-through", "belts"];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -205,6 +215,11 @@ export class WakuseiSpace extends HTMLElement {
   #scaleNames: Partial<Record<ScaleMode, string>> = {};
   #rings = new Map<string, HTMLElement>();
   #scaleLine: HTMLElement | undefined;
+  #noteLine: HTMLElement | undefined;
+  #oortLabel: HTMLElement | undefined;
+  /** The belt the camera is flying through, and the point it flies on (the ride's target, to know the ride is still this one). */
+  #flight: { belt: BeltId; point: ReturnType<typeof beltFlight> } | null = null;
+  #spacing = new Map<BeltId, { known: number; drawn: number }>();
   #hint = "choose to look at it";
   #painter: WakuseiPainter | undefined;
   #door: DoorHost = createDoorHost(
@@ -246,6 +261,9 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
+    this.#model.belts = readBelts(this.getAttribute("belts"));
+    if (this.#door.book.get(BELTS_SOURCE_ID) === undefined) this.#door.book.addSource(beltsSource());
+    this.#door.book.enableSource(BELTS_SOURCE_ID, this.#model.belts.length > 0);
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
     if (!this.hasAttribute("tabindex")) this.setAttribute("tabindex", "0");
@@ -256,6 +274,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#stage = root.getElementById("stage")!;
     this.#labelBox = root.getElementById("labels")!;
     this.#scaleLine = root.querySelector<HTMLElement>(".sp-scale")!;
+    this.#noteLine = root.querySelector<HTMLElement>(".sp-note")!;
+    this.#oortLabel = root.querySelector<HTMLElement>(".sp-oort")!;
     this.#nameScale();
     this.#pool.clear();
     this.#rings.clear();
@@ -277,6 +297,7 @@ export class WakuseiSpace extends HTMLElement {
       advance: () => this.#advance(),
       onLabels: (places) => {
         this.#placeLabels(places);
+        this.#placeOort();
         this.#door.announce();
       },
       onMoving: () => this.#gate?.request(),
@@ -331,9 +352,11 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
     else if (name === "data") this.#door.book.ownOnly(value === "own");
+    else if (name === "belts") this.belts = readBelts(value);
     else if (name === "lang") {
       for (const [id, button] of this.#pool) this.#nameLabel(button, id);
       this.#nameScale();
+      this.#showNote();
     }
   }
 
@@ -380,6 +403,8 @@ export class WakuseiSpace extends HTMLElement {
   }
   set scale(value: ScaleMode) {
     this.#model.mode = value;
+    // a flight through a belt is at true distances: the squeezed scale does not map a camera that moves among the bodies
+    if (value !== "true" && this.#flight !== null) this.leaveBelt();
     this.#nameScale();
     this.#gate?.request();
   }
@@ -670,6 +695,8 @@ export class WakuseiSpace extends HTMLElement {
       else if (wasRiding) model.focus = this.#focusBeforeRide;
     }
     this.#lostTold = false;
+    if (this.#flight !== null && (model.ride === null || model.ride.target !== this.#flight.point)) this.#flight = null;
+    this.#showNote();
     const pose = model.pose;
     const rideKind = chooseTransition(readTransition(options.transition, model.leave.transition), true);
     model.transition = (options.smooth ?? true) && !reduced && pose.valid && rideKind !== "cut" ? { start: performance.now(), kind: "direct", launchMs: model.leave.launchMs, turnMs: model.leave.turnMs, leaving: null, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
@@ -697,6 +724,87 @@ export class WakuseiSpace extends HTMLElement {
       return { target: id as MoonId, around: planet as SpaceBody, view: options.view ?? "from", look, distanceKm };
     }
     return undefined;
+  }
+
+  /**
+   * The belts drawn, by name (`main`, `hilda`, `trojan`, `centaur`, `classical`, `resonant`, `scattered`): all seven by default, `[]` for none. The attribute `belts` says the same (`belts="off"`, `belts="main trojan"`). Each belt is one instanced draw of its own
+   * colour, from the package's own source of NASA/JPL's Small-Body Database (`@johnmorrisdotca/wakusei-planets/belts`), fetched when the view first draws it.
+   */
+  get belts(): readonly BeltId[] {
+    return this.#model.belts;
+  }
+  set belts(list: readonly BeltId[]) {
+    this.#model.belts = BELT_IDS.filter((id) => list.includes(id));
+    if (this.#flight !== null && !this.#model.belts.includes(this.#flight.belt)) this.leaveBelt();
+    // with no belt shown the source is switched off, so its bodies are neither read nor held (the chunk of them is not fetched)
+    this.#door.book.enableSource(BELTS_SOURCE_ID, this.#model.belts.length > 0);
+    this.#gate?.request();
+  }
+
+  /**
+   * Fly into a belt: the camera goes to a point on a circular orbit in the middle of the belt, tilted a few degrees to the ecliptic so that it passes through the belt's thickness, looking the way it goes with the ecliptic's north at the top, at true
+   * distances (the squeezed scale is left), and a drag looks about. The dots round it are the belt's bodies; a line on the view says how many bodies there really are, and that neighbours are millions of kilometres apart, which is why the picture is
+   * mostly empty. Time runs as the clock says (`speed`). `leaveBelt()` goes back.
+   *
+   * @param belt - The belt, `main` by default.
+   * @param options - `smooth` (a glide, true by default).
+   */
+  enterBelt(belt: BeltId = "main", options: { smooth?: boolean } = {}): void {
+    if (!(BELT_IDS as readonly string[]).includes(belt)) throw new RangeError(`belt must be one of ${BELT_IDS.join(", ")}, got ${JSON.stringify(belt)}`);
+    if (this.#model.mode !== "true") this.scale = "true";
+    if (!this.#model.belts.includes(belt)) this.belts = [...this.#model.belts, belt];
+    const point = beltFlight(belt);
+    this.#flight = { belt, point };
+    this.ride(point, { around: "sun", view: "from", look: "ahead", smooth: options.smooth ?? true });
+    // the note needs the bodies to know how thickly they lie; the line is shown as soon as they are here
+    void loadBeltBodies().then((bodies) => {
+      this.#spacing.set(belt, beltSpacing(belt, bodies, 2_461_200.5));
+      this.#showNote();
+    });
+    this.#showNote();
+  }
+
+  /** Come out of a belt: the camera goes back to the body it looked at before. */
+  leaveBelt(options: { smooth?: boolean } = {}): void {
+    if (this.#flight === null) return;
+    this.#flight = null;
+    this.ride(null, { smooth: options.smooth ?? true });
+    this.#showNote();
+  }
+
+  /** The belt the camera is flying through, or null. */
+  get flyingThrough(): BeltId | null {
+    return this.#flight?.belt ?? null;
+  }
+
+  /** The line about a belt that is on the view while the camera is in one, and the label of the Oort cloud's shell when it is drawn. */
+  #showNote(): void {
+    if (this.#noteLine === undefined) return;
+    const riding = this.#model.ride;
+    if (this.#flight !== null && (riding === null || riding.target !== this.#flight.point)) this.#flight = null;
+    const spacing = this.#flight === null ? undefined : this.#spacing.get(this.#flight.belt);
+    const language = this.getAttribute("lang") === "ja" ? "ja" : "en";
+    if (this.#flight === null) {
+      this.#noteLine.hidden = true;
+      this.#noteLine.textContent = "";
+    } else {
+      this.#noteLine.hidden = false;
+      this.#noteLine.textContent = spacing === undefined ? BELTS[this.#flight.belt].name[language] : beltNote(this.#flight.belt, spacing, language);
+    }
+    if (this.#oortLabel !== undefined) this.#oortLabel.textContent = `${OORT.name[language]} (${language === "ja" ? "内側のふち 約" : "inner edge about "}${OORT.innerAu.toLocaleString(language === "ja" ? "ja-JP" : "en-US")}${language === "ja" ? "天文単位" : " au"})`;
+  }
+
+  /** Where the Oort label goes: at the point of the shell the scene found, or hidden when the shell is not drawn. */
+  #placeOort(): void {
+    if (this.#oortLabel === undefined) return;
+    const at = this.#model.oort;
+    if (at === null) {
+      if (!this.#oortLabel.hidden) this.#oortLabel.hidden = true;
+      return;
+    }
+    if (this.#oortLabel.textContent === "") this.#showNote();
+    if (this.#oortLabel.hidden) this.#oortLabel.hidden = false;
+    this.#oortLabel.style.transform = `translate(${Math.round(at.x) + 6}px,${Math.round(at.y) - 8}px)`;
   }
 
   /** What the camera is riding along with now, or null. */
@@ -747,10 +855,11 @@ export class WakuseiSpace extends HTMLElement {
    * licence and credit. Assign a list to replace them; a source `validateSource` refuses throws a `TypeError` and changes nothing. A property, not an attribute: data is not text.
    */
   get sources(): readonly DataSource[] {
-    return this.#door.sources();
+    return this.#door.sources().filter((source) => source.info.id !== BELTS_SOURCE_ID);
   }
   set sources(list: readonly DataSource[]) {
-    this.#door.setSources(list);
+    const own = this.#door.book.get(BELTS_SOURCE_ID);
+    this.#door.setSources(own === undefined ? list : [own, ...list]);
   }
   /** Adds one source (checked at once: a `TypeError` for an empty credit, no licence, a clashing id or a map source with no body). Returns the function that removes it. */
   addSource(source: DataSource): () => void {
@@ -791,8 +900,8 @@ export class WakuseiSpace extends HTMLElement {
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
     tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
-    /** The data door: the small bodies in the one instanced draw, and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
-    door: { points: number; sources: ReturnType<DoorHost["book"]["stats"]> };
+    /** The data door: the small bodies of a page's own sources in the one instanced draw (`points`), the package's own belts (`belts` bodies in `draws` instanced draws, one for each belt), and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
+    door: { points: number; belts: number; draws: number; sources: ReturnType<DoorHost["book"]["stats"]> };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
     orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
@@ -815,7 +924,7 @@ export class WakuseiSpace extends HTMLElement {
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
-      door: { points: this.#model.door.points, sources: this.#door.book.stats() },
+      door: { points: this.#model.door.points, belts: this.#model.door.belts, draws: this.#model.door.draws, sources: this.#door.book.stats() },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden] },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),

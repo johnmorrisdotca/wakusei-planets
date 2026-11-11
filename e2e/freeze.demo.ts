@@ -728,3 +728,50 @@ test("the space view at a day a second with a source of 20,000 small bodies: at 
   expect(s1.draws - s0.draws).toBeLessThanOrEqual(4 * 31);
   expect(await page.evaluate(() => (Reflect.get(window, "__rocks") as { count: number }).count)).toBe(1);
 });
+
+// --- the belts: 3,340 bodies drawn by default, one instanced draw for each of seven belts ----------------------------------------------------------------------------------------------------
+test("the space view with its seven belts of 3,340 bodies: nothing is drawn at rest, one context, and switching the belts off and on again leaves it so", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&scale=compressed`);
+  await liveSky(page);
+  const doorOf = () => sky(page).evaluate((el) => (el as unknown as { stats: { door: { belts: number; draws: number } } }).stats.door);
+  await expect.poll(async () => (await doorOf()).belts, { timeout: 60_000 }).toBe(3340);
+  expect((await doorOf()).draws).toBe(7);
+  await settle(page, 2500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing is drawn at rest").toBe(0);
+  expect(after.rafRequests - before.rafRequests).toBe(0);
+  for (let round = 0; round < 4; round += 1) {
+    await sky(page).evaluate((el) => Reflect.set(el, "belts", []));
+    await expect.poll(async () => (await doorOf()).belts, { timeout: 30_000 }).toBe(0);
+    await sky(page).evaluate((el) => Reflect.set(el, "belts", ["main", "hilda", "trojan", "centaur", "classical", "resonant", "scattered"]));
+    await expect.poll(async () => (await doorOf()).belts, { timeout: 30_000 }).toBe(3340);
+  }
+  await settle(page, 2500);
+  const again = await readCounts(page);
+  await settle(page, 3000);
+  const end = await readCounts(page);
+  expect(end.contexts).toBe(1);
+  expect(end.draws - again.draws).toBe(0);
+});
+
+test("the space view at a day a second with the belts: at most thirty frames a second, and flying through the main belt keeps to it too", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&scale=compressed`);
+  await liveSky(page);
+  await expect.poll(async () => sky(page).evaluate((el) => (el as unknown as { stats: { door: { belts: number } } }).stats.door.belts), { timeout: 60_000 }).toBe(3340);
+  await settle(page, 1500);
+  const s0 = await skyStats(page);
+  await settle(page, 4000);
+  const s1 = await skyStats(page);
+  expect(s1.draws - s0.draws).toBeGreaterThan(0);
+  expect(s1.draws - s0.draws).toBeLessThanOrEqual(4 * 31);
+  await sky(page).evaluate((el) => (el as unknown as { enterBelt(b: string, o: object): void }).enterBelt("main", { smooth: false }));
+  await settle(page, 1500);
+  const f0 = await skyStats(page);
+  await settle(page, 4000);
+  const f1 = await skyStats(page);
+  expect(f1.draws - f0.draws).toBeGreaterThan(0);
+  expect(f1.draws - f0.draws).toBeLessThanOrEqual(4 * 31);
+  expect((await readCounts(page)).contexts).toBe(1);
+});
