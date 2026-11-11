@@ -77,4 +77,6 @@ A `when` that is not a `Date` or a number is a `TypeError`, an invalid or non-fi
 
 ## Where the numbers come from
 
+A page that shows places owes each source its credit: `PLACES_CREDITS` from `/places` has the line to print, the licence and the address for every `source.id` the tables use. The lander catalogue's is a condition of its licence: "data from GCAT (J. McDowell, planet4589.org/space/gcat)".
+
 The positions of the Moon's sites are from NASA's NSSDCA, "Table of Anthropogenic Impacts and Spacecraft on the Moon" (<https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html>), a US government work. The dates, operators, countries, site names and the Mars sites are from GCAT, the General Catalog of Artificial Space Objects (J. McDowell; data from GCAT (J. McDowell, planet4589.org/space/gcat)), released under the Creative Commons Attribution 4.0 licence. The named features are from the IAU Gazetteer of Planetary Nomenclature kept by the USGS Astrogeology Science Center (<https://planetarynames.wr.usgs.gov/>), US public domain. `scripts/make-places-data.py` makes the two tables from the sources' files and `scripts/make-places-checks.py` the second-source file the test uses; [NOTICE.md](../../NOTICE.md) says how each was read. The names a page shows for the catalogue's technical object names, and the Japanese names, are written here.

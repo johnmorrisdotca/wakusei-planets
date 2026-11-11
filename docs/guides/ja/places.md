@@ -77,4 +77,6 @@ console.log(terminator("moon", day, 36).length, "points on the Moon's terminator
 
 ## 数値の出どころ
 
+場所を表示するページは、各出典に対する表示義務があります。`/places` の `PLACES_CREDITS` が、表が使う `source.id` ごとに、表示する文、ライセンス、アドレスを持っています。着陸機カタログの表示はライセンスの条件です。「data from GCAT (J. McDowell, planet4589.org/space/gcat)」です。
+
 月の地点の位置は、NASA の NSSDCA の「月面の人工物の衝突と探査機の表」(<https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html>、米国政府の著作物) です。日付、運用者、国、着陸地点の名前、火星の地点は、GCAT (General Catalog of Artificial Space Objects。J. McDowell。data from GCAT (J. McDowell, planet4589.org/space/gcat)) のもので、クリエイティブ・コモンズ表示 4.0 ライセンスで公開されています。名前のある地形は、USGS 天文地質学科学センターが管理する IAU 惑星命名辞典 (<https://planetarynames.wr.usgs.gov/>、米国パブリックドメイン) のものです。`scripts/make-places-data.py` が2つの表を出典のファイルから作り、`scripts/make-places-checks.py` がテストの使う第二の出典のファイルを作ります。それぞれをどう読んだかは [NOTICE.md](../../../NOTICE.md) にあります。ページに表示する、カタログの技術的な天体名に代わる名前と、日本語の名前は、ここで書いたものです。

@@ -70,6 +70,25 @@ export interface Place {
 }
 
 /**
+ * The credit a page that shows places owes each source, one row for every `source.id` the tables use: the line to print, the licence or terms it rests on and the address. The lander catalogue's is a condition of its licence (CC BY 4.0: "data from GCAT (J. McDowell,
+ * planet4589.org/space/gcat)"); the others are US government works, credited as their owners ask.
+ *
+ * @example
+ * ```ts
+ * import { PLACES_CREDITS } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * console.log(PLACES_CREDITS.map((credit) => credit.line).join("; "));
+ * ```
+ */
+export const PLACES_CREDITS: readonly { id: Place["source"]["id"]; line: string; licence: string; url: string }[] = [
+  { id: "gcat-landercat", line: "data from GCAT (J. McDowell, planet4589.org/space/gcat)", licence: "CC BY 4.0", url: "https://planet4589.org/space/gcat/" },
+  { id: "iau-gazetteer", line: "IAU Gazetteer of Planetary Nomenclature, U.S. Geological Survey", licence: "US public domain", url: "https://planetarynames.wr.usgs.gov/" },
+  { id: "nssdca", line: "NASA NSSDCA", licence: "US government work (NASA content is generally not subject to copyright in the United States)", url: "https://nssdc.gsfc.nasa.gov/" },
+  { id: "pds-ode", line: "NASA Planetary Data System, Mars Orbital Data Explorer", licence: "US government work", url: "https://ode.rsl.wustl.edu/mars/" },
+  { id: "nasa-mars24", line: "NASA Goddard Institute for Space Studies, Mars24 Sunclock", licence: "US government work", url: "https://www.giss.nasa.gov/tools/mars24/" },
+];
+
+/**
  * The bodies that have places: `moon` and `mars`.
  *
  * @example

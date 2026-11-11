@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
-import { angleBetween, findPlace, isDaylight, listPlaces, loadPlaces, localSolarTime, nearestPlace, PLACE_BODIES, placeDistanceKm, placesNear, placesOfKind, subSolarPoint, terminator, type Place, type PlaceKind } from "../src/places.ts";
+import { angleBetween, findPlace, PLACES_CREDITS, isDaylight, listPlaces, loadPlaces, localSolarTime, nearestPlace, PLACE_BODIES, placeDistanceKm, placesNear, placesOfKind, subSolarPoint, terminator, type Place, type PlaceKind } from "../src/places.ts";
 import { PLACES_MOON } from "../src/places/moon.ts";
 import { PLACES_MARS } from "../src/places/mars.ts";
 
@@ -59,6 +59,13 @@ test("every record has a source and a name in both languages, every id is unique
   assert.ok(Math.abs(findPlace(mars, "Phoenix")!.lat - 67.986) < 0.01, "Phoenix's 68.22 is planetographic, 67.99 planetocentric");
   assert.ok(Math.abs(findPlace(mars, "Mars Pathfinder")!.lat - 19.095) < 1e-4 && Math.abs(findPlace(mars, "InSight")!.lat - 4.5) < 1e-4);
   assert.equal(findPlace(mars, "Viking 1")!.lat, 22.27);
+});
+
+test("every source the tables use has a credit, and the lander catalogue's is the line its licence asks for", () => {
+  const used = new Set([...moon, ...mars].map((p) => p.source.id));
+  for (const id of used) assert.ok(PLACES_CREDITS.some((credit) => credit.id === id && credit.line.length > 0 && credit.url.startsWith("https://")), `a credit for ${id}`);
+  assert.equal(PLACES_CREDITS.find((c) => c.id === "gcat-landercat")!.line, "data from GCAT (J. McDowell, planet4589.org/space/gcat)");
+  assert.equal(PLACES_CREDITS.find((c) => c.id === "gcat-landercat")!.licence, "CC BY 4.0");
 });
 
 test("a dozen positions agree with sources other than the ones the table takes them from", () => {
