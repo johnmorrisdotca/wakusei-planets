@@ -63,7 +63,7 @@ export const ROADSTER = {
   launch: LAUNCH,
   /** The number JPL Horizons gives the car. */
   horizonsId: "-143205",
-  /** The span the path covers, in milliseconds since 1970 (UTC): from about six hours after the launch (where Horizons' record starts) to 2035-01-01. A date outside it throws a `RangeError`. */
+  /** The span the path covers, in milliseconds since 1970 (UTC): from about six hours after the launch (where Horizons' record starts) to 2036-01-01. A date outside it throws a `RangeError`. */
   record: { start: RECORD_START, end: RECORD_END },
 } as const;
 
@@ -85,7 +85,7 @@ export const ROADSTER_ACCURACY = {
   to: RECORD_END,
   /** The days between rows of the table once the car is ten days out. */
   stepDays: ROADSTER_STEP_DAYS,
-  /** The worst distance, in kilometres, between the table's interpolation and Horizons' own record of the same path, measured every day of the span, every hour of the first 13 days and every hour round the Mars pass of October 2020. */
+  /** The worst distance, in kilometres, between the table's interpolation and Horizons' own record of the same path, measured every day of the span, every hour of the first 13 days and every hour round the Mars passes of October 2020 and April 2035. */
   interpolationKm: ROADSTER_WORST_KM,
   /** In words, what the numbers leave out. */
   note: "Horizons' path was fitted to observations from February and March 2018 and is a prediction after that; sunlight's push is modelled only as one number fitted to those observations, so the real car drifts from the predicted path, and the further from 2018 the more. The interpolation error above is separate and small beside it.",

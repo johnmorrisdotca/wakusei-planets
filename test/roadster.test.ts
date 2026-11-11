@@ -45,9 +45,9 @@ const utcOf = (jd: number): number => {
 };
 const DAY = 86_400_000;
 
-test("the span starts where Horizons' record starts and ends on 2035-01-01", () => {
+test("the span starts where Horizons' record starts and ends on 2036-01-01", () => {
   assert.equal(new Date(ROADSTER.record.start).toISOString(), "2018-02-07T02:58:50.816Z");
-  assert.equal(new Date(ROADSTER.record.end).toISOString(), "2035-01-01T02:58:50.816Z");
+  assert.equal(new Date(ROADSTER.record.end).toISOString(), "2036-01-01T02:58:50.816Z");
   assert.equal(ROADSTER_ACCURACY.from, ROADSTER.record.start);
   assert.equal(ROADSTER_ACCURACY.to, ROADSTER.record.end);
   assert.equal(ROADSTER.launch, Date.UTC(2018, 1, 6, 20, 45));
@@ -202,6 +202,19 @@ test("the close approach to Mars in October 2020 is Horizons' own: the date to a
   assert.ok(Math.abs(october.distanceKm / AU_KM - 0.049505) < 0.0005, `${(october.distanceKm / AU_KM).toFixed(6)} au`);
 });
 
+test("the close approach to Mars in April 2035 is Horizons' own too: the date to a few minutes and the distance to a fraction of a per cent", () => {
+  // Horizons' table of the object's encounters (read 2026-11-11): 2035 Apr 22.35485 TDB, Mars, 0.015980 au
+  const horizonsDate = utcOf(2_464_439.5 + 0.35485);
+  const april = roadsterApproaches("mars").find((a) => Math.abs(a.date - horizonsDate) < 2 * DAY)!;
+  assert.ok(april !== undefined, "the 2035 pass is inside the span");
+  assert.ok(Math.abs(april.date - horizonsDate) < 10 * 60_000, `${new Date(april.date).toISOString()} against ${new Date(horizonsDate).toISOString()}`);
+  assert.ok(Math.abs(april.distanceKm / AU_KM - 0.01598) < 0.00015, `${(april.distanceKm / AU_KM).toFixed(6)} au`);
+  console.log(`roadster: Mars 2035 at ${new Date(april.date).toISOString()}, ${(april.distanceKm / AU_KM).toFixed(6)} au; Horizons 2035 Apr 22.35485 TDB, 0.015980 au`);
+  // and the car's position there, against Horizons' vector from Mars at the moment found
+  const row = fixture.approachMars[fixture.approachTimes.mars.length - 1]!;
+  assert.ok(Math.abs(april.distanceKm - Math.hypot(row[1]!, row[2]!, row[3]!)) < 6000);
+});
+
 test("the stats name the closest approaches before and after a moment, inside the span", () => {
   const mid = Date.UTC(2026, 10, 11);
   const stats = roadsterStats(mid);
@@ -265,7 +278,7 @@ test("the series gives the distances and the speed at equal steps, equal to the 
 
 test("a date outside the span throws a RangeError that names the span; the ends themselves are inside", () => {
   for (const fn of [roadsterPosition, roadsterPositionAu, roadsterVelocity, roadsterSpeed, roadsterElements, roadsterStats]) {
-    assert.throws(() => fn(ROADSTER.record.start - 60_000), (e: Error) => e instanceof RangeError && /2018-02-07T02:58:50.816Z/.test(e.message) && /2035-01-01T02:58:50.816Z/.test(e.message));
+    assert.throws(() => fn(ROADSTER.record.start - 60_000), (e: Error) => e instanceof RangeError && /2018-02-07T02:58:50.816Z/.test(e.message) && /2036-01-01T02:58:50.816Z/.test(e.message));
     assert.throws(() => fn(ROADSTER.record.end + 60_000), RangeError);
     assert.throws(() => fn(Date.UTC(2018, 1, 6, 21)), RangeError, "the launch itself is before the record");
     assert.throws(() => fn(Number.NaN), RangeError);
@@ -284,8 +297,8 @@ test("the table is a chunk of its own: no other entry point of the package carri
     const result = await build({ stdin: { contents, resolveDir: root, loader: "ts" }, bundle: true, format: "esm", minify: true, write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
     return result.outputFiles.map((file) => file.text).join("");
   };
-  // the first row's x and the last row's y, which appear only in the table
-  const marks = ["109705979", "9990610"];
+  // the first and the last row's x, which appear only in the table
+  const marks = ["109705979", "215420683"];
   const roadster = await bundle(`export * from "./src/roadster.ts";`);
   for (const mark of marks) assert.ok(roadster.includes(mark), `the /roadster bundle holds the table (${mark})`);
   for (const entry of ["./src/index.ts", "./src/space/index.ts", "./src/spacecraft.ts", "./src/nearest.ts", "./src/element.ts", "./src/space/element.ts"]) {

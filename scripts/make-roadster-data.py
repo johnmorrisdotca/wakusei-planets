@@ -3,14 +3,14 @@
 (https://ssd.jpl.nasa.gov/api/horizons.api, VECTORS, centre the Sun 500@10, ecliptic and equinox J2000, km and km/s, TDB), as a table of state vectors that src/roadster.ts
 joins with cubic Hermite interpolation on position and velocity.
 
-The table starts where Horizons' record starts (2018-02-07 03:00 TDB) and ends at END (2035-01-01 03:00 TDB). Rows are 2 hours apart for the first day (the car is still
+The table starts where Horizons' record starts (2018-02-07 03:00 TDB) and ends at END (2036-01-01 03:00 TDB). Rows are 2 hours apart for the first day (the car is still
 near the Earth and the Earth's pull bends its path), a day apart from day 1 to day 10, then STEP days apart (the largest step, tried from 5 days up, whose worst interpolation error against
-the daily record, an hourly record of the first 13 days and an hourly record round the Mars pass of October 2020 stays under LIMIT_KM). Positions are rounded to whole
+the daily record, an hourly record of the first 13 days and an hourly record round each of the Mars passes of October 2020 and April 2035 stays under LIMIT_KM). Positions are rounded to whole
 kilometres and velocities to 1e-5 km/s. Afterwards the script fetches, for the test fixture, the state at times that are on no row from the Sun, the Earth and Mars, and Horizons' own
 osculating elements at the same times; with --approaches FILE (a JSON list of Julian dates, TDB) it adds the Earth- and Mars-centred states at those times too.
 
 Usage: python3 -I scripts/make-roadster-data.py [--cache DIR] [--approaches FILE]   (needs the network; one request at a time with a pause between them, stops on any error;
---cache keeps every answer so a stopped run resumes without asking again. A full run asks Horizons for 8 answers, 10 with --approaches.)"""
+--cache keeps every answer so a stopped run resumes without asking again. A full run asks Horizons for 9 answers, 10 with --approaches.)"""
 import json, math, os, re, sys, time, urllib.parse, urllib.request, hashlib
 
 SOURCE = "https://ssd.jpl.nasa.gov/api/horizons.api"
@@ -19,7 +19,7 @@ PAUSE = 1.5
 LIMIT_KM = 1000.0
 SAFETY = 0.8  # the step chosen keeps the worst error under this share of the limit, so a moment between two rows of the record has room
 START = "2018-02-07 03:00"
-END = "2035-01-01 03:00"
+END = "2036-01-01 03:00"
 UNIX_EPOCH_JD = 2440587.5
 
 # Dates for the test fixture, read as TDB; none is on a table row.
@@ -115,7 +115,8 @@ def main():
     daily = hz.ask(TARGET, "500@10", start=START, stop=END, step="1 d")
     hourly_launch = hz.ask(TARGET, "500@10", start=START, stop="2018-02-20 03:00", step="1 h")
     hourly_mars = hz.ask(TARGET, "500@10", start="2020-09-25 03:00", stop="2020-10-20 03:00", step="1 h")
-    checks = [("the daily record", daily), ("the hourly record of the first 13 days", hourly_launch), ("the hourly record round the Mars pass", hourly_mars)]
+    hourly_2035 = hz.ask(TARGET, "500@10", start="2035-04-10 03:00", stop="2035-05-05 03:00", step="1 h")
+    checks = [("the daily record", daily), ("the hourly record of the first 13 days", hourly_launch), ("the hourly record round the Mars pass of 2020", hourly_mars), ("the hourly record round the Mars pass of 2035", hourly_2035)]
 
     chosen = None
     print("step  worst error in km (record)")
@@ -141,7 +142,7 @@ def main():
     body = ",\n".join("  " + ",".join(("%d" % v) if i < 4 else repr(v) for i, v in enumerate(flat[k:k + 7])) for k in range(0, len(flat), 7))
     ms = round((jd0 - UNIX_EPOCH_JD) * 86400000)
     out = f"""// Made by scripts/make-roadster-data.py from JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api): the Tesla Roadster (target {TARGET}, solution s11), centre the Sun, ecliptic and equinox J2000, TDB (taken as terrestrial time), fetched 2026-11-11.
-// {len(nodes)} rows: rows 2 hours apart for the first day, a day apart from day 1 to day 10, then {step} days apart to the end; measured against Horizons' own record (every day of the span, every hour of the first 13 days and of 25 days round the Mars pass of October 2020), the Hermite interpolation of src/roadster.ts is within {round(worst)} km. Do not edit by hand.
+// {len(nodes)} rows: rows 2 hours apart for the first day, a day apart from day 1 to day 10, then {step} days apart to the end; measured against Horizons' own record (every day of the span, every hour of the first 13 days and of 25 days round each of the Mars passes of October 2020 and April 2035), the Hermite interpolation of src/roadster.ts is within {round(worst)} km. Do not edit by hand.
 /** Where the table starts: milliseconds since 1970 (TDB taken as terrestrial time) of its first row. */
 export const ROADSTER_START = {ms};
 /** The worst interpolation error against Horizons' own record, in kilometres, as measured when the table was made. */
