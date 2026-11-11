@@ -144,7 +144,7 @@ test("going to a body glides, ends at its middle with it whole in view, and the 
   await openSpace(page);
   await callOn(page, "goTo", "jupiter");
   await centred(page, "jupiter");
-  await expect(page.locator("#hop-prev-name")).toHaveText("Ceres");
+  await expect(page.locator("#hop-prev-name")).toHaveText("Pallas");
   await expect(page.locator("#hop-next-name")).toHaveText("Io");
   await page.locator("#hop-next").dispatchEvent("click");
   await centred(page, "io");

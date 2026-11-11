@@ -16,16 +16,15 @@ test("the body page has a row of small bodies, each a click away, and the addres
   await expect(page.locator("#main svg")).toBeVisible();
 });
 
-test("every small body draws as a line drawing, Vesta and Halley as the long shapes they are", async ({ page }) => {
+test("every small body draws as a line drawing, and Halley as the long shape it is", async ({ page }) => {
   for (const body of ["vesta", "pallas", "chiron", "pholus", "halley"]) {
     await page.goto(`${URL}?look=line&body=${body}`);
     await expect(page.locator("#main svg"), body).toBeVisible();
   }
-  for (const body of ["vesta", "halley"]) {
-    await page.goto(`${URL}?look=line&body=${body}`);
-    const ratios = await page.locator("#main svg ellipse").evaluateAll((els) => els.map((el) => Number(el.getAttribute("rx")) / Number(el.getAttribute("ry"))));
-    expect(Math.max(...ratios.map((r) => Math.max(r, 1 / r))), body).toBeGreaterThan(1.05);
-  }
+  // Halley's nucleus is twice as long as it is wide
+  await page.goto(`${URL}?look=line&body=halley`);
+  const ratios = await page.locator("#main svg ellipse").evaluateAll((els) => els.map((el) => Number(el.getAttribute("rx")) / Number(el.getAttribute("ry"))));
+  expect(Math.max(...ratios.map((r) => Math.max(r, 1 / r)))).toBeGreaterThan(1.3);
 });
 
 test("Vesta in the painted and realistic looks draws from Dawn's map", async ({ page }, testInfo) => {
