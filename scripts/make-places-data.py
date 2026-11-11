@@ -33,8 +33,8 @@ TYPE_WORDS = {
     "Fossa, fossae": ("trough", "溝"), "Labes, labēs": ("landslide", "地すべり"), "Labyrinthus, labyrinthi": ("labyrinth", "迷路地形"), "Lacus, lacūs": ("lake", "湖"), "Landing site name": ("landing site", "着陸地点"),
     "Lingula, lingulae": ("lobe", "舌状地形"), "Mare, maria": ("sea", "海"), "Mensa, mensae": ("mesa", "台地"), "Mons, montes": ("mountain", "山"), "Oceanus, oceani": ("ocean", "大洋"),
     "Palus, paludes": ("marsh", "沼"), "Patera, paterae": ("patera", "パテラ"), "Planitia, planitiae": ("plain", "平原"), "Planum, plana": ("plateau", "高原"), "Promontorium, promontoria": ("cape", "岬"),
-    "Rima, rimae": ("rille", "谷筋"), "Rupes, rupēs": ("scarp", "崖"), "Scopulus, scopuli": ("scarp", "崖"), "Serpens, serpentes": ("serpent", "蛇行地形"), "Sinus, sinūs": ("bay", "入り江"),
-    "Sulcus, sulci": ("furrows", "溝状地形"), "Terra, terrae": ("land", "大陸"), "Tholus, tholi": ("dome", "ドーム"), "Undae, undae": ("dunes", "砂丘"), "Vallis, valles": ("valley", "谷"), "Vastitas, vastitates": ("lowland", "低地"),
+    "Rima, rimae": ("rille", "リル"), "Rupes, rupēs": ("scarp", "崖"), "Scopulus, scopuli": ("scarp", "崖"), "Serpens, serpentes": ("serpent", "蛇行地形"), "Sinus, sinūs": ("bay", "入り江"),
+    "Sulcus, sulci": ("furrows", "溝状地形"), "Terra, terrae": ("land", "大陸"), "Tholus, tholi": ("dome", "ドーム"), "Unda, undae": ("dunes", "砂丘"), "Macula, maculae": ("spot", "斑"), "Astronaut-named features": ("feature named for an astronaut", "宇宙飛行士にちなんだ地形"), "Statio": ("landing site", "着陸地点"), "Vallis, valles": ("valley", "谷"), "Vastitas, vastitates": ("lowland", "低地"),
 }
 # The names a page shows for GCAT's technical object names, from the catalogue's own comments, pieces and site names (the lunar module of Apollo 11 is "LM 5 DS" there); anything else keeps GCAT's name
 DISPLAY = {
@@ -56,10 +56,10 @@ JA_NAMES = {
     "Luna 2": "ルナ2号", "Luna 9": "ルナ9号", "Luna 13": "ルナ13号", "Luna 16": "ルナ16号", "Luna 17": "ルナ17号", "Luna 20": "ルナ20号", "Luna 21": "ルナ21号", "Luna 23": "ルナ23号", "Luna 24": "ルナ24号", "Lunokhod 1": "ルノホート1号", "Lunokhod 2": "ルノホート2号",
     "Surveyor 1": "サーベイヤー1号", "Surveyor 3": "サーベイヤー3号", "Surveyor 5": "サーベイヤー5号", "Surveyor 6": "サーベイヤー6号", "Surveyor 7": "サーベイヤー7号",
     "Chang'e 3": "嫦娥3号", "Chang'e 4": "嫦娥4号", "Chang'e 5 lander": "嫦娥5号 着陸機", "Chang'e 6 lander": "嫦娥6号 着陸機", "Yutu": "玉兎号", "Yutu-2": "玉兎2号", "Chandrayaan-3 (Vikram)": "チャンドラヤーン3号 (ヴィクラム)", "Pragyan": "プラギャン", "SLIM": "SLIM",
-    "IM-1 Odysseus": "IM-1 オデュッセウス", "IM-2 Athena": "IM-2 アテナ", "Blue Ghost 1": "ブルーゴースト1号",
+    "IM-1 Odysseus": "IM-1 オデュッセウス", "IM-2 Athena": "IM-2 アテナ", "Blue Ghost 1": "ブルーゴースト ミッション1",
     "Mars 2 lander": "マルス2号 着陸機", "Mars 3 lander": "マルス3号 着陸機", "Mars 6 lander": "マルス6号 着陸機", "Viking 1": "バイキング1号", "Viking 2": "バイキング2号", "Mars Pathfinder": "マーズ・パスファインダー", "Sojourner": "ソジャーナ",
     "Spirit's lander": "スピリットの着陸機", "Spirit": "スピリット", "Opportunity's lander": "オポチュニティの着陸機", "Opportunity": "オポチュニティ", "Phoenix": "フェニックス",
-    "Curiosity's descent stage": "キュリオシティの降下ステージ", "Curiosity": "キュリオシティ", "InSight": "インサイト", "Perseverance's descent stage": "パーサヴィアランスの降下ステージ", "Perseverance": "パーサヴィアランス",
+    "Curiosity's descent stage": "キュリオシティの降下ステージ", "Curiosity": "キュリオシティ", "InSight": "インサイト", "Perseverance's descent stage": "パーシビアランスの降下ステージ", "Perseverance": "パーシビアランス",
     "Tianwen-1 lander": "天問1号 着陸機", "Zhurong": "祝融号",
 }
 
@@ -71,6 +71,7 @@ JA_NAMES.update({
     "Luna 5": "ルナ5号", "Luna 7": "ルナ7号", "Luna 8": "ルナ8号", "Luna 15": "ルナ15号", "Luna 18": "ルナ18号", "Luna 25": "ルナ25号",
     "Hiten": "ひてん", "Lunar Prospector": "ルナ・プロスペクター", "SMART-1": "スマート1号", "Chang'e-1": "嫦娥1号", "Okina": "おきな", "Kaguya": "かぐや", "B'reshit": "ベレシート", "Longjiang 2": "龍江2号",
     "Vikram": "ヴィクラム (チャンドラヤーン2号)", "Hakuto-R M1": "HAKUTO-R ミッション1", "Resilience": "レジリエンス", "Beagle 2": "ビーグル2", "Mars Polar Lander": "マーズ・ポーラー・ランダー",
+    "Intrepid": "インテピッド", "Antares": "アンタレス", "Falcon": "ファルコン", "Challenger": "チャレンジャー", "Apollo 16 Subsatellite": "アポロ16号 子衛星", "Chang'e-5 Shangsheng Qi": "嫦娥5号 上昇機", "Chang'e-6 Shangsheng Qi": "嫦娥6号 上昇機",
     "DS2 Scott Probe": "ディープ・スペース2 (スコット)", "DS2 Amundsen Probe": "ディープ・スペース2 (アムンゼン)", "Schiaparelli": "スキアパレッリ", "PROP-M": "PROP-M",
 })
 # GCAT's pieces that duplicate another record's place (the three pieces of Luna 15 hit one spot)
@@ -95,7 +96,7 @@ MOON_NSSDCA_ONLY = {
 DOUBTED = {"Luna 9"}
 CREWED = {"Apollo 11 lunar module", "Apollo 12 lunar module", "Apollo 14 lunar module", "Apollo 15 lunar module", "Apollo 16 lunar module", "Apollo 17 lunar module"}
 # Features below the crater floor that a page still wants: the famous small craters and the landing-site craters of Mars
-KEEP_ALWAYS = {"moon": {"Aristarchus", "Kepler", "Eratosthenes", "Shackleton", "Linné", "Cabeus"}, "mars": {"Jezero", "Eberswalde", "Holden", "Endeavour", "Victoria", "Santa Maria", "Eagle", "Endurance"}}
+KEEP_ALWAYS = {"moon": {"Aristarchus", "Kepler", "Eratosthenes", "Shackleton", "Cabeus"}, "mars": {"Jezero", "Eberswalde", "Holden", "Endeavour", "Victoria", "Santa Maria", "Eagle", "Endurance"}}
 # Mars: positions from NASA's own pages where GCAT's differs by more than a few hundredths of a degree and the page says which latitude it is (name shown: lat, lon east -180..180, source id, address)
 # Mars: every place has planetocentric latitude and east longitude. Each lander below takes one source (name shown: lat, east longitude 0-360, source id, the source's address or name, how the latitude stands):
 #   planetocentric: the source's own latitude is planetocentric (NSSDCA's Viking 1 page says so; ODE lists the radio-tracking solutions of the Mars Exploration Rovers and Folkner et al.'s Viking and Pathfinder positions, which are planetocentric)
@@ -142,6 +143,40 @@ def decimals_of(text):
     text = text.strip()
     return len(text.split(".")[1]) if "." in text else 0
 
+
+# Japanese names (ours, typed as facts) of the features a reader knows, by the Gazetteer's name; every other feature keeps its IAU Latin name as its Japanese name. A name left out is one not known well enough to write.
+JA_FEATURES = {
+    # the Moon: maria, lakes, bays, marshes, the ocean
+    "Mare Frigoris": "氷の海", "Mare Imbrium": "雨の海", "Mare Australe": "南の海", "Mare Tranquillitatis": "静かの海", "Mare Fecunditatis": "豊かの海", "Mare Nubium": "雲の海", "Mare Serenitatis": "晴れの海",
+    "Mare Crisium": "危難の海", "Mare Insularum": "島の海", "Mare Humorum": "湿りの海", "Mare Smythii": "スミス海", "Mare Marginis": "縁の海", "Mare Cognitum": "既知の海", "Mare Nectaris": "神酒の海",
+    "Mare Orientale": "東の海", "Mare Ingenii": "賢者の海", "Mare Moscoviense": "モスクワの海", "Mare Undarum": "波の海", "Mare Vaporum": "蒸気の海", "Mare Humboldtianum": "フンボルト海", "Mare Anguis": "蛇の海", "Mare Spumans": "泡の海",
+    "Oceanus Procellarum": "嵐の大洋",
+    "Lacus Somniorum": "夢の湖", "Lacus Veris": "春の湖", "Lacus Temporis": "時の湖", "Lacus Autumni": "秋の湖", "Lacus Mortis": "死の湖", "Lacus Timoris": "恐怖の湖", "Lacus Solitudinis": "孤独の湖",
+    "Lacus Felicitatis": "幸福の湖", "Lacus Gaudii": "歓喜の湖", "Lacus Aestatis": "夏の湖", "Lacus Spei": "希望の湖", "Lacus Odii": "憎しみの湖", "Lacus Oblivionis": "忘却の湖", "Lacus Hiemalis": "冬の湖",
+    "Sinus Aestuum": "暑さの入江", "Sinus Medii": "中央の入江", "Sinus Iridum": "虹の入江", "Sinus Roris": "露の入江", "Sinus Amoris": "愛の入江", "Sinus Successus": "成功の入江", "Sinus Honoris": "名誉の入江",
+    "Palus Epidemiarum": "疫病の沼", "Palus Putredinis": "腐敗の沼", "Palus Somni": "眠りの沼",
+    # the Moon: mountain ranges, valleys, mountains
+    "Montes Apenninus": "アペニン山脈", "Montes Alpes": "アルプス山脈", "Montes Caucasus": "コーカサス山脈", "Montes Carpatus": "カルパチア山脈", "Montes Jura": "ジュラ山脈", "Montes Haemus": "ハエムス山脈",
+    "Montes Pyrenaeus": "ピレネー山脈", "Montes Taurus": "タウルス山脈", "Montes Riphaeus": "リパエウス山脈", "Montes Cordillera": "コルディレラ山脈", "Montes Rook": "ルック山脈", "Montes Agricola": "アグリコラ山脈",
+    "Montes Archimedes": "アルキメデス山脈", "Montes Spitzbergen": "シュピッツベルゲン山脈", "Montes Teneriffe": "テネリフェ山脈", "Montes Secchi": "セッキ山脈", "Vallis Alpes": "アルプス谷", "Vallis Schröteri": "シュレーター谷",
+    "Vallis Rheita": "ライタ谷", "Vallis Snellius": "スネリウス谷", "Mons Hadley": "ハドレー山", "Mons Pico": "ピコ山", "Mons Piton": "ピトン山", "Mons Rümker": "リュムカー山", "Mons Huygens": "ホイヘンス山", "Mons Bradley": "ブラッドレー山",
+    # the Moon: craters a reader knows
+    "Tycho": "ティコ", "Copernicus": "コペルニクス", "Kepler": "ケプラー", "Aristarchus": "アリスタルコス", "Plato": "プラトン", "Clavius": "クラヴィウス", "Ptolemaeus": "プトレマイオス", "Archimedes": "アルキメデス",
+    "Eratosthenes": "エラトステネス", "Grimaldi": "グリマルディ", "Langrenus": "ラングレヌス", "Petavius": "ペタヴィウス", "Theophilus": "テオフィルス", "Shackleton": "シャクルトン", "Tsiolkovskiy": "ツィオルコフスキー",
+    "Hipparchus": "ヒッパルコス", "Pythagoras": "ピタゴラス", "Aristoteles": "アリストテレス", "Schickard": "シッカルト", "Gassendi": "ガッサンディ", "Bailly": "バイイ", "Maginus": "マギヌス", "Longomontanus": "ロンゴモンタヌス",
+    "Riccioli": "リッチョーリ", "Hertzsprung": "ヘルツシュプルング", "Korolev": "コロリョフ", "Gagarin": "ガガーリン", "Mendeleev": "メンデレーエフ", "Poincaré": "ポアンカレ", "Planck": "プランク", "Schrödinger": "シュレーディンガー",
+    "Apollo": "アポロ", "Einstein": "アインシュタイン", "Gauss": "ガウス", "Humboldt": "フンボルト", "Janssen": "ジャンセン", "Struve": "シュトルーベ", "Fermi": "フェルミ", "Pasteur": "パスツール", "Lorentz": "ローレンツ",
+    "Linné": "リンネ", "Cabeus": "カベウス", "Alphonsus": "アルフォンスス", "Arzachel": "アルザケル", "Posidonius": "ポセイドニオス", "Eudoxus": "エウドクソス", "Cassini": "カッシーニ", "Aristillus": "アリスティルス",
+    "Autolycus": "アウトリュコス", "Atlas": "アトラス", "Hercules": "ヘルクレス", "Endymion": "エンデュミオン", "Bullialdus": "ブリアルドゥス", "Herodotus": "ヘロドトス", "Vitruvius": "ウィトルウィウス", "Proclus": "プロクルス",
+    "Messier": "メシエ", "Albategnius": "アルバテグニウス", "Bessel": "ベッセル", "Manilius": "マニリウス", "Menelaus": "メネラウス", "Macrobius": "マクロビウス", "Fracastorius": "フラカストリウス", "Piccolomini": "ピッコロミニ",
+    "Copernicus H": "コペルニクスH", "Hevelius": "ヘヴェリウス", "Kästner": "ケストナー", "Langrenus": "ラングレヌス", "Vendelinus": "ウェンデリヌス", "Gruithuisen": "グルイテュイゼン", "Hausen": "ハウゼン",
+    # Mars
+    "Gale": "ゲール", "Jezero": "ジェゼロ", "Olympus Mons": "オリンポス山", "Valles Marineris": "マリネリス峡谷", "Hellas Planitia": "ヘラス平原", "Arsia Mons": "アルシア山", "Pavonis Mons": "パヴォニス山", "Ascraeus Mons": "アスクレウス山",
+    "Elysium Mons": "エリシウム山", "Elysium Planitia": "エリシウム平原", "Alba Mons": "アルバ山", "Utopia Planitia": "ユートピア平原", "Argyre Planitia": "アルギュレ平原", "Syrtis Major Planum": "大シルチス", "Gusev": "グセフ",
+    "Meridiani Planum": "メリディアニ平原", "Chryse Planitia": "クリュセ平原", "Isidis Planitia": "イシディス平原", "Noctis Labyrinthus": "ノクティス迷宮", "Schiaparelli": "スキアパレッリ", "Huygens": "ホイヘンス",
+    "Acidalia Planitia": "アシダリア平原", "Amazonis Planitia": "アマゾニス平原", "Arcadia Planitia": "アルカディア平原", "Solis Planum": "ソリス平原", "Lunae Planum": "ルナエ平原", "Hesperia Planum": "ヘスペリア平原",
+    "Tharsis Tholus": "タルシス・トルス", "Ares Vallis": "アレス谷",
+}
 
 def read_dbf(raw):
     n = struct.unpack("<I", raw[4:8])[0]
@@ -193,7 +228,7 @@ def features_of(body, cache):
         out.append({
             "id": f"{body}/{re.sub(r'[^a-z0-9]+', '-', row['clean_name'].lower()).strip('-')}",
             "kind": "feature",
-            "name": {"en": row["name"], "ja": row["name"]},
+            "name": {"en": row["name"], "ja": JA_FEATURES.get(row["name"], row["name"])},
             "lat": round(float(row["center_lat"]), 4), "lon": round(east180(row["center_lon"]), 4),
             "feature": {"type": kind, "typeWord": {"en": words[0], "ja": words[1]}, "diameterKm": round(diameter, 2), "approved": row["approvaldt"][:10].replace("/", "-")},
             "source": {"id": "iau-gazetteer", "read": stamp},

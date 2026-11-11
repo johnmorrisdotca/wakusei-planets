@@ -130,6 +130,30 @@ test("the famous places are where the sources put them: Apollo 11 at Tranquility
   assert.ok(Math.abs(placeDistanceKm("mars", { lat: 0, lon: 0 }, { lat: 0, lon: 90 }) - (Math.PI / 2) * 3396.19) < 1, "a quarter of Mars's equator");
 });
 
+test("features with a Japanese name are found by it and by the Latin one; the rest keep the IAU's Latin name", () => {
+  const tranquility = findPlace(moon, "静かの海")!;
+  assert.equal(tranquility.id, "moon/mare-tranquillitatis");
+  assert.equal(findPlace(moon, "Mare Tranquillitatis"), tranquility);
+  assert.equal(findPlace(moon, "mare tranquillitatis"), tranquility);
+  assert.equal(findPlace(mars, "オリンポス山")!.name.en, "Olympus Mons");
+  assert.equal(findPlace(mars, "Olympus Mons")!.name.ja, "オリンポス山");
+  assert.equal(findPlace(moon, "嵐の大洋")!.name.en, "Oceanus Procellarum");
+  assert.equal(findPlace(moon, "アルプス谷")!.name.en, "Vallis Alpes");
+  assert.equal(findPlace(moon, "ティコ")!.name.en, "Tycho");
+  assert.equal(findPlace(mars, "マリネリス峡谷")!.name.en, "Valles Marineris");
+  assert.equal(findPlace(mars, "ヘラス平原")!.kind, "feature");
+  // every mare has its usual Japanese name
+  for (const mare of moon.filter((p) => p.feature?.type === "Mare, maria")) assert.notEqual(mare.name.ja, mare.name.en, mare.name.en);
+  // the named count
+  assert.equal(moon.filter((p) => p.kind === "feature" && p.name.ja !== p.name.en).length, 126);
+  assert.equal(mars.filter((p) => p.kind === "feature" && p.name.ja !== p.name.en).length, 38);
+  // a feature without a Japanese name has the Latin name for it, and every type has a Japanese word
+  assert.equal(findPlace(moon, "Lacus Excellentiae")!.name.ja, "Lacus Excellentiae");
+  for (const p of [...moon, ...mars]) if (p.kind === "feature") assert.ok(/[ぁ-んァ-ヶ一-龠]/.test(p.feature!.typeWord.ja), `${p.id}: ${p.feature!.typeWord.ja}`);
+  assert.equal(findPlace(moon, "Statio Tranquillitatis")!.feature!.typeWord.ja, "着陸地点");
+  assert.equal(findPlace(mars, "Perseverance")!.name.ja, "パーシビアランス");
+});
+
 test("places load by body on request, by kind, and an unknown body is refused", async () => {
   assert.equal((await loadPlaces("moon")).length, 858);
   assert.equal((await loadPlaces("mars")).length, 939);
