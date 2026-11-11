@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "asteroids", "data/asteroids"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "asteroids", "data/asteroids", "approaches", "data/approaches"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -110,3 +110,9 @@ const asteroids = await import(asteroidsEntry);
 const eros = asteroids.findAsteroid("Eros");
 const erosSun = Math.hypot(...(asteroids.asteroidPositionAu(eros, Date.UTC(2026, 5, 9)) as number[]));
 if (asteroids.ASTEROIDS.length !== 104 || eros.number !== 433 || erosSun < eros.elements.q || erosSun > eros.elements.a * (1 + eros.elements.e)) throw new Error("asteroids package entry failed");
+
+// The approaches through package resolution: the table loads with the entry point, Apophis passes the Earth on 2029-04-13 at about 0.000254 au, and the counts hold.
+const approachesEntry = "@johnmorrisdotca/wakusei-planets/approaches";
+const approaches = await import(approachesEntry);
+const apophis = approaches.nextApproach("Apophis", Date.UTC(2026, 10, 11));
+if (approaches.approachList().length !== 4183 || apophis === undefined || new Date(apophis.date).toISOString().slice(0, 10) !== "2029-04-13" || Math.abs(apophis.distanceAu - 0.000254091) > 1e-8) throw new Error("approaches package entry failed");
