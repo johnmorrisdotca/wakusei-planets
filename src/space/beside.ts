@@ -114,8 +114,13 @@ export function besideMoon(input: BesideInput): BesideCamera {
   // look between the two, and turn the picture so the planet is to the side of the moon, not above or below it
   const forward = unit(add(toMoon, toHost));
   const shift = minus(toHost, toMoon);
-  const across = unit(minus(shift, scale(forward, dot(shift, forward))));
-  const up = unit(cross(across, forward));
+  let across = unit(minus(shift, scale(forward, dot(shift, forward))));
+  let up = unit(cross(across, forward));
+  // the planet may be on either side of the moon, so the picture is turned the way that keeps north (the scene's +y) up: the Earth is never seen south-up from beside the Moon
+  if (up[1] < 0) {
+    up = scale(up, -1);
+    across = scale(across, -1);
+  }
   // both discs fit: the half-angle from the middle to the far edge of each, across and up
   const reach = Math.max(angleBetween(forward, toMoon) + moonHalf(position), angleBetween(forward, toHost) + hostHalf(position)) + 3;
   const half = Math.max(Math.tan(reach * RAD) / Math.min(1.6, Math.max(0.3, input.aspect)), Math.tan((moonHalf(position) + 3) * RAD));
