@@ -171,6 +171,11 @@
       "import": "./dist/roadster.js",
       "default": "./dist/roadster.js"
     },
+    "./orbiters": {
+      "types": "./dist/orbiters.d.ts",
+      "import": "./dist/orbiters.js",
+      "default": "./dist/orbiters.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",
