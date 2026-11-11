@@ -95,6 +95,23 @@ test("the path round one trip closes on itself, stays the ellipse's size, and pa
     assert.ok(Math.min(...radii) > elements.a * (1 - elements.e) - 1 && Math.max(...radii) < elements.a * (1 + elements.e) + 1, `${id}'s line is between periapsis and apoapsis`);
     const here = orbiterPosition(id, when);
     const nearest = Math.min(...path.map((p) => length([p[0] - here[0], p[1] - here[1], p[2] - here[2]])));
-    assert.ok(nearest < (2 * Math.PI * elements.a * (1 + elements.e)) / 96, `${id} sits on its line (${nearest.toFixed(0)} km from the nearest point)`);
+    assert.ok(nearest < 0.1 * elements.a, `${id} sits on its line (${nearest.toFixed(0)} km from the nearest point, of an orbit ${elements.a.toFixed(0)} km across)`);
+  }
+});
+
+test("the line of every orbit turns by a modest angle at each of its points, whatever the eccentricity", () => {
+  const when = Date.UTC(2026, 10, 11, 12);
+  for (const id of ORBITER_IDS) {
+    const elements = orbiterElements(id);
+    if (elements === undefined) continue;
+    const path = orbiterPath(id, when, 96);
+    let widest = 0;
+    for (let k = 0; k < 96; k += 1) {
+      const a = path[k]!;
+      const b = path[k + 1]!;
+      const angle = (Math.acos(Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (length(a) * length(b))))) * 180) / Math.PI;
+      widest = Math.max(widest, angle);
+    }
+    assert.ok(widest < 20, `${id} (e ${elements.e.toFixed(2)}): the line goes round the body by at most ${widest.toFixed(1)} degrees between two points`);
   }
 });
