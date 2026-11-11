@@ -43,6 +43,7 @@ Michroma (Vernon Adams, SIL Open Font License 1.1) is fetched once, 64 kB, from 
 
 - The name is lit as the body is: by the Sun, so a name on the night side is dark too (`light="lit"` on the space view lights it from your side, like the bodies).
 - A body drawn smaller than 24 CSS pixels in radius carries no name (`minRadiusPx` in `bodyLabel`), so the dwarf planets from afar, the small moons and the whole solar system are left plain, and a name comes as you zoom in. Saturn's rings sit outside the band; the Sun's name is drawn on its disc, fully lit.
+- On the space view a body that carries its drawn name gives its floating name and dot up: they fade out (at once under reduced motion) and fade back when the body shrinks below the size above. `labels-always` keeps both.
 - A name written once is on the far side half the time: `body-label-repeat="both"` keeps one in view, or `body-label-facing` keeps it turned to you.
 - Nothing is redrawn at rest, and a change of setting redraws the one texture the name is written on. `pnpm test:freeze` covers it.
 - `stats.label` on `<wakusei-body>`, and `stats.bodyLabels` on `<wakusei-space>` (how many are drawn and the one on the body looked at), say what is drawn now: its text, and its turn about the pole when it faces you.

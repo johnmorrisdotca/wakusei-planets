@@ -153,7 +153,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-label,.sp-ring{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
@@ -184,7 +184,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -236,6 +236,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.time = this.#clock.time;
     this.#model.mode = this.getAttribute("scale") === "compressed" ? "compressed" : "true";
     this.#model.labels = this.getAttribute("labels") !== "off";
+    this.#labelsAlways = this.hasAttribute("labels-always") && this.getAttribute("labels-always") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
@@ -319,6 +320,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "speed") this.speed = this.#readSpeed();
     else if (name === "scale") this.scale = value === "compressed" ? "compressed" : "true";
     else if (name === "labels") this.labels = value !== "off";
+    else if (name === "labels-always") this.labelsAlways = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
@@ -416,6 +418,19 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.labels = value;
     if (!value) for (const label of [...this.#pool.values(), ...this.#rings.values()]) label.hidden = true;
     this.#gate?.request();
+  }
+
+  #labelsAlways = false;
+  /**
+   * Keep a body's floating name and dot while its name is drawn on its globe (the attribute `labels-always`; off by default). Off, a body that carries its drawn name (`body-label` on, and the body at least 24 CSS pixels in
+   * radius) fades its floating name and dot out, and they fade back when it shrinks below that; bodies with no drawn name keep their floating names.
+   */
+  get labelsAlways(): boolean {
+    return this.#labelsAlways;
+  }
+  set labelsAlways(value: boolean) {
+    this.#labelsAlways = value;
+    if (this.#places) this.#placeLabels(this.#places);
   }
 
   get orbits(): boolean {
@@ -855,7 +870,7 @@ export class WakuseiSpace extends HTMLElement {
     const box = this.#labelBox;
     if (!box) return;
     const wanted: LabelBox[] = [];
-    const spots = new Map<string, { x: number; y: number; small: boolean }>();
+    const spots = new Map<string, { x: number; y: number; small: boolean; carried: boolean }>();
     const ids = [...new Set([...SPACE_BODIES, ...this.#pool.keys(), ...Object.keys(places)])];
     for (const id of ids) {
       let label = this.#pool.get(id);
@@ -883,8 +898,10 @@ export class WakuseiSpace extends HTMLElement {
       if (!at) continue;
       const x = Math.round(at.x + Math.max(4, Math.min(at.r, 40)));
       const y = Math.round(at.y - 8);
-      spots.set(id, { x, y, small: at.r < RING_BELOW_PX });
-      wanted.push({ id, x, y, width: this.#widthOf(label), height: 16, rank: this.#rank(id), size: at.r });
+      // a body that carries its drawn name gives its floating name up (it fades, and leaves its place to the others) unless the page keeps both
+      const carried = at.named === true && !this.#labelsAlways;
+      spots.set(id, { x, y, small: at.r < RING_BELOW_PX, carried });
+      if (!carried) wanted.push({ id, x, y, width: this.#widthOf(label), height: 16, rank: this.#rank(id), size: at.r });
     }
     // no two names overlap: a moon gives way to its planet and a planet to the Sun
     const shown = chooseLabels(wanted);
@@ -893,12 +910,18 @@ export class WakuseiSpace extends HTMLElement {
       const ring = this.#rings.get(id);
       if (!label || !ring) continue;
       const spot = spots.get(id);
-      if (!spot || !shown.has(id)) {
+      if (!spot || (!spot.carried && !shown.has(id))) {
         if (!label.hidden) label.hidden = true;
         if (!ring.hidden) ring.hidden = true;
         continue;
       }
       if (label.hidden) label.hidden = false;
+      if (label.hasAttribute("data-carried") !== spot.carried) {
+        label.toggleAttribute("data-carried", spot.carried);
+        ring.toggleAttribute("data-carried", spot.carried);
+        label.setAttribute("aria-hidden", String(spot.carried));
+        label.tabIndex = spot.carried ? -1 : 0;
+      }
       label.style.transform = `translate(${spot.x}px,${spot.y}px)`;
       // a body too small to see is marked: a ring round the place it is, as well as its name
       if (ring.hidden === spot.small) ring.hidden = !spot.small;

@@ -66,7 +66,7 @@ No two names overlap: when the boxes of two names would cross, the one that matt
 
 A planet's nearer moons appear round it once the planet is a few pixels across, at the places the package's moon models give (`zoomFor("jupiter-moons")`). The paths of the Earth and the planets round the Sun, and the Moon's path round the Earth, are drawn unless `orbits="off"`. Every line goes through the same mapping as the bodies, so each body lies on its own line in both scales; `stats.orbits` says which lines were drawn and how far each body is from its own, as a fraction of the line's radius (under 0.01 for a body on its line). The Moon's line is one sidereal month from the Moon's own place and is worked out again every few days of the clock; `moonOrbit(ms)` gives its points.
 
-`body-label="painted"` writes each body's name on its own globe as well, turning with it, in the page's language: the looks, how many, where and the font are in [A name on the body](name-on-the-body.md). A body too small on the screen carries none.
+`body-label="painted"` writes each body's name on its own globe as well, turning with it, in the page's language: the looks, how many, where and the font are in [A name on the body](name-on-the-body.md). A body too small on the screen carries none. While a body carries its drawn name its floating name and dot fade out and leave their place to the others, and fade back when it is small again; `labels-always` keeps both.
 
 ## Every body
 
