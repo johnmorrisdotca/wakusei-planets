@@ -16,6 +16,7 @@ import bisect, datetime, hashlib, json, math, os, random, re, sys, time, urllib.
 SOURCE = "https://ssd.jpl.nasa.gov/api/horizons.api"
 UNIX_EPOCH_JD = 2440587.5
 PAUSE = 1.2
+UA = {"User-Agent": "wakusei-planets-data-build/1.0 (john@johnmorris.ca)"}  # the Solar System Dynamics terms ask for a User-Agent naming the product, its version and a contact
 LIMIT_KM = 1000.0
 RELATIVE_LIMIT = 1e-6
 SPEED_LIMIT = float(os.environ.get('SPEED_LIMIT', '0.01'))
@@ -43,6 +44,15 @@ CRAFT = {
     "juno": ("-61", [("2011", "2016-06-01", 24), ("2016-06-01", "2029", 1)], 10, [("Earth", "399", "2013-10-09 19:21"), ("Jupiter", "599", "2016-07-05 02:47")], [("599", "2016-06-20", "2029")]),
     "parker": ("-96", [("2018", "2030", 6)], 10, [("Venus", "299", "2018-10-03 08:44"), ("Venus", "299", "2019-12-26 18:14"), ("Venus", "299", "2020-07-11 03:22"), ("Venus", "299", "2021-02-20 08:19"), ("Venus", "299", "2021-10-16 07:04"), ("Venus", "299", "2023-08-21 14:54"), ("Venus", "299", "2024-11-06 03:46")], []),
     "webb": ("-170", [("2021", "2032", 24)], 10, [], []),
+    # the deep-space craft added 2026-11-11 (flyby dates are only where to look: the closest approach is found from Horizons within 3 days of them)
+    "bepicolombo": ("-121", [("2018", "2028", 24)], 10, [("Earth", "399", "2020-04-10 04:25"), ("Venus", "299", "2020-10-15 03:58"), ("Venus", "299", "2021-08-10 13:51"), ("Mercury", "199", "2021-10-01 23:34"), ("Mercury", "199", "2022-06-23 09:44"), ("Mercury", "199", "2023-06-19 18:34"), ("Mercury", "199", "2024-09-04 21:48"), ("Mercury", "199", "2024-12-02 00:00"), ("Mercury", "199", "2025-01-08 05:59")], []),
+    "psyche": ("-255", [("2023", "2030", 24)], 10, [("Mars", "499", "2026-05-15 19:00")], []),
+    "europaclipper": ("-159", [("2024", "2035", 24)], 10, [("Mars", "499", "2025-03-01 17:00"), ("Earth", "399", "2026-12-03 12:00")], []),
+    "lucy": ("-49", [("2021", "2034", 24)], 10, [("Earth", "399", "2022-10-16 06:00"), ("Dinkinesh", "152830;", "2023-11-01 17:00"), ("Earth", "399", "2024-12-12 12:00"), ("Donaldjohanson", "52246;", "2025-04-20 12:00"), ("Eurybates", "3548;", "2027-08-12 12:00"), ("Polymele", "15094;", "2027-09-15 12:00"), ("Leucus", "11351;", "2028-04-18 12:00"), ("Orus", "21900;", "2028-11-11 12:00"), ("Patroclus", "617;", "2033-03-02 12:00")], []),
+    "juice": ("-28", [("2023", "2032", 24)], 10, [("Moon", "301", "2024-08-19 21:16"), ("Earth", "399", "2024-08-20 21:57"), ("Venus", "299", "2025-08-31 04:00"), ("Earth", "399", "2026-09-29 12:00"), ("Earth", "399", "2029-01-18 12:00")], []),
+    "hayabusa2": ("-37", [("2014", "2028", 24)], 10, [("Earth", "399", "2015-12-03 10:08"), ("Earth", "399", "2020-12-06 06:00")], []),
+    "osirisapex": ("-64", [("2016", "2031", 24)], 10, [("Earth", "399", "2017-09-22 16:52"), ("Earth", "399", "2023-09-24 15:00")], []),
+    "solarorbiter": ("-144", [("2020", "2031", 12)], 10, [("Venus", "299", "2020-12-27 12:00"), ("Venus", "299", "2021-08-09 12:00"), ("Earth", "399", "2021-11-27 12:00"), ("Venus", "299", "2022-09-04 12:00"), ("Venus", "299", "2025-02-18 12:00"), ("Venus", "299", "2026-12-24 12:00"), ("Venus", "299", "2030-09-03 03:00")], []),
 }
 
 JD0 = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
@@ -85,7 +95,7 @@ class Horizons:
         wait = PAUSE - (time.time() - self.last)
         if wait > 0:
             time.sleep(wait)
-        text = json.load(urllib.request.urlopen(SOURCE + "?" + query, timeout=300)).get("result", "")
+        text = json.load(urllib.request.urlopen(urllib.request.Request(SOURCE + "?" + query, headers=UA), timeout=300)).get("result", "")
         self.last = time.time()
         self.requests += 1
         if "$$SOE" not in text:
@@ -113,7 +123,7 @@ class Horizons:
                 wait = PAUSE - (time.time() - self.last)
                 if wait > 0:
                     time.sleep(wait)
-                text = json.load(urllib.request.urlopen(SOURCE + "?" + query, timeout=120)).get("result", "")
+                text = json.load(urllib.request.urlopen(urllib.request.Request(SOURCE + "?" + query, headers=UA), timeout=120)).get("result", "")
                 self.last = time.time()
                 if path:
                     open(path, "w").write(text)
@@ -414,6 +424,10 @@ def build(horizons, name, spec, log):
             S.add(horizons.ask(code, "500@10", start=start, stop=stop, step=steps))
         S.index = {t: i for i, t in enumerate(S.t)}
         kept = {t: s for t, s in kept.items() if not any(s["a_t"] <= hi and lo <= s["b_t"] for lo, hi in ranges)}
+    for i in sorted(jumps(S)):
+        dt = (S.t[i] - S.t[i - 1]) * 86400
+        guess = [S.p[i - 1][k] + dt * (S.v[i - 1][k] + S.v[i][k]) / 2 for k in range(3)]
+        log(f"  join {name} JD {S.t[i]:.6f} = {to_iso(S.t[i])}: {math.dist(guess, S.p[i]):.0f} km")
     return S, segments, first, last, windows
 
 
@@ -432,16 +446,23 @@ def flybys_of(horizons, name, first, last):
     out = []
     for label, body, when in CRAFT[name][3]:
         centre = to_jd(when)
-        rows = relative(horizons, CRAFT[name][0], body, start=centre - 1.5, stop=centre + 1.5, step=4320)
+        rows = relative(horizons, CRAFT[name][0], body, start=centre - 3.0, stop=centre + 3.0, step=4320)
         ranges = [math.hypot(*r[1:4]) for r in rows]
         k = min(max(ranges.index(min(ranges)), 1), len(rows) - 2)
+        if ranges.index(min(ranges)) in (0, len(rows) - 1):
+            raise SystemExit(f"{name}: the closest approach to {label} is at the edge of the window round {when}: the date given is more than 3 days out")
         a0, a1, a2 = ranges[k - 1], ranges[k], ranges[k + 1]
         jd = rows[k][0] + 0.5 * (a0 - a2) / (a0 - 2 * a1 + a2) * (rows[k + 1][0] - rows[k][0])
         seen = relative(horizons, CRAFT[name][0], body, times=[jd])[0]
         craft = horizons.ask(CRAFT[name][0], "500@10", times=[jd])[0]
         state = [0] + [c - r for c, r in zip(craft[1:7], seen[1:7])]
+        print(f"  flyby {name} {label}: closest approach JD {jd:.5f} = {to_iso(jd)} UTC-ish, {math.hypot(*seen[1:4]):.0f} km from the centre", flush=True)
         out.append({"craft": name, "body": label, "horizons": body, "jd": round(jd, 7), "distanceKm": round(math.hypot(*seen[1:4])), "bodyState": [round(v, 3) for v in state[1:7]], "inRecord": first <= jd <= last})
     return out
+
+
+def to_iso(jd):
+    return (JD0 + datetime.timedelta(days=jd - UNIX_EPOCH_JD)).strftime("%Y-%m-%d %H:%M")
 
 
 def evaluate(table, jd):
@@ -534,13 +555,13 @@ def main():
         fixture["craft"][name] = [[round(r[0], 7)] + [round(v, 3) for v in r[1:7]] for r in pick]
         write_table(name, table, first, last, report[name])
         fixture["flybys"] += flybys_of(horizons, name, first, last)
-    path = "test/data/spacecraft-horizons.json"
-    old = json.load(open(path)) if os.path.exists(path) and chosen else {"craft": {}, "flybys": []}
-    old["craft"].update(fixture["craft"])
-    old["flybys"] = [f for f in old["flybys"] if f["craft"] not in names] + fixture["flybys"]
-    fixture.update({"craft": old["craft"], "flybys": old["flybys"]})
-    json.dump(fixture, open(path, "w"), indent=None, separators=(",", ":"))
-    log(f"wrote {path}; {horizons.requests} requests")
+        # the fixture is written after each craft, so a stopped run keeps what it has done
+        path = "test/data/spacecraft-horizons.json"
+        old = json.load(open(path)) if os.path.exists(path) and chosen else {"craft": {}, "flybys": []}
+        old["craft"].update(fixture["craft"])
+        old["flybys"] = [f for f in old["flybys"] if f["craft"] not in names] + fixture["flybys"]
+        json.dump({**fixture, "craft": old["craft"], "flybys": old["flybys"]}, open(path, "w"), indent=None, separators=(",", ":"))
+        log(f"wrote {path}; {horizons.requests} requests")
     json.dump(report, open(os.path.join(cache or ".", "spacecraft-report.json"), "w"), indent=1)
 
 
