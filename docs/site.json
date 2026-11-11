@@ -101,8 +101,8 @@
       "platform": "node"
     },
     "./spacecraft": {
-      "en": "Ten famous spacecraft (Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker Solar Probe, Webb): facts, events, and where each is at any date from launch to the end of its record",
-      "ja": "有名な探査機10機 (ボイジャー、ニュー・ホライズンズ、パイオニア、カッシーニ、ガリレオ、ジュノー、パーカー、ウェッブ): 情報、出来事、打ち上げから記録の終わりまでの任意の日の位置",
+      "en": "Eighteen spacecraft (Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker Solar Probe, Webb, BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX, Solar Orbiter): facts, events, and where each is at any date from launch to the end of its record",
+      "ja": "探査機18機 (ボイジャー、ニュー・ホライズンズ、パイオニア、カッシーニ、ガリレオ、ジュノー、パーカー、ウェッブ、ベピコロンボ、プシケ、エウロパ・クリッパー、ルーシー、ジュース、はやぶさ2、オシリス・エイペックス、ソーラー・オービター): 情報、出来事、打ち上げから記録の終わりまでの任意の日の位置",
       "platform": "node"
     },
     "./roadster": {
@@ -243,6 +243,11 @@
     "./asteroids": {
       "en": "104 asteroids, trojans, centaurs and trans-Neptunian objects from JPL's Small-Body Database: orbits, sizes, the spacecraft that visited them, and where each is on any date (about 18 kB gzipped)",
       "ja": "JPL の小天体データベースから、小惑星・トロヤ群・ケンタウルス族・太陽系外縁天体104個: 軌道、大きさ、訪れた探査機、任意の日の位置 (gzip で約18 kB)",
+      "platform": "node"
+    },
+    "./approaches": {
+      "en": "4,183 close approaches of near-Earth objects to the Earth (every one within 0.05 au from 2026 to 2036, and the close ones since 1900) from JPL: dates, distances, speeds, sizes, and searches (about 134 kB gzipped)",
+      "ja": "地球近傍天体の地球への接近4,183件 (2026年から2036年の 0.05 au 以内すべてと、1900年以降の近いもの) を JPL から: 日時、距離、速さ、大きさと検索 (gzip で約134 kB)",
       "platform": "node"
     }
   }

@@ -484,6 +484,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [TypeScript and Node](docs/guides/typescript-and-node.md) | Types and the pure side |
 | [How it works](docs/guides/how-it-works.md) | Where the numbers come from |
 | [Asteroids and distant small bodies](docs/guides/asteroids.md) | 104 asteroids, trojans, centaurs and trans-Neptunian objects: orbits, sizes, the spacecraft that visited them, and where each is on any date |
+| [Close approaches to the Earth](docs/guides/approaches.md) | 4,183 approaches of near-Earth objects: every one within 0.05 au from 2026 to 2036 and the close ones since 1900, with dates, distances, speeds and sizes |
 | [Architecture](docs/guides/architecture.md) | How the layers fit |
 | [Troubleshooting](docs/guides/troubleshooting.md) | Something does not appear |
 | [Upgrading](docs/guides/upgrading.md) | What to act on between versions |

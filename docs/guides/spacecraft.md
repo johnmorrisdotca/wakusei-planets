@@ -2,10 +2,10 @@
 title: Famous spacecraft
 section: how-to
 order: 17
-description: "Ten famous spacecraft, from Pioneer 10 to the Webb telescope: facts, the events of the voyage, and where each one is on any date, fitted to JPL Horizons. Each craft is a table of its own, 2 to 127 kB gzipped."
+description: "Eighteen spacecraft, from Pioneer 10 to Solar Orbiter: facts, the events of the voyage, and where each one is on any date, fitted to JPL Horizons. Each craft is a table of its own, 2 to 127 kB gzipped."
 ---
 
-`/spacecraft` answers two questions about ten famous craft: where is it on a date, and what happened on its voyage? The craft are Voyager 1 and 2, New Horizons, Pioneer 10 and 11, Cassini, Galileo, Juno, Parker Solar Probe and the James Webb Space Telescope. Each one's path is a table fitted to JPL Horizons over the whole of Horizons' own record of it, from about an hour after launch to the end of the mission (or, for a craft still flying, to the end of Horizons' predicted path). It runs anywhere, with no DOM and no three.js, and a craft's table loads only when you ask for it.
+`/spacecraft` answers two questions about eighteen craft: where is it on a date, and what happened on its voyage? The craft are Voyager 1 and 2, New Horizons, Pioneer 10 and 11, Cassini, Galileo, Juno, Parker Solar Probe and the James Webb Space Telescope, and eight from deep space (BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX, Solar Orbiter). Each one's path is a table fitted to JPL Horizons over the whole of Horizons' own record of it, from about an hour after launch to the end of the mission (or, for a craft still flying, to the end of Horizons' predicted path). It runs anywhere, with no DOM and no three.js, and a craft's table loads only when you ask for it.
 
 ```ts
 import { loadSpacecraft, SPACECRAFT, spacecraftLightTime, spacecraftPosition, spacecraftSpeed, spacecraftSunDistance } from "@johnmorrisdotca/wakusei-planets/spacecraft";
@@ -34,18 +34,36 @@ console.log("x, y, z in au:", spacecraftPosition("voyager1", day).map((km) => (k
 
 The record's first and last moments are the ones Horizons itself gives for each craft (`SPACECRAFT.<id>.record`, in milliseconds since 1970, UTC). A date outside it throws a `RangeError` that names the date and the record. The record starts about an hour after the launch, and its end for a craft still flying (and for Pioneer 10 and 11, whose contact ended) is Horizons' predicted path, so a date after today is a prediction.
 
-A craft that went round a planet needs far more numbers than one that flew by: Cassini went round Saturn nearly 300 times, and each pass close to the planet needs its own short pieces of the fit. The tables are separate files, and `loadSpacecraft()` with no arguments loads all of them (about 275 kB gzipped); a page that draws only Voyager 1 asks for `"voyager1"` and loads 3 kB.
+A craft that went round a planet needs far more numbers than one that flew by: Cassini went round Saturn nearly 300 times, and each pass close to the planet needs its own short pieces of the fit. The tables are separate files, and `loadSpacecraft()` with no arguments loads all of them (about 460 kB gzipped); a page that draws only Voyager 1 asks for `"voyager1"` and loads 3 kB.
+
+## Eight more craft, from deep space
+
+Eight more craft were added on 2026-11-11, each a table of its own made the same way: BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX (the OSIRIS-REx craft after its sample return) and Solar Orbiter. They carry the launch, the agency (ESA, JAXA or NASA), the status, the page of the mission and the flybys of planets and asteroids, and `spacecraftStats(id, when)` gives a craft's distance from the Sun and the Earth in kilometres and astronomical units with the light time, its speed relative to each, and the days since launch, as `roadsterStats` does for the car.
+
+| Id | Craft | Horizons' record | Table, gzipped |
+|---|---|---|---|
+| `bepicolombo` | BepiColombo | 2018-10-20 to 2027-04-11 | 107 kB |
+| `psyche` | Psyche | 2023-10-13 to 2029-02-24 | 3.2 kB |
+| `europaclipper` | Europa Clipper | 2024-10-14 to 2034-09-03 | 37 kB |
+| `lucy` | Lucy | 2021-10-16 to 2033-03-13 | 4.4 kB |
+| `juice` | JUICE | 2023-04-14 to 2031-07-21 | 4.4 kB |
+| `hayabusa2` | Hayabusa2 | 2014-12-03 to 2027-01-28 | 7.0 kB |
+| `osirisapex` | OSIRIS-APEX | 2016-09-08 to 2030-03-22 | 7.7 kB |
+| `solarorbiter` | Solar Orbiter | 2020-02-10 to 2030-11-20 | 11 kB |
+
+Each table is within 1,000 km of Horizons' own samples near a planet and within a millionth of the distance from the Sun elsewhere, measured the same way as the first ten (worst 850 km on samples held back and 830 km on fresh samples at random times; BepiColombo needs 918 short pieces, for its engine's thrust arcs and six passes of Mercury). A flyby's date is the day of the closest approach in Horizons' own path, tested against Horizons: where an agency's date differs by a day (JUICE's second Earth flyby, Lucy's Patroclus), the path's is the one given. Everything after today is Horizons' prediction. Two cautions about Horizons' record, both unconfirmed: the paths of Hayabusa2 (December 2020) and OSIRIS-APEX (September 2023) pass within 7,000 km of the Earth's centre at the dates their sample capsules came home, so near those dates the record may follow the capsule and not the craft; and Psyche's record steps by 1,968,170 km on 2027-03-01 where two solutions meet (listed in `joins`, like the others).
 
 ## What you can ask
 
 | Function | Gives |
 |---|---|
 | `SPACECRAFT` and `SPACECRAFT_IDS` | the facts of each craft: name in English and Japanese, launch date and site and vehicle, agency, end of mission, status, NASA's mission page, Horizons' number, the record and the voyage's events |
-| `loadSpacecraft(...ids)` | loads the tables (all ten when you pass none); call it once and wait |
+| `loadSpacecraft(...ids)` | loads the tables (all eighteen when you pass none); call it once and wait |
 | `spacecraftPosition(id, when)` | x, y, z in kilometres from the Sun, in the J2000 ecliptic frame (the axes of `heliocentric`, which is in astronomical units) |
 | `spacecraftVelocity(id, when)` and `spacecraftSpeed(id, when)` | the velocity in km/s relative to the Sun, and its length |
 | `spacecraftSunDistance(id, when)` and `spacecraftEarthDistance(id, when)` | the distance in kilometres from the Sun's centre and from the Earth's centre |
 | `spacecraftLightTime(id, when)` | seconds a radio signal takes from the Earth to the craft |
+| `spacecraftStats(id, when)` | distance from the Sun and the Earth (km, au, light time), speed relative to each, days since launch |
 | `spacecraftErrorKm(id)` | the worst error of the loaded path against Horizons, measured when it was made |
 
 `when` is a `Date` or milliseconds since 1970 (UTC), as everywhere in this package. A table that is not loaded throws an `Error` that says to call `loadSpacecraft`, an unknown craft or a date that is not a number throws a `RangeError`.
