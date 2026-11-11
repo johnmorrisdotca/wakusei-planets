@@ -375,25 +375,44 @@ test("the space view at rest: one WebGL context, one canvas, eleven bodies, and 
 test("pointing at bodies across the space view at rest lights their systems and draws nothing", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z`);
   await liveSky(page);
-  await sky(page).evaluate((el) => {
-    const space = el as unknown as { setView(v: unknown): void; zoomFor(p: string): number };
-    space.setView({ yaw: 0, tilt: 0, zoom: space.zoomFor("solar-system") });
-  });
-  await expect.poll(async () => sky(page).evaluate((el) => (el as unknown as { placeOf(id: string): { x: number } | null }).placeOf("jupiter") !== null), { timeout: 60_000 }).toBe(true);
-  await settle(page, 2500);
+  await drawn(page, () =>
+    sky(page).evaluate((el) => {
+      const space = el as unknown as { setView(v: unknown): void; zoomFor(p: string): number };
+      space.setView({ yaw: 0, tilt: 0, zoom: space.zoomFor("solar-system") });
+    }),
+  );
+  /** The draws once they hold: two reads 300 ms apart the same. */
+  const held = async (): Promise<number> => {
+    let last = -1;
+    await expect
+      .poll(
+        async () => {
+          const now = (await readCounts(page)).draws;
+          const same = now === last;
+          last = now;
+          return same;
+        },
+        { timeout: 30_000, intervals: [300] },
+      )
+      .toBe(true);
+    return last;
+  };
   const box = (await sky(page).boundingBox())!;
   const places = await sky(page).evaluate((el) => {
     const space = el as unknown as { placeOf(id: string): { x: number; y: number } | null; bodyList(): { id: string }[] };
     return space.bodyList().map(({ id }) => space.placeOf(id)).filter((at): at is { x: number; y: number } => at !== null && at.x > 0 && at.y > 0 && at.x < el.clientWidth && at.y < el.clientHeight);
   });
   expect(places.length).toBeGreaterThan(3);
-  const before = await readCounts(page);
+  await sky(page).evaluate((el) => {
+    Reflect.set(window, "__hovers", 0);
+    el.addEventListener("wakusei-body-hover", () => Reflect.set(window, "__hovers", (Reflect.get(window, "__hovers") as number) + 1));
+  });
+  const before = await held();
   for (const at of places.slice(0, 12)) await page.mouse.move(box.x + at.x, box.y + at.y, { steps: 4 });
   await page.mouse.move(box.x + 4, box.y + box.height - 4, { steps: 4 });
-  await settle(page, 1500);
-  const after = await readCounts(page);
-  expect(after.draws - before.draws).toBe(0);
-  expect(after.contexts).toBe(1);
+  expect(await held()).toBe(before);
+  expect(await page.evaluate(() => Reflect.get(window, "__hovers"))).toBeGreaterThan(0);
+  expect((await readCounts(page)).contexts).toBe(1);
 });
 
 test("zooming the space view from a millionth to its surface and back leaves contexts and graphics memory flat and draws nothing at rest", async ({ page }) => {

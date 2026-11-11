@@ -72,3 +72,17 @@ test("the page is told again when a body enters or leaves the view, changes edge
   const behind = { mars: sightOf({ front: false, x: 0, y: 0, r: 0, dx: 1, dy: 0 }, W, H) };
   assert.equal(sightChanged(at(1200), behind), true);
 });
+
+test("a line through a corner of the picture belongs to the top or the bottom edge, at the corner itself", () => {
+  const up = sightOf(ahead(1200, -300), W, H);
+  assert.equal(up.edge, "top");
+  assert.equal(up.x, W);
+  assert.equal(up.y, 0);
+  assert.equal(up.along, W);
+  const down = sightOf({ front: false, x: 0, y: 0, r: 0, dx: 4, dy: 3 }, W, H);
+  assert.equal(down.edge, "bottom");
+  assert.equal(down.x, W);
+  assert.equal(down.y, H);
+  assert.equal(down.along, W);
+  assert.equal(sightOf({ front: false, x: 0, y: 0, r: 0, dx: -4, dy: -3 }, W, H).edge, "top");
+});
