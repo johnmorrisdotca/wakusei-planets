@@ -14,6 +14,14 @@ import { add, cross, dot, length, RAD, scale, unit, type Vec3 } from "../vec.ts"
 export const BESIDE_RADII = 5.8;
 /** The angle off the line from the planet through the moon, in degrees, the camera first tries; it opens wider until the planet clears the moon. */
 const FIRST_ANGLE = 25;
+/**
+ * Inside this (the sine of about 20 degrees) of the Sun lying on the line from the planet through the moon, the camera's side is pushed towards the planet's north side, more the nearer the Sun is to the line (a cosine ramp), so the
+ * camera goes round over the top a little at a time rather than hopping to the Sun's other side. One moment is still sharp, as any rule from the Sun's place alone must have one: a Sun about 11 degrees south of the
+ * moon's orbit as the moon crosses the line; the moons of Jupiter, whose Sun is always within 3 degrees of their orbits, never meet it.
+ */
+const SIDE_BLEND = 0.35;
+/** Inside this (the sine of 10 degrees) of looking along the planet's pole, the up blends towards the scene's +y laid across the line of sight: there is little north left to lay. */
+const POLE_CONE = Math.sin(10 * RAD);
 
 /**
  * What `besideMoon` is asked: where the moon, the planet it goes round and the Sun are and how big the moon and the planet are (one unit for all), the shape of the view, and the shared controls' zoom, yaw and tilt.
@@ -40,6 +48,8 @@ export interface BesideInput {
   yaw: number;
   /** Degrees the camera opens further off that line (a drag down the view is 60). */
   tilt: number;
+  /** The planet's own north pole in the scene's axes (a unit vector): the picture's up is this laid across the line of sight. The scene's +y when not given. */
+  north?: Vec3;
 }
 
 /**
@@ -64,11 +74,14 @@ export interface BesideCamera {
 
 const angleBetween = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, dot(unit(a), unit(b))))) / RAD;
 const minus = (a: Vec3, b: Vec3): Vec3 => add(a, scale(b, -1));
+/** The part of `v` square to the unit vector `along`. */
+const across = (v: Vec3, along: Vec3): Vec3 => minus(v, scale(along, dot(v, along)));
 
 /**
  * The camera for a view from near a moon with its planet still in view: beyond the moon on the side away from the planet and a little off the line to it, so the moon is large in the foreground and the planet is behind it,
  * at the angular size it really has from there. The camera sits on the Sun's side of that line where it can, so the moon shows a lit face. It opens off the line, from 25 degrees, until the two discs no longer touch
- * (with 2 degrees to spare), turns the picture so the planet is to one side of the moon, and widens the field of view until both fit the view's narrower side.
+ * (with 2 degrees to spare), keeps the planet's own north pole up (laid across the line of sight, so the equator and any rings stay level whatever the date), and widens the field of view until both discs fit the view.
+ * Where the Sun lies near the line from the planet through the moon, the camera goes round over the planet's north side a little at a time, rather than hopping to the Sun's other side from one moment to the next.
  *
  * @param input - The places and sizes, the view's shape, and the zoom, yaw and tilt.
  * @returns The camera.
@@ -85,7 +98,13 @@ export function besideMoon(input: BesideInput): BesideCamera {
   const { moon, moonRadius, host, hostRadius } = input;
   const away = unit(minus(moon, host));
   const toSun = unit(minus(input.sun, moon));
-  let side: Vec3 = minus(toSun, scale(away, dot(toSun, away)));
+  const north = unit(input.north ?? [0, 1, 0]);
+  // the side the camera opens to: the Sun's, so the moon shows a lit face; as the moon crosses the line from the Sun through its planet that side swings round, the faster the nearer the Sun is to the line,
+  // so over the last degrees it is pushed towards the planet's north side and the camera goes round over the top a little at a time (the push is 0 at the edge of the band and 1 on the line)
+  let side: Vec3 = across(toSun, away);
+  const over = (1 - Math.cos((Math.PI * Math.max(0, SIDE_BLEND - length(side))) / SIDE_BLEND)) / 2;
+  const northSide = across(north, away);
+  if (over > 0 && length(northSide) > 1e-3) side = add(side, scale(unit(northSide), over));
   if (length(side) < 1e-3) side = cross(away, [0, 1, 0]);
   if (length(side) < 1e-3) side = cross(away, [1, 0, 0]);
   side = unit(side);
@@ -114,10 +133,16 @@ export function besideMoon(input: BesideInput): BesideCamera {
   // look between the two, and turn the picture so the planet is to the side of the moon, not above or below it
   const forward = unit(add(toMoon, toHost));
   const shift = minus(toHost, toMoon);
-  // north is up, always: the scene's +y (the planet's north, up in every other view) laid across the line of sight, so the picture is never rolled by where the Sun or the moon happens to be; only a camera
-  // looking straight along the pole has no north to lay, and takes the side the planet is on instead
-  let up: Vec3 = minus([0, 1, 0], scale(forward, forward[1]));
-  if (length(up) < 1e-6) up = cross(unit(minus(shift, scale(forward, dot(shift, forward)))), forward);
+  // north is up, always: the planet's own pole laid across the line of sight, so the picture is never rolled by where the Sun or the moon happens to be, and the planet's equator and rings stay level; a regular
+  // moon keeps the camera near the planet's equator, so the pole stays near square to the line of sight. A camera looking nearly along the pole (an odd inclined moon) has little north to lay, and blends to
+  // the scene's +y laid across; looking along both, it takes the side the planet is on
+  let up: Vec3 = across(north, forward);
+  const poleward = Math.max(0, POLE_CONE - length(up)) / POLE_CONE;
+  if (poleward > 0) {
+    const y = across([0, 1, 0], forward);
+    if (length(y) > 1e-6) up = add(up, scale(unit(y), poleward));
+  }
+  if (length(up) < 1e-6) up = cross(unit(across(shift, forward)), forward);
   up = unit(up);
   // both discs fit: the half-angle from the middle to the far edge of each, across and up
   // both discs fit, whichever way they lie now that north is up: the view must reach each disc's far edge across (over the aspect) and up, with a little room

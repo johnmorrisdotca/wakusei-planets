@@ -1,5 +1,7 @@
 // The view from beside the Moon (MODULES-854): the camera beyond the Moon and off the line to the Earth, so the Moon is large in the foreground and the Earth is in view behind it and never hidden by it, with a glide to it
 // and back. Chromium, drawing in software.
+import { orientation } from "../src/scene/orient.ts";
+import { dot, unit, type Vec3 } from "../src/vec.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, setOn, settle, SPACE, statsOf } from "./space-ui.ts";
 
@@ -73,20 +75,27 @@ test("the view from beside a moon is for a moon: a planet or a point of your own
   expect((await rideOf(page)).riding).toBe(false);
 });
 
-test("north is up beside a moon, whatever the date: the picture's up the page reports has north near 1 at four dates a quarter of the Moon's month apart, and beside Io and Titan", async ({ page }) => {
+test("north is up beside a moon, whatever the date: the up the page reports is the planet's own pole laid across its line of sight, at four dates a quarter of the Moon's month apart, and beside Io and Titan", async ({ page }) => {
   test.setTimeout(240_000);
-  const up = async (): Promise<number[]> => ((await statsOf(page)) as unknown as { camera: { up: number[] } }).camera.up;
+  /** How well the page's up agrees with the planet's north pole laid across the page's line of sight: the cosine between them, 1 when they are the same. */
+  const northUp = async (host: "earth" | "jupiter" | "saturn", when: number): Promise<number> => {
+    const { up, forward } = ((await statsOf(page)) as unknown as { camera: { up: Vec3; forward: Vec3 } }).camera;
+    const pole = orientation(host, when).pole;
+    const along = dot(pole, forward);
+    const laid = unit([pole[0] - forward[0] * along, pole[1] - forward[1] * along, pole[2] - forward[2] * along]);
+    return dot(laid, up);
+  };
   await openSpace(page, "t=2026-11-02T14:00Z&scale=true");
-  for (const [target, dates] of [
-    ["moon", [Date.UTC(2026, 10, 2, 14), Date.UTC(2026, 10, 9, 20), Date.UTC(2026, 10, 17, 2), Date.UTC(2026, 10, 24, 8)]],
-    ["io", [Date.UTC(2026, 10, 2, 14), Date.UTC(2026, 10, 3, 1)]],
-    ["titan", [Date.UTC(2026, 10, 2, 14), Date.UTC(2026, 10, 10, 14)]],
+  for (const [target, host, dates] of [
+    ["moon", "earth", [Date.UTC(2026, 10, 2, 14), Date.UTC(2026, 10, 9, 20), Date.UTC(2026, 10, 17, 2), Date.UTC(2026, 10, 24, 8)]],
+    ["io", "jupiter", [Date.UTC(2026, 10, 2, 14), Date.UTC(2026, 10, 3, 1)]],
+    ["titan", "saturn", [Date.UTC(2026, 10, 2, 14), Date.UTC(2026, 10, 10, 14)]],
   ] as const) {
     for (const when of dates) {
       await setOn(page, "time", when);
       await callOn(page, "ride", target, { view: "beside", smooth: false });
       await expect.poll(async () => (await rideOf(page)).riding && !(await rideOf(page)).gliding, { timeout: 30_000 }).toBe(true);
-      await expect.poll(async () => (await up())[1]!, { timeout: 30_000, message: `beside ${target} at ${new Date(when).toISOString()}: north is up` }).toBeGreaterThan(0.99);
+      await expect.poll(() => northUp(host, when), { timeout: 30_000, message: `beside ${target} at ${new Date(when).toISOString()}: the planet's north is up` }).toBeGreaterThan(0.999);
       await callOn(page, "ride", null, { smooth: false });
     }
   }
