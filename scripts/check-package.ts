@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets", "places", "places/moon", "places/mars", "asteroids", "data/asteroids", "approaches", "data/approaches", "plan/index", "plan/element", "orbiters", "orbiter-facts", "data/orbiters"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets", "places", "places/moon", "places/mars", "asteroids", "data/asteroids", "approaches", "data/approaches", "moon-catalogue", "data/moon-catalogue", "plan/index", "plan/element", "orbiters", "orbiter-facts", "data/orbiters"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -161,3 +161,10 @@ const approachesEntry = "@johnmorrisdotca/wakusei-planets/approaches";
 const approaches = await import(approachesEntry);
 const apophis = approaches.nextApproach("Apophis", Date.UTC(2026, 10, 11));
 if (approaches.approachList().length !== 4183 || apophis === undefined || new Date(apophis.date).toISOString().slice(0, 10) !== "2029-04-13" || Math.abs(apophis.distanceAu - 0.000254091) > 1e-8) throw new Error("approaches package entry failed");
+
+// The moon catalogue through package resolution: the rows load with the entry point, Himalia is found by its JPL code and placed about 11 million km from Jupiter, and every moon has a host.
+const catalogueEntry = "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+const catalogue = await import(catalogueEntry);
+const himalia = catalogue.findCatalogueMoon(506);
+const himaliaKm = Math.hypot(...(catalogue.catalogueMoonPosition(himalia, Date.UTC(2026, 10, 11)) as number[]));
+if (catalogue.MOON_CATALOGUE.length < 400 || himalia?.label !== "Himalia" || himaliaKm < 9e6 || himaliaKm > 14e6) throw new Error("moon catalogue package entry failed");
