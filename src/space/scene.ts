@@ -13,7 +13,7 @@ import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
-import { arrowSites, ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";
+import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { spinAxis } from "./spin.ts";
 import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
@@ -169,6 +169,8 @@ export interface SpaceModel {
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
   help: boolean;
+  /** How many arrowheads each orbit line carries: 0 to `MAX_ARROWS_PER_ORBIT`, two by default. */
+  arrowCount: number;
   /** How long an arrowhead drawn at the last draw is on the screen, in CSS pixels (measured from its own points), or 0 when none was drawn. */
   arrowPx: number;
   /** What the help arrow drew at the last draw, or null: the body, the axis it spins about (right-hand rule), the north pole, and the axis the drawn arc itself turns about (measured from its points). */
@@ -214,6 +216,7 @@ export const newSpaceModel = (): SpaceModel => ({
   arrows: {},
   help: false,
   arrowPx: 0,
+  arrowCount: ARROWS_PER_ORBIT,
   helpDrawn: null,
   door: { points: 0, used: {} },
   lookups: 0,
@@ -359,7 +362,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         orbits.set(id, { line, positions, colours, faded: false, samples: [], epoch: Number.NaN });
       }
       // the arrowheads of every orbit line: two strokes each, in the colour of the line, in one object; and the help mode's axis and curved arrow in another (drawn over the body, not hidden by it)
-      const ARROW_VERTICES = ORBIT_BODIES.length * ARROWS_PER_ORBIT * 4;
+      const ARROW_VERTICES = ORBIT_BODIES.length * MAX_ARROWS_PER_ORBIT * 4;
       const arrowPositions = new Float32Array(ARROW_VERTICES * 3);
       const arrowColours = new Float32Array(ARROW_VERTICES * 3);
       const arrowGeometry = new three.BufferGeometry();
@@ -370,7 +373,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       scene.add(arrowLines);
       ORBIT_BODIES.forEach((id, k) => {
         const c = rgb(id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
-        for (let v = 0; v < ARROWS_PER_ORBIT * 4; v += 1) arrowColours.set(c, (k * ARROWS_PER_ORBIT * 4 + v) * 3);
+        for (let v = 0; v < MAX_ARROWS_PER_ORBIT * 4; v += 1) arrowColours.set(c, (k * MAX_ARROWS_PER_ORBIT * 4 + v) * 3);
       });
       const HELP_SEGMENTS = 28;
       const HELP_VERTICES = (1 + HELP_SEGMENTS + 2) * 2;
@@ -716,14 +719,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (!model.orbits || !drawnRings.includes(id) || hiddenRings.includes(id)) return;
             const line: Vec3[] = [];
             for (let i = 0; i <= ORBIT_POINTS; i += 1) line.push([o.positions[i * 3]!, o.positions[i * 3 + 1]!, o.positions[i * 3 + 2]!]);
-            const sites = arrowSites(line);
+            const sites = arrowSites(line, model.arrowCount);
             arrowsNow[id] = sites;
             sites.forEach((site, j) => {
               // an arrow on the faded part of a line goes with it
               if (closeUp && Math.hypot(site.position[0] - pos[nearId][0], site.position[1] - pos[nearId][1], site.position[2] - pos[nearId][2]) < 12 * nearRadius) return;
               const head = chevron(site.position, site.direction, camRight, camUp, ARROW_PX * pixel(site.position));
               if (!head) return;
-              const base = (k * ARROWS_PER_ORBIT + j) * 4 * 3;
+              const base = (k * MAX_ARROWS_PER_ORBIT + j) * 4 * 3;
               arrowPositions.set([...head[0], ...head[1], ...head[0], ...head[2]], base);
               if (measured === 0) {
                 const tip = labelFor(head[0]);

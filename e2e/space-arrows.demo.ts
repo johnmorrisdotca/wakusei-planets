@@ -58,7 +58,7 @@ for (const scale of ["true", "compressed"] as const) {
       await settle(page, speed === 0 ? 500 : 1500);
       const now = await seen(page);
       expect(Object.keys(now.arrows).length, "an orbit line each for the Earth, the planets, the dwarf planets, the minor bodies and the Moon").toBe(23);
-      for (const list of Object.values(now.arrows)) expect(list.length).toBe(6);
+      for (const list of Object.values(now.arrows)) expect(list.length).toBe(2);
       for (const id of ["earth", "venus", "uranus", "moon"]) {
         const { about, direction } = await momentum(id, now.time, scale);
         for (const arrow of now.arrows[id]!) {
@@ -111,4 +111,25 @@ test("help mode is off by default, and on it draws the axis and the spin arrow o
   await setOn(page, "help", false);
   await settle(page, 500);
   expect((await seen(page)).help).toBeNull();
+});
+
+test("each orbit carries two arrows by default and four at most; the count is a property and an attribute, and 0 draws none", async ({ page }) => {
+  await openSpace(page, "t=2026-11-02T14:00Z&scale=compressed");
+  await page.locator(SPACE).evaluate((el) => (el as unknown as { setView(v: unknown): void; zoomFor(p: string): number }).setView({ yaw: 0, tilt: 0, zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") }));
+  await settle(page, 800);
+  const counts = async (): Promise<number[]> => Object.values((await seen(page)).arrows).map((list) => list.length);
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "arrows"))).toBe(2);
+  expect(new Set(await counts())).toEqual(new Set([2]));
+  await setOn(page, "arrows", 4);
+  await settle(page, 600);
+  expect(new Set(await counts())).toEqual(new Set([4]));
+  await setOn(page, "arrows", 9);
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "arrows")), "at most four").toBe(4);
+  await page.locator(SPACE).evaluate((el) => el.setAttribute("arrows", "1"));
+  await settle(page, 600);
+  expect(new Set(await counts())).toEqual(new Set([1]));
+  await page.locator(SPACE).evaluate((el) => el.setAttribute("arrows", "0"));
+  await settle(page, 600);
+  expect((await counts()).every((n) => n === 0)).toBe(true);
+  expect(((await statsOf(page)) as unknown as { arrowPx: number }).arrowPx).toBe(0);
 });

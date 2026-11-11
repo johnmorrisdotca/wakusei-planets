@@ -45,7 +45,8 @@ export function kepler(meanAnomaly: number, e: number): number {
   let m = meanAnomaly % (2 * Math.PI);
   if (m > Math.PI) m -= 2 * Math.PI;
   if (m < -Math.PI) m += 2 * Math.PI;
-  let E = e < 0.8 ? m : Math.PI;
+  // from the mean anomaly itself for a gentle orbit, and for a long one from a place on the same side of the orbit (Newton's method started at pi goes astray for a negative mean anomaly, which put Sedna's far side in the wrong places)
+  let E = e < 0.8 ? m : m + 0.85 * e * Math.sign(Math.sin(m) || 1);
   for (let i = 0; i < 12; i += 1) {
     const d = (E - e * Math.sin(E) - m) / (1 - e * Math.cos(E));
     E -= d;

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { moonVector } from "../src/ephemeris.ts";
+import { kepler, moonVector } from "../src/ephemeris.ts";
 import { BODIES, BODY_IDS, DWARF_IDS, heliocentric, lineSvg, MOONS_OF } from "../src/index.ts";
 import { portrait, silhouette } from "../src/pose.ts";
 import { length, sub } from "../src/vec.ts";
@@ -59,5 +59,15 @@ test("every dwarf planet and moon has a line drawing in both languages", () => {
   for (const id of [...DWARF_IDS, "dysnomia", "hiiaka", "namaka", "vanth"] as const) {
     assert.ok(lineSvg(id).includes(BODIES[id].name.en), id);
     assert.ok(lineSvg(id, { lang: "ja" }).includes(BODIES[id].name.ja), id);
+  }
+});
+
+test("Kepler's equation is solved for a long orbit like Sedna's (e 0.86) at every mean anomaly, positive or negative", () => {
+  for (const e of [0.5, 0.8, 0.86, 0.95]) {
+    for (let k = -180; k <= 180; k += 7) {
+      const m = (k * Math.PI) / 180;
+      const E = kepler(m, e);
+      assert.ok(Math.abs(E - e * Math.sin(E) - m) < 1e-9, `e ${e}, M ${k} degrees: ${E - e * Math.sin(E) - m}`);
+    }
   }
 });

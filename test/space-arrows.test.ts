@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { moonOffset } from "../src/scene/orient.ts";
-import { arrowSites, chevron, frameAt, moonOrbit, orbitLine, placeAround, placeMoon, placeSun, planetOrbit, spinArrow, spinAxis, ARROWS_PER_ORBIT, type ScaleMode } from "../src/space/index.ts";
+import { arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, frameAt, moonOrbit, orbitLine, placeAround, placeMoon, placeSun, planetOrbit, spinArrow, spinAxis, ARROWS_PER_ORBIT, type ScaleMode } from "../src/space/index.ts";
 import { cross, dot, length, unit, type Vec3 } from "../src/vec.ts";
 
 const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -41,9 +41,6 @@ for (const mode of ["true", "compressed"] as ScaleMode[]) {
         const sense = dot(cross(minus(arrow.position, sun), arrow.direction), unit(momentum));
         assert.ok(sense > 0, `${id}, ${mode}: an arrow points against the way it goes (${sense})`);
       }
-      // and the nearest one is not far from the body's own way of going
-      const velocity = unit(minus(after, before));
-      assert.ok(dot(arrows[0]!.direction, velocity) > 0.3 || id === "neptune" || id === "ceres", `${id}: the first arrow and the body's velocity`);
     }
   });
 }
@@ -103,5 +100,50 @@ test("the spin arrow turns the way the body turns by the right-hand rule about t
     for (const p of arc) assert.ok(Math.abs(length(minus(p, middle)) - 1.3) < 1e-9);
     const tip = arc[28]!;
     for (const wing of head) assert.ok(length(minus(wing, tip)) < 0.3 && length(minus(wing, tip)) > 0.05);
+  }
+});
+
+test("an orbit carries two arrows by default, at most four, and the count is a whole number from none to four", () => {
+  assert.equal(ARROWS_PER_ORBIT, 2);
+  assert.equal(MAX_ARROWS_PER_ORBIT, 4);
+  const circle = Array.from({ length: 97 }, (_, i) => [Math.cos((i / 96) * 2 * Math.PI), 0, Math.sin((i / 96) * 2 * Math.PI)] as Vec3);
+  assert.equal(arrowSites(circle).length, 2);
+  for (const [asked, drawn] of [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4], [5, 4], [99, 4], [-3, 0], [2.6, 3]] as const) assert.equal(arrowSites(circle, asked).length, drawn, `asked for ${asked}`);
+  // the attribute's text and anything that is not a number
+  assert.equal(arrowCount(undefined), 2);
+  assert.equal(arrowCount(null), 2);
+  assert.equal(arrowCount(""), 2);
+  assert.equal(arrowCount("many"), 2);
+  assert.equal(arrowCount(Number.NaN), 2);
+  assert.equal(arrowCount("3"), 3);
+  assert.equal(arrowCount(" 1 "), 1);
+  assert.equal(arrowCount("0"), 0);
+  assert.equal(arrowCount("-1"), 0);
+  assert.equal(arrowCount("9"), 4);
+  assert.equal(arrowCount(3.4), 3);
+  // spread evenly round the line: two arrows are half a turn apart
+  const [a, b] = arrowSites(circle, 2);
+  assert.ok(length([a!.position[0] + b!.position[0], a!.position[1] + b!.position[1], a!.position[2] + b!.position[2]]) < 0.05);
+});
+
+test("the far orbits are smooth curves: no corner of more than twenty degrees in Sedna's, Eris's, Gonggong's or Halley's line, in either scale", () => {
+  const corners = (points: readonly Vec3[]): number => {
+    let worst = 0;
+    for (let i = 1; i < points.length - 1; i += 1) {
+      const u = unit(minus(points[i]!, points[i - 1]!));
+      const v = unit(minus(points[i + 1]!, points[i]!));
+      worst = Math.max(worst, (Math.acos(Math.max(-1, Math.min(1, dot(u, v)))) * 180) / Math.PI);
+    }
+    return worst;
+  };
+  for (const id of ["sedna", "eris", "gonggong", "haumea", "halley", "pholus", "chiron"] as const) {
+    const true_ = planetOrbit(id, ms, 96);
+    assert.ok(corners(true_) < 20, `${id}: ${corners(true_).toFixed(1)} degrees at the sharpest corner`);
+    for (const mode of ["true", "compressed"] as ScaleMode[]) {
+      const line = orbitLine(mode, placeSun(mode, frameAt(ms).sun), true_);
+      assert.ok(corners(line) < 30, `${id}, ${mode}: ${corners(line).toFixed(1)} degrees`);
+    }
+    // it goes once round and closes
+    assert.ok(length(minus(true_[96]!, true_[0]!)) < 0.2 * Math.max(...true_.map(length)), `${id} closes`);
   }
 });

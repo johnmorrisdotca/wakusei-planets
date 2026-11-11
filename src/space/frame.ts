@@ -291,9 +291,9 @@ const PERIOD_DAYS: Record<SpacePlanet | SpaceDwarf | SpaceMinor | "earth", numbe
  */
 export function planetOrbit(id: SpacePlanet | SpaceDwarf | SpaceMinor | "earth", ms: number, count = 96): Vec3[] {
   const points: Vec3[] = [];
-  const minor = (SPACE_MINORS as readonly string[]).includes(id) ? MINOR_ELEMENTS[id as SpaceMinor] : undefined;
-  if (minor !== undefined && minor.e > 0.3) {
-    // a long ellipse (Halley's, Pholus's) is cut at equal steps of the eccentric anomaly, not of time, so the sharp turn near the Sun gets as many points as the slow far side
+  const minor = (SPACE_MINORS as readonly string[]).includes(id) ? MINOR_ELEMENTS[id as SpaceMinor] : (SPACE_DWARFS as readonly string[]).includes(id) ? DWARF_ELEMENTS[id as SpaceDwarf] : undefined;
+  if (minor !== undefined && minor.e > 0.15) {
+    // a long ellipse (Halley's, Pholus's, Sedna's, Eris's) is cut at equal steps of the eccentric anomaly, not of time: cut in time, the sharp turn near the Sun is one straight stroke with corners, and the slow far side most of the points
     const e = minor.e;
     const m0 = ((minor.m + (minor.n * (ms - minor.epoch)) / DAY_MS) * Math.PI) / 180;
     let e0 = m0;
@@ -301,7 +301,7 @@ export function planetOrbit(id: SpacePlanet | SpaceDwarf | SpaceMinor | "earth",
     const mean = (anomaly: number): number => anomaly - e * Math.sin(anomaly);
     for (let i = 0; i <= count; i += 1) {
       const anomaly = e0 + (i / count) * 2 * Math.PI;
-      points.push(scene(heliocentric(id as SpaceMinor, ms + ((mean(anomaly) - mean(e0)) / ((minor.n * Math.PI) / 180)) * DAY_MS)));
+      points.push(scene(heliocentric(id as SpaceMinor | SpaceDwarf, ms + ((mean(anomaly) - mean(e0)) / ((minor.n * Math.PI) / 180)) * DAY_MS)));
     }
     return points;
   }
