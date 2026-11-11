@@ -573,7 +573,9 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     update(info) {
       light.set(info.toSun[0], info.toSun[1], info.toSun[2]);
       const scale = group.scale.x || 1;
-      // a star's glow faces the camera (the group is not turned, so the camera's own turn is the glow's); the globe inside it has the body's own pole and prime meridian like every other body
+      // a star's glow faces the camera, when `update` is given the camera (`info.view`): without it the glow keeps its last turn, so a caller that used to turn the Sun's object itself passes `view` now. The group is
+      // never turned, so `camera.quaternion` (the camera's local turn, which is its world turn for a camera with no parent, as the views here have) is the glow's own; the globe inside it has the body's own
+      // pole and prime meridian like every other body
       if (glowMesh !== undefined && info.view !== undefined) glowMesh.quaternion.copy(info.view.camera.quaternion);
       {
         const { pole, meridian } = info.pose ?? orientation(id, info.ms);
