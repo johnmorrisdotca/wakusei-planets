@@ -115,6 +115,14 @@ MARS_POSITIONS = {
     "Phoenix": (68.22, 234.25, "pds-ode", ODE_URL, "converted"),
     "InSight": (4.50, 135.62, "nasa-mars24", "https://www.giss.nasa.gov/tools/mars24/help/landers.html", "not stated"),
 }
+# The places a page can suggest first (`famous: true`): the ones a reader has heard of. Modest on purpose; every name must be in the list below or the script stops.
+FAMOUS = {
+    "moon": ["Apollo 11 lunar module", "Apollo 12 lunar module", "Apollo 14 lunar module", "Apollo 15 lunar module", "Apollo 16 lunar module", "Apollo 17 lunar module", "Luna 2", "Luna 9", "Surveyor 1", "Lunokhod 1", "Chang'e 4", "Chang'e 5 lander",
+             "Chandrayaan-3 (Vikram)", "SLIM", "IM-1 Odysseus", "Tycho", "Copernicus", "Aristarchus", "Kepler", "Shackleton", "Clavius", "Plato", "Tsiolkovskiy", "Mare Tranquillitatis", "Mare Imbrium", "Mare Serenitatis", "Mare Crisium",
+             "Oceanus Procellarum", "Montes Apenninus", "Mare Orientale"],
+    "mars": ["Mars 3 lander", "Viking 1", "Viking 2", "Mars Pathfinder", "Sojourner", "Spirit", "Opportunity", "Phoenix", "Curiosity", "InSight", "Perseverance", "Zhurong", "Olympus Mons", "Valles Marineris", "Gale", "Jezero", "Hellas Planitia",
+             "Arsia Mons", "Pavonis Mons", "Ascraeus Mons", "Elysium Mons", "Utopia Planitia", "Argyre Planitia", "Noctis Labyrinthus", "Gusev", "Meridiani Planum", "Syrtis Major Planum", "Chryse Planitia"],
+}
 MARS_RATIO = (3376.2 / 3396.19) ** 2
 NSSDCA_URL = "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
 
@@ -239,7 +247,7 @@ def features_of(body, cache):
 
 def gcat_date(text):
     text = text.strip()
-    m = re.match(r"(\d{4}) ([A-Z][a-z]{2}) ?(\d{1,2})?(?: (\d{2})(\d{2})(?::(\d{2}))?)?", text)
+    m = re.match(r"(\d{4}) ([A-Z][a-z]{2})(?:\s+(\d{1,2}))?(?:\s+(\d{2})(\d{2})(?::(\d{2}))?)?", text)
     if not m:
         return None
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -372,6 +380,13 @@ def main():
             if seen[base] > 1:
                 place["id"] = f"{base}-{seen[base]}"
         print(f"{body}: {len(features)} of {total} Gazetteer features kept (file of {stamp}); {len(sites)} sites from GCAT ({kinds}, catalogue updated {updated})", file=sys.stderr)
+        names = {p["name"]["en"] for p in sites + features}
+        missing = [n for n in FAMOUS[body] if n not in names]
+        if missing:
+            sys.exit(f"{body}: famous names not in the list: {missing}")
+        for place in sites + features:
+            if place["name"]["en"] in FAMOUS[body]:
+                place["famous"] = True
         path = os.path.join(OUT, f"places-{body}.ts")
         with open(path, "w") as f:
             f.write(f"// Made by scripts/make-places-data.py. Named features from the IAU Gazetteer of Planetary Nomenclature (USGS Astrogeology, public domain; the nightly centre-point file of {stamp}),\n")
