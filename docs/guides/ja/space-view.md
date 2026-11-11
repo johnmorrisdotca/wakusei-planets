@@ -76,6 +76,10 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 デモでは、3回のクリックで順に選びます。種類 (太陽と惑星、準惑星、小天体、衛星)、衛星ならそれが回る惑星、そして天体です。横には名前 (英語でも日本語でも) でさがす欄があり、衛星のある惑星には「衛星もいっしょに」ボタンが出ます。自分の選び方を作るときは、`space.bodyList()` がそのデータです。
 
+## ほかの衛星をすべて点で
+
+`all-moons` (属性。または `space.allMoons = true`) をつけると、ほかの知られている衛星もすべて表示します。[`/moon-catalogue`](moon-catalogue.md) の衛星のうち、この表示がくわしく描かないものを、平均軌道の位置に小さな点で惑星のまわりに描きます。すべての点を1回の描画でまとめて描きます。縮めた縮尺では、くわしく描く衛星と同じ方法で近くに寄せるので、木星や土星の遠い衛星は惑星のまわりに点の雲になります。衛星の表は、はじめてオンにしたときに別のかたまりとして読み込みます。一度もオンにしない表示は読み込みません。点は表示が描くときだけ描くので、止まっているあいだは何も描きません。`stats.allMoons` で、オンかどうか、表を読み込んだかどうか、前回の描画で描いた点の数がわかります。three.js の一部だけを渡すページ (`setThreeLoader`) は、`Points` と `PointsMaterial` を含めてください。点が本当の位置にどれだけ近いかは、表の `grade` にあります。点は、衛星がだいたいどのあたりにあるかを示すもので、望遠鏡を向けるための位置ではありません。
+
 ## 天体へ行く、天体をめぐる
 
 天体かその名前を最初に押すと、その天体が選ばれます。`wakusei-body-click` と同じ内容 (detail) を持つ `wakusei-body-select` が発火し (ページのカードに使えます)、`space.selected` で読めますが、表示は動きません。選ばれた天体をもう一度押すか、`space.goTo("saturn")` を呼ぶと、その天体が表示の中心になります。カメラは約1秒でそこへ滑るように動き (動きを減らす設定の人や `{ smooth: false }` のときは一瞬で移ります)、ズームは1に戻って天体ぜんたいが見え (`{ zoom }` で別の値も指定できます)、時間が進んでもその天体を追います。押しても、ほかの場所へ飛ぶことはありません。すでに中心にある天体を押しても何も起こりません。`goTo` は、そこへ行けるかどうかを返します。`<kazoku-view-controls>` を要素に結びつけているときは、ズームの状態をバーが持つので、イベントが運ぶ値をページが `controls.controller.set({ zoom }, true, "jump")` で反映します。
@@ -104,7 +108,7 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`all-moons` (ほかの衛星をすべて点で)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 乗って見る
 
