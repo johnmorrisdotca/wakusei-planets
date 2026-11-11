@@ -143,6 +143,23 @@ export interface SpaceFrame {
   minors: Record<SpaceMinor, Vec3>;
 }
 
+/**
+ * An ecliptic J2000 vector in the scene's axes (equatorial J2000, y north): what `frameAt` does to every heliocentric place, for a place of your own (the Roadster's, from `/roadster`).
+ *
+ * @param v - A vector in ecliptic J2000 axes.
+ * @returns The same vector in the scene's axes.
+ *
+ * @example
+ * ```ts
+ * import { eclipticToScene } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(eclipticToScene([0, 1, 0]).map((n) => n.toFixed(3)).join(", "));
+ * ```
+ */
+export function eclipticToScene(v: Vec3): Vec3 {
+  return scene(v);
+}
+
 /** An ecliptic J2000 vector in the scene's axes (equatorial J2000, y north). */
 const scene = (v: Vec3): Vec3 => {
   const c = Math.cos(OBLIQUITY * RAD);

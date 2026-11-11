@@ -515,6 +515,32 @@ test("the space view with names on the bodies draws nothing at rest, and every c
   expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
 });
 
+test("the space view with Starman shown draws nothing at rest, and switching the car on and off gives back what it took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&starman=1&goto=solar-system`);
+  await liveSky(page);
+  const drawnCar = async () => ((await skyStats(page)) as unknown as { roadster: { shown: boolean } }).roadster.shown;
+  await expect.poll(drawnCar, { timeout: 60_000 }).toBe(true);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the car shown").toBe(0);
+  const round = async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await page.locator("#starman").dispatchEvent("click");
+      await expect.poll(drawnCar, { timeout: 30_000 }).toBe(false);
+      await page.locator("#starman").dispatchEvent("click");
+      await expect.poll(drawnCar, { timeout: 30_000 }).toBe(true);
+    }
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+});
+
 test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&ride=mars`);
   await liveSky(page);
