@@ -1016,12 +1016,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                   drawing.positions[i * 3 + 1] = p[1] / km;
                   drawing.positions[i * 3 + 2] = p[2] / km;
                 }
+                (drawing.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
                 drawing.epoch = model.time;
               }
               // the line is in the body's radii round the origin: placed and scaled with the body
               drawing.line.position.set(pos[centre][0], pos[centre][1], pos[centre][2]);
               drawing.line.scale.setScalar(hostRadius);
-              (drawing.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
               drawing.lineMaterial.opacity = dim ? 0.25 : 0.45;
               drawing.line.visible = model.orbits;
               orbiterPlaces[id] = { at: place, px: dotPx };
