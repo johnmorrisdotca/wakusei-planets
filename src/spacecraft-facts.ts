@@ -1,6 +1,8 @@
 // What is known about each craft: names, launch, agency, status, the mission's page, and its voyage as a list of events. Facts typed from the pages named in NOTICE.md (the first ten read 2026-11-08), never guessed:
 // a time is given only where the page gives one, else the event's `precision` is "day". Every flyby is tested against the closest approach of the fitted path (test/spacecraft.test.ts); the eight craft added on 2026-11-11
-// (BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX and Solar Orbiter) take the day of each flyby from the path itself, which the test checks against Horizons.
+// (BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX and Solar Orbiter) take the day of each flyby from the closest approach on JPL Horizons' path, which the test checks against Horizons. An agency's announced
+// date can differ from it by a day or more: where it was checked (2026-11-11) JUICE's second Earth flyby (ESA: 28 September 2026, 11:45 UTC) and Lucy at Eurybates (NASA: 11 August 2027, ET) agree with the path, and Lucy at Patroclus does
+// not (path 2033-02-27, NASA 2033-03-03 ET). Torifune is JAXA's own time, 18:30 JST on 2026-07-05, which the path matches to a minute.
 import type { PlanetId } from "./facts.ts";
 
 /**
@@ -406,6 +408,7 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       ev("launch", T(2014, 11, 3, 4, 22, 4), "minute", "Launch", "打ち上げ"),
       flyby(noon(2015, 12, 3), "day", "Earth flyby", "地球スイングバイ", "earth", 3_090),
       ev("arrival", noon(2018, 6, 27), "day", "Arrival at the asteroid Ryugu", "小惑星リュウグウに到着"),
+      flyby(T(2026, 6, 5, 9, 30), "minute", "Flyby of the asteroid Torifune", "小惑星トリフネのフライバイ"),
     ],
   },
   osirisapex: {

@@ -101,12 +101,19 @@ test("known records: names, years, sizes, groups, hazard flags and missions as t
   assert.deepEqual(findAsteroid("Didymos")!.missions.map((m) => m.name), ["DART", "Hera"]);
   assert.equal(findAsteroid("Didymos")!.satellites, 1);
   assert.equal(findAsteroid("Psyche")!.missions[0]!.planned, true);
+  // happened by 2026-11-11 (JAXA 2026-07-30, CNSA 2026-07-06): no longer planned
+  assert.deepEqual(findAsteroid("Torifune")!.missions, [{ name: "Hayabusa2", year: 2026 }]);
+  assert.deepEqual(findAsteroid("Kamo`oalewa")!.missions, [{ name: "Tianwen-2", year: 2026 }]);
+  assert.equal(findAsteroid("1998 KY26")!.missions[0]!.planned, true);
+  assert.equal(findAsteroid("Mani")!.name.ja, "マーニ");
+  assert.equal(findAsteroid("Varuna")!.diameterKm, 900, "the database's value, with the note that it is old");
+  assert.match(findAsteroid("Varuna")!.note!, /670 km/);
   assert.equal(findAsteroid("2024 YR4")!.name.en, "2024 YR4");
   assert.equal(findAsteroid("2024 YR4")!.discoveryYear, 2024);
   assert.equal(findAsteroid("Leleākūhonua")!.designation, "2015 TG387");
   // the Lucy targets and the visits already made
   assert.deepEqual(["Eurybates", "Polymele", "Leucus", "Orus", "Patroclus"].map((n) => findAsteroid(n)!.missions[0]!.name), ["Lucy", "Lucy", "Lucy", "Lucy", "Lucy"]);
-  assert.equal(ASTEROIDS.filter((a) => a.missions.some((m) => !m.planned)).length, 18);
+  assert.equal(ASTEROIDS.filter((a) => a.missions.some((m) => !m.planned)).length, 20);
   assert.equal(ASTEROIDS.filter((a) => a.hazardous).length, 17);
 });
 
