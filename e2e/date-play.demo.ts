@@ -202,10 +202,11 @@ test.describe("the body page", () => {
 
 test.describe("a reader who prefers reduced motion", () => {
   test.use({ reducedMotion: "reduce" });
-  test("gets Play left off, even from an address that asks for it", async ({ page }) => {
+  test("gets a still view with Play ready, even from an address that asks for it to run", async ({ page }) => {
     await page.goto(`${SPACE_PAGE}?t=${START}&play=on&speed=86400`);
     await expect(play(page)).toHaveAttribute("aria-pressed", "false");
-    await expect(play(page)).toBeDisabled();
+    // kazoku-ui 0.34: nothing starts by itself, and the reader's own press does
+    await expect(play(page)).toBeEnabled();
     const before = await boxMs(page);
     await page.waitForTimeout(1200);
     expect(await boxMs(page)).toBe(before);

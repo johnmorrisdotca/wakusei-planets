@@ -1,11 +1,18 @@
 import { expect, test, type Page } from "@playwright/test";
 
-/** The drawing the element holds once it has drawn: the line drawing is an SVG in its shadow, so wait for that (what the page reports), not for a fixed time. */
+/** The drawing the element holds once it has drawn it: the line drawing is an SVG in its shadow, so wait for that and for it to stop changing (the same text on two reads), not for a fixed time. */
 async function drawing(page: Page): Promise<string> {
   const element = page.locator("wakusei-body");
   await expect(element.locator("svg")).toBeVisible();
-  await expect(element).toHaveAttribute("data-state", /./);
-  return element.evaluate((el) => el.shadowRoot?.innerHTML ?? "");
+  const read = (): Promise<string> => element.evaluate((el) => el.shadowRoot?.innerHTML ?? "");
+  let last = "";
+  await expect.poll(async () => {
+    const now = await read();
+    const same = now === last && now.length > 0;
+    last = now;
+    return same;
+  }, { intervals: [200], timeout: 15_000 }).toBe(true);
+  return last;
 }
 
 test("the embed frame turns by itself when it is asked to, and a line drawing is the same picture each time", async ({ page }) => {

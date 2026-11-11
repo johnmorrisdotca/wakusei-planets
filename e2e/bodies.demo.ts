@@ -246,6 +246,7 @@ test("To scale with its planet: Deimos is drawn at its true size beside Mars, a 
   await expect(page.locator("#caption")).toContainText("times the radius of Earth");
 });
 
+// (the picture's background has a faint dot pattern, so a pixel counts as the body only when it is clearly brighter than that)
 test("an irregular body is drawn whole: the sides of Deimos's and Phobos's pictures are clear", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
   for (const id of ["deimos", "phobos"]) {
@@ -266,7 +267,7 @@ test("an irregular body is drawn whole: the sides of Deimos's and Phobos's pictu
       const column = (x: number): number => {
         const { data: px } = context.getImageData(x, 0, 1, bitmap.height);
         let drawn = 0;
-        for (let i = 0; i < px.length; i += 4) if (Math.abs(px[i]! - bg[0]!) + Math.abs(px[i + 1]! - bg[1]!) + Math.abs(px[i + 2]! - bg[2]!) > 24) drawn += 1;
+        for (let i = 0; i < px.length; i += 4) if (Math.abs(px[i]! - bg[0]!) + Math.abs(px[i + 1]! - bg[1]!) + Math.abs(px[i + 2]! - bg[2]!) > 90) drawn += 1;
         return drawn;
       };
       return { left: column(1), right: column(bitmap.width - 2), middle: column(Math.floor(bitmap.width / 2)) };
