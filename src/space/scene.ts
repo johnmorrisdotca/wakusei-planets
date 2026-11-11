@@ -285,6 +285,8 @@ export interface SpaceDeps {
   onLabels?: (places: Record<string, BodyPlace | null>) => void;
   /** What the camera sees of each body at each draw, by id: the Sun, the planets and the other bodies of `SPACE_BODIES`, the moons of the body looked at, and any other moon drawn; with the picture's size and the point straight ahead of the camera. Not the body the camera rides on. */
   onSight?: (bodies: Record<string, SightInput>, frame: { width: number; height: number; axis: { x: number; y: number } }) => void;
+  /** Whether `onSight` is wanted at this draw (left out, it always is): the page has asked for it. */
+  wantSight?: () => boolean;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
   onMoving?: () => void;
   /** The target of the ride could not be placed at this draw. */
@@ -906,7 +908,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
             deps.onLabels(places);
           }
-          if (deps.onSight) {
+          if (deps.onSight && (deps.wantSight?.() ?? true)) {
             // each body in the camera's own axes: in front when it is ahead (negative z), its place from the projection (a pan included), and the way to it on the screen from its x and y, which holds behind the camera too
             const sights: Record<string, SightInput> = {};
             const sight = (id: string, at: Vec3, r: number): void => {

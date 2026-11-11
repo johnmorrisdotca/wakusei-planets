@@ -3,7 +3,7 @@
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { carryControls, type ElementControls, type ViewController } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import "../tables/minor.ts";
-import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
+import { BODIES, BODY_IDS, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
@@ -169,6 +169,10 @@ const REAL_TIME_TICK_MS = 60_000;
 const WHEEL_AS_PINCH = 0.2;
 /** The least time between two `wakusei-timechange` events while time runs: a few a second at most, however fast the picture is drawn. */
 const TIME_EVENT_MS = 250;
+/** A listener as `addEventListener` takes one, typed or not. */
+type Listener = EventListenerOrEventListenerObject | ((this: HTMLElement, ev: never) => unknown) | null;
+/** The least time between two `wakusei-sight` events while the view moves, in milliseconds. */
+const SIGHT_EVENT_MS = 250;
 
 const readCentre = (value: string | null): { lon: number; lat: number } | null => {
   if (!value) return null;
@@ -326,6 +330,7 @@ export class WakuseiSpace extends HTMLElement {
         this.#door.announce();
       },
       onSight: (bodies, frame) => this.#see(bodies, frame),
+      wantSight: () => this.#sightAsked || this.#sightListeners.size > 0,
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
@@ -357,7 +362,11 @@ export class WakuseiSpace extends HTMLElement {
     this.removeEventListener("pointerdown", this.#down);
     this.removeEventListener("pointermove", this.#move);
     this.removeEventListener("pointerleave", this.#leave);
-    this.#hovered = null;
+    window.removeEventListener("pointerup", this.#lift, true);
+    window.removeEventListener("pointercancel", this.#lift, true);
+    if (this.#hovered !== null) this.#hover(null, this.#hoverBy);
+    clearTimeout(this.#sightTimer);
+    this.#sightTimer = undefined;
     this.removeEventListener("wheel", this.#wheel, { capture: true });
     window.removeEventListener("pointerup", this.#up, true);
     clearTimeout(this.#timer);
@@ -529,10 +538,36 @@ export class WakuseiSpace extends HTMLElement {
   /**
    * Where each body is for the picture at the last draw: in view or not, and for one out of view the edge of the picture it lies beyond, the point on that edge, the way to it, and whether it is behind the camera. It
    * covers the Sun, the planets, the dwarf planets and the minor bodies, the moons of the body looked at and any other moon drawn; not the body the camera rides on. `wakusei-sight` fires with the same list whenever a
-   * body comes into view or leaves it, changes edge, or moves 8 CSS pixels along its edge, and never at rest: a page draws its own tabs at the edges from it.
+   * body comes into view or leaves it, changes edge, or moves 8 CSS pixels along its edge, at most four times a second with a last one when the view settles, and never at rest: a page draws its own tabs at the edges
+   * from it. The view works it out only once it is asked: the first call (or the first `wakusei-sight` listener) asks for one draw, and the list is there from that draw on.
    */
   sight(): BodySight[] {
+    if (!this.#sightAsked) {
+      this.#sightAsked = true;
+      this.#gate?.request();
+    }
     return Object.values(this.#sight).map((one) => ({ ...one }));
+  }
+
+  #sightAsked = false;
+  #sightListeners = new Set<NonNullable<Listener>>();
+  // the sight of the bodies is worked out only for a page that listens for it (or has asked `sight()`)
+  override addEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => unknown, options?: boolean | AddEventListenerOptions): void;
+  override addEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | AddEventListenerOptions): void;
+  override addEventListener(type: string, listener: Listener, options?: boolean | AddEventListenerOptions): void {
+    if (listener === null) return;
+    super.addEventListener(type, listener as EventListenerOrEventListenerObject, options);
+    if (type !== "wakusei-sight") return;
+    const first = this.#sightListeners.size === 0 && !this.#sightAsked;
+    this.#sightListeners.add(listener);
+    if (first) this.#gate?.request();
+  }
+  override removeEventListener<K extends keyof HTMLElementEventMap>(type: K, listener: (this: HTMLElement, ev: HTMLElementEventMap[K]) => unknown, options?: boolean | EventListenerOptions): void;
+  override removeEventListener(type: string, listener: EventListenerOrEventListenerObject | null, options?: boolean | EventListenerOptions): void;
+  override removeEventListener(type: string, listener: Listener, options?: boolean | EventListenerOptions): void {
+    if (listener === null) return;
+    super.removeEventListener(type, listener as EventListenerOrEventListenerObject, options);
+    if (type === "wakusei-sight") this.#sightListeners.delete(listener);
   }
 
   get orbits(): boolean {
@@ -1050,6 +1085,8 @@ export class WakuseiSpace extends HTMLElement {
 
   /** The bodies drawn at full strength: the system of the body under the pointer, or else the one in the middle of the view. */
   #lit(): Set<string> {
+    // the Sun in the middle lights the Sun and the eight planets; a body pointed at, the Sun too, lights its own system
+    if (this.#hovered === null && this.#model.focus === "sun") return new Set<string>(["sun", ...BODY_IDS.filter((id) => BODIES[id].kind === "planet")]);
     const { host, moons } = systemOf(this.#hovered ?? this.#model.focus);
     return new Set<string>([host, ...moons]);
   }
@@ -1130,10 +1167,21 @@ export class WakuseiSpace extends HTMLElement {
       now[id] = one;
     }
     this.#sight = now;
-    if (!sightChanged(this.#told, now)) return;
-    this.#told = now;
-    this.dispatchEvent(new CustomEvent("wakusei-sight", { detail: { bodies: this.sight() } }));
+    if (this.#sightTimer !== undefined || !sightChanged(this.#told, now)) return;
+    // at most four times a second while the view moves; the last change is told when the wait is over
+    const wait = this.#sightSent + SIGHT_EVENT_MS - performance.now();
+    if (wait > 0) this.#sightTimer = setTimeout(this.#tellSight, wait);
+    else this.#tellSight();
   }
+  #sightSent = -Infinity;
+  #sightTimer: ReturnType<typeof setTimeout> | undefined;
+  #tellSight = (): void => {
+    this.#sightTimer = undefined;
+    if (!this.isConnected || !sightChanged(this.#told, this.#sight)) return;
+    this.#told = this.#sight;
+    this.#sightSent = performance.now();
+    this.dispatchEvent(new CustomEvent("wakusei-sight", { detail: { bodies: Object.values(this.#sight).map((one) => ({ ...one })) } }));
+  };
 
   /** The quiet arrows for the bodies behind others (`covered="arrow"`): one per covering disc, just outside its edge, named for the surest body behind and counting the rest. */
   #placeArrows(places: Record<string, BodyPlace | null>): void {
@@ -1233,10 +1281,21 @@ export class WakuseiSpace extends HTMLElement {
   #downY = 0;
   #down = (event: PointerEvent): void => {
     if (event.button !== 0) return;
-    if (event.pointerType === "touch") this.#hover(this.#pointAt(event), "pointer");
+    if (event.pointerType === "touch") {
+      // a finger lights the system it is on until it lifts
+      this.#hover(this.#pointAt(event), "pointer");
+      window.addEventListener("pointerup", this.#lift, { capture: true });
+      window.addEventListener("pointercancel", this.#lift, { capture: true });
+    }
     this.#downX = event.clientX;
     this.#downY = event.clientY;
     window.addEventListener("pointerup", this.#up, { capture: true, once: true });
+  };
+  #lift = (event: PointerEvent): void => {
+    if (event.pointerType !== "touch") return;
+    window.removeEventListener("pointerup", this.#lift, true);
+    window.removeEventListener("pointercancel", this.#lift, true);
+    if (this.#hoverBy === "pointer") this.#hover(null, "pointer");
   };
   #up = (event: PointerEvent): void => {
     if (Math.hypot(event.clientX - this.#downX, event.clientY - this.#downY) > 6) return;

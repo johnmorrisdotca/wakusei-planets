@@ -26,7 +26,7 @@ const strengths = (page: Page): Promise<{ far: string[]; near: string[]; opacity
     };
   });
 /** Whether a body's name is marked far, shown or not (a name the no-overlap rule leaves out keeps its mark). */
-const isFar = (page: Page, id: string): Promise<boolean> => page.locator(SPACE).evaluate((el, body) => el.shadowRoot!.querySelector(`.sp-label[data-body="${body}"]`)?.hasAttribute("data-far") ?? false, id);
+const isFar = (page: Page, id: string): Promise<boolean | null> => page.locator(SPACE).evaluate((el, body) => el.shadowRoot!.querySelector(`.sp-label[data-body="${body}"]`)?.hasAttribute("data-far") ?? null, id);
 /** A point of the page on the view and in the window, with no body within 40 pixels: empty sky. */
 async function emptySky(page: Page): Promise<{ x: number; y: number }> {
   const box = (await page.locator(SPACE).boundingBox())!;
@@ -41,12 +41,30 @@ async function emptySky(page: Page): Promise<{ x: number; y: number }> {
 /** Every event of these names the element has sent since the page began listening, in order. */
 async function listen(page: Page, names: string[]): Promise<void> {
   await page.locator(SPACE).evaluate((el, list) => {
-    const heard: { type: string; detail: unknown }[] = [];
+    const heard: { type: string; detail: unknown; at: number }[] = [];
     Reflect.set(window, "__heard", heard);
-    for (const name of list) el.addEventListener(name, (event) => heard.push({ type: name, detail: (event as CustomEvent).detail }));
+    for (const name of list) el.addEventListener(name, (event) => heard.push({ type: name, detail: (event as CustomEvent).detail, at: performance.now() }));
   }, names);
 }
-const heard = (page: Page): Promise<{ type: string; detail: Record<string, unknown> }[]> => page.evaluate(() => Reflect.get(window, "__heard") as { type: string; detail: Record<string, unknown> }[]);
+const heard = (page: Page): Promise<{ type: string; detail: Record<string, unknown>; at: number }[]> => page.evaluate(() => Reflect.get(window, "__heard") as { type: string; detail: Record<string, unknown>; at: number }[]);
+/** Wait until the view stops drawing: two reads of the draws, 300 ms apart, the same. */
+async function steady(page: Page): Promise<number> {
+  let held = -1;
+  await expect
+    .poll(
+      async () => {
+        const now = (await readCounts(page)).draws;
+        const same = now === held;
+        held = now;
+        return same;
+      },
+      { timeout: 30_000, intervals: [300] },
+    )
+    .toBe(true);
+  return held;
+}
+/** One frame of the page. */
+const frame = (page: Page) => page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => done())));
 /** A point of the page over a body's place in the view. */
 async function over(page: Page, id: string): Promise<{ x: number; y: number }> {
   const place = await placeOf(page, id);
@@ -125,9 +143,23 @@ test("far names are drawn at half strength and the system in the middle at full;
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "farOpacity"))).toBe(1);
   await page.locator(SPACE).evaluate((el) => el.setAttribute("far-opacity", "0.25"));
   await expect.poll(async () => (await strengths(page)).opacity[farOne], { timeout: 10_000 }).toBe("0.25");
+
+  // the Sun in the middle lights the Sun and the eight planets, not the moons or the dwarf planets; pointing at the Sun lights the Sun alone
+  await drawn(page, () => callOn(page, "goTo", "sun", { smooth: false }));
+  await expect.poll(() => isFar(page, "sun")).toBe(false);
+  for (const id of ["mercury", "earth", "mars", "jupiter", "neptune"]) expect(await isFar(page, id), id).toBe(false);
+  const others = await Promise.all(["pluto", "eris", "ceres", "moon"].map((id) => isFar(page, id)));
+  expect(others).not.toContain(false);
+  expect(others).toContain(true);
+  const sun = await over(page, "sun");
+  await page.mouse.move(sun.x, sun.y);
+  await expect.poll(() => hovered(page)).toBe("sun");
+  await expect.poll(() => isFar(page, "earth")).toBe(true);
+  expect(await isFar(page, "sun")).toBe(false);
+  expect(((await heard(page)).at(-1)?.detail["system"] as { moons: string[] }).moons).toEqual([]);
 });
 
-test("a finger on a body lights its system and tells the page; a finger on empty sky ends it", async ({ page }, testInfo) => {
+test("a finger on a body lights its system and tells the page while it is down; lifting it ends that", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-phone", "touch, on the phone");
   test.setTimeout(180_000);
   await fromAfar(page);
@@ -135,14 +167,15 @@ test("a finger on a body lights its system and tells the page; a finger on empty
   await listen(page, ["wakusei-body-hover", "wakusei-body-hover-end"]);
   const planet = await lonePlanet(page, ["earth"]);
   const point = await over(page, planet);
-  await page.touchscreen.tap(point.x, point.y);
+  const touch = await page.context().newCDPSession(page);
+  await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: point.x, y: point.y }] });
   await expect.poll(() => hovered(page)).toBe(planet);
   expect((await heard(page)).find((one) => one.type === "wakusei-body-hover")?.detail["id"]).toBe(planet);
   await expect.poll(() => isFar(page, planet)).toBe(false);
-  const sky = await emptySky(page);
-  await page.touchscreen.tap(sky.x, sky.y);
+  await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await expect.poll(() => hovered(page)).toBeNull();
   expect((await heard(page)).at(-1)?.type).toBe("wakusei-body-hover-end");
+  await expect.poll(() => isFar(page, planet)).toBe(true);
 });
 
 // --- where the bodies out of view are --------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -186,15 +219,21 @@ test("sight: the bodies in view are in the picture, the others lie beyond the ed
     }
     return all;
   };
+  // asked once, the view works the sight out at its next draw
+  await expect.poll(async () => (await sight(page)).length, { timeout: 30_000 }).toBeGreaterThan(20);
   const first = await check();
   expect(first.find((one) => one.id === "earth")?.inView).toBe(true);
 
   await listen(page, ["wakusei-sight"]);
   const count = async () => (await heard(page)).length;
-  // at rest: nothing heard
-  const draws = (await readCounts(page)).draws;
-  await expect.poll(async () => (await readCounts(page)).draws, { intervals: [500, 500, 500] }).toBe(draws);
-  expect(await count()).toBe(0);
+  // at rest: once the view has stopped drawing, a second and a half of reads hears nothing and sees no draw
+  const draws = await steady(page);
+  const quiet = await count();
+  for (let read = 0; read < 5; read += 1) {
+    await page.waitForTimeout(300);
+    expect((await readCounts(page)).draws).toBe(draws);
+    expect(await count()).toBe(quiet);
+  }
   // turned half round, the far side of the sky is ahead and what was ahead is behind the camera
   await drawn(page, () => callOn(page, "setView", { yaw: 180, tilt: 0, zoom: 1 }));
   await expect.poll(count).toBeGreaterThan(0);
@@ -202,4 +241,25 @@ test("sight: the bodies in view are in the picture, the others lie beyond the ed
   expect(turned.some((one) => one.behind && one.edge !== null)).toBe(true);
   const told = (await heard(page)).at(-1)!.detail["bodies"] as BodySight[];
   expect(told.map((one) => one.id).sort()).toEqual(turned.map((one) => one.id).sort());
+
+  // a drag turns the view every frame: the page hears at most four times a second, and a last time with where things came to rest
+  await steady(page);
+  const before = (await heard(page)).length;
+  const sky = await emptySky(page);
+  await page.mouse.move(sky.x, sky.y);
+  await page.mouse.down();
+  const start = await page.evaluate(() => performance.now());
+  for (let step = 1; step <= 40; step += 1) {
+    await page.mouse.move(sky.x + step * 10, sky.y);
+    await frame(page);
+  }
+  await page.mouse.up();
+  const end = await page.evaluate(() => performance.now());
+  await steady(page);
+  const during = (await heard(page)).slice(before);
+  expect(during.length).toBeGreaterThan(0);
+  expect(during.length).toBeLessThanOrEqual(Math.ceil((end - start) / 250) + 2);
+  for (let i = 1; i < during.length; i += 1) expect(during[i]!.at - during[i - 1]!.at, "time between two events").toBeGreaterThanOrEqual(245);
+  const brief = (list: BodySight[]) => list.map((one) => `${one.id}:${one.inView}:${one.edge}:${one.behind}`).sort();
+  await expect.poll(async () => brief((await heard(page)).at(-1)!.detail["bodies"] as BodySight[])).toEqual(brief(await sight(page)));
 });
