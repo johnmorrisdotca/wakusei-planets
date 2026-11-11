@@ -78,8 +78,10 @@ test("the arrows are small in pixels and never hide a body: they are drawn in sc
     return ((await statsOf(page)) as unknown as { arrowPx: number }).arrowPx;
   };
   // the element reports an arrowhead's length on the screen: the same at every zoom, and a few pixels
-  const near = await lengthAt(1);
-  const far = await lengthAt(0.01);
+  // (two arrows an orbit, half a turn apart: at zoom 1 the Earth fills the view and its lines are not drawn, so the near view is the Moon's orbit)
+  const zoomFor = (preset: string): Promise<number> => page.locator(SPACE).evaluate((el, p) => (el as unknown as { zoomFor(p: string): number }).zoomFor(p), preset);
+  const near = await lengthAt(await zoomFor("moon"));
+  const far = await lengthAt(await zoomFor("solar-system"));
   expect(near).toBeGreaterThan(3);
   expect(near).toBeLessThan(14);
   expect(Math.abs(far - near)).toBeLessThan(2);
