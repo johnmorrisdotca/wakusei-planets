@@ -1,6 +1,6 @@
 {
   "name": "@johnmorrisdotca/wakusei-planets",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Wakusei Planets 惑星 — The Sun, planets and moons for the web: each as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation as data, and positions of the moons for any date and time. SVG for the lines, three.js (optional) for the rest.",
   "keywords": [
     "planets",
