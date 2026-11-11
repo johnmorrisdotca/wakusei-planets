@@ -120,6 +120,8 @@ function placeOf(window: TileWindow): { lonMin: number; lonMax: number; latMin: 
 export function createDetail(T: Three, deps: DetailDeps): Detail {
   const clock = deps.now ?? (() => performance.now());
   const store = deps.book.store;
+  /** This drawing of the body: its tiles are held under its own name in the store. */
+  const owner = {};
   const failed = new Map<string, number>();
   /** The bitmaps this body has seen come out of the store, to close the ones the store has let go. */
   const seen = new Map<string, { image: { close?(): void }; account: string }>();
@@ -136,10 +138,8 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
   let wantKey = "";
   let requested = 0;
   let gone = false;
-  let lastKeys: { account: string; keys: readonly string[] } | undefined;
+  let lastKeys: { source: BodyMapSource; account: string; keys: readonly string[] } | undefined;
   let watching = false;
-  /** Looks at the view again with what it was told last, once the levels are read, so a window is not waited for until the next draw. */
-  let replay: (() => void) | undefined;
   // The Texture class of the three.js module the page handed over: `DataTexture` extends it, and a page's subset of three need not name it.
   const TextureClass = Object.getPrototypeOf(T.DataTexture) as new (image: unknown) => THREE.Texture;
 
@@ -171,15 +171,15 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
   /** Stops the window being fetched: its loads are aborted (the tiles already here stay in the store until it needs the room). */
   const cancelLoading = (): void => {
     if (loading !== undefined) {
-      const at = accountOf(loading.source, deps.body);
-      if (lastKeys?.account === at) store.want(deps.book.loader(loading.source, deps.body), []);
+      const at = accountOf(loading.source, deps.body, owner);
+      if (lastKeys?.account === at) store.want(deps.book.loader(loading.source, deps.body, owner), []);
     }
     loading = undefined;
   };
 
   /** Frees every tile of this body held in the store, and the bitmaps. */
   const dropTiles = (): void => {
-    if (lastKeys !== undefined) store.drop(lastKeys.account);
+    if (lastKeys !== undefined) deps.book.dropAccount(lastKeys.source, deps.body, owner);
     for (const one of seen.values()) one.image.close?.();
     seen.clear();
     lastKeys = undefined;
@@ -192,7 +192,7 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     canvas.height = window.rows * TILE_SIZE;
     const context = canvas.getContext("2d");
     if (context === null) return false;
-    const account = accountOf(source, deps.body);
+    const account = accountOf(source, deps.body, owner);
     for (const tile of placed) {
       const key = tiles.get(`${tile.level}:${tile.col}:${tile.row}`);
       const got = key === undefined ? undefined : store.get(account, key);
@@ -240,14 +240,16 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
   const check = (): void => {
     if (gone || loading === undefined) return;
     const now = loading;
-    const loader = deps.book.loader(now.source, deps.body);
+    const loader = deps.book.loader(now.source, deps.body, owner);
     const got = store.want(loader, now.keys);
-    const account = accountOf(now.source, deps.body);
+    const account = accountOf(now.source, deps.body, owner);
     for (const [key, tile] of got) seen.set(`${account}\u0000${key}`, { image: tile.image as { close?(): void }, account });
     if (now.keys.every((key) => got.has(key))) {
       loading = undefined;
       if (!install(now.window, now.source, now.tiles)) failed.set(now.key, clock());
       prune();
+      // a window that arrives when the view no longer wants one is let go after the usual while: no draw may come to say so
+      if (wantLevel === null) scheduleFree();
       return;
     }
     const stats = store.stats();
@@ -294,9 +296,9 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     }
     const wanted = need.map((tile) => tiles.get(`${tile.level}:${tile.col}:${tile.row}`)!);
     loading = { key, window, keys: wanted, tiles, source };
-    lastKeys = { account: accountOf(source, deps.body), keys: wanted };
+    lastKeys = { source, account: accountOf(source, deps.body, owner), keys: wanted };
     // the store starts what is not held and aborts what is no longer wanted; what is held comes back at once
-    store.want(deps.book.loader(source, deps.body, () => (requested += 1)), wanted);
+    store.want(deps.book.loader(source, deps.body, owner, () => (requested += 1)), wanted);
     check();
   };
 
@@ -327,9 +329,11 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     // read once the view has settled, and only if the body is still drawn from this source: a page that changes `tiles` just after the element starts is not asked for a manifest it has just said it does not want
     setTimeout(() => {
       if (gone || active !== source || deps.source() !== source) {
-        // not wanted now: ask again for whatever the view is drawn from, so that nothing waits for a draw that may not come
-        if (!gone && active === source) levelsAsked = false;
-        if (!gone) replay?.();
+        // not wanted now: ask again for whatever the view is drawn from, at the draw this asks for
+        if (!gone && active === source) {
+          levelsAsked = false;
+          deps.redraw();
+        }
         return;
       }
       void Promise.resolve()
@@ -340,10 +344,8 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
             levelsRead = read !== undefined;
             levels = read !== undefined && read.length > 0 ? read : undefined;
             deps.onLevels?.(levels);
-            if (levels !== undefined) {
-              replay?.();
-              deps.redraw();
-            }
+            // a draw tells this the view as it is now (never as it was): the window is chosen then
+            if (levels !== undefined) deps.redraw();
           },
           () => undefined,
         );
@@ -419,7 +421,6 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
         idle();
         return;
       }
-      replay = () => this.sync(box, axes, viewWidth);
       ask(source);
       if (levels === undefined) return;
       const region = visibleRegion(box, axes);
@@ -433,7 +434,6 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
         return;
       }
       // the levels are read when the view wants more than the 2048 pixel map gives, not before: a page that never gets that close fetches nothing
-      replay = () => this.follow(seen_);
       const radiansPixels = seen_ === undefined ? 0 : seen_.radiansPixels * deps.ratio();
       if (seen_ !== undefined && radiansPixels / TEXEL_SLACK > BASE_WIDTH / (2 * Math.PI)) ask(source);
       if (levels === undefined) {
@@ -451,7 +451,7 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
         level: wantLevel,
         shown: held?.window.level ?? null,
         held: heldTiles(),
-        loading: loading === undefined ? 0 : loading.keys.filter((key) => store.get(accountOf(loading!.source, deps.body), key) === undefined).length,
+        loading: loading === undefined ? 0 : loading.keys.filter((key) => store.get(accountOf(loading!.source, deps.body, owner), key) === undefined).length,
         failed: failed.size,
         requested,
         pixels: held === undefined ? 0 : held.window.cols * TILE_SIZE * held.window.rows * TILE_SIZE,

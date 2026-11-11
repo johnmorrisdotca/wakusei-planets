@@ -80,8 +80,10 @@ export interface SourceBook {
   get(id: string): DataSource | undefined;
   /** The tile store all the map sources share. */
   readonly store: TileStore<ImageTile>;
-  /** A source seen as the store sees it, for one body: its tiles are held under `<id>/<body>`, so one source can serve several bodies. A tile that is not a picture is an error, so it is counted and never drawn. */
-  loader(source: BodyMapSource, body: string, onRequest?: () => void): TileLoader<ImageTile>;
+  /** A source seen as the store sees it, for one body and one drawing of it (`owner`): its tiles are held under their own name in the store, so one source can serve several bodies and several drawings. A tile that is not a picture is an error, so it is counted and never drawn. */
+  loader(source: BodyMapSource, body: string, owner: object, onRequest?: () => void): TileLoader<ImageTile>;
+  /** Frees one drawing's tiles and loads (what `loader` made for it): the others' are not touched. */
+  dropAccount(source: BodyMapSource, body: string, owner: object): void;
   /** Calls `listener` when something changed that a view may want to draw again for: a source added, removed or switched, a tile arrived or failed, records read. Returns the function that stops it. */
   onChange(listener: () => void): () => void;
   stats(): SourceStats;
@@ -93,8 +95,15 @@ export interface SourceBook {
   dispose(): void;
 }
 
-/** The name a source's tiles are held under for one body in the store: `<id>/<body>`. */
-export const accountOf = (source: { info: { id: string } }, body: string): string => `${source.info.id}/${body}`;
+const owners = new WeakMap<object, number>();
+let ownerCount = 0;
+
+/** The name a source's tiles are held under in the store for one body and one drawing of it (`owner`): `<id>/<body>#<n>`, so two drawings of the same body never share, or drop, each other's tiles. */
+export const accountOf = (source: { info: { id: string } }, body: string, owner: object): string => {
+  let n = owners.get(owner);
+  if (n === undefined) owners.set(owner, (n = ownerCount += 1));
+  return `${source.info.id}/${body}#${n}`;
+};
 
 const isTile = (tile: unknown): tile is ImageTile => {
   if (typeof tile !== "object" || tile === null) return false;
@@ -240,8 +249,14 @@ export function createSourceBook(options: SourceBookOptions = {}): SourceBook {
     isOwn,
     get: (id) => list.find((source) => source.info.id === id),
     store,
-    loader(source, body, onRequest) {
-      const account = accountOf(source, body);
+    dropAccount(source, body, owner) {
+      const account = accountOf(source, body, owner);
+      store.drop(account);
+      loaders.delete(account);
+      accounts.get(source.info.id)?.delete(account);
+    },
+    loader(source, body, owner, onRequest) {
+      const account = accountOf(source, body, owner);
       const held = loaders.get(account);
       if (held !== undefined && held.source === source) return held.loader;
       const info: SourceInfo = { ...source.info, id: account };

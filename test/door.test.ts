@@ -305,7 +305,7 @@ test("3b. switching a source off aborts the loads still running, and an abort is
       }),
   };
   book.addSource(slow);
-  const loader = book.loader(slow, "mars");
+  const loader = book.loader(slow, "mars", {});
   book.store.want(loader, ["3/1/1", "3/2/1"]);
   assert.equal(book.stats().inFlight, 2);
   book.enableSource("slow", false);
@@ -338,6 +338,37 @@ test("3c. a map source the page adds as the package's own folder is the package'
   assert.deepEqual(book.mapSources("mars"), [folder]);
   assert.deepEqual(book.mapSources("earth"), [folder], "a folder is for every body");
   assert.deepEqual(book.mapSources("mars", "height"), []);
+});
+
+test("3d. two drawings of one body in one view keep their own tiles: letting one go does not take the other's window", async () => {
+  const book = createSourceBook({ kinds: ["tiles"] });
+  forgetManifests();
+  fakeNetwork();
+  const painter = createPainter({ textureBase: "/none/", farBase: "/none/", tiles: "/tiles/", book });
+  const first = painter.make(three, "Mars", { look: "painted", invalidate: () => undefined });
+  const second = painter.make(three, "Mars", { look: "painted", invalidate: () => undefined });
+  await sleep(20);
+  const camera = cameraAt(1.1);
+  const draw = (): void => {
+    first.update(info(1455, camera));
+    second.update(info(1455, camera));
+  };
+  draw();
+  for (let i = 0; i < 40 && (first.tiles?.shown !== 3 || second.tiles?.shown !== 3); i += 1) {
+    await sleep(50);
+    draw();
+  }
+  assert.deepEqual([first.tiles?.shown, second.tiles?.shown], [3, 3]);
+  const held = book.stats().held;
+  assert.ok(held >= 2, "each drawing holds its own tiles");
+  first.dispose();
+  assert.equal(book.stats().held, held / 2, "only the first's tiles went");
+  draw();
+  await sleep(300);
+  assert.equal(second.tiles?.shown, 3, "the second still has its window");
+  assert.equal(on(second), 1);
+  second.dispose();
+  assert.equal(book.stats().held, 0);
 });
 
 // ----- 4: bad input -----
@@ -474,7 +505,7 @@ test("5b. at most six loads run at once for a source", async () => {
     },
   };
   book.addSource(wide);
-  book.store.want(book.loader(wide, "mars"), Array.from({ length: 20 }, (_, n) => `3/${n}/0`));
+  book.store.want(book.loader(wide, "mars", {}), Array.from({ length: 20 }, (_, n) => `3/${n}/0`));
   await book.store.idle();
   assert.equal(most, 6);
   assert.equal(book.stats().held, 20);
