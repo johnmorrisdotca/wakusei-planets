@@ -64,6 +64,8 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ほかの天体の後ろにある天体 (画面上の位置が、手前の天体の円盤の中にあるもの。`placeOf(id).behind` が手前の天体を返します) の名前は、ふつうは円盤の上に出ます。`covered="arrow"` (または `space.covered`) をつけると、代わりに控えめな小さな矢印を1つ、円盤のふちのすぐ外側で、後ろの天体に近い側に置き、円盤の後ろを指します。矢印のそばには、後ろの天体のうち優先順位が一番高いものの名前と、残りの数を出します (`天王星 +4`)。押すとその天体へ移動し、天体が後ろから出てくると矢印は消えます。`/space` の `coveredBy` と `coverArrows` がその計算です。
 
+真ん中から遠い名前は、控えめに出します。表示の真ん中にある系 (見ている天体、それが回っている天体、その天体の衛星のまとまり。たとえば土星系) に入らない天体は、名前、点、輪、矢印を半分の濃さで描きます。読めるだけの濃さは残し、真ん中の天体のものが目立つようにします。濃さは `far-opacity` (0から1。`space.farOpacity`、または要素につける CSS の `--wakusei-far-opacity`) で変えられます。`1` にすると、すべての名前が同じ濃さになります。天体やその名前にポインターをのせるか、指でふれるか、Tab で名前に移ると、その天体のまとまりがふつうの濃さになり、ほかは遠い名前の濃さになります。明るく見えるものはすべて1つのまとまりなので、どれを押してもそこへ移動します。このとき `wakusei-body-hover` が、その天体 (`wakusei-body-click` と同じ値) と `system: { host, moons }` つきで発火し、どの天体も指していなくなると `wakusei-body-hover-end` (`{ id }`) が発火します。ページはこれを使って、真ん中の天体のカードとは別に、指している天体のカードをもう1つ出せます。いま指している天体は `space.hovered` で読めます。どの天体のまとまりも `/space` の `systemOf(id)` で得られます。これらはどれも絵を描き直しません。
+
 名前は重なりません。2つの名前の枠が重なるときは、大事なほうだけを出し、出さない名前は輪も出しません。優先は、見ている天体、太陽、惑星、月の順で、同じ順なら画面で大きいほうが残ります。衛星は惑星に、惑星は太陽に場所をゆずり、ズームインすると名前が戻ります。`@johnmorrisdotca/wakusei-planets/space` の `chooseLabels(boxes)` は、同じ決まりを、ふつうの四角形の一覧に当てはめられます。
 
 惑星が数ピクセルの大きさになると、そのまわりに近い衛星が現れます。位置はこのパッケージの衛星モデルが出します (`zoomFor("jupiter-moons")`)。地球と惑星が太陽のまわりを回る道と、月が地球のまわりを回る道は、`orbits="off"` にしない限り描きます。どの線も天体と同じ変換を通るので、どちらの縮尺でも、天体は自分の線の上にいます。`stats.orbits` は、描いた線と、各天体が自分の線からどれだけ離れているか (線の半径に対する割合。線の上なら0.01未満) を返します。月の線は、月がいる場所から恒星月1つぶんの道で、時計が数日進むたびに計算し直します。点は `moonOrbit(ms)` で得られます。
@@ -104,7 +106,7 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターや指が乗った天体、またはフォーカスのある天体と、それがなくなったとき) です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 乗って見る
 

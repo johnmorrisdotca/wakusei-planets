@@ -7,7 +7,7 @@ import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
-import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
+import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
 import { coverArrows } from "./covered.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
@@ -60,6 +60,21 @@ export interface BodyInfo {
   radiusKm: number;
   /** Distance from the Earth's centre now, kilometres (0 for the Earth). */
   distanceKm: number;
+}
+
+/**
+ * The body under the pointer, a finger or the keyboard's focus (`wakusei-body-hover`), with the system it belongs to: the body in its middle and that body's moons. The view draws their names and markers at full strength.
+ *
+ * @example
+ * ```ts no-run
+ * import type { BodyHover } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const hover: BodyHover = { id: "titan", name: "Titan", kind: "moon", host: "saturn", radiusKm: 2574.7, distanceKm: 1.4e9, system: { host: "saturn", moons: ["mimas", "titan"] } };
+ * console.log(`${hover.name} is in ${hover.system.host}'s system`);
+ * ```
+ */
+export interface BodyHover extends BodyInfo {
+  system: { host: BodyId; moons: BodyId[] };
 }
 
 /**
@@ -123,6 +138,12 @@ export interface RideOptions {
 export type Riding = RideState;
 
 const readLight = (value: string | null): SpaceLight => (value === "lit" ? "lit" : "sun");
+/** The far names' strength from the attribute: a number from 0 to 1, or undefined when it is not set or not a number. */
+const readFar = (value: string | null): number | undefined => {
+  if (value === null || value.trim() === "") return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : undefined;
+};
 const RAD = Math.PI / 180;
 const REAL_TIME_TICK_MS = 60_000;
 /** The plain wheel in an immersive view is passed on as a pinch of this share, so a notch (100) zooms about 1.2 times, as the family's mouse wheel does with Alt. */
@@ -154,13 +175,16 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label,.sp-ring{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
  * (`"lon,lat"`), `time` (`now` or an ISO date), `speed` (1 is real time, 0 holds, 86400 is a day a second, negative runs backwards), `scale` (`compressed` or `true`), `look` (`realistic` or `painted`),
  * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), and `texture-base`, `texture-far-base`, `max-texture` and `tiles` (where the finer map tiles are, for a close zoom; `off` for none). Positions come from this package's own models. It draws
  * only when something changes, and nothing while it is out of sight.
+ *
+ * The names and markers of bodies outside the system in the middle of the view are drawn at half strength (`far-opacity`, 0 to 1). A body under the pointer, a finger or the keyboard's focus lights its own system instead and
+ * sends `wakusei-body-hover` with the body and its system (`wakusei-body-hover-end` when none is). Neither draws the picture again.
  *
  * `immersive` makes it a full-screen view: it fills the box it is in, whatever the shape (the body looked at is framed by the shorter side), the plain wheel zooms and a drag anywhere on it turns it. Without it Ctrl, Command or Alt with the wheel zooms and the plain wheel scrolls the page.
  *
@@ -185,7 +209,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "far-opacity", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -295,17 +319,24 @@ export class WakuseiSpace extends HTMLElement {
     });
     this.#schedule();
     this.addEventListener("pointerdown", this.#down);
+    this.addEventListener("pointermove", this.#move, { passive: true });
+    this.addEventListener("pointerleave", this.#leave);
     // before the shared hands (which hear it after this): a plain wheel in an immersive view zooms
     this.addEventListener("wheel", this.#wheel, { capture: true, passive: false });
     this.#hands = carryControls(this, { limits: CARRIED_LIMITS, onChange: (view, info) => this.setView(view, info.final) });
     this.#labelBox.addEventListener("click", this.#labelClick);
     this.#labelBox.addEventListener("focusin", this.#labelFocus);
+    this.#labelBox.addEventListener("focusout", this.#labelBlur);
+    this.#farStrength();
   }
 
   disconnectedCallback(): void {
     this.#hands?.unbind();
     this.#hands = undefined;
     this.removeEventListener("pointerdown", this.#down);
+    this.removeEventListener("pointermove", this.#move);
+    this.removeEventListener("pointerleave", this.#leave);
+    this.#hovered = null;
     this.removeEventListener("wheel", this.#wheel, { capture: true });
     window.removeEventListener("pointerup", this.#up, true);
     clearTimeout(this.#timer);
@@ -328,6 +359,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
+    else if (name === "far-opacity") this.#farStrength();
     else if (name === "help-through") this.helpThrough = value !== null && value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
@@ -448,6 +480,29 @@ export class WakuseiSpace extends HTMLElement {
   set labelsAlways(value: boolean) {
     this.#labelsAlways = value;
     if (this.#places) this.#placeLabels(this.#places);
+  }
+
+  /**
+   * How strongly the names and markers of bodies outside the system in the middle of the view are drawn, from 0 (not at all) to 1 (as strongly as the others): the attribute `far-opacity`, 0.5 when it is not set
+   * (a page may set the CSS property `--wakusei-far-opacity` instead). The system in the middle is the body looked at, the body it goes round, and that body's moons; while a body is under the pointer, a finger or the
+   * keyboard's focus, its own system is drawn at full strength instead, and the rest at this strength.
+   */
+  get farOpacity(): number {
+    return readFar(this.getAttribute("far-opacity")) ?? 0.5;
+  }
+  set farOpacity(value: number) {
+    this.setAttribute("far-opacity", String(Math.min(1, Math.max(0, value))));
+  }
+
+  #farStrength(): void {
+    const far = readFar(this.getAttribute("far-opacity"));
+    if (far === undefined) this.#labelBox?.style.removeProperty("--wakusei-far-opacity");
+    else this.#labelBox?.style.setProperty("--wakusei-far-opacity", String(far));
+  }
+
+  /** The body under the pointer, a finger or the keyboard's focus now, or null: its system's names are drawn at full strength. */
+  get hovered(): BodyId | null {
+    return this.#hovered;
   }
 
   get orbits(): boolean {
@@ -924,6 +979,7 @@ export class WakuseiSpace extends HTMLElement {
     }
     // no two names overlap: a moon gives way to its planet and a planet to the Sun
     const shown = chooseLabels(wanted);
+    this.#nameBoxes = wanted.filter((one) => shown.has(one.id));
     for (const id of ids) {
       const label = this.#pool.get(id);
       const ring = this.#rings.get(id);
@@ -954,7 +1010,82 @@ export class WakuseiSpace extends HTMLElement {
       if (spot.small) ring.style.transform = `translate(${Math.round(places[id]!.x)}px,${Math.round(places[id]!.y)}px)`;
     }
     this.#placeArrows(places);
+    this.#markFar();
   }
+
+  // --- far names, and the system under the pointer ---------------------------------------------------------------------------------------------------
+  #hovered: BodyId | null = null;
+  #hoverBy: "pointer" | "focus" = "pointer";
+  #nameBoxes: LabelBox[] = [];
+
+  /** The bodies drawn at full strength: the system of the body under the pointer, or else the one in the middle of the view. */
+  #lit(): Set<string> {
+    const { host, moons } = systemOf(this.#hovered ?? this.#model.focus);
+    return new Set<string>([host, ...moons]);
+  }
+
+  /** Mark the names, rings and arrows of the bodies outside the lit system: they are drawn at the far strength. Only what changed is touched, and nothing is drawn again. */
+  #markFar(): void {
+    const lit = this.#lit();
+    const mark = (el: HTMLElement, id: string | undefined): void => {
+      const far = id !== undefined && !lit.has(id);
+      if (el.hasAttribute("data-far") !== far) el.toggleAttribute("data-far", far);
+    };
+    for (const [id, label] of this.#pool) mark(label, id);
+    for (const [id, ring] of this.#rings) mark(ring, id);
+    for (const arrow of this.#arrows.values()) mark(arrow, arrow.dataset["body"]);
+  }
+
+  /** A body comes under the pointer, a finger or the keyboard's focus (`wakusei-body-hover`, with its system), or none does (`wakusei-body-hover-end`). */
+  #hover(id: BodyId | null, by: "pointer" | "focus"): void {
+    if (id === this.#hovered) {
+      if (id !== null) this.#hoverBy = by;
+      return;
+    }
+    const was = this.#hovered;
+    this.#hovered = id;
+    this.#hoverBy = by;
+    this.#markFar();
+    if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
+    else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: was }, bubbles: true, composed: true }));
+  }
+
+  /** The body at a point of the element, in CSS pixels: on its disc (at least 14 pixels round its place) or on its name. */
+  #bodyAt(x: number, y: number): BodyId | null {
+    if (!this.#places || !this.#model.labels) return null;
+    let best: BodyId | null = null;
+    let bestD = Infinity;
+    for (const [id, at] of Object.entries(this.#places)) {
+      if (!at) continue;
+      const d = Math.hypot(x - at.x, y - at.y);
+      if (d <= Math.max(at.r, 14) && d < bestD) {
+        best = id as BodyId;
+        bestD = d;
+      }
+    }
+    if (best !== null) return best;
+    for (const box of this.#nameBoxes) if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) return box.id as BodyId;
+    return null;
+  }
+
+  #pointAt(event: PointerEvent): BodyId | null {
+    const rect = this.getBoundingClientRect();
+    return this.#bodyAt(event.clientX - rect.left, event.clientY - rect.top);
+  }
+
+  // a mouse or a pen that moves over the view with no button down; a drag that turns the view leaves the lit system as it is
+  #move = (event: PointerEvent): void => {
+    if (event.pointerType === "touch" || event.buttons !== 0) return;
+    if (this.#hoverBy === "focus" && this.#hovered !== null) return;
+    this.#hover(this.#pointAt(event), "pointer");
+  };
+  #leave = (event: PointerEvent): void => {
+    if (event.pointerType !== "touch" && this.#hoverBy === "pointer") this.#hover(null, "pointer");
+  };
+  #labelBlur = (event: FocusEvent): void => {
+    const next = event.relatedTarget as HTMLElement | null;
+    if (this.#hoverBy === "focus" && !(next && this.#labelBox?.contains(next))) this.#hover(null, "focus");
+  };
 
   /** The quiet arrows for the bodies behind others (`covered="arrow"`): one per covering disc, just outside its edge, named for the surest body behind and counting the rest. */
   #placeArrows(places: Record<string, BodyPlace | null>): void {
@@ -1054,6 +1185,7 @@ export class WakuseiSpace extends HTMLElement {
   #downY = 0;
   #down = (event: PointerEvent): void => {
     if (event.button !== 0) return;
+    if (event.pointerType === "touch") this.#hover(this.#pointAt(event), "pointer");
     this.#downX = event.clientX;
     this.#downY = event.clientY;
     window.addEventListener("pointerup", this.#up, { capture: true, once: true });
@@ -1104,7 +1236,9 @@ export class WakuseiSpace extends HTMLElement {
   }
   #labelFocus = (event: Event): void => {
     const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
-    if (id) this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    if (!id) return;
+    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    this.#hover(id, "focus");
   };
 
   // --- the rest --------------------------------------------------------------------------------------------------------------------------------------
