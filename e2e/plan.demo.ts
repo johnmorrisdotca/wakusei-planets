@@ -70,6 +70,10 @@ test("a press on a dot marks it and sends the body's id; a planet with moons als
 test("the keyboard: a dot takes the focus, Enter marks it, and the focus stays on it when the plan is drawn again", async ({ page }) => {
   await open(page);
   await dot(sun(page), "venus").focus();
+  // a dot that is not the marked one shows a ring too when the keyboard reaches it
+  expect(await sun(page).evaluate((el) => getComputedStyle(el.shadowRoot!.querySelector('g[data-id="venus"] circle.fr')!).display)).not.toBe("none");
+  expect(await sun(page).evaluate((el) => getComputedStyle(el.shadowRoot!.querySelector('g[data-id="earth"] circle.fr')!).display)).toBe("none");
+  expect(await sun(page).evaluate((el) => el.shadowRoot!.querySelector('g[data-id="venus"] circle.hit')!.getAttribute("r"))).toBe("12");
   await page.keyboard.press("Enter");
   await expect.poll(() => marked(sun(page))).toBe("venus");
   await expect.poll(() => sun(page).evaluate((el) => el.shadowRoot?.activeElement?.getAttribute("data-id"))).toBe("venus");
@@ -151,6 +155,15 @@ test("a craft or a small body can be marked: the plan stands out to hold it", as
   expect(await marked(sun(page))).toBe("voyager1");
   expect(await sun(page).evaluate((el) => (el as Plan).plan?.extent)).toBe(200);
   await expect(dot(sun(page), "voyager1")).toHaveAttribute("data-kind", "spacecraft");
+  // a second craft is fetched when it is first marked: its mark does not vanish because another is loaded
+  await page.locator('#sun-marks button[data-id="voyager2"]').click();
+  await expect.poll(() => sun(page).evaluate((el) => (el as Plan).plan?.dots.some((one) => one.id === "voyager2"))).toBe(true);
+  expect(await marked(sun(page))).toBe("voyager2");
+  await expect(dot(sun(page), "voyager2")).toHaveAttribute("data-marked", "");
+  // and back: the first is still there
+  await page.locator('#sun-marks button[data-id="voyager1"]').click();
+  await expect.poll(() => marked(sun(page))).toBe("voyager1");
+  expect(await sun(page).evaluate((el) => (el as Plan).plan?.dots.some((one) => one.id === "voyager1"))).toBe(true);
 });
 
 test("light and dark follow the page, and Japanese follows the page's language", async ({ page }, info) => {
