@@ -151,6 +151,17 @@ const text = lineupText(largest, "en");
 console.log(`${text.name}: ${text.radius}, ${text.km}, ${text.source}`);
 ```
 
+## The top-down plan
+
+`<wakusei-plan mark="mars">` is a small map of the solar system from above, or (`system="jupiter" mark="io"`) of one planet's moons from above its pole, with the body you are looking at marked. It is SVG with no WebGL, made to be read at 200 to 280 pixels, so it fits an inset beside a 3D view. Distances are squeezed with a logarithm so Mercury and Neptune both show, or to scale with `spacing="true"`. It draws only when its time, mark or another attribute changes, never on a timer. The pure side needs no browser; [the guide](docs/guides/plan.md) has the attributes and both spacings:
+
+```ts
+import { planAt } from "@johnmorrisdotca/wakusei-planets/plan";
+
+const io = planAt(Date.UTC(2026, 10, 11), { system: "jupiter", mark: "io", spacing: "true" }).dots.find((dot) => dot.id === "io");
+console.log(io?.distance.toFixed(1), "Jupiter radii from Jupiter");
+```
+
 ## A name on the body
 
 `body-label="painted"` writes the body's name on its own globe, large and in capitals, lying on the surface and turning with it, as a film lays a title over the thing it names: on `<wakusei-body>` and on every body of `<wakusei-space>`, in the page's language, in Michroma by default or a font of yours. Four looks (`painted`, `etched`, `outline`, `burned`), once or on both sides, at the equator or near a pole, turning with the body or always facing you; nothing on a body too small on the screen. [A name on the body](docs/guides/name-on-the-body.md) has the attributes.
@@ -432,6 +443,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
+| `.../plan` | The top-down plan: `planAt`, `planSvg`, `planText`. `.../plan/element` is `<wakusei-plan>`, in SVG with no WebGL. |
 | `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
 | `.../sheets` | Printable colouring sheets for children: the Sun, the planets and the big moons in thick lines with the real colours and three facts, and all the planets at one scale, in English and Japanese (`kidsSvg`, `kidsSheet`, `kidsFacts`). |
 | `.../look` | What a body needs to be drawn with three.js. |
@@ -465,6 +477,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
 | [A star from its numbers](docs/guides/star-look.md) | Any star in 3D or as lines, what is measured and what is drawn, every way to put it in a page |
 | [The size line-up](docs/guides/size-lineup.md) | The Sun and the largest stars at true relative size, with each radius, its error and its paper, where the papers disagree, every way to put it in a page |
+| [The top-down plan](docs/guides/plan.md) | The solar system or one planet's moons from above, with one body marked: squeezed or to-scale distances, drawing only on change |
 | [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |
 | [Close zoom and map tiles](docs/guides/close-zoom.md) | How far each body zooms and why, the finer map tiles for a close zoom (made from public-domain maps, served beside the demo, never in the package), the generic detail, what it costs |
 | [Outside data, the data door](docs/guides/data-door.md) | Hand the package your own maps of a body or small bodies with their licence and credit, switch them off, and show whose data is on the screen |

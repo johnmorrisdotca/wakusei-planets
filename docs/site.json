@@ -40,6 +40,16 @@
       "ja": "<wakusei-space> 要素 (地球・月・太陽・惑星をその位置に)",
       "platform": "browser"
     },
+    "./plan": {
+      "en": "A small top-down plan of the solar system or of one planet's moons for a date: positions, spacing and the SVG",
+      "ja": "太陽系、またはひとつの惑星の衛星を真上から見た小さな図。日付ごとの位置、距離の描き方、SVG",
+      "platform": "node"
+    },
+    "./plan/element": {
+      "en": "The <wakusei-plan> element: the solar system, or one planet's moons, from above, in SVG",
+      "ja": "<wakusei-plan> 要素 (太陽系、またはひとつの惑星の衛星を真上から、SVGで)",
+      "platform": "browser"
+    },
     "./door": {
       "en": "The data door: hand the package your own maps of a body or small bodies as a source with its own licence and credit, and see whose data is on the screen",
       "ja": "データの入口（自分で用意した天体の地図や小天体を、ライセンスと出典つきのソースとして渡し、いま画面にあるのは誰のデータかを示します）",
