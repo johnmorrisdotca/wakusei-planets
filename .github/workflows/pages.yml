@@ -38,7 +38,9 @@ jobs:
         run: pnpm tiles
       - run: pnpm site
       - run: pnpm docs:site
-      - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright
+        with:
+          browsers: chromium
       - name: The ready-made PDFs of the colouring sheets
         run: node scripts/make-pdfs.mjs
       - uses: actions/configure-pages@v6

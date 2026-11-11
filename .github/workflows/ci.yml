@@ -48,7 +48,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright
+        with:
+          browsers: chromium
       - name: Every way of using it in the README and the guides, built and opened in a browser
         run: pnpm test:usage
   demo:
@@ -80,7 +82,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps ${{ startsWith(matrix.project, 'webkit') && 'webkit' || 'chromium' }}
+      - uses: ./.github/actions/playwright
+        with:
+          browsers: ${{ startsWith(matrix.project, 'webkit') && 'webkit' || 'chromium' }}
       - name: The demo and the docs site, played in one browser at one width (pnpm test:demo plays all four)
         run: pnpm test:demo:one --project=${{ matrix.project }} --shard=${{ matrix.shard }}
   freeze:
@@ -95,7 +99,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - uses: ./.github/actions/playwright
+        with:
+          browsers: chromium
       - name: The freeze test, WebGL drawn in software
         run: pnpm test:freeze
       - name: The soak, one minute (ten minutes by hand with pnpm test:soak)
