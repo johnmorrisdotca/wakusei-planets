@@ -777,7 +777,7 @@ export class WakuseiSpace extends HTMLElement {
     /** How many frames the ephemeris has worked out. */
     lookups: number;
     /** The camera as the last draw left it: its place in Earth radii from the Earth's centre, and its field of view in degrees. */
-    camera: { position: [number, number, number]; fov: number };
+    camera: { position: [number, number, number]; fov: number; up: [number, number, number] };
     /** What the painter has made at the last draw: the bodies with a drawing, the moons shown round a planet that is near, and the moons made and not yet let go. */
     bodies: { look: string; painted: number; moons: number; held: number };
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
@@ -806,7 +806,7 @@ export class WakuseiSpace extends HTMLElement {
       assets: { entries: stats?.assets.entries ?? 0, refs: stats?.assets.refs ?? 0 },
       time: this.time,
       lookups: this.#model.lookups,
-      camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov },
+      camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov, up: [...this.#model.camera.up] },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, sources: this.#door.book.stats() },
@@ -913,6 +913,13 @@ export class WakuseiSpace extends HTMLElement {
       if (!spot || (!spot.carried && !shown.has(id))) {
         if (!label.hidden) label.hidden = true;
         if (!ring.hidden) ring.hidden = true;
+        // a hidden name forgets its fade, so that when it comes back it fades in rather than popping
+        if (label.hasAttribute("data-carried")) {
+          label.removeAttribute("data-carried");
+          ring.removeAttribute("data-carried");
+          label.setAttribute("aria-hidden", "false");
+          label.tabIndex = 0;
+        }
         continue;
       }
       if (label.hidden) label.hidden = false;

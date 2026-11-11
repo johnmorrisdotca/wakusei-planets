@@ -114,16 +114,23 @@ export function besideMoon(input: BesideInput): BesideCamera {
   // look between the two, and turn the picture so the planet is to the side of the moon, not above or below it
   const forward = unit(add(toMoon, toHost));
   const shift = minus(toHost, toMoon);
-  let across = unit(minus(shift, scale(forward, dot(shift, forward))));
-  let up = unit(cross(across, forward));
-  // the planet may be on either side of the moon, so the picture is turned the way that keeps north (the scene's +y) up: the Earth is never seen south-up from beside the Moon
-  if (up[1] < 0) {
-    up = scale(up, -1);
-    across = scale(across, -1);
-  }
+  // north is up, always: the scene's +y (the planet's north, up in every other view) laid across the line of sight, so the picture is never rolled by where the Sun or the moon happens to be; only a camera
+  // looking straight along the pole has no north to lay, and takes the side the planet is on instead
+  let up: Vec3 = minus([0, 1, 0], scale(forward, forward[1]));
+  if (length(up) < 1e-6) up = cross(unit(minus(shift, scale(forward, dot(shift, forward)))), forward);
+  up = unit(up);
   // both discs fit: the half-angle from the middle to the far edge of each, across and up
-  const reach = Math.max(angleBetween(forward, toMoon) + moonHalf(position), angleBetween(forward, toHost) + hostHalf(position)) + 3;
-  const half = Math.max(Math.tan(reach * RAD) / Math.min(1.6, Math.max(0.3, input.aspect)), Math.tan((moonHalf(position) + 3) * RAD));
+  // both discs fit, whichever way they lie now that north is up: the view must reach each disc's far edge across (over the aspect) and up, with a little room
+  const right = unit(cross(forward, up));
+  const need = (direction: Vec3, halfAngle: number): { across: number; up: number } => {
+    const z = Math.max(1e-9, dot(direction, forward));
+    const marginTan = Math.tan((halfAngle + 3) * RAD);
+    return { across: Math.abs(dot(direction, right)) / z + marginTan, up: Math.abs(dot(direction, up)) / z + marginTan };
+  };
+  const moonNeed = need(toMoon, moonHalf(position));
+  const hostNeed = need(toHost, hostHalf(position));
+  const aspect = Math.min(1.6, Math.max(0.3, input.aspect));
+  const half = Math.max(moonNeed.up, hostNeed.up, moonNeed.across / aspect, hostNeed.across / aspect, Math.tan((moonHalf(position) + 3) * RAD));
   const fov = Math.min(110, Math.max(35, 2 * Math.atan(half) / RAD));
   return { position, forward, up, fov, distance, separation: spot.separation };
 }
