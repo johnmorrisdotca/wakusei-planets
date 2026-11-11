@@ -130,10 +130,20 @@ const eagle = places.findPlace(moonPlaces, "Apollo 11 lunar module");
 const percy = places.findPlace(marsPlaces, "Perseverance");
 if (eagle === undefined || Math.abs(eagle.lat - 0.674) > 0.01 || Math.abs(eagle.lon - 23.473) > 0.01 || eagle.kind !== "crewed") throw new Error("places: Apollo 11 is not at Tranquility Base");
 if (percy === undefined || Math.abs(percy.lat - 18.44) > 0.01 || Math.abs(percy.lon - 77.45) > 0.01) throw new Error("places: Perseverance is not in Jezero");
+// every body of /places has its entry point in the package: the file, its types and an export that resolves, and each table says its own body
+const placeEntries: Record<string, number> = {};
+for (const body of places.PLACE_BODIES as string[]) {
+  for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/places/${body}.${ext}`, import.meta.url))) throw new Error(`missing dist/places/${body}.${ext}`);
+  const table = (await import(`@johnmorrisdotca/wakusei-planets/places/${body}`)) as Record<string, readonly { id: string }[]>;
+  const list = table[`PLACES_${body.toUpperCase().replace("-", "_")}`];
+  if (list === undefined || list.length === 0 || !list.every((place) => place.id.startsWith(`${body}/`))) throw new Error(`places: /places/${body} does not hold its own table`);
+  placeEntries[body] = list.length;
+}
+if (placeEntries.venus === undefined || placeEntries.venus < 300 || placeEntries["67p"] !== 1) throw new Error("places: the Venus or 67P table is not what it should be");
 if ((await places.loadPlaces("mars")).length !== marsPlaces.length || (await places.listPlaces("moon", "crewed")).length !== 6) throw new Error("places: the lookups do not load a table");
 let noBody = false;
 try {
-  await places.loadPlaces("venus");
+  await places.loadPlaces("earth");
 } catch (error) {
   noBody = error instanceof RangeError;
 }

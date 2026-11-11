@@ -1,6 +1,6 @@
-// Places on a body: the record a page marks on the Moon or Mars (a landing, a rover, a crash or impact site, a named feature), the lookups over a body's list, and the helpers a page needs beside
-// them: the sub-solar point, the terminator and the local solar time at a place, at any moment, from the package's own ephemeris and the IAU poles. Pure: no DOM, no clock reads. The lists
-// themselves are the entry points `/places/moon` and `/places/mars`, so a page pays only for the body it shows.
+// Places on a body: the record a page marks on the Moon, Mars or any of 31 other bodies (a landing, a rover, a crash, impact or atmospheric-entry site, a named feature), the lookups over a body's list, and the helpers a page needs
+// beside them: the sub-solar point, the terminator and the local solar time at a place, at any moment, from the package's own ephemeris and the IAU poles. Pure: no DOM, no clock reads. The lists
+// themselves are the entry points `/places/<body>`, so a page pays only for the body it shows.
 import { apparent } from "./ephemeris.ts";
 import { BODIES, type BodyId } from "./facts.ts";
 import { cross, dot, type Vec3 } from "./vec.ts";
@@ -10,20 +10,22 @@ export type { When } from "./when.ts";
 
 /**
  * What a place is: a `crewed` landing (an Apollo lunar module), a `landing` (a lander that worked after touchdown), a `rover` that drove there, a `crash` (a craft that hit the surface and was lost, by accident or at the end of its mission), an
- * `impact` (a craft sent to hit it on purpose), a `planned` landing (announced, not flown) or a named `feature` of the surface.
+ * `impact` (a craft sent to hit it on purpose), an `entry` (a probe or orbiter lost in the atmosphere of Venus, Jupiter or Saturn: no surface was reached or none is there), a `planned` landing (announced, not flown) or a named `feature` of the surface.
  *
  * @example
  * ```ts
  * import type { PlaceKind } from "@johnmorrisdotca/wakusei-planets/places";
  *
- * const kinds: PlaceKind[] = ["crewed", "landing", "rover", "crash", "impact", "planned", "feature"];
+ * const kinds: PlaceKind[] = ["crewed", "landing", "rover", "crash", "impact", "entry", "planned", "feature"];
  * console.log(kinds.length);
  * ```
  */
-export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "planned" | "feature";
+export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "entry" | "planned" | "feature";
 
 /**
- * One place on a body. Latitude and longitude are planetocentric degrees, east positive, from -180 to 180: the Moon's in the mean Earth/polar axis frame, Mars's in its IAU frame. On Mars every place is planetocentric: the Gazetteer's features are, and a lander's `source.latitude` says whether its source is planetocentric, was a planetographic latitude `converted`, or does not state it (`not stated`, GCAT's own rows).
+ * One place on a body. Latitude and longitude are degrees, east positive, from -180 to 180 on every body: the Moon's in the mean Earth/polar axis frame, the others' in the IAU frame the Gazetteer or the source uses (Venus, Mars, Mercury and the moons 0 to 360 east,
+ * converted; a source's west longitude is negated). Every feature is planetocentric (the Gazetteer's shapefiles are "in east longitude, planetocentric latitude"). On Mars every place is planetocentric: a lander's `source.latitude` says whether its source is planetocentric,
+ * was a planetographic latitude `converted`, or does not state it (`not stated`, GCAT's own rows and most of the other bodies' sites).
  *
  * @example
  * ```ts
@@ -44,11 +46,11 @@ export interface Place {
   lon: number;
   /** When it got there (ISO, UTC, to the minute where the source gives one; a month alone where only that is known), for a site. */
   date?: string;
-  /** For a site: the craft, who ran it, its country code as the catalogue gives it, and how it ended up (`soft`, `hard`, `impact`, `crewed`). */
+  /** For a site: the craft, who ran it, its country code as the catalogue gives it, and how it ended up (`soft`, `hard`, `impact`, `crewed`, or `entry`: lost in an atmosphere). */
   mission?: string;
   operator?: string;
   country?: string;
-  outcome?: "crewed" | "soft" | "hard" | "impact";
+  outcome?: "crewed" | "soft" | "hard" | "impact" | "entry";
   /** True where the source gives the position to a degree or less, or says it is an estimate: the real place can be tens of kilometres from the point. */
   approximate?: true;
   /** Where the catalogue's own position differs from the one used by more than 0.05 degrees: `[lat, lon]`, kept so a page can show both. */
@@ -61,17 +63,29 @@ export interface Place {
   until?: string;
   /** The catalogue's own name for the object, for looking it up there. */
   gcatName?: string;
-  /** For a feature: the IAU type and a plain word for it, the size in kilometres, and the date the name was approved. */
+  /** True on the places a page can suggest first: the ones a reader has heard of (the Apollo sites, Tycho, Olympus Mons, Maxwell Montes, Sputnik Planitia, Occator). A modest list. */
+  famous?: true;
+  /** For a feature on a body beyond the Moon and Mars: where the Gazetteer says the name comes from (in English). */
+  origin?: string;
+  /** For a feature: the IAU type and a plain word for it, the size in kilometres (0 where the Gazetteer gives none), and the date the name was approved. */
   feature?: { type: string; typeWord: { en: string; ja: string }; diameterKm: number; approved: string };
   /** For a planned landing: the announced date, its state, and the date the announcement was read. */
   planned?: { date: string; status: "announced" | "slipped" | "cancelled"; read: string };
   /** Where the record comes from, and the date that source's file was read. */
-  source: { id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency"; read: string; latitude?: "planetocentric" | "converted" | "not stated" };
+  source: {
+    id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency" | "nasa-ntrs" | "pds-atmospheres" | "paper";
+    read: string;
+    latitude?: "planetocentric" | "converted" | "not stated";
+    /** The page or paper a position was typed from, where it is not one of the tables above. */
+    url?: string;
+    /** The coordinate frame, where the source's is not the body's IAU one. */
+    frame?: string;
+  };
 }
 
 /**
  * The credit a page that shows places owes each source, one row for every `source.id` the tables use: the line to print, the licence or terms it rests on and the address. The lander catalogue's is a condition of its licence (CC BY 4.0: "data from GCAT (J. McDowell,
- * planet4589.org/space/gcat)"); the others are US government works, credited as their owners ask.
+ * planet4589.org/space/gcat)"); the others are US government works, credited as their owners ask, and the papers' coordinates are facts (each record's `source.url` names the paper).
  *
  * @example
  * ```ts
@@ -86,10 +100,15 @@ export const PLACES_CREDITS: readonly { id: Place["source"]["id"]; line: string;
   { id: "nssdca", line: "NASA NSSDCA", licence: "US government work (NASA content is generally not subject to copyright in the United States)", url: "https://nssdc.gsfc.nasa.gov/" },
   { id: "pds-ode", line: "NASA Planetary Data System, Mars Orbital Data Explorer", licence: "US government work", url: "https://ode.rsl.wustl.edu/mars/" },
   { id: "nasa-mars24", line: "NASA Goddard Institute for Space Studies, Mars24 Sunclock", licence: "US government work", url: "https://www.giss.nasa.gov/tools/mars24/" },
+  { id: "agency", line: "NASA mission and Photojournal pages (the address is in each record's source.url)", licence: "US government work", url: "https://www.nasa.gov/nasa-brand-center/images-and-media/" },
+  { id: "nasa-ntrs", line: "Basilevsky and Weitz 1992, The geology of the Venera/Vega landing sites, NASA Technical Reports Server", licence: "public use permitted (NTRS)", url: "https://ntrs.nasa.gov/citations/19930005108" },
+  { id: "pds-atmospheres", line: "NASA Planetary Data System, Planetary Atmospheres Node, Pioneer Venus summary", licence: "US government work", url: "https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PIONEER_Venus/venus_cp.html" },
+  { id: "paper", line: "the published paper named in the record's source.url (Daly et al. 2023; Nagdimunov et al. 2014; Hoang et al. 2020)", licence: "coordinates (facts) typed from the papers, none of whose text, figures or tables is copied; Daly et al. 2023 is CC BY 4.0, credited", url: "https://doi.org/10.1038/s41586-023-05810-5" },
 ];
 
 /**
- * The bodies that have places: `moon` and `mars`.
+ * The bodies that have places, in the order a picker shows them: the Moon and Mars (landings, rovers and named features), Mercury, Venus, the moons of Jupiter, Saturn, Uranus and Neptune that have mapped names, Pluto and Charon, Ceres and Vesta
+ * (named features), then the bodies with only sites (Eros, Ryugu, Bennu, Dimorphos, comets Tempel 1 and 67P, Jupiter and Saturn themselves). Each has its own entry point `/places/<body>`.
  *
  * @example
  * ```ts
@@ -98,7 +117,10 @@ export const PLACES_CREDITS: readonly { id: Place["source"]["id"]; line: string;
  * console.log(PLACE_BODIES.join(", "));
  * ```
  */
-export const PLACE_BODIES = ["moon", "mars"] as const;
+export const PLACE_BODIES = [
+  "moon", "mars", "mercury", "venus", "io", "europa", "ganymede", "callisto", "titan", "enceladus", "mimas", "tethys", "dione", "rhea", "iapetus", "miranda", "ariel", "umbriel", "titania", "oberon", "triton", "pluto", "charon", "ceres", "vesta",
+  "eros", "ryugu", "bennu", "dimorphos", "tempel-1", "67p", "jupiter", "saturn",
+] as const;
 
 /**
  * A body with places.
@@ -182,9 +204,9 @@ export function placesNear(places: readonly Place[], lat: number, lon: number, w
 const RAD = Math.PI / 180;
 
 /**
- * A body's places, loaded when asked for: the table of `/places/moon` or `/places/mars` arrives as a chunk of its own the first time, so a page that never asks for one does not carry it.
+ * A body's places, loaded when asked for: the table of `/places/<body>` arrives as a chunk of its own the first time, so a page that never asks for one does not carry it.
  *
- * @param body - `moon` or `mars`.
+ * @param body - One of `PLACE_BODIES`: `moon`, `mars`, `venus`, `titan`, `pluto`, `67p` and the rest.
  * @returns The list: the sites first, by date, then the named features by size. An unknown body is a rejected `RangeError`.
  *
  * @example
@@ -196,15 +218,48 @@ const RAD = Math.PI / 180;
  * ```
  */
 export async function loadPlaces(body: PlaceBody): Promise<readonly Place[]> {
-  if (body === "moon") return (await import("./places/moon.ts")).PLACES_MOON;
-  if (body === "mars") return (await import("./places/mars.ts")).PLACES_MARS;
-  throw new RangeError(`places are held for ${PLACE_BODIES.join(" and ")}, not "${String(body)}"`);
+  switch (body) {
+    case "moon": return (await import("./places/moon.ts")).PLACES_MOON;
+    case "mars": return (await import("./places/mars.ts")).PLACES_MARS;
+    case "mercury": return (await import("./places/mercury.ts")).PLACES_MERCURY;
+    case "venus": return (await import("./places/venus.ts")).PLACES_VENUS;
+    case "io": return (await import("./places/io.ts")).PLACES_IO;
+    case "europa": return (await import("./places/europa.ts")).PLACES_EUROPA;
+    case "ganymede": return (await import("./places/ganymede.ts")).PLACES_GANYMEDE;
+    case "callisto": return (await import("./places/callisto.ts")).PLACES_CALLISTO;
+    case "titan": return (await import("./places/titan.ts")).PLACES_TITAN;
+    case "enceladus": return (await import("./places/enceladus.ts")).PLACES_ENCELADUS;
+    case "mimas": return (await import("./places/mimas.ts")).PLACES_MIMAS;
+    case "tethys": return (await import("./places/tethys.ts")).PLACES_TETHYS;
+    case "dione": return (await import("./places/dione.ts")).PLACES_DIONE;
+    case "rhea": return (await import("./places/rhea.ts")).PLACES_RHEA;
+    case "iapetus": return (await import("./places/iapetus.ts")).PLACES_IAPETUS;
+    case "miranda": return (await import("./places/miranda.ts")).PLACES_MIRANDA;
+    case "ariel": return (await import("./places/ariel.ts")).PLACES_ARIEL;
+    case "umbriel": return (await import("./places/umbriel.ts")).PLACES_UMBRIEL;
+    case "titania": return (await import("./places/titania.ts")).PLACES_TITANIA;
+    case "oberon": return (await import("./places/oberon.ts")).PLACES_OBERON;
+    case "triton": return (await import("./places/triton.ts")).PLACES_TRITON;
+    case "pluto": return (await import("./places/pluto.ts")).PLACES_PLUTO;
+    case "charon": return (await import("./places/charon.ts")).PLACES_CHARON;
+    case "ceres": return (await import("./places/ceres.ts")).PLACES_CERES;
+    case "vesta": return (await import("./places/vesta.ts")).PLACES_VESTA;
+    case "eros": return (await import("./places/eros.ts")).PLACES_EROS;
+    case "ryugu": return (await import("./places/ryugu.ts")).PLACES_RYUGU;
+    case "bennu": return (await import("./places/bennu.ts")).PLACES_BENNU;
+    case "dimorphos": return (await import("./places/dimorphos.ts")).PLACES_DIMORPHOS;
+    case "tempel-1": return (await import("./places/tempel-1.ts")).PLACES_TEMPEL_1;
+    case "67p": return (await import("./places/67p.ts")).PLACES_67P;
+    case "jupiter": return (await import("./places/jupiter.ts")).PLACES_JUPITER;
+    case "saturn": return (await import("./places/saturn.ts")).PLACES_SATURN;
+    default: throw new RangeError(`places are held for ${PLACE_BODIES.join(", ")}, not "${String(body)}"`);
+  }
 }
 
 /**
  * The places of a body by kind, from its list (loaded on the first call): `listPlaces("moon", "crewed", "landing")`. With no kind it is every place.
  *
- * @param body - `moon` or `mars`.
+ * @param body - One of `PLACE_BODIES`.
  * @param kinds - The kinds wanted; none for all.
  * @returns The places in the list's order.
  *
@@ -250,9 +305,9 @@ export function nearestPlace(places: readonly Place[], lat: number, lon: number,
 }
 
 /**
- * The distance over the surface between two places on a body, in kilometres: the great circle on a sphere of the body's equatorial radius from `BODIES` (1737.4 km for the Moon, 3396.19 km for Mars; flattening is not allowed for, which is 0.6 per cent on Mars and nothing on the Moon).
+ * The distance over the surface between two places on a body, in kilometres: the great circle on a sphere of the body's equatorial radius from `BODIES` (1737.4 km for the Moon, 3396.19 km for Mars; flattening is not allowed for, which is 0.6 per cent on Mars and nothing on the Moon). A body the package has no radius for (Eros, Ryugu, Bennu, Dimorphos and the two comets: their shapes are not spheres) is a `RangeError`.
  *
- * @param body - `moon` or `mars`.
+ * @param body - A body of `PLACE_BODIES` that has a radius in `BODIES`.
  * @param a - A place, or a latitude and east longitude.
  * @param b - The other.
  * @returns Kilometres.
@@ -268,8 +323,10 @@ export function nearestPlace(places: readonly Place[], lat: number, lon: number,
  * ```
  */
 export function placeDistanceKm(body: PlaceBody, a: Place | { lat: number; lon: number }, b: Place | { lat: number; lon: number }): number {
-  if (!PLACE_BODIES.includes(body)) throw new RangeError(`places are held for ${PLACE_BODIES.join(" and ")}, not "${String(body)}"`);
-  return (angleBetween(a.lat, a.lon, b.lat, b.lon) * RAD * BODIES[body].radiusKm);
+  if (!PLACE_BODIES.includes(body)) throw new RangeError(`places are held for ${PLACE_BODIES.join(", ")}, not "${String(body)}"`);
+  const facts = (BODIES as Readonly<Record<string, { radiusKm: number } | undefined>>)[body];
+  if (facts === undefined) throw new RangeError(`the package has no radius for ${body}, an irregular body: no distance over a sphere is given`);
+  return (angleBetween(a.lat, a.lon, b.lat, b.lon) * RAD * facts.radiusKm);
 }
 
 /**

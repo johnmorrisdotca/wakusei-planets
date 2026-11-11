@@ -191,6 +191,161 @@
       "import": "./dist/places/mars.js",
       "default": "./dist/places/mars.js"
     },
+    "./places/mercury": {
+      "types": "./dist/places/mercury.d.ts",
+      "import": "./dist/places/mercury.js",
+      "default": "./dist/places/mercury.js"
+    },
+    "./places/venus": {
+      "types": "./dist/places/venus.d.ts",
+      "import": "./dist/places/venus.js",
+      "default": "./dist/places/venus.js"
+    },
+    "./places/io": {
+      "types": "./dist/places/io.d.ts",
+      "import": "./dist/places/io.js",
+      "default": "./dist/places/io.js"
+    },
+    "./places/europa": {
+      "types": "./dist/places/europa.d.ts",
+      "import": "./dist/places/europa.js",
+      "default": "./dist/places/europa.js"
+    },
+    "./places/ganymede": {
+      "types": "./dist/places/ganymede.d.ts",
+      "import": "./dist/places/ganymede.js",
+      "default": "./dist/places/ganymede.js"
+    },
+    "./places/callisto": {
+      "types": "./dist/places/callisto.d.ts",
+      "import": "./dist/places/callisto.js",
+      "default": "./dist/places/callisto.js"
+    },
+    "./places/titan": {
+      "types": "./dist/places/titan.d.ts",
+      "import": "./dist/places/titan.js",
+      "default": "./dist/places/titan.js"
+    },
+    "./places/enceladus": {
+      "types": "./dist/places/enceladus.d.ts",
+      "import": "./dist/places/enceladus.js",
+      "default": "./dist/places/enceladus.js"
+    },
+    "./places/mimas": {
+      "types": "./dist/places/mimas.d.ts",
+      "import": "./dist/places/mimas.js",
+      "default": "./dist/places/mimas.js"
+    },
+    "./places/tethys": {
+      "types": "./dist/places/tethys.d.ts",
+      "import": "./dist/places/tethys.js",
+      "default": "./dist/places/tethys.js"
+    },
+    "./places/dione": {
+      "types": "./dist/places/dione.d.ts",
+      "import": "./dist/places/dione.js",
+      "default": "./dist/places/dione.js"
+    },
+    "./places/rhea": {
+      "types": "./dist/places/rhea.d.ts",
+      "import": "./dist/places/rhea.js",
+      "default": "./dist/places/rhea.js"
+    },
+    "./places/iapetus": {
+      "types": "./dist/places/iapetus.d.ts",
+      "import": "./dist/places/iapetus.js",
+      "default": "./dist/places/iapetus.js"
+    },
+    "./places/miranda": {
+      "types": "./dist/places/miranda.d.ts",
+      "import": "./dist/places/miranda.js",
+      "default": "./dist/places/miranda.js"
+    },
+    "./places/ariel": {
+      "types": "./dist/places/ariel.d.ts",
+      "import": "./dist/places/ariel.js",
+      "default": "./dist/places/ariel.js"
+    },
+    "./places/umbriel": {
+      "types": "./dist/places/umbriel.d.ts",
+      "import": "./dist/places/umbriel.js",
+      "default": "./dist/places/umbriel.js"
+    },
+    "./places/titania": {
+      "types": "./dist/places/titania.d.ts",
+      "import": "./dist/places/titania.js",
+      "default": "./dist/places/titania.js"
+    },
+    "./places/oberon": {
+      "types": "./dist/places/oberon.d.ts",
+      "import": "./dist/places/oberon.js",
+      "default": "./dist/places/oberon.js"
+    },
+    "./places/triton": {
+      "types": "./dist/places/triton.d.ts",
+      "import": "./dist/places/triton.js",
+      "default": "./dist/places/triton.js"
+    },
+    "./places/pluto": {
+      "types": "./dist/places/pluto.d.ts",
+      "import": "./dist/places/pluto.js",
+      "default": "./dist/places/pluto.js"
+    },
+    "./places/charon": {
+      "types": "./dist/places/charon.d.ts",
+      "import": "./dist/places/charon.js",
+      "default": "./dist/places/charon.js"
+    },
+    "./places/ceres": {
+      "types": "./dist/places/ceres.d.ts",
+      "import": "./dist/places/ceres.js",
+      "default": "./dist/places/ceres.js"
+    },
+    "./places/vesta": {
+      "types": "./dist/places/vesta.d.ts",
+      "import": "./dist/places/vesta.js",
+      "default": "./dist/places/vesta.js"
+    },
+    "./places/eros": {
+      "types": "./dist/places/eros.d.ts",
+      "import": "./dist/places/eros.js",
+      "default": "./dist/places/eros.js"
+    },
+    "./places/ryugu": {
+      "types": "./dist/places/ryugu.d.ts",
+      "import": "./dist/places/ryugu.js",
+      "default": "./dist/places/ryugu.js"
+    },
+    "./places/bennu": {
+      "types": "./dist/places/bennu.d.ts",
+      "import": "./dist/places/bennu.js",
+      "default": "./dist/places/bennu.js"
+    },
+    "./places/dimorphos": {
+      "types": "./dist/places/dimorphos.d.ts",
+      "import": "./dist/places/dimorphos.js",
+      "default": "./dist/places/dimorphos.js"
+    },
+    "./places/tempel-1": {
+      "types": "./dist/places/tempel-1.d.ts",
+      "import": "./dist/places/tempel-1.js",
+      "default": "./dist/places/tempel-1.js"
+    },
+    "./places/67p": {
+      "types": "./dist/places/67p.d.ts",
+      "import": "./dist/places/67p.js",
+      "default": "./dist/places/67p.js"
+    },
+    "./places/jupiter": {
+      "types": "./dist/places/jupiter.d.ts",
+      "import": "./dist/places/jupiter.js",
+      "default": "./dist/places/jupiter.js"
+    },
+    "./places/saturn": {
+      "types": "./dist/places/saturn.d.ts",
+      "import": "./dist/places/saturn.js",
+      "default": "./dist/places/saturn.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",
