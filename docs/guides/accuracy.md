@@ -74,9 +74,31 @@ console.log(Math.hypot(x, y, z).toFixed(2));
 
 Before this, a dwarf planet was a plain ellipse that was right only near 2026: Ceres was 2° off in 2000 and 9° off in 1900, and the others were a few arc-minutes off.
 
-## The Moon and the moons
+## The minor bodies
 
-The Moon is the lunar solution ELP2000-82B (Chapront-Touzé and Chapront, IMCCE) cut to its 540 largest terms and run in terrestrial time, as the planets are.
+Vesta, Pallas, Chiron, Pholus and Halley's comet are tables fitted to Horizons in the same way as the dwarf planets (Chebyshev segments from the solar system's barycentre, the Sun's swing added back), made by `scripts/make-minor-data.py`. The segments are not all one length: each is as long as it can be while the fit stays within an arc-second of the samples left out (Vesta and Pallas 2 to 4 years, Chiron and Pholus up to 10, Halley 43 days near the Sun and 16 years far from it), which a table says in its `edges`. Halley is Horizons' record 90000030, the solution of the 1986 apparition; a comet's orbit past the observations it was fitted to (1835 to 1994) is a prediction, and the planets' pull on it is in the solution, not in this package.
+
+```ts
+import { heliocentric } from "@johnmorrisdotca/wakusei-planets";
+import "@johnmorrisdotca/wakusei-planets/tables/minor"; // Vesta, Pallas, Chiron, Pholus, Halley: about 48 kB gzipped
+
+const [x, y, z] = heliocentric("halley", Date.UTC(1986, 1, 9, 12));
+console.log(Math.hypot(x, y, z).toFixed(3)); // its perihelion: 0.587 au from the Sun
+```
+
+`@johnmorrisdotca/wakusei-planets/tables` loads them with the others, and `<wakusei-space>` loads them itself (`<wakusei-body>` fetches them when a minor body has a date). Measured against Horizons on 12 dates, one request a date (Horizons gives every time of a list the correction between terrestrial and universal time of the list's *first* date, which puts a list from 1835 a minute off in 2026: 6 arc-seconds for Halley at its perihelion), from the Sun:
+
+| Body | Worst measured | Held to | Years |
+|---|---|---|---|
+| Vesta | 0.18″ | 1″ | 1900 to 2100 |
+| Pallas | 0.13″ | 1″ | 1900 to 2100 |
+| Chiron | 0.21″ | 1″ | 1800 to 2200 |
+| Pholus | 0.10″ | 1″ | 1800 to 2200 |
+| Halley | 0.53″ | 1″ | 1800 to 2200 |
+
+Outside those years each is a plain ellipse from Horizons' osculating elements of one epoch, which a planet's pull moves away from the real orbit: Vesta is 2.5° off in 1835 and 1.9° in 2134, Pallas is 8° off in 1835, and Halley, whose elements are from 1968, is 31° off by 2026 without its table. `heliocentricModel` says which one answered.
+
+## The Moon and the moons ELP2000-82B (Chapront-Touzé and Chapront, IMCCE) cut to its 540 largest terms and run in terrestrial time, as the planets are.
 
 Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both; the web component fetches each only when it draws that planet's moons, as a chunk of its own, so a page that shows one planet does not grow):
 

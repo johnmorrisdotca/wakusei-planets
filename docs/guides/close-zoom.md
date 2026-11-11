@@ -43,6 +43,11 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Gonggong | 4096 | shader | 11x |  |  |
 | Eris | 4096 | shader | 11x | 35.5 radii | 177.3x |
 | Sedna | 4096 | shader | 11x |  |  |
+| Vesta | 2048 | map | 8x |  |  |
+| Pallas | 4096 | shader | 11x |  |  |
+| Chiron | 4096 | shader | 11x |  |  |
+| Pholus | 4096 | shader | 11x |  |  |
+| Halley | 4096 | shader | 11x |  |  |
 | Moon | 16384 | tiles | 44x |  |  |
 | Phobos | 4096 | shader | 11x |  |  |
 | Deimos | 4096 | shader | 11x |  |  |
