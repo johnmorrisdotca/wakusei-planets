@@ -117,17 +117,17 @@
     },
     "./places": {
       "en": "Places on a body: the record's shape, lookups by kind, name and nearness, distances over the surface, and the sub-solar point, the terminator and the local solar time at any moment",
-      "ja": "天体上の場所: レコードの形、種類・名前・近さによる検索、地表上の距離、任意の時刻の太陽直下点・明暗境界線・地方太陽時",
+      "ja": "天体上の場所: 記録の形、種類・名前・近さによる検索、地表上の距離、任意の時刻の太陽直下点・明暗境界線・地方太陽時",
       "platform": "node"
     },
     "./places/moon": {
-      "en": "Every place on the Moon: 6 crewed landings, 22 landers, 13 rovers, 49 crash and impact sites and 768 named features (about 33 kB gzipped)",
-      "ja": "月のすべての場所: 有人着陸6件、着陸機22件、探査車13件、墜落・衝突地点49件、名前のある地形768件 (gzip で約33 kB)",
+      "en": "Every place on the Moon: 6 crewed landings, 22 landers, 13 rovers, 49 crash and impact sites and 768 named features, 126 with a Japanese name and the rest in the IAU's Latin (about 33 kB gzipped)",
+      "ja": "月のすべての場所: 有人着陸6件、着陸機22件、探査車13件、墜落・衝突地点49件、名前のある地形768件。よく知られた126件には日本語名があり、ほかは IAU のラテン語名のままです (gzip で約33 kB)",
       "platform": "node"
     },
     "./places/mars": {
-      "en": "Every place on Mars: 12 landers, 7 rovers, 6 crash sites and 914 named features (about 36 kB gzipped)",
-      "ja": "火星のすべての場所: 着陸機12件、探査車7件、墜落地点6件、名前のある地形914件 (gzip で約36 kB)",
+      "en": "Every place on Mars: 12 landers, 7 rovers, 6 crash sites and 914 named features, 38 with a Japanese name and the rest in the IAU's Latin (about 36 kB gzipped)",
+      "ja": "火星のすべての場所: 着陸機12件、探査車7件、墜落地点6件、名前のある地形914件。よく知られた38件には日本語名があり、ほかは IAU のラテン語名のままです (gzip で約36 kB)",
       "platform": "node"
     },
     "./suncalc": {
