@@ -106,6 +106,14 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus` です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
+## 天体から天体への移動
+
+`goTo` と `ride` は、いまの眺めから新しい天体の眺めまで、はじめに一度だけ計算した道筋に沿ってカメラを動かします (`/space` の `travelPose`、時間の純粋な関数です)。その道筋は `transition` (属性、`space.transition`、呼び出しごとのオプション) で選びます。既定の `turn-travel` は、まず離れる天体のそばで向きを変え、次の天体が画面に入ったら (小さすぎて見えないときは点や目印として)、それを画面に入れたまま、だんだん大きくしながら近づいていきます。視線は一方向にしか回らず、何も映らない画面は出ず、どの天体の近くも通りません。同じ惑星の二つの衛星、または惑星とその衛星のあいだでは、惑星を画面に入れたまま回り込みます。`direct` は緩急をつけて行き先へまっすぐ向かい、`look-back` は離れる天体を見ながらまっすぐ進み、`auto` は移動を始めるときに行き先が画面にあれば `direct`、なければ `turn-travel` です。`cut` は一瞬で切り替わり、動きを減らす設定の人はいつもこれになります。天体には来た側から着きますが、その側だと天体の大半が暗く見えるときは、太陽のほうへ回り込んだ側から着くので、最後の近づき方はまっすぐです。カメラ操作の yaw と tilt はその側に合わせます (衛星のそばでは、来た側にいちばん近くなる yaw にします)。移動にかかる時間は、画面がどれだけ変わるかで1.2秒から9秒のあいだに決まり、それに `pace` (属性と `space.pace`、既定は1) を掛けます。2なら倍の時間がかかります。呼び出しに `duration` (ミリ秒) を渡すと、その一回だけ長さをそれで決められます。`stats.travelling` は最後の描画での移動の様子 (種類と道筋、区間、進み具合、離れる天体と行き先が画面にあるか) を返し、カメラが止まっていれば null です。
+
+## 太陽から段階を追って引く
+
+太陽から引いていくときは、よく知られた段階を順にたどり、それぞれの段階の軌道がすべて画面に入るように収めます。`inner-planets` (水星から火星まで)、`asteroid-belt` (ベスタ、ケレス、パラス)、`outer-planets` (木星から海王星まで)、`kuiper-belt` (冥王星から、準惑星のエリスまで)、`whole-system` (ビューが描くすべての軌道) です。`space.stepOut()` は一段階外側へ (どの天体からでも最初の段階へ)、`space.stepIn()` は一段階内側へ (最初の段階からは太陽そのものへ) 進みます。どちらも `goTo` と同じ種類の移動で、まっすぐ引くか、まっすぐ寄る動きになり、着いた段階 (なければ null) を返します。`goTo` には段階の id も渡せます。段階にいるあいだ、ズームは1のままで、ズームの操作は外側か内側への一歩として扱われます (操作一回につき一段階)。ドラッグで向きを変えることは今までどおりできます。段階の名前はビューの隅に要素の言語で表示されます (`part="region"` でスタイルを当てられます)。`space.region` はいまの段階か null、`stats.region` はその名前に加えて、太陽からどこまで届くかと、カメラがどれだけ引いているかを返し、段階に着くと `wakusei-region` イベントが発火します。段階とその軌道線は `/space` の `SUN_REGIONS`、`regionOrbits`、`regionView` です。
+
 ## 乗って見る
 
 `space.ride("moon")`、`space.ride("io")`、`space.ride({ at })` で、カメラを動く点に乗せ、その点が回る天体を見ます。詳しくは [乗って見る](ride-along.md) をどうぞ。
