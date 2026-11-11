@@ -16,7 +16,7 @@ import { hostOf } from "./bodies.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { spinAxis } from "./spin.ts";
-import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 
@@ -29,8 +29,8 @@ const RAD = Math.PI / 180;
 export const FIT_DISTANCE = 4.1;
 const FOV = 35;
 const ORBIT_POINTS = 96;
-const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, "moon"] as const;
-/** A dwarf planet is drawn once it is this many CSS pixels across its radius, or when it is the body looked at: Sedna at true scale is never anything but a speck, and its picture is not made for it. */
+const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, ...SPACE_MINORS, "moon"] as const;
+/** A dwarf planet or a minor body is drawn once it is this many CSS pixels across its radius, or when it is the body looked at: Sedna at true scale is never anything but a speck, and its picture is not made for it. */
 const DWARF_MIN_PX = 0.4;
 /** A colour as three numbers from 0 to 1, from `#rrggbb`. */
 const rgb = (hex: string): [number, number, number] => [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
@@ -52,7 +52,7 @@ const MOON_MIN_SYSTEM_PX = 30;
 const MOON_KEEP_MS = 4000;
 
 /**
- * The nineteen bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets, Pluto and the eight other dwarf planets. The moons of the planets and of the dwarf planets are placed round their hosts.
+ * The twenty-four bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets, Pluto, the eight other dwarf planets and the five minor bodies (Vesta, Pallas, Chiron, Pholus and Halley). The moons of the planets and of the dwarf planets are placed round their hosts.
  *
  * @example
  * ```ts no-run
@@ -61,7 +61,7 @@ const MOON_KEEP_MS = 4000;
  * console.log(SPACE_BODIES.join(", "));
  * ```
  */
-export const SPACE_BODIES = ["earth", "sun", "moon", ...SPACE_PLANETS, ...SPACE_DWARFS] as const;
+export const SPACE_BODIES = ["earth", "sun", "moon", ...SPACE_PLANETS, ...SPACE_DWARFS, ...SPACE_MINORS] as const;
 
 /**
  * One of the bodies in `SPACE_BODIES`, by the package's usual lower-case name.
@@ -439,7 +439,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             for (const id of Object.keys(placed) as (keyof typeof placed)[]) placed[id] = minus(placed[id], origin);
             return placed;
           };
-          const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : (SPACE_DWARFS as readonly string[]).includes(id) ? frame.dwarfs[id as SpaceDwarf] : frame.planets[id as SpacePlanet]));
+          const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : (SPACE_DWARFS as readonly string[]).includes(id) ? frame.dwarfs[id as SpaceDwarf] : (SPACE_MINORS as readonly string[]).includes(id) ? frame.minors[id as SpaceMinor] : frame.planets[id as SpacePlanet]));
 
           // riding along: the camera sits at a moving point and looks at the body it goes round (a moon over its planet, a point over any body). The point's place and way of going are in radii of
           // that body, from its centre; the body is drawn at `centre` with the radius `unitWorld`, so the same numbers place the camera in the scene.
@@ -623,8 +623,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           let paintedBodies = 0;
           for (const id of SPACE_BODIES) {
             const slot = slotOf(id);
-            // a dwarf planet too small to see is not made, and one that was made but has shrunk away is hidden
-            const unseen = (SPACE_DWARFS as readonly string[]).includes(id) && px[id] < DWARF_MIN_PX && focus !== id && model.focus !== id && hostOf(model.focus) !== id;
+            // a dwarf planet or minor body too small to see is not made, and one that was made but has shrunk away is hidden
+            const unseen = ((SPACE_DWARFS as readonly string[]).includes(id) || (SPACE_MINORS as readonly string[]).includes(id)) && px[id] < DWARF_MIN_PX && focus !== id && model.focus !== id && hostOf(model.focus) !== id;
             if (unseen) {
               if (slot.drawing) slot.drawing.object.visible = false;
               continue;

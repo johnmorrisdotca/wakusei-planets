@@ -227,9 +227,11 @@ const followHelp = (): void => {
 };
 document.addEventListener("family-help", followHelp);
 followHelp();
-// the picker: a kind (the Sun and planets, dwarf planets, moons), for a moon the planet it goes round, then the body; or a search by name. A choice goes there.
-const choice = { kind: "planet" as "planet" | "dwarf-planet" | "moon", host: "" };
-const kindOf = (info: BodyInfo): "planet" | "dwarf-planet" | "moon" => (info.kind === "star" ? "planet" : info.kind);
+// the picker: a kind (the Sun and planets, dwarf planets, small bodies, moons), for a moon the planet it goes round, then the body; or a search by name. A choice goes there.
+type PickKind = "planet" | "dwarf-planet" | "minor" | "moon";
+const choice = { kind: "planet" as PickKind, host: "" };
+/** The picker's kind of a body: the Sun is among the planets, and asteroids, centaurs and comets are the small bodies. */
+const kindOf = (info: BodyInfo): PickKind => (info.kind === "star" ? "planet" : info.kind === "asteroid" || info.kind === "centaur" || info.kind === "comet" ? "minor" : info.kind);
 const labelled = (button: HTMLButtonElement, info: BodyInfo, on: boolean): void => {
   button.dataset["id"] = info.id;
   button.textContent = info.name;

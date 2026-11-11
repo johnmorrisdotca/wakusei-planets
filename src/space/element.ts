@@ -2,6 +2,7 @@
 // the single bodies need none of it. It draws only when something changes, at most 30 times a second, and nothing while it is out of sight.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { carryControls, type ElementControls, type ViewController } from "@johnmorrisdotca/kazoku-ui/view-controls";
+import "../tables/minor.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
@@ -14,7 +15,7 @@ import { ownCredit } from "../door/own.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
-import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_PLANETS, type SpaceDwarf, type SpacePlanet } from "./frame.ts";
+import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "./frame.ts";
 import { moonOffset } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
@@ -559,6 +560,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (id === "moon") geo = frame.moon;
     else if ((SPACE_PLANETS as readonly string[]).includes(id)) geo = frame.planets[id as SpacePlanet];
     else if ((SPACE_DWARFS as readonly string[]).includes(id)) geo = frame.dwarfs[id as SpaceDwarf];
+    else if ((SPACE_MINORS as readonly string[]).includes(id)) geo = frame.minors[id as SpaceMinor];
     else if (host !== undefined && ((SPACE_PLANETS as readonly string[]).includes(host) || (SPACE_DWARFS as readonly string[]).includes(host))) {
       // a moon: its planet's place and its offset in the planet's radii
       const at = (SPACE_DWARFS as readonly string[]).includes(host) ? frame.dwarfs[host as SpaceDwarf] : frame.planets[host as SpacePlanet];
@@ -852,12 +854,12 @@ export class WakuseiSpace extends HTMLElement {
     }
   }
 
-  /** How sure a body's name is of its place: the body looked at first, then the Sun, the planets, the dwarf planets and the moons. */
+  /** How sure a body's name is of its place: the body looked at first, then the Sun, the planets, the dwarf planets and minor bodies, and the moons. */
   #rank(id: string): number {
     if (id === this.#model.focus) return 0;
     if (id === "sun") return 1;
     const kind = bodyKindOf(id as BodyId);
-    return kind === "moon" ? 4 : kind === "dwarf-planet" ? 3 : 2;
+    return kind === "moon" ? 4 : kind === "planet" || kind === "star" ? 2 : 3;
   }
 
   #widths = new WeakMap<HTMLElement, number>();
