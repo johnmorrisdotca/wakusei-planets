@@ -30,7 +30,7 @@ console.log("nearest visited place to 20 N, 30.7 E:", nearestPlace(PLACES_MOON, 
 | `impact` | 狙って表面に衝突させた探査機 | 14 | 0 |
 | `crash` | 表面にぶつかって失われた探査機 (使用後に落とした上昇段、寿命の終わりの周回機、上段ロケットも) | 35 | 6 |
 | `entry` | 大気の中で失われた探査機や周回機 (金星、木星、土星。下を参照) | 0 | 0 |
-| `planned` | 発表されていて、まだ飛んでいない着陸 | 0 | 0 |
+| `planned` | 発表されていて、まだ飛んでいない着陸 | 8 | 1 |
 | `feature` | IAU の一覧にある名前のある地形 | 768 | 914 |
 
 地点の記録には、`mission` (カタログでの天体の名前)、`operator` (カタログの機関・企業の符号)、`country`、`date` (UTC。時刻がわかる場合は分まで、わからない場合は日か月まで)、`outcome` (`crewed`、`soft`、`hard`、`impact`) があり、ある場合は着陸地点自身の名前 (`site`: `Statio Tranquillitatis`、`Octavia E. Butler Landing`)、カタログの `note`、わかっていれば動作を止めた時刻 (`until`) も付きます。地形には、IAU の分類とその平易な語 (英語と日本語)、大きさ (キロメートル)、名前が承認された日があります。月の地点は、6回の有人着陸、ソ連・米国・中国・インド・日本・イスラエルと民間の着陸機、探査車、そしてレインジャー、ルナ、ルナ・オービター、サターンの上段、LCROSS、GRAIL などの衝突地点です。火星には、マルス2号から祝融号までの着陸機と探査車、到着時に失われた機体 (マーズ・ポーラー・ランダー、2機のディープ・スペース2、ビーグル2、スキアパレッリ) があります。地形は、海と、IAU 惑星地名辞典にあるアルベド模様を除くすべての種類の地形、80 km 以上のクレーター、そして小さくても有名なもの (アリスタルコス、ケプラー、ジェゼロ) です。
@@ -81,7 +81,36 @@ console.log("nearest visited place to 20 N, 30.7 E:", nearestPlace(PLACES_MOON, 
 
 **名前。** どの場所にも英語名があり、日本語名は、ある場合はその通称です。月の海、湖、入江、沼、大洋、主な山脈、読者が知っているクレーターと火星の地形 (月に126件、火星に38件。静かの海、嵐の大洋、アルプス谷、ティコ、オリンポス山、マリネリス峡谷、ヘラス平原) です。地形の名前は、よく知られたもの以外は IAU のラテン語名のままです。`findPlace` は、英語、日本語、ラテン語の形のどれでも見つけます (「Mare Tranquillitatis」も「静かの海」も)。
 
-**計画中の着陸**は、まだ収録していません。日付は動くので、機関自身の発表を人の手で入力し、読んだ日を添えたもの (`planned: { date, status, read }`) だけを収録することにしています。まだ1件もないので、`placesOfKind(places, "planned")` は今は空です。
+**着陸の予定** (`kind: "planned"`) は、月に8件、火星に1件です。どれも各機関や運用会社自身のページから、2026-11-11 に人の手で入力しました (ニュースサイトは使いません)。Astrobotic の Griffin Mission One (Nobile)、Intuitive Machines の IM-3 (Reiner Gamma) と IM-4 (Mons Mouton)、Blue Origin の Blue Moon MK1 Endurance (Shackleton のそばの尾根)、NASA の VIPER (Mons Mouton)、Firefly の Blue Ghost ミッション2、3、4 (Nassau、Gruithuisen Domes、Haworth)、ESA の Rosalind Franklin 探査車 (Oxia Planum) です。着陸する点を書いたページはないので、どれもページが挙げた場所の中心 (IAU の地名集の値) に置き、`approximate` (おおよそ) の印を付けています。`planned` には、ページにある日付 (年)、`dateOf` (ほとんどは `launch` で、打ち上げの年です (NASA の予定のページが打ち上げの年を書いているため)。VIPER と Rosalind Franklin だけは `landing` で、着陸の年です)、`status` (機関自身のページで予定が遅れたものは `slipped`。Griffin、IM-3、Blue Ghost ミッション2)、`read` (読んだ日) があり、記録の `source.url` がそのページです。地名集に名前のある場所を挙げていないミッションは入れていません。嫦娥7号、チャンドラヤーン4号、LUPEX、アルテミス4号は地域しか書いておらず、嫦娥8号の Leibnitz-Beta Plateau は IAU が決めた名前ではありません。`node scripts/check-planned.ts` (`pnpm places:planned`) は、日付が過ぎたものと、読んでから40日を超えたものを出します。毎月の見直しに使います。
+
+## 天体の上の印
+
+`<wakusei-body>` と `<wakusei-space>` の `places` は、陰影つきの見た目のときに、天体の上に場所の小さく控えめな印を付けます。`<wakusei-space>` では、見ている天体に付けます。種類ごとに別々にオンにできます。`landing` (有人着陸、着陸機、探査車)、`crash` (墜落、衝突、大気圏で消えた場所)、`planned` (予定)、`feature` (地形) です。値なしの `places` か `all` で、すべての種類が付きます。
+
+```html
+<wakusei-body body="moon" look="painted" places="landing crash"></wakusei-body>
+<wakusei-space places="landing planned"></wakusei-space>
+<script type="module">
+  import { setPlacesLoader } from "@johnmorrisdotca/wakusei-planets/element";
+  import { loadPlaces } from "@johnmorrisdotca/wakusei-planets/places";
+
+  setPlacesLoader(loadPlaces);
+  const moon = document.querySelector("wakusei-body");
+  moon.addEventListener("wakusei-place", (event) => console.log(event.detail.body, event.detail.place.name.ja, event.detail.place.date));
+  await moon.goToPlace("Apollo 11 lunar module");
+  await document.querySelector("wakusei-space").goToPlace("パーシビアランス", { body: "mars" });
+</script>
+```
+
+- **一覧はページが読み込みます。** 要素は表を持っていないので、印を使わないページには表が入りません。`setPlacesLoader(loadPlaces)` (`/element` か `/space/element` から。どちらで呼んでも両方に効きます) を呼ぶと、要素は必要になったときに、その天体の一覧を別のチャンクとして読み込みます。一覧を返す自分の関数を渡すこともできます。呼ぶまでは、印は付きません。
+- **印は天体といっしょに回り**、裏側と、円盤のふちの近くでは隠れます。画面での半径が 40 CSS ピクセルより小さい天体には付けません。名前のある地形は、画面で 14 ピクセル以上の大きさになると印が付きます (`famous` のものは大きさに関係なく付きます)。なので、拡大すると印が増えます。印どうしは 12 ピクセル以上離し (探査機の場所、有名なもの、大きい地形の順に優先)、一度に付けるのは、天体の半径 4 ピクセルにつき1個までです (少なくとも8個、多くても60個)。小さい天体でも、印が多くなりすぎません。
+- **印にカーソルを合わせるか、フォーカスするか、タッチすると**、名前と短い説明 (`有人着陸、1969年`、`着陸予定 (2027年打ち上げ)`、`クレーター、93 km`) が要素の `lang` で出ます。印はボタンなので、キーボードで移動でき、画面読み上げソフトは名前と説明を読みます。印が出ている間、要素の役割は `img` ではなく `group` になります。
+- **クリックか Enter** で `wakusei-place` (バブルし、composed) が届きます。`detail: { body, place, x, y }` に、場所の記録全体と印の位置があります。
+- **`goToPlace(名前か id)`** は、`<wakusei-body>` を回して、その場所を円盤の真ん中に持ってきます。`<wakusei-space>` では `goToPlace(名前, { body })` で、その天体まで行き、カメラを場所の真上に置きます。どちらも目で追える速さで動きます。動きを減らす設定にしている人や、`smooth: false` のときは、すぐに移ります。自分で回る天体は、そこからまた回り続けます (`turn="0"` なら止まったままです)。
+- **見た目。** 印は要素のパーツ (`::part(place)`、`::part(place-tip)`) で、色は `--wakusei-place-landing`、`--wakusei-place-crash`、`--wakusei-place-planned`、`--wakusei-place-feature`、名前のフォントは `--wakusei-place-font` (なければページのゴシック体) です。
+- **印のために描くことはありません。** 印は、表示がもともと描くたびに、その上に置き直すだけです。印を指したり名前を出したりしても、描き直しは起きません。`placesShown` プロパティは、いま付いている印 (場所の id、種類、位置) の一覧で、テストや、自分で描くページに使えます。
+
+計算だけの部分は `/places` にもあります。`placeMarks(list, layers, view, radiusKm)` は、自分で描く表示に付ける印を選びます (天体の軸、目の位置、投影を渡します)。`surfacePoint` は場所を天体の楕円体の上に置き、`turnToPlace` は `<wakusei-body>` が使う回し方です。
 
 ## どこにあるか、どこまで確かか
 
