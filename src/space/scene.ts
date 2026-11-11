@@ -191,7 +191,7 @@ export interface SpaceModel {
   /** The shared controls' view as the last draw used it, and how tall the view was (CSS pixels). */
   drawnView: { yaw: number; tilt: number; zoom: number; roll: number; panX: number; panY: number } | null;
   heightPx: number;
-  camera: { position: [number, number, number]; fov: number };
+  camera: { position: [number, number, number]; fov: number; /** The picture's up in the scene's axes (y is north): north up reads y near 1. */ up: [number, number, number] };
   /** The body or point the camera rides along with, or null. */
   ride: RideState | null;
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
@@ -234,7 +234,7 @@ export const newSpaceModel = (): SpaceModel => ({
   motion: 0,
   drawnView: null,
   heightPx: 420,
-  camera: { position: [0, 0, 0], fov: FOV },
+  camera: { position: [0, 0, 0], fov: FOV, up: [0, 1, 0] },
   ride: null,
   rideLost: false,
   transition: null,
@@ -625,7 +625,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           camera.updateMatrixWorld();
           const hiddenBody = rideFrom?.hiddenBody ?? null;
           const hiddenMoon = rideFrom?.hiddenMoon ?? null;
-          model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow };
+          const e2 = camera.matrixWorld.elements;
+          model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow, up: [e2[4]!, e2[5]!, e2[6]!] };
           model.pose = { p: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
           model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom, roll: model.view.roll, panX: model.view.panX, panY: model.view.panY };
           model.heightPx = size.height;

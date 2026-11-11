@@ -61,13 +61,23 @@ test("zoom goes closer and further, yaw swings round the line to the Earth, tilt
   assert.ok(Number.isFinite(full.position[0]) && full.separation > 20);
 });
 
-test("from beside a moon the picture is never upside down: whichever side the planet is on, up keeps to the north side of the scene, in both scales and at every yaw", () => {
+test("from beside a moon north is up, always: the picture's up is the scene's +y laid across the line of sight, for the Moon, Io and Titan at four moments a quarter of an orbit apart, in both scales", () => {
   for (const scene of [TRUE, SQUEEZED]) {
-    for (const sun of [scene.sun, [23_000, -5000, 9000] as Vec3, [0, 30_000, 0] as Vec3, [0, -30_000, 100] as Vec3]) {
-      for (const yaw of [0, 45, 90, 135, 180, 225, 270, 315]) {
-        const camera = besideMoon({ ...scene, sun, aspect: 1.78, zoom: 1, yaw, tilt: 0 });
-        assert.ok(camera.up[1] >= 0, `sun ${sun.join(",")}, yaw ${yaw}: up ${camera.up.map((n) => n.toFixed(2)).join(",")}`);
-        assert.ok(Math.abs(dot(camera.forward, camera.up)) < 1e-9);
+    for (const [moonRadius, hostRadius, period] of [[0.2724, 1, 27.3], [0.2857, 11.2, 1.77], [0.404, 9.45, 15.9]] as const) {
+      for (let quarter = 0; quarter < 4; quarter += 1) {
+        // the moon a quarter of the way further round its planet each time, the Sun where it was
+        const angle = (quarter * Math.PI) / 2;
+        const r = length(scene.moon);
+        const moon: Vec3 = [r * Math.cos(angle), scene.moon[1] * 0.1, r * Math.sin(angle)];
+        for (const yaw of [0, 90, 180, 270]) {
+          const camera = besideMoon({ moon, moonRadius, host: scene.host, hostRadius, sun: scene.sun, aspect: 1.78, zoom: 1, yaw, tilt: 0 });
+          // north laid across the line of sight: up is +y less its part along forward
+          const north: Vec3 = [-camera.forward[0] * camera.forward[1], 1 - camera.forward[1] * camera.forward[1], -camera.forward[2] * camera.forward[1]];
+          const n = length(north);
+          assert.ok(n > 0.5, "the camera does not look along the pole here");
+          assert.ok(dot(camera.up, north) / n > 0.9999, `period ${period} d, quarter ${quarter}, yaw ${yaw}: up ${camera.up.map((x) => x.toFixed(3)).join(",")} against north`);
+          assert.ok(Math.abs(dot(camera.forward, camera.up)) < 1e-9);
+        }
       }
     }
   }
