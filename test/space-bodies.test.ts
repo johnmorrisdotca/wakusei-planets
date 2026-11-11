@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BODY_IDS, BODIES, MOONS_OF } from "../src/facts.ts";
-import { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf } from "../src/space/index.ts";
+import { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, systemOf } from "../src/space/index.ts";
 
 test("the hopper's order holds every body once, the Sun first, and each planet is followed by its moons nearest first", () => {
   assert.equal(HOP_ORDER.length, BODY_IDS.length);
@@ -58,4 +58,16 @@ test("kinds and hosts: a moon has its planet, the Moon has the Earth, a planet h
   assert.equal(hostOf("moon"), "earth");
   assert.equal(hostOf("dysnomia"), "eris");
   assert.equal(hostOf("mars"), undefined);
+});
+
+test("a body's system is its host and the host's moons: a moon shares its planet's, the Sun and a body with no moons are alone", () => {
+  assert.deepEqual(systemOf("saturn"), { host: "saturn", moons: [...MOONS_OF.saturn] });
+  assert.deepEqual(systemOf("titan"), systemOf("saturn"));
+  assert.deepEqual(systemOf("moon"), { host: "earth", moons: ["moon"] });
+  assert.deepEqual(systemOf("earth"), { host: "earth", moons: ["moon"] });
+  assert.deepEqual(systemOf("sun"), { host: "sun", moons: [] });
+  assert.deepEqual(systemOf("ceres"), { host: "ceres", moons: [] });
+  assert.deepEqual(systemOf("dysnomia"), { host: "eris", moons: ["dysnomia"] });
+  // every moon is in its own host's system
+  for (const id of BODY_IDS) if (bodyKindOf(id) === "moon") assert.ok(systemOf(id).moons.includes(id), id);
 });

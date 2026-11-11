@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - The ports are this package's block in John's port table, 8225 to 8249 (MODULES-1034): the demo and dev on 8225, the tests on 8226, the picture scripts on 8227, the serve example on 8235. They were 8300 to 8310, the Space Program X website's, so a gate run without TEST_PORT met the website's tests.
+- **Far names are quieter; point at a body to light up its system** (MODULES-911, John at Pluto, seeing Saturn, the Earth and Ceres far off: "make all background planet labels 50% opaque or less ... when you mouse over a planet ... all the bodies in that system would go to normal opacity"). In `<wakusei-space>` the names, dots, rings and covered-body arrows of bodies outside the system in the middle of the view (the body looked at, the body it goes round, and that body's moons) are drawn at half strength; `far-opacity` (0 to 1, and `space.farOpacity`, or the CSS property `--wakusei-far-opacity`) sets it, `1` for all alike. A body under the mouse (on its disc or its name), under a finger, or whose name has the keyboard's focus lights its own system and leaves the rest at the far strength; `wakusei-body-hover` fires with the body's info and `system: { host, moons }`, and `wakusei-body-hover-end` when none is, so a page can show a second card for the body pointed at. `space.hovered` reads it; `systemOf(id)` from `/space` gives any body's system. Only the names change: nothing is drawn again (a new freeze case moves the mouse over a dozen bodies at rest and counts no draw).
 
 ## [0.36.0] - 2026-11-11
 

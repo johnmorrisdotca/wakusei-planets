@@ -107,3 +107,22 @@ export function hopFrom(id: BodyId, step: 1 | -1, can: (id: BodyId) => boolean =
   }
   return id;
 }
+
+/**
+ * The system a body belongs to: the body a moon goes round (or the body itself), and that body's moons, nearest first. The Sun's system is the Sun alone, and a body with no moons is a system of one.
+ *
+ * @param id - A body's name.
+ * @returns `host`, the middle of the system, and `moons`, the moons that go round it.
+ *
+ * @example
+ * ```ts
+ * import { systemOf } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const { host, moons } = systemOf("titan");
+ * console.log(host, moons.join(", "));
+ * ```
+ */
+export function systemOf(id: BodyId): { host: BodyId; moons: BodyId[] } {
+  const host = hostOf(id) ?? id;
+  return { host, moons: [...((MOONS_OF as Record<string, readonly BodyId[]>)[host] ?? [])] };
+}
