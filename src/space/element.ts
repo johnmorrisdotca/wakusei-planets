@@ -16,6 +16,7 @@ import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../
 import type { Credit, DataSource } from "../data-door.ts";
 import { createDoorHost, type DoorHost } from "../door/host.ts";
 import { ownCredit } from "../door/own.ts";
+import { BELT_IDS, BELTS, beltFlight, beltNote, beltsSource, beltSpacing, loadBeltBodies, OORT, type BeltId } from "../belts/index.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
@@ -170,6 +171,15 @@ export interface RideOptions {
  */
 export type Riding = RideState;
 
+/** The id of the package's own source of the belts: it is in every view, but is not one of `sources`. */
+const BELTS_SOURCE_ID = "wakusei-belts";
+/** The belts the attribute `belts` names: all of them where it is left out or says `all`, none for `off`, else a list of names separated by commas or spaces. */
+const readBelts = (value: string | null): readonly BeltId[] => {
+  if (value === null || value.trim() === "" || value.trim() === "all") return BELT_IDS;
+  if (value.trim() === "off" || value.trim() === "none") return [];
+  const named = value.split(/[\s,]+/).filter((id): id is BeltId => (BELT_IDS as readonly string[]).includes(id));
+  return BELT_IDS.filter((id) => named.includes(id));
+};
 const readLight = (value: string | null): SpaceLight => (value === "lit" ? "lit" : "sun");
 /** The kinds of move between two views, as `transition` names them. */
 const TRAVEL_KINDS: readonly TravelKind[] = ["turn-travel", "direct", "look-back", "auto", "cut"];
@@ -226,7 +236,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
@@ -261,7 +271,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "all-moons", "far-opacity", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "all-moons", "far-opacity", "transition", "pace", "belts", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -282,6 +292,11 @@ export class WakuseiSpace extends HTMLElement {
   #scaleNames: Partial<Record<ScaleMode, string>> = {};
   #rings = new Map<string, HTMLElement>();
   #scaleLine: HTMLElement | undefined;
+  #noteLine: HTMLElement | undefined;
+  #oortLabel: HTMLElement | undefined;
+  /** The belt the camera is flying through, and the point it flies on (the ride's target, to know the ride is still this one). */
+  #flight: { belt: BeltId; point: ReturnType<typeof beltFlight> } | null = null;
+  #spacing = new Map<BeltId, { known: number; drawn: number }>();
   #hint = "choose to look at it";
   #painter: WakuseiPainter | undefined;
   #door: DoorHost = createDoorHost(
@@ -334,6 +349,9 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.light = readLight(this.getAttribute("light"));
     this.#relabel();
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
+    this.#model.belts = readBelts(this.getAttribute("belts"));
+    if (this.#door.book.get(BELTS_SOURCE_ID) === undefined) this.#door.book.addSource(beltsSource());
+    this.#door.book.enableSource(BELTS_SOURCE_ID, this.#model.belts.length > 0);
     this.#model.stepMs = Math.max(1000, Math.abs(this.#clock.speed) * 1000);
     this.#model.speed = this.#clock.speed;
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
@@ -346,6 +364,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#labelBox = root.getElementById("labels")!;
     this.#scaleLine = root.querySelector<HTMLElement>(".sp-scale")!;
     this.#regionLine = root.getElementById("region")!;
+    this.#noteLine = root.querySelector<HTMLElement>(".sp-note")!;
+    this.#oortLabel = root.querySelector<HTMLElement>(".sp-oort")!;
     this.#nameScale();
     this.#showRegion();
     this.#pool.clear();
@@ -369,6 +389,7 @@ export class WakuseiSpace extends HTMLElement {
       advance: () => this.#advance(),
       onLabels: (places) => {
         this.#placeLabels(places);
+        this.#placeOort();
         this.#door.announce();
       },
       onSight: (bodies, frame) => this.#see(bodies, frame),
@@ -453,10 +474,12 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
     else if (name === "data") this.#door.book.ownOnly(value === "own");
+    else if (name === "belts") this.belts = readBelts(value);
     else if (name === "lang") {
       for (const [id, button] of this.#pool) this.#nameLabel(button, id);
       this.#nameScale();
       this.#showRegion();
+      this.#showNote();
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
     if (name === "places" || name === "lang") this.#markSurface();
@@ -644,6 +667,8 @@ export class WakuseiSpace extends HTMLElement {
   }
   set scale(value: ScaleMode) {
     this.#model.mode = value;
+    // a flight through a belt is at true distances: the squeezed scale does not map a camera that moves among the bodies
+    if (value !== "true" && this.#flight !== null) this.leaveBelt();
     this.#nameScale();
     this.#gate?.request();
   }
@@ -1251,6 +1276,8 @@ export class WakuseiSpace extends HTMLElement {
       else if (wasRiding) model.focus = this.#focusBeforeRide;
     }
     this.#lostTold = false;
+    // a ride to somewhere other than the belt's own point ends the flight through it
+    if (this.#flight !== null && (model.ride === null || model.ride.target !== this.#flight.point)) this.#flight = null;
     const destination = target !== null && typeof target === "string" ? (readBody(target) ?? null) : target === null ? this.#model.focus : null;
     model.transition = this.#startMove(this.#moveKind(options, destination), leaving, destination, options.duration);
     if (model.transition !== null && model.ride?.view === "beside" && typeof model.ride.target === "string") {
@@ -1260,6 +1287,7 @@ export class WakuseiSpace extends HTMLElement {
     }
     model.region = null;
     this.#showRegion();
+    this.#showNote();
     this.#schedule();
     this.#gate?.request();
     this.dispatchEvent(new CustomEvent("wakusei-ride", { detail: this.riding }));
@@ -1305,6 +1333,87 @@ export class WakuseiSpace extends HTMLElement {
       return { target: id as MoonId, around: planet as SpaceBody, view: options.view ?? "from", look, distanceKm };
     }
     return undefined;
+  }
+
+  /**
+   * The belts drawn, by name (`main`, `hilda`, `trojan`, `centaur`, `classical`, `resonant`, `scattered`): all seven by default, `[]` for none. The attribute `belts` says the same (`belts="off"`, `belts="main trojan"`). Each belt is one instanced draw of its own
+   * colour, from the package's own source of NASA/JPL's Small-Body Database (`@johnmorrisdotca/wakusei-planets/belts`), fetched when the view first draws it.
+   */
+  get belts(): readonly BeltId[] {
+    return this.#model.belts;
+  }
+  set belts(list: readonly BeltId[]) {
+    this.#model.belts = BELT_IDS.filter((id) => list.includes(id));
+    if (this.#flight !== null && !this.#model.belts.includes(this.#flight.belt)) this.leaveBelt();
+    // with no belt shown the source is switched off, so its bodies are neither read nor held (the chunk of them is not fetched)
+    this.#door.book.enableSource(BELTS_SOURCE_ID, this.#model.belts.length > 0);
+    this.#gate?.request();
+  }
+
+  /**
+   * Fly into a belt: the camera goes to a point on a circular orbit in the middle of the belt, tilted a few degrees to the ecliptic so that it passes through the belt's thickness, looking the way it goes with the ecliptic's north at the top, at true
+   * distances (the squeezed scale is left), and a drag looks about. The dots round it are the belt's bodies; a line on the view says how many bodies there really are, and that neighbours are millions of kilometres apart, which is why the picture is
+   * mostly empty. Time runs as the clock says (`speed`). `leaveBelt()` goes back.
+   *
+   * @param belt - The belt, `main` by default.
+   * @param options - `smooth` (a glide, true by default).
+   */
+  enterBelt(belt: BeltId = "main", options: { smooth?: boolean } = {}): void {
+    if (!(BELT_IDS as readonly string[]).includes(belt)) throw new RangeError(`belt must be one of ${BELT_IDS.join(", ")}, got ${JSON.stringify(belt)}`);
+    if (this.#model.mode !== "true") this.scale = "true";
+    if (!this.#model.belts.includes(belt)) this.belts = [...this.#model.belts, belt];
+    const point = beltFlight(belt);
+    this.#flight = { belt, point };
+    this.ride(point, { around: "sun", view: "from", look: "ahead", smooth: options.smooth ?? true });
+    // the note needs the bodies to know how thickly they lie; the line is shown as soon as they are here
+    void loadBeltBodies().then((bodies) => {
+      this.#spacing.set(belt, beltSpacing(belt, bodies, 2_461_200.5));
+      this.#showNote();
+    });
+    this.#showNote();
+  }
+
+  /** Come out of a belt: the camera goes back to the body it looked at before. */
+  leaveBelt(options: { smooth?: boolean } = {}): void {
+    if (this.#flight === null) return;
+    this.#flight = null;
+    this.ride(null, { smooth: options.smooth ?? true });
+    this.#showNote();
+  }
+
+  /** The belt the camera is flying through, or null. */
+  get flyingThrough(): BeltId | null {
+    return this.#flight?.belt ?? null;
+  }
+
+  /** The line about a belt that is on the view while the camera is in one, and the label of the Oort cloud's shell when it is drawn. */
+  #showNote(): void {
+    if (this.#noteLine === undefined) return;
+    const riding = this.#model.ride;
+    if (this.#flight !== null && (riding === null || riding.target !== this.#flight.point)) this.#flight = null;
+    const spacing = this.#flight === null ? undefined : this.#spacing.get(this.#flight.belt);
+    const language = this.getAttribute("lang") === "ja" ? "ja" : "en";
+    if (this.#flight === null) {
+      this.#noteLine.hidden = true;
+      this.#noteLine.textContent = "";
+    } else {
+      this.#noteLine.hidden = false;
+      this.#noteLine.textContent = spacing === undefined ? BELTS[this.#flight.belt].name[language] : beltNote(this.#flight.belt, spacing, language);
+    }
+    if (this.#oortLabel !== undefined) this.#oortLabel.textContent = `${OORT.name[language]} (${language === "ja" ? "内側のふち 約" : "inner edge about "}${OORT.innerAu.toLocaleString(language === "ja" ? "ja-JP" : "en-US")}${language === "ja" ? "天文単位" : " au"})`;
+  }
+
+  /** Where the Oort label goes: at the point of the shell the scene found, or hidden when the shell is not drawn. */
+  #placeOort(): void {
+    if (this.#oortLabel === undefined) return;
+    const at = this.#model.oort;
+    if (at === null) {
+      if (!this.#oortLabel.hidden) this.#oortLabel.hidden = true;
+      return;
+    }
+    if (this.#oortLabel.textContent === "") this.#showNote();
+    if (this.#oortLabel.hidden) this.#oortLabel.hidden = false;
+    this.#oortLabel.style.transform = `translate(${Math.round(at.x) + 6}px,${Math.round(at.y) - 8}px)`;
   }
 
   /** What the camera is riding along with now, or null. */
@@ -1355,10 +1464,11 @@ export class WakuseiSpace extends HTMLElement {
    * licence and credit. Assign a list to replace them; a source `validateSource` refuses throws a `TypeError` and changes nothing. A property, not an attribute: data is not text.
    */
   get sources(): readonly DataSource[] {
-    return this.#door.sources();
+    return this.#door.sources().filter((source) => source.info.id !== BELTS_SOURCE_ID);
   }
   set sources(list: readonly DataSource[]) {
-    this.#door.setSources(list);
+    const own = this.#door.book.get(BELTS_SOURCE_ID);
+    this.#door.setSources(own === undefined ? list : [own, ...list]);
   }
   /** Adds one source (checked at once: a `TypeError` for an empty credit, no licence, a clashing id or a map source with no body). Returns the function that removes it. */
   addSource(source: DataSource): () => void {
@@ -1403,8 +1513,8 @@ export class WakuseiSpace extends HTMLElement {
     travelling: { kind: string; path: string; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean } | null;
     /** The stage out from the Sun the view is framed on, or null: its id and name, how far it reaches from the Sun and how far back the camera stands, in Earth radii. */
     region: { id: string; name: string; reach: number; distance: number } | null;
-    /** The data door: the small bodies in the one instanced draw, and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
-    door: { points: number; sources: ReturnType<DoorHost["book"]["stats"]> };
+    /** The data door: the small bodies of a page's own sources in the one instanced draw (`points`), the package's own belts (`belts` bodies in `draws` instanced draws, one for each belt), and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
+    door: { points: number; belts: number; draws: number; sources: ReturnType<DoorHost["book"]["stats"]> };
     /** The catalogue's other moons (`all-moons`): whether they are asked for, whether the catalogue has loaded, and how many dots the last draw drew. */
     allMoons: { on: boolean; loaded: boolean; dots: number };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
@@ -1435,7 +1545,7 @@ export class WakuseiSpace extends HTMLElement {
       camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov, up: [...this.#model.camera.up], forward: [...this.#model.camera.forward] },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
-      door: { points: this.#model.door.points, sources: this.#door.book.stats() },
+      door: { points: this.#model.door.points, belts: this.#model.door.belts, draws: this.#model.door.draws, sources: this.#door.book.stats() },
       allMoons: { on: this.#allMoons, loaded: this.#model.allMoons !== null, dots: this.#model.moonDots },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
