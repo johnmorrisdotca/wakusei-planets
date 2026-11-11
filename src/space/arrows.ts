@@ -2,7 +2,7 @@
 import { add, cross, dot, RAD, scale, unit, type Vec3 } from "../vec.ts";
 
 /**
- * How many arrowheads an orbit line carries.
+ * How many arrowheads an orbit line carries by default: two are enough to show which way a body goes round.
  *
  * @example
  * ```ts
@@ -11,7 +11,39 @@ import { add, cross, dot, RAD, scale, unit, type Vec3 } from "../vec.ts";
  * console.log(ARROWS_PER_ORBIT);
  * ```
  */
-export const ARROWS_PER_ORBIT = 6;
+export const ARROWS_PER_ORBIT = 2;
+
+/**
+ * The most arrowheads an orbit line may carry, whatever a page asks for.
+ *
+ * @example
+ * ```ts
+ * import { MAX_ARROWS_PER_ORBIT } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(MAX_ARROWS_PER_ORBIT);
+ * ```
+ */
+export const MAX_ARROWS_PER_ORBIT = 4;
+
+/**
+ * Reads the number of arrowheads a page asks for (the attribute `arrows` or the property): a whole number from 0 (none) to `MAX_ARROWS_PER_ORBIT`; more is four, less is none, and anything that is not a number is
+ * the default, `ARROWS_PER_ORBIT`.
+ *
+ * @param value - A number, the text of an attribute, or nothing.
+ * @returns How many arrowheads to draw on each orbit line.
+ *
+ * @example
+ * ```ts
+ * import { arrowCount } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(arrowCount(undefined), arrowCount("3"), arrowCount(9), arrowCount("-1"), arrowCount("many"));
+ * ```
+ */
+export function arrowCount(value: unknown): number {
+  const n = typeof value === "string" && value.trim() !== "" ? Number(value) : value;
+  if (typeof n !== "number" || !Number.isFinite(n)) return ARROWS_PER_ORBIT;
+  return Math.min(MAX_ARROWS_PER_ORBIT, Math.max(0, Math.round(n)));
+}
 
 /**
  * One arrowhead on an orbit line: where its tip is and the way it points, the way the body goes along the line.
@@ -35,7 +67,7 @@ export interface OrbitArrow {
  * They show the real way the body travels, which is the same whichever way the clock runs.
  *
  * @param line - The orbit line, `count + 1` points whose last is near the first.
- * @param arrows - How many arrowheads (`ARROWS_PER_ORBIT` by default).
+ * @param arrows - How many arrowheads (`ARROWS_PER_ORBIT`, two, by default; at most `MAX_ARROWS_PER_ORBIT`).
  * @returns The arrows, each at a point of the line.
  *
  * @example
@@ -49,10 +81,11 @@ export interface OrbitArrow {
 export function arrowSites(line: readonly (readonly [number, number, number])[], arrows = ARROWS_PER_ORBIT): OrbitArrow[] {
   const n = line.length - 1;
   const out: OrbitArrow[] = [];
-  if (n < 4 || arrows < 1) return out;
-  for (let k = 0; k < arrows; k += 1) {
+  const count = arrowCount(arrows);
+  if (n < 4 || count < 1) return out;
+  for (let k = 0; k < count; k += 1) {
     // k + 1/2 of the way round in equal steps: never at the body (the first point) or at the join
-    const i = Math.min(n - 1, Math.max(1, Math.round(((k + 0.5) / arrows) * n)));
+    const i = Math.min(n - 1, Math.max(1, Math.round(((k + 0.5) / count) * n)));
     const before = line[i - 1]!;
     const after = line[i + 1]!;
     const direction = unit([after[0] - before[0], after[1] - before[1], after[2] - before[2]]);

@@ -5,6 +5,7 @@ import { carryControls, type ElementControls, type ViewController } from "@johnm
 import "../tables/minor.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
+import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
@@ -182,7 +183,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data"];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows"];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -235,6 +236,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.mode = this.getAttribute("scale") === "compressed" ? "compressed" : "true";
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
+    this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
@@ -315,6 +317,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "scale") this.scale = value === "compressed" ? "compressed" : "true";
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
+    else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
@@ -395,6 +398,15 @@ export class WakuseiSpace extends HTMLElement {
   }
   set orbits(value: boolean) {
     this.#model.orbits = value;
+    this.#gate?.request();
+  }
+
+  /** How many small arrowheads each orbit line carries to show which way the body goes: 2 by default, at most 4, 0 for none (the attribute `arrows` says the same). Anything else is made a whole number in that range. */
+  get arrows(): number {
+    return this.#model.arrowCount;
+  }
+  set arrows(value: number) {
+    this.#model.arrowCount = arrowCount(value);
     this.#gate?.request();
   }
 
