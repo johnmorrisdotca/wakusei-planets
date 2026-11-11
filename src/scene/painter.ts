@@ -542,6 +542,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let label: NameLabel | undefined;
   let labelText = "";
   let labelShown = false;
+  // what `label` reports: one object, written at each draw (it is read for every body at every frame)
+  const labelReport = { shown: false, text: "", turn: 0 };
   const setLabel = (next: PaintLabel | null): void => {
     if (next === null || next === undefined || gone) {
       if (label !== undefined) {
@@ -549,11 +551,13 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
         label.dispose();
         label = undefined;
         labelShown = false;
+        labelReport.shown = false;
       }
       return;
     }
     const { lang, text, ...options } = next;
     labelText = text ?? nameLabelText(facts.name, lang ?? "en");
+    labelReport.text = labelText;
     if (label === undefined) {
       label = createNameLabel(T, labelText, options, look.emissive === true, redraw);
       mesh.add(label.object);
@@ -568,7 +572,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     object: group,
     setLabel,
     get label() {
-      return label === undefined ? null : { shown: labelShown, text: labelText, turn: label.object.children[0] !== undefined ? (label.object.children[0] as THREE.Object3D).rotation.y : 0 };
+      return label === undefined ? null : labelReport;
     },
     get tiles() {
       return detail?.stats;
@@ -610,7 +614,11 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       keepSized(info.radiusPx);
       if (label !== undefined) {
         label.update(info.view?.camera, info.radiusPx, info.toSun);
-        labelShown = label.object.children[0] !== undefined && (label.object.children[0] as THREE.Object3D).visible;
+        const inner = label.object.children[0] as THREE.Object3D | undefined;
+        labelShown = inner !== undefined && inner.visible;
+        labelReport.shown = labelShown;
+        labelReport.text = labelText;
+        labelReport.turn = inner?.rotation.y ?? 0;
       }
     },
     dispose() {
