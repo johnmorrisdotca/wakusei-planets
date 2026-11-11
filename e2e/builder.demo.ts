@@ -37,7 +37,7 @@ test("nothing the builder had before the shared panel is gone: its rows, seven t
   await page.goto("/wakusei-planets/builder.html");
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
   const panel = page.locator("#embed-panel");
-  await expect(page.locator("#groups button")).toHaveCount(12);
+  await expect(page.locator("#groups button")).toHaveCount(13);
   await expect(page.locator("#bodies button")).toHaveCount(10);
   await expect(page.locator("#looks button")).toHaveText(["line", "realistic", "painted"]);
   await expect(page.locator("#skies button")).toHaveText(["A portrait", "The sky right now"]);
