@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The data door names licences in Japanese** (KAZOKU-UI-105): `src/data-door.ts` copied again, unchanged, from kazoku-ui's template: a licence may carry `nameJa` for a Japanese credit line. "Published for use with credit" is 出典を示せば利用可 in a Japanese credit line.
+
 ## [0.33.0] - 2026-11-11
 
 - **CI installs Playwright's browsers in bounded, cached steps** (KAZOKU-UI-100). A slow package mirror held `playwright install --with-deps` for the whole job limit on 2026-11-09 and 2026-11-10, so no test ran and the failure read as a test failure. `.github/actions/playwright` (the family's, kazoku-ui's copy is canonical) caches the browsers by Playwright's version, then installs the system libraries in a step of their own: two tries, each cut off after 7 minutes, and a failure that says it is the runner's package mirror and that nothing was run. Free: GitHub-hosted Linux runners and the cache.

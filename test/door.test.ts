@@ -542,13 +542,13 @@ test("7. the package's own sources are clear to pass on: none is non-commercial 
   assert.equal(tilesSource("/tiles/").info, OWN_SOURCES[1]);
   assert.equal(ownCredit("wakusei-tiles", 3).own, true);
   assert.throws(() => ownCredit("fake", 1), RangeError);
-  assert.equal(creditLine([ownCredit("wakusei-pictures", 1), ownCredit("wakusei-orbits", 5)], "ja"), "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System ScopeとNestaericの地図（CC BY 4.0）／位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）（Published for use with credit）");
+  assert.equal(creditLine([ownCredit("wakusei-pictures", 1), ownCredit("wakusei-orbits", 5)], "ja"), "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System ScopeとNestaericの地図（CC BY 4.0）／位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）（出典を示せば利用可）");
 });
 
 // ----- 8: the template -----
 test("8. src/data-door.ts is kazoku-ui's templates/data-door.ts, byte for byte", () => {
   // The recorded hash of kazoku-ui's templates/data-door.ts (line ends as "\n"); kazoku-ui's check-standard.mjs records the same one. Change it only by copying the template again.
-  const RECORDED = "ae12207f4c1b89670b208baf306ea988df8c5f2213ae791a7044ca8681c31793";
+  const RECORDED = "b90af1f8e0f2ffc59485d5cc98995e54ee21fd98cd5ae027b90efe8c6673d5fa";
   const text = readFileSync(new URL("../src/data-door.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
   assert.equal(createHash("sha256").update(text).digest("hex"), RECORDED);
 });
