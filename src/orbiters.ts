@@ -320,3 +320,33 @@ function placeOf(elements: OrbiterElements, centre: OrbiterCentre, dt: number, m
 export function orbiterFacts(id: OrbiterId): OrbiterFacts {
   return ORBITER_FACTS[idOf(id)];
 }
+
+/** An ecliptic J2000 vector in the space view's axes (equatorial J2000, y north): the same turn `eclipticToScene` from `/space` makes, kept here so `/orbiters` imports nothing of the view. */
+const OBLIQUITY = 23.4392911 * RAD;
+const toScene = (v: Vec3): Vec3 => [v[0], v[1] * Math.sin(OBLIQUITY) + v[2] * Math.cos(OBLIQUITY), -(v[1] * Math.cos(OBLIQUITY) - v[2] * Math.sin(OBLIQUITY))];
+
+/**
+ * An orbiter as a point the space view can ride along with (`space.ride(orbiterRidePoint("lro"), { around: "moon" })`): where it is and which way it goes at a moment, in kilometres and kilometres a
+ * second from the centre of the body it goes round, in the view's axes (equatorial J2000, y north). It answers `null` for a craft with no path.
+ *
+ * @param id - The orbiter.
+ * @returns The point: its `at` gives the place and velocity, or `null` for a craft with no path (`orbiterStatus` says `none`), which the view then does not ride.
+ *
+ * @example
+ * ```ts
+ * import { orbiterRidePoint } from "@johnmorrisdotca/wakusei-planets/orbiters";
+ *
+ * const point = orbiterRidePoint("mro").at(Date.UTC(2026, 10, 11));
+ * console.log(point === null ? "no path" : Math.hypot(...point.velocity).toFixed(2) + " km/s");
+ * ```
+ */
+export function orbiterRidePoint(id: OrbiterId): { at(ms: number): { position: Vec3; velocity: Vec3 } | null } {
+  idOf(id);
+  return {
+    at(ms) {
+      if (orbiterElements(id) === undefined) return null;
+      const { position, velocity } = stateOf(id, ms);
+      return { position: toScene(position), velocity: toScene(velocity) };
+    },
+  };
+}

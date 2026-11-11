@@ -54,6 +54,11 @@ const MOON_MIN_PX = 2.2;
 const MOON_MIN_SYSTEM_PX = 30;
 /** A moon that has been out of sight this long is let go (its pictures too). */
 const MOON_KEEP_MS = 4000;
+/** An orbiter is drawn as a dot this many CSS pixels across its radius, once its body is at least `ORBITER_HOST_PX` across its radius on the screen (nearer, the dots would all sit on the body's own dot). */
+const ORBITER_PX = 2.2;
+const ORBITER_HOST_PX = 24;
+/** An orbiter's orbit line is worked out again when the moment has moved this far from the line's epoch (the node and periapsis drift a little a day). */
+const ORBITER_LINE_KEEP_MS = 86_400_000;
 /** The Roadster is drawn as a dot this many CSS pixels across its radius: a car is nothing at any scale of the view. */
 const ROADSTER_PX = 3;
 /** The Roadster's orbit line spans this long round the moment shown (about one trip round the Sun), and is worked out again when the moment has moved this far from the line's middle. */
@@ -157,6 +162,17 @@ export interface RoadsterPath {
   name: { en: string; ja: string };
 }
 
+/** The orbiters as the view needs them: from `/orbiters`, loaded only when they are shown. */
+export interface OrbiterSet {
+  ids: readonly string[];
+  centre(id: string): "moon" | "mars";
+  /** Kilometres from the body's centre, ecliptic J2000; `null` for a craft with no path. */
+  position(id: string, ms: number): Vec3 | null;
+  path(id: string, ms: number, points: number): Vec3[];
+  status(id: string, ms: number): "tracked" | "predicted" | "modelled" | "none";
+  name(id: string): { en: string; ja: string };
+}
+
 export interface SpaceModel {
   /** Moment shown, milliseconds since the epoch. */
   time: number;
@@ -194,6 +210,11 @@ export interface SpaceModel {
   helpThrough: boolean;
   /** How many arrowheads each orbit line carries: 0 to `MAX_ARROWS_PER_ORBIT`, two by default. */
   arrowCount: number;
+  /** Show the spacecraft in orbit round the Moon and Mars: a dot each on its orbit line, named, once its body is big enough on the screen. Off by default; their paths are loaded when first shown. */
+  orbiters: boolean;
+  orbiterSet: OrbiterSet | null;
+  /** The orbiters at the last draw: how many were drawn, and each drawn one's status. */
+  orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none"> };
   /** Show Starman and the Roadster: a small marked body on its orbit line, named. Off by default; its path is loaded when it is first shown. */
   roadster: boolean;
   roadsterPath: RoadsterPath | null;
@@ -294,6 +315,9 @@ export const newSpaceModel = (): SpaceModel => ({
   helpThrough: false,
   arrowPx: 0,
   arrowCount: ARROWS_PER_ORBIT,
+  orbiters: false,
+  orbiterSet: null,
+  orbitersDrawn: { count: 0, status: {} },
   roadster: false,
   roadsterPath: null,
   roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
@@ -512,6 +536,35 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       roadsterLine.frustumCulled = false;
       scene.add(roadsterLine);
       const roadsterOrbit = { samples: [] as Vec3[], epoch: Number.NaN };
+      // the orbiters: a dot and a line each, made the first time the craft is drawn, kept for the view's life
+      interface OrbiterDrawing {
+        mesh: THREE.Mesh;
+        material: THREE.ShaderMaterial;
+        line: THREE.Line;
+        lineMaterial: THREE.LineBasicMaterial;
+        positions: Float32Array;
+        epoch: number;
+      }
+      const orbiterDrawings = new Map<string, OrbiterDrawing>();
+      const orbiterGeometry = new three.SphereGeometry(1, 16, 8);
+      const orbiterDrawing = (id: string): OrbiterDrawing => {
+        let drawing = orbiterDrawings.get(id);
+        if (drawing !== undefined) return drawing;
+        const material = new three.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: BALL_FRAGMENT, uniforms: { uLight: { value: new three.Vector3(0, 0, 1) }, uColour: { value: new three.Vector3(0.75, 0.9, 1) } } });
+        const mesh = new three.Mesh(orbiterGeometry, material);
+        mesh.frustumCulled = false;
+        scene.add(mesh);
+        const positions = new Float32Array((ORBIT_POINTS + 1) * 3);
+        const geometry = new three.BufferGeometry();
+        geometry.setAttribute("position", new three.BufferAttribute(positions, 3));
+        const lineMaterial = new three.LineBasicMaterial({ color: 0x9fd0ff, transparent: true, opacity: 0.45 });
+        const line = new three.Line(geometry, lineMaterial);
+        line.frustumCulled = false;
+        scene.add(line);
+        drawing = { mesh, material, line, lineMaterial, positions, epoch: Number.NaN };
+        orbiterDrawings.set(id, drawing);
+        return drawing;
+      };
 
       const labelFor = (v: Vec3): { x: number; y: number } | null => {
         projected.set(v[0], v[1], v[2]).project(camera);
@@ -925,6 +978,62 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             roadsterMesh.visible = false;
             roadsterLine.visible = false;
           }
+          // the orbiters round the Moon and Mars: each a dot at the table's place, scaled with its body's drawn radius, on its orbit line, once its body is big enough on the screen; a modelled path is drawn dim
+          const orbiterSet = model.orbiters ? model.orbiterSet : null;
+          const orbiterPlaces: Record<string, { at: Vec3; px: number }> = {};
+          const orbiterStatus: Record<string, "tracked" | "predicted" | "modelled" | "none"> = {};
+          if (orbiterSet !== null) {
+            for (const id of orbiterSet.ids) {
+              const centre = orbiterSet.centre(id);
+              const hostPx = px[centre];
+              const km = BODIES[centre].radiusKm;
+              const at = hostPx >= ORBITER_HOST_PX ? orbiterSet.position(id, model.time) : null;
+              const drawing = orbiterDrawings.get(id) ?? (at === null ? undefined : orbiterDrawing(id));
+              if (drawing === undefined) continue;
+              if (at === null) {
+                drawing.mesh.visible = false;
+                drawing.line.visible = false;
+                continue;
+              }
+              const status = orbiterSet.status(id, model.time);
+              const hostRadius = radiusOf(centre);
+              const here = eclipticToScene(at);
+              const place: Vec3 = [pos[centre][0] + (here[0] / km) * hostRadius, pos[centre][1] + (here[1] / km) * hostRadius, pos[centre][2] + (here[2] / km) * hostRadius];
+              const away = Math.hypot(place[0] - camera.position.x, place[1] - camera.position.y, place[2] - camera.position.z);
+              const drawn = (away * half * ORBITER_PX) / (size.height / 2);
+              const dotPx = away <= drawn ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
+              drawing.mesh.visible = true;
+              drawing.mesh.position.set(place[0], place[1], place[2]);
+              drawing.mesh.scale.setScalar(drawn);
+              (drawing.material.uniforms.uLight!.value as THREE.Vector3).set(...toSunOf(centre));
+              const dim = status === "modelled" || status === "predicted";
+              (drawing.material.uniforms.uColour!.value as THREE.Vector3).set(dim ? 0.55 : 0.75, dim ? 0.6 : 0.9, dim ? 0.65 : 1);
+              if (!Number.isFinite(drawing.epoch) || Math.abs(model.time - drawing.epoch) > ORBITER_LINE_KEEP_MS) {
+                const points = orbiterSet.path(id, model.time, ORBIT_POINTS);
+                for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+                  const p = eclipticToScene(points[i] ?? [0, 0, 0]);
+                  drawing.positions[i * 3] = p[0] / km;
+                  drawing.positions[i * 3 + 1] = p[1] / km;
+                  drawing.positions[i * 3 + 2] = p[2] / km;
+                }
+                drawing.epoch = model.time;
+              }
+              // the line is in the body's radii round the origin: placed and scaled with the body
+              drawing.line.position.set(pos[centre][0], pos[centre][1], pos[centre][2]);
+              drawing.line.scale.setScalar(hostRadius);
+              (drawing.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+              drawing.lineMaterial.opacity = dim ? 0.25 : 0.45;
+              drawing.line.visible = model.orbits;
+              orbiterPlaces[id] = { at: place, px: dotPx };
+              orbiterStatus[id] = status;
+            }
+          } else {
+            for (const drawing of orbiterDrawings.values()) {
+              drawing.mesh.visible = false;
+              drawing.line.visible = false;
+            }
+          }
+          model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus };
           model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };
 
           // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)
@@ -1084,6 +1193,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const drawing = slots.get(id)?.drawing;
               places[id] = at ? { x: at.x, y: at.y, r: px[id], named: drawing !== undefined && drawing.object.visible && drawing.label?.shown === true } : null;
             }
+            for (const [id, { at, px: dotPx }] of Object.entries(orbiterPlaces)) {
+              const spot = labelFor(at);
+              places[id] = spot ? { x: spot.x, y: spot.y, r: dotPx } : null;
+              if (spot) moonDistances[id] = Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z);
+            }
             if (roadsterAt !== null) {
               const spot = labelFor(roadsterAt);
               places["roadster"] = spot ? { x: spot.x, y: spot.y, r: roadsterPx } : null;
@@ -1124,6 +1238,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           roadsterGeometry.dispose();
           roadsterMaterial.dispose();
+          for (const drawing of orbiterDrawings.values()) {
+            drawing.material.dispose();
+            drawing.line.geometry.dispose();
+            drawing.lineMaterial.dispose();
+          }
+          orbiterGeometry.dispose();
         },
       };
     },
