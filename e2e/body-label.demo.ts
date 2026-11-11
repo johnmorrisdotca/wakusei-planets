@@ -1,9 +1,8 @@
-// The name written on the body (MODULES-923): `body-label` writes each body's name on its own globe, in the page's language, turning with the body or facing the reader, and nothing on a body
+// The name written on the body: `body-label` writes each body's name on its own globe, in the page's language, turning with the body or facing the reader, and nothing on a body
 // too small on the screen. A picture test: the pixels inside the disc that the name changes. Chromium, drawing in software. Every wait is on what the page reports.
-import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { callOn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
+import { callOn, drawn as drawnShared, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -25,26 +24,8 @@ const keep = (name: string, data: string): void => {
   writeFileSync(`${dir}/${name}.png`, Buffer.from(data, "base64"));
 };
 
-/** Do something, then wait until the view has drawn again and the name on the body looked at reads as wanted. */
-async function drawn(page: Page, act: () => Promise<unknown>, wanted: (now: Labels) => boolean): Promise<void> {
-  const before = (await readCounts(page)).draws;
-  await act();
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
-  await expect.poll(async () => wanted(await labels(page)), { timeout: 60_000 }).toBe(true);
-  // the name is drawn once its font is in, which asks for one more draw: wait for the draws to hold
-  let held = -1;
-  await expect
-    .poll(
-      async () => {
-        const now = (await readCounts(page)).draws;
-        const same = now === held;
-        held = now;
-        return same;
-      },
-      { timeout: 30_000, intervals: [400] },
-    )
-    .toBe(true);
-}
+/** Do something, then wait until the view has drawn again and the name on the body looked at reads as wanted (the name is drawn once its font is in, which asks for one more draw: `drawn` waits for the draws to hold). */
+const drawn = (page: Page, act: () => Promise<unknown>, wanted: (now: Labels) => boolean): Promise<void> => drawnShared(page, act, (stats) => wanted((stats as unknown as { bodyLabels: Labels }).bodyLabels));
 
 /** How many pixels inside the disc of a body differ between two pictures of the view (by more than a fifth of the brightness range). */
 async function changedInside(page: Page, id: string, a: string, b: string): Promise<number> {

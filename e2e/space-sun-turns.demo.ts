@@ -1,9 +1,8 @@
-// The Sun is a globe like the others in the turning view (MODULES-922): its surface turns with the view and with its own spin, while its glow still faces the camera. A picture test: the Sun's pixels change when
+// The Sun is a globe like the others in the turning view: its surface turns with the view and with its own spin, while its glow still faces the camera. A picture test: the Sun's pixels change when
 // the view turns (yaw, tilt and roll) and when days pass, in both looks and both scales, are the same when nothing has turned, and change too when the Sun is seen from another body. Chromium, drawing in
 // software. Every wait is on what the page reports: the draws the renderer counts.
-import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { callOn, openSpace, setOn, SPACE } from "./space-ui.ts";
+import { callOn, changedBetween, changedInside, drawn, openSpace, pictureOf, setOn, shot, SPACE } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -17,104 +16,16 @@ interface View {
   zoom: number;
   roll: number;
 }
-const shot = async (page: Page): Promise<string> => (await page.locator(SPACE).screenshot()).toString("base64");
 /** The view as the shared controls hold it now: what `goTo` left, to come back to exactly. */
 const viewNow = (page: Page): Promise<View> =>
   page.locator(SPACE).evaluate((el) => {
     const state = (Reflect.get(el, "controller") as { state: View }).state;
     return { yaw: state.yaw, tilt: state.tilt, zoom: state.zoom, roll: state.roll ?? 0 };
   });
-const sunPlace = (page: Page) => page.locator(SPACE).evaluate((el) => (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf("sun"));
-
-/** Do something, then wait until the view has drawn it and the draws hold (two reads apart with no new draw). */
-async function drawn(page: Page, act: () => Promise<unknown>): Promise<void> {
-  const before = (await readCounts(page)).draws;
-  await act();
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
-  let held = -1;
-  await expect
-    .poll(
-      async () => {
-        const now = (await readCounts(page)).draws;
-        const same = now === held;
-        held = now;
-        return same;
-      },
-      { timeout: 30_000, intervals: [400] },
-    )
-    .toBe(true);
-}
 const setView = (page: Page, view: View): Promise<void> => drawn(page, () => callOn(page, "setView", view));
-
-/** How many pixels inside the Sun's disc differ between two pictures of the view. */
-async function changed(page: Page, a: string, b: string): Promise<number> {
-  const place = await sunPlace(page);
-  expect(place, "the Sun is drawn").not.toBeNull();
-  return page.evaluate(
-    async ({ pa, pb, p }) => {
-      const read = async (data: string): Promise<{ px: Uint8ClampedArray; width: number; height: number }> => {
-        const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
-        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-        const context = canvas.getContext("2d")!;
-        context.drawImage(bitmap, 0, 0);
-        return { px: context.getImageData(0, 0, bitmap.width, bitmap.height).data, width: bitmap.width, height: bitmap.height };
-      };
-      const [x, y] = [await read(pa), await read(pb)];
-      const ratio = x.width / (document.querySelector("wakusei-space")?.clientWidth ?? x.width);
-      const [cx, cy, r] = [p.x * ratio, p.y * ratio, p.r * ratio];
-      let n = 0;
-      for (let j = Math.max(0, Math.floor(cy - r)); j < Math.min(x.height, cy + r); j += 1) {
-        for (let i = Math.max(0, Math.floor(cx - r)); i < Math.min(x.width, cx + r); i += 1) {
-          if (Math.hypot(i - cx, j - cy) > r * 0.8) continue;
-          const k = (j * x.width + i) * 4;
-          if (Math.abs(x.px[k]! - y.px[k]!) + Math.abs(x.px[k + 1]! - y.px[k + 1]!) + Math.abs(x.px[k + 2]! - y.px[k + 2]!) > 60) n += 1;
-        }
-      }
-      return n;
-    },
-    { pa: a, pb: b, p: place! },
-  );
-}
-
-/** A picture of the view and where the Sun is in it, so two pictures can be compared disc to disc wherever the Sun sits in each. */
-async function sunPicture(page: Page): Promise<{ data: string; x: number; y: number; r: number }> {
-  const data = await shot(page);
-  const place = await sunPlace(page);
-  expect(place, "the Sun is drawn").not.toBeNull();
-  return { data, ...place! };
-}
-
-/** How many pixels of the Sun's disc differ between two pictures, each disc taken at its own place (the smaller radius of the two). */
-async function changedBetween(page: Page, a: { data: string; x: number; y: number; r: number }, b: { data: string; x: number; y: number; r: number }): Promise<number> {
-  return page.evaluate(
-    async ({ pa, pb }) => {
-      const read = async (data: string): Promise<{ px: Uint8ClampedArray; width: number; height: number }> => {
-        const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
-        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-        const context = canvas.getContext("2d")!;
-        context.drawImage(bitmap, 0, 0);
-        return { px: context.getImageData(0, 0, bitmap.width, bitmap.height).data, width: bitmap.width, height: bitmap.height };
-      };
-      const [x, y] = [await read(pa.data), await read(pb.data)];
-      const ratio = x.width / (document.querySelector("wakusei-space")?.clientWidth ?? x.width);
-      const r = Math.min(pa.r, pb.r) * ratio * 0.8;
-      const [ax, ay, bx, by] = [pa.x * ratio, pa.y * ratio, pb.x * ratio, pb.y * ratio];
-      let n = 0;
-      for (let dy = -r; dy <= r; dy += 1) {
-        for (let dx = -r; dx <= r; dx += 1) {
-          if (Math.hypot(dx, dy) > r) continue;
-          const [i, j, k, l] = [Math.round(ax + dx), Math.round(ay + dy), Math.round(bx + dx), Math.round(by + dy)];
-          if (i < 0 || j < 0 || k < 0 || l < 0 || i >= x.width || k >= y.width || j >= x.height || l >= y.height) continue;
-          const p = (j * x.width + i) * 4;
-          const q = (l * y.width + k) * 4;
-          if (Math.abs(x.px[p]! - y.px[q]!) + Math.abs(x.px[p + 1]! - y.px[q + 1]!) + Math.abs(x.px[p + 2]! - y.px[q + 2]!) > 60) n += 1;
-        }
-      }
-      return n;
-    },
-    { pa: a, pb: b },
-  );
-}
+const sunPicture = (page: Page) => pictureOf(page, "sun");
+/** How many pixels inside the Sun's disc differ between two pictures of the view (its place now). */
+const changed = (page: Page, a: string, b: string): Promise<number> => changedInside(page, "sun", a, b, 60, 0.8);
 
 for (const [look, scale] of [["realistic", "true"], ["painted", "compressed"]] as const) {
   test(`${look}, ${scale} scale: the Sun's face changes when the view turns (yaw, tilt, roll) and when days pass, and not when nothing turns`, async ({ page }) => {
