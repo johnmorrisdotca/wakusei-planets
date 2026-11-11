@@ -13,14 +13,17 @@ const bodyOf = (page: Page): Promise<string> => page.locator(SPACE).evaluate((el
 const choices = (page: Page): Promise<string[]> => page.locator("#choices button").evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset["id"] ?? ""));
 const press = (page: Page, selector: string) => page.locator(selector).dispatchEvent("click");
 
-test("the view offers all 47 bodies: the Sun, every planet and dwarf planet, and every moon, each with its kind", async ({ page }) => {
+test("the view offers all 52 bodies: the Sun, every planet, dwarf planet and minor body, and every moon, each with its kind", async ({ page }) => {
   await openSpace(page);
   const list = await page.locator(SPACE).evaluate((el) => (el as unknown as { bodyList(): { id: string; kind: string; host?: string }[] }).bodyList());
-  expect(list.length).toBe(47);
+  expect(list.length).toBe(52);
   const of = (kind: string): string[] => list.filter((b) => b.kind === kind).map((b) => b.id);
   expect(of("star")).toEqual(["sun"]);
   expect(of("planet")).toEqual(["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"]);
   expect(of("dwarf-planet").sort()).toEqual(["ceres", "eris", "gonggong", "haumea", "makemake", "orcus", "pluto", "quaoar", "sedna"]);
+  expect(of("asteroid")).toEqual(["vesta", "pallas"]);
+  expect(of("centaur")).toEqual(["chiron", "pholus"]);
+  expect(of("comet")).toEqual(["halley"]);
   expect(of("moon").length).toBe(29);
   expect(list.find((b) => b.id === "dysnomia")).toMatchObject({ host: "eris" });
 });
@@ -33,6 +36,10 @@ test("the picker: a kind, then (for a moon) the planet it goes round, then the b
   expect(await choices(page)).toEqual(expect.arrayContaining(["ceres", "eris", "sedna", "pluto"]));
   await page.locator('#choices button[data-id="eris"]').dispatchEvent("click");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("eris");
+  await press(page, '#kinds [data-kind="minor"]');
+  expect(await choices(page), "the minor bodies, from the Sun outwards").toEqual(["vesta", "pallas", "chiron", "halley", "pholus"]);
+  await page.locator('#choices button[data-id="halley"]').dispatchEvent("click");
+  await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("halley");
   await press(page, '#kinds [data-kind="moon"]');
   await expect(page.locator("#hosts-row")).toBeVisible();
   const hosts = await page.locator("#hosts button").evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset["id"]));
@@ -48,6 +55,15 @@ test("the search finds a body by its name in English or Japanese and goes there"
   await page.locator("#find").fill("Hydra");
   await page.locator("#find").dispatchEvent("change");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("hydra");
+  await page.locator("#find").fill("ケレス");
+  await page.locator("#find").dispatchEvent("change");
+  await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("ceres");
+  await page.locator("#find").fill("ベスタ");
+  await page.locator("#find").dispatchEvent("change");
+  await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("vesta");
+  await page.locator("#find").fill("Pholus");
+  await page.locator("#find").dispatchEvent("change");
+  await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("pholus");
   await page.locator("#find").fill("ケレス");
   await page.locator("#find").dispatchEvent("change");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("ceres");
@@ -75,7 +91,7 @@ test("every body can be ridden: the camera is at a dwarf planet, at a moon of a 
     Reflect.set(window, "__lost", 0);
     el.addEventListener("wakusei-ride-lost", () => Reflect.set(window, "__lost", (Reflect.get(window, "__lost") as number) + 1));
   });
-  for (const target of ["ceres", "eris", "titan", "vanth", "dysnomia", "hiiaka", "mars", "io"]) {
+  for (const target of ["ceres", "eris", "titan", "vanth", "dysnomia", "hiiaka", "mars", "io", "vesta", "halley"]) {
     await callOn(page, "ride", target, { smooth: false });
     await settle(page, 700);
     const s = await statsOf(page);
