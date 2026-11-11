@@ -15,6 +15,7 @@ import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
+import { coveredBy, type CoverEntry } from "./covered.ts";
 import { spinAxis } from "./spin.ts";
 import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
@@ -260,6 +261,8 @@ export interface BodyPlace {
   r: number;
   /** True while the body's name is drawn on its globe (`body-label` on, and the body big enough): the floating name beside it gives way. */
   named?: boolean;
+  /** The id of the nearer body whose disc covers this body's place on the screen, when one does. */
+  behind?: string;
 }
 
 export interface SpaceDeps {
@@ -798,6 +801,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const now = performance.now();
           const seen = new Set<string>();
           const moonPlaces: Record<string, BodyPlace> = {};
+          const moonDistances: Record<string, number> = {};
           for (const id of [...SPACE_PLANETS, ...SPACE_DWARFS]) {
             const planet = slotOf(id).drawing;
             if (!planet) continue;
@@ -831,7 +835,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const moonPx = away <= drawn * 1.001 ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
               drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
               const spot = labelFor(at);
-              if (spot) moonPlaces[key] = { x: spot.x, y: spot.y, r: moonPx, named: drawing.label?.shown === true };
+              if (spot) {
+                moonPlaces[key] = { x: spot.x, y: spot.y, r: moonPx, named: drawing.label?.shown === true };
+                moonDistances[key] = away;
+              }
             }
           }
           let soonest = Number.POSITIVE_INFINITY;
@@ -879,6 +886,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const drawing = slots.get(id)?.drawing;
               places[id] = at ? { x: at.x, y: at.y, r: px[id], named: drawing !== undefined && drawing.object.visible && drawing.label?.shown === true } : null;
             }
+            // a body behind another: its place is inside a nearer body's disc
+            const entries: CoverEntry[] = [];
+            for (const [id, at] of Object.entries(places)) {
+              if (at === null) continue;
+              const distance = (SPACE_BODIES as readonly string[]).includes(id) ? Math.hypot(pos[id as SpaceBody][0] - camera.position.x, pos[id as SpaceBody][1] - camera.position.y, pos[id as SpaceBody][2] - camera.position.z) : moonDistances[id];
+              if (distance !== undefined) entries.push({ id, x: at.x, y: at.y, r: at.r, distance });
+            }
+            for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
             deps.onLabels(places);
           }
           if (model.rideLost) deps.onRideLost?.();
