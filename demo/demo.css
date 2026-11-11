@@ -131,3 +131,11 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .lineup-others { margin: 0; padding-left: 1.2rem; color: var(--muted); font-size: .9rem; }
 @media (max-width: 600px) { .lineup-view wakusei-lineup { --wakusei-ratio: 4 / 5; } }
 @media (max-width: 520px) { .lineup-facts { grid-template-columns: 1fr; gap: 0; } .lineup-facts dd { margin-bottom: 8px; } }
+
+/* The plan page: two insets side by side on the felt, then the rows of choices. */
+.plan-stage { display: grid; justify-items: center; padding: 18px 12px 10px; margin-bottom: 8px; }
+.plan-pair { display: flex; flex-wrap: wrap; justify-content: center; gap: 18px 28px; }
+.plan-fig { margin: 0; display: grid; justify-items: center; gap: 8px; max-width: 100%; }
+.plan-fig figcaption { color: #c9d4e3; text-align: center; max-width: 260px; }
+.plan-marks { flex-wrap: wrap; }
+#code-text { white-space: pre-wrap; overflow-wrap: anywhere; }

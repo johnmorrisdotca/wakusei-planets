@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <!--family:head-->
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <section class="fam-felt plan-stage" aria-labelledby="stage-h">
+        <h2 id="stage-h" class="fam-sr" data-say="pl_stage">Top-down plan</h2>
+        <div class="plan-pair">
+          <figure class="plan-fig">
+            <wakusei-plan id="plan-sun" size="260" data-testid="plan-sun"></wakusei-plan>
+            <figcaption id="cap-sun" class="fam-fine"></figcaption>
+          </figure>
+          <figure class="plan-fig">
+            <wakusei-plan id="plan-moons" size="260" system="jupiter" data-testid="plan-moons"></wakusei-plan>
+            <figcaption id="cap-moons" class="fam-fine"></figcaption>
+          </figure>
+        </div>
+        <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
+        <p class="fam-fine stage-name" data-say="pl_hint">Press a dot to mark it. Press a planet in the solar system and the plan beside it shows that planet's moons.</p>
+      </section>
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <label class="fam-label" for="date" data-say="pl_date">Date (your time zone)</label>
+            <input class="fam-field" type="date" id="date" data-testid="date" />
+            <div class="group fam-seg" id="steps" role="group" aria-label="Move the date" data-say-label="pl_move">
+              <button type="button" data-step="-30" data-say="pl_m30">-30 days</button>
+              <button type="button" data-step="-1" data-say="pl_m1">-1 day</button>
+              <button type="button" data-step="1" data-say="pl_p1">+1 day</button>
+              <button type="button" data-step="30" data-say="pl_p30">+30 days</button>
+            </div>
+            <button type="button" class="fam-button" id="today" data-say="pl_today">Today</button>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="pl_sunMark">Solar system: mark</span>
+            <div class="group fam-seg plan-marks" id="sun-marks" role="group" aria-label="Solar system: mark" data-say-label="pl_sunMark" data-testid="sun-marks"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="pl_moonsOf">Moons of</span>
+            <div class="group fam-seg plan-marks" id="moon-hosts" role="group" aria-label="Moons of" data-say-label="pl_moonsOf" data-testid="moon-hosts"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="pl_moonMark">Moons: mark</span>
+            <div class="group fam-seg plan-marks" id="moon-marks" role="group" aria-label="Moons: mark" data-say-label="pl_moonMark" data-testid="moon-marks"></div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="pl_spacing">Distances</span>
+            <div class="group fam-seg" id="spacings" role="group" aria-label="Distances" data-say-label="pl_spacing">
+              <button type="button" data-spacing="squeezed" aria-pressed="true" data-say="pl_squeezed">Squeezed (log)</button>
+              <button type="button" data-spacing="true" aria-pressed="false" data-say="pl_true">To scale</button>
+            </div>
+            <span class="fam-label" data-say="pl_names">Names</span>
+            <div class="group fam-seg" id="names" role="group" aria-label="Names" data-say-label="pl_names">
+              <button type="button" data-names="on" aria-pressed="true" data-say="pl_on">On</button>
+              <button type="button" data-names="off" aria-pressed="false" data-say="pl_off">Off</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="more" id="code" aria-labelledby="code-h">
+        <h2 id="code-h" data-say="pl_codeTitle">Put it in your page</h2>
+        <p data-say="pl_codeText">Two lines: load the element, then write it with the body, the moment and the spacing. It draws when one of them changes, and never on a timer.</p>
+        <pre id="code-text" data-testid="code"></pre>
+      </section>
+
+      <p class="fam-fine credits"><span data-say="pl_credits">The positions are this package's own: VSOP87B for the planets, fitted tables for Pluto and the other small bodies, and the moon theories, with no allowance for light's travel. Distances are squeezed with a logarithm unless you choose to scale; the dots are not drawn to size.</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts plan.js-->
+  </body>
+</html>
