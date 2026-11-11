@@ -348,6 +348,14 @@ const SPACE_PAGE = "/wakusei-planets/space.html";
 const sky = (page: Page) => page.locator("wakusei-space");
 const liveSky = (page: Page) => expect(sky(page)).toHaveAttribute("data-state", "live", { timeout: 120_000 });
 const skyStats = (page: Page) => sky(page).evaluate((el) => (el as unknown as { stats: { draws: number; lookups: number; time: number; bodies: { painted: number } } }).stats);
+/** Wait for the view to be at rest, by what the page reports: the move it is making has ended (the camera no longer glides, nothing is travelling) and it has let go of the moons that left the picture (it keeps one four seconds after it was last in sight). A move takes 1.2 to 9 seconds, so a count read before this is of a view part way, with moons still held. */
+const atRest = async (page: Page): Promise<void> => {
+  type Reading = { ride: { gliding: boolean }; travelling: unknown; bodies: { moons: number; held: number } };
+  const reading = () => skyStats(page) as unknown as Promise<Reading>;
+  await expect.poll(async () => (await reading()).ride.gliding, { timeout: 90_000, message: "the camera never stopped gliding" }).toBe(false);
+  await expect.poll(async () => (await reading()).travelling, { timeout: 30_000, message: "the travel never ended" }).toBeNull();
+  await expect.poll(async () => { const { bodies } = await reading(); return bodies.held - bodies.moons; }, { timeout: 30_000, message: "moons out of sight were never let go" }).toBe(0);
+};
 const goTo = (page: Page, name: string) => page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
 
 test("the space view at rest: one WebGL context, one canvas, eleven bodies, and nothing is drawn", async ({ page }) => {
@@ -443,6 +451,8 @@ test("changes to the space view give back what they took: the zooms, the scales,
       await settle(page, 700);
     }
     await settle(page, 500);
+    // the last move (the ride off) may take seconds, and the moons it leaves are let go some seconds after: a count is read at rest, not part way
+    await atRest(page);
   };
   const first = await converged(page, round);
   for (let i = 0; i < 3; i += 1) await round();
@@ -520,6 +530,8 @@ test("the space view with Starman shown draws nothing at rest, and switching the
   await liveSky(page);
   const drawnCar = async () => ((await skyStats(page)) as unknown as { roadster: { shown: boolean } }).roadster.shown;
   await expect.poll(drawnCar, { timeout: 60_000 }).toBe(true);
+  // the move to the address's view takes seconds: nothing is drawn at rest once it has ended
+  await atRest(page);
   await settle(page, 1500);
   const before = await readCounts(page);
   await settle(page, 3000);
