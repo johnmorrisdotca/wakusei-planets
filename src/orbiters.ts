@@ -263,7 +263,8 @@ export function orbiterPath(id: OrbiterId, when: When, points = 96): Vec3[] {
   if (elements === undefined) return [];
   const dt = jdOf(when) - elements.epochJd;
   const out: Vec3[] = [];
-  for (let k = 0; k <= points; k += 1) out.push(placeOf(elements, orbiterCentre(id), dt, (360 * k) / points));
+  // evenly spaced in eccentric anomaly, not mean: a lopsided orbit (ARTEMIS P1, e about 0.8) is then sampled fastest where it bends least, and has no sharp corner at periapsis
+  for (let k = 0; k <= points; k += 1) out.push(placeAt(elements, dt, (2 * Math.PI * k) / points));
   return out;
 }
 
@@ -290,6 +291,12 @@ function placeOf(elements: OrbiterElements, centre: OrbiterCentre, dt: number, m
   const m = ((meanAnomalyDeg ?? mDeg ?? 0) * RAD) % (2 * Math.PI);
   let ea = m;
   for (let k = 0; k < 30; k += 1) ea -= (ea - e * Math.sin(ea) - m) / (1 - e * Math.cos(ea));
+  return placeAt(elements, dt, ea);
+}
+
+/** A point of the ellipse `dt` days after the epoch at the eccentric anomaly `ea` (radians). */
+function placeAt(elements: OrbiterElements, dt: number, ea: number): Vec3 {
+  const e = elements.e;
   const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(ea / 2), Math.sqrt(1 - e) * Math.cos(ea / 2));
   const r = elements.a * (1 - e * Math.cos(ea));
   const raan = (elements.raan + elements.raanRate * dt) * RAD;
