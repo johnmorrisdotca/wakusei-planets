@@ -6,6 +6,7 @@ import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, type PointsThree } from "../door/points.ts";
+import { createMoonDots, type DotsThree, type MoonDot } from "./all-moons.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
@@ -151,6 +152,9 @@ export interface SpaceModel {
   anchor: number | null;
   orbits: boolean;
   labels: boolean;
+  /** The catalogue's moons to draw as dots at a moment (`all-moons`), or null for none; and how many were drawn at the last draw. */
+  allMoons: ((ms: number) => readonly MoonDot[]) | null;
+  moonDots: number;
   /** Milliseconds of game time one second of wall time covers (the ephemeris is looked up once per such span). */
   stepMs: number;
   /** The body the camera looks at, and (in `zoom`) fills the view with at 1x: any body the package knows that the view can place (the eleven of `SPACE_BODIES` and the moons of the planets). */
@@ -220,6 +224,8 @@ export const newSpaceModel = (): SpaceModel => ({
   anchor: null,
   orbits: true,
   labels: true,
+  allMoons: null,
+  moonDots: 0,
   stepMs: 1000,
   focus: "earth",
   light: "sun",
@@ -327,6 +333,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const points = deps.book !== undefined && typeof (three as Partial<PointsThree>).InstancedBufferGeometry === "function" ? createSmallBodyPoints(three as unknown as PointsThree) : undefined;
       if (points !== undefined) scene.add(points.object);
       let pointsVersion = -1;
+      // the catalogue's other moons as dots (a page's own subset of three needs Points and PointsMaterial for them)
+      const dots = typeof (three as Partial<DotsThree>).Points === "function" ? createMoonDots(three as unknown as DotsThree) : undefined;
+      if (dots !== undefined) scene.add(dots.object);
       const camera = new three.PerspectiveCamera(FOV, width / Math.max(1, height), 0.05, 1000);
       const target = new three.Vector3();
       const projected = new three.Vector3();
@@ -688,6 +697,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             points.update({ jd: toTerrestrialTime(model.time) / 86_400_000 + 2_440_587.5, mode, sun: sunPos, width: size.width * ratio, height: size.height * ratio, ratio });
             model.door.points = points.count;
           }
+          if (dots !== undefined) {
+            const list = model.allMoons?.(model.time) ?? [];
+            dots.object.visible = list.length > 0;
+            model.moonDots = list.length === 0 ? 0 : dots.update(list, mode, (host) => pos[host], radiusOf, model.ratio());
+          }
 
           // the orbits round the Sun, placed by the same mapping as the bodies
           const drawnRings: string[] = [];
@@ -912,6 +926,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         },
         dispose() {
           points?.dispose();
+          dots?.dispose();
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);

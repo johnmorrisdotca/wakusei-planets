@@ -38,6 +38,8 @@ const state = {
   light: pick(address.get("light"), ["sun", "lit"], "sun"),
   orbits: address.get("orbits") !== "0",
   names: address.get("names") !== "0",
+  /** Every other known moon drawn as a dot, and the list of the planet's moons under the controls (`moons=all`). */
+  allMoons: address.get("moons") === "all",
   /** Playing: the clock runs from the date shown at `speed` times real time. A page opened with no date, speed or play in its address opens playing, from now, an hour a second (the first speed at which the Earth's turn shows); a link that names a date or a speed, and a reader who asked for reduced motion, get it still with Play ready. */
   play: address.get("play") === "on" || (!["play", "t", "speed"].some((key) => address.get(key) !== null) && !matchMedia("(prefers-reduced-motion: reduce)").matches),
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
@@ -69,6 +71,7 @@ function render(): void {
   space.light = state.light;
   space.orbits = state.orbits;
   space.labels = state.names;
+  space.allMoons = state.allMoons;
   if (replay.playing !== state.play) replay.playing = state.play;
   state.play = replay.playing;
   if (applied !== state.time) {
@@ -91,6 +94,8 @@ function render(): void {
   }
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
+  pressed(document.querySelector<HTMLElement>("#all-moons")!, state.allMoons);
+  renderMoonList();
   renderBodyLabelRow(bodyLabel, space, address);
   pressed(nowButton, state.time === "now");
   if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
@@ -103,6 +108,7 @@ function render(): void {
   address.set("light", state.light === "sun" ? null : state.light);
   address.set("orbits", state.orbits ? null : "0");
   address.set("names", state.names ? null : "0");
+  address.set("moons", state.allMoons ? "all" : null);
   address.set("play", state.play ? "on" : null);
   address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
@@ -127,6 +133,53 @@ for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((st
 for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
+document.querySelector("#all-moons")!.addEventListener("click", () => ((state.allMoons = !state.allMoons), render()));
+
+// The moons of the planet in view, from the catalogue (fetched the first time "All moons" is on): the counts, a row of its groups, and a table that scrolls in its own box.
+let catalogue: typeof import("../src/moon-catalogue.ts") | undefined;
+let moonGroup = "";
+function renderMoonList(): void {
+  const panel = document.querySelector<HTMLElement>("#moon-list")!;
+  panel.hidden = !state.allMoons;
+  if (!state.allMoons) return;
+  if (catalogue === undefined) {
+    void import("../src/moon-catalogue.ts").then((mod) => ((catalogue = mod), renderMoonList()));
+    return;
+  }
+  const here = space.bodyInfo(space.body);
+  const host = (here.kind === "moon" ? here.host : here.id) as BodyId;
+  const all = catalogue.catalogueMoonsOf(host as Parameters<typeof catalogue.catalogueMoonsOf>[0]);
+  const hostName = space.bodyInfo(host).name;
+  document.querySelector("#moon-list-h")!.textContent = say("sp_moons_of", { name: hostName });
+  const named = all.filter((m) => m.named).length;
+  document.querySelector("#moon-count")!.textContent = all.length === 0 ? say("sp_moons_none", { name: hostName }) : say("sp_moons_count", { count: all.length, named, date: catalogue.MOON_CATALOGUE_FETCHED });
+  const groups = [...new Set(all.map((m) => m.group))];
+  if (!groups.includes(moonGroup as never)) moonGroup = "";
+  document.querySelector("#moon-groups")!.replaceChildren(
+    ...["", ...groups].map((g) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = g === "" ? say("sp_moon_group_all") : say(`sp_group_${g}`);
+      pressed(button, g === moonGroup);
+      button.addEventListener("click", () => ((moonGroup = g), renderMoonList()));
+      return button;
+    }),
+  );
+  const lang = chooser()?.lang ?? "en";
+  const rows = all.filter((m) => moonGroup === "" || m.group === moonGroup);
+  document.querySelector("#moon-rows")!.replaceChildren(
+    ...rows.map((m) => {
+      const tr = document.createElement("tr");
+      const name = lang === "ja" && m.ja !== null ? m.ja : m.label;
+      const found = m.discovery.year === null ? "" : `${m.discovery.year}${m.discovery.by ? ` · ${m.discovery.by}` : ""}`;
+      const size = m.radiusKm === null ? "" : `${m.radiusKm.toLocaleString("en-US")} km${m.radiusFrom === "derived" ? " *" : ""}`;
+      for (const text of [name, say(`sp_group_${m.group}`), found, size, say(`sp_grade_${m.full ? "full" : m.grade}`)]) tr.append(Object.assign(document.createElement("td"), { textContent: text }));
+      return tr;
+    }),
+  );
+}
+space.addEventListener("wakusei-hop", () => renderMoonList());
+window.addEventListener("wakusei-language", () => queueMicrotask(renderMoonList));
 bindBodyLabelRow(bodyLabel, render);
 nowButton.addEventListener("click", () => {
   state.time = "now";
