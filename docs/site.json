@@ -106,8 +106,8 @@
       "platform": "node"
     },
     "./roadster": {
-      "en": "Starman and the Tesla Roadster: where it is on any date from 2018 to 2035, its distances, speeds, orbit and the moments worth looking at (about 20 kB gzipped)",
-      "ja": "スターマンとテスラ・ロードスター: 2018年から2035年までの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",
+      "en": "Starman and the Tesla Roadster: where it is on any date from 2018 to the end of 2035, its distances, speeds, orbit and the moments worth looking at (about 20 kB gzipped)",
+      "ja": "スターマンとテスラ・ロードスター: 2018年から2035年末までの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",
       "platform": "node"
     },
     "./suncalc": {

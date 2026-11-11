@@ -2,7 +2,7 @@
 title: Starman and the Tesla Roadster
 section: how-to
 order: 18
-description: "Where the Tesla Roadster launched on the first Falcon Heavy is on any date from 2018 to 2035, and its distances, speeds, orbit and moments worth looking at, from a 20 kB table of JPL Horizons state vectors."
+description: "Where the Tesla Roadster launched on the first Falcon Heavy is on any date from 2018 to the end of 2035, and its distances, speeds, orbit and moments worth looking at, from a 20 kB table of JPL Horizons state vectors."
 ---
 
 `/roadster` answers where the Tesla Roadster, with Starman at the wheel, is on a date, and what its numbers are. It is the car SpaceX launched on the first Falcon Heavy on 6 February 2018 into an orbit round the Sun. The path is a table of state vectors (position and velocity) from JPL Horizons, target `-143205`, which the module joins with cubic Hermite interpolation on position and velocity. It runs anywhere, with no DOM and no three.js, needs no loading step, and the table (about 20 kB gzipped) is part of this entry point only: a page that does not import `/roadster` does not carry it.
@@ -19,7 +19,7 @@ console.log("x, y, z in km:", roadsterPosition(day).map((km) => Math.round(km)).
 
 ## The span and how exact it is
 
-The table covers 2018-02-07 02:58:50 UTC (about six hours after the launch, where Horizons' record starts) to 2035-01-01 02:58:50 UTC; `ROADSTER.record` holds both ends in milliseconds since 1970. A date outside it throws a `RangeError` that names the date and the span, like the spacecraft's. `ROADSTER_ACCURACY` states the numbers: the span, the 10 days between rows, and the worst error of the interpolation.
+The table covers 2018-02-07 02:58:50 UTC (about six hours after the launch, where Horizons' record starts) to 2036-01-01 02:58:50 UTC; `ROADSTER.record` holds both ends in milliseconds since 1970. A date outside it throws a `RangeError` that names the date and the span, like the spacecraft's. `ROADSTER_ACCURACY` states the numbers: the span, the 10 days between rows, and the worst error of the interpolation.
 
 | Where | Rows | Worst error against Horizons' own record |
 |---|---|---|
@@ -27,7 +27,7 @@ The table covers 2018-02-07 02:58:50 UTC (about six hours after the launch, wher
 | Day 1 to day 10 | a day apart | 62 km |
 | Day 10 to the end | 10 days apart | 645 km |
 
-The step is the largest, tried from 5 days up, that keeps the worst error under 80 per cent of 1,000 km. It was measured against every day of the span, every hour of the first 13 days and every hour round the Mars pass of October 2020. On 15 dates that are on no row (from `test/data/roadster-horizons.json`) the position was within 629 km of Horizons and the velocity within 2 metres a second. Over the whole record the velocity (the slope of the interpolation) is within 2.3 metres a second of Horizons' after the first day and within 115 metres a second in it.
+The step is the largest, tried from 5 days up, that keeps the worst error under 80 per cent of 1,000 km. It was measured against every day of the span, every hour of the first 13 days and every hour round the Mars passes of October 2020 and April 2035. On 15 dates that are on no row (from `test/data/roadster-horizons.json`) the position was within 629 km of Horizons and the velocity within 2 metres a second. Over the whole record the velocity (the slope of the interpolation) is within 2.3 metres a second of Horizons' after the first day and within 115 metres a second in it.
 
 That is the error of the interpolation, and it is small beside the other one. **The path itself is a prediction.** Horizons' solution (s11) is a fit to 374 telescope observations made in February and March 2018, with the push of sunlight on the car estimated as one number from them; the car has not been tracked since. The real car drifts from the predicted path, and the further from 2018 the more. A close approach in 2035 is a prediction, not a promise.
 
@@ -61,7 +61,7 @@ const mars = roadsterApproaches("mars").find((a) => new Date(a.date).getUTCFullY
 console.log("Mars, 2020:", new Date(mars.date).toISOString(), (mars.distanceKm / 149597870.7).toFixed(4), "au");
 ```
 
-The close approach to Mars on 7 October 2020 is at 06:28 UTC, 0.0495 au, which is Horizons' own: its table of the object's encounters gives 2020 Oct 07.268 and 0.049505 au. An approach is a least value of the distance between the centres that is under one astronomical unit; the launch and the last days of the span are not counted. Perihelion and aphelion are where the distance from the Sun is least and greatest. The Mars pass of 22 April 2035 is a few months after the span ends.
+The close approach to Mars on 7 October 2020 is at 06:28 UTC, 0.0495 au, which is Horizons' own: its table of the object's encounters gives 2020 Oct 07.268 and 0.049505 au. An approach is a least value of the distance between the centres that is under one astronomical unit; the launch and the last days of the span are not counted. Perihelion and aphelion are where the distance from the Sun is least and greatest. The pass of 22 April 2035, the closest of all, is also Horizons' own: the table puts it at 08:31 UTC at 0.01600 au, and Horizons' table gives 2035 Apr 22.355 and 0.015980 au (the date within 3 minutes). It is 17 years after the observations the path was fitted to, so it is a prediction.
 
 Each event has `kind`, `date`, `name` (`en` and `ja`) and, for an approach, a perihelion or an aphelion, `distanceKm`. A page can list them and jump to `date`.
 
