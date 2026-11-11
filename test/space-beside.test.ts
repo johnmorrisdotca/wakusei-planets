@@ -61,7 +61,7 @@ test("zoom goes closer and further, yaw swings round the line to the Earth, tilt
   assert.ok(Number.isFinite(full.position[0]) && full.separation > 20);
 });
 
-test("from beside a moon north is up, always: the picture's up is the scene's +y laid across the line of sight, for the Moon, Io and Titan at four moments a quarter of an orbit apart, in both scales", () => {
+test("from beside a moon north is up, always: with no `north` given the picture's up is the scene's +y laid across the line of sight, for the Moon, Io and Titan at four moments a quarter of an orbit apart, in both scales", () => {
   for (const scene of [TRUE, SQUEEZED]) {
     for (const [moonRadius, hostRadius, period] of [[0.2724, 1, 27.3], [0.2857, 11.2, 1.77], [0.404, 9.45, 15.9]] as const) {
       for (let quarter = 0; quarter < 4; quarter += 1) {

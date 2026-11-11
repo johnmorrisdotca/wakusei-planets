@@ -110,7 +110,7 @@ Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale` (`true`, the defaul
 
 `space.ride("moon")`, `space.ride("io")` or `space.ride({ at })` puts the camera on a moving point and looks at the body it goes round: see [Riding along](ride-along.md).
 
-Beside a moon, north is up, always: the picture's up is the scene's north laid across the line of sight (`stats.camera.up` reports it), whatever the date and wherever the Sun is, and both discs are framed above or beside each other as that leaves them.
+Beside a moon, north is up, always: the picture's up is the planet's own north pole laid across the line of sight (`stats.camera.up` reports it, and `stats.camera.forward` where the camera looks), whatever the date and wherever the Sun is, so the planet's equator and rings stay level, and both discs are framed above or beside each other as that leaves them. Where the Sun lies near the line from the planet through the moon (within about 20 degrees), the camera goes round over the planet's north side a little at a time, rather than hopping to the Sun's other side.
 
 ## The budget
 

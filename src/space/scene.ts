@@ -7,7 +7,7 @@ import type { ThreeParts } from "../scene/body.ts";
 import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, type PointsThree } from "../door/points.ts";
 import { toTerrestrialTime } from "../clock.ts";
-import { moonOffset } from "../scene/orient.ts";
+import { moonOffset, orientation } from "../scene/orient.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
@@ -192,7 +192,14 @@ export interface SpaceModel {
   /** The shared controls' view as the last draw used it, and how tall the view was (CSS pixels). */
   drawnView: { yaw: number; tilt: number; zoom: number; roll: number; panX: number; panY: number } | null;
   heightPx: number;
-  camera: { position: [number, number, number]; fov: number; /** The picture's up in the scene's axes (y is north): north up reads y near 1. */ up: [number, number, number] };
+  camera: {
+    position: [number, number, number];
+    fov: number;
+    /** The picture's up in the scene's axes (y is the Earth's north): beside a moon it is the planet's own pole laid across the line of sight. */
+    up: [number, number, number];
+    /** Which way the camera looks, a unit vector in the scene's axes. */
+    forward: [number, number, number];
+  };
   /** The body or point the camera rides along with, or null. */
   ride: RideState | null;
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
@@ -235,7 +242,7 @@ export const newSpaceModel = (): SpaceModel => ({
   motion: 0,
   drawnView: null,
   heightPx: 420,
-  camera: { position: [0, 0, 0], fov: FOV, up: [0, 1, 0] },
+  camera: { position: [0, 0, 0], fov: FOV, up: [0, 1, 0], forward: [0, 0, -1] },
   ride: null,
   rideLost: false,
   transition: null,
@@ -505,7 +512,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const id = t as SpaceBody;
               if (ride.view === "beside") {
                 // beyond the Moon and off the line to the Earth, the Earth in view behind it
-                if (id === "moon") besideIn = { moon: pos.moon, moonRadius: radiusOf("moon"), host: pos.earth, hostRadius: radiusOf("earth"), sun: pos.sun };
+                if (id === "moon") besideIn = { moon: pos.moon, moonRadius: radiusOf("moon"), host: pos.earth, hostRadius: radiusOf("earth"), sun: pos.sun, north: orientation("earth", model.time).pole };
                 focus = id;
                 focusPos = pos[id];
                 focusRadius = radiusOf(id);
@@ -530,7 +537,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               if (ride.view === "beside") {
                 const there: Vec3 = [centre[0] + offset[0] * unitWorld, centre[1] + offset[1] * unitWorld, centre[2] + offset[2] * unitWorld];
                 const radius = Math.max(1e-6, (BODIES[id].radiusKm / BODIES[around as SpacePlanet].radiusKm) * unitWorld);
-                besideIn = { moon: there, moonRadius: radius, host: centre, hostRadius: unitWorld, sun: pos.sun };
+                besideIn = { moon: there, moonRadius: radius, host: centre, hostRadius: unitWorld, sun: pos.sun, north: orientation(around as BodyId, model.time).pole };
                 focus = id;
                 focusPos = there;
                 focusRadius = radius;
@@ -629,7 +636,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const hiddenBody = rideFrom?.hiddenBody ?? null;
           const hiddenMoon = rideFrom?.hiddenMoon ?? null;
           const e2 = camera.matrixWorld.elements;
-          model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow, up: [e2[4]!, e2[5]!, e2[6]!] };
+          model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow, up: [e2[4]!, e2[5]!, e2[6]!], forward: [-e2[8]!, -e2[9]!, -e2[10]!] };
           model.pose = { p: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
           model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom, roll: model.view.roll, panX: model.view.panX, panY: model.view.panY };
           model.heightPx = size.height;
