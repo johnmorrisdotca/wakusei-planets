@@ -46,9 +46,9 @@ test("a moon that keeps one face to its planet shows it: the meridian points at 
   assert.ok(away > 0.99, String(away));
 });
 
-test("the Sun is a billboard with a glow and no ring; Saturn has a ring that the light and the pole reach", () => {
+test("the Sun is a globe with a glow and no ring; Saturn has a ring that the light and the pole reach", () => {
   const sun = painter.make(THREE, "sun");
-  assert.equal(sun.billboard, true);
+  assert.equal(sun.billboard, undefined, "the object is not turned to the camera: the globe keeps its own orientation");
   assert.equal(sun.object.children.length, 2);
   sun.dispose();
   const saturn = painter.make(THREE, "Saturn", { look: "painted" });
@@ -113,4 +113,32 @@ test("a painter told to map every body asks for each body's picture in the reali
     assert.ok(urls.some((url) => new RegExp(`/${map}-\\d+\\.webp$`).test(url)), `${id} asks for its map when told to map every body: ${urls.join(" ")}`);
   }
   for (const id of ["phobos", "deimos", "miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
+});
+
+test("the Sun turns about its own pole with time, and the glow, not the globe, faces the camera", () => {
+  const sun = painter.make(THREE, "sun");
+  const meshes = sun.object.children as THREE.Mesh[];
+  const glow = meshes.find((m) => m.geometry.type === "PlaneGeometry")!;
+  const globe = meshes.find((m) => m !== glow)!;
+  const camera = new THREE.PerspectiveCamera();
+  camera.quaternion.setFromEuler(new THREE.Euler(0.4, 1.1, -0.3));
+  const view = { camera, width: 400, height: 300 };
+  sun.update({ toSun: [0, 0, 1], ms, radiusPx: 60, view });
+  // the glow is turned to the camera: it carries the camera's own rotation
+  assert.ok(glow.quaternion.angleTo(camera.quaternion) < 1e-6);
+  // the globe is not: its basis is the Sun's pole and prime meridian (about 25 days a turn at the equator, 14.18 degrees a day)
+  const { pole, meridian } = orientation("sun", ms);
+  const up = new THREE.Vector3(0, 1, 0).applyMatrix4(globe.matrix.clone().setPosition(0, 0, 0)).normalize();
+  assert.ok(dot([up.x, up.y, up.z], pole) > 0.999);
+  sun.update({ toSun: [0, 0, 1], ms: ms + 86_400_000, radiusPx: 60, view });
+  const later = orientation("sun", ms + 86_400_000).meridian;
+  const angle = (Math.acos(Math.min(1, dot(meridian, later))) * 180) / Math.PI;
+  assert.ok(Math.abs(angle - 14.18) < 0.3, `${angle} degrees in a day`);
+  // and turning the camera leaves the globe's basis where it was
+  const before = globe.matrix.clone();
+  camera.quaternion.setFromEuler(new THREE.Euler(-1, 0.2, 0.7));
+  sun.update({ toSun: [0, 0, 1], ms: ms + 86_400_000, radiusPx: 60, view });
+  assert.ok(globe.matrix.equals(before), "the globe does not follow the camera");
+  assert.ok(glow.quaternion.angleTo(camera.quaternion) < 1e-6, "the glow does");
+  sun.dispose();
 });
