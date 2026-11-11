@@ -4,13 +4,14 @@ import { test } from "node:test";
 import { ORBITER_FACTS, ORBITER_IDS, orbiterCentre, orbiterElements, orbiterFacts, orbiterNumbers, orbiterPath, orbiterPosition, orbiterSpeed, orbiterStatus, type OrbiterId } from "../src/orbiters.ts";
 
 interface Point {
-  jd: number;
+  /** Where the point is from: inside the fit's window, or in the days after it. */
+  span: "fit" | "predicted";
+  /** The moment as a UTC calendar date, as Horizons was asked for it (TIME_TYPE UT): Horizons does the time-scale change, not the package. */
+  utc: string;
   position: [number, number, number];
   velocity: [number, number, number];
 }
 const fixture = JSON.parse(readFileSync(new URL("./data/orbiters-horizons.json", import.meta.url), "utf8")) as Record<string, Point[]>;
-const UNIX_EPOCH_JD = 2440587.5;
-const msOfJd = (jd: number): number => (jd - UNIX_EPOCH_JD) * 86_400_000;
 const length = (v: readonly number[]): number => Math.hypot(v[0]!, v[1]!, v[2]!);
 
 test("thirteen orbiters, six round the Moon and seven round Mars, each with its facts", () => {
@@ -27,6 +28,25 @@ test("thirteen orbiters, six round the Moon and seven round Mars, each with its 
   assert.throws(() => orbiterCentre("iss" as OrbiterId), /no orbiter called iss/);
 });
 
+test("at a known UTC instant LRO and MRO are where Horizons put them, not 69 seconds of their motion away (UTC read as TDB would miss by 110 and 235 km)", () => {
+  // Horizons, asked at the UTC calendar dates with TIME_TYPE UT on 2026-11-11 (Moon- and Mars-centred, ecliptic J2000, km): the answer is typed here, apart from the fixture file
+  const lro = Date.UTC(2026, 10, 8, 3, 17, 0);
+  const lroHorizons = [317.4522531231513, 341.1387337978168, 1746.994989878749];
+  const here = orbiterPosition("lro", lro);
+  const miss = length([here[0] - lroHorizons[0]!, here[1] - lroHorizons[1]!, here[2] - lroHorizons[2]!]);
+  assert.ok(miss < orbiterElements("lro")!.fitErrorKm.max * 1.05 + 1, `LRO is ${miss.toFixed(1)} km off`);
+  // the same craft read 69.184 s later is about 110 km away from that point: the time scale matters at this size
+  const later = orbiterPosition("lro", lro + 69_184);
+  assert.ok(length([later[0] - lroHorizons[0]!, later[1] - lroHorizons[1]!, later[2] - lroHorizons[2]!]) > 90, "a minute later LRO is far from the point");
+  // MRO moves about 3.4 km/s: from the saved Horizons points, asked at UTC calendar dates
+  const mro = fixture["mro"]!.find((point) => point.span === "fit")!;
+  const there = orbiterPosition("mro", Date.parse(mro.utc));
+  const mroMiss = length([there[0] - mro.position[0], there[1] - mro.position[1], there[2] - mro.position[2]]);
+  assert.ok(mroMiss < orbiterElements("mro")!.fitErrorKm.max * 1.05 + 1, `MRO is ${mroMiss.toFixed(1)} km off`);
+  const wrong = orbiterPosition("mro", Date.parse(mro.utc) + 69_184);
+  assert.ok(length([wrong[0] - mro.position[0], wrong[1] - mro.position[1], wrong[2] - mro.position[2]]) > 150, "69 s of MRO's motion is over 150 km");
+});
+
 test("every craft with a path is where Horizons puts it, within the fit's own stated error, at the points held from its window", () => {
   let checked = 0;
   for (const id of ORBITER_IDS) {
@@ -36,20 +56,43 @@ test("every craft with a path is where Horizons puts it, within the fit's own st
       assert.ok(points === undefined || id === "capstone", `${id} has no path`);
       continue;
     }
-    assert.ok(points !== undefined && points.length >= 4, `${id} has reference points`);
-    for (const point of points) {
-      const ours = orbiterPosition(id, msOfJd(point.jd));
+    assert.ok(points !== undefined && points.filter((one) => one.span === "fit").length >= 4, `${id} has reference points`);
+    for (const point of points.filter((one) => one.span === "fit")) {
+      const ours = orbiterPosition(id, Date.parse(point.utc));
       const miss = length([ours[0] - point.position[0], ours[1] - point.position[1], ours[2] - point.position[2]]);
       // the test points are inside the fit's window: within the worst error measured there, with a little room for the rounding of the elements
-      assert.ok(miss <= elements.fitErrorKm.max * 1.05 + 1, `${id} at JD ${point.jd}: ${miss.toFixed(1)} km off, the fit's worst is ${elements.fitErrorKm.max} km`);
+      assert.ok(miss <= elements.fitErrorKm.max * 1.05 + 1, `${id} at ${point.utc}: ${miss.toFixed(1)} km off, the fit's worst is ${elements.fitErrorKm.max} km`);
       // the speed from the ellipse is the real speed to a few per cent on a tracked fit; a mean ellipse only (ARTEMIS, pulled about by the Earth) is rougher
-      const speed = orbiterSpeed(id, msOfJd(point.jd));
+      const speed = orbiterSpeed(id, Date.parse(point.utc));
       const real = length(point.velocity);
       assert.ok(Math.abs(speed - real) / real < (elements.basis === "tracked" ? 0.05 : 0.2), `${id}: speed ${speed.toFixed(3)} against Horizons' ${real.toFixed(3)} km/s`);
       checked += 1;
     }
   }
   assert.ok(checked >= 40, `${checked} points checked`);
+});
+
+test("past the fit's window each craft is where Horizons puts it within the predicted error the data states, which is the larger of the two", () => {
+  let checked = 0;
+  for (const id of ORBITER_IDS) {
+    const elements = orbiterElements(id);
+    if (elements === undefined) continue;
+    const points = (fixture[id] ?? []).filter((one) => one.span === "predicted");
+    if (elements.predictedErrorKm === null) {
+      assert.equal(points.length, 0, `${id} has no predicted span`);
+      continue;
+    }
+    assert.ok(points.length >= 4, `${id} has reference points past its window`);
+    for (const point of points) {
+      const ours = orbiterPosition(id, Date.parse(point.utc));
+      const miss = length([ours[0] - point.position[0], ours[1] - point.position[1], ours[2] - point.position[2]]);
+      assert.equal(orbiterStatus(id, Date.parse(point.utc)), elements.basis === "tracked" ? "predicted" : "modelled", `${id} at ${point.utc}`);
+      assert.ok(miss <= elements.predictedErrorKm.max * 1.05 + 1, `${id} at ${point.utc}: ${miss.toFixed(1)} km off, the predicted worst is ${elements.predictedErrorKm.max} km`);
+      checked += 1;
+    }
+    if (elements.basis === "tracked") assert.ok(elements.predictedErrorKm.max > elements.fitErrorKm.max, `${id}: carried on past the fit it is less exact than inside it`);
+  }
+  assert.ok(checked >= 30, `${checked} points checked`);
 });
 
 test("the orbits are the right size: a low lunar orbit about 100 km up, a low Mars orbit a few hundred km up, Hope far out, and ARTEMIS long and lopsided", () => {
@@ -68,11 +111,27 @@ test("the orbits are the right size: a low lunar orbit about 100 km up, a low Ma
   assert.equal(orbiterNumbers("tianwen-1", when), undefined);
 });
 
-test("the status says where a path comes from: tracked inside the window, predicted past the tracking, modelled outside it or for a mean ellipse only, none for no path", () => {
+test("the status says where a path comes from: tracked inside the fit's window, predicted after it, modelled beyond or for a mean ellipse only, none for no path", () => {
   const lro = orbiterElements("lro")!;
   assert.equal(lro.basis, "tracked");
   assert.equal(orbiterStatus("lro", Date.parse(lro.validFrom) + 86_400_000), "tracked");
+  assert.equal(orbiterStatus("lro", Date.parse(lro.fitUntil)), "tracked", "tracked to the last moment of the window");
+  assert.equal(orbiterStatus("lro", Date.parse(lro.fitUntil) + 1000), "predicted");
+  assert.equal(orbiterStatus("lro", Date.parse(lro.validUntil) - 86_400_000), "predicted");
   assert.equal(orbiterStatus("lro", Date.parse(lro.validUntil) + 86_400_000), "modelled");
+  // predicted really appears, for every tracked craft, and its numbers state the error that goes with it
+  for (const id of ORBITER_IDS) {
+    const elements = orbiterElements(id);
+    if (elements === undefined || elements.basis !== "tracked") continue;
+    const inside = Date.parse(elements.fitUntil) - 3_600_000;
+    const after = Date.parse(elements.fitUntil) + 86_400_000;
+    assert.equal(orbiterStatus(id, inside), "tracked", id);
+    assert.equal(orbiterStatus(id, after), "predicted", id);
+    assert.equal(orbiterNumbers(id, inside)!.errorKm, elements.fitErrorKm.max, id);
+    assert.equal(orbiterNumbers(id, after)!.errorKm, elements.predictedErrorKm!.max, id);
+    assert.match(elements.retrieved, /^\d{4}-\d{2}-\d{2}$/, `${id} says when it was read`);
+  }
+  assert.equal(orbiterNumbers("artemis-p1", Date.parse(orbiterElements("artemis-p1")!.validFrom) + 86_400_000)!.errorKm, null, "a modelled path states no error");
   assert.equal(orbiterStatus("lro", Date.UTC(2020, 0, 1)), "modelled");
   assert.equal(orbiterStatus("artemis-p1", Date.parse(orbiterElements("artemis-p1")!.validFrom) + 86_400_000), "modelled");
   assert.equal(orbiterStatus("maven", Date.UTC(2026, 10, 11)), "modelled");

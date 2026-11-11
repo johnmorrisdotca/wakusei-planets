@@ -47,8 +47,9 @@ export type OrbiterId = keyof typeof ORBITER_FITS;
 export type OrbiterCentre = "moon" | "mars";
 
 /**
- * Where an orbiter's path comes from at a moment: `tracked` (within the window Horizons' tracking data reached when the fit was made), `predicted` (after that, within the fit's own window),
- * `modelled` (a mean orbit only: the track ended, or no ellipse follows the craft closely) or `none` (no path at all: Tianwen-1 has no public orbit track, CAPSTONE's halo orbit is no ellipse).
+ * Where an orbiter's path comes from at a moment: `tracked` (inside the window the ellipse was fitted over, where its error against Horizons was measured: `fitErrorKm`), `predicted` (after that window
+ * and within as many days again as it was long: the same ellipse carried on, its error against Horizons measured there too: `predictedErrorKm`, usually the larger), `modelled` (a mean orbit only: outside
+ * both, or the track ended, or no ellipse follows the craft closely) or `none` (no path at all: Tianwen-1 has no public orbit track, CAPSTONE's halo orbit is no ellipse).
  *
  * @example
  * ```ts
@@ -62,6 +63,11 @@ export type OrbiterStatus = "tracked" | "predicted" | "modelled" | "none";
 /** GM of the Moon and Mars in km^3/s^2 (JPL DE440). */
 const GM: Record<OrbiterCentre, number> = { moon: 4902.800118, mars: 42828.375816 };
 const UNIX_EPOCH_JD = 2440587.5;
+/**
+ * TDB minus UTC in seconds. The fitted epochs and Horizons' vectors are in TDB; a `Date` is UTC. TAI - UTC is 37 s (since 2017-01-01; a later leap second would add one) and TT - TAI is 32.184 s; TDB differs
+ * from TT by under 2 ms, which this package ignores. Left out, the craft would lag its true place by about 69 s of its motion: 110 km for LRO, 235 km for MRO.
+ */
+const TDB_MINUS_UTC_S = 37 + 32.184;
 const RAD = Math.PI / 180;
 
 /**
@@ -91,15 +97,20 @@ export interface OrbiterElements {
   meanMotionCorrection: number;
   /** One trip round the body, in days. */
   periodDays: number;
-  /** The fit's epoch, as a Julian date (TDB). */
+  /** The fit's epoch, as a Julian date in TDB (a moment in UTC is turned into TDB, 69.184 s later, before it is used). */
   epochJd: number;
-  /** The window the fit was made over, and the end of the window it is taken as good for, as ISO dates. */
+  /** The window the fit was made over (`validFrom` to `fitUntil`, ISO dates in UTC: `tracked`) and the end of the days after it the ellipse is carried on for (`validUntil`: `predicted`). */
   validFrom: string;
+  fitUntil: string;
   validUntil: string;
+  /** The date Horizons was read on, as `yyyy-mm-dd` (UTC): the age of the elements. */
+  retrieved: string;
   /** How far Horizons' tracking data reached when the fit was made, as Horizons writes it. */
   trackedUntil: string;
-  /** The error of the ellipse against Horizons over the window, in kilometres: median and worst. */
+  /** The error of the ellipse against Horizons over the fit's window (`tracked`), in kilometres: median and worst. */
   fitErrorKm: { median: number; max: number };
+  /** The error of the same ellipse against Horizons over the days after the window (`predicted`), in kilometres: median and worst; `null` where Horizons has nothing there (a craft whose track has ended). */
+  predictedErrorKm: { median: number; max: number } | null;
   /** `tracked` when the ellipse follows Horizons within the limit the script sets; `modelled` when not, or when the track had ended. */
   basis: "tracked" | "modelled";
 }
@@ -146,14 +157,17 @@ export function orbiterElements(id: OrbiterId): OrbiterElements | undefined {
   const fit = ORBITER_FITS[idOf(id)];
   if (!hasElements(fit)) return undefined;
   const f = fit as unknown as OrbiterElements;
-  return { a: f.a, e: f.e, i: f.i, raan: f.raan, argp: f.argp, m0: f.m0, raanRate: f.raanRate, argpRate: f.argpRate, meanMotionCorrection: f.meanMotionCorrection, periodDays: f.periodDays, epochJd: f.epochJd, validFrom: f.validFrom, validUntil: f.validUntil, trackedUntil: f.trackedUntil, fitErrorKm: { ...f.fitErrorKm }, basis: f.basis };
+  return { a: f.a, e: f.e, i: f.i, raan: f.raan, argp: f.argp, m0: f.m0, raanRate: f.raanRate, argpRate: f.argpRate, meanMotionCorrection: f.meanMotionCorrection, periodDays: f.periodDays, epochJd: f.epochJd, validFrom: f.validFrom, fitUntil: f.fitUntil, validUntil: f.validUntil, retrieved: f.retrieved, trackedUntil: f.trackedUntil, fitErrorKm: { ...f.fitErrorKm }, predictedErrorKm: f.predictedErrorKm === null ? null : { ...f.predictedErrorKm }, basis: f.basis };
 }
 
 const msOf = (when: When): number => (when instanceof Date ? when.getTime() : when);
-const jdOf = (when: When): number => msOf(when) / 86_400_000 + UNIX_EPOCH_JD;
+/** The Julian date in TDB of a moment given in UTC (see `TDB_MINUS_UTC_S`). */
+const tdbJdOf = (when: When): number => (msOf(when) / 1000 + TDB_MINUS_UTC_S) / 86_400 + UNIX_EPOCH_JD;
 
 /**
- * Where an orbiter's path comes from at a moment: see `OrbiterStatus`. A moment before the fit's window is `modelled` too (the ellipse is extended back, not measured there).
+ * Where an orbiter's path comes from at a moment: see `OrbiterStatus`. `tracked` ends with the fit's window (`fitUntil`); after it, up to `validUntil`, a path is `predicted`. A moment before the window or after
+ * `validUntil` is `modelled` (the ellipse is extended, not measured there). `trackedUntil`, how far Horizons' own tracking data reached, is not used: where Horizons' track is itself an agency's prediction, "tracked" says the
+ * ellipse follows that track.
  *
  * @param id - The orbiter.
  * @param when - A `Date` or milliseconds since 1970 (UTC).
@@ -172,16 +186,13 @@ export function orbiterStatus(id: OrbiterId, when: When): OrbiterStatus {
   const f = fit as unknown as OrbiterElements;
   if (f.basis === "modelled") return "modelled";
   const ms = msOf(when);
-  const from = Date.parse(f.validFrom);
-  const until = Date.parse(f.validUntil);
-  if (ms < from || ms > until) return "modelled";
-  const tracked = Date.parse(f.trackedUntil.replace(/^(\d{4})-([A-Za-z]{3})-(\d{2})$/, "$2 $3, $1"));
-  return Number.isFinite(tracked) && ms > tracked ? "predicted" : "tracked";
+  if (ms < Date.parse(f.validFrom) || ms > Date.parse(f.validUntil)) return "modelled";
+  return ms > Date.parse(f.fitUntil) ? "predicted" : "tracked";
 }
 
 /**
  * Where an orbiter is at a moment, in kilometres from the centre of the body it goes round, ecliptic and equinox J2000. The mean ellipse is propagated with its drifting node and periapsis: good to the
- * `fitErrorKm` of its elements within the fit's window, rougher outside it (`orbiterStatus`). Throws for a craft with no path.
+ * `fitErrorKm` of its elements within the fit's window and the larger `predictedErrorKm` in the days after it, rougher beyond (`orbiterStatus`). `when` is UTC; the elements' TDB epoch is allowed for (69.184 s). Throws for a craft with no path.
  *
  * @param id - The orbiter.
  * @param when - A `Date` or milliseconds since 1970 (UTC).
@@ -219,7 +230,8 @@ export function orbiterSpeed(id: OrbiterId, when: When): number {
 }
 
 /**
- * The numbers a page shows for an orbiter at a moment: its height above the body's mean surface, its speed, its period and inclination, and where its path comes from.
+ * The numbers a page shows for an orbiter at a moment: its height above the body's mean surface, its speed, its period and inclination, where its path comes from, and how far wrong it may be (`errorKm`: the worst error
+ * measured against Horizons for that status, `fitErrorKm.max` when `tracked`, `predictedErrorKm.max` when `predicted`; `null` when `modelled`).
  *
  * @param id - The orbiter.
  * @param when - A `Date` or milliseconds since 1970 (UTC).
@@ -230,14 +242,16 @@ export function orbiterSpeed(id: OrbiterId, when: When): number {
  * import { orbiterNumbers } from "@johnmorrisdotca/wakusei-planets/orbiters";
  *
  * const mro = orbiterNumbers("mro", Date.UTC(2026, 10, 11))!;
- * console.log(mro.altitudeKm.toFixed(0), "km up,", mro.speedKmS.toFixed(2), "km/s,", (mro.periodDays * 24 * 60).toFixed(0), "minutes round,", mro.status);
+ * console.log(mro.altitudeKm.toFixed(0), "km up,", mro.speedKmS.toFixed(2), "km/s,", (mro.periodDays * 24 * 60).toFixed(0), "minutes round,", mro.status, "within", mro.errorKm, "km");
  * ```
  */
-export function orbiterNumbers(id: OrbiterId, when: When): { altitudeKm: number; speedKmS: number; periodDays: number; inclinationDeg: number; status: OrbiterStatus } | undefined {
+export function orbiterNumbers(id: OrbiterId, when: When): { altitudeKm: number; speedKmS: number; periodDays: number; inclinationDeg: number; status: OrbiterStatus; errorKm: number | null } | undefined {
   const elements = orbiterElements(id);
   if (elements === undefined) return undefined;
   const { position, velocity } = stateOf(id, when);
-  return { altitudeKm: Math.hypot(position[0], position[1], position[2]) - MEAN_RADIUS_KM[orbiterCentre(id)], speedKmS: Math.hypot(velocity[0], velocity[1], velocity[2]), periodDays: elements.periodDays, inclinationDeg: elements.i, status: orbiterStatus(id, when) };
+  const status = orbiterStatus(id, when);
+  const errorKm = status === "tracked" ? elements.fitErrorKm.max : status === "predicted" ? (elements.predictedErrorKm?.max ?? null) : null;
+  return { altitudeKm: Math.hypot(position[0], position[1], position[2]) - MEAN_RADIUS_KM[orbiterCentre(id)], speedKmS: Math.hypot(velocity[0], velocity[1], velocity[2]), periodDays: elements.periodDays, inclinationDeg: elements.i, status, errorKm };
 }
 
 /** The mean radius of the Moon and Mars in kilometres (IAU), for heights above the surface. */
@@ -261,7 +275,7 @@ const MEAN_RADIUS_KM: Record<OrbiterCentre, number> = { moon: 1737.4, mars: 3389
 export function orbiterPath(id: OrbiterId, when: When, points = 96): Vec3[] {
   const elements = orbiterElements(id);
   if (elements === undefined) return [];
-  const dt = jdOf(when) - elements.epochJd;
+  const dt = tdbJdOf(when) - elements.epochJd;
   const out: Vec3[] = [];
   // evenly spaced in eccentric anomaly, not mean: a lopsided orbit (ARTEMIS P1, e about 0.8) is then sampled fastest where it bends least, and has no sharp corner at periapsis
   for (let k = 0; k <= points; k += 1) out.push(placeAt(elements, dt, (2 * Math.PI * k) / points));
@@ -272,7 +286,7 @@ function stateOf(id: OrbiterId, when: When): { position: Vec3; velocity: Vec3 } 
   const elements = orbiterElements(id);
   if (elements === undefined) throw new RangeError(`wakusei-planets: ${id} has no path to follow (${orbiterStatus(id, when)})`);
   const centre = orbiterCentre(id);
-  const dt = jdOf(when) - elements.epochJd;
+  const dt = tdbJdOf(when) - elements.epochJd;
   const n = meanMotion(elements, centre);
   const m = (elements.m0 + n * dt) % 360;
   const position = placeOf(elements, centre, dt, undefined, m);

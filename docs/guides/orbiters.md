@@ -24,7 +24,21 @@ console.log("LRO is", Math.hypot(x, y, z).toFixed(0), "km from the Moon's centre
 
 Each path is a Kepler ellipse round the body whose node and periapsis drift at fitted rates: nine numbers a craft, fitted by `scripts/make-orbiter-data.py` to JPL Horizons' own track over the last days before the read date (7 days for the low orbits, 10 for Mars Express and Hope, 14 for ARTEMIS). The script is run by hand from the Mac, about monthly or after a manoeuvre, and never on a timer; the page never calls a server. Positions are kilometres from the body's centre, ecliptic and equinox J2000, the same axes as `/roadster`; `eclipticToScene` from `/space` turns them into the space view's.
 
-`orbiterElements(id)` gives the elements with the window they were fitted over (`validFrom`, `validUntil`), how far Horizons' tracking data reached (`trackedUntil`) and the error of the ellipse against Horizons over the window (`fitErrorKm`, median and worst). On 2026-11-11 the worst errors were 33 to 54 km for the low circular orbits (LRO, Chandrayaan-2, Danuri, MRO, Odyssey), 9 km for Hope and 16 km for Mars Express; a mean ellipse cannot follow TGO (146 km, its node swings 2.2 degrees a day) or ARTEMIS P1 and P2 (about 3,000 km of a 10,000 km orbit, pulled about by the Earth), so those are marked `modelled`.
+Times: a `Date` is UTC, Horizons' vectors and the fitted epoch (`epochJd`) are TDB. The package adds 69.184 s (37 s of TAI - UTC and 32.184 s of TT - TAI; TDB - TT is under 2 ms) before it uses an epoch. Left out, every craft would lag its true place by about 69 s of its motion: 110 km for LRO, 235 km for MRO.
+
+`orbiterElements(id)` gives the elements with the window they were fitted over (`validFrom` to `fitUntil`), the end of the days the ellipse is carried on for (`validUntil`), the day Horizons was read (`retrieved`: the age of the elements), how far Horizons' tracking data reached (`trackedUntil`) and two errors against Horizons: over the fit's window (`fitErrorKm`) and over the days after it (`predictedErrorKm`), each median and worst. Both are measured by the script, in kilometres:
+
+| Craft | Tracked: median, worst | Predicted: median, worst |
+|---|---|---|
+| LRO | 14, 44 | 80, 235 |
+| Chandrayaan-2 | 11, 33 | 99, 251 |
+| Danuri | 13, 48 | 36, 144 |
+| MRO | 20, 52 | 60, 146 |
+| Odyssey | 17, 54 | 68, 166 |
+| Mars Express | 7, 17 | 8, 27 |
+| Hope | 4, 9 | 17, 33 |
+
+A mean ellipse cannot follow TGO (146 km inside its window, 444 past it; its node swings 2.2 degrees a day) or ARTEMIS P1 and P2 (about 3,000 km of a 10,000 km orbit, pulled about by the Earth), so those are marked `modelled`. These are the numbers of the file read on 2026-11-11; the script rewrites them.
 
 ## Tracked, predicted, modelled, none
 
@@ -32,12 +46,12 @@ Each path is a Kepler ellipse round the body whose node and periapsis drift at f
 
 | Status | Meaning |
 |---|---|
-| `tracked` | within the fit's window, up to the date Horizons' tracking data reached |
-| `predicted` | within the window, after the tracking data: Horizons' own prediction, fitted |
-| `modelled` | a mean orbit only: outside the window, a craft whose ellipse misses by more than the limit, or one whose track has ended (MAVEN, lost in December 2025 and ended by NASA in 2026, keeps its last orbit) |
+| `tracked` | inside the window the ellipse was fitted over, up to `fitUntil`: its error against Horizons there is `fitErrorKm` |
+| `predicted` | after that window, for as many days again: the same ellipse carried on, and the error there, measured against Horizons the same way, is `predictedErrorKm` (larger: for the low orbits two to five times) |
+| `modelled` | a mean orbit only: outside both spans, a craft whose ellipse misses by more than the limit, or one whose track has ended (MAVEN, lost in December 2025 and ended by NASA in 2026, keeps its last orbit) |
 | `none` | no path: CAPSTONE's near-rectilinear halo orbit is no ellipse and its mission is complete; Tianwen-1's only public record is a volunteers' track of its cruise, ending at arrival |
 
-Never present a guess as live: a `modelled` craft is drawn dim and said to be modelled, and one with `none` carries its facts and no marker.
+`tracked` means the ellipse follows Horizons' track over the fit's window, where the track is itself the agency's measurement, or, for the last days before the read date, its prediction (`trackedUntil` says where Horizons' tracking data ended). Never present a guess as live: a `predicted` or `modelled` craft is drawn dim and said to be so, with the error that goes with it (`orbiterNumbers(id, when).errorKm`: the worst error for the status, `null` when modelled), and one with `none` carries its facts and no marker.
 
 ## The numbers and the facts
 
@@ -46,10 +60,10 @@ Never present a guess as live: a `modelled` craft is drawn dim and said to be mo
 ## Refreshing
 
 ```sh
-python3 -I scripts/make-orbiter-data.py --cache .cache/horizons-orbiters
+python3 -I scripts/make-orbiter-data.py --cache <a folder outside the repository>
 ```
 
-One header request and one vectors request per craft, two seconds apart, answers cached so a second run asks nothing again. The script prints each fit's error and says which craft Horizons no longer tracks; it rewrites `src/data/orbiters.ts` and the test points in `test/data/orbiters-horizons.json`, and `pnpm test` checks every craft against them.
+Four requests per craft (the object page, the fit's window, the days after it, and four test points asked at UTC calendar dates), two seconds apart, one at a time, with a generic User-Agent; the cache is outside the repository, so a second run asks nothing again. The script prints each fit's error and says which craft Horizons no longer tracks; it rewrites `src/data/orbiters.ts` and the test points in `test/data/orbiters-horizons.json`, and `pnpm test` checks every craft against them.
 
 ## In the space view
 

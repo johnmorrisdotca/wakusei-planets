@@ -3,17 +3,27 @@
 (https://ssd.jpl.nasa.gov/api/horizons.api, VECTORS, centre the body, ecliptic and equinox J2000, km and km/s, TDB), as mean orbital elements with
 secular rates fitted over a window of the craft's current track, each with the dates it is good for and the error measured against Horizons.
 
+Time scales: Horizons' vectors are asked for and read in TDB, so every Julian date in the fit (`epochJd`) is TDB. The library takes UTC (a `Date`) and adds
+TDB - UTC = 37 s (TAI - UTC, fixed since 2017-01-01) + 32.184 s (TT - TAI) = 69.184 s; TDB differs from TT by under 2 ms. The dates written as ISO strings are UTC.
+The test points are asked for as UTC calendar dates (TIME_TYPE UT), so Horizons does the time-scale change itself and the test does not depend on ours.
+
 For each craft: the object header is read for the revision date and how far tracking data reach; one VECTORS request gives samples at STEP minutes
 over WINDOW days before the read date; the osculating elements of every sample are worked out and a line is fitted to each (the node, the argument of
 periapsis and the mean anomaly as drifts, the rest as means); the fit is propagated back to every sample and the worst error recorded. A craft Horizons
 has no track for at the read date is kept from the last good file with `basis: "modelled"`.
 
-Usage: python3 -I scripts/make-orbiter-data.py [--cache DIR] [craft ...]   (needs the network; one request at a time, a pause between requests, stops on any error)"""
+Two errors are measured against Horizons for each craft: `fitErrorKm` over the fit's window (what "tracked" means) and, from a second request for the days after the read
+date, `predictedErrorKm` over the window's own length past it (what "predicted" means: the ellipse carried on beyond the data it was fitted to). A craft whose Horizons
+track has ended has none.
+
+Usage: python3 -I scripts/make-orbiter-data.py [--cache DIR] [craft ...]   (needs the network; one request at a time, a pause between requests, stops on any error; keep the cache outside the repository)"""
 import datetime, hashlib, json, math, os, re, sys, time, urllib.parse, urllib.request
 
 SOURCE = "https://ssd.jpl.nasa.gov/api/horizons.api"
 UNIX_EPOCH_JD = 2440587.5
 PAUSE = 2.0
+# TDB - UTC in seconds: TAI - UTC (37 s since 2017-01-01; no leap second since) plus TT - TAI (32.184 s). TDB - TT is under 2 ms, far below anything this fit can show.
+TDB_MINUS_UTC_S = 37.0 + 32.184
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "src", "data", "orbiters.ts")
 FIXTURE = os.path.join(ROOT, "test", "data", "orbiters-horizons.json")
@@ -47,8 +57,18 @@ def jd_of(when):
     return (when - JD0).total_seconds() / 86400 + UNIX_EPOCH_JD
 
 
+def tdb_of_utc(utc_jd):
+    return utc_jd + TDB_MINUS_UTC_S / 86400
+
+
 def iso_of_jd(jd):
+    """An ISO UTC string from a UTC Julian date."""
     return (JD0 + datetime.timedelta(days=jd - UNIX_EPOCH_JD)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def iso_of_tdb(jd):
+    """An ISO UTC string from a TDB Julian date."""
+    return iso_of_jd(jd - TDB_MINUS_UTC_S / 86400)
 
 
 class Horizons:
@@ -68,7 +88,7 @@ class Horizons:
         wait = self.last + PAUSE - time.time()
         if wait > 0:
             time.sleep(wait)
-        req = urllib.request.Request(SOURCE + "?" + query, headers={"User-Agent": "wakusei-planets-build/0.1 (john@johnmorris.ca)"})
+        req = urllib.request.Request(SOURCE + "?" + query, headers={"User-Agent": "wakusei-planets-data-script/0.1 (+https://github.com/johnmorrisdotca/wakusei-planets)"})
         with urllib.request.urlopen(req, timeout=120) as r:
             answer = json.load(r)
         self.last = time.time()
@@ -95,6 +115,25 @@ class Horizons:
                 continue
             rows.append((float(parts[0]), [float(parts[2]), float(parts[3]), float(parts[4])], [float(parts[5]), float(parts[6]), float(parts[7])]))
         return rows, text
+
+
+    def vectors_at_utc(self, command, center, start, stop, steps):
+        """Vectors at `steps` equal intervals between two UTC calendar dates ('YYYY-MM-DD HH:MM'), asked in UT so Horizons changes the time scale itself.
+        Returns [(UTC ISO string, position, velocity)]."""
+        answer = self.get({"format": "json", "COMMAND": f"'{command}'", "OBJ_DATA": "'NO'", "MAKE_EPHEM": "'YES'", "EPHEM_TYPE": "'VECTORS'", "CENTER": f"'{center}'", "REF_PLANE": "'ECLIPTIC'",
+                           "REF_SYSTEM": "'ICRF'", "OUT_UNITS": "'KM-S'", "VEC_TABLE": "'2'", "CSV_FORMAT": "'YES'", "TIME_TYPE": "'UT'",
+                           "START_TIME": f"'{start}'", "STOP_TIME": f"'{stop}'", "STEP_SIZE": f"'{steps}'"})
+        text = answer.get("result", "")
+        if "$$SOE" not in text or "JDUT" not in text:
+            return None
+        rows = []
+        for line in text.split("$$SOE")[1].split("$$EOE")[0].strip().splitlines():
+            parts = [p.strip() for p in line.split(",")]
+            if len(parts) < 8:
+                continue
+            when = datetime.datetime.strptime(parts[1].replace("A.D. ", ""), "%Y-%b-%d %H:%M:%S.%f").strftime("%Y-%m-%dT%H:%M:%SZ")
+            rows.append((when, [float(parts[2]), float(parts[3]), float(parts[4])], [float(parts[5]), float(parts[6]), float(parts[7])]))
+        return rows
 
 
 def cross(a, b):
@@ -235,13 +274,13 @@ def main():
     today = datetime.datetime.now(datetime.timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     read = today.strftime("%Y-%m-%d")
     fits = dict(existing)
-    fixture = json.load(open(FIXTURE)) if os.path.exists(FIXTURE) else {}
+    fixture = {k: v for k, v in (json.load(open(FIXTURE)) if os.path.exists(FIXTURE) else {}).items() if k not in wanted}
     for craft in wanted:
         command, body, window, step, limit = CRAFT[craft]
         mu = GM[body]
         header = horizons.header(command)
         revised, through = read_header(header)
-        stop = jd_of(today)
+        stop = tdb_of_utc(jd_of(today))  # the read date's UTC midnight, as the TDB Julian date Horizons is asked for
         start = stop - window
         rows, text = horizons.vectors(command, CENTER[body], start, stop, step)
         ended = None
@@ -256,7 +295,7 @@ def main():
                 continue
             month = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"].index(reason.group(2).upper()) + 1
             ended = datetime.datetime(int(reason.group(1)), month, int(reason.group(3)), tzinfo=datetime.timezone.utc)
-            stop = jd_of(ended) - 0.5
+            stop = jd_of(ended) - 0.5  # Horizons' own end date, in the TDB it was asked in
             start = stop - window
             rows, text = horizons.vectors(command, CENTER[body], start, stop, step)
             if rows is None or len(rows) < 50:
@@ -273,9 +312,19 @@ def main():
         if worst > 0.5 * mean_r:
             # no ellipse describes this path (CAPSTONE's near-rectilinear halo orbit): the craft is kept with no elements, so nothing is drawn for it
             print(f"{craft}: a mean ellipse misses by {worst:.0f} km of a {mean_r:.0f} km orbit: no elements kept, modelled", file=sys.stderr)
-            fits[craft] = {"id": craft, "center": body, "horizonsId": int(command), "basis": "modelled", "retrieved": read, "horizonsRevised": revised, "trackedUntil": through or (ended.strftime("%Y-%m-%d") if ended else ""), "trackEnd": iso_of_jd(stop) if ended else ""}
+            fits[craft] = {"id": craft, "center": body, "horizonsId": int(command), "basis": "modelled", "retrieved": read, "horizonsRevised": revised, "trackedUntil": through or (ended.strftime("%Y-%m-%d") if ended else ""), "trackEnd": iso_of_tdb(stop) if ended else ""}
             continue
         basis = "tracked" if ended is None else "modelled"
+        # the same ellipse carried on past the fit, for as many days as the window is long, against what Horizons has there (none once a craft's track has ended)
+        predicted = None
+        if ended is None:
+            extra, _ = horizons.vectors(command, CENTER[body], stop, stop + window, step)
+            if extra is not None and len(extra) >= 50:
+                p_median, p_worst = error_of(el, extra, mu)
+                predicted = {"median": round(p_median, 1), "max": round(p_worst, 1)}
+                print(f"{craft}: predicted span, {len(extra)} samples over the next {window} days: error median {p_median:.1f} km, worst {p_worst:.1f} km", file=sys.stderr)
+            else:
+                print(f"{craft}: Horizons has nothing for the {window} days after the read date: no predicted error", file=sys.stderr)
         print(f"{craft}: {len(rows)} samples over {window} days, a {el['a']:.0f} km, e {el['e']:.4f}, i {el['i']:.2f}, node {el['raanRate']:+.4f} and periapsis {el['argpRate']:+.4f} deg/day; error median {median:.1f} km, worst {worst:.1f} km (limit {allowed:.0f}){'' if worst <= allowed else '  OVER THE LIMIT'}", file=sys.stderr)
         period_days = 360 / (math.degrees(math.sqrt(mu / el["a"] ** 3)) * 86400 + el["meanMotionCorrection"])
         fits[craft] = {
@@ -283,18 +332,31 @@ def main():
             "epochJd": round(el["epochJd"], 6), "a": round(el["a"], 3), "e": round(el["e"], 7), "i": round(el["i"], 5), "raan": round(el["raan"], 5), "argp": round(el["argp"], 5), "m0": round(el["m0"], 5),
             "raanRate": round(el["raanRate"], 7), "argpRate": round(el["argpRate"], 7), "meanMotionCorrection": round(el["meanMotionCorrection"], 7),
             "periodDays": round(period_days, 7),
-            "validFrom": iso_of_jd(start), "validUntil": iso_of_jd(stop + window), "trackedUntil": through or (ended.strftime("%Y-%m-%d") if ended else ""), "trackEnd": iso_of_jd(stop) if ended else "", "horizonsRevised": revised, "retrieved": read,
-            "fitErrorKm": {"median": round(median, 1), "max": round(worst, 1)}, "basis": basis if worst <= allowed else "modelled",
+            "validFrom": iso_of_tdb(start), "fitUntil": iso_of_tdb(stop), "validUntil": iso_of_tdb(stop + window), "trackedUntil": through or (ended.strftime("%Y-%m-%d") if ended else ""), "trackEnd": iso_of_tdb(stop) if ended else "", "horizonsRevised": revised, "retrieved": read,
+            "fitErrorKm": {"median": round(median, 1), "max": round(worst, 1)}, "predictedErrorKm": predicted, "basis": basis if worst <= allowed else "modelled",
         }
-        # a few Horizons points for the tests, spread over the window (never the fit's own grid points would be ideal, but the fit is a mean: any point serves)
-        picks = [rows[k] for k in (3, len(rows) // 3, len(rows) // 2 + 7, len(rows) - 4)]
-        fixture[craft] = [{"jd": t, "position": [round(x, 3) for x in r], "velocity": [round(x, 6) for x in v]} for t, r, v in picks]
+        # four Horizons points for the tests, inside the fit's window, asked for as UTC calendar dates (to the minute) so that Horizons itself does the UTC to TDB change
+        first = iso_of_tdb(start + 0.1 * window)[:16].replace("T", " ")
+        last = iso_of_tdb(stop - 0.1 * window)[:16].replace("T", " ")
+        points = horizons.vectors_at_utc(command, CENTER[body], first, last, 3)
+        if points is None or len(points) != 4:
+            print(f"{craft}: Horizons gave no UTC test points; stopping", file=sys.stderr)
+            sys.exit(1)
+        fixture[craft] = [{"span": "fit", "utc": t, "position": [round(x, 3) for x in r], "velocity": [round(x, 6) for x in v]} for t, r, v in points]
+        if predicted is not None:
+            first = iso_of_tdb(stop + 0.1 * window)[:16].replace("T", " ")
+            last = iso_of_tdb(stop + 0.9 * window)[:16].replace("T", " ")
+            points = horizons.vectors_at_utc(command, CENTER[body], first, last, 3)
+            if points is None or len(points) != 4:
+                print(f"{craft}: Horizons gave no UTC test points for the predicted span; stopping", file=sys.stderr)
+                sys.exit(1)
+            fixture[craft] += [{"span": "predicted", "utc": t, "position": [round(x, 3) for x in r], "velocity": [round(x, 6) for x in v]} for t, r, v in points]
     for craft, (command, body) in NO_TRACK.items():
         fits[craft] = {"id": craft, "center": body, "horizonsId": int(command), "basis": "modelled", "retrieved": read}
     ordered = {k: fits[k] for k in list(CRAFT) + list(NO_TRACK) if k in fits}
     with open(OUT, "w") as f:
         f.write("// Made by scripts/make-orbiter-data.py from JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api): the spacecraft in orbit round the Moon and Mars, as mean elements with secular rates fitted over a window\n")
-        f.write(f"// of each craft's current track (centre the body, ecliptic and equinox J2000, km and degrees, TDB), with the dates the fit is good for and its error against Horizons. Fetched {read}. Do not edit by hand.\n")
+        f.write(f"// of each craft's current track (centre the body, ecliptic and equinox J2000, km and degrees, `epochJd` in TDB, the dates in UTC), with the dates the fit is good for and its error against Horizons, over the fit and past it. Fetched {read}. Do not edit by hand.\n")
         f.write("export const ORBITER_FITS = " + json.dumps(ordered, indent=2) + " as const;\n")
     with open(FIXTURE, "w") as f:
         json.dump(fixture, f, indent=1)
