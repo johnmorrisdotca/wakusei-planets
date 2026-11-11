@@ -282,6 +282,8 @@ export interface SpaceDeps {
   advance?: () => void;
   /** Where each body is on the screen, in CSS pixels in the box, or null when it is behind the camera. Called at each draw. */
   onLabels?: (places: Record<string, BodyPlace | null>) => void;
+  /** The body looked at, as this draw left it, for marks laid on its surface: its centre and radius in the scene, its pole and prime meridian, the camera's place, the projection to CSS pixels and its radius on the screen. Not while the camera rides. */
+  onSurface?: (body: { id: BodyId; centre: Vec3; radius: number; pole: Vec3; meridian: Vec3; eye: Vec3; project(point: Vec3): { x: number; y: number } | null; width: number; height: number; radiusPx: number } | null) => void;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
   onMoving?: () => void;
   /** The target of the ride could not be placed at this draw. */
@@ -679,6 +681,17 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             drawing.update({ toSun, ms: model.time, radiusPx: px[id], view: { camera, width: size.width, height: size.height } });
           }
           model.painted.bodies = paintedBodies;
+          if (deps.onSurface) {
+            const shown = rideFrom ? undefined : (slots.get(model.focus as SpaceBody)?.drawing ?? moonSlots.get(model.focus)?.slot.drawing);
+            if (shown === undefined || !shown.object.visible) deps.onSurface(null);
+            else {
+              const at = shown.object.position;
+              const r = shown.object.scale.x;
+              const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
+              const { pole, meridian } = orientation(model.focus, model.time);
+              deps.onSurface({ id: model.focus, centre: [at.x, at.y, at.z], radius: r, pole, meridian, eye: [camera.position.x, camera.position.y, camera.position.z], project: labelFor, width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : ((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half });
+            }
+          }
           if (points !== undefined && deps.book !== undefined) {
             if (pointsVersion !== deps.book.version) {
               pointsVersion = deps.book.version;

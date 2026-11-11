@@ -19,11 +19,16 @@ import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "./frame.ts";
-import { moonOffset } from "../scene/orient.ts";
+import { moonOffset, orientation } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
+import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
+import { placeMarks, readPlaceLayers, type PlaceLayer } from "../place-marks.ts";
+import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
+import { cross, dot, type Vec3 } from "../vec.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
+export { setPlacesLoader } from "../scene/place-layer.ts";
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type SpaceBody, type SpaceLight };
 
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
@@ -185,7 +190,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -225,6 +230,12 @@ export class WakuseiSpace extends HTMLElement {
   #focusBeforeRide: BodyId = "earth";
   #lostTold = false;
   #hands: ElementControls | undefined;
+  #markLayer: PlaceLayerView | undefined;
+  #markList: { body: BodyId; list: readonly Place[] } | undefined;
+  #markLoading: BodyId | undefined;
+  #markHeard: (() => void) | undefined;
+  #placeGlide = 0;
+  #surface: Parameters<NonNullable<Parameters<typeof createSpaceItem>[1]["onSurface"]>>[0] = null;
 
   /** The shared controller behind the element's own hands: for a page that moves the view itself, such as `controller.set({ zoom: space.zoomFor("moon") })`. It is there while the element is connected, whether `controls` is `none` or not. */
   get controller(): ViewController | undefined {
@@ -281,6 +292,10 @@ export class WakuseiSpace extends HTMLElement {
         this.#placeLabels(places);
         this.#door.announce();
       },
+      onSurface: (surface) => {
+        this.#surface = surface;
+        this.#markSurface();
+      },
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
@@ -298,6 +313,10 @@ export class WakuseiSpace extends HTMLElement {
     // before the shared hands (which hear it after this): a plain wheel in an immersive view zooms
     this.addEventListener("wheel", this.#wheel, { capture: true, passive: false });
     this.#hands = carryControls(this, { limits: CARRIED_LIMITS, onChange: (view, info) => this.setView(view, info.final) });
+    this.#markHeard = onPlacesLoader(() => {
+      this.#markList = undefined;
+      this.#markSurface();
+    });
     this.#labelBox.addEventListener("click", this.#labelClick);
     this.#labelBox.addEventListener("focusin", this.#labelFocus);
   }
@@ -315,6 +334,10 @@ export class WakuseiSpace extends HTMLElement {
     this.#view = undefined;
     this.#taken?.release();
     this.#taken = undefined;
+    this.#markLayer?.dispose();
+    this.#markLayer = undefined;
+    this.#markHeard?.();
+    this.#markHeard = undefined;
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -337,6 +360,125 @@ export class WakuseiSpace extends HTMLElement {
       this.#nameScale();
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
+    if (name === "places" || name === "lang") this.#markSurface();
+  }
+
+  /**
+   * The layers of places marked on the body looked at: any of `landing` (crewed landings, landers and rovers), `crash` (crash, impact and atmospheric-entry sites), `planned` (announced landings) and `feature` (named features), from
+   * the `places` attribute (`places="landing crash"`; `places` alone or `all` for every layer). Only a body with places (`PLACE_BODIES` from `/places`) shows any, and only once it is big enough on the screen. Setting it writes the attribute.
+   */
+  get places(): PlaceLayer[] {
+    return readPlaceLayers(this.getAttribute("places"));
+  }
+  set places(layers: readonly PlaceLayer[] | null) {
+    if (layers === null || layers.length === 0) this.removeAttribute("places");
+    else this.setAttribute("places", layers.join(" "));
+  }
+  /** The marks laid on the body looked at now: each place's id, its layer and where its mark is, in CSS pixels from the view's top left. */
+  get placesShown(): readonly { id: string; layer: PlaceLayer; x: number; y: number }[] {
+    return this.#markLayer?.shown ?? [];
+  }
+
+  /**
+   * Go to a place on a body: the view glides to the body (as `goTo` does), or on the body looked at turns round it, and the camera comes to rest straight above the place. The place is an id (`mars/perseverance`) or an English or Japanese name, on the body looked at
+   * unless `body` names another. The zoom stays on the same body and is 1 (the whole body) on another, unless `zoom` is given. Resolves the place, or `undefined` when the body has no place by that name or cannot be looked at.
+   *
+   * @param text - The place's id or name.
+   * @param options - `body`, `smooth` (true by default) and `zoom`.
+   * @returns The place, once the move has started.
+   */
+  async goToPlace(text: string, options: { body?: BodyId | string; smooth?: boolean; zoom?: number } = {}): Promise<Place | undefined> {
+    const body = options.body === undefined ? this.#model.focus : readBody(options.body);
+    if (body === undefined || !(PLACE_BODIES as readonly string[]).includes(body)) return undefined;
+    const list = await this.#loadMarks(body);
+    const place = findPlace(list, text);
+    if (place === undefined) return undefined;
+    const model = this.#model;
+    const same = body === model.focus;
+    const zoom = options.zoom ?? (same ? model.view.zoom : 1);
+    // on another body the view glides there (as goTo does) and arrives over the place; on the same one it turns round the body to it, never through it
+    if (!same && !this.goTo(body, { smooth: options.smooth, zoom })) return undefined;
+    // the camera sits along the place's outward direction, which the view's yaw and tilt give as a place on the Earth's globe at the moment the view was last pointed
+    const { pole, meridian } = orientation(body, model.time);
+    const east = cross(pole, meridian);
+    const c = Math.cos(place.lat * RAD);
+    const d: Vec3 = [0, 1, 2].map((i) => c * Math.cos(place.lon * RAD) * meridian[i]! + c * Math.sin(place.lon * RAD) * east[i]! + Math.sin(place.lat * RAD) * pole[i]!) as unknown as Vec3;
+    model.anchor ??= model.time;
+    const earth = orientation("earth", model.anchor);
+    const lat = Math.asin(Math.max(-1, Math.min(1, dot(d, earth.pole)))) / RAD;
+    const lon = Math.atan2(dot(d, cross(earth.pole, earth.meridian)), dot(d, earth.meridian)) / RAD;
+    const from = { ...model.view };
+    const to = { yaw: model.centre.lon - lon, tilt: model.centre.lat - lat, zoom };
+    to.yaw = from.yaw + ((((to.yaw - from.yaw + 180) % 360) + 360) % 360) - 180;
+    const apply = (yaw: number, tilt: number, z: number, final: boolean): void => {
+      if (this.#hands !== undefined && !this.hasAttribute("data-kazoku-bar")) this.#hands.controller.set({ yaw, tilt, zoom: z }, final, "place");
+      else this.setView({ yaw, tilt, zoom: z, roll: from.roll, panX: from.panX, panY: from.panY }, final);
+    };
+    const glide = (this.#placeGlide += 1);
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!same || options.smooth === false || reduced || typeof requestAnimationFrame !== "function") {
+      apply(to.yaw, to.tilt, to.zoom, true);
+      return place;
+    }
+    const start = performance.now();
+    const step = (): void => {
+      if (glide !== this.#placeGlide || !this.isConnected) return;
+      const k = Math.min(1, (performance.now() - start) / 900);
+      const ease = k * k * (3 - 2 * k);
+      apply(from.yaw + (to.yaw - from.yaw) * ease, from.tilt + (to.tilt - from.tilt) * ease, from.zoom + (to.zoom - from.zoom) * ease, k >= 1);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    return place;
+  }
+
+  async #loadMarks(body: BodyId): Promise<readonly Place[]> {
+    if (this.#markList?.body === body) return this.#markList.list;
+    const load = placesLoader();
+    if (load === undefined) return [];
+    const list = await load(body as PlaceBody);
+    this.#markList = { body, list };
+    return list;
+  }
+
+  /** Lay the marks of the places over the body looked at, as the last draw left it, or take them away. Draws nothing. */
+  #markSurface(): void {
+    const layers = this.places;
+    const surface = this.#surface;
+    const root = this.shadowRoot;
+    if (layers.length === 0 || surface === null || root === null || !(PLACE_BODIES as readonly string[]).includes(surface.id)) {
+      if (layers.length === 0 && this.#markLayer !== undefined) {
+        this.#markLayer.dispose();
+        this.#markLayer = undefined;
+        if (this.getAttribute("role") === "group") this.setAttribute("role", "img");
+      } else this.#markLayer?.clear();
+      return;
+    }
+    const id = surface.id;
+    if (this.#markList?.body !== id) {
+      this.#markLayer?.clear();
+      if (this.#markLoading !== id && placesLoader() !== undefined) {
+        this.#markLoading = id;
+        void this.#loadMarks(id).then(() => {
+          this.#markLoading = undefined;
+          if (this.#markList?.body === id) this.#markSurface();
+        }, () => {
+          this.#markLoading = undefined;
+        });
+      }
+      return;
+    }
+    if (this.#markLayer === undefined) {
+      this.#markLayer = createPlaceLayer(root, {
+        lang: () => (this.getAttribute("lang") === "ja" ? "ja" : "en"),
+        pick: (place, at) => this.dispatchEvent(new CustomEvent("wakusei-place", { detail: { body: id, place, x: at.x, y: at.y }, bubbles: true, composed: true })),
+      });
+      if (this.getAttribute("role") === "img") this.setAttribute("role", "group");
+    }
+    const facts = BODIES[id];
+    const ax = facts.axesKm;
+    const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
+    this.#markLayer.set(placeMarks(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm));
   }
 
   #bodyLabel: NameLabelOptions | null | undefined;
