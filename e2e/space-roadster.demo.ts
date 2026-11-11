@@ -33,7 +33,8 @@ test("off by default and its table not fetched; on, the car is where the table p
     if (/roadster/i.test(response.url())) fetched.push(response.url());
   });
   const when = Date.UTC(2026, 10, 2, 14);
-  await openSpace(page, "t=2026-11-02T14:00Z&play=off&goto=solar-system");
+  // the inner system (the whole system puts the car, 1.4 AU out, a few pixels from the Earth, where a name beside a nearer body gives way to it)
+  await openSpace(page, "t=2026-11-02T14:00Z&play=off&goto=inner");
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "roadster"))).toBe(false);
   expect((await car(page)).shown).toBe(false);
   expect(fetched, "the table is not fetched while the car is off").toEqual([]);
