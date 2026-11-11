@@ -4,7 +4,7 @@ import { BODIES, MOONS_OF, type MoonId } from "../facts.ts";
 import { meanSunAu } from "../ephemeris.ts";
 import { moonOffset } from "../scene/orient.ts";
 import type { Vec3 } from "../vec.ts";
-import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, SPACE_DWARFS, type SpaceDwarf, type SpaceFrame, type SpacePlanet } from "./frame.ts";
+import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, SPACE_DWARFS, SPACE_MINORS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet } from "./frame.ts";
 
 /**
  * The scale the space view is drawn in: `compressed` squeezes the distances so the Moon, the Sun and Neptune fit one view, and `true` keeps the real ones.
@@ -140,17 +140,19 @@ export function placeAround(mode: ScaleMode, sun: Vec3, helio: Vec3): Vec3 {
   return [sun[0] + helio[0] * d, sun[1] + helio[1] * d, sun[2] + helio[2] * d];
 }
 
-type BaseBody = "sun" | "earth" | "moon" | SpacePlanet | SpaceDwarf;
+type BaseBody = "sun" | "earth" | "moon" | SpacePlanet | SpaceDwarf | SpaceMinor;
 
 /** The sizes a compressed view gives bodies large enough to see, in Earth radii. The Moon is at its true size beside the Earth (0.273 of it), so it never looks as big as the Earth. */
 const COMPRESSED_RADIUS: Record<"sun" | "earth" | "moon" | SpacePlanet, number> = { sun: 5, earth: 1, moon: 0.273, mercury: 0.5, venus: 0.8, mars: 0.6, jupiter: 1.8, saturn: 1.6, uranus: 1.0, neptune: 1.0, pluto: 0.4 };
 /** A dwarf planet in a compressed view: its true size or this, whichever is the larger, in Earth radii. */
 const COMPRESSED_DWARF = 0.3;
+/** A minor body in a compressed view: its true size or this, whichever is the larger, in Earth radii (a speck beside a dwarf planet). */
+const COMPRESSED_MINOR = 0.2;
 
 /**
  * A body's radius in Earth radii: the real one, or one large enough to see in a compressed view.
  *
- * @param id - The Sun, the Earth, the Moon, a planet or a dwarf planet.
+ * @param id - The Sun, the Earth, the Moon, a planet, a dwarf planet or a minor body.
  * @param mode - The scale.
  * @returns The radius to draw it at, in Earth radii.
  *
@@ -161,7 +163,8 @@ const COMPRESSED_DWARF = 0.3;
  * console.log(radiusIn("moon", "true").toFixed(3), radiusIn("moon", "compressed"));
  * ```
  */
-export function radiusIn(id: "sun" | "earth" | "moon" | SpacePlanet | SpaceDwarf, mode: ScaleMode): number {
+export function radiusIn(id: "sun" | "earth" | "moon" | SpacePlanet | SpaceDwarf | SpaceMinor, mode: ScaleMode): number {
+  if ((SPACE_MINORS as readonly string[]).includes(id)) return mode === "true" ? BODIES[id as SpaceMinor].radiusKm / EARTH_RADIUS_KM : Math.max(COMPRESSED_MINOR, BODIES[id as SpaceMinor].radiusKm / EARTH_RADIUS_KM);
   if ((SPACE_DWARFS as readonly string[]).includes(id)) return mode === "true" ? BODIES[id].radiusKm / EARTH_RADIUS_KM : Math.max(COMPRESSED_DWARF, BODIES[id].radiusKm / EARTH_RADIUS_KM);
   return mode === "true" ? BODIES[id].radiusKm / EARTH_RADIUS_KM : COMPRESSED_RADIUS[id as keyof typeof COMPRESSED_RADIUS];
 }
@@ -239,6 +242,7 @@ export function placeBodies(mode: ScaleMode, frame: SpaceFrame): Record<BaseBody
   const helio = (geo: Vec3): Vec3 => [geo[0] - frame.sun[0], geo[1] - frame.sun[1], geo[2] - frame.sun[2]];
   for (const [id, geo] of Object.entries(frame.planets) as [SpacePlanet, Vec3][]) all[id] = placeAround(mode, sun, helio(geo));
   for (const [id, geo] of Object.entries(frame.dwarfs) as [SpaceDwarf, Vec3][]) all[id] = placeAround(mode, sun, helio(geo));
+  for (const [id, geo] of Object.entries(frame.minors) as [SpaceMinor, Vec3][]) all[id] = placeAround(mode, sun, helio(geo));
   return all;
 }
 

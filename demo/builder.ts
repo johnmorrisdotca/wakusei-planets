@@ -7,13 +7,14 @@ import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
 import type { EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
-import { BODIES, DWARF_IDS, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/facts.ts";
+import { BODIES, DWARF_IDS, MINOR_IDS, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/facts.ts";
 
 setThreeLoader(() => import("./three-subset.ts"));
 
 const GROUPS: readonly { id: string; label: string; bodies: readonly BodyId[] }[] = [
   { id: "sun", label: "The Sun and the planets", bodies: ["sun", ...PLANET_IDS] },
   { id: "dwarfs", label: "Dwarf planets", bodies: DWARF_IDS },
+  { id: "minor", label: "Small bodies", bodies: MINOR_IDS },
   ...Object.entries(MOONS_OF).map(([planet, moons]) => ({ id: planet, label: `Moons of ${BODIES[planet as keyof typeof MOONS_OF].name.en}`, bodies: moons as readonly BodyId[] })),
 ];
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;

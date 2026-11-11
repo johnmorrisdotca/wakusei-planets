@@ -1,8 +1,9 @@
 // Where the Sun, the Moon and the planets are, as seen from the centre of the Earth, for any date, from this package's own models (VSOP87B planets, the Pluto table, ELP2000 Moon).
 // Positions are geometric (no aberration or nutation, about 20 arc-seconds), in the painter's axes: J2000 equatorial, x to the vernal equinox, y north. Pure: no DOM, no three.js.
 import { heliocentric, moonGeocentric } from "../ephemeris.ts";
-import { DWARF_IDS, type DwarfId } from "../facts.ts";
+import { DWARF_IDS, MINOR_IDS, type DwarfId, type MinorId } from "../facts.ts";
 import { DWARF_ELEMENTS } from "../data/dwarf.ts";
+import { MINOR_ELEMENTS } from "../data/minor.ts";
 import { OBLIQUITY, RAD, type Vec3 } from "../vec.ts";
 import { earthPosition } from "../theory.ts";
 import { DAY_MS } from "../clock.ts";
@@ -83,6 +84,31 @@ export const SPACE_DWARFS = DWARF_IDS;
 export type SpaceDwarf = DwarfId;
 
 /**
+ * The minor bodies the space view places: the asteroids Vesta and Pallas, the centaurs Chiron and Pholus and Halley's comet.
+ *
+ * @example
+ * ```ts
+ * import { SPACE_MINORS } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(SPACE_MINORS.join(", "));
+ * ```
+ */
+export const SPACE_MINORS = MINOR_IDS;
+
+/**
+ * One of the minor bodies in `SPACE_MINORS`.
+ *
+ * @example
+ * ```ts
+ * import { planetOrbit, type SpaceMinor } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const minor: SpaceMinor = "halley";
+ * console.log(planetOrbit(minor, Date.UTC(2026, 10, 2), 8).length);
+ * ```
+ */
+export type SpaceMinor = MinorId;
+
+/**
  * One of the planets in `SPACE_PLANETS`.
  *
  * @example
@@ -113,6 +139,8 @@ export interface SpaceFrame {
   planets: Record<SpacePlanet, Vec3>;
   /** The dwarf planets besides Pluto, from their osculating elements (good for a few years either side of 2026). */
   dwarfs: Record<SpaceDwarf, Vec3>;
+  /** The minor bodies: Vesta, Pallas, Chiron, Pholus and Halley's comet, from tables fitted to Horizons (outside their years, from osculating elements). */
+  minors: Record<SpaceMinor, Vec3>;
 }
 
 /** An ecliptic J2000 vector in the scene's axes (equatorial J2000, y north). */
@@ -148,8 +176,13 @@ export function frameAt(ms: number): SpaceFrame {
     const h = heliocentric(id, ms);
     dwarfs[id] = scene([h[0] - earth[0], h[1] - earth[1], h[2] - earth[2]]);
   }
+  const minors = {} as Record<SpaceMinor, Vec3>;
+  for (const id of SPACE_MINORS) {
+    const h = heliocentric(id, ms);
+    minors[id] = scene([h[0] - earth[0], h[1] - earth[1], h[2] - earth[2]]);
+  }
   const moon = moonGeocentric(ms);
-  return { ms, sun: scene([-earth[0], -earth[1], -earth[2]]), moon: scene([moon[0] / AU_KM, moon[1] / AU_KM, moon[2] / AU_KM]), planets, dwarfs };
+  return { ms, sun: scene([-earth[0], -earth[1], -earth[2]]), moon: scene([moon[0] / AU_KM, moon[1] / AU_KM, moon[2] / AU_KM]), planets, dwarfs, minors };
 }
 
 const lerp3 = (a: Vec3, b: Vec3, t: number): Vec3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
@@ -176,7 +209,9 @@ export function blend(a: SpaceFrame, b: SpaceFrame, t: number): SpaceFrame {
   for (const id of SPACE_PLANETS) planets[id] = lerp3(a.planets[id], b.planets[id], t);
   const dwarfs = {} as Record<SpaceDwarf, Vec3>;
   for (const id of SPACE_DWARFS) dwarfs[id] = lerp3(a.dwarfs[id], b.dwarfs[id], t);
-  return { ms: a.ms + (b.ms - a.ms) * t, sun: lerp3(a.sun, b.sun, t), moon: lerp3(a.moon, b.moon, t), planets, dwarfs };
+  const minors = {} as Record<SpaceMinor, Vec3>;
+  for (const id of SPACE_MINORS) minors[id] = lerp3(a.minors[id], b.minors[id], t);
+  return { ms: a.ms + (b.ms - a.ms) * t, sun: lerp3(a.sun, b.sun, t), moon: lerp3(a.moon, b.moon, t), planets, dwarfs, minors };
 }
 
 /**
@@ -231,16 +266,17 @@ export function createTrack(initialStepMs = 1000) {
   };
 }
 
-const PERIOD_DAYS: Record<SpacePlanet | SpaceDwarf | "earth", number> = {
+const PERIOD_DAYS: Record<SpacePlanet | SpaceDwarf | SpaceMinor | "earth", number> = {
   mercury: 87.97, venus: 224.7, earth: 365.256, mars: 686.98, jupiter: 4332.6, saturn: 10_759, uranus: 30_688, neptune: 60_182, pluto: 90_560,
   // a dwarf planet's own: a full turn of its mean motion
   ...(Object.fromEntries(SPACE_DWARFS.map((id) => [id, 360 / DWARF_ELEMENTS[id].n])) as Record<SpaceDwarf, number>),
+  ...(Object.fromEntries(SPACE_MINORS.map((id) => [id, 360 / MINOR_ELEMENTS[id].n])) as Record<SpaceMinor, number>),
 };
 
 /**
  * The path a planet or the Earth takes round the Sun, as `count + 1` points round one trip from where the planet is at `ms`, from the Sun, in astronomical units and the scene's axes.
  *
- * @param id - The planet, the dwarf planet or `earth`.
+ * @param id - The planet, the dwarf planet, the minor body or `earth`.
  * @param ms - The moment the path starts at, in milliseconds since the Unix epoch.
  * @param count - How many segments to cut the trip into.
  * @returns `count + 1` points; the last is near the first.
@@ -253,8 +289,22 @@ const PERIOD_DAYS: Record<SpacePlanet | SpaceDwarf | "earth", number> = {
  * console.log(points.length);
  * ```
  */
-export function planetOrbit(id: SpacePlanet | SpaceDwarf | "earth", ms: number, count = 96): Vec3[] {
+export function planetOrbit(id: SpacePlanet | SpaceDwarf | SpaceMinor | "earth", ms: number, count = 96): Vec3[] {
   const points: Vec3[] = [];
+  const minor = (SPACE_MINORS as readonly string[]).includes(id) ? MINOR_ELEMENTS[id as SpaceMinor] : undefined;
+  if (minor !== undefined && minor.e > 0.3) {
+    // a long ellipse (Halley's, Pholus's) is cut at equal steps of the eccentric anomaly, not of time, so the sharp turn near the Sun gets as many points as the slow far side
+    const e = minor.e;
+    const m0 = ((minor.m + (minor.n * (ms - minor.epoch)) / DAY_MS) * Math.PI) / 180;
+    let e0 = m0;
+    for (let k = 0; k < 40; k += 1) e0 -= (e0 - e * Math.sin(e0) - m0) / (1 - e * Math.cos(e0));
+    const mean = (anomaly: number): number => anomaly - e * Math.sin(anomaly);
+    for (let i = 0; i <= count; i += 1) {
+      const anomaly = e0 + (i / count) * 2 * Math.PI;
+      points.push(scene(heliocentric(id as SpaceMinor, ms + ((mean(anomaly) - mean(e0)) / ((minor.n * Math.PI) / 180)) * DAY_MS)));
+    }
+    return points;
+  }
   for (let i = 0; i <= count; i += 1) points.push(scene(heliocentric(id, ms + (i / count) * PERIOD_DAYS[id] * DAY_MS)));
   return points;
 }

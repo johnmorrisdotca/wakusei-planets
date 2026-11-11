@@ -1,8 +1,8 @@
 // Which bodies the space view can put at the middle of its view, and in what order a reader hops from one to the next. Pure: names in, names out.
-import { BODIES, MOONS_OF, type BodyId, type HostId } from "../facts.ts";
+import { BODIES, MOONS_OF, type BodyId, type HostId, type MinorId } from "../facts.ts";
 
 /**
- * What a body is: the Sun, one of the eight planets, a dwarf planet (Pluto among them) or a moon.
+ * What a body is: the Sun, one of the eight planets, a dwarf planet (Pluto among them), a moon, or a minor body: an `asteroid` (Vesta, Pallas), a `centaur` (Chiron, Pholus) or a `comet` (Halley).
  *
  * @example
  * ```ts
@@ -12,14 +12,14 @@ import { BODIES, MOONS_OF, type BodyId, type HostId } from "../facts.ts";
  * console.log(kind);
  * ```
  */
-export type SpaceKind = "star" | "planet" | "dwarf-planet" | "moon";
+export type SpaceKind = "star" | "planet" | "dwarf-planet" | "moon" | "asteroid" | "centaur" | "comet";
 
-/** Planets, then dwarf planets, ordered by the distance of their orbits from the Sun, each followed by its moons nearest first. */
-const SUN_ORDER: readonly HostId[] = ["mercury", "venus", "earth", "mars", "ceres", "jupiter", "saturn", "uranus", "neptune", "pluto", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"];
+/** Planets, dwarf planets and minor bodies, ordered by the size of their orbits (the semi-major axis), each followed by its moons nearest first. */
+const SUN_ORDER: readonly (HostId | MinorId)[] = ["mercury", "venus", "earth", "mars", "vesta", "ceres", "pallas", "jupiter", "saturn", "chiron", "halley", "uranus", "pholus", "neptune", "pluto", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"];
 
 /**
- * Every body the package knows, in the order a hopper goes: the Sun, then each planet and dwarf planet from the Sun outwards, each followed by its moons nearest first (Mercury, Venus, the Earth and the
- * Moon, Mars, Phobos and Deimos, Ceres, Jupiter and its four large moons, and on to Sedna).
+ * Every body the package knows, in the order a hopper goes: the Sun, then each planet, dwarf planet and minor body from the Sun outwards, each followed by its moons nearest first (Mercury, Venus, the Earth and the
+ * Moon, Mars, Phobos and Deimos, Vesta, Ceres, Pallas, Jupiter and its four large moons, and on to Sedna).
  *
  * @example
  * ```ts
@@ -34,13 +34,13 @@ export const HOP_ORDER: readonly BodyId[] = ["sun", ...SUN_ORDER.flatMap((id) =>
  * What kind of body a name is.
  *
  * @param id - A body's name.
- * @returns `star` for the Sun, `planet` for the eight planets, `dwarf-planet` for Pluto and the others, or `moon`.
+ * @returns `star` for the Sun, `planet` for the eight planets, `dwarf-planet` for Pluto and the others, `moon`, or `asteroid`, `centaur` or `comet` for a minor body.
  *
  * @example
  * ```ts
  * import { bodyKindOf } from "@johnmorrisdotca/wakusei-planets/space";
  *
- * console.log(bodyKindOf("ceres"), bodyKindOf("moon"));
+ * console.log(bodyKindOf("ceres"), bodyKindOf("moon"), bodyKindOf("halley"));
  * ```
  */
 export function bodyKindOf(id: BodyId): SpaceKind {
