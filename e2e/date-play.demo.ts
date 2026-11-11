@@ -98,10 +98,22 @@ test.describe("the space page", () => {
 
     await play(page).click();
     await expect(play(page)).toHaveAttribute("aria-pressed", "false");
-    await page.waitForTimeout(400);
+    // the box settles once two reads a quarter of a second apart agree: the hold is what the page wrote last, and it stays
+    let last = -1;
+    await expect
+      .poll(
+        async () => {
+          const now = await boxMs(page);
+          const same = now === last;
+          last = now;
+          return same;
+        },
+        { timeout: 15_000, intervals: [250], message: "the date box settles after Pause" },
+      )
+      .toBe(true);
     const held = await boxMs(page);
     expect(held).toBeGreaterThanOrEqual(running);
-    await page.waitForTimeout(1500);
+    await expect.poll(() => boxMs(page), { timeout: 3_000, intervals: [500] }).toBe(held);
     expect(await boxMs(page), "Pause holds the date").toBe(held);
     const paused = await addressOf(page);
     expect(paused.get("play"), "play leaves the address").toBeNull();

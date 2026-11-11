@@ -5,6 +5,7 @@ import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } f
 import { expect, type Page, test } from "@playwright/test";
 import { addRocks } from "./door-fixture.ts";
 import { routeTiles } from "./tiles-fixture.ts";
+import { drawn } from "./space-ui.ts";
 
 const URL = "/wakusei-planets/";
 const main = (page: Page) => page.locator("#main");
@@ -457,33 +458,15 @@ test("changes to the space view give back what they took: the zooms, the scales,
   expect(gpuObjects(gone)).toBeLessThanOrEqual(8);
 });
 
-/** Do something that changes the picture, then wait until the view has drawn it (the draws the renderer counts went up) and the draws hold again. */
-const drawnAndHeld = async (page: Page, act: () => Promise<unknown>): Promise<void> => {
-  const before = (await readCounts(page)).draws;
-  await act();
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
-  let held = -1;
-  await expect
-    .poll(
-      async () => {
-        const now = (await readCounts(page)).draws;
-        const same = now === held;
-        held = now;
-        return same;
-      },
-      { timeout: 30_000, intervals: [300] },
-    )
-    .toBe(true);
-};
 /** The "Name on the body" row's choices, one after another: every look, how many, where, facing and off, so each texture is drawn again and the old one let go. Each waits on the draw it causes. */
 const labelRound = async (page: Page): Promise<void> => {
-  const press = (group: string, name: string): Promise<void> => drawnAndHeld(page, () => page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click"));
+  const press = (group: string, name: string): Promise<void> => drawn(page, () => page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click"));
   for (const name of ["Etched", "Outline", "Burned in", "Painted"]) await press("Name on the body", name);
   for (const name of ["Both sides", "All round", "Once"]) await press("How many", name);
   for (const name of ["North", "South", "Equator"]) await press("Where", name);
   for (const name of ["Full", "Half"]) await press("Strength", name);
-  await drawnAndHeld(page, () => page.locator("#body-label-facing").dispatchEvent("click"));
-  await drawnAndHeld(page, () => page.locator("#body-label-facing").dispatchEvent("click"));
+  await drawn(page, () => page.locator("#body-label-facing").dispatchEvent("click"));
+  await drawn(page, () => page.locator("#body-label-facing").dispatchEvent("click"));
   await press("Name on the body", "Off");
   await press("Name on the body", "Painted");
 };
