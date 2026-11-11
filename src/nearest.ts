@@ -1,4 +1,4 @@
-// Which bodies are nearest to a body on a date, and when two bodies come closest over a span: for the Sun, the planets, the dwarf planets and the moons, by the angle between them in the sky of an observer
+// Which bodies are nearest to a body on a date, and when two bodies come closest over a span: for the Sun, the planets, the dwarf planets, the minor bodies and the moons, by the angle between them in the sky of an observer
 // or by the distance between them in space. The positions are this package's own (heliocentric, ephemeris.ts): a sky angle is astrometric (the Earth's or the observer's place at the date, the body's place when
 // its light left, no aberration or light bending), a distance is the geometry at one instant. Each result carries the accuracy the theories are held to (docs/guides/accuracy.md). Pure: no DOM, no three.js.
 import { heliocentric, heliocentricModel, meanSunAu, moonVector } from "./ephemeris.ts";
@@ -16,13 +16,15 @@ const AU_KM = 149_597_870.7;
 const LIGHT_SECONDS_PER_AU = 499.004784;
 const DAY_MS = 86_400_000;
 const ARCSECONDS_PER_RADIAN = 206_264.806;
-const KINDS: readonly BodyFacts["kind"][] = ["star", "planet", "dwarf-planet", "moon"];
+const KINDS: readonly BodyFacts["kind"][] = ["star", "planet", "dwarf-planet", "moon", "asteroid", "centaur", "comet"];
 
 /** The worst direction error from the Sun in arc-seconds over 60 dates from 1800 to 2200, as the accuracy guide holds each planet to. */
 const PLANET_ARCSECONDS: Readonly<Record<string, number>> = { mercury: 4.5, venus: 2.6, earth: 4, mars: 6, jupiter: 3.6, saturn: 5.7, uranus: 5, neptune: 3.4, pluto: 0.2 };
 /** The same for a dwarf planet inside its fitted table's years. */
 const DWARF_ARCSECONDS: Readonly<Record<string, number>> = { ceres: 0.3, orcus: 0.1, haumea: 0.1, quaoar: 0.15, makemake: 0.15, gonggong: 0.1, eris: 0.1, sedna: 0.1 };
-/** A dwarf planet outside its table's years runs on the osculating elements of one epoch, and Pluto outside 1800 to 2200 on JPL's approximate elements. */
+/** The same for a minor body inside its fitted table's years: the worst of the held-back samples of each fit (scripts/make-minor-data.py), rounded up. */
+const MINOR_ARCSECONDS: Readonly<Record<string, number>> = { vesta: 1, pallas: 1, chiron: 0.6, pholus: 0.7, halley: 1 };
+/** A dwarf planet or minor body outside its table's years runs on the osculating elements of one epoch, and Pluto outside 1800 to 2200 on JPL's approximate elements. */
 const OSCULATING_ARCSECONDS = 3600;
 const APPROXIMATE_ARCSECONDS = 120;
 /** The worst direction error from the planet in degrees over 60 dates, for the Moon and each moon; a moon the accuracy guide does not measure is given 5 degrees. */
@@ -284,7 +286,7 @@ function separation(by: "sky" | "space", a: Sighting, b: Sighting): number {
 
 function hostErrorKm(host: BodyId, ms: number): number {
   const model = heliocentricModel(host as Parameters<typeof heliocentric>[0], ms);
-  const arcseconds = model.theory === "vsop87b" ? PLANET_ARCSECONDS[host]! : model.theory === "chebyshev" ? (PLANET_ARCSECONDS[host] ?? DWARF_ARCSECONDS[host]!) : model.theory === "osculating-elements" ? OSCULATING_ARCSECONDS : APPROXIMATE_ARCSECONDS;
+  const arcseconds = model.theory === "vsop87b" ? PLANET_ARCSECONDS[host]! : model.theory === "chebyshev" ? (PLANET_ARCSECONDS[host] ?? DWARF_ARCSECONDS[host] ?? MINOR_ARCSECONDS[host]!) : model.theory === "osculating-elements" ? OSCULATING_ARCSECONDS : APPROXIMATE_ARCSECONDS;
   return length(heliocentric(host as Parameters<typeof heliocentric>[0], ms)) * AU_KM * Math.tan(arcseconds / ARCSECONDS_PER_RADIAN);
 }
 

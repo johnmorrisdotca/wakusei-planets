@@ -36,6 +36,7 @@ SOURCES = {
     "enceladus": ("Enceladus Color Map.jpg", 4096),
     "mimas": ("Map of Mimas 2010-02 PIA12780.jpg", 3840),
     "ceres": ("PIA20354-Ceres-DwarfPlanet-MercatorMap-HAMO-20160322-0DegreeLongitude.jpg", 4000),
+    "vesta": ("Vesta map for GeoHack.png", 3561),
     "tethys": ("Tethys Color Map.jpg", 4096),
     "dione": ("Dione Color Map.jpg", 4096),
     "iapetus": ("Iapetus Color Map.jpg", 4096),
@@ -46,7 +47,7 @@ SOURCES = {
 # A source with less than 2048 pixels across is not made at 2048.
 MAX_WIDTH = {"europa": 1024}
 # Pictures full of fine detail get a lower WebP quality, to keep the package small.
-QUALITY = {"rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 62, "dione": 62, "iapetus": 64}
+QUALITY = {"vesta": 70, "rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 62, "dione": 62, "iapetus": 64}
 META = os.path.join(OUT, "SOURCES.json")
 # Commons names no author for this file: the images are Galileo SSI and Voyager's, NASA and JPL's, and Commons marks the file public domain.
 CREDIT_FALLBACK = {"io": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author"}
@@ -380,6 +381,9 @@ def make(body):
         img = img * (1 - wrong) + lum * tone * wrong
         img = extend_poles(img, int(img.shape[0] * 0.02), int(img.shape[0] * 0.93))
         img = desaturate(img, 0.6)
+    elif body == "vesta":
+        # Dawn's grey photomap runs from 330 degrees (its left edge) to 330 degrees: longitude 0 is a twelfth in, so it is rolled to the middle; the grey is given the faint warmth of Vesta's surface (a V-type asteroid)
+        img = tint(roll(img, 5 / 12), (0.05, 0.047, 0.042), (0.93, 0.90, 0.83), 1.0)
     elif body in ("tethys", "dione"):
         img = desaturate(roll(img, 0.5), 0.55)
     elif body == "iapetus":

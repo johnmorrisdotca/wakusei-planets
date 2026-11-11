@@ -191,6 +191,11 @@
       "import": "./dist/tables/dwarfs.js",
       "default": "./dist/tables/dwarfs.js"
     },
+    "./tables/minor": {
+      "types": "./dist/tables/minor.d.ts",
+      "import": "./dist/tables/minor.js",
+      "default": "./dist/tables/minor.js"
+    },
     "./tables/vsop": {
       "types": "./dist/tables/vsop.d.ts",
       "import": "./dist/tables/vsop.js",
@@ -270,6 +275,11 @@
       "types": "./dist/bodies/dwarfs.d.ts",
       "import": "./dist/bodies/dwarfs.js",
       "default": "./dist/bodies/dwarfs.js"
+    },
+    "./minor": {
+      "types": "./dist/bodies/minor.d.ts",
+      "import": "./dist/bodies/minor.js",
+      "default": "./dist/bodies/minor.js"
     },
     "./moons-earth": {
       "types": "./dist/bodies/moons-earth.d.ts",

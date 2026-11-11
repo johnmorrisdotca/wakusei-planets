@@ -1,7 +1,7 @@
 // The text to put a body in a page, for each way a page is made: a script tag from a CDN, an ES module, React, Vue, Angular, Svelte, or an iframe of `embed.html`. The demo's "Put it in your page"
 // section shows these as the reader changes a choice, and the tests build or parse every one. Pure: no DOM.
 import { embedSnippet } from "@johnmorrisdotca/kazoku-ui/embed-panel";
-import { BODIES, DWARF_IDS, type BodyId, type Look } from "./facts.ts";
+import { BODIES, DWARF_IDS, MINOR_IDS, type BodyId, type Look } from "./facts.ts";
 import { decodeScene } from "./portrait/model.ts";
 import type { LineupSet } from "./lineup/data.ts";
 import type { LineupLayout } from "./lineup/layout.ts";
@@ -82,10 +82,10 @@ const SITE = "https://johnmorrisdotca.github.io/wakusei-planets/";
 const CDN = `https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets@${VERSION}`;
 const PACKAGE = "@johnmorrisdotca/wakusei-planets";
 
-/** The entry point that holds a body's shaded and painted look: the body's own, `dwarfs` for the dwarf planets besides Pluto, `moons-<planet>` for a moon and `moons-dwarf` for a moon of a dwarf planet. */
+/** The entry point that holds a body's shaded and painted look: the body's own, `dwarfs` for the dwarf planets besides Pluto, `minor` for Vesta, Pallas, Chiron, Pholus and Halley, `moons-<planet>` for a moon and `moons-dwarf` for a moon of a dwarf planet. */
 export function entryOf(id: BodyId): string {
   const parent = BODIES[id].parent;
-  if (parent === undefined) return (DWARF_IDS as readonly string[]).includes(id) ? "dwarfs" : id;
+  if (parent === undefined) return (DWARF_IDS as readonly string[]).includes(id) ? "dwarfs" : (MINOR_IDS as readonly string[]).includes(id) ? "minor" : id;
   return (DWARF_IDS as readonly string[]).includes(parent) ? "moons-dwarf" : `moons-${parent}`;
 }
 

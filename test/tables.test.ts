@@ -48,3 +48,21 @@ test("model information respects built-in priorities, TT segment edges and unkno
 test("model queries reject nonfinite instants without loading tables", () => {
   for (const body of ["earth", "pluto", "ceres"] as const) for (const ms of [NaN, Infinity, -Infinity]) assert.throws(() => heliocentricModel(body, ms), RangeError);
 });
+
+test("a table of unequal segments is looked up by its edges, and ends where its last edge is", async () => {
+  const { toTerrestrialTime } = await import("../src/clock.ts");
+  const when = Date.UTC(2026, 0, 1);
+  // three segments of 1000, 10 and 5000 ms, each a constant position (its first coefficient, in au), so the segment found shows in the answer; the Sun's swing, which is added, hardly changes in 6 seconds
+  const fixture = { start: toTerrestrialTime(when), segment: 2000, edges: [0, 1000, 1010, 6010], worst: 0.5, segments: [[[1], [0], [0]], [[2], [0], [0]], [[3], [0], [0]]] };
+  const original = tableOf("ceres")!;
+  try {
+    registerTable("ceres", fixture);
+    const x = (offset: number): number => heliocentric("ceres", when + offset)[0];
+    for (const [offset, want] of [[0, 1], [999, 1], [1000, 2], [1009, 2], [1010, 3], [6009, 3]] as const) assert.ok(Math.abs(x(offset) - x(0) - (want - 1)) < 1e-6, `${offset}`);
+    assert.equal(heliocentricModel("ceres", when + 6010).theory, "osculating-elements");
+    assert.equal(heliocentricModel("ceres", when - 1).theory, "osculating-elements");
+    assert.equal(heliocentricModel("ceres", when + 1005).theory, "chebyshev");
+  } finally {
+    registerTable("ceres", original);
+  }
+});

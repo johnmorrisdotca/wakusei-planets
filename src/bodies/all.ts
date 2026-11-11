@@ -8,6 +8,7 @@ import "./uranus.ts";
 import "./neptune.ts";
 import "./pluto.ts";
 import "./dwarfs.ts";
+import "./minor.ts";
 import "./earth-look.ts";
 import "./moons-earth.ts";
 import "./moons-mars.ts";
