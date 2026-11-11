@@ -570,14 +570,15 @@ export class WakuseiSpace extends HTMLElement {
    */
   setView(view: { yaw: number; tilt: number; zoom: number; roll?: number; panX?: number; panY?: number }, final = true): void {
     const now = this.#model.view;
-    if (this.#model.region !== null && view.zoom !== 1 && !this.hasAttribute("data-kazoku-bar")) {
-      // at a stage out from the Sun a zoom gesture is a step: out to the next stage, in to the one before (or the Sun); one gesture, one step, and the controls go back to holding zoom 1
+    if (this.#model.region !== null && view.zoom !== 1) {
+      // at a stage out from the Sun a zoom gesture is a step: out to the next stage, in to the one before (or the Sun); one gesture, one step, and the controls go back to holding zoom 1 (the element's own
+      // hands are set here; a bar bound to the element hears `wakusei-hop` with zoom 1, which a step or a refused gesture both announce)
       const at = performance.now();
       if (this.#model.transition === null && at - this.#regionStepAt > 600) {
         this.#regionStepAt = at;
         if (view.zoom < 1) this.stepOut();
         else this.stepIn();
-      }
+      } else this.#announceHop(1);
       this.#hands?.controller.set({ zoom: 1 }, true, "jump");
       return;
     }
@@ -646,14 +647,12 @@ export class WakuseiSpace extends HTMLElement {
     this.#selected = id;
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
-    // a bar bound to the element holds the view's state: it applies the zoom the page hears in the event; without one the element's own hands do
-    if (!this.hasAttribute("data-kazoku-bar")) {
-      const side = model.transition !== null ? this.#faceApproach(id) : null;
-      this.#hands?.controller.set(side ? { ...side, zoom } : { zoom }, true, "jump");
-    }
+    // the side the camera comes from, as the controls' yaw and tilt: the element's own hands are set to it here, and a bar bound to the element (which holds the view's state) hears it in the event with the zoom
+    const side = model.transition !== null ? this.#faceApproach(id) : null;
+    if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set(side ? { ...side, zoom } : { zoom }, true, "jump");
     this.#schedule();
     this.#gate?.request();
-    this.#announceHop(zoom);
+    this.#announceHop(zoom, side ?? undefined);
     return true;
   }
 
@@ -819,9 +818,9 @@ export class WakuseiSpace extends HTMLElement {
     this.#selected = id;
   }
 
-  /** `zoom` is the zoom the page should bring the view to: given by `goTo`, left out when the body was only set (the zoom stays). */
-  #announceHop(zoom?: number): void {
-    this.dispatchEvent(new CustomEvent("wakusei-hop", { detail: { ...this.hopper, zoom }, bubbles: true, composed: true }));
+  /** `zoom` is the zoom the page should bring the view to: given by `goTo`, left out when the body was only set (the zoom stays). `side` is the controls' yaw and tilt that look from the side the camera comes from, given by a `goTo` that travels. */
+  #announceHop(zoom?: number, side?: { yaw: number; tilt: number }): void {
+    this.dispatchEvent(new CustomEvent("wakusei-hop", { detail: { ...this.hopper, zoom, ...(side ? { yaw: side.yaw, tilt: side.tilt } : {}) }, bubbles: true, composed: true }));
   }
 
   /** The words shown beside each body, for a page in another language (`{ mars: "火星" }`). A body left out keeps its name in the element's `lang`. */

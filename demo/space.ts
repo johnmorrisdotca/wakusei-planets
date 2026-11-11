@@ -244,9 +244,10 @@ function showHop(): void {
 hopPrev.addEventListener("click", () => space.previous());
 hopNext.addEventListener("click", () => space.next());
 space.addEventListener("wakusei-hop", (event) => {
-  const { zoom } = (event as CustomEvent<{ zoom?: number }>).detail;
+  const { zoom, yaw, tilt } = (event as CustomEvent<{ zoom?: number; yaw?: number; tilt?: number }>).detail;
   if (zoom !== undefined) {
-    controls.controller.set({ zoom }, true, "jump");
+    // a move that travels also says the side the camera comes from, so the way in is straight
+    controls.controller.set(yaw !== undefined && tilt !== undefined ? { zoom, yaw, tilt } : { zoom }, true, "jump");
     (state as { goto: string }).goto = "";
   }
   showHop();
