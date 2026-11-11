@@ -464,6 +464,26 @@ await step("lineup-iframe", async () => {
   });
 });
 
+await step("plan-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("plan"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (out !== "Mars: 1.60 au from the Sun, 46 per cent of the way to the edge (50 au)\nIo: 5.9 Jupiter radii from Jupiter's centre\nThe SVG is an <svg>") throw new Error(`unexpected output: ${out}`);
+});
+
+await step("plan-cdn", async () => {
+  await opened(browser, async (page) => {
+    await page.route("https://cdn.jsdelivr.net/**", async (route) => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/plan/element/+esm") return route.fulfill({ body: await bundleOf(modules("plan/element.js")), contentType: "text/javascript" });
+      return route.fulfill({ status: 404, body: "" });
+    });
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("plan"), "cdn.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    await page.waitForFunction(() => document.querySelectorAll("wakusei-plan[data-state=ready]").length === 2, undefined, { timeout: 20_000 });
+    const labels = await page.locator("wakusei-plan").evaluateAll((all) => all.map((el) => el.shadowRoot?.querySelector("svg")?.getAttribute("aria-label")));
+    if (labels[0] !== "The solar system from above, Mars marked" || labels[1] !== "Jupiter's moons from above its north pole, Io marked") throw new Error(`the plans' labels are wrong: ${labels.join(" | ")}`);
+  });
+});
+
 const lineupApp = async (name: string, plugins: unknown[] = []): Promise<void> => {
   const dir = examples(`lineup/${name}`);
   const out = join(usage, "out", "lineup", name);
@@ -526,6 +546,8 @@ const FILES: Record<string, string[]> = {
   "star/vue/main.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "star/svelte/StarView.svelte": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "star/angular/star-view.component.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
+  "plan/cdn.html": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
+  "plan/node.mjs": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
   "lineup/cdn.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/iframe.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/node.mjs": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
