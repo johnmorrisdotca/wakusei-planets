@@ -30,7 +30,7 @@ console.log("nearest visited place to 20 N, 30.7 E:", nearestPlace(PLACES_MOON, 
 | `impact` | a craft sent to hit the surface on purpose | 14 | 0 |
 | `crash` | a craft that hit it and was lost (also an upper stage, an ascent stage sent down after use, an orbiter at the end of its life) | 35 | 6 |
 | `entry` | a probe or orbiter lost in an atmosphere (Venus, Jupiter, Saturn: see below) | 0 | 0 |
-| `planned` | a landing announced and not yet flown | 0 | 0 |
+| `planned` | a landing announced and not yet flown | 8 | 1 |
 | `feature` | a named feature of the surface, from the IAU's list | 768 | 914 |
 
 A site's record has the `mission` (the catalogue's own name for the object), the `operator` (the agency or company's code as the catalogue gives it), its `country`, the `date` (UTC, to the minute where the source gives the time, to the day or the month where it does not), the `outcome` (`crewed`, `soft`, `hard` or `impact`) and, where there is one, the landing site's own name (`site`: `Statio Tranquillitatis`, `Octavia E. Butler Landing`), a `note` from the catalogue and, where it is known, the time it stopped working (`until`). A feature has its IAU type with a plain word for it in English and Japanese, its size in kilometres and the date its name was approved. Moon sites are the six crewed landings, the Soviet, American, Chinese, Indian, Japanese, Israeli and commercial landers, the rovers, and the impact sites of Ranger, Luna, Lunar Orbiter, the Saturn upper stages, LCROSS, GRAIL and the rest. Mars has the landers and rovers from Mars 2 to Zhurong, and the craft lost on arrival (Mars Polar Lander, the two Deep Space 2 probes, Beagle 2, Schiaparelli). The features are the maria and every type of surface feature of the Gazetteer except albedo features, plus the craters of 80 km and more and a handful of small famous ones (Aristarchus, Kepler, Jezero).
@@ -81,7 +81,36 @@ Each has its own table, and the same record. The tables are made by `scripts/mak
 
 **Names.** Every place has its English name, and its Japanese name is its usual one where there is one: the maria, the lakes, bays and marshes of the Moon, the ocean, the main ranges, the craters and Mars features a reader knows (126 on the Moon, 38 on Mars: 静かの海, 嵐の大洋, アルプス谷, ティコ, オリンポス山, マリネリス峡谷, ヘラス平原). Every other feature keeps its IAU Latin name as its Japanese name (地形の名前は、よく知られたもの以外は IAU のラテン語名のままです). `findPlace` matches the English, the Japanese and the Latin form ("Mare Tranquillitatis" and "静かの海").
 
-No **planned landing** is held yet. Their dates move, and a date is held only when an agency's own announcement has been typed in by hand with the day it was read (`planned: { date, status, read }`); none has been, so `placesOfKind(places, "planned")` is empty today.
+**Planned landings** (`kind: "planned"`): 8 on the Moon and 1 on Mars, typed by hand from each agency's or operator's own page, read on 2026-11-11 (never a news site): Astrobotic's Griffin Mission One (Nobile), Intuitive Machines' IM-3 (Reiner Gamma) and IM-4 (Mons Mouton), Blue Origin's Blue Moon MK1 Endurance (the ridge by Shackleton), NASA's VIPER (Mons Mouton), Firefly's Blue Ghost Missions 2, 3 and 4 (Nassau, the Gruithuisen Domes, Haworth) and ESA's Rosalind Franklin rover (Oxia Planum). No page gives a landing point, so each sits on the IAU Gazetteer's centre of the site it names and is `approximate`. `planned` has the date as the page gives it (a year), `dateOf` (`launch` for most: a NASA event page gives the launch; `landing` for VIPER and Rosalind Franklin), `status` (`slipped` where the agency's own pages have moved it later: Griffin, IM-3, Blue Ghost 2) and `read`; the record's `source.url` is the page. A mission whose page names no site the Gazetteer has a name for is not held: Chang'e 7, Chandrayaan-4, LUPEX and Artemis IV name only a region, and Chang'e 8's Leibnitz-Beta Plateau is not an IAU name. `node scripts/check-planned.ts` (`pnpm places:planned`) lists the ones whose date has passed and those read more than 40 days ago, for the monthly look.
+
+## Marks on the body
+
+`places` on `<wakusei-body>` and `<wakusei-space>` lays small quiet marks of the places on the body, in the shaded looks: on `<wakusei-space>` on the body it looks at. Each layer goes on by itself: `landing` (the crewed landings, landers and rovers), `crash` (the crash, impact and atmospheric-entry sites), `planned` and `feature`; `places` alone, or `all`, is every layer.
+
+```html
+<wakusei-body body="moon" look="painted" places="landing crash"></wakusei-body>
+<wakusei-space places="landing planned"></wakusei-space>
+<script type="module">
+  import { setPlacesLoader } from "@johnmorrisdotca/wakusei-planets/element";
+  import { loadPlaces } from "@johnmorrisdotca/wakusei-planets/places";
+
+  setPlacesLoader(loadPlaces);
+  const moon = document.querySelector("wakusei-body");
+  moon.addEventListener("wakusei-place", (event) => console.log(event.detail.body, event.detail.place.name.en, event.detail.place.date));
+  await moon.goToPlace("Apollo 11 lunar module");
+  await document.querySelector("wakusei-space").goToPlace("Perseverance", { body: "mars" });
+</script>
+```
+
+- **The lists are the page's to load.** The elements hold no table, so a page that marks no place carries none: `setPlacesLoader(loadPlaces)` (from `/element` or `/space/element`; either sets it for both) lets them fetch a body's list as its own chunk when it is first needed, or give a function of your own that returns a list. Until it is called nothing is marked.
+- **The marks turn with the body** and hide on the far side and close to the edge of the disc. Nothing is marked on a body under 40 CSS pixels of radius on the screen. A named feature gets a mark once it is 14 pixels across on the screen (a `famous` one at any size), so zooming in brings more; no two marks are closer than 12 pixels (the visited sites first, then the famous, then the larger features) and at most one for every 4 pixels of the body's radius is laid (8 at least, 60 at most), so a small body stays quiet.
+- **Hover, focus or touch a mark** for its name and a short line (`crewed landing, 1969`; `planned landing, launch 2027`; `crater, 93 km`) in the element's `lang`. The marks are buttons, so the keyboard reaches them, and each says its name and line to a screen reader; while they are on, the element is a `group` rather than an `img`.
+- **A click or Enter** sends `wakusei-place` (bubbling, composed) with `detail: { body, place, x, y }`: the whole record and where its mark is.
+- **`goToPlace(name or id)`** turns `<wakusei-body>` until the place is in the middle of the disc; `goToPlace(name, { body })` takes `<wakusei-space>` to the body and puts the camera straight over the place. Both move at a pace you can follow, and at once for a reader who prefers reduced motion or with `smooth: false`. A body that turns by itself carries the place on from there (`turn="0"` keeps it).
+- **The look.** The marks are a part of the element (`::part(place)`, `::part(place-tip)`), coloured by `--wakusei-place-landing`, `--wakusei-place-crash`, `--wakusei-place-planned` and `--wakusei-place-feature`, and the name is in `--wakusei-place-font`, else the page's sans.
+- **Nothing is drawn by them.** The marks are laid over the picture after each draw the view makes anyway; pointing at them or showing a name draws nothing. The property `placesShown` lists the marks laid now (each place's id, its layer and where it is), for a test or a page that draws its own.
+
+The pure part is in `/places` too: `placeMarks(list, layers, view, radiusKm)` chooses the marks for a body in any view you draw yourself (hand it the body's axes, the eye and a projection), `surfacePoint` puts a place on the body's ellipsoid, and `turnToPlace` is the turn `<wakusei-body>` uses.
 
 ## Where, and how sure
 
