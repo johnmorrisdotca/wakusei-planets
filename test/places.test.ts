@@ -354,6 +354,7 @@ test("positions on the other bodies agree with what the sources say, east longit
   assert.equal(at("venus", "Venera 7").approximate, true);
   assert.equal(at("venus", "Venera 13").approximate, undefined);
   assert.equal(at("venus", "Venera 13").date, "1982-03-01T03:57Z", "a catalogue date with a single-digit day keeps its day");
+  assert.equal(findPlace(mars, "Mars 3 lander")!.date, "1971-12-02T13:47Z", "Mars 3's single-digit day is kept");
   assert.equal(at("venus", "Venera 4").kind, "entry");
   // Pioneer Venus: the PDS's impact positions (GCAT has the North Probe's latitude and longitude the wrong way round)
   const north = at("venus", "Pioneer Venus North Probe");
