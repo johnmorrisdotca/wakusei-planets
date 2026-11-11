@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-11
+
 - **CI installs Playwright's browsers in bounded, cached steps** (KAZOKU-UI-100). A slow package mirror held `playwright install --with-deps` for the whole job limit on 2026-11-09 and 2026-11-10, so no test ran and the failure read as a test failure. `.github/actions/playwright` (the family's, kazoku-ui's copy is canonical) caches the browsers by Playwright's version, then installs the system libraries in a step of their own: two tries, each cut off after 7 minutes, and a failure that says it is the runner's package mirror and that nothing was run. Free: GitHub-hosted Linux runners and the cache.
 - **`pnpm docs:check` reads a guide's front matter as strict YAML** (KAZOKU-UI-102). A title or description holding a colon and a space without quotes passed the old line reader while GitHub showed "Error in user YAML" above the page. `scripts/docs-site.mjs` (the family's, version `2026-11-10-strict-front-matter`) now fails with the file, the line and a plain sentence on an unquoted colon, an unquoted " #", a value that starts with a YAML character (`[ { & * ! | > % @` or a backtick), a tab, an indented continuation, a key twice and an unclosed quote.
 - **Two arrows on each orbit, with a setting for the count** (MODULES-909, John: "too many arrows ... we probably only need 2 or max 4"). `ARROWS_PER_ORBIT` is now 2 (it was 6) and an orbit carries at most 4 (`MAX_ARROWS_PER_ORBIT`). `<wakusei-space>` has the attribute and property `arrows` for the count: 2 by default, 0 for none, anything else a whole number from 0 to 4 (`arrowCount` reads it); `arrowSites(line, count)` takes the same. The Moon's line has them too.
