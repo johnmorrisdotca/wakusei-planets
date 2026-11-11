@@ -20,6 +20,8 @@ import { spinAxis } from "./spin.ts";
 import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
+import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
+import { travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -204,12 +206,45 @@ export interface SpaceModel {
   ride: RideState | null;
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
   rideLost: boolean;
-  /** A camera move in progress from where the last draw left it: when it began (ms of the page's clock), how long it takes. */
-  transition: { start: number; duration: number; from: { p: SpaceVec3; q: [number, number, number, number]; fov: number } } | null;
+  /** A camera move in progress from where the last draw left the camera to the view set up for the new target: see `SpaceTransition`. */
+  transition: SpaceTransition | null;
+  /** What the move is doing at this draw, or null when the camera is still: the kind and path of the move, its stage, how far along it is (0 to 1), its length, and whether the body left and the one gone to are in the picture. */
+  travelling: { kind: Exclude<TravelKind, "auto">; path: TravelPlan["path"]; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean } | null;
+  /** The stage out from the Sun the view is framed on (`SUN_REGIONS`), or null for an ordinary view of the body looked at. */
+  region: SunRegion | null;
+  /** The region as the last draw framed it: how far out it reaches from the Sun and how far the camera stood back, in Earth radii. */
+  regionDrawn: { id: SunRegion; reach: number; distance: number } | null;
   pose: CameraPose;
   /** Pixels a game-second that riding makes things move on the screen (0 when not riding): the draw rate follows it. */
   rideMotion: number;
   ratio(): number;
+}
+
+/**
+ * A camera move from one view to the next, as the element asks for it: when it began (ms of the page's clock), the length a page asked for (0 to take the plan's own), the pace, the kind of move, where the
+ * last draw left the camera, and the body being left and the one gone to (for the path to keep in the picture; null when unknown). The scene builds the path at the move's first draw (`input`, `plan`), from
+ * that camera to the view it has just set up for the new target, and then draws `travelPose` of it until the move is over.
+ *
+ * @example
+ * ```ts no-run
+ * import type { SpaceTransition } from "@johnmorrisdotca/wakusei-planets/space/scene";
+ *
+ * const describe = (move: SpaceTransition): string => `${move.kind} from ${move.leaving ?? "?"} to ${move.destination ?? "?"}`;
+ * console.log(typeof describe);
+ * ```
+ */
+export interface SpaceTransition {
+  start: number;
+  duration: number;
+  pace: number;
+  kind: TravelKind;
+  from: { p: SpaceVec3; q: [number, number, number, number]; fov: number };
+  leaving: BodyId | null;
+  destination: BodyId | null;
+  /** How far the region being left reached from the Sun, when the move leaves a stage out from the Sun (a straight push in or pull back then). */
+  leavingReach: number;
+  input: TravelInput | null;
+  plan: TravelPlan | null;
 }
 
 export const newSpaceModel = (): SpaceModel => ({
@@ -246,6 +281,9 @@ export const newSpaceModel = (): SpaceModel => ({
   ride: null,
   rideLost: false,
   transition: null,
+  travelling: null,
+  region: null,
+  regionDrawn: null,
   pose: { p: [0, 0, 0], q: [0, 0, 0, 1], fov: FOV, valid: false },
   rideMotion: 0,
   ratio: () => Math.min(globalThis.devicePixelRatio || 1, 2),
@@ -330,8 +368,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const camera = new three.PerspectiveCamera(FOV, width / Math.max(1, height), 0.05, 1000);
       const target = new three.Vector3();
       const projected = new three.Vector3();
-      const desiredQ = camera.quaternion.clone();
       const fromQ = camera.quaternion.clone();
+      const scratchA = new three.Vector3();
+      const scratchB = new three.Vector3();
+      // the orbit lines of a stage out from the Sun, kept while the stage, the scale and the day are the same
+      let regionLines: { id: SunRegion; mode: ScaleMode; epoch: number; lines: Vec3[][] } | null = null;
 
       let ended = false;
       interface Slot {
@@ -604,6 +645,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const across = focusRadius * (FRAMED[focus as SpaceBody] ?? 1) * Math.max(1, size.height / Math.max(1, size.width));
             distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * across) / Math.max(1e-9, model.view.zoom));
             target.set(focusPos[0], focusPos[1], focusPos[2]);
+            model.regionDrawn = null;
+            if (model.region !== null && focus === "sun") {
+              // a stage out from the Sun: the camera stands back along the same line of sight until every orbit of the stage is in the picture, whatever the zoom says
+              if (regionLines === null || regionLines.id !== model.region || regionLines.mode !== mode || Math.abs(model.time - regionLines.epoch) > 86_400_000) {
+                regionLines = { id: model.region, mode, epoch: model.time, lines: regionOrbits(model.region, mode, model.time).map((line) => line.map((p) => minus(p, origin))) };
+              }
+              const framed = regionView({ centre: focusPos, orbits: regionLines.lines, aspect: size.width / Math.max(1, size.height), forward: [-aim[0], -aim[1], -aim[2]], up: [0, 1, 0] });
+              distance = Math.hypot(framed.position[0] - focusPos[0], framed.position[1] - focusPos[1], framed.position[2] - focusPos[2]);
+              model.regionDrawn = { id: model.region, reach: framed.reach, distance };
+            }
             camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
             camera.up.set(0, 1, 0);
             camera.lookAt(target);
@@ -611,18 +662,50 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             camera.far = Math.max(2000, distance * 4 + (mode === "true" ? 40 * 23_481 : 400));
           }
 
-          // a ride that changed: glide from where the last draw left the camera
+          // a move to a new target: the camera travels from where the last draw left it to the view just set up, along the path `travelPose` gives (the body left kept in the picture through the
+          // turn, the destination from then on, nothing passed close), worked out once at the move's first draw
           const glide = model.transition;
+          model.travelling = null;
           if (glide) {
-            const k = Math.min(1, (performance.now() - glide.start) / glide.duration);
-            const ease = k * k * (3 - 2 * k);
-            desiredQ.copy(camera.quaternion);
-            // the pose the last draw left is absolute (from the Earth's centre); the scene is now relative to the new origin
-            const [fx, fy, fz] = [glide.from.p[0] - origin[0], glide.from.p[1] - origin[1], glide.from.p[2] - origin[2]];
-            camera.position.set(fx + (camera.position.x - fx) * ease, fy + (camera.position.y - fy) * ease, fz + (camera.position.z - fz) * ease);
-            fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
-            camera.quaternion.copy(fromQ.slerp(desiredQ, ease));
-            fovNow = glide.from.fov + (fovNow - glide.from.fov) * ease;
+            if (glide.input === null) {
+              // the pose the last draw left is absolute (from the Earth's centre); the scene is now relative to the new origin
+              const from: Vec3 = [glide.from.p[0] - origin[0], glide.from.p[1] - origin[1], glide.from.p[2] - origin[2]];
+              fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
+              const sf = scratchA.set(0, 0, -1).applyQuaternion(fromQ);
+              const su = scratchB.set(0, 1, 0).applyQuaternion(fromQ);
+              const start = { position: from, forward: [sf.x, sf.y, sf.z] as Vec3, up: [su.x, su.y, su.z] as Vec3, fov: glide.from.fov };
+              const ef = scratchA.set(0, 0, -1).applyQuaternion(camera.quaternion);
+              const eu = scratchB.set(0, 1, 0).applyQuaternion(camera.quaternion);
+              const end = { position: [camera.position.x, camera.position.y, camera.position.z] as Vec3, forward: [ef.x, ef.y, ef.z] as Vec3, up: [eu.x, eu.y, eu.z] as Vec3, fov: fovNow };
+              const radiusOfAny = (id: BodyId): number => {
+                if ((SPACE_BODIES as readonly string[]).includes(id)) return radiusOf(id as SpaceBody);
+                const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
+                return Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusOf(host));
+              };
+              const bodyOf = (id: BodyId | null): TravelBody | null => (id === null ? null : { from: absoluteSite(id), radius: radiusOfAny(id) });
+              const destination: TravelBody = bodyOf(glide.destination) ?? { from: focusPos, radius: focusRadius };
+              if (model.regionDrawn !== null && glide.destination === "sun") destination.reach = model.regionDrawn.reach;
+              const leaving: TravelBody = bodyOf(glide.leaving) ?? { ...destination };
+              if (glide.leavingReach > 0 && glide.leaving === "sun") leaving.reach = glide.leavingReach;
+              // two of one planet's family (two moons, or the planet and a moon) circle the planet, which stays in the picture
+              const familyOf = (id: BodyId | null): BodyId | null => (id === null ? null : id === "moon" ? "earth" : (hostOf(id) as BodyId | undefined) ?? id);
+              const family = familyOf(glide.leaving);
+              const around = family !== null && family === familyOf(glide.destination) && (glide.leaving !== glide.destination) && (glide.leaving !== family || glide.destination !== family) ? bodyOf(family) : null;
+              const others = (["sun", "earth", "jupiter", "saturn"] as const).filter((id) => id !== glide.leaving && id !== glide.destination && id !== family).map((id) => bodyOf(id)!);
+              const input: TravelInput = { start, end, leaving, destination, others, aspect: size.width / Math.max(1, size.height), kind: glide.kind, pace: glide.pace };
+              if (around !== null) input.around = around;
+              glide.input = input;
+              glide.plan = travelPlan(input);
+              if (glide.duration <= 0) glide.duration = glide.plan.duration;
+            }
+            const k = Math.min(1, (performance.now() - glide.start) / Math.max(1, glide.duration));
+            const sample = travelPose(glide.input, k, glide.plan!);
+            camera.position.set(sample.position[0], sample.position[1], sample.position[2]);
+            camera.up.set(sample.up[0], sample.up[1], sample.up[2]);
+            target.set(sample.position[0] + sample.forward[0], sample.position[1] + sample.forward[1], sample.position[2] + sample.forward[2]);
+            camera.lookAt(target);
+            fovNow = sample.fov;
+            model.travelling = { kind: glide.plan!.kind, path: glide.plan!.path, stage: sample.stage, progress: k, duration: glide.duration, leaving: sample.leaving.inside, destination: sample.destination.inside };
             if (k >= 1) model.transition = null;
           }
           // the controls' roll turns the picture clockwise about the line of sight, and a pan moves everything by that many CSS pixels at any depth: the window of the projection moves the other way

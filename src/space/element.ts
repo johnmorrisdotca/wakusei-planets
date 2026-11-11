@@ -19,9 +19,13 @@ import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "./frame.ts";
-import { moonOffset } from "../scene/orient.ts";
+import { moonOffset, orientation } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
+import { groundDirection } from "./aim.ts";
+import { besideMoon } from "./beside.ts";
+import { SUN_REGIONS, type SunRegion } from "./regions.ts";
+import { travelArrival, type TravelKind } from "./travel.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type SpaceBody, type SpaceLight };
@@ -107,6 +111,10 @@ export interface RideOptions {
   distanceKm?: number;
   around?: SpaceBody;
   smooth?: boolean;
+  /** How the camera moves there: the view's `transition` by default. */
+  transition?: TravelKind;
+  /** How long the move takes, in milliseconds: the plan's own length by default. */
+  duration?: number;
 }
 
 /**
@@ -123,6 +131,18 @@ export interface RideOptions {
 export type Riding = RideState;
 
 const readLight = (value: string | null): SpaceLight => (value === "lit" ? "lit" : "sun");
+/** The kinds of move between two views, as `transition` names them. */
+const TRAVEL_KINDS: readonly TravelKind[] = ["turn-travel", "direct", "look-back", "auto", "cut"];
+const readTravel = (value: unknown, fallback: TravelKind): TravelKind => {
+  const name = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return (TRAVEL_KINDS as readonly string[]).includes(name) ? (name as TravelKind) : fallback;
+};
+const readPace = (value: unknown, fallback: number): number => {
+  const n = typeof value === "number" ? value : typeof value === "string" ? Number.parseFloat(value) : Number.NaN;
+  return Number.isFinite(n) && n > 0 ? Math.min(20, Math.max(0.05, n)) : fallback;
+};
+const REGION_IDS: readonly SunRegion[] = SUN_REGIONS.map((region) => region.id);
+const readRegion = (value: unknown): SunRegion | undefined => (typeof value === "string" && (REGION_IDS as readonly string[]).includes(value.trim().toLowerCase()) ? (value.trim().toLowerCase() as SunRegion) : undefined);
 const RAD = Math.PI / 180;
 const REAL_TIME_TICK_MS = 60_000;
 /** The plain wheel in an immersive view is passed on as a pinch of this share, so a notch (100) zooms about 1.2 times, as the family's mouse wheel does with Alt. */
@@ -154,7 +174,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label,.sp-ring{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label,.sp-ring{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
@@ -185,7 +205,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -243,6 +263,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.helpThrough = this.hasAttribute("help-through") && this.getAttribute("help-through") !== "off";
+    this.#travel = { kind: readTravel(this.getAttribute("transition"), "turn-travel"), pace: readPace(this.getAttribute("pace"), 1) };
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
     this.#relabel();
@@ -257,7 +278,9 @@ export class WakuseiSpace extends HTMLElement {
     this.#stage = root.getElementById("stage")!;
     this.#labelBox = root.getElementById("labels")!;
     this.#scaleLine = root.querySelector<HTMLElement>(".sp-scale")!;
+    this.#regionLine = root.getElementById("region")!;
     this.#nameScale();
+    this.#showRegion();
     this.#pool.clear();
     this.#rings.clear();
     this.#arrows.clear();
@@ -329,12 +352,15 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "help-through") this.helpThrough = value !== null && value !== "off";
+    else if (name === "transition") this.transition = readTravel(value, "turn-travel");
+    else if (name === "pace") this.pace = readPace(value, 1);
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
     else if (name === "data") this.#door.book.ownOnly(value === "own");
     else if (name === "lang") {
       for (const [id, button] of this.#pool) this.#nameLabel(button, id);
       this.#nameScale();
+      this.#showRegion();
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
   }
@@ -424,6 +450,32 @@ export class WakuseiSpace extends HTMLElement {
     this.#gate?.request();
   }
 
+  #travel: { kind: TravelKind; pace: number } = { kind: "turn-travel", pace: 1 };
+  #regionLine: HTMLElement | undefined;
+  /** When the last step out or in from a zoom gesture was taken (ms of the page's clock): one gesture is one step. */
+  #regionStepAt = 0;
+  /**
+   * How the camera moves from one view to the next: `turn-travel` (the default: turn beside the body being left until the next is in the picture, then travel to it, never an empty frame), `direct` (a straight
+   * eased glide), `look-back` (straight, watching the body left until the end), `auto` (`turn-travel`), `cut` (no move). The attribute `transition` says the same; `goTo` and `ride` take one for a single move. A
+   * reader who asked for reduced motion always gets `cut`.
+   */
+  get transition(): TravelKind {
+    return this.#travel.kind;
+  }
+  set transition(value: TravelKind) {
+    this.#travel = { ...this.#travel, kind: readTravel(value, this.#travel.kind) };
+  }
+  /** How slow the moves are: the plan's own length times this (1 by default; 2 is twice as slow). The attribute `pace` says the same; `goTo` and `ride` take `duration` in milliseconds for a single move instead. */
+  get pace(): number {
+    return this.#travel.pace;
+  }
+  set pace(value: number) {
+    this.#travel = { ...this.#travel, pace: readPace(value, this.#travel.pace) };
+  }
+  /** The stage out from the Sun the view is framed on (`inner-planets`, `asteroid-belt`, `outer-planets`, `kuiper-belt`, `whole-system`), or null for a view of a body. */
+  get region(): SunRegion | null {
+    return this.#model.region;
+  }
   #covered: "name" | "arrow" = "name";
   #arrows = new Map<string, HTMLElement>();
   /**
@@ -518,6 +570,17 @@ export class WakuseiSpace extends HTMLElement {
    */
   setView(view: { yaw: number; tilt: number; zoom: number; roll?: number; panX?: number; panY?: number }, final = true): void {
     const now = this.#model.view;
+    if (this.#model.region !== null && view.zoom !== 1 && !this.hasAttribute("data-kazoku-bar")) {
+      // at a stage out from the Sun a zoom gesture is a step: out to the next stage, in to the one before (or the Sun); one gesture, one step, and the controls go back to holding zoom 1
+      const at = performance.now();
+      if (this.#model.transition === null && at - this.#regionStepAt > 600) {
+        this.#regionStepAt = at;
+        if (view.zoom < 1) this.stepOut();
+        else this.stepIn();
+      }
+      this.#hands?.controller.set({ zoom: 1 }, true, "jump");
+      return;
+    }
     const [roll, panX, panY] = [view.roll ?? 0, view.panX ?? 0, view.panY ?? 0];
     if (view.yaw === now.yaw && view.tilt === now.tilt && view.zoom === now.zoom && roll === now.roll && panX === now.panX && panY === now.panY) return;
     this.#model.view = { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY };
@@ -555,31 +618,180 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /**
-   * Go to a body: it becomes the middle of the view and the zoom brings it whole into view (`zoom`, 1 by default; a planet's `-moons` preset for its system), gliding there from where the camera is unless `smooth` is
-   * false or the reader asked for reduced motion. `wakusei-hop` tells the page where it went and where the next and previous hops lead. A name in any case, in English or Japanese, works.
+   * Go to a body: it becomes the middle of the view and the zoom brings it whole into view (`zoom`, 1 by default; a planet's `-moons` preset for its system), travelling there from where the camera is (`transition`,
+   * the view's own by default; `duration` in milliseconds, the plan's own by default) unless `smooth` is false or the reader asked for reduced motion. The travel arrives from the side it comes from, moved round
+   * towards the Sun where that side would show the body mostly dark, so the way in is straight: the controls' yaw and tilt are set to that side. A stage out from the Sun (`inner-planets`, `asteroid-belt`,
+   * `outer-planets`, `kuiper-belt`, `whole-system`) is a target too: the Sun is looked at and the camera stands back until the stage's orbits are all in the picture, with the stage's name shown. `wakusei-hop`
+   * tells the page where it went and where the next and previous hops lead. A name in any case, in English or Japanese, works.
    *
-   * @param target - A body's name (`"saturn"`, `"Saturn"`, `"土星"`).
-   * @param options - `smooth` (true by default) and `zoom` (1 by default).
+   * @param target - A body's name (`"saturn"`, `"Saturn"`, `"土星"`) or a stage's id.
+   * @param options - `smooth` (true by default), `zoom` (1 by default), `transition` and `duration`.
    * @returns Whether the view can go there.
    */
-  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number } = {}): boolean {
+  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number; transition?: TravelKind; duration?: number } = {}): boolean {
+    const region = readRegion(target);
+    if (region !== undefined) {
+      this.#goToRegion(region, options);
+      return true;
+    }
     const id = readBody(target);
     if (!id) return false;
     const model = this.#model;
-    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const pose = model.pose;
-    const glide = (options.smooth ?? true) && !reduced && pose.valid && model.ride === null;
+    const leaving = this.#leaving();
+    const kind = this.#moveKind(options, id);
     if (model.ride !== null) this.ride(null, { smooth: false });
-    model.transition = glide ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    model.transition = this.#startMove(kind, leaving, id, options.duration);
+    model.region = null;
+    this.#showRegion();
     this.#selected = id;
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
     // a bar bound to the element holds the view's state: it applies the zoom the page hears in the event; without one the element's own hands do
-    if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set({ zoom }, true, "jump");
+    if (!this.hasAttribute("data-kazoku-bar")) {
+      const side = model.transition !== null ? this.#faceApproach(id) : null;
+      this.#hands?.controller.set(side ? { ...side, zoom } : { zoom }, true, "jump");
+    }
     this.#schedule();
     this.#gate?.request();
     this.#announceHop(zoom);
     return true;
+  }
+
+  /** The body the camera is at now: the target of the ride, or the body looked at. */
+  #leaving(): BodyId {
+    const ride = this.#model.ride;
+    if (ride !== null) return typeof ride.target === "string" ? (ride.target as BodyId) : (ride.around as BodyId);
+    return this.#model.focus;
+  }
+
+  /**
+   * The kind of move a call gets: `cut` for `smooth: false`, for a reader who asked for reduced motion, or before the first draw; else the call's `transition`, or the view's. `auto` is `direct` when the
+   * destination is on the screen as the move starts (it stays in view and grows), `turn-travel` when it is not.
+   */
+  #moveKind(options: { smooth?: boolean; transition?: TravelKind }, destination: BodyId | null = null): TravelKind {
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!(options.smooth ?? true) || reduced || !this.#model.pose.valid) return "cut";
+    const kind = readTravel(options.transition, this.#travel.kind);
+    if (kind !== "auto") return kind;
+    const place = destination === null ? null : this.placeOf(destination);
+    const inView = place !== null && place.x >= 0 && place.y >= 0 && place.x <= this.clientWidth && place.y <= this.clientHeight;
+    return inView ? "direct" : "turn-travel";
+  }
+
+  /** A move from where the last draw left the camera, or null for a cut. The scene builds its path at the next draw. */
+  #startMove(kind: TravelKind, leaving: BodyId | null, destination: BodyId | null, duration?: number): SpaceModel["transition"] {
+    if (kind === "cut") return null;
+    const pose = this.#model.pose;
+    const leavingReach = this.#model.region !== null && leaving === "sun" ? (this.#model.regionDrawn?.reach ?? 0) : 0;
+    return {
+      start: performance.now(),
+      duration: typeof duration === "number" && Number.isFinite(duration) && duration > 0 ? duration : 0,
+      pace: this.#travel.pace,
+      kind,
+      from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov },
+      leaving,
+      destination,
+      leavingReach,
+      input: null,
+      plan: null,
+    };
+  }
+
+  /** Where a body is drawn now, in Earth radii from the Earth's centre, and its drawn radius: the places the scene uses, worked out the same way. */
+  #site(id: BodyId): { at: [number, number, number]; radius: number } {
+    const mode = this.#model.mode;
+    const pos = placeBodies(mode, frameAt(this.#model.time));
+    if ((SPACE_BODIES as readonly string[]).includes(id)) return { at: [...pos[id as SpaceBody]] as [number, number, number], radius: radiusIn(id as SpaceBody, mode) };
+    const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
+    const real = moonOffset(id as MoonId, this.#model.time);
+    const d = Math.hypot(real[0], real[1], real[2]);
+    const k = (d === 0 ? 1 : moonDistance(mode, host, d) / d) * radiusIn(host, mode);
+    const centre = pos[host];
+    return { at: [centre[0] + real[0] * k, centre[1] + real[1] * k, centre[2] + real[2] * k], radius: Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusIn(host, mode)) };
+  }
+
+  /**
+   * The controls' yaw and tilt that look at a body from the side the camera comes from (moved round towards the Sun where that side would show it mostly dark), so the move in is straight and nothing is turned
+   * back on arrival; null when the camera has not drawn yet.
+   */
+  #faceApproach(id: BodyId): { yaw: number; tilt: number } | null {
+    const model = this.#model;
+    if (!model.pose.valid) return null;
+    const body = this.#site(id);
+    const sun = id === "sun" ? undefined : this.#site("sun").at;
+    const wanted = travelArrival({ body: body.at, radius: body.radius, from: model.camera.position, sun, aspect: 16 / 9 });
+    const side: [number, number, number] = [wanted.position[0] - body.at[0], wanted.position[1] - body.at[1], wanted.position[2] - body.at[2]];
+    const anchor = model.anchor ?? model.time;
+    // the scene aims from the ground direction of (lon - yaw, lat - tilt) at the anchor moment: search the pair that lies along the wanted side, coarse then fine
+    const score = (yaw: number, tilt: number): number => {
+      const aim = groundDirection(model.centre.lon - yaw, Math.max(-90, Math.min(90, model.centre.lat - tilt)), anchor);
+      return aim[0] * side[0] + aim[1] * side[1] + aim[2] * side[2];
+    };
+    let best = { yaw: model.view.yaw, tilt: model.view.tilt, score: -Infinity };
+    for (let yaw = -180; yaw < 180; yaw += 6) for (let tilt = -85; tilt <= 85; tilt += 5) {
+      const n = score(yaw, tilt);
+      if (n > best.score) best = { yaw, tilt, score: n };
+    }
+    for (let yaw = best.yaw - 6; yaw <= best.yaw + 6; yaw += 1) for (let tilt = Math.max(-89, best.tilt - 5); tilt <= Math.min(89, best.tilt + 5); tilt += 1) {
+      const n = score(yaw, tilt);
+      if (n > best.score) best = { yaw, tilt, score: n };
+    }
+    return { yaw: best.yaw, tilt: best.tilt };
+  }
+
+  /** Go to a stage out from the Sun: the Sun is looked at and the camera stands back until every orbit of the stage is in the picture; from another stage the move is a straight pull back or push in. */
+  #goToRegion(region: SunRegion, options: { smooth?: boolean; transition?: TravelKind; duration?: number }): void {
+    const model = this.#model;
+    const leaving = this.#leaving();
+    const kind = this.#moveKind(options, "sun");
+    if (model.ride !== null) this.ride(null, { smooth: false });
+    model.transition = this.#startMove(kind, model.region !== null ? "sun" : leaving, "sun", options.duration);
+    model.region = region;
+    this.#selected = "sun";
+    model.focus = "sun";
+    // at a stage the controls hold zoom 1: a zoom gesture is taken as a step out or in, not as a zoom
+    if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set({ zoom: 1 }, true, "jump");
+    this.#showRegion();
+    this.#schedule();
+    this.#gate?.request();
+    this.#announceHop(1);
+    this.dispatchEvent(new CustomEvent("wakusei-region", { detail: { region, name: this.#regionName(region) }, bubbles: true, composed: true }));
+  }
+
+  /** The next stage out from the Sun from where the view is (the first stage from a body), with the same move as `goTo`; null, and nothing done, when the view is already at the widest stage. */
+  stepOut(options: { smooth?: boolean; transition?: TravelKind; duration?: number } = {}): SunRegion | null {
+    const here = this.#model.region;
+    const next = here === null ? REGION_IDS[0]! : REGION_IDS[REGION_IDS.indexOf(here) + 1];
+    if (next === undefined) return null;
+    this.#goToRegion(next, options);
+    return next;
+  }
+
+  /** The next stage in towards the Sun from the stage the view is at, or the Sun itself (`"sun"`, zoom 1) from the first stage; null, and nothing done, when the view is not at a stage. */
+  stepIn(options: { smooth?: boolean; transition?: TravelKind; duration?: number } = {}): SunRegion | "sun" | null {
+    const here = this.#model.region;
+    if (here === null) return null;
+    const i = REGION_IDS.indexOf(here);
+    if (i <= 0) {
+      this.goTo("sun", options);
+      return "sun";
+    }
+    this.#goToRegion(REGION_IDS[i - 1]!, options);
+    return REGION_IDS[i - 1]!;
+  }
+
+  #regionName(region: SunRegion): string {
+    const name = SUN_REGIONS.find((entry) => entry.id === region)!.name;
+    return this.getAttribute("lang") === "ja" ? name.ja : name.en;
+  }
+
+  /** The stage's name in the corner of the view, in the element's language, or nothing at a body. */
+  #showRegion(): void {
+    const line = this.#regionLine;
+    if (!line) return;
+    const region = this.#model.region;
+    line.textContent = region === null ? "" : this.#regionName(region);
+    line.hidden = region === null;
   }
 
   /** Go to the next body in the order of `bodyList()` (the Sun, Mercury, Venus, the Earth, the Moon, Mars, Phobos, Deimos, Ceres, Jupiter, its moons, and on), round to the Sun after the last. */
@@ -666,7 +878,7 @@ export class WakuseiSpace extends HTMLElement {
    */
   ride(target: RideTarget | null, options: RideOptions = {}): void {
     const model = this.#model;
-    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const leaving = this.#leaving();
     const wasRiding = model.ride !== null;
     if (target === null) {
       model.ride = null;
@@ -680,11 +892,39 @@ export class WakuseiSpace extends HTMLElement {
       else if (wasRiding) model.focus = this.#focusBeforeRide;
     }
     this.#lostTold = false;
-    const pose = model.pose;
-    model.transition = (options.smooth ?? true) && !reduced && pose.valid ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    const destination = target !== null && typeof target === "string" ? (readBody(target) ?? null) : target === null ? this.#model.focus : null;
+    model.transition = this.#startMove(this.#moveKind(options, destination), leaving, destination, options.duration);
+    if (model.transition !== null && model.ride?.view === "beside" && typeof model.ride.target === "string") {
+      // beside a moon the picture can be swung round the line from its planet by the controls' yaw: take the yaw that puts the camera nearest the side it comes from, so the way in is straight
+      const yaw = this.#besideYaw(model.ride.target as MoonId | "moon");
+      if (yaw !== null && !this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set({ yaw, tilt: 0 }, true, "jump");
+    }
+    model.region = null;
+    this.#showRegion();
     this.#schedule();
     this.#gate?.request();
     this.dispatchEvent(new CustomEvent("wakusei-ride", { detail: this.riding }));
+  }
+
+  /** The controls' yaw for the view from beside a moon that puts the camera nearest the side it comes from, in whole degrees; null before the first draw. */
+  #besideYaw(moon: MoonId | "moon"): number | null {
+    const model = this.#model;
+    if (!model.pose.valid) return null;
+    const host = (moon === "moon" ? "earth" : (hostOf(moon) ?? "earth")) as "earth" | SpacePlanet | SpaceDwarf;
+    const site = this.#site(moon);
+    const planet = this.#site(host);
+    const sun = this.#site("sun").at;
+    const north = orientation(host, model.time).pole;
+    const from = model.camera.position;
+    let best = { yaw: 0, near: -Infinity };
+    for (let yaw = 0; yaw < 360; yaw += 10) {
+      const camera = besideMoon({ moon: site.at, moonRadius: site.radius, host: planet.at, hostRadius: planet.radius, sun, north, aspect: 16 / 9, zoom: 1, yaw, tilt: 0 });
+      const a: [number, number, number] = [camera.position[0] - site.at[0], camera.position[1] - site.at[1], camera.position[2] - site.at[2]];
+      const b: [number, number, number] = [from[0] - site.at[0], from[1] - site.at[1], from[2] - site.at[2]];
+      const near = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (Math.hypot(...a) * Math.hypot(...b) || 1);
+      if (near > best.near) best = { yaw, near };
+    }
+    return best.yaw;
   }
 
   #resolveRide(target: RideTarget, options: RideOptions): RideState | undefined {
@@ -800,6 +1040,10 @@ export class WakuseiSpace extends HTMLElement {
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
     tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
+    /** The camera's move at the last draw, or null when it is still: its kind and path, its stage, how far along it is (0 to 1), its length in milliseconds, and whether the body left and the one gone to are in the picture. */
+    travelling: { kind: string; path: string; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean } | null;
+    /** The stage out from the Sun the view is framed on, or null: its id and name, how far it reaches from the Sun and how far back the camera stands, in Earth radii. */
+    region: { id: string; name: string; reach: number; distance: number } | null;
     /** The data door: the small bodies in the one instanced draw, and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
     door: { points: number; sources: ReturnType<DoorHost["book"]["stats"]> };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
@@ -828,6 +1072,8 @@ export class WakuseiSpace extends HTMLElement {
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, sources: this.#door.book.stats() },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
+      travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
+      region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden] },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,
