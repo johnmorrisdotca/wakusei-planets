@@ -13,6 +13,7 @@ import "../bodies/all.ts";
 import type { Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
+import { DEFAULT_LAUNCH_MS, DEFAULT_TURN_MS, glideDuration, glideProgress, turnProgress, type Transition } from "./glide.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { spinAxis } from "./spin.ts";
@@ -190,7 +191,9 @@ export interface SpaceModel {
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
   rideLost: boolean;
   /** A camera move in progress from where the last draw left it: when it began (ms of the page's clock), how long it takes. */
-  transition: { start: number; duration: number; from: { p: SpaceVec3; q: [number, number, number, number]; fov: number } } | null;
+  transition: { start: number; kind: "direct" | "look-back"; launchMs: number; turnMs: number; /** The body the camera is leaving, which `look-back` keeps in view. */ leaving: BodyId | null; from: { p: SpaceVec3; q: [number, number, number, number]; fov: number } } | null;
+  /** How the camera leaves a body for the next (`goTo`, the hopper): the name, how long the slow launch lasts and how long the turn lasts, in milliseconds. */
+  leave: { transition: Transition; launchMs: number; turnMs: number };
   pose: CameraPose;
   /** Pixels a game-second that riding makes things move on the screen (0 when not riding): the draw rate follows it. */
   rideMotion: number;
@@ -227,6 +230,7 @@ export const newSpaceModel = (): SpaceModel => ({
   ride: null,
   rideLost: false,
   transition: null,
+  leave: { transition: "direct", launchMs: DEFAULT_LAUNCH_MS, turnMs: DEFAULT_TURN_MS },
   pose: { p: [0, 0, 0], q: [0, 0, 0, 1], fov: FOV, valid: false },
   rideMotion: 0,
   ratio: () => Math.min(globalThis.devicePixelRatio || 1, 2),
@@ -582,14 +586,24 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           // a ride that changed: glide from where the last draw left the camera
           const glide = model.transition;
           if (glide) {
-            const k = Math.min(1, (performance.now() - glide.start) / glide.duration);
-            const ease = k * k * (3 - 2 * k);
+            const elapsed = performance.now() - glide.start;
+            const k = Math.min(1, elapsed / glideDuration(glide.launchMs));
+            // the camera leaves slowly (the launch), speeds up and settles: the share of the way covered
+            const ease = glideProgress(elapsed, glide.launchMs);
             desiredQ.copy(camera.quaternion);
             // the pose the last draw left is absolute (from the Earth's centre); the scene is now relative to the new origin
             const [fx, fy, fz] = [glide.from.p[0] - origin[0], glide.from.p[1] - origin[1], glide.from.p[2] - origin[2]];
             camera.position.set(fx + (camera.position.x - fx) * ease, fy + (camera.position.y - fy) * ease, fz + (camera.position.z - fz) * ease);
-            fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
-            camera.quaternion.copy(fromQ.slerp(desiredQ, ease));
+            if (glide.kind === "look-back" && glide.leaving !== null) {
+              // pulling away: it watches the body it is leaving (its place is relative to the origin now), and turns to the destination over the last part of the trip
+              const left = absoluteSite(glide.leaving);
+              camera.lookAt(left[0], left[1], left[2]);
+              fromQ.copy(camera.quaternion);
+              camera.quaternion.copy(fromQ.slerp(desiredQ, turnProgress(elapsed, glide.launchMs, glide.turnMs)));
+            } else {
+              fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
+              camera.quaternion.copy(fromQ.slerp(desiredQ, ease));
+            }
             fovNow = glide.from.fov + (fovNow - glide.from.fov) * ease;
             if (k >= 1) model.transition = null;
           }

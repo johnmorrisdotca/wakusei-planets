@@ -6,6 +6,7 @@ import "../tables/minor.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount } from "./arrows.ts";
+import { chooseTransition, DEFAULT_LAUNCH_MS, DEFAULT_TURN_MS, readMs, readTransition, type Transition } from "./glide.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
@@ -105,6 +106,8 @@ export interface RideOptions {
   distanceKm?: number;
   around?: SpaceBody;
   smooth?: boolean;
+  /** How the camera gets there: `direct` (a slow launch, then on), `cut` (no glide); `look-back` and `auto` glide as `direct` for a ride. The view's own `transition` where left out. */
+  transition?: Transition;
 }
 
 /**
@@ -183,7 +186,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows"];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", "transition", "launch", "turn"];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -237,6 +240,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
+    this.#model.leave = { transition: readTransition(this.getAttribute("transition")), launchMs: readMs(this.getAttribute("launch"), DEFAULT_LAUNCH_MS), turnMs: readMs(this.getAttribute("turn"), DEFAULT_TURN_MS) };
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
@@ -318,6 +322,9 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
+    else if (name === "transition") this.transition = readTransition(value);
+    else if (name === "launch") this.launchMs = readMs(value, DEFAULT_LAUNCH_MS);
+    else if (name === "turn") this.turnMs = readMs(value, DEFAULT_TURN_MS);
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
@@ -486,6 +493,42 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /**
+   * How the camera leaves a body for the next (every `goTo`, the hopper's `next` and `previous`, and a ride): `direct` (the default: a slow launch, then straight at the destination, which stays in view and grows), `look-back` (pull away
+   * watching the body being left, then turn to the destination over the last part of the trip), `auto` (`direct` when the destination is in view where the trip starts, `look-back` when it is not) or `cut` (no glide). A reader who prefers
+   * reduced motion always gets `cut`. The attribute `transition` says the same, and `goTo(name, { transition })` chooses for one trip.
+   */
+  get transition(): Transition {
+    return this.#model.leave.transition;
+  }
+  set transition(value: Transition) {
+    this.#model.leave = { ...this.#model.leave, transition: readTransition(value, this.#model.leave.transition) };
+  }
+
+  /** How long the slow launch of a glide lasts, in milliseconds (the attribute `launch`): the camera takes this long to cover the first fifth of the trip, so the departure is seen. 500 by default, 0 for a quick glide, at most 10,000. */
+  get launchMs(): number {
+    return this.#model.leave.launchMs;
+  }
+  set launchMs(value: number) {
+    this.#model.leave = { ...this.#model.leave, launchMs: readMs(value, this.#model.leave.launchMs) };
+  }
+
+  /** How long the turn to the destination lasts in `look-back` and `auto`, in milliseconds (the attribute `turn`): the last stretch of the trip. 700 by default. */
+  get turnMs(): number {
+    return this.#model.leave.turnMs;
+  }
+  set turnMs(value: number) {
+    this.#model.leave = { ...this.#model.leave, turnMs: readMs(value, this.#model.leave.turnMs) };
+  }
+
+  /** Whether a body is on the screen now: its place at the last draw is inside the element. */
+  #inView(id: BodyId): boolean {
+    const at = this.#places?.[id];
+    if (!at) return false;
+    const box = this.getBoundingClientRect();
+    return at.x >= 0 && at.y >= 0 && at.x <= box.width && at.y <= box.height;
+  }
+
+  /**
    * Go to a body: it becomes the middle of the view and the zoom brings it whole into view (`zoom`, 1 by default; a planet's `-moons` preset for its system), gliding there from where the camera is unless `smooth` is
    * false or the reader asked for reduced motion. `wakusei-hop` tells the page where it went and where the next and previous hops lead. A name in any case, in English or Japanese, works.
    *
@@ -493,15 +536,17 @@ export class WakuseiSpace extends HTMLElement {
    * @param options - `smooth` (true by default) and `zoom` (1 by default).
    * @returns Whether the view can go there.
    */
-  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number } = {}): boolean {
+  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number; transition?: Transition } = {}): boolean {
     const id = readBody(target);
     if (!id) return false;
     const model = this.#model;
     const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     const pose = model.pose;
-    const glide = (options.smooth ?? true) && !reduced && pose.valid && model.ride === null;
+    const kind = chooseTransition(readTransition(options.transition, model.leave.transition), this.#inView(id));
+    const glide = (options.smooth ?? true) && !reduced && pose.valid && model.ride === null && kind !== "cut";
+    const leaving = model.focus === id ? null : model.focus;
     if (model.ride !== null) this.ride(null, { smooth: false });
-    model.transition = glide ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    model.transition = glide ? { start: performance.now(), kind: kind === "look-back" ? "look-back" : "direct", launchMs: model.leave.launchMs, turnMs: model.leave.turnMs, leaving, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
     this.#selected = id;
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
@@ -612,7 +657,8 @@ export class WakuseiSpace extends HTMLElement {
     }
     this.#lostTold = false;
     const pose = model.pose;
-    model.transition = (options.smooth ?? true) && !reduced && pose.valid ? { start: performance.now(), duration: 1200, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
+    const rideKind = chooseTransition(readTransition(options.transition, model.leave.transition), true);
+    model.transition = (options.smooth ?? true) && !reduced && pose.valid && rideKind !== "cut" ? { start: performance.now(), kind: "direct", launchMs: model.leave.launchMs, turnMs: model.leave.turnMs, leaving: null, from: { p: [pose.p[0], pose.p[1], pose.p[2]], q: [pose.q[0], pose.q[1], pose.q[2], pose.q[3]], fov: pose.fov } } : null;
     this.#schedule();
     this.#gate?.request();
     this.dispatchEvent(new CustomEvent("wakusei-ride", { detail: this.riding }));

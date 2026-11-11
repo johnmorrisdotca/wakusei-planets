@@ -8,3 +8,4 @@ export { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, type SpaceKind } from
 export { besideMoon, BESIDE_RADII, type BesideCamera, type BesideInput } from "./beside.ts";
 export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";
 export { spinAxis, type SpinAxis } from "./spin.ts";
+export { chooseTransition, DEFAULT_LAUNCH_MS, DEFAULT_TURN_MS, glideDuration, glideProgress, readMs, readTransition, TRANSITIONS, turnProgress, type Transition } from "./glide.ts";
