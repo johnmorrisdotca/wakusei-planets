@@ -47,10 +47,10 @@ BODIES = [
     ("65803", "ディディモス", [M("DART", 2022), M("Hera", 2026, True)], "Dimorphos orbits it; DART struck Dimorphos on 2022-09-26."),
     ("486958", "アロコス", [M("New Horizons", 2019)], "A contact binary of the Kuiper belt."),
     ("99942", "アポフィス", [M("OSIRIS-APEX", 2029, True)], "It passes the Earth on 2029-04-13 at about 0.00025 au."),
-    ("98943", "トリフネ", [M("Hayabusa2", 2026, True)], ""), ("1998 KY26", "1998 KY26", [M("Hayabusa2", 2031, True)], ""),
+    ("98943", "トリフネ", [M("Hayabusa2", 2026)], "Hayabusa2 flew past it on 2026-07-05, closest approach at 09:30 UTC, about 744 m from its centre (JAXA, 2026-07-30)."), ("1998 KY26", "1998 KY26", [M("Hayabusa2", 2031, True)], ""),
     # famous near-Earth asteroids
     ("2024 YR4", "2024 YR4", [], ""), ("3200", "ファエトン", [M("DESTINY+", 2030, True)], "The parent of the Geminid meteors."), ("1566", "イカルス", [], ""), ("1620", "ジオグラフォス", [], ""),
-    ("1685", "トロ", [], ""), ("3753", "クルースン", [], ""), ("469219", "カモオアレワ", [M("Tianwen-2", 2026, True)], ""), ("29075", "1950 DA", [], ""), ("3122", "フローレンス", [], ""),
+    ("1685", "トロ", [], ""), ("3753", "クルースン", [], ""), ("469219", "カモオアレワ", [M("Tianwen-2", 2026)], "Tianwen-2 reached it in 2026: CNSA announced on 2026-07-06 that the probe was about 20 km from it and had begun scientific work."), ("29075", "1950 DA", [], ""), ("3122", "フローレンス", [], ""),
     ("1036", "ガニメデ", [], "The largest near-Earth asteroid."), ("1862", "アポロ", [], "The first of the Apollo group."), ("2062", "アテン", [], "The first of the Aten group."),
     ("1221", "アモール", [], "The first of the Amor group."), ("163693", "アティラ", [], "The first of the Atira group, whose orbits lie inside the Earth's."), ("69230", "ヘルメス", [], ""),
     ("4015", "ウィルソン・ハリントン", [], ""), ("367943", "ドゥエンデ", [], ""), ("4660", "ネレウス", [], ""), ("6489", "ゴレフカ", [], ""), ("2101", "アドニス", [], ""),
@@ -64,7 +64,7 @@ BODIES = [
     ("10199", "カリクロー", [], "The first small body found to have rings."), ("7066", "ネッソス", [], ""), ("8405", "アスボルス", [], ""), ("10370", "ヒュロノメ", [], ""),
     ("60558", "エケクルス", [], ""), ("54598", "ビエノル", [], ""), ("32532", "テレウス", [], ""),
     # trans-Neptunian objects and dwarf-planet candidates besides the dwarf planets the package has (Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna)
-    ("120347", "サラキア", [], ""), ("20000", "ヴァルナ", [], ""), ("28978", "イクシオン", [], ""), ("174567", "ヴァルダ", [], ""), ("307261", "2002 MS4", [], ""),
+    ("120347", "サラキア", [], ""), ("20000", "ヴァルナ", [], "The 900 km is JPL's older estimate; Herschel thermal measurements give about 670 km (a preliminary value: Santos-Sanz et al., EPSC 2013 abstract 665)."), ("28978", "イクシオン", [], ""), ("174567", "ヴァルダ", [], ""), ("307261", "マーニ", [], ""),
     ("2014 UZ224", "2014 UZ224", [], "Nicknamed DeeDee."), ("15760", "アルビオン", [], "The first Kuiper belt object found after Pluto and Charon."),
     ("2015 TG387", "レレアークーホヌア", [], "A distant object far beyond Neptune."), ("38628", "フヤ", [], ""), ("19521", "カオス", [], ""), ("42355", "テュポン", [], ""),
     ("2012 VP113", "2012 VP113", [], "A distant object like Sedna."), ("2018 AG37", "2018 AG37", [], "Nicknamed Farfarout."),
