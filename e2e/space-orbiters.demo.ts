@@ -3,7 +3,7 @@
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { ORBITER_IDS, orbiterStatus } from "../src/orbiters.ts";
-import { callOn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
+import { callOn, openSpace, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -31,11 +31,14 @@ test("off by default and not fetched; at the Moon the lunar orbiters with a path
     if (/orbiters/i.test(response.url())) fetched.push(response.url());
   });
   const when = Date.UTC(2026, 10, 11, 12);
-  await openSpace(page, "t=2026-11-11T12:00Z&play=off&goto=moon");
+  await openSpace(page, "t=2026-11-11T12:00Z&play=off");
+  // at the Moon itself (the demo's "goto=moon" is the Earth and the Moon's orbit, where the Moon is a few pixels across)
+  await drawn(page, () => callOn(page, "goTo", "moon", { smooth: false }));
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "orbiters"))).toBe(false);
   expect((await drawnOrbiters(page)).count).toBe(0);
   expect(fetched, "the orbiters' module is not fetched while they are off").toEqual([]);
-  await setOn(page, "orbiters", true);
+  // the demo's own switch: the page holds the choice and applies it to the element at every render, so a value set on the element alone is undone at the next one (a move's announcement)
+  await page.locator("#orbiters").dispatchEvent("click");
   await expect.poll(async () => (await drawnOrbiters(page)).count, { timeout: 60_000 }).toBeGreaterThan(0);
   expect(fetched.length).toBeGreaterThanOrEqual(1);
   const seen = await drawnOrbiters(page);
@@ -50,7 +53,9 @@ test("off by default and not fetched; at the Moon the lunar orbiters with a path
   await page.locator(SPACE).evaluate((el) => el.setAttribute("lang", "ja"));
   await expect(nameOf(page, "lro")).toHaveText("ルナー・リコネサンス・オービター");
   // from the whole solar system the Moon is nothing: no orbiter is drawn
-  await drawn(page, () => page.locator(SPACE).evaluate((el) => (el as unknown as { setView(v: unknown): void; zoomFor(p: string): number }).setView({ yaw: 0, tilt: 0, zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") })));
+  // (zoomed through the view controls, which hold the view's state: a zoom set on the element alone would leave them at 1, and the next goTo's zoom of 1 would be no change to them)
+  const zoom = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system"));
+  await drawn(page, () => page.locator("#controls").evaluate((el, z) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom: z }, true, "set"), zoom));
   await expect.poll(async () => (await drawnOrbiters(page)).count, { timeout: 30_000 }).toBe(0);
   // at Mars: its craft with a path, Tianwen-1 with none, MAVEN modelled
   await drawn(page, () => callOn(page, "goTo", "mars", { smooth: false }));
@@ -60,14 +65,15 @@ test("off by default and not fetched; at the Moon the lunar orbiters with a path
   expect(mars.status["maven"]).toBe("modelled");
   expect(mars.status["mro"]).toBe(orbiterStatus("mro", when));
   // and off again
-  await drawn(page, () => setOn(page, "orbiters", false));
+  await drawn(page, () => page.locator("#orbiters").dispatchEvent("click"));
   expect((await drawnOrbiters(page)).count).toBe(0);
   await expect(nameOf(page, "mro")).toBeHidden();
 });
 
 test("the demo's Orbiters switch is kept in the address", async ({ page }) => {
   test.setTimeout(240_000);
-  await openSpace(page, "t=2026-11-11T12:00Z&play=off&goto=moon&orbiters=1");
+  await openSpace(page, "t=2026-11-11T12:00Z&play=off&orbiters=1");
+  await drawn(page, () => callOn(page, "goTo", "moon", { smooth: false }));
   await expect.poll(async () => (await drawnOrbiters(page)).count, { timeout: 60_000 }).toBeGreaterThan(0);
   expect(await page.locator("#orbiters").getAttribute("aria-pressed")).toBe("true");
   await page.locator("#orbiters").dispatchEvent("click");
