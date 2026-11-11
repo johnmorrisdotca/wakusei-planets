@@ -16,7 +16,7 @@ import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
 import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
-import { createNameLabel, nameLabelKey, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import { createNameLabel, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 
 export { fallbackLook } from "./fallback.ts";
 
@@ -437,12 +437,12 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       };
 
       // the name on the globe: a child of the mesh, so it turns with the body
+      // the element hands over the same label object until a setting changes, so a draw compares by reference and does no work when nothing did
       let label: NameLabel | undefined;
-      let labelKey = "";
+      let labelApplied: SceneState["label"] = undefined;
       const syncLabel = (state: SceneState): void => {
-        const key = state.label ? nameLabelKey(state.label.text, state.label) : "";
-        if (key === labelKey) return;
-        labelKey = key;
+        if (state.label === labelApplied) return;
+        labelApplied = state.label;
         if (!state.label) {
           if (label !== undefined) {
             mesh.remove(label.object);
@@ -451,11 +451,13 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           }
           return;
         }
-        const { text, ...rest } = state.label;
         if (label === undefined) {
-          label = createNameLabel(T, text, rest, look.emissive === true, () => options.redraw());
+          label = createNameLabel(T, state.label.text, state.label, look.emissive === true, () => options.redraw());
           mesh.add(label.object);
-        } else label.set(text, rest);
+        } else {
+          label.set(state.label.text, state.label);
+          options.redraw();
+        }
       };
 
       const light = new T.Vector3();

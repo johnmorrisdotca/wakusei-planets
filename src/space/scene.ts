@@ -847,24 +847,25 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const held of moonSlots.values()) if (held.slot.drawing?.object.visible) paintedMoons += 1;
           model.painted.moons = paintedMoons;
           model.painted.held = moonSlots.size;
+          // one pass over every drawing (the bodies, then the moons): the names drawn, the tile windows summed, and the sources whose tiles are on a body
           let labelsDrawn = 0;
-          for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) if (painting?.object.visible && painting.label?.shown) labelsDrawn += 1;
-          model.labelsDrawn = { count: labelsDrawn, focus: (slots.get(focus)?.drawing ?? moonSlots.get(focus)?.slot.drawing)?.label ?? null };
           const tiles: SpaceModel["tiles"] = { requested: 0, loading: 0, failed: 0, shown: null };
-          for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) {
-            const stats = painting?.tiles;
-            if (stats === undefined) continue;
+          const used: Record<string, number> = {};
+          const tally = (painting: Painting | undefined): void => {
+            if (painting === undefined) return;
+            if (painting.object.visible && painting.label?.shown) labelsDrawn += 1;
+            const stats = painting.tiles;
+            if (stats === undefined) return;
             tiles.requested += stats.requested;
             tiles.loading += stats.loading;
             tiles.failed += stats.failed;
             if (stats.shown !== null) tiles.shown = Math.max(tiles.shown ?? 0, stats.shown);
-          }
+            if (stats.source !== undefined) used[stats.source.id] = (used[stats.source.id] ?? 0) + stats.used;
+          };
+          for (const slot of slots.values()) tally(slot.drawing);
+          for (const held of moonSlots.values()) tally(held.slot.drawing);
+          model.labelsDrawn = { count: labelsDrawn, focus: (slots.get(focus)?.drawing ?? moonSlots.get(focus)?.slot.drawing)?.label ?? null };
           model.tiles = tiles;
-          const used: Record<string, number> = {};
-          for (const painting of [...[...slots.values()].map((slot) => slot.drawing), ...[...moonSlots.values()].map((held) => held.slot.drawing)]) {
-            const shown = painting?.tiles;
-            if (shown?.source !== undefined) used[shown.source.id] = (used[shown.source.id] ?? 0) + shown.used;
-          }
           if (points !== undefined && deps.book !== undefined && points.count > 0) for (const [id, read] of deps.book.recordReads()) used[id] = read.records.length;
           model.door.used = used;
 

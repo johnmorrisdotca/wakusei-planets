@@ -557,7 +557,10 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     if (label === undefined) {
       label = createNameLabel(T, labelText, options, look.emissive === true, redraw);
       mesh.add(label.object);
-    } else label.set(labelText, options);
+    } else {
+      label.set(labelText, options);
+      redraw();
+    }
   };
   if (context.label) setLabel(context.label);
 
