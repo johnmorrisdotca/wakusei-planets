@@ -516,6 +516,11 @@
       "types": "./dist/asteroids.d.ts",
       "import": "./dist/asteroids.js",
       "default": "./dist/asteroids.js"
+    },
+    "./approaches": {
+      "types": "./dist/approaches.d.ts",
+      "import": "./dist/approaches.js",
+      "default": "./dist/approaches.js"
     }
   },
   "files": [
