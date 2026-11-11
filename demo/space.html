@@ -34,6 +34,31 @@
               <button type="button" data-goto="jupiter-moons" aria-pressed="false" data-say="sp_goto_jupiter">Jupiter and its moons</button>
             </div>
           </div>
+          <div class="fam-row" data-help-en="Backing out from the Sun by stages: the inner planets, the asteroid belt, the outer planets, the Kuiper belt, then the whole system. Step out goes one stage further out, Step in one stage back in (to the Sun from the first); at a stage a zoom gesture does the same. The stage's name is shown in the corner of the view." data-help-ja="太陽から段階を追って引いていきます。内太陽系、小惑星帯、外太陽系、カイパーベルト、太陽系全体の順です。「外側へ」は一段階外側へ、「内側へ」は一段階内側へ (最初の段階からは太陽へ) 進みます。段階にいるときは、ズーム操作も同じ働きをします。段階の名前はビューの隅に出ます。">
+            <span class="fam-label" data-say="sp_stages">Stages</span>
+            <div class="group fam-seg" role="group" aria-label="Stages" data-say-label="sp_stages">
+              <button type="button" class="fam-button" id="step-in" data-say="sp_step_in">Step in</button>
+              <button type="button" class="fam-button" id="step-out" data-say="sp_step_out">Step out</button>
+            </div>
+            <output id="stage-name" class="fam-fine" aria-live="polite"></output>
+          </div>
+          <div class="fam-row" data-help-en="How the camera moves from one body to the next. Turn then travel turns beside the body you are leaving until the next one is in the picture, then travels to it with it in view the whole way; Direct goes straight at it; Look back pulls away watching the body you are leaving; Auto is Direct when the next body is already in view and Turn then travel when it is not; Cut jumps. Length scales how long a move takes (2× is twice as long)." data-help-ja="カメラが天体から天体へどう動くかです。「回ってから進む」は、離れる天体のそばで次の天体が画面に入るまで向きを変え、そのあとは次の天体を見たまま進みます。「まっすぐ」は次の天体へまっすぐ向かい、「振り返る」は離れる天体を見ながら遠ざかります。「自動」は、次の天体がすでに見えていれば「まっすぐ」、見えていなければ「回ってから進む」になります。「ジャンプ」は一瞬で切り替わります。「かかる時間」は、移動にかかる時間の倍率です (2なら倍の時間がかかります)。">
+            <span class="fam-label" data-say="sp_transition">Travel</span>
+            <div class="group fam-seg" id="transitions" role="group" aria-label="Travel" data-say-label="sp_transition">
+              <button type="button" data-transition="turn-travel" aria-pressed="true" data-say="sp_tr_turn">Turn then travel</button>
+              <button type="button" data-transition="direct" aria-pressed="false" data-say="sp_tr_direct">Direct</button>
+              <button type="button" data-transition="look-back" aria-pressed="false" data-say="sp_tr_lookback">Look back</button>
+              <button type="button" data-transition="auto" aria-pressed="false" data-say="sp_tr_auto">Auto</button>
+              <button type="button" data-transition="cut" aria-pressed="false" data-say="sp_tr_cut">Cut</button>
+            </div>
+            <span class="fam-label" data-say="sp_pace">Length</span>
+            <div class="group fam-seg" id="paces" role="group" aria-label="Length" data-say-label="sp_pace">
+              <button type="button" data-pace="0.5" aria-pressed="false">0.5×</button>
+              <button type="button" data-pace="1" aria-pressed="true">1×</button>
+              <button type="button" data-pace="2" aria-pressed="false">2×</button>
+              <button type="button" data-pace="4" aria-pressed="false">4×</button>
+            </div>
+          </div>
           <div class="fam-row">
             <span class="fam-label" data-say="sp_find">Find a body</span>
             <div class="group fam-seg" id="kinds" role="group" aria-label="Kind" data-say-label="sp_kind">

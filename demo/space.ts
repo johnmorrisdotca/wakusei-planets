@@ -46,6 +46,10 @@ const state = {
   ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io"], ""),
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
+  /** How the camera moves between bodies: one of the view's named moves, kept in the address so each can be tried. */
+  transition: pick(address.get("tr"), ["turn-travel", "direct", "look-back", "auto", "cut"], "turn-travel"),
+  /** How slow the moves are: the plan's length times this. */
+  pace: pick(address.get("pace"), ["0.5", "1", "2", "4"], "1"),
 };
 const bodyLabel = readBodyLabelState(address);
 
@@ -81,6 +85,12 @@ function render(): void {
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
   for (const b of $$("#lights [data-light]")) pressed(b, b.dataset["light"] === state.light);
   for (const b of $$("#gotos [data-goto]")) pressed(b, b.dataset["goto"] === state.goto);
+  space.transition = state.transition;
+  space.pace = Number(state.pace);
+  for (const b of $$("#transitions [data-transition]")) pressed(b, b.dataset["transition"] === state.transition);
+  for (const b of $$("#paces [data-pace]")) pressed(b, b.dataset["pace"] === state.pace);
+  stageName.textContent = space.region === null ? "" : space.stats.region?.name ?? "";
+  (document.querySelector("#step-in") as HTMLButtonElement).disabled = space.region === null;
   for (const b of $$("#rides [data-ride]")) pressed(b, b.dataset["ride"] === state.ride);
   for (const b of $$("#ride-looks [data-ride-look]")) pressed(b, b.dataset["rideLook"] === state.rideLook);
   if (appliedRide !== `${state.ride}|${state.rideLook}`) {
@@ -107,6 +117,8 @@ function render(): void {
   address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
   address.set("goto", state.goto === "earth" || (state.goto as string) === "" ? null : state.goto);
+  address.set("tr", state.transition === "turn-travel" ? null : state.transition);
+  address.set("pace", state.pace === "1" ? null : state.pace);
   address.set("ride", state.ride === "" ? null : state.ride);
   address.set("rlook", state.rideLook === "down" ? null : state.rideLook);
 }
@@ -122,6 +134,21 @@ for (const b of $$("#scales [data-scale]")) b.addEventListener("click", () => ((
 for (const b of $$("#looks [data-look]")) b.addEventListener("click", () => ((state.look = b.dataset["look"] as typeof state.look), render()));
 for (const b of $$("#lights [data-light]")) b.addEventListener("click", () => ((state.light = b.dataset["light"] as typeof state.light), render()));
 for (const b of $$("#gotos [data-goto]")) b.addEventListener("click", () => goTo(b.dataset["goto"] as SpacePreset));
+for (const b of $$("#transitions [data-transition]")) b.addEventListener("click", () => ((state.transition = b.dataset["transition"] as typeof state.transition), render()));
+for (const b of $$("#paces [data-pace]")) b.addEventListener("click", () => ((state.pace = b.dataset["pace"] as typeof state.pace), render()));
+const stageName = document.querySelector<HTMLOutputElement>("#stage-name")!;
+// the stages out from the Sun: a step clears the Go to choice, since the view is at a stage, not at a preset
+document.querySelector("#step-out")!.addEventListener("click", () => {
+  if (space.stepOut() !== null) (state as { goto: string }).goto = "";
+  render();
+});
+document.querySelector("#step-in")!.addEventListener("click", () => {
+  const to = space.stepIn();
+  if (to === "sun") state.goto = "sun";
+  render();
+});
+space.addEventListener("wakusei-region", () => render());
+space.addEventListener("wakusei-hop", () => render());
 // riding along is for watching it go by: a ride starts the clock (Play), and the date box moves with it
 for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((state.ride = b.dataset["ride"] as typeof state.ride), (state.play = state.play || state.ride !== ""), render()));
 for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
