@@ -553,6 +553,41 @@ test("the space view with Starman shown draws nothing at rest, and switching the
   expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
 });
 
+test("the space view with the orbiters shown draws nothing at rest, and switching them on and off gives back what it took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&orbiters=1`);
+  await liveSky(page);
+  const drawnOrbiters = async () => ((await skyStats(page)) as unknown as { orbiters: { count: number } }).orbiters.count;
+  // the craft are drawn once the Moon is big on the screen: go to the Moon itself (the Go to row's Moon is the Earth and the Moon's orbit, where it is a few pixels across), and wait for the view to be at rest before counting
+  await sky(page).evaluate((el) => (el as unknown as { goTo(body: string, options: { smooth: boolean }): void }).goTo("moon", { smooth: false }));
+  await expect.poll(drawnOrbiters, { timeout: 90_000 }).toBeGreaterThan(0);
+  await atRest(page);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the orbiters shown").toBe(0);
+  expect(after.rafRequests - before.rafRequests, "no frame asked for at rest with the orbiters shown").toBe(0);
+  const round = async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await page.locator("#orbiters").dispatchEvent("click");
+      await expect.poll(drawnOrbiters, { timeout: 30_000 }).toBe(0);
+      await page.locator("#orbiters").dispatchEvent("click");
+      await expect.poll(drawnOrbiters, { timeout: 30_000 }).toBeGreaterThan(0);
+    }
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 3; i += 1) await round();
+  await atRest(page);
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  // and still nothing drawn at rest after the rounds
+  const again = await readCounts(page);
+  await settle(page, 3000);
+  expect((await readCounts(page)).draws - again.draws, "nothing drawn at rest after the rounds").toBe(0);
+});
+
 test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&ride=mars`);
   await liveSky(page);
