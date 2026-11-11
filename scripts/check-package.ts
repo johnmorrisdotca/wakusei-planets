@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "asteroids", "data/asteroids"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -103,3 +103,10 @@ try {
   outside = error instanceof RangeError;
 }
 if (!outside) throw new Error("roadster does not refuse a date outside its span");
+
+// The asteroids through package resolution: the table loads with the entry point, Eros is where its elements put it at their epoch (a distance from the Sun between perihelion and aphelion), and the counts hold.
+const asteroidsEntry = "@johnmorrisdotca/wakusei-planets/asteroids";
+const asteroids = await import(asteroidsEntry);
+const eros = asteroids.findAsteroid("Eros");
+const erosSun = Math.hypot(...(asteroids.asteroidPositionAu(eros, Date.UTC(2026, 5, 9)) as number[]));
+if (asteroids.ASTEROIDS.length !== 104 || eros.number !== 433 || erosSun < eros.elements.q || erosSun > eros.elements.a * (1 + eros.elements.e)) throw new Error("asteroids package entry failed");

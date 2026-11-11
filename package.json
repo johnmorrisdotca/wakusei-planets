@@ -336,6 +336,11 @@
       "types": "./dist/coordinates.d.ts",
       "import": "./dist/coordinates.js",
       "default": "./dist/coordinates.js"
+    },
+    "./asteroids": {
+      "types": "./dist/asteroids.d.ts",
+      "import": "./dist/asteroids.js",
+      "default": "./dist/asteroids.js"
     }
   },
   "files": [
