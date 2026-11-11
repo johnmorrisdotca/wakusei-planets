@@ -117,6 +117,9 @@ for (const scale of ["true", "compressed"] as const) {
         left = Math.min(left, now);
       }
       expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe(to);
+      const after = (await statsOf(page)) as unknown as { travelling: Travelling | null; ride: { gliding: boolean } };
+      expect(after.ride.gliding, "the move is over").toBe(false);
+      expect(after.travelling, "nothing is travelling after the move").toBeNull();
     });
   }
 }
@@ -170,7 +173,83 @@ test("under reduced motion every move is a cut", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1280, height: 900 } });
   const page = await context.newPage();
   await openSpace(page, "t=2026-11-02T14:00Z&play=off");
+  type Reading = { ride: { gliding: boolean }; travelling: Travelling | null; region: { id: string } | null };
+  const reading = async (): Promise<Reading> => (await statsOf(page)) as unknown as Reading;
   await callOn(page, "goTo", "mars");
-  expect(((await statsOf(page)) as unknown as { ride: { gliding: boolean } }).ride.gliding, "reduced motion: no move").toBe(false);
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe("mars");
+  expect((await reading()).ride.gliding, "reduced motion: no move").toBe(false);
+  expect((await reading()).travelling, "reduced motion: nothing travels").toBeNull();
+  // a step out from the Sun is a cut too: the stage is there at once, and nothing travels
+  await callOn(page, "goTo", "sun");
+  expect(await callOn(page, "stepOut")).toBe("inner-planets");
+  expect((await reading()).ride.gliding, "reduced motion: a step out is no move").toBe(false);
+  expect((await reading()).region?.id).toBe("inner-planets");
+  await expect.poll(async () => (await reading()).travelling, { timeout: 30_000 }).toBeNull();
+  expect(await callOn(page, "stepIn")).toBe("sun");
+  expect((await reading()).ride.gliding, "reduced motion: a step in is no move").toBe(false);
   await context.close();
+});
+
+test("a press while the camera is on its way starts a new move from where it is: no empty frame, it ends at the last body, and nothing travels after it", async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed");
+  await callOn(page, "goTo", "earth", { smooth: false });
+  await held(page);
+  await callOn(page, "goTo", "mars");
+  // wait until the first move has turned and is on its way: Mars is on the screen
+  await expect.poll(async () => (await read(page, "earth", "mars")).travelling?.stage ?? "", { timeout: 60_000 }).toMatch(/^(travel|arrive)$/);
+  await expect.poll(async () => (await read(page, "earth", "mars")).onScreen.destination, { timeout: 60_000 }).toBe(true);
+  const base = (await statsOf(page)).draws;
+  await callOn(page, "goTo", "jupiter");
+  const frames: Frame[] = [];
+  let lastDraw = base;
+  const started = Date.now();
+  for (;;) {
+    const now = await read(page, "mars", "jupiter");
+    if (now.draws !== lastDraw) {
+      lastDraw = now.draws;
+      frames.push(now);
+    }
+    if (!now.gliding && frames.length > 0) break;
+    if (Date.now() - started > 90_000) throw new Error("the second move never ended");
+  }
+  expect(frames.length, `${frames.length} frames of the second move were seen`).toBeGreaterThan(3);
+  for (const [i, frame] of frames.entries()) {
+    if (frame.travelling !== null) expect(frame.onScreen.leaving || frame.onScreen.destination, `frame ${i}: the Mars or Jupiter is on the screen`).toBe(true);
+  }
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe("jupiter");
+  const after = (await statsOf(page)) as unknown as { travelling: Travelling | null; ride: { gliding: boolean } };
+  expect(after.ride.gliding).toBe(false);
+  expect(after.travelling, "nothing is travelling after the move").toBeNull();
+});
+
+test("with a bar bound to the element a move that travels announces the side the camera comes from, the bar holds it, and the camera arrives from that side", async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=true");
+  await callOn(page, "goTo", "earth", { smooth: false });
+  await held(page);
+  const before = (await statsOf(page)).camera.position;
+  // every announcement of a hop, kept as the page hears it
+  await page.locator(SPACE).evaluate((el) => {
+    const heard: unknown[] = [];
+    Reflect.set(window, "__hops", heard);
+    el.addEventListener("wakusei-hop", (event) => heard.push((event as CustomEvent).detail));
+  });
+  await callOn(page, "goTo", "jupiter");
+  type Hop = { zoom?: number; yaw?: number; tilt?: number };
+  await expect.poll(() => page.evaluate(() => (Reflect.get(window, "__hops") as Hop[]).filter((one) => one.zoom !== undefined).length), { timeout: 30_000 }).toBeGreaterThan(0);
+  const hop = (await page.evaluate(() => Reflect.get(window, "__hops") as Hop[])).find((one) => one.zoom !== undefined)!;
+  expect(typeof hop.yaw, "the hop carries the yaw").toBe("number");
+  expect(typeof hop.tilt, "the hop carries the tilt").toBe("number");
+  await expect.poll(async () => ((await statsOf(page)) as unknown as { ride: { gliding: boolean } }).ride.gliding, { timeout: 90_000 }).toBe(false);
+  await held(page);
+  // the bar holds the side the hop named
+  const bar = await page.locator("#controls").evaluate((el) => (Reflect.get(el, "controller") as { state: { yaw: number; tilt: number } }).state);
+  expect(bar.yaw).toBeCloseTo(hop.yaw!, 6);
+  expect(bar.tilt).toBeCloseTo(hop.tilt!, 6);
+  // and the camera arrives from that side: looking the way it came, along the line from where it started (Jupiter is far off, so the way in is the way there)
+  const after = (await statsOf(page)) as unknown as { camera: { position: [number, number, number]; forward: [number, number, number] } };
+  const way: [number, number, number] = [after.camera.position[0] - before[0], after.camera.position[1] - before[1], after.camera.position[2] - before[2]];
+  const length = Math.hypot(...way);
+  expect(angle(after.camera.forward, [way[0] / length, way[1] / length, way[2] / length]), "the camera looks along the way it came").toBeLessThan(10);
 });

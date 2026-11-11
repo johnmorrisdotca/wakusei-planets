@@ -20,6 +20,7 @@ const STAGES = [
 
 interface Report {
   ride: { gliding: boolean };
+  travelling: unknown;
   region: { id: string; name: string; reach: number; distance: number } | null;
 }
 const report = async (page: Page): Promise<Report> => (await statsOf(page)) as unknown as Report;
@@ -34,7 +35,9 @@ const inBox = (page: Page, id: string): Promise<boolean> =>
 async function settled(page: Page, id: string | null): Promise<Report> {
   await expect.poll(async () => (await report(page)).ride.gliding, { timeout: 60_000 }).toBe(false);
   await expect.poll(async () => (await report(page)).region?.id ?? null, { timeout: 30_000 }).toBe(id);
-  return report(page);
+  const now = await report(page);
+  expect(now.travelling, "nothing is travelling once the stage is reached").toBeNull();
+  return now;
 }
 
 for (const scale of ["true", "compressed"] as const) {
@@ -98,6 +101,34 @@ test("at a stage a zoom-out gesture steps out and a zoom-in gesture steps in, on
   await page.mouse.wheel(0, -240);
   await page.keyboard.up("Control");
   await settled(page, "inner-planets");
+});
+
+test("a pinch that goes on for a second is one step, and the next gesture after a pause is another (reduced motion, so a step is a cut and nothing else holds a second step back)", async ({ browser }) => {
+  test.setTimeout(240_000);
+  const context = await browser.newContext({ reducedMotion: "reduce", viewport: { width: 1280, height: 900 } });
+  const page = await context.newPage();
+  await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed");
+  await callOn(page, "goTo", "inner-planets");
+  await settled(page, "inner-planets");
+  const box = (await page.locator(SPACE).boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  const pinch = async (deltaY: number): Promise<void> => {
+    await page.keyboard.down("Control");
+    // a turn of the wheel that goes on: an event every 100 milliseconds for 1.2 seconds
+    for (let i = 0; i < 12; i += 1) {
+      await page.mouse.wheel(0, deltaY);
+      await page.waitForTimeout(100);
+    }
+    await page.keyboard.up("Control");
+  };
+  await pinch(120);
+  await settled(page, "asteroid-belt");
+  // the gesture is over: nothing steps again on its own
+  await page.waitForTimeout(800);
+  expect((await report(page)).region?.id).toBe("asteroid-belt");
+  await pinch(120);
+  await settled(page, "outer-planets");
+  await context.close();
 });
 
 test("a Japanese page shows the stage's Japanese name", async ({ page }) => {
