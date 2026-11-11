@@ -115,6 +115,11 @@
       "ja": "探査機18機 (ボイジャー、ニュー・ホライズンズ、パイオニア、カッシーニ、ガリレオ、ジュノー、パーカー、ウェッブ、ベピコロンボ、プシケ、エウロパ・クリッパー、ルーシー、ジュース、はやぶさ2、オシリス・エイペックス、ソーラー・オービター): 情報、出来事、打ち上げから記録の終わりまでの任意の日の位置",
       "platform": "node"
     },
+    "./orbiters": {
+      "en": "The spacecraft in orbit round the Moon and Mars: where each is at a moment from mean elements fitted to JPL Horizons, its numbers, and what is known about it (about 9 kB)",
+      "ja": "月と火星を周回する探査機: JPL Horizonsに合わせた平均軌道要素から任意の時刻の位置、数値、各機の情報 (約9 kB)",
+      "platform": "node"
+    },
     "./roadster": {
       "en": "Starman and the Tesla Roadster: where it is on any date from 2018 to the start of 2036, its distances, speeds, orbit and the moments worth looking at (about 20 kB gzipped)",
       "ja": "スターマンとテスラ・ロードスター: 2018年から2036年初めまでの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",
