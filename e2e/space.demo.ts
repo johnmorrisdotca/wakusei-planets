@@ -518,20 +518,28 @@ test.describe("a reader who prefers reduced motion", () => {
     expect((await rideOf(page)).ride.gliding).toBe(false);
     await setOn(page, "speed", 60);
     await settle(page, 800);
-    // The draws are counted over the real time between the two reads, taken with the page's own clock: a wait of 4000 ms on a busy machine is 5 s or more by the time the second read
-    // is made,, and a count divided by the 4 it was meant to be overstates the rate (CI read 7 draws as 1.75 a second).
-    // Any picture that is still on its way (the Moon's, a minor body's) draws one frame when it arrives, which is not a step of the clock either: count from when nothing has been fetched for a second and a half.
+    // What the test is about is the clock's steps, which the element announces (`wakusei-time`, one for every step the clock takes): about one a second. The frames drawn are counted too, but only to keep a runaway
+    // out (a ride at 30 frames a second): a picture that finishes loading, or a name that settles, draws a frame that is not a step, and on a loaded runner a few of those arrive in four seconds.
     await page.waitForFunction(() => {
       const w = window as unknown as { __seen?: { n: number; at: number } };
       const n = performance.getEntriesByType("resource").length;
       if (w.__seen === undefined || w.__seen.n !== n) w.__seen = { n, at: performance.now() };
       return performance.now() - w.__seen.at > 1500;
     }, undefined, { polling: 250, timeout: 60_000 });
-    const read = () => page.locator(SPACE).evaluate((el) => ({ draws: (Reflect.get(el, "stats") as { draws: number }).draws, at: performance.now() }));
+    await page.locator(SPACE).evaluate((el) => {
+      const w = window as unknown as { __steps?: number };
+      w.__steps = 0;
+      el.addEventListener("wakusei-time", () => {
+        w.__steps = (w.__steps ?? 0) + 1;
+      });
+    });
+    const read = () => page.locator(SPACE).evaluate((el) => ({ draws: (Reflect.get(el, "stats") as { draws: number }).draws, steps: (window as unknown as { __steps: number }).__steps, at: performance.now() }));
     const s0 = await read();
     await page.waitForTimeout(4000);
     const s1 = await read();
     const seconds = (s1.at - s0.at) / 1000;
-    expect((s1.draws - s0.draws) / seconds, `${s1.draws - s0.draws} draws in ${seconds.toFixed(2)} s`).toBeLessThanOrEqual(1.6);
+    expect((s1.steps - s0.steps) / seconds, `${s1.steps - s0.steps} clock steps in ${seconds.toFixed(2)} s`).toBeLessThanOrEqual(1.6);
+    expect(s1.steps - s0.steps, "the clock does run").toBeGreaterThanOrEqual(2);
+    expect((s1.draws - s0.draws) / seconds, `${s1.draws - s0.draws} frames in ${seconds.toFixed(2)} s`).toBeLessThanOrEqual(3);
   });
 });
