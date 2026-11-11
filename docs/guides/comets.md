@@ -82,7 +82,7 @@ console.log(comet.kind, comet.periodYears?.toFixed(0), "years;", cometDistance(c
 console.log(cometOrbit(comet, 50).length / 3, "points");
 ```
 
-`cometFromElements` takes the elements as the Minor Planet Center and JPL publish them: `e`, `q` in au, `i`, `node` and `w` in degrees, and the time of perihelion either as `tp` (a Julian date in TDB, as JPL gives it) or as `perihelion` (a `Date` or milliseconds). It checks them, folds the angles into 0 to 360 and returns a record that every function takes in place of an id. The set is not changed by it. The kind is made from the orbit (a closed orbit under 200 years is periodic, any other is long-period); give `kind: "interstellar"` for one that is. The same door will take asteroids and further objects (MODULES-997's last point) in the same shape.
+`cometFromElements` takes the elements as the Minor Planet Center and JPL publish them: `e`, `q` in au, `i`, `node` and `w` in degrees, and the time of perihelion either as `tp` (a Julian date in TDB, as JPL gives it) or as `perihelion` (a `Date` or milliseconds). It checks them, folds the angles into 0 to 360 and returns a record that every function takes in place of an id. The set is not changed by it. The kind is made from the orbit (a closed orbit under 200 years is periodic, any other is long-period); give `kind: "interstellar"` for one that is. The same door will take asteroids and further objects in the same shape.
 
 ## When the input is wrong
 

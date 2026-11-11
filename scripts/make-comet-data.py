@@ -42,7 +42,7 @@ COMETS = [
     ("borrelly", "19P", "Borrelly", "ボレリー彗星", []),
     ("giacobini-zinner", "21P", "Giacobini-Zinner", "ジャコビニ・ツィンナー彗星", ["dra"]),
     ("schwassmann-wachmann-1", "29P", "Schwassmann-Wachmann 1", "シュワスマン・ワハマン第1彗星", []),
-    ("honda-mrkos-pajdusakova", "45P", "Honda-Mrkos-Pajdusakova", "ホンダ・ムルコス・パイドゥシャーコヴァー彗星", []),
+    ("honda-mrkos-pajdusakova", "45P", "Honda-Mrkos-Pajdusakova", "本田・ムルコス・パジュサーコヴァー彗星", []),
     ("wirtanen", "46P", "Wirtanen", "ウィルタネン彗星", []),
     ("tempel-tuttle", "55P", "Tempel-Tuttle", "テンペル・タットル彗星", ["leo"]),
     ("churyumov-gerasimenko", "67P", "Churyumov-Gerasimenko", "チュリュモフ・ゲラシメンコ彗星", []),
