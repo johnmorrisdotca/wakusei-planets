@@ -115,7 +115,8 @@ test("a pinch that goes on for a second is one step, and the next gesture after 
   const pinch = (gaps: number[]): Promise<string | null> =>
     page.locator(SPACE).evaluate((el, between) => {
       const real = performance.now.bind(performance);
-      let virtual = real() + 5_000;
+      // the test's clock goes on from where the call before left it
+      let virtual = (Reflect.get(window, "__clock") as number | undefined) ?? real() + 5_000;
       Object.defineProperty(performance, "now", { value: () => virtual, configurable: true });
       const box = el.getBoundingClientRect();
       try {
@@ -124,6 +125,7 @@ test("a pinch that goes on for a second is one step, and the next gesture after 
           el.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, ctrlKey: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true, cancelable: true, composed: true }));
         }
       } finally {
+        Reflect.set(window, "__clock", virtual);
         delete (performance as unknown as Record<string, unknown>)["now"];
       }
       return (Reflect.get(el, "region") as string | null) ?? null;
