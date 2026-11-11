@@ -2,7 +2,7 @@
 title: Starman and the Tesla Roadster
 section: how-to
 order: 18
-description: "Where the Tesla Roadster launched on the first Falcon Heavy is on any date from 2018 to the end of 2035, and its distances, speeds, orbit and moments worth looking at, from a 20 kB table of JPL Horizons state vectors."
+description: "Where the Tesla Roadster launched on the first Falcon Heavy is on any date from 2018 to the start of 2036, and its distances, speeds, orbit and moments worth looking at, from a 20 kB table of JPL Horizons state vectors."
 ---
 
 `/roadster` answers where the Tesla Roadster, with Starman at the wheel, is on a date, and what its numbers are. It is the car SpaceX launched on the first Falcon Heavy on 6 February 2018 into an orbit round the Sun. The path is a table of state vectors (position and velocity) from JPL Horizons, target `-143205`, which the module joins with cubic Hermite interpolation on position and velocity. It runs anywhere, with no DOM and no three.js, needs no loading step, and the table (about 20 kB gzipped) is part of this entry point only: a page that does not import `/roadster` does not carry it.

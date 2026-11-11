@@ -476,7 +476,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [What is nearby, and when bodies come close](docs/guides/nearest.md) | The nearest bodies to a body on a date, closest approaches and conjunctions, and how close they are to Horizons |
 | [Colouring sheets for children](docs/guides/kids-sheets.md) | Printable sheets of the Sun, planets and big moons, A4 and US Letter, English and Japanese, and the ready-made PDFs |
 | [Famous spacecraft](docs/guides/spacecraft.md) | Voyager, New Horizons, Pioneer, Cassini, Galileo, Juno, Parker and Webb: where they are and their whole voyage |
-| [Starman and the Tesla Roadster](docs/guides/roadster.md) | where the car launched on the first Falcon Heavy is on any date from 2018 to the end of 2035, its distances, speeds, orbit and key moments |
+| [Starman and the Tesla Roadster](docs/guides/roadster.md) | where the car launched on the first Falcon Heavy is on any date from 2018 to the start of 2036, its distances, speeds, orbit and key moments |
 | [Comets](docs/guides/comets.md) | 34 well-known comets with orbits from JPL: where each is on any date, its distances, orbit line, last and next perihelion, meteor showers, and a door to add a new comet |
 | [Places on the Moon and Mars](docs/guides/places.md) | every landing, rover, crash and impact site and the named features of the Moon and Mars, with positions, dates and sources, and the Sun's point, the terminator and the local solar time on any body |
 | [Data files](docs/guides/data-files.md) | CSV and Parquet tables of the bodies, orbits and spacecraft, for Python, R and Rust |
