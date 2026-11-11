@@ -19,6 +19,9 @@ const open = async (page: Page, query = "?date=2026-11-11"): Promise<string[]> =
 /** Two animation frames: whatever the page was going to do about a change has been done. */
 const settled = (page: Page): Promise<unknown> => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
 const dot = (plan: Locator, id: string): Locator => plan.locator(`g[data-id="${id}"]`);
+/** The dot's own mark, which a press lands on (the group's box also holds its name and its wider hit area, and a neighbour's hit area can lie over the middle of it). */
+const shape = (plan: Locator, id: string): Locator => dot(plan, id).locator("circle:not(.hit):not(.ring), rect").first();
+const search = (page: Page): Promise<string> => page.evaluate(() => location.search);
 
 test("the page: two insets of a size to sit beside another, choices in rows of clicks, no fold-open sections, nothing scrolls sideways", async ({ page }, info) => {
   const errors = await open(page);
@@ -49,14 +52,15 @@ test("a press on a dot marks it and sends the body's id; a planet with moons als
     Reflect.set(window, "__picks", []);
     el.addEventListener("wakusei-plan-pick", (event) => (Reflect.get(window, "__picks") as unknown[]).push((event as CustomEvent).detail));
   });
-  await dot(sun(page), "saturn").click();
+  await shape(sun(page), "saturn").click();
   expect(await page.evaluate(() => Reflect.get(window, "__picks"))).toEqual([{ id: "saturn", kind: "planet" }]);
   await expect.poll(() => marked(sun(page))).toBe("saturn");
   await expect.poll(() => moons(page).evaluate((el) => (el as Plan).plan?.system)).toBe("saturn");
   expect(await marked(moons(page))).toBe("saturn");
-  await dot(moons(page), "titan").click();
+  await shape(moons(page), "titan").click();
   await expect.poll(() => marked(moons(page))).toBe("titan");
-  expect(await page.evaluate(() => location.search)).toContain("moon=titan");
+  // the address is written a moment after the choice
+  await expect.poll(() => search(page)).toContain("moon=titan");
   // a row of clicks does the same
   await page.locator('#sun-marks button[data-id="venus"]').click();
   await expect.poll(() => marked(sun(page))).toBe("venus");
@@ -71,6 +75,8 @@ test("the keyboard: a dot takes the focus, Enter marks it, and the focus stays o
 });
 
 test("a plan draws only when an input changes: not when nothing changes, not when the same value is written, not while it is out of sight", async ({ page }) => {
+  // tall enough that the page does not scroll, so the plans stay in view until the test moves them away
+  await page.setViewportSize({ width: 1280, height: 1500 });
   await open(page);
   const first = await draws(sun(page));
   await settled(page);
@@ -83,7 +89,9 @@ test("a plan draws only when an input changes: not when nothing changes, not whe
   // one change, one draw, in each plan
   const moonsFirst = await draws(moons(page));
   await page.locator('#spacings button[data-spacing="true"]').click();
-  await expect.poll(() => draws(sun(page))).toBe(first + 1);
+  await expect(page.locator('#spacings button[data-spacing="true"]')).toHaveAttribute("aria-pressed", "true");
+  const where = await page.evaluate(() => ({ scrollY, top: document.querySelector("wakusei-plan")!.getBoundingClientRect().top, spacing: document.querySelector("wakusei-plan")!.getAttribute("spacing") }));
+  await expect.poll(() => draws(sun(page)), { message: `after the click: ${JSON.stringify(where)}` }).toBe(first + 1);
   expect(await draws(moons(page))).toBe(moonsFirst + 1);
   expect(await sun(page).evaluate((el) => (el as Plan).plan?.spacing)).toBe("true");
   // out of sight: a change is not drawn until the plan is seen again
@@ -128,7 +136,7 @@ test("the date moves the dots, in rows of clicks and in the box, and Today goes 
   await expect.poll(where).toBe(start);
   await page.locator("#date").fill("2030-05-05");
   await expect.poll(() => sun(page).evaluate((el) => new Date((el as Plan).plan!.time).getFullYear())).toBe(2030);
-  expect(await page.evaluate(() => location.search)).toContain("date=2030-05-05");
+  await expect.poll(() => search(page)).toContain("date=2030-05-05");
 });
 
 test("a craft or a small body can be marked: the plan stands out to hold it", async ({ page }) => {
