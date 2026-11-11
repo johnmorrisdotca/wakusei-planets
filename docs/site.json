@@ -239,6 +239,11 @@
       "en": "Pure coordinate conversions",
       "ja": "座標変換",
       "platform": "node"
+    },
+    "./asteroids": {
+      "en": "104 asteroids, trojans, centaurs and trans-Neptunian objects from JPL's Small-Body Database: orbits, sizes, the spacecraft that visited them, and where each is on any date (about 18 kB gzipped)",
+      "ja": "JPL の小天体データベースから、小惑星・トロヤ群・ケンタウルス族・太陽系外縁天体104個: 軌道、大きさ、訪れた探査機、任意の日の位置 (gzip で約18 kB)",
+      "platform": "node"
     }
   }
 }
