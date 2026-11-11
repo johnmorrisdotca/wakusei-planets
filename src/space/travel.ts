@@ -365,6 +365,8 @@ interface Turn {
   lift: number;
   fov0: number;
   fov1: number;
+  /** Where the camera starts near the body left and the pivot is far off: the turn begins as a turn about that body (kept at `u`, `d` away, backing off to `far` times that) and gives way to the pivot's circle over the first `q` of the turn. */
+  hold?: { body: TravelBody; u: Vec3; d: number; q: number; far: number };
 }
 /** The way on, from the camera's place relative to the body `about`: a straight `line`, or straight at the body and then round it (`swing`). */
 interface Leg {
@@ -407,7 +409,11 @@ function turnAt(turn: Turn, p: number, t: number): { position: Vec3; o: Facing; 
   // the lift is early: the camera backs off as it starts to turn, so the body left goes into the picture, not out of its side
   const w = Math.sqrt(p);
   const d = Math.exp(Math.log(turn.d0) + (Math.log(turn.d1) - Math.log(turn.d0)) * p + turn.lift * 4 * w * (1 - w));
-  return { position: sub(placeOf(turn.pivot, t), scale(toScene(o, arc(turn.u0, turn.u1, p)), d)), o, fov: fovBetween(turn.fov0, turn.fov1, p) };
+  const position = sub(placeOf(turn.pivot, t), scale(toScene(o, arc(turn.u0, turn.u1, p)), d));
+  if (turn.hold === undefined) return { position, o, fov: fovBetween(turn.fov0, turn.fov1, p) };
+  // the turn about the body left, kept where it was in the picture, handing over to the circle of the pivot
+  const near = sub(placeOf(turn.hold.body, t), scale(toScene(o, turn.hold.u), turn.hold.d * (1 + (turn.hold.far - 1) * smooth(p / turn.hold.q))));
+  return { position: mix(near, position, smooth(p / turn.hold.q)), o, fov: fovBetween(turn.fov0, turn.fov1, p) };
 }
 
 function legAt(leg: Leg, q: number, t: number): { position: Vec3; o: Facing; fov: number } {
@@ -636,22 +642,43 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
     } else if (family && turn.pivot !== input.leaving) {
       // the planet is held, not the moon left: back the turn off in its middle until one of the two bodies is in the picture at every moment of it
       const frameAt = (fov: number): Frame => frameOf(fov, input.aspect);
-      let best = { lift: 0, missed: Number.POSITIVE_INFINITY };
-      for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
+      const missing = (candidate: Turn): number => {
         let missed = 0;
         for (let i = 1; i < 64; i += 1) {
-          const t = (share * i) / 64;
-          const at = turnAt({ ...turn, lift }, ease(i / 64), t);
-          const frame = frameAt(at.fov);
-          const seen = (body: TravelBody): boolean => {
-            const sight = sightOf(body, t, at.position, at.o, frame);
-            return sight.inside && Math.abs(sight.x) <= 0.97 && Math.abs(sight.y) <= 0.97;
-          };
-          if (!seen(input.leaving) && !seen(input.destination)) missed += 1;
+          // the first moments are sampled finely: the body left is nearest then, and nearest to being lost
+          for (const x of i === 1 ? [0.0005, 0.001, 0.002, 0.004, 0.008, 1 / 64] : [i / 64]) {
+            const t = share * x;
+            const at = turnAt(candidate, ease(x), t);
+            const frame = frameAt(at.fov);
+            const seen = (body: TravelBody): boolean => {
+              const sight = sightOf(body, t, at.position, at.o, frame);
+              return sight.inside && Math.abs(sight.x) <= 0.9 && Math.abs(sight.y) <= 0.9;
+            };
+            if (!seen(input.leaving) && !seen(input.destination)) missed += 1;
+          }
         }
-        if (missed < best.missed) best = { lift, missed };
+        return missed;
+      };
+      let best: { turn: Turn; missed: number } = { turn, missed: Number.POSITIVE_INFINITY };
+      for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
+        const missed = missing({ ...turn, lift });
+        if (missed < best.missed) best = { turn: { ...turn, lift }, missed };
       }
-      turn = { ...turn, lift: best.lift };
+      if (best.missed > 0) {
+        // the body left is near the camera and the planet far off, so the circle of the planet carries the camera away from the body left at once: begin by turning about the body left instead
+        const u = unit(toCamera(facingOf(input.start), sub(input.leaving.from, input.start.position)));
+        const d = Math.max(1e-12, length(sub(input.leaving.from, input.start.position)));
+        for (const far of [1, 2, 4, 8, 16]) {
+          for (const q of [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]) {
+            for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
+              const candidate: Turn = { ...turn, lift, hold: { body: input.leaving, u, d, q, far } };
+              const missed = missing(candidate);
+              if (missed < best.missed) best = { turn: candidate, missed };
+            }
+          }
+        }
+      }
+      turn = best.turn;
       const t0 = turnMs(turn);
       share = t0 / (t0 + legMs(leg, t0));
     }

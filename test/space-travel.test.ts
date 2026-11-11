@@ -52,11 +52,11 @@ function site(id: BodyId, mode: ScaleMode, ms: number): { at: Vec3; radius: numb
 const bodyOf = (id: BodyId, mode: ScaleMode): TravelBody => ({ from: site(id, mode, START).at, to: site(id, mode, START + SPAN).at, radius: site(id, mode, START).radius });
 
 /** The framed view at a body at a moment: beside a moon with its planet behind it, or the whole body from the side `from` is on. */
-function viewOf(id: BodyId, mode: ScaleMode, ms: number, aspect: number, from: Vec3): TravelView {
+function viewOf(id: BodyId, mode: ScaleMode, ms: number, aspect: number, from: Vec3, plain = false): TravelView {
   const here = site(id, mode, ms);
   const sun = site("sun", mode, ms).at;
   const host = hostOf(id);
-  if (host !== undefined) {
+  if (host !== undefined && !plain) {
     const planet = site(host, mode, ms);
     const camera = besideMoon({ moon: here.at, moonRadius: here.radius, host: planet.at, hostRadius: planet.radius, sun, aspect, zoom: 1, yaw: 0, tilt: 0, north: orientation(host, ms).pole });
     return { position: camera.position, forward: camera.forward, up: camera.up, fov: camera.fov };
@@ -70,7 +70,8 @@ interface Move {
   bodies: { id: BodyId; body: TravelBody }[];
 }
 
-function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, kind?: TravelKind): Move {
+/** `plain` gives both views as the space view frames a body it goes to (the whole body from the side the camera is on, a moon too), not beside a moon with its planet behind it. */
+function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, kind?: TravelKind, plain: boolean | Vec3 = false): Move {
   const names = new Set<BodyId>([a, b, "sun"]);
   for (const id of [a, b]) {
     const host = hostOf(id);
@@ -82,9 +83,11 @@ function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, kind?: Tr
   const get = (id: BodyId): TravelBody => bodies.find((entry) => entry.id === id)!.body;
   // the first view: a moon from beside it; a planet from its sunward side, a little north; the Sun from the Earth's side
   const sunNow = site("sun", mode, START).at;
-  const first = a === "sun" ? site("earth", mode, START).at : [sunNow[0], sunNow[1] + 0.3 * length(sub(sunNow, site(a, mode, START).at)), sunNow[2]] as Vec3;
-  const start = viewOf(a, mode, START, aspect, first);
-  const end = viewOf(b, mode, START + SPAN, aspect, start.position);
+  const sunSide = a === "sun" ? site("earth", mode, START).at : [sunNow[0], sunNow[1] + 0.3 * length(sub(sunNow, site(a, mode, START).at)), sunNow[2]] as Vec3;
+  // `plain` as a direction: the camera comes from that side of the body left
+  const first = Array.isArray(plain) ? [site(a, mode, START).at[0] + plain[0], site(a, mode, START).at[1] + plain[1], site(a, mode, START).at[2] + plain[2]] as Vec3 : sunSide;
+  const start = viewOf(a, mode, START, aspect, first, plain !== false);
+  const end = viewOf(b, mode, START + SPAN, aspect, start.position, plain !== false);
   const input: TravelInput = { start, end, leaving: get(a), destination: get(b), around: shared === undefined ? undefined : get(shared), others: bodies.map((entry) => entry.body), aspect, kind };
   return { input, bodies };
 }
@@ -204,6 +207,24 @@ for (const [a, b] of PAIRS) {
         const w = walk(moveOf(a, b, mode, shape.aspect), { bent: BENT[`${a} to ${b}`] });
         row(`${a} to ${b}`, mode, shape.name, w);
         assert.deepEqual(w.faults, [], `${a} to ${b}, ${mode}, ${shape.name}`);
+      }
+    });
+  }
+}
+
+// the views the space view really frames: a moon is looked at whole, from the side the camera comes from, with its planet wherever it lies, so the first view may have its planet out of the picture and
+// the body left near the camera while the planet is far off (the bodies of a moon to moon move are then a long way from the planet's circle)
+/** Where the camera comes from, as a direction from the body left: along each axis and between them. */
+const SIDES: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1], [1, 1, 0], [-1, 1, 1], [1, -1, -1], [-1, -1, 1]];
+for (const [a, b] of [["callisto", "europa"], ["io", "ganymede"], ["titan", "enceladus"], ["oberon", "miranda"]] as [BodyId, BodyId][]) {
+  for (const mode of SCALES) {
+    test(`${a} to ${b} from plain views, ${mode}: one of the two is in the picture at every moment from the first, and the turn is never undone`, () => {
+      for (const shape of SHAPES) {
+        for (const side of SIDES) {
+          const w = walk(moveOf(a, b, mode, shape.aspect, undefined, side), { bent: BENT[`${a} to ${b}`] });
+          row(`${a} to ${b} (plain)`, mode, shape.name, w);
+          assert.deepEqual(w.faults.filter((text) => !/planet circled/.test(text)), [], `${a} to ${b}, ${mode}, ${shape.name}, from ${side.join(",")}`);
+        }
       }
     });
   }
