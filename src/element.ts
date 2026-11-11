@@ -310,7 +310,7 @@ export class WakuseiBody extends HTMLElement {
   }
 
   /**
-   * Turn the body so a place is in the middle of the disc, at a pace you can follow (at once for a reader who prefers reduced motion or with `smooth: false`); the zoom stays. The place is an id (`moon/apollo-11-lunar-module`),
+   * Turn the body so a place is in the middle of the disc, at a pace you can follow while the picture is live (at once for a still, for a reader who prefers reduced motion, or with `smooth: false`); the zoom stays. The place is an id (`moon/apollo-11-lunar-module`),
    * or an English or Japanese name. A body that turns by itself carries the place on from there (`turn="0"` keeps it). Resolves the place, or `undefined` when the body has no place by that name.
    *
    * @param text - The place's id or name.
@@ -333,7 +333,8 @@ export class WakuseiBody extends HTMLElement {
       else this.setView({ yaw, tilt, roll: this.#roll, zoom: this.#zoom });
     };
     const glide = (this.#placeGlide += 1);
-    if (options.smooth === false || this.#reduce || typeof requestAnimationFrame !== "function") {
+    // a still (not live) is made again for every change of view: it goes there at once
+    if (options.smooth === false || this.#reduce || this.#view?.live !== true || typeof requestAnimationFrame !== "function") {
       apply(to.yaw, to.tilt, true);
       return place;
     }
