@@ -105,6 +105,11 @@
       "ja": "有名な探査機10機 (ボイジャー、ニュー・ホライズンズ、パイオニア、カッシーニ、ガリレオ、ジュノー、パーカー、ウェッブ): 情報、出来事、打ち上げから記録の終わりまでの任意の日の位置",
       "platform": "node"
     },
+    "./roadster": {
+      "en": "Starman and the Tesla Roadster: where it is on any date from 2018 to 2035, its distances, speeds, orbit and the moments worth looking at (about 20 kB gzipped)",
+      "ja": "スターマンとテスラ・ロードスター: 2018年から2035年までの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",
+      "platform": "node"
+    },
     "./suncalc": {
       "en": "The Sun and Moon from a place: position, sunrise and sunset, Moon rise, set and phase, with suncalc 2's names and a better engine",
       "ja": "場所から見た太陽と月: 位置、日の出と日の入り、月の出入りと月相。suncalc 2 と同じ名前で、より正確です",
