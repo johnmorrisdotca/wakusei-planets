@@ -28,7 +28,7 @@ Save this as `saturn.html` and open it. The `<wakusei-body>` tag is the body; th
 </html>
 ```
 
-`body` is the name of the body (`sun`, `mercury`, `venus`, `earth`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, the dwarf planets `ceres`, `orcus`, `haumea`, `quaoar`, `makemake`, `gonggong`, `eris` and `sedna`, `moon` and the moons of the planets). `look="line"` is a clean outline drawing, an SVG that needs nothing else. The disc leans at Saturn's own axial tilt, 26.73 degrees, and the rings are open as a viewer above the north pole would see them. `size` is the width in pixels.
+`body` is the name of the body (`sun`, `mercury`, `venus`, `earth`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, the dwarf planets `ceres`, `orcus`, `haumea`, `quaoar`, `makemake`, `gonggong`, `eris` and `sedna`, the minor bodies `vesta`, `pallas`, `chiron`, `pholus` and `halley`, `moon` and the moons of the planets). `look="line"` is a clean outline drawing, an SVG that needs nothing else. The disc leans at Saturn's own axial tilt, 26.73 degrees, and the rings are open as a viewer above the north pole would see them. `size` is the width in pixels.
 
 ## 2. Let the reader turn it
 

@@ -5,7 +5,7 @@ order: 18
 description: The bodies nearest to a body on a date, by angle in the sky or distance in space, and the moments two bodies come closest, checked against JPL Horizons to seconds of time.
 ---
 
-`/nearest` answers three questions about the Sun, the planets, the dwarf planets and the moons: *what is next to this one on a date?*, *when do these two come closest?* and *how far apart are these two, and how far apart do they get?* It is good for a game ("which planet is the Moon beside tonight?"), a calendar of conjunctions, or a label on a chart. It runs anywhere, with no browser, on the package's own positions.
+`/nearest` answers three questions about the Sun, the planets, the dwarf planets, the minor bodies (Vesta, Pallas, Chiron, Pholus, Halley) and the moons: *what is next to this one on a date?*, *when do these two come closest?* and *how far apart are these two, and how far apart do they get?* It is good for a game ("which planet is the Moon beside tonight?"), a calendar of conjunctions, or a label on a chart. It runs anywhere, with no browser, on the package's own positions.
 
 ```ts
 import { closestApproach, conjunctions, distance, distanceRange, nearest, within } from "@johnmorrisdotca/wakusei-planets/nearest";
@@ -33,7 +33,7 @@ console.log(conjunctions({ from: Date.UTC(2023, 0, 1), to: Date.UTC(2024, 0, 1),
 | `distance(a, b, date)` | the straight-line distance between two bodies on a date, in km and au |
 | `distanceRange(a, b, { from, to })` | the least and the greatest distance of two bodies over a span, each with its moment |
 
-A body is a name such as `"mars"`, `"moon"` or `"io"`, the same names as the rest of the package. The Sun, the planets, the dwarf planets and the moons are all searched. Stars are in [`/stars`](stars.md); a star is not a target here.
+A body is a name such as `"mars"`, `"moon"` or `"io"`, the same names as the rest of the package. The Sun, the planets, the dwarf planets, the minor bodies and the moons are all searched (a minor body's `kind` is `asteroid`, `centaur` or `comet`). Stars are in [`/stars`](stars.md); a star is not a target here.
 
 ## The options
 
@@ -45,7 +45,7 @@ The same options mean the same in every function, and are the names the other pa
 | `date` | a `Date` or milliseconds since 1970 (UTC); default now |
 | `count` | how many to return: 5 by default, or every body inside `within` when that is given |
 | `within` | only bodies this close: degrees for `by: "sky"`, kilometres for `by: "space"` |
-| `kind` | only this kind (`"planet"`, `"dwarf-planet"`, `"moon"` or `"star"`, which is the Sun), or a list of kinds |
+| `kind` | only this kind (`"planet"`, `"dwarf-planet"`, `"asteroid"`, `"centaur"`, `"comet"`, `"moon"` or `"star"`, which is the Sun), or a list of kinds |
 | `bodies` | search only these bodies |
 | `observer` | where the sky is seen from: the Earth's centre by default; `{ latitude, longitude, heightM }` for a place on the Earth; or a body's name (`"mars"`) for the sky of that body |
 
