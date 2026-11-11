@@ -8,12 +8,13 @@ const sun = (page: Page): Locator => page.locator("wakusei-plan#plan-sun");
 const moons = (page: Page): Locator => page.locator("wakusei-plan#plan-moons");
 const draws = (plan: Locator): Promise<number> => plan.evaluate((el) => (el as Plan).draws);
 const marked = (plan: Locator): Promise<string | undefined> => plan.evaluate((el) => (el as Plan).plan?.marked);
-const open = async (page: Page, query = "?date=2026-11-11"): Promise<string[]> => {
+const open = async (page: Page, query = "?date=2026-11-11", both = true): Promise<string[]> => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`/wakusei-planets/plan.html${query}`);
   await expect(sun(page)).toHaveAttribute("data-state", "ready");
-  await expect(moons(page)).toHaveAttribute("data-state", "ready");
+  // a plan below the first screen is not drawn until it is seen
+  if (both) await expect(moons(page)).toHaveAttribute("data-state", "ready");
   return errors;
 };
 /** Two animation frames: whatever the page was going to do about a change has been done. */
@@ -100,7 +101,7 @@ test("a plan draws only when an input changes: not when nothing changes, not whe
     spacer.id = "spacer";
     spacer.style.height = "5000px";
     document.querySelector("main")!.prepend(spacer);
-    window.scrollTo(0, 4000);
+    window.scrollTo(0, 1000);
   });
   await settled(page);
   const before = await draws(sun(page));
@@ -108,7 +109,7 @@ test("a plan draws only when an input changes: not when nothing changes, not whe
   await settled(page);
   await settled(page);
   expect(await draws(sun(page))).toBe(before);
-  await page.evaluate(() => window.scrollTo(0, 0));
+  await sun(page).scrollIntoViewIfNeeded();
   await expect.poll(() => draws(sun(page))).toBe(before + 1);
   expect(await sun(page).evaluate((el) => (el as Plan).plan?.time)).toBe(Date.UTC(2027, 0, 1));
 });
@@ -187,7 +188,10 @@ test("light and dark follow the page, and Japanese follows the page's language",
 
 test("a phone: the two insets stack or sit side by side without going past the screen", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
-  await open(page);
+  await open(page, "?date=2026-11-11", false);
+  // the second plan is below the first screen on a phone: it is drawn when it is scrolled to
+  await moons(page).scrollIntoViewIfNeeded();
+  await expect(moons(page)).toHaveAttribute("data-state", "ready");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   for (const plan of [sun(page), moons(page)]) {
     const box = (await plan.boundingBox())!;
