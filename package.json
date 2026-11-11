@@ -91,6 +91,7 @@
     "./dist/portrait/element.js",
     "./dist/lineup/element.js",
     "./dist/space/element.js",
+    "./dist/plan/element.js",
     "./dist/bodies/*.js",
     "./dist/tables/*.js",
     "./dist/craft/*.js",
@@ -98,6 +99,7 @@
     "./src/portrait/element.ts",
     "./src/lineup/element.ts",
     "./src/space/element.ts",
+    "./src/plan/element.ts",
     "./src/bodies/*.ts",
     "./src/tables/*.ts",
     "./src/craft/*.ts"
@@ -135,6 +137,16 @@
       "types": "./dist/space/element.d.ts",
       "import": "./dist/space/element.js",
       "default": "./dist/space/element.js"
+    },
+    "./plan": {
+      "types": "./dist/plan/index.d.ts",
+      "import": "./dist/plan/index.js",
+      "default": "./dist/plan/index.js"
+    },
+    "./plan/element": {
+      "types": "./dist/plan/element.d.ts",
+      "import": "./dist/plan/element.js",
+      "default": "./dist/plan/element.js"
     },
     "./time": {
       "types": "./dist/time.d.ts",
