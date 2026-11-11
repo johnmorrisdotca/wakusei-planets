@@ -21,6 +21,8 @@ export {
   OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
+  Points,
+  PointsMaterial,
   RepeatWrapping,
   RGBAFormat,
   RingGeometry,

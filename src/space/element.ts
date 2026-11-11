@@ -26,6 +26,7 @@ import { groundDirection } from "./aim.ts";
 import { besideMoon } from "./beside.ts";
 import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
+import type { MoonDot } from "./all-moons.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type SpaceBody, type SpaceLight };
@@ -181,7 +182,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
  * (`"lon,lat"`), `time` (`now` or an ISO date), `speed` (1 is real time, 0 holds, 86400 is a day a second, negative runs backwards), `scale` (`compressed` or `true`), `look` (`realistic` or `painted`),
- * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), and `texture-base`, `texture-far-base`, `max-texture` and `tiles` (where the finer map tiles are, for a close zoom; `off` for none). Positions come from this package's own models. It draws
+ * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), `all-moons` (every other known moon as a dot round its planet, from `/moon-catalogue`, fetched when first asked for), and `texture-base`, `texture-far-base`, `max-texture` and `tiles` (where the finer map tiles are, for a close zoom; `off` for none). Positions come from this package's own models. It draws
  * only when something changes, and nothing while it is out of sight.
  *
  * `immersive` makes it a full-screen view: it fills the box it is in, whatever the shape (the body looked at is framed by the shorter side), the plain wheel zooms and a drag anywhere on it turns it. Without it Ctrl, Command or Alt with the wheel zooms and the plain wheel scrolls the page.
@@ -207,9 +208,11 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "all-moons", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
+  #allMoons = false;
+  #catalogue: Promise<(ms: number) => readonly MoonDot[]> | undefined;
   #clock: GameClock = createGameClock("now", 1);
   #view: View | undefined;
   #gate: Gate | undefined;
@@ -356,6 +359,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "roadster") this.roadster = value !== null && value !== "off";
     else if (name === "orbiters") this.orbiters = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
+    else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "help-through") this.helpThrough = value !== null && value !== "off";
@@ -574,6 +578,32 @@ export class WakuseiSpace extends HTMLElement {
   set orbits(value: boolean) {
     this.#model.orbits = value;
     this.#gate?.request();
+  }
+
+  /**
+   * Whether every other known moon is drawn as a small dot round its planet (the attribute `all-moons`): the moons of `/moon-catalogue` the view does not draw in full, each at its mean-orbit place. The catalogue is fetched,
+   * as a chunk of its own, the first time they are turned on; a view that never turns them on never loads it.
+   */
+  get allMoons(): boolean {
+    return this.#allMoons;
+  }
+  set allMoons(value: boolean) {
+    this.#allMoons = value;
+    if (!value) {
+      this.#model.allMoons = null;
+      this.#gate?.request();
+      return;
+    }
+    this.#catalogue ??= import("../moon-catalogue.ts").then(({ MOON_CATALOGUE, catalogueMoonPosition }) => {
+      const hosts: readonly string[] = [...SPACE_PLANETS, ...SPACE_DWARFS];
+      const shown = MOON_CATALOGUE.filter((m) => !m.full && m.orbit !== null && hosts.includes(m.host));
+      return (ms: number) => shown.map((m) => ({ host: m.host as SpacePlanet | SpaceDwarf, km: catalogueMoonPosition(m, ms)! }));
+    });
+    void this.#catalogue.then((dots) => {
+      if (!this.#allMoons) return;
+      this.#model.allMoons = dots;
+      this.#gate?.request();
+    });
   }
 
   /** How many small arrowheads each orbit line carries to show which way the body goes: 2 by default, at most 4, 0 for none (the attribute `arrows` says the same). Anything else is made a whole number in that range. */
@@ -1113,6 +1143,8 @@ export class WakuseiSpace extends HTMLElement {
     region: { id: string; name: string; reach: number; distance: number } | null;
     /** The data door: the small bodies in the one instanced draw, and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
     door: { points: number; sources: ReturnType<DoorHost["book"]["stats"]> };
+    /** The catalogue's other moons (`all-moons`): whether they are asked for, whether the catalogue has loaded, and how many dots the last draw drew. */
+    allMoons: { on: boolean; loaded: boolean; dots: number };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
     orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
@@ -1142,6 +1174,7 @@ export class WakuseiSpace extends HTMLElement {
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, sources: this.#door.book.stats() },
+      allMoons: { on: this.#allMoons, loaded: this.#model.allMoons !== null, dots: this.#model.moonDots },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
