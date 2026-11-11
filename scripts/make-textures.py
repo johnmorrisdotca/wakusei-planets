@@ -393,7 +393,8 @@ def make(body):
     elif body == "charon":
         img = fill_unseen(img, "south", margin=12, fade=0.1, depth=40)
     elif body == "mimas":
-        img = img[163:1951, 201:3736]
+        # the map inside its frame: the gap between the frame and the map is black, and a wider box left a black strip of 22 columns at the seam (a dark band pole to pole on the globe)
+        img = img[183:1926, 226:3718]
     big = Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8))
     for w in [x for x in WIDTHS if x <= MAX_WIDTH.get(body, 2048)]:
         small = big.resize((w, w // 2), Image.LANCZOS)

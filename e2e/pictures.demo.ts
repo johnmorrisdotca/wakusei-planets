@@ -75,3 +75,39 @@ test("a small dwarf planet in the realistic look is smooth: soft craters, no pix
     }
   }
 });
+
+test("no surface picture has a black strip at its edges: the seam of every map is real surface on both sides", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "one browser is enough for a read of the pictures");
+  await page.goto(URL);
+  const names = await page.evaluate(async () => {
+    const list = await (await fetch("textures/SOURCES.json")).json() as Record<string, unknown>;
+    return Object.keys(list).filter((name) => name !== "saturn-ring");
+  });
+  expect(names.length).toBeGreaterThan(20);
+  // the mean brightness of the first and last two columns and rows of each 512 picture: a black strip (Mimas's map once had 22 black columns at the seam, a dark band pole to pole on the globe) reads under 0.06
+  const dark = await page.evaluate(async (bodies) => {
+    const out: string[] = [];
+    for (const body of bodies) {
+      const img = new Image();
+      img.src = `textures/${body}-512.webp`;
+      await img.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(img, 0, 0);
+      const data = context.getImageData(0, 0, img.width, img.height).data;
+      const mean = (xs: number[], ys: number[]): number => {
+        let sum = 0;
+        for (const x of xs) for (const y of ys) sum += data[(y * img.width + x) * 4]! + data[(y * img.width + x) * 4 + 1]! + data[(y * img.width + x) * 4 + 2]!;
+        return sum / (3 * 255 * xs.length * ys.length);
+      };
+      const all = (n: number): number[] => Array.from({ length: n }, (_, i) => i);
+      const edges = { left: mean([0, 1], all(img.height)), right: mean([img.width - 2, img.width - 1], all(img.height)), top: mean(all(img.width), [0, 1]), bottom: mean(all(img.width), [img.height - 2, img.height - 1]) };
+      for (const [edge, value] of Object.entries(edges)) if (value < 0.06) out.push(`${body} ${edge} ${value.toFixed(3)}`);
+    }
+    return out;
+  }, names);
+  // the Sun's picture is a photograph of the disc turned onto the sphere, and the poles of some maps were never imaged (Triton's south, Charon's north): black there is honest, so only the seam (left and right) must be clean
+  expect(dark.filter((line) => / (left|right) /.test(line)), "black columns at a seam").toEqual([]);
+});
