@@ -35,7 +35,7 @@ test("every record has a source and a name in both languages, every id is unique
       assert.ok(Number.isFinite(place.lat) && Number.isFinite(place.lon), place.id);
       assert.ok(place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180, `${place.id} at ${place.lat}, ${place.lon}`);
       assert.ok(place.name.en.length > 0 && place.name.ja.length > 0, place.id);
-      assert.ok(["iau-gazetteer", "gcat-landercat", "nssdca", "agency"].includes(place.source.id) && /^\d{4}-\d{2}-\d{2}$/.test(place.source.read), place.id);
+      assert.ok(["iau-gazetteer", "gcat-landercat", "nssdca", "pds-ode", "nasa-mars24", "agency"].includes(place.source.id) && /^\d{4}-\d{2}-\d{2}$/.test(place.source.read), place.id);
       if (place.kind === "feature") {
         assert.equal(place.source.id, "iau-gazetteer", place.id);
         assert.ok(place.feature !== undefined && place.feature.diameterKm >= 0 && /^\d{4}-\d{2}-\d{2}$/.test(place.feature.approved), place.id);
@@ -53,20 +53,29 @@ test("every record has a source and a name in both languages, every id is unique
   assert.equal(findPlace(moon, "Apollo 11 lunar module")!.approximate, undefined);
   assert.equal(moon.filter((p) => p.approximate).length, 17);
   assert.equal(mars.filter((p) => p.approximate).length, 5);
+  // every Mars lander says how its latitude stands; the Gazetteer's features are planetocentric
+  for (const p of mars) assert.ok(p.kind === "feature" || ["planetocentric", "converted", "not stated"].includes(p.source.latitude ?? ""), p.id);
+  assert.equal(findPlace(mars, "Phoenix")!.source.latitude, "converted");
+  assert.ok(Math.abs(findPlace(mars, "Phoenix")!.lat - 67.986) < 0.01, "Phoenix's 68.22 is planetographic, 67.99 planetocentric");
+  assert.ok(Math.abs(findPlace(mars, "Mars Pathfinder")!.lat - 19.095) < 1e-4 && Math.abs(findPlace(mars, "InSight")!.lat - 4.5) < 1e-4);
+  assert.equal(findPlace(mars, "Viking 1")!.lat, 22.27);
 });
 
 test("a dozen positions agree with sources other than the ones the table takes them from", () => {
-  const fixture = JSON.parse(readFileSync(new URL("./data/places-second-source.json", import.meta.url), "utf8")) as { rows: { id: string; source: string; lat: number; lon: number }[] };
-  // Luna 9's position is the first Soviet report's and NASA says the lander is not there; Viking 2 and Pathfinder differ by a few tenths of a degree between NASA's pages, which give the latitude in different conventions
-  const tolerance: Record<string, number> = { "moon/luna-9": 0.8, "mars/viking-2": 0.7, "mars/mars-pathfinder": 0.4, "mars/insight": 0.06 };
+  const fixture = JSON.parse(readFileSync(new URL("./data/places-second-source.json", import.meta.url), "utf8")) as { rows: { id: string; source: string; lat: number; lon: number; convertFrom?: string }[] };
+  // Luna 9's position is the first Soviet report's and NASA says the lander is not there; NSSDCA's Pathfinder point is an estimate from Viking pictures made before the landing (its longitude is 0.3 degree west of the radio-tracked one); the rest agree to 0.011 degree
+  const tolerance: Record<string, number> = { "moon/luna-9": 0.8, "mars/mars-pathfinder": 0.3 };
+  const RATIO = (3376.2 / 3396.19) ** 2;
   const missing = new Set(["Apollo 11", "Apollo 17", "Luna 2", "Luna 9", "Chang'e 3", "Chang'e 4", "Chang'e 5", "Chandrayaan-3", "SLIM", "Viking 1", "Curiosity", "Perseverance", "Zhurong"]);
   const worst: string[] = [];
   assert.ok(fixture.rows.length >= 20);
   for (const row of fixture.rows) {
     const place = findPlace(row.id.startsWith("moon") ? moon : mars, row.id)!;
     assert.ok(place !== undefined, row.id);
-    const miss = angleBetween(place.lat, place.lon, row.lat, row.lon);
-    assert.ok(miss < (tolerance[row.id] ?? 0.05), `${row.id} is ${miss} degrees from ${row.source}`);
+    // a row that prints a planetographic latitude is turned into a planetocentric one first, as the table's own are
+    const lat = row.convertFrom === "planetographic" ? (Math.atan(RATIO * Math.tan((row.lat * Math.PI) / 180)) * 180) / Math.PI : row.lat;
+    const miss = angleBetween(place.lat, place.lon, lat, row.lon);
+    assert.ok(miss < (tolerance[row.id] ?? 0.012), `${row.id} is ${miss} degrees from ${row.source}`);
     worst.push(`${row.id} ${miss.toFixed(3)}`);
     for (const name of [...missing]) if (place.name.en.startsWith(name) || place.id.includes(name.toLowerCase().replace(/[^a-z0-9]+/g, "-"))) missing.delete(name);
   }

@@ -23,7 +23,7 @@ export type { When } from "./when.ts";
 export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "planned" | "feature";
 
 /**
- * One place on a body. Latitude and longitude are planetocentric degrees, east positive, from -180 to 180: the Moon's in the mean Earth/polar axis frame, Mars's in its IAU frame, as the sources give them.
+ * One place on a body. Latitude and longitude are planetocentric degrees, east positive, from -180 to 180: the Moon's in the mean Earth/polar axis frame, Mars's in its IAU frame. On Mars every place is planetocentric: the Gazetteer's features are, and a lander's `source.latitude` says whether its source is planetocentric, was a planetographic latitude `converted`, or does not state it (`not stated`, GCAT's own rows).
  *
  * @example
  * ```ts
@@ -66,7 +66,7 @@ export interface Place {
   /** For a planned landing: the announced date, its state, and the date the announcement was read. */
   planned?: { date: string; status: "announced" | "slipped" | "cancelled"; read: string };
   /** Where the record comes from, and the date that source's file was read. */
-  source: { id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "agency"; read: string };
+  source: { id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency"; read: string; latitude?: "planetocentric" | "converted" | "not stated" };
 }
 
 /**

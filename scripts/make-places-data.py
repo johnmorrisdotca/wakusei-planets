@@ -14,10 +14,10 @@
   Positions on the Moon: NASA's NSSDCA "Table of Anthropogenic Impacts and Spacecraft on the Moon" (https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html, a US government work), nssdca-lunar-artifacts.html in --cache.
   Where the table gives a position for a craft GCAT lists, the table's position is used (it is newer, from LRO images, and where the two disagree GCAT's is kept in `gcatPosition`); the rest of the record (operator, site, notes) stays GCAT's.
   A few rows only the table has (the Saturn upper stages that struck the Moon, a booster) are added from it. A record whose position is given to a degree or less carries `approximate: true`.
-  Crewed landings (the six Apollo lunar modules) have the kind `crewed`. Mars positions are GCAT's, except Viking 1's, which is NASA's own (NSSDCA's Viking 1 lander page).
+  Crewed landings (the six Apollo lunar modules) have the kind `crewed`. Every Mars place has planetocentric latitude and east longitude: the features' are the Gazetteer's, and each lander named in MARS_POSITIONS takes one source that is planetocentric or is converted (Phoenix, below); the other Mars sites are GCAT's, whose convention it does not state (`source.latitude`).
 
 Usage: python3 -I scripts/make-places-data.py --cache DIR"""
-import datetime, json, os, re, struct, sys, zipfile
+import datetime, json, math, os, re, struct, sys, zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "src", "data")
@@ -97,7 +97,24 @@ CREWED = {"Apollo 11 lunar module", "Apollo 12 lunar module", "Apollo 14 lunar m
 # Features below the crater floor that a page still wants: the famous small craters and the landing-site craters of Mars
 KEEP_ALWAYS = {"moon": {"Aristarchus", "Kepler", "Eratosthenes", "Shackleton", "Linné", "Cabeus"}, "mars": {"Jezero", "Eberswalde", "Holden", "Endeavour", "Victoria", "Santa Maria", "Eagle", "Endurance"}}
 # Mars: positions from NASA's own pages where GCAT's differs by more than a few hundredths of a degree and the page says which latitude it is (name shown: lat, lon east -180..180, source id, address)
-MARS_OVERRIDE = {"Viking 1": (22.27, -47.95, "nssdca", "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1975-075C")}
+# Mars: every place has planetocentric latitude and east longitude. Each lander below takes one source (name shown: lat, east longitude 0-360, source id, the source's address or name, how the latitude stands):
+#   planetocentric: the source's own latitude is planetocentric (NSSDCA's Viking 1 page says so; ODE lists the radio-tracking solutions of the Mars Exploration Rovers and Folkner et al.'s Viking and Pathfinder positions, which are planetocentric)
+#   converted: the source prints a planetographic latitude, turned into a planetocentric one with tan(phi_c) = (Rp/Re)^2 tan(phi_g), Re 3396.19 km and Rp 3376.2 km (IAU 2000)
+#   not stated: the source does not say (GCAT's rows; NASA GISS's InSight figure)
+ODE_URL = "https://ode.rsl.wustl.edu/mars/pagehelp/Content/Missions_Instruments/Landing_Sites.htm"
+MARS_POSITIONS = {
+    "Viking 1": (22.27, 312.05, "nssdca", "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1975-075C", "planetocentric"),
+    "Viking 2": (47.6673, 134.2809, "nssdca", "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1975-083C", "planetocentric"),
+    "Mars Pathfinder": (19.095, 326.747, "pds-ode", ODE_URL, "planetocentric"),
+    "Sojourner": (19.095, 326.747, "pds-ode", ODE_URL, "planetocentric"),
+    "Spirit's lander": (-14.571892, 175.47848, "pds-ode", ODE_URL, "planetocentric"),
+    "Spirit": (-14.571892, 175.47848, "pds-ode", ODE_URL, "planetocentric"),
+    "Opportunity's lander": (-1.9483, 354.47417, "pds-ode", ODE_URL, "planetocentric"),
+    "Opportunity": (-1.9483, 354.47417, "pds-ode", ODE_URL, "planetocentric"),
+    "Phoenix": (68.22, 234.25, "pds-ode", ODE_URL, "converted"),
+    "InSight": (4.50, 135.62, "nasa-mars24", "https://www.giss.nasa.gov/tools/mars24/help/landers.html", "not stated"),
+}
+MARS_RATIO = (3376.2 / 3396.19) ** 2
 NSSDCA_URL = "https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html"
 
 
@@ -290,13 +307,25 @@ def main():
             sites.sort(key=lambda r: r["date"] or "")
             print(f"moon: {len(used)} places take NASA's position; differences over 0.05 degrees:\n  " + "\n  ".join(notes), file=sys.stderr)
         else:
+            moved = []
             for place in sites:
-                if place["name"]["en"] in MARS_OVERRIDE:
-                    lat, lon, src, _ = MARS_OVERRIDE[place["name"]["en"]]
-                    place["gcatPosition"] = [place["lat"], place["lon"]]
-                    place["lat"], place["lon"] = lat, lon
-                    place["source"] = {"id": src, "read": "2026-11-11"}
+                name = place["name"]["en"]
+                if name in MARS_POSITIONS:
+                    lat, lon, src, where, how = MARS_POSITIONS[name]
+                    if how == "converted":
+                        lat = math.degrees(math.atan(MARS_RATIO * math.tan(math.radians(lat))))
+                    before = (place["lat"], place["lon"])
+                    lon = east180(lon)
+                    km = math.degrees(math.acos(max(-1, min(1, math.sin(math.radians(before[0])) * math.sin(math.radians(lat)) + math.cos(math.radians(before[0])) * math.cos(math.radians(lat)) * math.cos(math.radians(before[1] - lon)))))) * math.pi / 180 * 3396.19
+                    moved.append((name, round(km, 1)))
+                    if km > 0.05:
+                        place["gcatPosition"] = [before[0], before[1]]
+                    place["lat"], place["lon"] = round(lat, 4), round(lon, 4)
+                    place["source"] = {"id": src, "read": "2026-11-11", "latitude": how}
                     place.pop("approximate", None)
+                else:
+                    place["source"]["latitude"] = "not stated"
+            print("mars: positions moved from GCAT's (km): " + ", ".join(f"{n} {k}" for n, k in moved), file=sys.stderr)
         kinds = {}
         for s in sites:
             kinds[s["kind"]] = kinds.get(s["kind"], 0) + 1

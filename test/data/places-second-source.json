@@ -1,6 +1,6 @@
 {
  "read": "2026-11-11",
- "note": "Positions of places from sources other than the ones the table uses for them. Latitude north, longitude east, -180 to 180. Mars24's latitudes are planetographic or planetocentric as each mission's own team gave them; they can differ from the table's by up to half a degree.",
+ "note": "Positions of places from sources other than the ones the table uses for them. Latitude north, longitude east, -180 to 180. Every Mars row is planetocentric except those with convertFrom planetographic, which print a planetographic latitude.",
  "rows": [
   {
    "id": "moon/apollo-11-lunar-module",
@@ -115,30 +115,6 @@
    "lon": 77.45
   },
   {
-   "id": "mars/viking-1",
-   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
-   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
-   "figure": "at 312.05°E 22.27°N",
-   "lat": 22.27,
-   "lon": -47.95
-  },
-  {
-   "id": "mars/viking-2",
-   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
-   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
-   "figure": "at 134.28°E 48.27°N",
-   "lat": 48.27,
-   "lon": 134.28
-  },
-  {
-   "id": "mars/mars-pathfinder",
-   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
-   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
-   "figure": "at 326.75°E 19.47°N",
-   "lat": 19.47,
-   "lon": -33.25
-  },
-  {
    "id": "mars/spirit",
    "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
    "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
@@ -160,15 +136,8 @@
    "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
    "figure": "at 234.25°E 68.22°N",
    "lat": 68.22,
-   "lon": -125.75
-  },
-  {
-   "id": "mars/insight",
-   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
-   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
-   "figure": "at 135.62°E 4.50°N",
-   "lat": 4.5,
-   "lon": 135.62
+   "lon": -125.75,
+   "convertFrom": "planetographic"
   },
   {
    "id": "mars/zhurong",
@@ -177,6 +146,31 @@
    "figure": "at 109.93°E 25.07°N",
    "lat": 25.07,
    "lon": 109.93
+  },
+  {
+   "id": "mars/viking-1",
+   "source": "PDS Mars Orbital Data Explorer, existing landing sites (Folkner et al. 1997)",
+   "url": "https://ode.rsl.wustl.edu/mars/pagehelp/Content/Missions_Instruments/Landing_Sites.htm",
+   "figure": "Viking Lander 1 Landing Site 22.269° N 312.049° E",
+   "lat": 22.269,
+   "lon": -47.951
+  },
+  {
+   "id": "mars/viking-2",
+   "source": "PDS Mars Orbital Data Explorer, existing landing sites (Folkner et al. 1997)",
+   "url": "https://ode.rsl.wustl.edu/mars/pagehelp/Content/Missions_Instruments/Landing_Sites.htm",
+   "figure": "Viking Lander 2 Landing Site 47.668° N 134.280° E",
+   "lat": 47.668,
+   "lon": 134.28
+  },
+  {
+   "id": "mars/mars-pathfinder",
+   "source": "NASA NSSDCA, Mars Pathfinder Landing Site",
+   "url": "https://nssdc.gsfc.nasa.gov/planetary/marsland.html",
+   "figure": "estimated to be at 19.33 N, 33.55 W",
+   "lat": 19.33,
+   "lon": -33.55,
+   "convertFrom": "planetographic"
   }
  ]
 }
