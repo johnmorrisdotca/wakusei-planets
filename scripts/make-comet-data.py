@@ -160,6 +160,7 @@ def record(fetch, row):
         "showers": [{"code": SHOWERS[s][0], "en": SHOWERS[s][1], "ja": SHOWERS[s][2]} for s in showers],
         "spkid": obj.get("spkid"),
     }
+    out["_lastObs"] = orbit.get("last_obs")
     return out
 
 
@@ -209,6 +210,44 @@ def horizons_vectors(fetch, rec, jds):
     return command, rows
 
 
+def horizons_elements(fetch, rec, jds):
+    """Horizons' osculating elements of a periodic comet at the Julian dates (TDB), from the comet's latest apparition record (its record number is picked from the list the plain designation answers with:
+    the largest epoch year). Returns the record's command and the rows [JD, Tp, PR]: the time of perihelion of the osculating orbit at each date (the passage nearest the date) and its period in days."""
+    def ask(command):
+        query = urllib.parse.urlencode({"format": "json", "COMMAND": f"'{command}'", "OBJ_DATA": "'NO'", "MAKE_EPHEM": "'YES'", "EPHEM_TYPE": "'ELEMENTS'", "CENTER": "'500@10'", "REF_PLANE": "'ECLIPTIC'",
+                                        "REF_SYSTEM": "'ICRF'", "OUT_UNITS": "'AU-D'", "CSV_FORMAT": "'YES'", "TIME_TYPE": "'TDB'", "TLIST_TYPE": "'JD'", "TLIST": "'" + "' '".join(f"{t:.6f}" for t in jds) + "'"})
+        return fetch.get("horizons", HORIZONS, query).get("result", "")
+    command = f"DES={rec['designation']};"
+    text = ask(command)
+    if "$$SOE" not in text:
+        found = [(int(m.group(2)), int(m.group(1))) for m in re.finditer(r"^\s+(9\d{7})\s+(\d{4})\s", text, re.M)]
+        if not found:
+            raise SystemExit(f"Horizons gave no record for {command}: {text.strip()[:400]}")
+        command = str(max(found)[1])
+        text = ask(command)
+    if "$$SOE" not in text:
+        raise SystemExit(f"Horizons gave no rows for {command}: {text.strip()[:600]}")
+    rows = []
+    for line in text.split("$$SOE")[1].split("$$EOE")[0].strip().split("\n"):
+        p = [v.strip() for v in line.split(",")]
+        rows.append([float(p[0]), float(p[7]), float(p[13])])
+    return command, rows
+
+
+def add_perihelia(fetch, rec, last_obs, now_jd):
+    """The last and the next perihelion of a periodic comet from JPL: Horizons' osculating elements of the comet's latest apparition record, asked at the two dates the plain period puts them near (the elements' Tp is
+    the passage nearest the date, and the dates are within half a period of the real ones). `last` is observed when the solution has observations within 150 days of it (SBDB's last observation), else predicted."""
+    k = 0.01720209895
+    period = 2 * math.pi * math.sqrt(rec["a"] ** 3) / k
+    turns = math.floor((now_jd - rec["tp"]) / period)
+    est_last = rec["tp"] + turns * period
+    command, rows = horizons_elements(fetch, rec, [est_last, est_last + period])
+    last, nxt = rows[0][1], rows[1][1]
+    observed = last_obs is not None and (datetime.date.fromisoformat(last_obs) - datetime.date(1858, 11, 17)).days + 2400000.5 >= last - 150
+    rec["perihelion"] = {"last": round(last, 3), "lastObserved": observed, "next": round(nxt, 3), "source": f"JPL Horizons, small-body record {command}"}
+    return rec
+
+
 def main():
     args = sys.argv[1:]
     if not args:
@@ -218,6 +257,11 @@ def main():
     root = os.path.dirname(here)
     stamp = datetime.date.today().isoformat()
     records = [record(fetch, row) for row in COMETS]
+    now_jd = datetime.datetime.now(datetime.timezone.utc).timestamp() / 86400 + UNIX_EPOCH_JD
+    for r in records:
+        last_obs = r.pop("_lastObs")
+        if r["kind"] == "periodic":
+            add_perihelia(fetch, r, last_obs, now_jd)
     write_table(records, os.path.join(root, "src", "data", "comets.ts"), stamp)
     print(f"wrote {len(records)} comets; SBDB requests made this run: {fetch.count['sbdb']}")
     if "--horizons" in args:

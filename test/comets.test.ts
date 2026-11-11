@@ -182,28 +182,41 @@ test("find a comet by id, designation or English name, any case; a stranger is u
   assert.equal(findComet(7 as unknown as string), undefined);
 });
 
-test("last and next perihelion of the periodic comets, from the elements, against the dates the comets are known for", () => {
+test("last and next perihelion of the periodic comets are JPL's dates, with their basis; outside the span they are repeated from the period and marked estimated", () => {
   const day = (ms: number | null) => new Date(ms!).toISOString().slice(0, 10);
   const now = Date.UTC(2026, 10, 11);
-  // the real passages: 67P 2021-11-02, 1P 1986-02-09 (next predicted 2061-07-28), 2P 2023-10-22, 21P 2018-09-10, 109P 1992-12-12 (next 2126-07-12)
-  assert.ok(Math.abs(cometPerihelia("1P", now).last! - Date.UTC(1986, 1, 9)) < 2 * DAY, `Halley last ${day(cometPerihelia("1P", now).last)}`);
-  assert.ok(Math.abs(cometPerihelia("1P", now).next! - Date.UTC(2061, 6, 28)) < 400 * DAY, `Halley next ${day(cometPerihelia("1P", now).next)}`);
-  // 67P's osculating period (2015) is 80 days longer than the one it kept: the last passage comes out on 2022-01-21, not 2021-11-02
-  assert.ok(Math.abs(cometPerihelia("67P", now).last! - Date.UTC(2021, 10, 2)) < 100 * DAY, `67P last ${day(cometPerihelia("67P", now).last)}`);
-  assert.ok(Math.abs(cometPerihelia("19P", now).last! - Date.UTC(2022, 1, 1)) < 5 * DAY, `19P last ${day(cometPerihelia("19P", now).last)}`);
-  assert.ok(Math.abs(cometPerihelia("21P", now).last! - Date.UTC(2025, 2, 29)) < 5 * DAY, `21P last ${day(cometPerihelia("21P", now).last)}`);
-  assert.ok(Math.abs(cometPerihelia("2P", now).last! - Date.UTC(2023, 9, 22)) < 40 * DAY, `2P last ${day(cometPerihelia("2P", now).last)}`);
-  assert.ok(Math.abs(cometPerihelia("109P", now).next! - Date.UTC(2126, 6, 12)) < 2 * 365 * DAY, `109P next ${day(cometPerihelia("109P", now).next)}`);
-  for (const c of listComets("periodic")) {
-    const { last, next } = cometPerihelia(c, now);
-    assert.ok(last! <= now && next! > now && next! - last! > 0, c.id);
-    assert.ok(Math.abs((next! - last!) / DAY / 365.25 - c.periodYears!) < 1e-3, `${c.id} the gap is the period`);
+  // the dates the comets are known for: 1P Halley 1986-02-09 and the published prediction 2061-07-28, 109P 1992-12-12 and 2126-07-12, 67P 2021-11-02, 2P 2023-10-22, 19P 2022-02-01
+  const known: [string, string, string][] = [["1P", "1986-02-09", "2061-07-28"], ["109P", "1992-12-12", "2126-07-12"], ["67P", "2021-11-02", "2028-04-09"], ["2P", "2023-10-22", "2027-02-10"], ["19P", "2022-02-01", "2028-12-11"], ["81P", "2022-12-15", "2029-05-14"]];
+  for (const [id, last, next] of known) {
+    const p = cometPerihelia(id, now);
+    assert.equal(day(p.last), last, `${id} last`);
+    assert.equal(day(p.next), next, `${id} next`);
+    assert.equal(p.basis, "jpl");
+    assert.equal(p.lastObserved, true, id);
   }
-  // an open orbit has one perihelion
-  assert.deepEqual(Object.keys(cometPerihelia("2I", now)), ["last", "next"]);
+  // 21P and 46P: JPL's solution is older than the passages of 2025 and 2024, so their last is a prediction (the real 21P passage was 2025-03-29, JPL's date is 4 days earlier)
+  assert.equal(cometPerihelia("21P", now).lastObserved, false);
+  assert.ok(Math.abs(cometPerihelia("21P", now).last! - Date.UTC(2025, 2, 29)) < 5 * DAY);
+  for (const c of listComets("periodic")) {
+    assert.ok(c.perihelion !== undefined && c.perihelion.source.startsWith("JPL Horizons, small-body record 9000"), c.id);
+    const { last, next, basis } = cometPerihelia(c, now);
+    assert.ok(last! <= now && next! > now && basis === "jpl", c.id);
+    assert.ok(Math.abs((next! - last!) / DAY / 365.25 - c.periodYears!) < c.periodYears! * 0.1 + 0.3, `${c.id} the gap is about the period`);
+  }
+  // after JPL's next date, or before its last, the passages are repeated from the period and said to be estimated
+  const later = cometPerihelia("67P", Date.UTC(2040, 0, 1));
+  assert.equal(later.basis, "estimated");
+  assert.ok(later.last! < Date.UTC(2040, 0, 1) && later.next! > Date.UTC(2040, 0, 1) && later.lastObserved === false);
+  assert.equal(cometPerihelia("1P", Date.UTC(1900, 0, 1)).basis, "estimated");
+  // a comet of the set on an open orbit has JPL's one perihelion; one from elements has its own
   assert.equal(cometPerihelia("2I", now).next, null);
+  assert.equal(cometPerihelia("2I", now).basis, "jpl");
   assert.equal(cometPerihelia("2I", Date.UTC(2000, 0, 1)).last, null);
   assert.ok(cometPerihelia("2I", Date.UTC(2000, 0, 1)).next! > 0);
+  const made = cometFromElements({ designation: "X", e: 0.5, q: 1, i: 10, node: 0, w: 0, perihelion: Date.UTC(2030, 0, 1) });
+  assert.equal(cometPerihelia(made, Date.UTC(2029, 0, 1)).basis, "elements");
+  assert.equal(day(cometPerihelia(made, Date.UTC(2029, 0, 1)).next), "2030-01-01");
+  assert.equal(cometPerihelia(made, Date.UTC(2040, 0, 1)).basis, "estimated");
 });
 
 test("the distance from the Sun and the Earth, and how far from the epoch a moment is", () => {

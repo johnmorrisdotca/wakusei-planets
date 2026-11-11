@@ -108,6 +108,11 @@ export interface CometRecord {
   showers: readonly CometShower[];
   /** The number JPL gives the comet for Horizons and its other services, or `null` for a comet added with `cometFromElements`. */
   spkid: string | null;
+  /**
+   * For a periodic comet of the set, its last and next perihelion as JPL gives them (Julian dates in TDB): JPL Horizons' osculating elements of the comet's latest apparition record at the passage nearest 2026-11-11. `lastObserved` is true when
+   * that solution has observations of the last passage, false when the date is JPL's prediction for it (21P and 46P: the solution is older than their passages of 2025 and 2024). `source` names the record. Absent on any other comet.
+   */
+  perihelion?: { last: number; lastObserved: boolean; next: number; source: string };
 }
 
 /**
@@ -130,7 +135,7 @@ export const COMET_ACCURACY = {
   /** The days from an epoch within which `cometTrust` says a position is inside what was measured. */
   trustedDays: TRUSTED_DAYS,
   /** In words, what the numbers leave out. */
-  note: "The orbit is two-body motion on the elements of one epoch: the planets' pull and a comet's own jets move the real orbit away from it, so a position is good near the epoch and drifts away from it, by days or years later a comet's closest approach to the Sun may be off. A long-period comet is good only near its epoch; a periodic comet's last and next perihelion are worked from the osculating period and can be off by a year for the longest. For a close look at one date use JPL Horizons.",
+  note: "The orbit is two-body motion on the elements of one epoch: the planets' pull and a comet's own jets move the real orbit away from it, so a position is good near the epoch and drifts away from it, by days or years later a comet's closest approach to the Sun may be off. A long-period comet is good only near its epoch; a periodic comet's last and next perihelion are JPL's own dates inside the span they cover and are repeated from the osculating period outside it. For a close look at one date use JPL Horizons.",
 } as const;
 
 const RECORDS: readonly CometRecord[] = COMET_TABLE;
@@ -369,30 +374,41 @@ export function cometOrbit(comet: CometRecord | string, points = 180, maxAu = 40
 }
 
 /**
- * The last and the next time a comet is at perihelion, relative to a moment, in milliseconds since 1970 (UTC). A closed orbit repeats every osculating period from the time of perihelion; a parabola or an open orbit has one
- * perihelion, which is the last when it is behind and the next when it is ahead (and the other is `null`). The period is the osculating one: the real comet's is a little different (a periodic comet may arrive months or, for
- * the longest orbits, a year or more from the date this gives).
+ * The last and the next time a comet is at perihelion, relative to a moment, in milliseconds since 1970 (UTC). For a periodic comet of the set between the two dates JPL gives (`CometRecord.perihelion`: the last, observed or predicted
+ * from JPL's solution, and the next, JPL's prediction by integrating that orbit) they are those, `basis` is `"jpl"`, and `lastObserved` says whether the last passage was observed. Outside that span the passages are repeated from the
+ * nearest JPL date with the osculating period and `basis` is `"estimated"` (good to months for a short orbit and to a year or more for a long one). A comet of the set on a parabola or an open orbit has one perihelion, JPL's, which is the last when
+ * it is behind and the next when it is ahead (the other is `null`). A comet from `cometFromElements` has the date it was given (`"elements"`) or the repetition of it (`"estimated"`).
  *
  * @param comet - A comet of the set, one from `cometFromElements`, or the id, designation or name of one in the set.
  * @param when - A `Date` or milliseconds since 1970 (UTC).
- * @returns `last` and `next`, in milliseconds since 1970 (UTC), `null` where there is none.
+ * @returns `last` and `next`, in milliseconds since 1970 (UTC), `null` where there is none; `basis`; and `lastObserved`.
  *
  * @example
  * ```ts
  * import { cometPerihelia } from "@johnmorrisdotca/wakusei-planets/comets";
  *
- * const { last, next } = cometPerihelia("1P", Date.UTC(2026, 10, 11));
- * console.log(new Date(last!).toISOString().slice(0, 10), new Date(next!).toISOString().slice(0, 10));
+ * const { last, next, basis } = cometPerihelia("1P", Date.UTC(2026, 10, 11));
+ * console.log(new Date(last!).toISOString().slice(0, 10), new Date(next!).toISOString().slice(0, 10), basis);
  * ```
  */
-export function cometPerihelia(comet: CometRecord | string, when: When): { last: number | null; next: number | null } {
+export function cometPerihelia(comet: CometRecord | string, when: When): { last: number | null; next: number | null; basis: "jpl" | "elements" | "estimated"; lastObserved: boolean } {
   const record = resolve(comet);
   const ms = moment(when);
+  const jpl = record.perihelion;
+  if (jpl !== undefined) {
+    const last = utcOfJulianDate(jpl.last);
+    const next = utcOfJulianDate(jpl.next);
+    if (last <= ms && ms < next) return { last, next, basis: "jpl", lastObserved: jpl.lastObserved };
+  }
   const tp = utcOfJulianDate(record.tp);
-  if (!(record.e < 1)) return tp <= ms ? { last: tp, next: null } : { last: null, next: tp };
+  if (!(record.e < 1)) {
+    const basis = record.spkid === null ? "elements" : "jpl";
+    return tp <= ms ? { last: tp, next: null, basis, lastObserved: false } : { last: null, next: tp, basis, lastObserved: false };
+  }
   const period = (2 * Math.PI * Math.sqrt((record.q / (1 - record.e)) ** 3)) / GAUSS_K;
-  const turns = Math.floor((toTerrestrialTime(ms) / DAY_MS + UNIX_EPOCH_JD - record.tp) / period);
-  return { last: utcOfJulianDate(record.tp + turns * period), next: utcOfJulianDate(record.tp + (turns + 1) * period) };
+  const anchor = jpl === undefined ? record.tp : ms < utcOfJulianDate(jpl.last) ? jpl.last : jpl.next;
+  const turns = Math.floor((toTerrestrialTime(ms) / DAY_MS + UNIX_EPOCH_JD - anchor) / period);
+  return { last: utcOfJulianDate(anchor + turns * period), next: utcOfJulianDate(anchor + (turns + 1) * period), basis: jpl === undefined && (turns === 0 || turns === -1) ? "elements" : "estimated", lastObserved: false };
 }
 
 /**
