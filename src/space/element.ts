@@ -184,7 +184,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -239,6 +239,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
+    this.#model.helpThrough = this.hasAttribute("help-through") && this.getAttribute("help-through") !== "off";
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
     this.#relabel();
@@ -321,6 +322,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
+    else if (name === "help-through") this.helpThrough = value !== null && value !== "off";
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
     else if (name === "light") this.light = readLight(value);
     else if (name === "data") this.#door.book.ownOnly(value === "own");
@@ -435,13 +437,25 @@ export class WakuseiSpace extends HTMLElement {
 
   /**
    * Help mode (the `help` attribute; off by default): on the body looked at, a line along its axis and a curved arrow round it showing which way it spins, by the right-hand rule about the axis it really turns about, so it is
-   * right for Venus and Uranus, which turn backwards, and for Uranus on its side. It is about learning, so the arrow is drawn over the body.
+   * right for Venus and Uranus, which turn backwards, and for Uranus on its side. By default the lines are hidden where the globe covers them (`helpThrough` draws them whole over it).
    */
   get help(): boolean {
     return this.#model.help;
   }
   set help(value: boolean) {
     this.#model.help = value;
+    this.#gate?.request();
+  }
+
+  /**
+   * Whether help mode's lines are drawn whole over the globe, as they were (the attribute `help-through`; off by default). Off, they have depth against the body they are on: the axis runs into the near pole and comes out of the
+   * far pole only where that end is not behind the globe, and the part of the curved arrow that passes behind the globe is hidden. It is the lines' own body that hides them, so a ring or a moon in front still shows them.
+   */
+  get helpThrough(): boolean {
+    return this.#model.helpThrough;
+  }
+  set helpThrough(value: boolean) {
+    this.#model.helpThrough = value;
     this.#gate?.request();
   }
 

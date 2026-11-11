@@ -169,6 +169,8 @@ export interface SpaceModel {
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
   help: boolean;
+  /** Help mode draws its lines whole over the globe (`true`); by default they have depth against the body they are on, so the axis shows only outside the globe and the part of the arrow behind it is hidden. */
+  helpThrough: boolean;
   /** How many arrowheads each orbit line carries: 0 to `MAX_ARROWS_PER_ORBIT`, two by default. */
   arrowCount: number;
   /** The name written on each body's globe, or null for none; `labelVersion` goes up whenever it (or the language) changes, so each body is told once. */
@@ -220,6 +222,7 @@ export const newSpaceModel = (): SpaceModel => ({
   rings: { drawn: [], miss: {}, hidden: [] },
   arrows: {},
   help: false,
+  helpThrough: false,
   arrowPx: 0,
   arrowCount: ARROWS_PER_ORBIT,
   label: null,
@@ -761,6 +764,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
 
           // help mode: on the body looked at, the line of its axis and a curved arrow round it the way it turns
           helpLines.visible = model.help;
+          // by default the lines are hidden where the globe covers them: the depth test against the body, whose own drawing writes depth
+          (helpLines.material as THREE.LineBasicMaterial).depthTest = !model.helpThrough;
           model.helpDrawn = null;
           if (model.help) {
             const turn = spinAxis(focus, model.time);
