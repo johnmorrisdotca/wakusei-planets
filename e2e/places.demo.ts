@@ -19,6 +19,8 @@ const keep = async (page: Page, name: string, view?: Locator): Promise<void> => 
   if (!dir) return;
   mkdirSync(dir, { recursive: true });
   await view?.scrollIntoViewIfNeeded();
+  // a picture of what a reader sees: the body drawn, not a still being made again
+  if (view !== undefined) await expect(view).toHaveAttribute("data-state", /still|live/, { timeout: 60_000 });
   await page.screenshot({ path: `${dir}/${name}.png` });
 };
 
