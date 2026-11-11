@@ -449,7 +449,7 @@ export class WakuseiSpace extends HTMLElement {
 
   /**
    * Whether help mode's lines are drawn whole over the globe, as they were (the attribute `help-through`; off by default). Off, they have depth against the body they are on: the axis runs into the near pole and comes out of the
-   * far pole only where that end is not behind the globe, and the part of the curved arrow that passes behind the globe is hidden. It is the lines' own body that hides them, so a ring or a moon in front still shows them.
+   * far pole only where that end is not behind the globe, and the part of the curved arrow that passes behind the globe is hidden.
    */
   get helpThrough(): boolean {
     return this.#model.helpThrough;
