@@ -5,8 +5,8 @@ import { BODIES, BODY_IDS, JOURNEY_STOPS, journeyStop, stopPlaceAu } from "../sr
 const at = Date.UTC(2026, 10, 2);
 const G = 6.6743e-20;
 
-// Pages read on 2026-11-04 print no mass for these. A new body with no mass fails this list on purpose.
-const NO_MASS = ["orcus", "quaoar", "gonggong", "sedna", "nereid", "vanth", "hiiaka", "namaka", "dysnomia"];
+// Pages read on 2026-11-04 (and, for the minor bodies, JPL's Small-Body Database on 2026-11-10) print no mass for these. A new body with no mass fails this list on purpose.
+const NO_MASS = ["orcus", "quaoar", "gonggong", "sedna", "chiron", "pholus", "halley", "nereid", "vanth", "hiiaka", "namaka", "dysnomia"];
 
 const apart = (a: readonly number[], b: readonly number[]): number => Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
 

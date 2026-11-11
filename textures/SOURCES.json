@@ -206,5 +206,13 @@
     "credit": "https://www.iau.org/public/images/detail/iau1803c/",
     "artist": "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute",
     "usage": "Public domain"
+  },
+  "vesta": {
+    "file": "Vesta map for GeoHack.png",
+    "page": "https://commons.wikimedia.org/wiki/File:Vesta_map_for_GeoHack.png",
+    "licence": "Public domain",
+    "credit": "https://planetarynames.wr.usgs.gov/Page/VESTA/target / https://planetarynames.wr.usgs.gov/images/vesta.pdf",
+    "artist": "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA",
+    "usage": "Public domain"
   }
 }

@@ -23,6 +23,17 @@ export const PLANET_IDS = ["mercury", "venus", "earth", "mars", "jupiter", "satu
  */
 export const DWARF_IDS = ["ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"] as const;
 /**
+ * The minor bodies beyond the dwarf planets that the package knows by name: the asteroids Vesta and Pallas, the centaurs Chiron and Pholus and Halley's comet, nearest the Sun first by the size of their orbits (Halley's, a long ellipse, last).
+ *
+ * @example
+ * ```ts
+ * import { MINOR_IDS } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(MINOR_IDS.join(", "));
+ * ```
+ */
+export const MINOR_IDS = ["vesta", "pallas", "chiron", "pholus", "halley"] as const;
+/**
  * The moons the package draws, by planet or dwarf planet.
  *
  * @example
@@ -70,6 +81,18 @@ export type PlanetId = (typeof PLANET_IDS)[number];
  */
 export type DwarfId = (typeof DWARF_IDS)[number];
 /**
+ * The name of a minor body: `vesta`, `pallas`, `chiron`, `pholus` or `halley`.
+ *
+ * @example
+ * ```ts
+ * import { MINOR_IDS, type MinorId } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * const id: MinorId = MINOR_IDS[4];
+ * console.log(id);
+ * ```
+ */
+export type MinorId = (typeof MINOR_IDS)[number];
+/**
  * A body a moon can go round: a planet, Pluto or another dwarf planet.
  *
  * @example
@@ -94,7 +117,7 @@ export type HostId = PlanetId | DwarfId;
  */
 export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
 /**
- * The name of a body: `sun`, a planet, a dwarf planet or a moon.
+ * The name of a body: `sun`, a planet, a dwarf planet, a minor body or a moon.
  *
  * @example
  * ```ts
@@ -104,7 +127,7 @@ export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
  * console.log(lineSvg(id, { size: 64 }).length > 100);
  * ```
  */
-export type BodyId = "sun" | PlanetId | DwarfId | MoonId;
+export type BodyId = "sun" | PlanetId | DwarfId | MinorId | MoonId;
 /**
  * How a body is drawn: `line` (an outline drawing), `realistic` and `painted` (a real surface map; `painted` is the same maps), or `illustrated` (shaded from the numbers, not a default).
  *
@@ -166,7 +189,8 @@ export type Feature =
  */
 export interface BodyFacts {
   id: BodyId;
-  kind: "star" | "planet" | "dwarf-planet" | "moon";
+  /** What it is: a star, a planet, a dwarf planet, a moon, or one of the minor bodies: an `asteroid`, a `centaur` (between Jupiter and Neptune) or a `comet`. */
+  kind: "star" | "planet" | "dwarf-planet" | "moon" | "asteroid" | "centaur" | "comet";
   /** The planet or dwarf planet a moon goes round. */
   parent?: HostId;
   name: { en: string; ja: string };
@@ -325,6 +349,17 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   gonggong: f("gonggong", "dwarf-planet", "Gonggong", "ゴンゴン", 615, 0, 0, 255.383, 36.831, 0, 385.7, 22.4, "#9c4f3b", { features: dots([[-50, 10, 9], [60, -25, 8], [140, 30, 7]]) }),
   eris: f("eris", "dwarf-planet", "Eris", "エリス", 1163, 0, 78.22, 36.17, 44.51, 0, 22.805163, 378.8616, "#e8e4dc", { features: [{ kind: "band", lat: 0 }, ...dots([[-30, 30, 8], [80, -20, 9]])] }),
   sedna: f("sedna", "dwarf-planet", "Sedna", "セドナ", 453, 0, 0, 297.062, 74.71, 0, 840.95, 10.273, "#9a3f2b", { features: dots([[-40, 20, 9], [70, -30, 8], [150, 10, 7]]) }),
+  // The minor bodies. Vesta: Park et al. 2025 (Nature Astronomy, JPL SBDB), pole and rotation from the same; Pallas: Marsset et al. 2020 (shape), Carry et al. 2010 (pole, rotation); Chiron and Pholus: JPL SBDB (diameters
+  // from occultation and thermal measurements) with the pole estimated along the orbit's; Halley: Keller et al. 1987 (the nucleus), the pole estimated along the orbit's and no spin drawn. See NOTICE.md.
+  vesta: f("vesta", "asteroid", "Vesta", "ベスタ", 261.385, 0, 27.4, 309.0611, 42.2324, 285.39, 1617.33312922, 5.3421276322, "#aaa397", {
+    axesKm: [284.62, 277.24, 226.33],
+    showLon: 301,
+    features: [{ kind: "circle", lon: 301, lat: -75, radius: 50 }, { kind: "band", lat: -10 }, { kind: "band", lat: -22 }, ...dots([[60, 25, 9], [140, 5, 7], [-100, 30, 8], [-40, -20, 6]])],
+  }),
+  pallas: f("pallas", "asteroid", "Pallas", "パラス", 256.5, 0, 83.6, 33, -3, 0, 1105.8, 7.8132214, "#85878a", { axesKm: [284, 266, 224], features: dots([[-60, 20, 12], [50, -25, 10], [130, 30, 9], [-130, -30, 8], [10, 55, 7]]) }),
+  chiron: f("chiron", "centaur", "Chiron", "ケイロン", 83, 0, 0, 258.793, 72.317, 0, 1460, 5.918, "#8d8e90", { features: dots([[-50, 20, 14], [70, -25, 12], [150, 30, 10], [-120, -35, 9]]) }),
+  pholus: f("pholus", "centaur", "Pholus", "ポルス", 95, 0, 0, 334.495, 66.246, 0, 865.73, 9.98, "#8e4b36", { features: dots([[-60, 15, 14], [40, -30, 12], [130, 25, 10], [-130, -20, 9]]) }),
+  halley: f("halley", "comet", "Halley", "ハレー彗星", 5.5, 0, 0, 41.795, -69.39, 0, 0, 0, "#44403d", { axesKm: [7.45, 4.1, 4.1], features: [...dots([[-40, 20, 16], [60, -15, 12], [130, 30, 10]]), { kind: "line", points: [[-120, -5], [-80, 8], [-30, -4], [20, 10], [80, 0]] }] }),
   moon: f("moon", "moon", "Moon", "月", 1737.4, 0.0012, 6.68, 269.9949, 66.5392, 38.3213, 13.17635815, 655.728, "#b8b5ae", {
     parent: "earth",
     synchronous: true,
@@ -370,7 +405,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
 };
 
 /**
- * Every body's name: the Sun, the planets outward, the dwarf planets, then the moons of each.
+ * Every body's name: the Sun, the planets outward, the dwarf planets, the minor bodies, then the moons of each.
  *
  * @example
  * ```ts
@@ -379,7 +414,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
  * console.log(BODY_IDS.length, BODY_IDS[0]);
  * ```
  */
-export const BODY_IDS: readonly BodyId[] = ["sun", ...PLANET_IDS, ...DWARF_IDS, ...Object.values(MOONS_OF).flat()];
+export const BODY_IDS: readonly BodyId[] = ["sun", ...PLANET_IDS, ...DWARF_IDS, ...MINOR_IDS, ...Object.values(MOONS_OF).flat()];
 
 /** A body's polar radius as a fraction of its equatorial radius. */
 export const polarRatio = (facts: BodyFacts): number => 1 - facts.flattening;

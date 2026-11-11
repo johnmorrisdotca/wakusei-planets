@@ -72,5 +72,5 @@ test("a body's size, tilt and rotation are the IAU numbers", () => {
   assert.equal(BODIES.uranus.tiltDeg, 97.77);
   assert.ok(BODIES.venus.rotationHours < 0, "Venus turns backwards");
   assert.ok(BODIES.saturn.rings!.length >= 5);
-  assert.equal(BODY_IDS.length, 1 + 9 + 8 + 25 + 4);
+  assert.equal(BODY_IDS.length, 1 + 9 + 8 + 5 + 25 + 4);
 });

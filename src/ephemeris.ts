@@ -5,6 +5,7 @@
 import { ORBITS, type OrbitElements } from "./data/orbits.ts";
 import { moonTheoryOf, planetSeriesOf } from "./data/theories.ts";
 import { DWARF_ELEMENTS } from "./data/dwarf.ts";
+import { MINOR_ELEMENTS } from "./data/minor.ts";
 import { tableOf, type FittedTable } from "./data/tables.ts";
 import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
 import { VSOP87 } from "./data/vsop.ts";
@@ -12,7 +13,7 @@ import { moonGeocentric, vsopPosition } from "./theory.ts";
 
 export { moonGeocentric };
 import { toTerrestrialTime } from "./clock.ts";
-import { BODIES, MOONS_OF, type BodyId, type HostId, type MoonId, type PlanetId } from "./facts.ts";
+import { BODIES, MOONS_OF, type BodyId, type HostId, type MinorId, type MoonId, type PlanetId } from "./facts.ts";
 import { add, cross, DEG, dot, fromRaDec, length, OBLIQUITY, RAD, scale, sub, toEcliptic, unit, wrap360, type Vec3 } from "./vec.ts";
 
 /** Milliseconds since 1970 at J2000.0 (2000-01-01 12:00 TT, taken as UTC). */
@@ -55,12 +56,31 @@ export function kepler(meanAnomaly: number, e: number): number {
 
 const PLUTO_TABLE: FittedTable = { start: PLUTO_START, segment: PLUTO_SEGMENT_MS, worst: 0.14637, segments: PLUTO };
 
+/** Which segment of a table holds a moment, where it starts (milliseconds from the table's start) and how long it is; `undefined` outside the table. A table with `edges` has segments of unequal length, found by bisection. */
+function segmentAt(table: FittedTable, terrestrialMs: number): { index: number; from: number; length: number } | undefined {
+  const since = terrestrialMs - table.start;
+  const edges = table.edges;
+  if (edges === undefined) {
+    const index = Math.floor(since / table.segment);
+    return table.segments[index] === undefined ? undefined : { index, from: index * table.segment, length: table.segment };
+  }
+  if (!(since >= edges[0]!) || since >= edges[edges.length - 1]!) return undefined;
+  let lo = 0;
+  let hi = edges.length - 2;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (edges[mid]! <= since) lo = mid;
+    else hi = mid - 1;
+  }
+  return { index: lo, from: edges[lo]!, length: edges[lo + 1]! - edges[lo]! };
+}
+
 /** A position from a Chebyshev table, as x, y, z in au, or undefined outside the years it covers. */
 function fittedPosition(table: FittedTable, terrestrialMs: number): Vec3 | undefined {
-  const segment = Math.floor((terrestrialMs - table.start) / table.segment);
-  const coefficients = table.segments[segment];
-  if (coefficients === undefined) return undefined;
-  const x = (2 * (terrestrialMs - table.start - segment * table.segment)) / table.segment - 1;
+  const found = segmentAt(table, terrestrialMs);
+  if (found === undefined) return undefined;
+  const coefficients = table.segments[found.index]!;
+  const x = (2 * (terrestrialMs - table.start - found.from)) / found.length - 1;
   const at = (axis: readonly number[]): number => {
     let b1 = 0;
     let b2 = 0;
@@ -75,8 +95,8 @@ function fittedPosition(table: FittedTable, terrestrialMs: number): Vec3 | undef
 }
 
 /** Same table priority and TT segment coverage for positions and model information. */
-function fittedTableAt(planet: HostId, tt: number): FittedTable | undefined {
-  const covers = (table: FittedTable): boolean => table.segments[Math.floor((tt - table.start) / table.segment)] !== undefined;
+function fittedTableAt(planet: HostId | MinorId, tt: number): FittedTable | undefined {
+  const covers = (table: FittedTable): boolean => segmentAt(table, tt) !== undefined;
   if (planet === "pluto" && covers(PLUTO_TABLE)) return PLUTO_TABLE;
   const registered = tableOf(planet);
   return registered !== undefined && covers(registered) ? registered : undefined;
@@ -113,7 +133,7 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
 
 /**
  * A planet's or dwarf planet's position in the Sun's frame (J2000 ecliptic, astronomical units) at a time: Mercury to Neptune from the VSOP87B series, and Pluto and the other dwarf planets from tables fitted to Horizons (each within a few arc-seconds or better, see the accuracy guide; outside a table's years a dwarf planet falls back to the osculating elements of one epoch from JPL's Small-Body Database).
- * @param planet - The planet's or dwarf planet's name.
+ * @param planet - The planet's, dwarf planet's or minor body's name.
  * @param ms - The instant, in milliseconds since 1970 (UTC).
  * @returns The position as x, y, z in au.
  *
@@ -125,7 +145,7 @@ function barycentreFromSun(terrestrialMs: number): Vec3 {
  * console.log(Math.hypot(x, y, z).toFixed(3));
  * ```
  */
-export function heliocentric(planet: HostId, ms: number): Vec3 {
+export function heliocentric(planet: HostId | MinorId, ms: number): Vec3 {
   const vsop = planetSeriesOf(planet) ?? VSOP87[planet];
   if (vsop !== undefined) return vsopPosition(vsop, toTerrestrialTime(ms));
   if (planet === "pluto" || tableOf(planet) !== undefined) {
@@ -144,9 +164,9 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
   let node: number;
   let w: number;
   let E: number;
-  const dwarf = DWARF_ELEMENTS[planet as keyof typeof DWARF_ELEMENTS];
+  const dwarf = DWARF_ELEMENTS[planet as keyof typeof DWARF_ELEMENTS] ?? MINOR_ELEMENTS[planet as MinorId];
   if (dwarf !== undefined) {
-    // a dwarf planet: the osculating elements of one epoch, run as a plain ellipse (good for years either side of it)
+    // a dwarf planet or a minor body: the osculating elements of one epoch, run as a plain ellipse (good for years either side of it)
     a = dwarf.a;
     e = dwarf.e;
     I = dwarf.i * RAD;
@@ -192,19 +212,19 @@ export function heliocentric(planet: HostId, ms: number): Vec3 {
  * console.log(heliocentricModel("pluto", Date.UTC(2026, 0, 1)));
  * ```
  */
-export function heliocentricModel(planet: HostId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } {
+export function heliocentricModel(planet: HostId | MinorId, ms: number): { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null } {
   const tt = toTerrestrialTime(ms);
   if (VSOP87[planet] !== undefined) return { theory: "vsop87b", worstArcseconds: null };
   const table = fittedTableAt(planet, tt);
   return table !== undefined
     ? { theory: "chebyshev", worstArcseconds: table.worst }
-    : { theory: planet in DWARF_ELEMENTS ? "osculating-elements" : "approximate-elements", worstArcseconds: null };
+    : { theory: planet in DWARF_ELEMENTS || planet in MINOR_ELEMENTS ? "osculating-elements" : "approximate-elements", worstArcseconds: null };
 }
 
 
 /**
- * Mean distance from the Sun, in astronomical units: a planet's semi-major axis at J2000, or a dwarf planet's semi-major axis at the epoch of its elements.
- * @param id - A planet or a dwarf planet.
+ * Mean distance from the Sun, in astronomical units: a planet's semi-major axis at J2000, or a dwarf planet's or minor body's semi-major axis at the epoch of its elements.
+ * @param id - A planet, a dwarf planet or a minor body.
  * @returns The semi-major axis in au.
  *
  * @example
@@ -214,8 +234,8 @@ export function heliocentricModel(planet: HostId, ms: number): { theory: "vsop87
  * console.log(meanSunAu("earth").toFixed(3));
  * ```
  */
-export function meanSunAu(id: HostId): number {
-  const dwarf = DWARF_ELEMENTS[id as keyof typeof DWARF_ELEMENTS];
+export function meanSunAu(id: HostId | MinorId): number {
+  const dwarf = DWARF_ELEMENTS[id as keyof typeof DWARF_ELEMENTS] ?? MINOR_ELEMENTS[id as MinorId];
   return dwarf !== undefined ? dwarf.a : ELEMENTS[id as PlanetId][0]!;
 }
 

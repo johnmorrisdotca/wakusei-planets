@@ -5,8 +5,10 @@
 export interface FittedTable {
   /** Milliseconds since 1970, in terrestrial time, at the start of the first segment. */
   start: number;
-  /** The length of a segment in milliseconds. */
+  /** The length of a segment in milliseconds (the mean length, for a table with `edges`). */
   segment: number;
+  /** Where each segment starts, in milliseconds from `start`, and where the last ends: one more than there are segments. Left out, every segment is `segment` long; a body that moves fast in one part of its orbit and slowly in another (a comet) has segments of unequal length. */
+  edges?: readonly number[];
   /** The error on samples held back from the fit, in arc-seconds. */
   worst: number;
   /** By segment, then x, y, z, then the Chebyshev coefficients, in au. */
@@ -17,7 +19,7 @@ const KEY = Symbol.for("johnmorrisdotca.wakusei-planets.tables");
 const tables = ((globalThis as Record<symbol, unknown>)[KEY] ??= new Map<string, FittedTable>()) as Map<string, FittedTable>;
 
 /**
- * Teach `heliocentric` a body's fitted table. The entry points `@johnmorrisdotca/wakusei-planets/tables/ceres` and `/tables/dwarfs` call this as they load.
+ * Teach `heliocentric` a body's fitted table. The entry points `@johnmorrisdotca/wakusei-planets/tables/ceres`, `/tables/dwarfs` and `/tables/minor` call this as they load.
  *
  * @param id - The body's name.
  * @param table - Its Chebyshev segments, as `scripts/make-dwarf-data.py` writes them.

@@ -127,7 +127,7 @@ test("nearest in space is the brute-force list, in order, and agrees with the Ho
       const b = heliocentric(target, date);
       return { id, km: Math.hypot(a[0]! - b[0], a[1]! - b[1], a[2]! - b[2]) * AU_KM, moon: BODIES[id].kind === "moon" };
     }).filter((row) => !row.moon).sort((x, y) => x.km - y.km);
-    const planets = nearest(target, { by: "space", kind: ["planet", "dwarf-planet", "star"], date, count: 100 });
+    const planets = nearest(target, { by: "space", kind: ["planet", "dwarf-planet", "star", "asteroid", "centaur", "comet"], date, count: 100 });
     assert.deepEqual(planets.map((row) => row.id), brute.map((row) => row.id));
     planets.forEach((row, i) => assert.ok(Math.abs(row.distanceKm - brute[i]!.km) < 1e-3));
   }
@@ -206,7 +206,7 @@ test("each result carries the accuracy to expect", () => {
 test("bad arguments are named", () => {
   assert.throws(() => nearest("pluton" as BodyId), /target must be a body/);
   assert.throws(() => nearest("mars", { by: "time" as "sky" }), /by must be/);
-  assert.throws(() => nearest("mars", { kind: "comet" as "moon" }), /kind must be/);
+  assert.throws(() => nearest("mars", { kind: "moon-shaped" as "moon" }), /kind must be/);
   assert.throws(() => nearest("mars", { count: -1 }), /count/);
   assert.throws(() => nearest("mars", { count: 1.5 }), /count/);
   assert.throws(() => nearest("mars", { within: -1 }), /within/);
