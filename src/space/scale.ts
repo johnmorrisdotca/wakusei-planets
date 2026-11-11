@@ -197,7 +197,8 @@ function reachOf(host: SpacePlanet | SpaceDwarf): number {
 
 /**
  * How far from its planet a moon is drawn, in the planet's radii, when it is really `distance` radii away. True: as it is. Compressed: the same, until the farthest of the planet's moons would
- * reach across the gap to the next planet's orbit; then every moon is drawn nearer, the farthest at about a third of the gap and the nearer ones in the order they are, so no moon's orbit crosses another planet's.
+ * reach across the gap to the next planet's orbit; then every moon is drawn nearer, the farthest at about a third of the gap and the nearer ones in the order they are, so no moon's orbit crosses another planet's,
+ * and none is drawn nearer than 1.5 radii or inside the planet's rings (Mimas stays outside Saturn's, Proteus outside Neptune's), so a camera at a moon is never in the ring plane.
  *
  * @param mode - The scale.
  * @param host - The planet or dwarf planet the moon goes round.
@@ -217,7 +218,18 @@ export function moonDistance(mode: ScaleMode, host: SpacePlanet | SpaceDwarf, di
   const radius = radiusIn(host, "compressed");
   const space = room(host);
   if (reach === 0 || reach * radius <= space) return distance;
-  return Math.min(distance, (space * Math.sqrt(distance / reach)) / radius);
+  // from the nearest a moon may be drawn (clear of the globe and its rings) out to the room's edge, in the order the moons are: a moon drawn in the ring plane, or inside the globe, put the camera riding beside it in the rings
+  const near = nearestOf(host);
+  const far = Math.max(space / radius, near * 1.6);
+  return Math.min(distance, near + (far - near) * Math.sqrt(distance / reach));
+}
+
+/** The nearest a moon is drawn to its planet in a compressed view, in the planet's radii: outside the globe, and outside its rings with a little room, so the moon never sits in the ring plane. */
+function nearestOf(host: SpacePlanet | SpaceDwarf): number {
+  const facts = BODIES[host];
+  const bands = facts.rings ?? [];
+  const ringEdge = bands.length === 0 ? 0 : Math.max(...bands.map((band) => band.to)) / facts.radiusKm;
+  return Math.max(1.5, ringEdge * 1.15);
 }
 
 /**

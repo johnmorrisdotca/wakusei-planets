@@ -5,7 +5,7 @@ import { test } from "node:test";
 import { Body, GeoVector, HelioVector, MakeTime } from "astronomy-engine";
 import { greenwichMeanSiderealTime } from "../src/time.ts";
 import { AU_IN_EARTH_RADII, blend, chooseLabels, compress, createTrack, frameAt, moonOrbit, groundDirection, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, planetOrbit, radiusIn, RIDE_FOV, ridePose, SPACE_PLANETS, SUN_COMPRESSED, truePosition, type ScaleMode } from "../src/space/index.ts";
-import { MOONS_OF } from "../src/facts.ts";
+import { BODIES, MOONS_OF } from "../src/facts.ts";
 import { moonOffset } from "../src/scene/orient.ts";
 import type { Vec3 } from "../src/vec.ts";
 
@@ -161,6 +161,22 @@ test("compressing the moons keeps their order and leaves the true scale alone", 
     assert.deepEqual(real.map((d) => moonDistance("true", host, d)), real);
   }
   assert.equal(moonDistance("compressed", "mars", 6.9), 6.9);
+});
+
+test("a compressed view draws no moon inside its planet or in its rings: every moon of every planet is 1.5 radii out at least, and clear of the ring's edge", () => {
+  for (const host of ["mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const) {
+    const facts = BODIES[host];
+    const ringEdge = facts.rings === undefined ? 0 : Math.max(...facts.rings.map((band) => band.to)) / facts.radiusKm;
+    for (const moon of MOONS_OF[host]) {
+      for (let i = 0; i < 12; i += 1) {
+        const drawn = moonDistance("compressed", host, length(moonOffset(moon, Date.UTC(2026, 0, 1) + i * 30 * 86_400_000)));
+        assert.ok(drawn >= 1.5, `${moon} is drawn ${drawn.toFixed(2)} radii from ${host}`);
+        assert.ok(drawn > ringEdge * 1.1, `${moon} at ${drawn.toFixed(2)} radii is outside ${host}'s rings (edge ${ringEdge.toFixed(2)})`);
+      }
+    }
+  }
+  // Mimas, just outside Saturn's rings, was drawn in the ring plane at 2.29 radii before: it keeps its real distance now
+  assert.ok(moonDistance("compressed", "saturn", 3.13) > 2.33 * 1.1);
 });
 
 test("the true scale is the real distance in Earth radii", () => {
