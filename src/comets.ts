@@ -109,8 +109,8 @@ export interface CometRecord {
   /** The number JPL gives the comet for Horizons and its other services, or `null` for a comet added with `cometFromElements`. */
   spkid: string | null;
   /**
-   * For a periodic comet of the set, its last and next perihelion as JPL gives them (Julian dates in TDB): JPL Horizons' osculating elements of the comet's latest apparition record at the passage nearest 2026-11-11. `lastObserved` is true when
-   * that solution has observations of the last passage, false when the date is JPL's prediction for it (21P and 46P: the solution is older than their passages of 2025 and 2024). `source` names the record. Absent on any other comet.
+   * For a periodic comet of the set, its last and next perihelion as JPL gives them (Julian dates in TDB): JPL Horizons' osculating elements of the comet's latest apparition record at the passage nearest 2026-11-11. `lastObserved` is what JPL's orbit solution records, not whether the comet was seen: true when
+   * the solution's last observation is within 150 days of the last passage, false when the solution is older and the date is JPL's prediction from it (21P and 46P were seen at their passages of 2025 and 2024, but the solution in the record predates them). `source` names the record. Absent on any other comet.
    */
   perihelion?: { last: number; lastObserved: boolean; next: number; source: string };
 }
@@ -375,9 +375,9 @@ export function cometOrbit(comet: CometRecord | string, points = 180, maxAu = 40
 
 /**
  * The last and the next time a comet is at perihelion, relative to a moment, in milliseconds since 1970 (UTC). For a periodic comet of the set between the two dates JPL gives (`CometRecord.perihelion`: the last, observed or predicted
- * from JPL's solution, and the next, JPL's prediction by integrating that orbit) they are those, `basis` is `"jpl"`, and `lastObserved` says whether the last passage was observed. Outside that span the passages are repeated from the
- * nearest JPL date with the osculating period and `basis` is `"estimated"` (good to months for a short orbit and to a year or more for a long one). A comet of the set on a parabola or an open orbit has one perihelion, JPL's, which is the last when
- * it is behind and the next when it is ahead (the other is `null`). A comet from `cometFromElements` has the date it was given (`"elements"`) or the repetition of it (`"estimated"`).
+ * from JPL's solution, and the next, JPL's prediction by integrating that orbit) they are those, `basis` is `"jpl"`, and `lastObserved` is what JPL's orbit solution records (an observation of the solution within 150 days of the last passage), not whether the comet was seen. Outside that span the passages are repeated from the
+ * nearest JPL date with the osculating period and `basis` is `"estimated"` (good to months for a short orbit and to a year or more for a long one). A comet of the set on a parabola or an open orbit, or on an ellipse with a period over 10,000 years (Hyakutake's is about 70,000), has one perihelion, JPL's, which is the last when
+ * it is behind and the next when it is ahead (the other is `null`: a repetition 70,000 years on would be a date in the year 99940). A comet from `cometFromElements` has the date it was given (`"elements"`) or the repetition of it (`"estimated"`).
  *
  * @param comet - A comet of the set, one from `cometFromElements`, or the id, designation or name of one in the set.
  * @param when - A `Date` or milliseconds since 1970 (UTC).
@@ -401,7 +401,8 @@ export function cometPerihelia(comet: CometRecord | string, when: When): { last:
     if (last <= ms && ms < next) return { last, next, basis: "jpl", lastObserved: jpl.lastObserved };
   }
   const tp = utcOfJulianDate(record.tp);
-  if (!(record.e < 1)) {
+  const periodYears = record.e < 1 ? (2 * Math.PI * Math.sqrt((record.q / (1 - record.e)) ** 3)) / GAUSS_K / 365.25 : Infinity;
+  if (!(record.e < 1) || periodYears > 10_000) {
     const basis = record.spkid === null ? "elements" : "jpl";
     return tp <= ms ? { last: tp, next: null, basis, lastObserved: false } : { last: null, next: tp, basis, lastObserved: false };
   }

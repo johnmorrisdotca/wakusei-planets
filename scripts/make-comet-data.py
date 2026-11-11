@@ -236,7 +236,7 @@ def horizons_elements(fetch, rec, jds):
 
 def add_perihelia(fetch, rec, last_obs, now_jd):
     """The last and the next perihelion of a periodic comet from JPL: Horizons' osculating elements of the comet's latest apparition record, asked at the two dates the plain period puts them near (the elements' Tp is
-    the passage nearest the date, and the dates are within half a period of the real ones). `last` is observed when the solution has observations within 150 days of it (SBDB's last observation), else predicted."""
+    the passage nearest the date, and the dates are within half a period of the real ones). `lastObserved` is what the solution records, not whether the comet was seen: true when SBDB's last observation of the solution is within 150 days of the passage, else the date is JPL's prediction from the solution."""
     k = 0.01720209895
     period = 2 * math.pi * math.sqrt(rec["a"] ** 3) / k
     turns = math.floor((now_jd - rec["tp"]) / period)

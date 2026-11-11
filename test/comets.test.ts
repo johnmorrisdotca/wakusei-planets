@@ -213,6 +213,12 @@ test("last and next perihelion of the periodic comets are JPL's dates, with thei
   assert.equal(cometPerihelia("2I", now).basis, "jpl");
   assert.equal(cometPerihelia("2I", Date.UTC(2000, 0, 1)).last, null);
   assert.ok(cometPerihelia("2I", Date.UTC(2000, 0, 1)).next! > 0);
+  // a period over 10,000 years has one perihelion: repeating Hyakutake's 70,000 years would put its next in the year 99940
+  const hyakutake = cometPerihelia("hyakutake", now);
+  assert.ok(hyakutake.last !== null && hyakutake.last < Date.UTC(1997, 0, 1) && hyakutake.next === null, "Hyakutake's one perihelion is behind");
+  assert.equal(cometPerihelia("hyakutake", Date.UTC(1990, 0, 1)).last, null);
+  assert.ok(cometPerihelia("hyakutake", Date.UTC(1990, 0, 1)).next! < Date.UTC(1997, 0, 1));
+  for (const comet of listComets()) if (comet.e < 1) assert.ok(new Date(cometPerihelia(comet, now).next ?? 0).getUTCFullYear() < 10_000, `${comet.id}'s next perihelion is not in a far year`);
   const made = cometFromElements({ designation: "X", e: 0.5, q: 1, i: 10, node: 0, w: 0, perihelion: Date.UTC(2030, 0, 1) });
   assert.equal(cometPerihelia(made, Date.UTC(2029, 0, 1)).basis, "elements");
   assert.equal(day(cometPerihelia(made, Date.UTC(2029, 0, 1)).next), "2030-01-01");
