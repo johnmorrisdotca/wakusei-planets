@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -103,3 +103,18 @@ try {
   outside = error instanceof RangeError;
 }
 if (!outside) throw new Error("roadster does not refuse a date outside its span");
+
+// The comets through package resolution: the table loads with the entry point, Halley's perihelion distance is on the orbit, a comet made from elements flies, and a stranger throws.
+const cometsEntry = "@johnmorrisdotca/wakusei-planets/comets";
+const comets = await import(cometsEntry);
+const halleyComet = comets.findComet("1P");
+if (halleyComet === undefined || comets.listComets().length !== 34 || Math.abs(Math.hypot(...comets.cometPosition("halley", Date.UTC(1986, 1, 8, 11, 22))) - halleyComet.q) > 1e-3) throw new Error("comets package entry failed");
+const madeComet = comets.cometFromElements({ designation: "C/2099 A1", e: 1.0004, q: 0.5, i: 20, node: 10, w: 20, perihelion: Date.UTC(2099, 5, 1) });
+if (Math.abs(Math.hypot(...comets.cometPosition(madeComet, Date.UTC(2099, 5, 1))) - 0.5) > 1e-6) throw new Error("a comet from elements is not where its elements put it");
+let strangeComet = false;
+try {
+  comets.cometPosition("no-such-comet", 0);
+} catch (error) {
+  strangeComet = error instanceof RangeError;
+}
+if (!strangeComet) throw new Error("comets does not refuse a comet it does not know");

@@ -110,6 +110,11 @@
       "ja": "スターマンとテスラ・ロードスター: 2018年から2035年末までの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",
       "platform": "node"
     },
+    "./comets": {
+      "en": "Comets: 34 well-known ones (Halley, Encke, Hale-Bopp, NEOWISE, 'Oumuamua and more) with orbits from JPL's Small-Body Database, where each is on a date, its distances, its orbit line and its meteor showers (about 6 kB gzipped)",
+      "ja": "彗星: ハレー、エンケ、ヘール・ボップ、ネオワイズ、オウムアムアなど有名な34個の軌道 (JPL小天体データベース)、任意の日の位置、距離、軌道の線、関連する流星群 (gzip で約6 kB)",
+      "platform": "node"
+    },
     "./suncalc": {
       "en": "The Sun and Moon from a place: position, sunrise and sunset, Moon rise, set and phase, with suncalc 2's names and a better engine",
       "ja": "場所から見た太陽と月: 位置、日の出と日の入り、月の出入りと月相。suncalc 2 と同じ名前で、より正確です",

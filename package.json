@@ -171,6 +171,11 @@
       "import": "./dist/roadster.js",
       "default": "./dist/roadster.js"
     },
+    "./comets": {
+      "types": "./dist/comets.d.ts",
+      "import": "./dist/comets.js",
+      "default": "./dist/comets.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",
