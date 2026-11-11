@@ -31,7 +31,7 @@ test("planSunExtent steps through 50, 100, 200, 500, 1000 and 2000 au", () => {
   assert.deepEqual([30, 50, 50.1, 83, 170, 400, 900, 1500, 9000].map(planSunExtent), [50, 50, 100, 100, 200, 500, 1000, 2000, 2000]);
 });
 
-test("the solar system from above: nine planets and the Sun at the middle, each at its own heliocentric place for the time", () => {
+test("the solar system from above: the eight planets and Pluto, and the Sun at the middle, each at its own heliocentric place for the time", () => {
   const plan = planAt(T, { spacing: "true" });
   assert.equal(plan.system, "sun");
   assert.equal(plan.unit, "au");
@@ -232,4 +232,46 @@ test("every mark and system gives a drawable plan with no gaps in the numbers", 
     for (const orbit of plan.orbits) for (const p of orbit.points) assert.ok(Number.isFinite(p[0]) && Number.isFinite(p[1]), `${system}: ${orbit.id}`);
     assert.ok(!planSvg(plan).includes("NaN"), system);
   }
+});
+
+test("a moon system is seen from above the planet's IAU north pole: each system's moons go the sense the facts give (Uranus's go clockwise, because it spins backward about that pole)", () => {
+  const hour = 3_600_000;
+  const T0 = Date.UTC(2026, 10, 11, 12);
+  const sense = (host: Exclude<(typeof PLAN_SYSTEMS)[number], "sun">, id: string): number => {
+    const a = dotOf(planAt(T0, { system: host, spacing: "true" }), id);
+    const b = dotOf(planAt(T0 + hour, { system: host, spacing: "true" }), id);
+    return Math.sign(turn(angle(a), angle(b)));
+  };
+  // +1 anticlockwise, -1 clockwise, seen from above the north pole; Nereid and Pluto's small moons are slow but still go one way
+  const expected: Record<string, Record<string, number>> = {
+    earth: { moon: 1 },
+    mars: { phobos: 1, deimos: 1 },
+    jupiter: { io: 1, europa: 1, ganymede: 1, callisto: 1 },
+    saturn: { mimas: 1, enceladus: 1, tethys: 1, dione: 1, rhea: 1, titan: 1, iapetus: 1 },
+    uranus: { miranda: -1, ariel: -1, umbriel: -1, titania: -1, oberon: -1 },
+    neptune: { proteus: 1, triton: -1, nereid: 1 },
+    pluto: { charon: 1, nix: 1, hydra: 1 },
+    orcus: { vanth: -1 },
+    haumea: { hiiaka: -1, namaka: -1 },
+    eris: { dysnomia: 1 },
+  };
+  assert.deepEqual(Object.keys(expected).sort(), PLAN_SYSTEMS.filter((system) => system !== "sun").sort(), "every system is listed");
+  for (const [host, moons] of Object.entries(expected)) {
+    assert.deepEqual(Object.keys(moons).sort(), [...MOONS_OF[host as keyof typeof MOONS_OF]].sort(), `${host}'s moons are all listed`);
+    for (const [id, want] of Object.entries(moons)) assert.equal(sense(host as never, id), want, `${id} round ${host}`);
+  }
+});
+
+test("a system the plan does not know throws a RangeError that lists the ones it does; a mark is read in lower case", () => {
+  assert.throws(() => planAt(T, { system: "mercury" as never }), (error: unknown) => error instanceof RangeError && /mercury/.test(error.message) && PLAN_SYSTEMS.every((system) => error.message.includes(system)));
+  assert.equal(planAt(T, { mark: "Mars" }).marked, "mars");
+  assert.equal(planAt(T, { system: "jupiter", mark: " IO " }).marked, "io");
+});
+
+test("the orbit lines of a small body follow the theory in use: fitted once its table is imported", async () => {
+  const before = planAt(T, { mark: "ceres" }).orbits.find((one) => one.id === "ceres")!;
+  await import("../src/tables/ceres.ts");
+  const after = planAt(T, { mark: "ceres" }).orbits.find((one) => one.id === "ceres")!;
+  assert.equal(after.points.length, before.points.length);
+  assert.ok(after.marked && after.points.every((p) => Number.isFinite(p[0])));
 });

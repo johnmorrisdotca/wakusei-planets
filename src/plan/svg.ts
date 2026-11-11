@@ -141,7 +141,8 @@ const STYLE = [
   ".o{fill:none;stroke:var(--wp-line);stroke-width:1}.om{fill:none;stroke:var(--wp-mark);stroke-width:1.5}",
   ".d{fill:var(--wp-dot)}.dm{fill:var(--wp-mark)}.s{fill:var(--wp-sun)}.ring{fill:none;stroke:var(--wp-mark);stroke-width:1.5}",
   ".t{fill:var(--wp-ink);paint-order:stroke;stroke:light-dark(#fbf8f1,#1d201e);stroke-width:3px;stroke-linejoin:round}.tm{font-weight:700;fill:var(--wp-mark)}.sc{fill:var(--wp-muted);font-size:9px}",
-  ".hit{fill:transparent;cursor:pointer}g[data-id]:focus-visible .ring{stroke-width:2.5}g[data-id]:focus{outline:none}g[data-id]:hover .hit+*{opacity:.8}",
+  // a dot reached by the keyboard shows a ring, marked or not; the hit area is 24 px across
+  ".hit{fill:transparent;cursor:pointer}.fr{display:none;fill:none;stroke:var(--wp-ink);stroke-width:2}g[data-id]:focus-visible .fr{display:inline}g[data-id]:focus{outline:none}g[data-id]:hover .hit+*{opacity:.8}",
 ].join("");
 
 /** The pixels a dot is drawn with: the Sun and a planet at the middle are larger than a body going round. */
@@ -165,7 +166,7 @@ const touches = (a: LabelBox, b: LabelBox): boolean => a.x < b.x + b.width + LAB
 
 /**
  * The plan as an SVG string, for a square of `size` pixels: the orbit lines, the Sun or planet at the middle, a dot for each body (the marked one larger, ringed and named), the names that do not overlap, and a line at the foot
- * saying how distances are drawn. Each body is a `<g data-id>` with a `role="button"`, so a page can turn a press into the body's id; the colours are CSS custom properties (`--wakusei-plan-ink`, `-muted`, `-line`, `-sun`, `-dot`, `-mark`)
+ * saying how distances are drawn. Each body is a `<g data-id>` with a `role="button"`, so a page can turn a press into the body's id (the target is 24 pixels across, and a dot reached with the keyboard shows a focus ring); the colours are CSS custom properties (`--wakusei-plan-ink`, `-muted`, `-line`, `-sun`, `-dot`, `-mark`)
  * that default to the family's and follow light and dark with the page's `color-scheme`.
  *
  * @param plan - The plan from `planAt`.
@@ -225,7 +226,7 @@ export function planSvg(plan: Plan, options: PlanDrawOptions = {}): string {
     const ring = dot.marked ? `<circle class="ring" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r + 4)}"/>` : "";
     const box = named.get(dot.id);
     const label = box !== undefined ? `<text class="t${dot.marked ? " tm" : ""}" x="${n2(box.x)}" y="${n2(box.y + 10)}">${esc(name)}</text>` : "";
-    out.push(`<g data-id="${esc(dot.id)}" data-kind="${dot.kind}"${dot.marked ? ' data-marked=""' : ""} role="button" tabindex="0" aria-label="${esc(name)}"><circle class="hit" cx="${n2(x)}" cy="${n2(y)}" r="8"/>${shape}${ring}${label}</g>`);
+    out.push(`<g data-id="${esc(dot.id)}" data-kind="${dot.kind}"${dot.marked ? ' data-marked=""' : ""} role="button" tabindex="0" aria-label="${esc(name)}"><circle class="hit" cx="${n2(x)}" cy="${n2(y)}" r="12"/>${shape}${ring}<circle class="fr" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r + 7)}"/>${label}</g>`);
   }
   out.push(`<text class="sc" x="2" y="${size - 4}">${esc(text.scale)}</text></svg>`);
   return out.join("");

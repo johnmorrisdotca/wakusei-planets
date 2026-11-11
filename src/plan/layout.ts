@@ -1,7 +1,7 @@
 // The plan: where the bodies are on a top-down map, from the package's own positions. Two systems: the solar system seen from above the ecliptic's north pole, and one planet's moons seen from above that planet's north pole.
 // Distances are squeezed (a logarithm, so the inner planets and the outer ones both show in a few hundred pixels) or true. Pure: numbers in, numbers out; no DOM, no clock.
 import { ORBITS } from "../data/orbits.ts";
-import { heliocentric, moonVector } from "../ephemeris.ts";
+import { heliocentric, heliocentricModel, moonVector } from "../ephemeris.ts";
 import { BODIES, MOONS_OF, PLANET_IDS, type BodyId, type HostId, type MinorId, type MoonId } from "../facts.ts";
 import { planetOrbit, SPACE_DWARFS, SPACE_MINORS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "../space/frame.ts";
 import { cross, dot, fromRaDec, toEcliptic, type Vec3 } from "../vec.ts";
@@ -254,7 +254,8 @@ const sunBodyOf = (id: string): string | undefined => {
 /** A heliocentric orbit, as points in the ecliptic plane in au: a trip round the Sun from the start of the year or so the moment is in. */
 function sunOrbit(id: SpacePlanet | SpaceDwarf | SpaceMinor | "earth", time: number): readonly (readonly [number, number])[] {
   const bucket = Math.floor(time / SUN_BUCKET);
-  return remember(`${id}|${bucket}`, () => planetOrbit(id, bucket * SUN_BUCKET, ORBIT_POINTS).map((p) => {
+  // the theory is in the key: a table imported after the first draw gives a better line than the elements it replaces
+  return remember(`${id}|${bucket}|${heliocentricModel(id as HostId | MinorId, time).theory}`, () => planetOrbit(id, bucket * SUN_BUCKET, ORBIT_POINTS).map((p) => {
     // planetOrbit answers in the scene's axes (J2000 equatorial with y north and z toward the viewer): back to equatorial, then to the ecliptic
     const ecliptic = toEcliptic([p[0], -p[2], p[1]]);
     return [ecliptic[0], ecliptic[1]] as const;
@@ -281,7 +282,7 @@ function overPole(host: HostId, id: MoonId, time: number): [number, number] {
 function moonOrbit(host: HostId, id: MoonId, time: number): readonly (readonly [number, number])[] {
   const bucket = Math.floor(time / MOON_BUCKET);
   return remember(`${host}:${id}|${bucket}`, () => {
-    const rate = id === "moon" ? 13.1763585 : ORBITS[id]?.sid;
+    const rate = ORBITS[id]?.sid;
     if (rate === undefined || rate === 0) return [];
     const start = bucket * MOON_BUCKET;
     const period = (360 / Math.abs(rate)) * DAY;
@@ -318,12 +319,15 @@ const place = (id: string, kind: PlanKind, point: readonly [number, number], ext
  * The plan for a moment: the solar system seen from above the ecliptic's north pole (x toward the March equinox, planets going anticlockwise), or one planet's moons seen from above its north pole. Every position is the package's own (VSOP87B,
  * the fitted tables, the moon theories) for `time`, with no allowance for light's travel. The orbit lines are cut once a year in the solar system and once a week for moons, which is finer than a pixel; the dots are exact.
  *
- * The solar-system plan holds the nine planets and the body marked if it is a dwarf planet or a minor body (and any `extras`), and stands at the smallest of 50, 100, 200, 500, 1,000 and 2,000 au that holds them all.
- * A moon system holds every moon of the planet and stands a little past the furthest of them.
+ * The solar-system plan holds the eight planets and Pluto, and the body marked if it is a dwarf planet or a minor body (and any `extras`), and stands at the smallest of 50, 100, 200, 500, 1,000 and 2,000 au that holds them all.
+ * A moon system holds every moon of the planet and stands a little past the furthest of them. A moon system is seen from above the planet's IAU north pole, so a planet that spins backward about it (Uranus) has its moons go clockwise.
+ * Pluto comes from its fitted table. The other dwarf planets and the minor bodies come from the osculating elements of one epoch, unless you have imported `@johnmorrisdotca/wakusei-planets/tables` (or `/tables/ceres`, `/tables/dwarfs`, `/tables/minor`), which fit them to Horizons; `<wakusei-plan>` imports the one it needs when such a body is marked.
+ * `mark` is read in lower case. A `system` that is not in `PLAN_SYSTEMS` throws a `RangeError` that lists them.
  *
  * @param time - The moment, in milliseconds since 1970 (UTC).
  * @param options - The system, the body to mark, the spacing and any extras.
  * @returns The plan.
+ * @throws RangeError when `options.system` is not one of `PLAN_SYSTEMS`.
  *
  * @example
  * ```ts
@@ -339,6 +343,8 @@ const place = (id: string, kind: PlanKind, point: readonly [number, number], ext
  */
 export function planAt(time: number, options: PlanOptions = {}): Plan {
   const system = options.system ?? "sun";
+  if (!(PLAN_SYSTEMS as readonly string[]).includes(system)) throw new RangeError(`unknown plan system ${JSON.stringify(system)}; expected one of ${PLAN_SYSTEMS.join(", ")}`);
+  if (options.mark !== undefined) options = { ...options, mark: options.mark.trim().toLowerCase() };
   const spacing: PlanSpacing = options.spacing === "true" ? "true" : "squeezed";
   return system === "sun" ? sunPlan(time, options, spacing) : moonPlan(time, system, options, spacing);
 }

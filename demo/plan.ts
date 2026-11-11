@@ -17,8 +17,8 @@ const pressed = (button: Element, on: boolean): void => {
   button.classList.toggle("on", on);
 };
 
-/** The bodies a reader can mark in the solar system beyond the Sun and the nine planets, and a craft. */
-const BEYOND = ["ceres", "eris", "sedna", "halley", "chiron", "voyager1"] as const;
+/** The bodies a reader can mark in the solar system beyond the Sun, the eight planets and Pluto, and two craft. */
+const BEYOND = ["ceres", "eris", "sedna", "halley", "chiron", "voyager1", "voyager2"] as const;
 const SUN_MARKS: readonly string[] = ["sun", ...PLANET_IDS, ...BEYOND];
 type Host = Exclude<PlanSystem, "sun">;
 const HOSTS = PLAN_SYSTEMS.filter((system): system is Host => system !== "sun");

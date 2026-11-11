@@ -1,5 +1,6 @@
 // <wakusei-plan>: a small top-down plan, in SVG with no WebGL: the solar system from above with one body marked, or one planet's moons from above its north pole with one moon marked. Positions are the package's own for the `time` it is
 // given. It draws when an input changes (the time, the mark, the system, the spacing, the names, the language, its size) and never on a timer, and nothing while it is out of sight. A press on a dot sends `wakusei-plan-pick`.
+import { DWARF_IDS, MINOR_IDS } from "../facts.ts";
 import { SPACECRAFT_IDS, type SpacecraftId } from "../spacecraft-facts.ts";
 import { PLAN_AU_KM, planAt, PLAN_SYSTEMS, type Plan, type PlanExtra, type PlanSpacing, type PlanSystem } from "./layout.ts";
 import { planSvg, type PlanLang } from "./svg.ts";
@@ -42,7 +43,7 @@ export interface PlanPick {
  * The `<wakusei-plan>` custom element: a small plan seen from above, in SVG, light enough for an inset of 200 to 280 pixels.
  *
  * Attributes: `system` (`sun`, the default, draws the solar system from above the ecliptic's north pole; a planet or dwarf planet with moons, such as `jupiter`, draws its moons from above its north pole), `mark` (the body the plan is about: its
- * id, such as `mars`, `ceres`, `halley`, `io` or a craft such as `voyager1`; in the solar system a moon marks its planet), `time` (an ISO date or milliseconds since 1970; the moment it is read when left out or `now`, and then it stands still:
+ * id in any case, such as `mars`, `ceres`, `halley`, `io` or a craft such as `voyager1`; in the solar system a moon marks its planet. A craft's path, or the fitted table of a dwarf planet or minor body, is fetched the first time it is marked), `time` (an ISO date or milliseconds since 1970, and a bare number is always milliseconds, so `2026` is two seconds past the start of 1970 and not a year; the moment it is read when left out or `now`, and then it stands still:
  * set `time` again to move it), `spacing` (`squeezed`, the default, puts each body at the logarithm of its distance so inner and outer both show; `true` is to scale), `names` (`off` hides every name but the marked body's), `lang` (`en` or `ja`;
  * the page's `lang` when left out), `size` (pixels across, 240 by default; also `--wakusei-size`) and `theme` (`light` or `dark`; the page's colour scheme when left out). The colours are `--wakusei-plan-bg`, `-ink`, `-muted`, `-line`, `-sun`, `-dot` and `-mark`.
  *
@@ -75,7 +76,11 @@ export class WakuseiPlan extends HTMLElement {
   #io: IntersectionObserver | undefined;
   #watch: MutationObserver | undefined;
   #craft: Spacecraft | undefined;
-  #loading: string | undefined;
+  /** The craft whose paths are loaded, and those being fetched: each is fetched once, when it is first marked. */
+  #craftLoaded = new Set<string>();
+  #craftLoading = new Set<string>();
+  /** The fitted tables fetched for a marked dwarf planet or minor body, by entry point. */
+  #tablesAsked = new Set<string>();
 
   constructor() {
     super();
@@ -138,6 +143,9 @@ export class WakuseiPlan extends HTMLElement {
       if (!this.hasAttribute("lang")) this.#queue();
     });
     this.#watch.observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
+    // and the nearest ancestor that sets one, which is the language it reads when it has none
+    const near = this.parentElement?.closest("[lang]");
+    if (near !== null && near !== undefined && near !== document.documentElement) this.#watch.observe(near, { attributes: true, attributeFilter: ["lang"] });
     this.#queue();
   }
 
@@ -179,20 +187,27 @@ export class WakuseiPlan extends HTMLElement {
     });
   }
 
-  /** The craft marked, if the mark is one: its path is fetched once, then drawn. */
-  #craftMarked(): SpacecraftId | undefined {
-    const mark = this.getAttribute("mark");
-    return mark !== null && (SPACECRAFT_IDS as readonly string[]).includes(mark) ? (mark as SpacecraftId) : undefined;
+  /** The mark, in lower case. */
+  #mark(): string | undefined {
+    return this.getAttribute("mark")?.trim().toLowerCase() || undefined;
   }
 
+  /** The craft marked, if the mark is one. */
+  #craftMarked(): SpacecraftId | undefined {
+    const mark = this.#mark();
+    return mark !== undefined && (SPACECRAFT_IDS as readonly string[]).includes(mark) ? (mark as SpacecraftId) : undefined;
+  }
+
+  /** The place of the craft marked, once its path has been fetched (each craft's the first time it is marked); until then, nothing. */
   #extras(id: SpacecraftId | undefined, time: number): PlanExtra[] {
     if (id === undefined) return [];
-    if (this.#craft === undefined) {
-      if (this.#loading !== id) {
-        this.#loading = id;
+    if (!this.#craftLoaded.has(id) || this.#craft === undefined) {
+      if (!this.#craftLoading.has(id)) {
+        this.#craftLoading.add(id);
         void import("../spacecraft.ts").then(async (module) => {
           await module.loadSpacecraft(id);
           this.#craft = module;
+          this.#craftLoaded.add(id);
           this.#queue();
         }, () => undefined);
       }
@@ -206,6 +221,16 @@ export class WakuseiPlan extends HTMLElement {
     }
   }
 
+  /** A marked dwarf planet or minor body is drawn from its fitted table once that has been fetched; until then from the elements of one epoch. */
+  #tables(mark: string | undefined): void {
+    if (mark === undefined) return;
+    const entry = mark === "ceres" ? "ceres" : (DWARF_IDS as readonly string[]).includes(mark) ? "dwarfs" : (MINOR_IDS as readonly string[]).includes(mark) ? "minor" : undefined;
+    if (entry === undefined || this.#tablesAsked.has(entry)) return;
+    this.#tablesAsked.add(entry);
+    const load = entry === "ceres" ? import("../tables/ceres.ts") : entry === "dwarfs" ? import("../tables/dwarfs.ts") : import("../tables/minor.ts");
+    void load.then(() => this.#queue(), () => undefined);
+  }
+
   #draw(): void {
     if (!this.isConnected || !this.#dirty) return;
     if (!this.#visible || this.#size <= 0) return;
@@ -215,7 +240,8 @@ export class WakuseiPlan extends HTMLElement {
     const system: PlanSystem = (PLAN_SYSTEMS as readonly string[]).includes(wanted) ? (wanted as PlanSystem) : "sun";
     const spacing: PlanSpacing = this.getAttribute("spacing") === "true" ? "true" : "squeezed";
     const craft = this.#craftMarked();
-    const plan = planAt(time, { system, spacing, mark: this.getAttribute("mark") ?? undefined, extras: system === "sun" ? this.#extras(craft, time) : [] });
+    this.#tables(this.#mark());
+    const plan = planAt(time, { system, spacing, mark: this.#mark(), extras: system === "sun" ? this.#extras(craft, time) : [] });
     const held = this.#root.activeElement?.getAttribute("data-id");
     this.#box.innerHTML = planSvg(plan, { size: this.#size, lang: this.#lang(), names: !off(this.getAttribute("names")) });
     if (held !== null && held !== undefined) this.#box.querySelector<SVGElement>(`g[data-id="${held}"]`)?.focus();

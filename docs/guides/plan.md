@@ -29,15 +29,15 @@ The first plan is the solar system seen from above the ecliptic's north pole, wi
 
 **The solar system** (`system="sun"`, the default). The Sun is at the middle and the eight planets and Pluto go round it anticlockwise, as seen from above the ecliptic's north pole. Each planet is a dot at its place for the `time`, with its orbit as a line. The body in `mark` has a ring, its name in bold and its orbit in the accent colour. A body that is not one of these nine joins the plan when it is marked: a dwarf planet (Ceres, Eris, Sedna), a minor body (Halley's comet, Chiron) or a spacecraft from [`/spacecraft`](spacecraft.md) such as `voyager1`. A moon in `mark` marks its planet, so a page that follows the body in a 3D view can hand the same id to both.
 
-**One planet's moons** (`system="jupiter"`, or any planet or dwarf planet that has moons: `earth`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `orcus`, `haumea`, `eris`). The planet is at the middle and each moon goes round it, seen from above the planet's north pole (the IAU pole), so a moon that goes the planet's way goes anticlockwise and a backward one, such as Triton, goes clockwise. `mark` is a moon, or the planet; a moon of another planet marks nothing.
+**One planet's moons** (`system="jupiter"`, or any planet or dwarf planet that has moons: `earth`, `mars`, `jupiter`, `saturn`, `uranus`, `neptune`, `pluto`, `orcus`, `haumea`, `eris`). The planet is at the middle and each moon goes round it, seen from above the planet's north pole (the IAU pole), so what you see is the sense of a moon's turn about that pole. The moons of the Earth, Mars, Jupiter and Saturn go anticlockwise. Uranus spins backward about its IAU north pole (its axis is tilted 98 degrees), and its moons go round the way it spins, so they go clockwise in this view; so does Triton, which goes against Neptune's spin, and so do Orcus's Vanth and Haumea's two moons. A test holds the sense of every moon. `mark` is a moon, or the planet; a moon of another planet marks nothing.
 
 ## The attributes
 
 | Attribute | What it does |
 |---|---|
 | `system` | `sun` (the default), or a planet or dwarf planet with moons |
-| `mark` | the body the plan is about: `mars`, `ceres`, `halley`, `io`, `voyager1` |
-| `time` | an ISO date or milliseconds since 1970. Left out or `now`, it is the moment the plan is first drawn, and it then stands still: set `time` again to move it |
+| `mark` | the body the plan is about, in any case: `mars`, `ceres`, `halley`, `io`, `voyager1` |
+| `time` | an ISO date or milliseconds since 1970 (a bare number is always milliseconds: `2026` is two seconds into 1970, not a year). Left out or `now`, it is the moment the plan is first drawn, and it then stands still: set `time` again to move it |
 | `spacing` | `squeezed` (the default) or `true` |
 | `names` | `off` hides every name but the marked body's |
 | `lang` | `en` or `ja`; the page's `lang` when left out |
@@ -92,7 +92,7 @@ Names are chosen so that none overlap: the marked body's first, then the Sun, pl
 
 ## What is exact and what is not
 
-The dots are exact: each is the package's own position for the moment (VSOP87B for the planets, fitted tables for Pluto and the other small bodies, the moon theories for moons; see [accuracy](accuracy.md)), with no allowance for the time light takes to arrive. They are drawn at one size, not to scale, so a dot says nothing about how big a body is. The plan is a flat view from above: a body that is well above or below the plane of the ecliptic (Pluto, Sedna, a spacecraft) is drawn where it is above that plane, and its distance is its distance in that plane. A spacecraft is drawn only while the moment is inside the record of its path.
+The dots are exact: each is the package's own position for the moment (VSOP87B for the planets, a fitted table for Pluto, the moon theories for moons; see [accuracy](accuracy.md)), with no allowance for the time light takes to arrive. The other dwarf planets and the minor bodies (Ceres, Eris, Sedna, Halley, Chiron) come from the osculating elements of one epoch, good for years either side of it, unless their fitted tables are loaded: `<wakusei-plan>` loads the table of a body when it is first marked, and for `planAt` you import `@johnmorrisdotca/wakusei-planets/tables` (or `/tables/ceres`, `/tables/dwarfs`, `/tables/minor`) yourself. A spacecraft's path is fetched when the craft is first marked, and each craft is fetched once. A dot reached with the keyboard shows a focus ring, and each dot is a target 24 pixels across. They are drawn at one size, not to scale, so a dot says nothing about how big a body is. The plan is a flat view from above: a body that is well above or below the plane of the ecliptic (Pluto, Sedna, a spacecraft) is drawn where it is above that plane, and its distance is its distance in that plane. A spacecraft is drawn only while the moment is inside the record of its path.
 
 ## Without a browser
 
