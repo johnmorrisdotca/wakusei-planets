@@ -2,7 +2,7 @@
 // language, and nothing outside its record. Chromium, drawing in software; every wait is on what the page reports.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { eclipticToScene, frameAt, placeAround } from "../src/space/index.ts";
+import { eclipticToScene, frameAt, placeAround, placeBodies } from "../src/space/index.ts";
 import { roadsterPositionAu } from "../src/roadster.ts";
 import { callOn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
 
@@ -42,7 +42,8 @@ test("off by default and its table not fetched; on, the car is where the table p
   expect(fetched.length, "the table came with the car's module, once").toBeGreaterThanOrEqual(1);
   // where the package puts it, in Earth radii from the Earth's centre, in the true scale
   const seen = (await car(page)).position!;
-  const expected = placeAround("true", frameAt(when).sun, eclipticToScene(roadsterPositionAu(when)));
+  // the Sun as the view places it (in Earth radii: the frame's own `sun` is in astronomical units), and the car round it by the same mapping
+  const expected = placeAround("true", placeBodies("true", frameAt(when)).sun, eclipticToScene(roadsterPositionAu(when)));
   for (let i = 0; i < 3; i += 1) expect(Math.abs(seen[i]! - expected[i]!), `axis ${i}: ${seen[i]} against ${expected[i]}`).toBeLessThan(Math.max(1e-6, Math.abs(expected[i]!) * 1e-6));
   expect((await car(page)).radiusPx).toBeGreaterThan(1);
   await expect(nameOf(page)).toHaveText("Starman");
@@ -50,7 +51,7 @@ test("off by default and its table not fetched; on, the car is where the table p
   // the squeezed scale: the same mapping as the planets
   await drawn(page, () => setOn(page, "scale", "compressed"));
   const squeezed = (await car(page)).position!;
-  const expectedSqueezed = placeAround("compressed", frameAt(when).sun, eclipticToScene(roadsterPositionAu(when)));
+  const expectedSqueezed = placeAround("compressed", placeBodies("compressed", frameAt(when)).sun, eclipticToScene(roadsterPositionAu(when)));
   for (let i = 0; i < 3; i += 1) expect(Math.abs(squeezed[i]! - expectedSqueezed[i]!)).toBeLessThan(1e-3);
   // Japanese
   await page.locator(SPACE).evaluate((el) => el.setAttribute("lang", "ja"));
