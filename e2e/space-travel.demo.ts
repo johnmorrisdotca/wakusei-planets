@@ -24,17 +24,27 @@ interface Frame {
   travelling: Travelling | null;
   gliding: boolean;
   forward: [number, number, number];
-  onScreen: { leaving: boolean; destination: boolean };
+  onScreen: { leaving: boolean; destination: boolean; planet: boolean };
 }
+/** The planet two moons of one planet go round (the move keeps it in the picture, and it is what the turn holds). */
+const PLANET: Record<string, string> = { callisto: "jupiter", europa: "jupiter" };
 
-/** Whether a body's disc or marker is on the screen now: its place is inside the box, or within its radius (at least a marker's 4 pixels) of the edge. */
-const onScreen = (page: Page, id: string): Promise<boolean> =>
-  page.locator(SPACE).evaluate((el, body) => {
-    const place = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(body);
-    if (!place) return false;
-    const r = Math.max(place.r, 4);
-    return place.x > -r && place.y > -r && place.x < el.clientWidth + r && place.y < el.clientHeight + r;
-  }, id);
+/** What the page reports now, read in one go so every part is of the same draw: the move, the look direction, and whether each body's disc or marker is on the screen (its place is inside the box, or within its radius, at least a marker's 4 pixels, of the edge). */
+const read = (page: Page, from: string, to: string): Promise<Frame> =>
+  page.locator(SPACE).evaluate(
+    (el, [a, b, c]) => {
+      const stats = Reflect.get(el, "stats") as { draws: number; ride: { gliding: boolean }; travelling: unknown; camera: { forward: [number, number, number] } };
+      const on = (id: string | null): boolean => {
+        if (id === null) return false;
+        const place = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(id);
+        if (!place) return false;
+        const r = Math.max(place.r, 4);
+        return place.x > -r && place.y > -r && place.x < el.clientWidth + r && place.y < el.clientHeight + r;
+      };
+      return { draws: stats.draws, travelling: stats.travelling, gliding: stats.ride.gliding, forward: stats.camera.forward, onScreen: { leaving: on(a), destination: on(b), planet: on(c) } };
+    },
+    [from, to, PLANET[from] !== undefined && PLANET[from] === PLANET[to] ? PLANET[from]! : null] as [string, string, string | null],
+  ) as Promise<Frame>;
 
 /** Wait until the draws hold (two reads apart with no new draw). */
 async function held(page: Page): Promise<void> {
@@ -52,22 +62,27 @@ async function held(page: Page): Promise<void> {
     .toBe(true);
 }
 
-/** Start a move and record what the page reports at every draw until it is over. */
-async function move(page: Page, from: string, to: string, options: Record<string, unknown> = {}): Promise<Frame[]> {
-  await callOn(page, "goTo", from, { smooth: false });
+/** Start a move and record what the page reports at every draw until it is over. A reading is kept only if it is of a draw made after the move was asked for: before that the page still reports the last draw of what came before. */
+async function move(page: Page, from: string, to: string, options: Record<string, unknown> = {}, startZoom = 1, fresh = false): Promise<Frame[]> {
+  // `fresh`: from the controls' own start (no turn, no tilt), so two moves of the same pair begin from the same view and their plans can be compared
+  if (fresh) await page.locator("#controls").evaluate((el) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom: 1 }, true, "set"));
+  const before = (await statsOf(page)).draws;
+  await callOn(page, "goTo", from, { smooth: false, zoom: startZoom });
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(from);
+  await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
   await held(page);
   const frames: Frame[] = [];
+  const base = (await statsOf(page)).draws;
   await callOn(page, "goTo", to, options);
   const started = Date.now();
-  let lastDraw = -1;
+  let lastDraw = base;
   for (;;) {
-    const stats = (await statsOf(page)) as unknown as { draws: number; ride: { gliding: boolean }; travelling: Travelling | null; camera: { forward: [number, number, number] } };
-    if (stats.draws !== lastDraw) {
-      lastDraw = stats.draws;
-      frames.push({ draws: stats.draws, travelling: stats.travelling, gliding: stats.ride.gliding, forward: stats.camera.forward, onScreen: { leaving: await onScreen(page, from), destination: await onScreen(page, to) } });
+    const now = await read(page, from, to);
+    if (now.draws !== lastDraw) {
+      lastDraw = now.draws;
+      frames.push(now);
     }
-    if (!stats.ride.gliding && frames.length > 0) break;
+    if (!now.gliding && frames.length > 0) break;
     if (Date.now() - started > 60_000) throw new Error("the move never ended");
   }
   return frames;
@@ -89,7 +104,8 @@ for (const scale of ["true", "compressed"] as const) {
       for (const [i, frame] of moving.entries()) {
         const t = frame.travelling!;
         expect(frame.onScreen.leaving || frame.onScreen.destination, `frame ${i} (${t.stage} ${t.progress.toFixed(2)}): the ${from} or the ${to} is on the screen`).toBe(true);
-        if (t.stage === "turn") expect(frame.onScreen.leaving, `frame ${i}: the ${from} is on the screen through the turn`).toBe(true);
+        // the turn holds the body left, or, for two moons of one planet, the planet circled: one of the two is on the screen through the turn
+        if (t.stage === "turn") expect(frame.onScreen.leaving || (PLANET[from] === PLANET[to] && frame.onScreen.planet), `frame ${i}: the ${from} (or its planet) is on the screen through the turn`).toBe(true);
         if (t.stage !== "turn" && t.progress > 0.3) expect(frame.onScreen.destination, `frame ${i}: the ${to} is on the screen on the way`).toBe(true);
       }
       // one turn, never undone: the angle left to the final look direction never grows between draws (half a degree of slack for a drawn frame's rounding)
@@ -113,17 +129,26 @@ test("direct goes straight (a line path), a page can set one move's length, and 
   expect(moving.length).toBeGreaterThan(3);
   expect(moving[0]!.travelling!.kind).toBe("direct");
   expect(moving[0]!.travelling!.path).toBe("line");
-  for (const frame of moving) expect(frame.onScreen.destination, "direct: the destination is on the screen the whole way").toBe(true);
+  // a straight glide keeps the destination in the picture when it is in the picture as the move starts (the whole system on the screen, then Jupiter); from the Earth framed, Mars is a long way off to one side at the start
+  const inView = await move(page, "sun", "jupiter", { transition: "direct" }, 0.02);
+  const inViewMoving = inView.filter((f) => f.travelling !== null);
+  expect(inViewMoving.length).toBeGreaterThan(3);
+  expect(inViewMoving[0]!.onScreen.destination, "Jupiter is on the screen as the move starts").toBe(true);
+  for (const [i, frame] of inViewMoving.entries()) expect(frame.onScreen.destination, `frame ${i}: direct, the destination is on the screen the whole way`).toBe(true);
   // a fixed length: the move lasts about that long (the draws are counted, not the clock: at least a few, and the stats say the length)
   const quick = await move(page, "mars", "earth", { duration: 900 });
   const quickMoving = quick.filter((f) => f.travelling !== null);
   expect(quickMoving.length).toBeGreaterThan(2);
   expect((quickMoving[0]!.travelling as unknown as { duration: number }).duration).toBe(900);
-  await page.locator(SPACE).evaluate((el) => Reflect.set(el, "pace", 2));
+  // the view's pace scales the plan: the same move from the same view takes twice as long at pace 2 (set with the demo's own control, which holds the choice and applies it at every render)
+  const paceOf = (frames: Frame[]): number => (frames.find((f) => f.travelling !== null)!.travelling as unknown as { duration: number }).duration;
+  await page.locator('#paces [data-pace="1"]').dispatchEvent("click");
+  const even = paceOf(await move(page, "earth", "mars", { transition: "direct" }, 1, true));
+  await page.locator('#paces [data-pace="2"]').dispatchEvent("click");
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "pace"))).toBe(2);
-  const slow = await move(page, "earth", "mars", { transition: "direct" });
-  const slowMoving = slow.filter((f) => f.travelling !== null);
-  expect((slowMoving[0]!.travelling as unknown as { duration: number }).duration, "pace 2 doubles the plan's length").toBeGreaterThan((moving[0]!.travelling as unknown as { duration: number }).duration * 1.5);
+  const slow = paceOf(await move(page, "earth", "mars", { transition: "direct" }, 1, true));
+  expect(slow, `pace 2 doubles the plan's length (${even} ms, then ${slow} ms)`).toBeGreaterThanOrEqual(even * 2 - 2);
+  expect(slow).toBeLessThanOrEqual(even * 2 + 2);
 });
 
 test("auto is direct when the destination is on the screen as the move starts, and turn then travel when it is not", async ({ page }) => {
