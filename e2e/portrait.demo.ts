@@ -107,8 +107,11 @@ test.describe("3D", () => {
     }
     await page.locator("#fit").click();
     const cam = (await scene(page)).camera;
+    // a start on empty space near the bottom left of the picture, kept inside the window: a taller page (a wider fallback font) can push the picture's foot below the fold, where a pointer is never delivered
+    await page.locator("#view").scrollIntoViewIfNeeded();
     const box = (await page.locator("#view").boundingBox())!;
-    await drag(page, { x: box.x + 60, y: box.y + box.height - 40 }, -150, -50);
+    const inWindow = await page.evaluate(() => window.innerHeight);
+    await drag(page, { x: box.x + 60, y: Math.min(box.y + box.height - 40, inWindow - 40) }, -150, -50);
     const panned = (await scene(page)).camera;
     expect(panned.x).toBeGreaterThan(cam.x + 0.1);
     expect(panned.y).toBeLessThan(cam.y);

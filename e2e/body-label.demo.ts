@@ -160,7 +160,8 @@ test("while the Earth carries its drawn name its floating name and dot fade out;
   await expect.poll(opacity, { timeout: 10_000 }).toBe("0");
   expect(await floating.evaluate((el) => el.getAttribute("aria-hidden"))).toBe("true");
   // the Sun is a dot far away: it carries no drawn name, so its floating name stays
-  expect(await page.locator(SPACE).locator('.sp-label[data-body="sun"]').evaluate((el) => el.hasAttribute("data-carried"))).toBe(false);
+  // (its name may be left out where a wider font crowds it: then there is no floating name to carry anything)
+  expect(await page.locator(SPACE).locator('.sp-label[data-body="sun"]').evaluateAll((all) => all.some((el) => el.hasAttribute("data-carried")))).toBe(false);
   // from the whole solar system the Earth is a dot again: its floating name comes back
   await drawn(page, () => page.locator(SPACE).evaluate((el) => (el as unknown as { setView(v: unknown): void; zoomFor(p: string): number }).setView({ yaw: 0, tilt: 0, zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") })), (now) => now.count === 0);
   await expect.poll(carried, { timeout: 30_000 }).toBe(false);
