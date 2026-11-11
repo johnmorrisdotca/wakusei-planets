@@ -81,3 +81,7 @@ A series holds at most 100,000 moments; a larger one throws a `RangeError` that 
 ## Where the numbers come from
 
 The path is from JPL Horizons (target `-143205`, the Sun as the centre, ecliptic and equinox J2000), fetched on 2026-11-11 by `scripts/make-roadster-data.py`, which also measures the error and writes `src/data/roadster.ts`. NASA's data is a US government work and in the public domain; [NOTICE.md](../../NOTICE.md) says so. The launch time and the names are from Horizons' own notes on the object.
+
+## In the space view
+
+`<wakusei-space roadster>` (and `space.roadster = true`) draws the car in the solar-system view: a small marked body where the table puts it on the date shown, in the same mapping as the planets in both scales, on its orbit line (about one trip round the Sun, from the table itself), with its name beside it in the page's language (`Starman`, `スターマン`). It is off by default, and the table is fetched the first time it is shown, never before. Outside the record (before the launch, after 2035) nothing is drawn. The view draws only when something changes, as always; `stats.roadster` says whether the car was drawn, where (Earth radii from the Earth's centre) and how big on the screen. A press on its name fires `wakusei-body-click` with `{ id: "roadster" }` and goes nowhere, since the view cannot look at a car.

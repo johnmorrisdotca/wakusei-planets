@@ -188,7 +188,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "transition", "launch", "turn", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "transition", "launch", "turn", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -242,6 +242,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#labelsAlways = this.hasAttribute("labels-always") && this.getAttribute("labels-always") !== "off";
     this.#covered = this.getAttribute("covered") === "arrow" ? "arrow" : "name";
+    this.roadster = this.hasAttribute("roadster") && this.getAttribute("roadster") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.leave = { transition: readTransition(this.getAttribute("transition")), launchMs: readMs(this.getAttribute("launch"), DEFAULT_LAUNCH_MS), turnMs: readMs(this.getAttribute("turn"), DEFAULT_TURN_MS) };
@@ -329,6 +330,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "labels-always") this.labelsAlways = value !== null && value !== "off";
     else if (name === "covered") this.covered = value === "arrow" ? "arrow" : "name";
+    else if (name === "roadster") this.roadster = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "transition") this.transition = readTransition(value);
@@ -431,6 +433,31 @@ export class WakuseiSpace extends HTMLElement {
     this.#gate?.request();
   }
 
+  #roadsterLoading = false;
+  /**
+   * Show Starman and the Tesla Roadster (the attribute `roadster`; off by default): a small marked body where `/roadster` puts the car on the date shown, on its orbit line (about one trip round the Sun), with its name
+   * (`Starman`, `スターマン`) beside it, from the launch in 2018 to the end of 2035. Its path (a 20 kB table) is loaded the first time it is shown, and never when it is not. `stats.roadster` says what was drawn.
+   */
+  get roadster(): boolean {
+    return this.#model.roadster;
+  }
+  set roadster(value: boolean) {
+    this.#model.roadster = value;
+    if (value && this.#model.roadsterPath === null && !this.#roadsterLoading) {
+      this.#roadsterLoading = true;
+      // the table comes with the module, so it is fetched only when the car is first shown
+      void import("../roadster.ts").then(
+        (mod) => {
+          this.#model.roadsterPath = { positionAu: (ms) => mod.roadsterPositionAu(ms), record: { ...mod.ROADSTER.record }, name: { ...mod.ROADSTER.name } };
+          this.#gate?.request();
+        },
+        () => {
+          this.#roadsterLoading = false;
+        },
+      );
+    }
+    this.#gate?.request();
+  }
   #covered: "name" | "arrow" = "name";
   #arrows = new Map<string, HTMLElement>();
   /**
@@ -861,6 +888,8 @@ export class WakuseiSpace extends HTMLElement {
     help: { body: string; axis: [number, number, number]; pole: [number, number, number]; retrograde: boolean; arcTurn: [number, number, number] } | null;
     /** The names on the globes at the last draw: how many are drawn (made, their font in, and the body big enough on the screen), and the one on the body looked at (its text and its turn about the pole in radians), or null. */
     bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
+    /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
+    roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -883,6 +912,7 @@ export class WakuseiSpace extends HTMLElement {
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
+      roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
     };
   }
 
@@ -929,7 +959,9 @@ export class WakuseiSpace extends HTMLElement {
 
   // --- labels --------------------------------------------------------------------------------------------------------------------------------------
   #nameOf(id: string): string {
-    return this.#names[id] ?? BODIES[id as BodyId].name[this.getAttribute("lang") === "ja" ? "ja" : "en"];
+    const lang = this.getAttribute("lang") === "ja" ? "ja" : "en";
+    if (id === "roadster") return this.#names[id] ?? this.#model.roadsterPath?.name[lang] ?? "Starman";
+    return this.#names[id] ?? BODIES[id as BodyId].name[lang];
   }
 
   #placeLabels(places: Record<string, BodyPlace | null>): void {
@@ -1036,6 +1068,7 @@ export class WakuseiSpace extends HTMLElement {
   #rank(id: string): number {
     if (id === this.#model.focus) return 0;
     if (id === "sun") return 1;
+    if (id === "roadster") return 3;
     const kind = bodyKindOf(id as BodyId);
     return kind === "moon" ? 4 : kind === "planet" || kind === "star" ? 2 : 3;
   }
@@ -1129,6 +1162,11 @@ export class WakuseiSpace extends HTMLElement {
    * the middle of the view (`goTo`), unless it already is, so a press never sends the view anywhere else.
    */
   #press(id: BodyId): void {
+    // the Roadster is no body of the package: a press on its name says so and goes nowhere
+    if ((id as string) === "roadster") {
+      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id: "roadster", name: this.#nameOf("roadster"), kind: "spacecraft" }, bubbles: true, composed: true }));
+      return;
+    }
     this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
     if (this.#selected === id) {
       if (canCentre(id) && this.#model.focus !== id) this.goTo(id);
