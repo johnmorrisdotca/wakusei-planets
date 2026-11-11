@@ -65,6 +65,11 @@
       "ja": "望遠鏡なしで見える5,080個の星: 名前、位置、固有運動、距離、色 (gzip で約100 kB)",
       "platform": "node"
     },
+    "./belts": {
+      "en": "The asteroid belts and the Kuiper belt as data: a few thousand numbered small bodies from NASA/JPL's Small-Body Database in seven belts, a source of them for the space view, where they are on a date, counts, density by distance and how far apart the bodies really are",
+      "ja": "小惑星帯とカイパーベルトのデータ。NASA/JPL小天体データベースの番号つきの小天体を数千個、7つの帯に分けて持ちます。宇宙の表示に渡すデータのソース、日付ごとの位置、数、距離ごとの密度、天体どうしの実際の間隔を返します",
+      "platform": "node"
+    },
     "./nearest": {
       "en": "The bodies nearest to a body on a date, in the sky or in space, and when two bodies come closest: nearest, within, closestApproach and conjunctions",
       "ja": "ある日付に、ある天体にいちばん近い天体を、空の見かけの角度か宇宙での距離でさがします。2つの天体がいちばん近づく時刻も: nearest、within、closestApproach、conjunctions",
