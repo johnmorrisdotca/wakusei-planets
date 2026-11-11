@@ -418,7 +418,7 @@ export const WORDS = {
     sp_tr_direct: "まっすぐ",
     sp_tr_lookback: "振り返る",
     sp_tr_auto: "自動",
-    sp_tr_cut: "切り替え",
+    sp_tr_cut: "ジャンプ",
     bl: "天体に名前",
     bl_off: "なし",
     bl_painted: "ペイント",
