@@ -1,6 +1,6 @@
 // Any body at the middle of the space view, a press that selects and a second press that goes there, and the hopper (MODULES-858). Chromium, drawing in software.
 import { expect, test, type Page } from "@playwright/test";
-import { callOn, goTo, openSpace, setOn, settle, SPACE } from "./space-ui.ts";
+import { callOn, goTo, openSpace, setOn, settle, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -23,7 +23,16 @@ const size = async (page: Page): Promise<{ width: number; height: number }> => {
 };
 
 /** Wait until the body is drawn at the middle of the view, to within `pixels`. */
+/** Wait for the move the page is making to end, by what it reports: the camera no longer glides, and nothing is travelling. A move takes as long as the picture changes (1.2 to 9 seconds), so a reading taken before it ends is of the camera on its way. */
+async function arrived(page: Page): Promise<void> {
+  type Reading = { ride: { gliding: boolean }; travelling: unknown };
+  await expect.poll(async () => ((await statsOf(page)) as unknown as Reading).ride.gliding, { timeout: 90_000 }).toBe(false);
+  await expect.poll(async () => ((await statsOf(page)) as unknown as Reading).travelling, { timeout: 30_000 }).toBeNull();
+}
+
 async function centred(page: Page, id: string, pixels = 3): Promise<Place> {
+  // the body is at the middle once the camera has got there: a body that crosses the middle on the way does not count
+  await arrived(page);
   const { width, height } = await size(page);
   await expect
     .poll(async () => {

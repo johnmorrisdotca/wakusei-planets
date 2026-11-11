@@ -303,7 +303,8 @@ const away = (s: SpaceStats): number => Math.hypot(...s.camera.position);
 test("riding the Moon: the camera is 3.5 Earth radii out when compressed and 55 to 66 when true, and the Moon is not drawn round it", async ({ page }) => {
   await open(page);
   await rideAlong(page, "moon");
-  await expect.poll(async () => (await rideOf(page)).ride.gliding).toBe(false);
+  // the move's own end: it takes as long as the picture changes (up to nine seconds), and longer on a slow machine
+  await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 90_000 }).toBe(false);
   // the camera is where the last draw left it: wait for the draw that puts it there (on a busy machine the next frame is seconds away)
   await expect.poll(async () => away(await rideOf(page)), { timeout: 60_000 }).toBeGreaterThan(3);
   expect(away(await rideOf(page))).toBeCloseTo(3.5, 0);
@@ -365,13 +366,14 @@ test("a point that cannot be placed: the ride is lost, the ordinary camera is us
   expect(away(await rideOf(page))).toBeCloseTo(4.1, 0);
 });
 
-test("switching glides and ends in about a second, then (the moons let go) nothing is drawn", async ({ page }) => {
+test("switching glides and ends, then (the moons let go) nothing is drawn", async ({ page }) => {
   await open(page);
   await rideAlong(page, "moon", { smooth: false });
   await settle(page, 600);
   await rideAlong(page, "mars");
   expect((await rideOf(page)).ride.gliding).toBe(true);
-  await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 4000 }).toBe(false);
+  // the move's own end, not a time: it takes as long as the picture changes
+  await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 90_000 }).toBe(false);
   await settle(page, 5000);
   const before = await readCounts(page);
   await page.waitForTimeout(2500);

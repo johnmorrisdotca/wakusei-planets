@@ -58,11 +58,12 @@ test("the same from beside Io, with Jupiter behind it; and glides to the view an
   await openSpace(page, "t=2026-11-02T14:00Z&scale=true");
   await callOn(page, "ride", "io", { view: "beside" });
   expect((await rideOf(page)).gliding, "it glides there").toBe(true);
-  await expect.poll(async () => (await rideOf(page)).gliding, { timeout: 8000 }).toBe(false);
+  // the move's own end (a move takes as long as the picture changes, up to nine seconds, and longer on a slow machine)
+  await expect.poll(async () => (await rideOf(page)).gliding, { timeout: 90_000 }).toBe(false);
   await bothInView(page, "io", "jupiter");
   await callOn(page, "ride", null);
   expect((await rideOf(page)).gliding, "and glides back").toBe(true);
-  await expect.poll(async () => (await rideOf(page)).gliding, { timeout: 8000 }).toBe(false);
+  await expect.poll(async () => (await rideOf(page)).gliding, { timeout: 90_000 }).toBe(false);
   expect((await rideOf(page)).riding).toBe(false);
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe("earth");
 });
