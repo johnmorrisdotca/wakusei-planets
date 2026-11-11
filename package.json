@@ -168,6 +168,11 @@
       "import": "./dist/kids/index.js",
       "default": "./dist/kids/index.js"
     },
+    "./belts": {
+      "types": "./dist/belts/index.d.ts",
+      "import": "./dist/belts/index.js",
+      "default": "./dist/belts/index.js"
+    },
     "./nearest": {
       "types": "./dist/nearest.d.ts",
       "import": "./dist/nearest.js",
