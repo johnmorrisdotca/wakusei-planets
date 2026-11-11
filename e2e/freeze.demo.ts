@@ -12,12 +12,14 @@ const live = (page: Page) => expect(main(page)).toHaveAttribute("data-state", "l
 const settle = (page: Page, ms: number) => page.waitForTimeout(ms);
 /** The counters once the graphics objects alive have stopped changing: the same number on four reads a quarter of a second apart. The page lets go of what it holds after it has been idle a while, so a baseline and the count after a run of changes are both read once that has happened, not after a fixed wait that a slow machine may not have finished. */
 const settledCounts = async (page: Page) => {
-  let held = -1;
+  let held = "";
   let same = 0;
   await expect
     .poll(
       async () => {
-        const now = gpuObjects(await readCounts(page));
+        // the graphics objects and the live contexts both: a context the renderer lets go of after its second of grace is part of settling, not something to race
+        const counts = await readCounts(page);
+        const now = `${gpuObjects(counts)}:${counts.contexts}`;
         same = now === held ? same + 1 : 0;
         held = now;
         return same;
