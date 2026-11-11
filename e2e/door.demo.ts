@@ -19,6 +19,20 @@ const main = (page: Page): Locator => page.locator("#main");
 const statsOf = (page: Page): Promise<Stats> => main(page).evaluate((el) => (el as unknown as { stats: Stats }).stats);
 const creditsOf = (page: Page): Promise<Credit[]> => main(page).evaluate((el) => (el as unknown as { credits(): { source: { id: string }; own: boolean; used: number }[] }).credits().map((c) => ({ id: c.source.id, own: c.own, used: c.used })));
 const setZoom = (page: Page, zoom: number): Promise<void> => main(page).evaluate((el, z) => (el as unknown as { setView(v: unknown): void }).setView({ zoom: z }), zoom);
+/** Zooms in and waits for the window of this source on the body. The zoom is set again while the window is not there: the page's own controls may put the view back just after the page opens (a language change does), and the first zoom is then lost. */
+async function closeIn(page: Page, source: string): Promise<void> {
+  const zoom = await zoomFor(page, 3200);
+  await expect
+    .poll(
+      async () => {
+        await setZoom(page, zoom);
+        await page.waitForTimeout(400);
+        return (await statsOf(page)).tiles?.source?.id;
+      },
+      { timeout: 60_000, message: `the window of ${source} is on the body` },
+    )
+    .toBe(source);
+}
 const line = (page: Page): Locator => page.getByTestId("door-credit");
 
 async function open(page: Page, query: string): Promise<void> {
@@ -106,8 +120,8 @@ test("a page's own map of Mars is drawn in place of the package's tiles, and its
   await expect(line(page)).toContainText("Surface pictures");
   await expect(line(page)).not.toContainText("My maps");
   await addMine(page);
-  await setZoom(page, await zoomFor(page, 3200));
-  await expect.poll(async () => (await statsOf(page)).tiles?.shown, { timeout: 60_000 }).toBe(3);
+  await closeIn(page, "mine");
+  expect((await statsOf(page)).tiles?.shown).toBe(3);
   await expect.poll(async () => green(await middle(page, main(page))), { timeout: 30_000, message: "the page's own tiles are on the body" }).toBe(true);
   expect((await statsOf(page)).tiles?.source?.id).toBe("mine");
   expect(await mineCalls(page)).toBeGreaterThanOrEqual(1);
@@ -123,8 +137,7 @@ test("at rest the door sends nothing and draws nothing; switching the source off
   await routeTiles(page);
   await open(page, "body=mars&look=realistic");
   await addMine(page);
-  await setZoom(page, await zoomFor(page, 3200));
-  await expect.poll(async () => (await statsOf(page)).tiles?.source?.id, { timeout: 60_000 }).toBe("mine");
+  await closeIn(page, "mine");
   await page.waitForTimeout(1500);
   const asked = await mineCalls(page);
   const before = await readCounts(page);
@@ -147,8 +160,7 @@ test("the credit line is in Japanese in Japanese, with the licence and 非営利
   await routeTiles(page);
   await open(page, "body=mars&look=realistic&lang=ja");
   await addMine(page);
-  await setZoom(page, await zoomFor(page, 3200));
-  await expect.poll(async () => (await statsOf(page)).tiles?.source?.id, { timeout: 60_000 }).toBe("mine");
+  await closeIn(page, "mine");
   await expect(line(page)).toContainText("表面の地図");
   await expect(line(page)).toContainText("地図：私の（A. Person、2026年）（CC BY-NC 4.0、非営利のみ）");
 });
@@ -158,8 +170,7 @@ test("data=own in the address ignores every outside source at once: none is aske
   await open(page, "body=mars&look=realistic&data=own");
   await expect(main(page)).toHaveAttribute("data", "own");
   await addMine(page);
-  await setZoom(page, await zoomFor(page, 3200));
-  await expect.poll(async () => (await statsOf(page)).tiles?.source?.id, { timeout: 60_000 }).toBe("wakusei-tiles");
+  await closeIn(page, "wakusei-tiles");
   expect(await mineCalls(page)).toBe(0);
   expect((await creditsOf(page)).map((c) => c.id)).toEqual(["wakusei-pictures", "wakusei-tiles"]);
 });
