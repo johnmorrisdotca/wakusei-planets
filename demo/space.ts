@@ -351,5 +351,7 @@ if (doorLine) {
   show();
 }
 if (new URLSearchParams(location.search).get("data") === "own") space.setAttribute("data", "own");
+// an address with a Go to choice in it opens at that view, not at the Earth with the choice only marked
+if (state.goto !== "earth" && (state.goto as string) !== "") goTo(state.goto);
 render();
 showHop();

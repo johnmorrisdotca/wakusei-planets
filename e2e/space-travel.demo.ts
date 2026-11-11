@@ -96,6 +96,8 @@ for (const scale of ["true", "compressed"] as const) {
       test.setTimeout(240_000);
       await openSpace(page, `t=2026-11-02T14:00Z&play=off&scale=${scale}`);
       expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "transition")), "turn then travel is the default").toBe("turn-travel");
+      // twice as slow, so that software drawing on a loaded machine still catches frames of every stage (the demo's own pace control)
+      await page.locator('#paces [data-pace="2"]').dispatchEvent("click");
       const frames = await move(page, from, to);
       const moving = frames.filter((f) => f.travelling !== null);
       expect(moving.length, `${moving.length} frames of the move were seen`).toBeGreaterThan(6);
