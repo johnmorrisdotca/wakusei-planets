@@ -74,6 +74,9 @@ JA_NAMES.update({
     "Intrepid": "インテピッド", "Antares": "アンタレス", "Falcon": "ファルコン", "Challenger": "チャレンジャー", "Apollo 16 Subsatellite": "アポロ16号 子衛星", "Chang'e-5 Shangsheng Qi": "嫦娥5号 上昇機", "Chang'e-6 Shangsheng Qi": "嫦娥6号 上昇機",
     "DS2 Scott Probe": "ディープ・スペース2 (スコット)", "DS2 Amundsen Probe": "ディープ・スペース2 (アムンゼン)", "Schiaparelli": "スキアパレッリ", "PROP-M": "PROP-M",
 })
+# Named corrections to GCAT's comments: the catalogue's row for Challenger Memorial Station (Opportunity's lander) has lost the first letter ("ander delivered rover to surface"), and Curiosity's reads "Rover, still active",
+# which goes stale the day the rover stops; the table says what a place is, not what it is doing now (an end date is in `until` where the catalogue has one)
+COMMENT_FIXES = {"ander delivered rover to surface": "Lander delivered rover to surface", "Rover, still active": "Rover"}
 # GCAT's pieces that duplicate another record's place (the three pieces of Luna 15 hit one spot)
 DROP_NAMES = {"Luna-15 VA", "Luna-15 VS"}
 # The names a place has in NASA's table of lunar impacts and landings (NSSDCA), where they are not the name shown
@@ -310,7 +313,7 @@ def sites_of(body, cache):
         if site and site != "-":
             record["site"] = site
         if comment and comment != "-":
-            record["note"] = comment
+            record["note"] = COMMENT_FIXES.get(comment, comment)
         if off and off not in ("-", "*"):
             record["until"] = gcat_date(off)
         out.append(record)
