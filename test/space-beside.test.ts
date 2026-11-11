@@ -60,3 +60,15 @@ test("zoom goes closer and further, yaw swings round the line to the Earth, tilt
   const full = besideMoon({ ...TRUE, sun: [-23_000, 0, 0], aspect: 1.6, zoom: 1, yaw: 0, tilt: 0 });
   assert.ok(Number.isFinite(full.position[0]) && full.separation > 20);
 });
+
+test("from beside a moon the picture is never upside down: whichever side the planet is on, up keeps to the north side of the scene, in both scales and at every yaw", () => {
+  for (const scene of [TRUE, SQUEEZED]) {
+    for (const sun of [scene.sun, [23_000, -5000, 9000] as Vec3, [0, 30_000, 0] as Vec3, [0, -30_000, 100] as Vec3]) {
+      for (const yaw of [0, 45, 90, 135, 180, 225, 270, 315]) {
+        const camera = besideMoon({ ...scene, sun, aspect: 1.78, zoom: 1, yaw, tilt: 0 });
+        assert.ok(camera.up[1] >= 0, `sun ${sun.join(",")}, yaw ${yaw}: up ${camera.up.map((n) => n.toFixed(2)).join(",")}`);
+        assert.ok(Math.abs(dot(camera.forward, camera.up)) < 1e-9);
+      }
+    }
+  }
+});

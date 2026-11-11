@@ -258,6 +258,8 @@ export interface BodyPlace {
   x: number;
   y: number;
   r: number;
+  /** True while the body's name is drawn on its globe (`body-label` on, and the body big enough): the floating name beside it gives way. */
+  named?: boolean;
 }
 
 export interface SpaceDeps {
@@ -828,7 +830,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const moonPx = away <= drawn * 1.001 ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
               drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
               const spot = labelFor(at);
-              if (spot) moonPlaces[key] = { x: spot.x, y: spot.y, r: moonPx };
+              if (spot) moonPlaces[key] = { x: spot.x, y: spot.y, r: moonPx, named: drawing.label?.shown === true };
             }
           }
           let soonest = Number.POSITIVE_INFINITY;
@@ -873,7 +875,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const places: Record<string, BodyPlace | null> = { ...moonPlaces };
             for (const id of SPACE_BODIES) {
               const at = id === hiddenBody || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
-              places[id] = at ? { x: at.x, y: at.y, r: px[id] } : null;
+              const drawing = slots.get(id)?.drawing;
+              places[id] = at ? { x: at.x, y: at.y, r: px[id], named: drawing !== undefined && drawing.object.visible && drawing.label?.shown === true } : null;
             }
             deps.onLabels(places);
           }

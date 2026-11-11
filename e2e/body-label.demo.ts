@@ -167,3 +167,28 @@ test("the body page: a name on Saturn through the row, kept in the address, and 
   await expect.poll(async () => (await stats())?.shown, { timeout: 60_000 }).toBe(true);
   await expect.poll(() => new URL(page.url()).searchParams.get("bl"), { timeout: 10_000 }).toBe("burned");
 });
+
+test("while the Earth carries its drawn name its floating name and dot fade out; from afar they come back; labels-always keeps both", async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSpace(page, "t=2026-11-02T14:00Z&play=off&bl=painted");
+  await expect.poll(async () => (await labels(page)).focus?.shown, { timeout: 60_000 }).toBe(true);
+  const floating = page.locator(SPACE).locator('.sp-label[data-body="earth"]');
+  const carried = () => floating.evaluate((el) => el.hasAttribute("data-carried"));
+  const opacity = () => floating.evaluate((el) => getComputedStyle(el).opacity);
+  await expect.poll(carried, { timeout: 30_000 }).toBe(true);
+  await expect.poll(opacity, { timeout: 10_000 }).toBe("0");
+  expect(await floating.evaluate((el) => el.getAttribute("aria-hidden"))).toBe("true");
+  // the Sun is a dot far away: it carries no drawn name, so its floating name stays
+  expect(await page.locator(SPACE).locator('.sp-label[data-body="sun"]').evaluate((el) => el.hasAttribute("data-carried"))).toBe(false);
+  // from the whole solar system the Earth is a dot again: its floating name comes back
+  await drawn(page, () => page.locator(SPACE).evaluate((el) => (el as unknown as { setView(v: unknown): void; zoomFor(p: string): number }).setView({ yaw: 0, tilt: 0, zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") })), (now) => now.count === 0);
+  await expect.poll(carried, { timeout: 30_000 }).toBe(false);
+  await expect.poll(opacity, { timeout: 10_000 }).toBe("1");
+  // back at the Earth with labels-always: both are kept
+  await page.locator(SPACE).evaluate((el) => el.setAttribute("labels-always", ""));
+  await drawn(page, () => callOn(page, "setView", { yaw: 0, tilt: 0, zoom: 1 }), (now) => now.focus?.shown === true);
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "labelsAlways"))).toBe(true);
+  expect(await carried()).toBe(false);
+  await page.locator(SPACE).evaluate((el) => el.removeAttribute("labels-always"));
+  await expect.poll(carried, { timeout: 30_000 }).toBe(true);
+});
