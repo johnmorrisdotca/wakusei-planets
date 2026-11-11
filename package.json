@@ -166,6 +166,11 @@
       "import": "./dist/spacecraft.js",
       "default": "./dist/spacecraft.js"
     },
+    "./roadster": {
+      "types": "./dist/roadster.d.ts",
+      "import": "./dist/roadster.js",
+      "default": "./dist/roadster.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",

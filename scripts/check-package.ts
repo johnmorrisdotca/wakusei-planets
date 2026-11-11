@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -90,3 +90,16 @@ const door = await import(doorEntry);
 if (door.OWN_SOURCES.map((one: { id: string }) => one.id).join() !== "wakusei-pictures,wakusei-tiles,wakusei-orbits") throw new Error("the data door's own sources are wrong");
 if (door.creditLine([door.ownCredit("wakusei-tiles", 1)], "en") !== "Finer map tiles: maps by NASA, USGS and JPL (public domain), cut by Wakusei Planets (Public domain).") throw new Error("the data door's credit line is wrong");
 if (door.tilesSource("/tiles").info.id !== "wakusei-tiles" || door.createSourceBook().sources.length !== 0) throw new Error("the data door cannot make a source or a book");
+
+// The Roadster through package resolution: the table loads with the entry point, the car is where Horizons puts it on 2020-10-07 (0.0495 au from Mars), and a date outside the span throws.
+const roadsterEntry = "@johnmorrisdotca/wakusei-planets/roadster";
+const roadster = await import(roadsterEntry);
+const flyby = roadster.roadsterApproaches("mars").find((a: { date: number }) => Math.abs(a.date - Date.UTC(2020, 9, 7, 6, 28)) < 3_600_000);
+if (flyby === undefined || Math.abs(flyby.distanceKm / 149597870.7 - 0.0495) > 0.0005 || roadster.roadsterEvents()[0].kind !== "launch") throw new Error("roadster package entry failed");
+let outside = false;
+try {
+  roadster.roadsterPosition(Date.UTC(2040, 0, 1));
+} catch (error) {
+  outside = error instanceof RangeError;
+}
+if (!outside) throw new Error("roadster does not refuse a date outside its span");
