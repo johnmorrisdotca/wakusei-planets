@@ -17,9 +17,10 @@ import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow,
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
 import { spinAxis } from "./spin.ts";
-import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createTrack, eclipticToScene, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
-import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
+import { moonDistance, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -51,6 +52,11 @@ const MOON_MIN_PX = 2.2;
 const MOON_MIN_SYSTEM_PX = 30;
 /** A moon that has been out of sight this long is let go (its pictures too). */
 const MOON_KEEP_MS = 4000;
+/** The Roadster is drawn as a dot this many CSS pixels across its radius: a car is nothing at any scale of the view. */
+const ROADSTER_PX = 3;
+/** The Roadster's orbit line spans this long round the moment shown (about one trip round the Sun), and is worked out again when the moment has moved this far from the line's middle. */
+const ROADSTER_ORBIT_MS = 560 * 86_400_000;
+const ROADSTER_ORBIT_KEEP_MS = 30 * 86_400_000;
 
 /**
  * The twenty-four bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets, Pluto, the eight other dwarf planets and the five minor bodies (Vesta, Pallas, Chiron, Pholus and Halley). The moons of the planets and of the dwarf planets are placed round their hosts.
@@ -139,6 +145,16 @@ export interface CameraPose {
   valid: boolean;
 }
 
+/** The Roadster's path as the view needs it: from `/roadster`, loaded only when the Roadster is shown. */
+export interface RoadsterPath {
+  /** Where the car is at a moment, in au from the Sun, ecliptic J2000 axes. */
+  positionAu(ms: number): Vec3;
+  /** The span the path covers, in milliseconds since 1970. */
+  record: { start: number; end: number };
+  /** The car's name, in English and Japanese. */
+  name: { en: string; ja: string };
+}
+
 export interface SpaceModel {
   /** Moment shown, milliseconds since the epoch. */
   time: number;
@@ -174,6 +190,11 @@ export interface SpaceModel {
   helpThrough: boolean;
   /** How many arrowheads each orbit line carries: 0 to `MAX_ARROWS_PER_ORBIT`, two by default. */
   arrowCount: number;
+  /** Show Starman and the Roadster: a small marked body on its orbit line, named. Off by default; its path is loaded when it is first shown. */
+  roadster: boolean;
+  roadsterPath: RoadsterPath | null;
+  /** What the Roadster drew at the last draw: whether it was drawn (shown, its path in, and the moment within the record), its place in Earth radii from the Earth's centre, and its radius on the screen. */
+  roadsterDrawn: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
   /** The name written on each body's globe, or null for none; `labelVersion` goes up whenever it (or the language) changes, so each body is told once. */
   label: PaintLabel | null;
   labelVersion: number;
@@ -226,6 +247,9 @@ export const newSpaceModel = (): SpaceModel => ({
   helpThrough: false,
   arrowPx: 0,
   arrowCount: ARROWS_PER_ORBIT,
+  roadster: false,
+  roadsterPath: null,
+  roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
   label: null,
   labelVersion: 0,
   labelsDrawn: { count: 0, focus: null },
@@ -420,6 +444,21 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       }
       const moonSlots = new Map<string, { slot: Slot; seen: number }>();
       let releaseTimer: ReturnType<typeof setTimeout> | undefined;
+      // Starman and the Roadster: a dot (a shaded ball, lit by the Sun) on its own orbit line, in the car's warm red; made once, shown only while the view asks for it
+      const roadsterGeometry = new three.SphereGeometry(1, 24, 12);
+      const roadsterMaterial = new three.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: BALL_FRAGMENT, uniforms: { uLight: { value: new three.Vector3(0, 0, 1) }, uColour: { value: new three.Vector3(0.93, 0.28, 0.2) } } });
+      const roadsterMesh = new three.Mesh(roadsterGeometry, roadsterMaterial);
+      roadsterMesh.visible = false;
+      roadsterMesh.frustumCulled = false;
+      scene.add(roadsterMesh);
+      const roadsterPositions = new Float32Array((ORBIT_POINTS + 1) * 3);
+      const roadsterLineGeometry = new three.BufferGeometry();
+      roadsterLineGeometry.setAttribute("position", new three.BufferAttribute(roadsterPositions, 3));
+      const roadsterLine = new three.Line(roadsterLineGeometry, new three.LineBasicMaterial({ color: 0xe8705a, transparent: true, opacity: 0.55 }));
+      roadsterLine.visible = false;
+      roadsterLine.frustumCulled = false;
+      scene.add(roadsterLine);
+      const roadsterOrbit = { samples: [] as Vec3[], epoch: Number.NaN };
 
       const labelFor = (v: Vec3): { x: number; y: number } | null => {
         projected.set(v[0], v[1], v[2]).project(camera);
@@ -728,6 +767,41 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           model.rings = { drawn: drawnRings, miss, hidden: hiddenRings };
 
+          // Starman and the Roadster: where the table puts the car, in the same mapping as the planets, as a dot a few pixels across, on its orbit line (about one trip round the Sun, from the table, worked out again every month)
+          const path = model.roadster ? model.roadsterPath : null;
+          let roadsterAt: Vec3 | null = null;
+          let roadsterPx = 0;
+          if (path !== null && model.time >= path.record.start && model.time <= path.record.end) {
+            roadsterAt = placeAround(mode, sunPos, eclipticToScene(path.positionAu(model.time)));
+            const away = Math.hypot(roadsterAt[0] - camera.position.x, roadsterAt[1] - camera.position.y, roadsterAt[2] - camera.position.z);
+            const drawn = (away * half * ROADSTER_PX) / (size.height / 2);
+            roadsterPx = away <= drawn ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
+            roadsterMesh.visible = true;
+            roadsterMesh.position.set(roadsterAt[0], roadsterAt[1], roadsterAt[2]);
+            roadsterMesh.scale.setScalar(drawn);
+            (roadsterMaterial.uniforms.uLight!.value as THREE.Vector3).set(...unit(minus(sunPos, roadsterAt)));
+            if (!Number.isFinite(roadsterOrbit.epoch) || Math.abs(model.time - roadsterOrbit.epoch) > ROADSTER_ORBIT_KEEP_MS) {
+              roadsterOrbit.samples = [];
+              for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+                const t = Math.max(path.record.start, Math.min(path.record.end, model.time - ROADSTER_ORBIT_MS / 2 + (ROADSTER_ORBIT_MS * i) / ORBIT_POINTS));
+                roadsterOrbit.samples.push(eclipticToScene(path.positionAu(t)));
+              }
+              roadsterOrbit.epoch = model.time;
+            }
+            const line = orbitLine(mode, sunPos, roadsterOrbit.samples);
+            for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+              roadsterPositions[i * 3] = line[i]![0];
+              roadsterPositions[i * 3 + 1] = line[i]![1];
+              roadsterPositions[i * 3 + 2] = line[i]![2];
+            }
+            (roadsterLineGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+            roadsterLine.visible = model.orbits && !closeUp;
+          } else {
+            roadsterMesh.visible = false;
+            roadsterLine.visible = false;
+          }
+          model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };
+
           // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)
           const e = camera.matrixWorld.elements;
           const camRight: Vec3 = [e[0]!, e[1]!, e[2]!];
@@ -885,6 +959,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const drawing = slots.get(id)?.drawing;
               places[id] = at ? { x: at.x, y: at.y, r: px[id], named: drawing !== undefined && drawing.object.visible && drawing.label?.shown === true } : null;
             }
+            if (roadsterAt !== null) {
+              const spot = labelFor(roadsterAt);
+              places["roadster"] = spot ? { x: spot.x, y: spot.y, r: roadsterPx } : null;
+              if (spot) moonDistances["roadster"] = Math.hypot(roadsterAt[0] - camera.position.x, roadsterAt[1] - camera.position.y, roadsterAt[2] - camera.position.z);
+            }
             // a body behind another: its place is inside a nearer body's disc
             const entries: CoverEntry[] = [];
             for (const [id, at] of Object.entries(places)) {
@@ -914,10 +993,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             o.line.geometry.dispose();
             (o.line.material as THREE.Material).dispose();
           }
-          for (const lines of [arrowLines, helpLines]) {
+          for (const lines of [arrowLines, helpLines, roadsterLine]) {
             lines.geometry.dispose();
             (lines.material as THREE.Material).dispose();
           }
+          roadsterGeometry.dispose();
+          roadsterMaterial.dispose();
         },
       };
     },

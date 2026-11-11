@@ -293,18 +293,26 @@ test("a date outside the span throws a RangeError that names the span; the ends 
 
 test("the table is a chunk of its own: no other entry point of the package carries it", async () => {
   const root = new URL("..", import.meta.url).pathname;
-  const bundle = async (contents: string) => {
-    const result = await build({ stdin: { contents, resolveDir: root, loader: "ts" }, bundle: true, format: "esm", minify: true, write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
-    return result.outputFiles.map((file) => file.text).join("");
+  // bundled as a page's bundler would, with code splitting: a dynamic import (the space view's, when the car is first shown) is a chunk of its own, and the entry's own file must not carry the table
+  const bundle = async (contents: string): Promise<{ entry: string; chunks: string[] }> => {
+    const result = await build({ stdin: { contents, resolveDir: root, loader: "ts", sourcefile: "entry.ts" }, bundle: true, splitting: true, outdir: "out", format: "esm", minify: true, write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
+    const files = result.outputFiles.map((file) => ({ path: file.path, text: file.text }));
+    const entry = files.find((file) => /\/(stdin|entry)\.js$/.test(file.path)) ?? files[0]!;
+    return { entry: entry.text, chunks: files.filter((file) => file !== entry).map((file) => file.text) };
   };
   // the first and the last row's x, which appear only in the table
   const marks = ["109705979", "215420683"];
   const roadster = await bundle(`export * from "./src/roadster.ts";`);
-  for (const mark of marks) assert.ok(roadster.includes(mark), `the /roadster bundle holds the table (${mark})`);
+  for (const mark of marks) assert.ok(roadster.entry.includes(mark) || roadster.chunks.some((chunk) => chunk.includes(mark)), `the /roadster bundle holds the table (${mark})`);
   for (const entry of ["./src/index.ts", "./src/space/index.ts", "./src/spacecraft.ts", "./src/nearest.ts", "./src/element.ts", "./src/space/element.ts"]) {
-    const text = await bundle(`import ${JSON.stringify(entry)};`);
-    for (const mark of marks) assert.ok(!text.includes(mark), `${entry} does not carry the Roadster table`);
+    const built = await bundle(`import ${JSON.stringify(entry)};`);
+    for (const mark of marks) assert.ok(!built.entry.includes(mark), `${entry} does not carry the Roadster table`);
   }
+  // the space view's dynamic import is a chunk of its own, holding the table, and nothing else of the view's is in that chunk
+  const space = await bundle(`import "./src/space/element.ts";`);
+  const tableChunk = space.chunks.find((chunk) => marks.every((mark) => chunk.includes(mark)));
+  assert.ok(tableChunk !== undefined, "the space view loads the table as a chunk of its own");
+  assert.ok(!tableChunk.includes("wakusei-space"), "the chunk holds the Roadster, not the view");
   const table = gzipSync(readFileSync(new URL("../src/data/roadster.ts", import.meta.url)), { level: 9 }).length;
   console.log(`roadster: ${ROADSTER_ROWS.length / 7} rows, table source ${table} bytes gzipped`);
   assert.ok(table < 30_000);
