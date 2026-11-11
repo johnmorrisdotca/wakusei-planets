@@ -1,7 +1,7 @@
 // The plan as an SVG string: orbits as lines, each body a dot, the one marked ringed and named, a line saying which spacing it is. Light and dark come from CSS custom properties with defaults that follow the page's colour scheme.
 // Pure: a plan in, a string out. A dot is `data-id`'d so the element can turn a press into the body's id.
 import { BODIES, type BodyId } from "../facts.ts";
-import { chooseLabels, type LabelBox } from "../space/labels.ts";
+import { LABEL_GAP, type LabelBox } from "../space/labels.ts";
 import { SPACECRAFT, type SpacecraftId } from "../spacecraft-facts.ts";
 import type { Plan, PlanDot, PlanKind } from "./layout.ts";
 
@@ -153,16 +153,15 @@ const n2 = (n: number): string => (Math.round(n * 100) / 100).toString();
 /** The width of a name in pixels, at 10 px type: a Japanese character is as wide as it is tall. */
 const widthOf = (text: string): number => [...text].reduce((sum, ch) => sum + (/[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 10 : 5.6), 0);
 
-/** A name's box beside its dot: to the right and a little above, or to the left when it would run off the picture, and kept inside it. */
-function boxFor(id: string, text: string, x: number, y: number, size: number, offset: number, rank: number): LabelBox {
+/** The places a name may take beside its dot, in the order tried: right and above, right and below, left and above, left and below. Each is kept inside the picture. */
+function boxesFor(text: string, x: number, y: number, size: number, offset: number): LabelBox[] {
   const width = widthOf(text);
   const height = 12;
-  let left = x + offset;
-  if (left + width > size - 2) left = x - offset - width;
-  left = Math.max(2, Math.min(size - 2 - width, left));
-  const top = Math.max(2, Math.min(size - 18 - height, y - height - 1));
-  return { id, x: left, y: top, width, height, rank, size: 0 };
+  const fit = (left: number, top: number): LabelBox => ({ id: "", x: Math.max(2, Math.min(size - 2 - width, left)), y: Math.max(2, Math.min(size - 18 - height, top)), width, height, rank: 0, size: 0 });
+  return [fit(x + offset, y - height - 1), fit(x + offset, y + 1), fit(x - offset - width, y - height - 1), fit(x - offset - width, y + 1)];
 }
+
+const touches = (a: LabelBox, b: LabelBox): boolean => a.x < b.x + b.width + LABEL_GAP && b.x < a.x + a.width + LABEL_GAP && a.y < b.y + b.height + LABEL_GAP && b.y < a.y + a.height + LABEL_GAP;
 
 /**
  * The plan as an SVG string, for a square of `size` pixels: the orbit lines, the Sun or planet at the middle, a dot for each body (the marked one larger, ringed and named), the names that do not overlap, and a line at the foot
@@ -205,15 +204,18 @@ export function planSvg(plan: Plan, options: PlanDrawOptions = {}): string {
 
   // the middle, then the bodies, the marked one last so it lies on top
   const everyone = [{ dot: plan.centre, centre: true }, ...plan.dots.map((dot) => ({ dot, centre: false }))];
-  const boxes: LabelBox[] = [];
-  const scaleBox: LabelBox = { id: "\0scale", x: 2, y: size - 14, width: widthOf(text.scale) * 0.9, height: 12, rank: -1, size: 0 };
-  boxes.push(scaleBox);
-  for (const { dot, centre } of everyone) {
+  // names: the surest first (the marked body, then the Sun, planets and the rest), each in the first of four places beside its dot that touches no name already kept; one that fits nowhere is left out
+  const kept: LabelBox[] = [{ id: "\0scale", x: 2, y: size - 14, width: widthOf(text.scale) * 0.9, height: 12, rank: -1, size: 0 }];
+  const named = new Map<string, LabelBox>();
+  const wanting = everyone.filter(({ dot }) => dot.marked || names).sort((a, b) => (a.dot.marked ? 0 : RANK[a.dot.kind]) - (b.dot.marked ? 0 : RANK[b.dot.kind]));
+  for (const { dot, centre } of wanting) {
     const [x, y] = at(dot.x, dot.y);
-    const wantName = dot.marked || names;
-    if (wantName) boxes.push(boxFor(dot.id, nameOf(dot.id, lang), x, y, size, radiusOf(dot, centre) + 3, dot.marked ? 0 : RANK[dot.kind]));
+    const box = boxesFor(nameOf(dot.id, lang), x, y, size, radiusOf(dot, centre) + 3).find((one) => !kept.some((other) => touches(one, other)));
+    if (box !== undefined) {
+      kept.push(box);
+      named.set(dot.id, box);
+    }
   }
-  const shown = chooseLabels(boxes);
   for (const { dot, centre } of everyone) {
     const [x, y] = at(dot.x, dot.y);
     const r = radiusOf(dot, centre);
@@ -221,9 +223,9 @@ export function planSvg(plan: Plan, options: PlanDrawOptions = {}): string {
     const colour = dot.marked ? "dm" : dot.kind === "star" ? "s" : "d";
     const shape = dot.kind === "spacecraft" ? `<rect class="${colour}" x="${n2(x - r)}" y="${n2(y - r)}" width="${n2(2 * r)}" height="${n2(2 * r)}" transform="rotate(45 ${n2(x)} ${n2(y)})"/>` : `<circle class="${colour}" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r)}"/>`;
     const ring = dot.marked ? `<circle class="ring" cx="${n2(x)}" cy="${n2(y)}" r="${n2(r + 4)}"/>` : "";
-    const box = boxes.find((one) => one.id === dot.id);
-    const label = box !== undefined && shown.has(dot.id) ? `<text class="t${dot.marked ? " tm" : ""}" x="${n2(box.x)}" y="${n2(box.y + 10)}">${esc(name)}</text>` : "";
-    out.push(`<g data-id="${esc(dot.id)}" data-kind="${dot.kind}"${dot.marked ? ' data-marked=""' : ""} role="button" tabindex="0" aria-label="${esc(name)}"><circle class="hit" cx="${n2(x)}" cy="${n2(y)}" r="11"/>${shape}${ring}${label}</g>`);
+    const box = named.get(dot.id);
+    const label = box !== undefined ? `<text class="t${dot.marked ? " tm" : ""}" x="${n2(box.x)}" y="${n2(box.y + 10)}">${esc(name)}</text>` : "";
+    out.push(`<g data-id="${esc(dot.id)}" data-kind="${dot.kind}"${dot.marked ? ' data-marked=""' : ""} role="button" tabindex="0" aria-label="${esc(name)}"><circle class="hit" cx="${n2(x)}" cy="${n2(y)}" r="8"/>${shape}${ring}${label}</g>`);
   }
   out.push(`<text class="sc" x="2" y="${size - 4}">${esc(text.scale)}</text></svg>`);
   return out.join("");

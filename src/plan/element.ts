@@ -125,7 +125,7 @@ export class WakuseiPlan extends HTMLElement {
     } else this.#size = Math.round(this.getBoundingClientRect().width) || 240;
     if (typeof IntersectionObserver === "function") {
       this.#io = new IntersectionObserver((entries) => {
-        const seen = entries.some((entry) => entry.isIntersecting);
+        const seen = entries[entries.length - 1]?.isIntersecting ?? this.#visible;
         if (seen !== this.#visible) {
           this.#visible = seen;
           if (seen) this.#queue();
