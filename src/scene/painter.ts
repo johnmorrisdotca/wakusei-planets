@@ -131,7 +131,7 @@ export interface PaintInfo {
  */
 export interface Painting {
   object: THREE.Object3D;
-  /** True to have the caller turn the object to face the camera (the Sun, which carries a glow). */
+  /** True to have the caller turn the whole object to face the camera. No body asks for it now: the Sun is a globe that turns with its own spin and the view, and its glow turns itself to the camera in `update` (from `PaintInfo.view`). */
   billboard?: boolean;
   /** Call at each draw, after the object has been placed and scaled. */
   update(info: PaintInfo): void;
@@ -386,7 +386,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     }
   }
 
-  // the glow of a star: a plane through its centre that the caller turns to the camera
+  // the glow of a star: a plane through its centre that `update` turns to the camera, so the globe inside it keeps its own orientation
+  let glowMesh: THREE.Mesh | undefined;
   if (look.emissive === true) {
     const glowGeometry = acquire(T, "glow", () => new T.PlaneGeometry(6, 6));
     releases.push(glowGeometry.release);
@@ -396,6 +397,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     glow.renderOrder = 4;
     glow.frustumCulled = false;
     group.add(glow);
+    glowMesh = glow;
   }
 
   // the painted map: the smallest width at once, a sharper one when the body is big on the screen, back to the small one when it is not
@@ -512,17 +514,18 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
 
   return {
     object: group,
-    ...(look.emissive === true ? { billboard: true } : {}),
     get tiles() {
       return detail?.stats;
     },
     update(info) {
       light.set(info.toSun[0], info.toSun[1], info.toSun[2]);
       const scale = group.scale.x || 1;
-      if (look.emissive !== true) {
+      // a star's glow faces the camera (the group is not turned, so the camera's own turn is the glow's); the globe inside it has the body's own pole and prime meridian like every other body
+      if (glowMesh !== undefined && info.view !== undefined) glowMesh.quaternion.copy(info.view.camera.quaternion);
+      {
         const { pole, meridian } = info.pose ?? orientation(id, info.ms);
         const east = cross(pole, meridian);
-        if (detail !== undefined) {
+        if (look.emissive !== true && detail !== undefined) {
           // a body big enough in the view, seen by a camera we were told of, is worked out for a window of finer map; any other keeps the pictures it has
           if (info.view === undefined || mesh.material !== paintedMaterial || info.radiusPx * ratio < TILES_FROM_PX) detail.rest();
           else detail.follow(seenRegion(sightOf(T, info.view), { centre: [group.position.x, group.position.y, group.position.z], radius: scale, axes: { east, pole, meridian, scale: [scaleX, scaleY, scaleZ] } }));
