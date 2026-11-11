@@ -9,3 +9,5 @@ export { besideMoon, BESIDE_RADII, type BesideCamera, type BesideInput } from ".
 export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";
 export { spinAxis, type SpinAxis } from "./spin.ts";
 export { COVER_ARROW_GAP, COVER_MIN_PX, coverArrows, coveredBy, type CoverArrow, type CoverEntry } from "./covered.ts";
+export { TRAVEL_CLEARANCE, travelArrival, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan, type TravelSample, type TravelSight, type TravelView } from "./travel.ts";
+export { regionOrbits, regionView, SUN_REGIONS, type SunRegion } from "./regions.ts";
