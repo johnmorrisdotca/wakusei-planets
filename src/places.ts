@@ -69,11 +69,11 @@ export interface Place {
   origin?: string;
   /** For a feature: the IAU type and a plain word for it, the size in kilometres (0 where the Gazetteer gives none), and the date the name was approved. */
   feature?: { type: string; typeWord: { en: string; ja: string }; diameterKm: number; approved: string };
-  /** For a planned landing: the announced date, its state, and the date the announcement was read. */
-  planned?: { date: string; status: "announced" | "slipped" | "cancelled"; read: string };
+  /** For a planned landing: the announced date (a year, or a year and month, as the page gives it), whether that date is the `launch` or the `landing`, its state (`slipped` where the agency's own pages have moved it later), and the date the announcement was read. */
+  planned?: { date: string; dateOf: "launch" | "landing"; status: "announced" | "slipped" | "cancelled"; read: string };
   /** Where the record comes from, and the date that source's file was read. */
   source: {
-    id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency" | "nasa-ntrs" | "pds-atmospheres" | "paper";
+    id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency" | "nasa-ntrs" | "pds-atmospheres" | "paper" | "announcement";
     read: string;
     latitude?: "planetocentric" | "converted" | "not stated";
     /** The page or paper a position was typed from, where it is not one of the tables above. */
@@ -103,6 +103,7 @@ export const PLACES_CREDITS: readonly { id: Place["source"]["id"]; line: string;
   { id: "agency", line: "NASA mission and Photojournal pages (the address is in each record's source.url)", licence: "US government work", url: "https://www.nasa.gov/nasa-brand-center/images-and-media/" },
   { id: "nasa-ntrs", line: "Basilevsky and Weitz 1992, The geology of the Venera/Vega landing sites, NASA Technical Reports Server", licence: "public use permitted (NTRS)", url: "https://ntrs.nasa.gov/citations/19930005108" },
   { id: "pds-atmospheres", line: "NASA Planetary Data System, Planetary Atmospheres Node, Pioneer Venus summary", licence: "US government work", url: "https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/PIONEER_Venus/venus_cp.html" },
+  { id: "announcement", line: "the agency's or operator's own announcement of a planned landing (the address is in each record's source.url; the position is the IAU Gazetteer's centre of the named site)", licence: "facts (a date and a site's name) typed by hand; no text copied", url: "https://planetarynames.wr.usgs.gov/" },
   { id: "paper", line: "the published paper named in the record's source.url (Daly et al. 2023; Nagdimunov et al. 2014; Hoang et al. 2020)", licence: "coordinates (facts) typed from the papers, none of whose text, figures or tables is copied; Daly et al. 2023 is CC BY 4.0, credited", url: "https://doi.org/10.1038/s41586-023-05810-5" },
 ];
 

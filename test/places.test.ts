@@ -21,11 +21,10 @@ const count = (places: readonly Place[]): Record<string, number> => {
 test("the counts of each kind on each body are pinned", () => {
   assert.equal(PLACE_BODIES.length, 33);
   assert.deepEqual([...PLACE_BODIES].slice(0, 4), ["moon", "mars", "mercury", "venus"]);
-  assert.deepEqual(count(moon), { impact: 14, crash: 35, landing: 22, crewed: 6, rover: 13, feature: 768 });
-  assert.deepEqual(count(mars), { crash: 6, landing: 12, rover: 7, feature: 914 });
-  assert.equal(moon.length, 858);
-  assert.equal(mars.length, 939);
-  assert.equal(placesOfKind(moon, "planned").length + placesOfKind(mars, "planned").length, 0, "no planned landing is held until an agency's announcement is typed in by hand");
+  assert.deepEqual(count(moon), { impact: 14, crash: 35, landing: 22, crewed: 6, rover: 13, planned: 8, feature: 768 });
+  assert.deepEqual(count(mars), { crash: 6, landing: 12, rover: 7, planned: 1, feature: 914 });
+  assert.equal(moon.length, 866);
+  assert.equal(mars.length, 940);
 });
 
 test("every record has a source and a name in both languages, every id is unique, every position is on the globe", () => {
@@ -36,10 +35,12 @@ test("every record has a source and a name in both languages, every id is unique
       assert.ok(Number.isFinite(place.lat) && Number.isFinite(place.lon), place.id);
       assert.ok(place.lat >= -90 && place.lat <= 90 && place.lon >= -180 && place.lon <= 180, `${place.id} at ${place.lat}, ${place.lon}`);
       assert.ok(place.name.en.length > 0 && place.name.ja.length > 0, place.id);
-      assert.ok(["iau-gazetteer", "gcat-landercat", "nssdca", "pds-ode", "nasa-mars24", "agency", "nasa-ntrs", "pds-atmospheres", "paper"].includes(place.source.id) && /^\d{4}-\d{2}-\d{2}$/.test(place.source.read), place.id);
+      assert.ok(["iau-gazetteer", "gcat-landercat", "nssdca", "pds-ode", "nasa-mars24", "agency", "nasa-ntrs", "pds-atmospheres", "paper", "announcement"].includes(place.source.id) && /^\d{4}-\d{2}-\d{2}$/.test(place.source.read), place.id);
       if (place.kind === "feature") {
         assert.equal(place.source.id, "iau-gazetteer", place.id);
         assert.ok(place.feature !== undefined && place.feature.diameterKm >= 0 && /^\d{4}-\d{2}-\d{2}$/.test(place.feature.approved), place.id);
+      } else if (place.kind === "planned") {
+        assert.ok(place.planned !== undefined && place.operator !== undefined && place.mission !== undefined, place.id);
       } else {
         assert.notEqual(place.source.id, "iau-gazetteer", place.id);
         assert.ok(place.date !== undefined && /^\d{4}(-\d{2}(-\d{2}(T\d{2}:\d{2}Z)?)?)?$/.test(place.date) && place.operator !== undefined && place.country !== undefined && place.mission !== undefined && place.outcome !== undefined, place.id);
@@ -52,8 +53,8 @@ test("every record has a source and a name in both languages, every id is unique
   assert.equal(findPlace(moon, "Luna 2")!.approximate, true);
   assert.equal(findPlace(moon, "Luna 9")!.approximate, true);
   assert.equal(findPlace(moon, "Apollo 11 lunar module")!.approximate, undefined);
-  assert.equal(moon.filter((p) => p.approximate).length, 17);
-  assert.equal(mars.filter((p) => p.approximate).length, 5);
+  assert.equal(moon.filter((p) => p.approximate).length, 25);
+  assert.equal(mars.filter((p) => p.approximate).length, 6);
   // every Mars lander says how its latitude stands; the Gazetteer's features are planetocentric
   for (const p of mars) assert.ok(p.kind === "feature" || ["planetocentric", "converted", "not stated"].includes(p.source.latitude ?? ""), p.id);
   assert.equal(findPlace(mars, "Phoenix")!.source.latitude, "converted");
@@ -122,7 +123,7 @@ test("the famous places are where the sources put them: Apollo 11 at Tranquility
   assert.ok(near.some((n) => n.place.id === eagle.id && n.degrees < 0.04));
   assert.ok(near.every((n, i) => i === 0 || n.degrees >= near[i - 1]!.degrees));
   assert.equal(nearestPlace(moon, 0.674, 23.473, "crewed", "landing", "rover")!.place.id, eagle.id);
-  assert.equal(nearestPlace(moon, 0.674, 23.473, "planned"), undefined);
+  assert.equal(nearestPlace(moon, 7.4, -59, "planned")!.place.id, "moon/im-3");
   assert.equal(nearestPlace([], 0, 0), undefined);
   assert.equal(nearestPlace(mars, 18.44, 77.45, "rover")!.place.name.en, "Perseverance");
   // a distance over the surface on the body's own radius: Apollo 11 to Apollo 17 is about 8 degrees of great circle on the Moon
@@ -156,9 +157,9 @@ test("features with a Japanese name are found by it and by the Latin one; the re
 });
 
 test("places load by body on request, by kind, and an unknown body is refused", async () => {
-  assert.equal((await loadPlaces("moon")).length, 858);
-  assert.equal((await loadPlaces("mars")).length, 939);
-  assert.equal((await listPlaces("moon")).length, 858);
+  assert.equal((await loadPlaces("moon")).length, 866);
+  assert.equal((await loadPlaces("mars")).length, 940);
+  assert.equal((await listPlaces("moon")).length, 866);
   assert.deepEqual((await listPlaces("moon", "crewed")).map((p) => p.name.en), ["Apollo 11 lunar module", "Apollo 12 lunar module", "Apollo 14 lunar module", "Apollo 15 lunar module", "Apollo 16 lunar module", "Apollo 17 lunar module"]);
   assert.deepEqual((await listPlaces("mars", "rover")).map((p) => p.name.en), ["PROP-M", "Sojourner", "Spirit", "Opportunity", "Curiosity", "Perseverance", "Zhurong"]);
   assert.equal((await listPlaces("mars", "crewed")).length, 0);
@@ -289,7 +290,7 @@ test("every body's table has the counts pinned, its own ids, a name in both lang
   for (const [body, list] of Object.entries(tables)) if (placesOfKind(list, "entry").length > 0) assert.ok(["venus", "jupiter", "saturn"].includes(body), body);
   // every source used by any table has a credit
   const used = new Set(Object.values(tables).flatMap((list) => list.map((p) => p.source.id)));
-  assert.deepEqual([...used].sort(), ["agency", "gcat-landercat", "iau-gazetteer", "nasa-mars24", "nasa-ntrs", "nssdca", "paper", "pds-atmospheres", "pds-ode"].filter((id) => used.has(id as Place["source"]["id"])));
+  assert.deepEqual([...used].sort(), ["agency", "announcement", "gcat-landercat", "iau-gazetteer", "nasa-mars24", "nasa-ntrs", "nssdca", "paper", "pds-atmospheres", "pds-ode"].filter((id) => used.has(id as Place["source"]["id"])));
   for (const id of used) assert.ok(credited.has(id), `a credit for ${id}`);
 });
 
@@ -426,4 +427,26 @@ test("a table loads on request for every body, and its list is the entry point's
   assert.deepEqual((await listPlaces("ryugu", "impact")).map((p) => p.name.en), ["SCI impact"]);
   assert.equal(nearestPlace(tables.venus!, 31, -68.4, "landing")!.place.name.en, "Venera 9");
   assert.equal(nearestPlace(tables.pluto!, 19.5, 178.7, "feature")!.place.name.en, "Sputnik Planitia");
+});
+
+test("the planned landings: typed from the agencies' own pages, each at a named site of the Gazetteer, marked approximate, with the date the page gives and what it is the date of", () => {
+  const planned = [...placesOfKind(moon, "planned"), ...placesOfKind(mars, "planned")];
+  assert.deepEqual(planned.map((p) => p.id), ["moon/griffin-mission-one", "moon/im-3", "moon/blue-moon-mk1-endurance", "moon/im-4", "moon/blue-ghost-mission-2", "moon/viper", "moon/blue-ghost-mission-3", "moon/blue-ghost-mission-4", "mars/rosalind-franklin"]);
+  for (const place of planned) {
+    assert.equal(place.approximate, true, place.id);
+    assert.equal(place.source.id, "announcement");
+    assert.ok(place.source.url?.startsWith("https://") && !/wikipedia|news/i.test(place.source.url), place.id);
+    assert.ok(/^\d{4}(-\d{2})?$/.test(place.planned!.date) && ["launch", "landing"].includes(place.planned!.dateOf) && ["announced", "slipped", "cancelled"].includes(place.planned!.status), place.id);
+    assert.equal(place.date, undefined, "a planned landing has no date of arrival");
+    assert.ok(typeof place.site === "string");
+  }
+  // each sits on the centre of its named site, as the Gazetteer holds it (or as the feature in the table where it is one)
+  for (const [id, feature] of [["moon/im-4", "Mons Mouton"], ["moon/viper", "Mons Mouton"], ["moon/blue-moon-mk1-endurance", "Shackleton"], ["moon/blue-ghost-mission-3", "Mons Gruithuisen Gamma"], ["mars/rosalind-franklin", "Oxia Planum"]] as const) {
+    const place = [...moon, ...mars].find((p) => p.id === id)!;
+    const at = findPlace(id.startsWith("moon") ? moon : mars, feature)!;
+    assert.ok(angleBetween(place.lat, place.lon, at.lat, at.lon) < 1e-3, `${id} on ${feature}`);
+  }
+  // in each list they come after the sites and before the features
+  const kinds = moon.map((p) => p.kind);
+  assert.ok(kinds.indexOf("planned") > kinds.lastIndexOf("crash") && kinds.lastIndexOf("planned") < kinds.indexOf("feature"));
 });

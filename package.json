@@ -547,6 +547,7 @@
   },
   "scripts": {
     "export:data": "node scripts/export-data.ts",
+    "places:planned": "node scripts/check-planned.ts",
     "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json && node scripts/copy-textures.mjs",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.check.json && tsc -p tsconfig.tools.json && tsc -p tsconfig.demo.json",
