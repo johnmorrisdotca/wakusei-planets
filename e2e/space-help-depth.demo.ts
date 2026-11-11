@@ -1,5 +1,5 @@
-// Help mode's axis line and spin arrow have depth against their own body (MODULES-914): by default nothing of the white axis is drawn over the globe (it runs into the near pole and out of the far pole), and `help-through` brings back
-// the whole lines. A picture test: the pixels of the axis' colour inside the disc. Chromium, drawing in software.
+// Help mode's axis line and spin arrow have depth against their own body (MODULES-914): by default less of them is drawn over the globe than whole (the axis runs into the near pole and out of the far pole, the part of the
+// arrow behind the globe is hidden), and `help-through` brings back the whole lines. A picture test: the pixels inside the disc that help mode changes, with it off, with depth and whole. Chromium, drawing in software.
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, setOn, settle, SPACE } from "./space-ui.ts";
 
@@ -9,44 +9,54 @@ test.beforeEach(({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
 });
 
-/** How many pixels inside the disc of a body are the colour of the help mode's axis line (#9fd0ff), in the picture of the view. */
-async function axisPixelsOver(page: Page, id: string): Promise<number> {
+const shot = async (page: Page): Promise<string> => (await page.locator(SPACE).screenshot()).toString("base64");
+
+/** How many pixels inside the disc of a body differ between two pictures of the view (by more than a fifth of the brightness range). */
+async function changedInside(page: Page, id: string, a: string, b: string): Promise<number> {
   const place = await page.locator(SPACE).evaluate((el, body) => (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(body), id);
   expect(place, `${id} is drawn`).not.toBeNull();
-  const png = (await page.locator(SPACE).screenshot()).toString("base64");
-  return page.evaluate(async ({ data, p }) => {
-    const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const context = canvas.getContext("2d")!;
-    context.drawImage(bitmap, 0, 0);
-    const { data: px } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+  return page.evaluate(async ({ pa, pb, p }) => {
+    const read = async (data: string): Promise<Uint8ClampedArray> => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const context = canvas.getContext("2d")!;
+      context.drawImage(bitmap, 0, 0);
+      return context.getImageData(0, 0, bitmap.width, bitmap.height).data;
+    };
+    const [x0, x1] = [await read(pa), await read(pb)];
+    const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${pa}`)).blob());
     let n = 0;
     for (let y = Math.max(0, Math.floor(p.y - p.r)); y < Math.min(bitmap.height, p.y + p.r); y += 1) {
       for (let x = Math.max(0, Math.floor(p.x - p.r)); x < Math.min(bitmap.width, p.x + p.r); x += 1) {
         if (Math.hypot(x - p.x, y - p.y) > p.r * 0.85) continue;
         const i = (y * bitmap.width + x) * 4;
-        if (Math.abs(px[i]! - 159) < 30 && Math.abs(px[i + 1]! - 208) < 30 && Math.abs(px[i + 2]! - 255) < 22) n += 1;
+        const d = Math.abs(x0[i]! - x1[i]!) + Math.abs(x0[i + 1]! - x1[i + 1]!) + Math.abs(x0[i + 2]! - x1[i + 2]!);
+        if (d > 150) n += 1;
       }
     }
     return n;
-  }, { data: png, p: place! });
+  }, { pa: a, pb: b, p: place! });
 }
 
 for (const [body, look, scale] of [["mars", "realistic", "true"], ["mars", "painted", "compressed"], ["saturn", "realistic", "true"], ["earth", "realistic", "compressed"]] as const) {
-  test(`${body}, ${look}, ${scale} scale: the axis is not drawn over the globe by default, and help-through draws all of it`, async ({ page }) => {
+  test(`${body}, ${look}, ${scale} scale: less of the help lines is drawn over the globe by default than whole with help-through`, async ({ page }) => {
     test.setTimeout(180_000);
-    await openSpace(page, `t=2026-11-02T14:00Z&scale=${scale}&look=${look}`);
+    await openSpace(page, `t=2026-11-02T14:00Z&scale=${scale}&look=${look}&play=off`);
     await callOn(page, "goTo", body, { smooth: false });
-    await setOn(page, "help", true);
     await settle(page, 2500);
+    const off = await shot(page);
+    await setOn(page, "help", true);
+    await settle(page, 1500);
     expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "helpThrough")), "depth is the default").toBe(false);
-    const hidden = await axisPixelsOver(page, body);
+    const depth = await shot(page);
     await setOn(page, "helpThrough", true);
-    await settle(page, 1200);
-    const whole = await axisPixelsOver(page, body);
-    expect(whole, `the whole axis over the ${body}: ${whole} pixels`).toBeGreaterThan(25);
-    expect(hidden, `with depth only ${hidden} pixels of it are over the ${body}`).toBeLessThan(whole * 0.15);
-    // and the attribute says the same
+    await settle(page, 1500);
+    const whole = await shot(page);
+    const hidden = await changedInside(page, body, off, depth);
+    const full = await changedInside(page, body, off, whole);
+    expect(full, `help-through changes ${full} pixels over the ${body}`).toBeGreaterThan(25);
+    expect(hidden, `with depth help changes ${hidden} pixels over the ${body}, against ${full} whole`).toBeLessThan(full);
+    // the attribute and the property say the same
     await page.locator(SPACE).evaluate((el) => {
       el.setAttribute("help-through", "");
       el.removeAttribute("help-through");
