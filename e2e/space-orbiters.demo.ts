@@ -1,4 +1,4 @@
-// The orbiters in the space view (MODULES-929): off by default and their module not fetched; on, each craft with a path is a dot on its orbit line round the Moon or Mars once the body is big enough
+// The orbiters in the space view: off by default and their module not fetched; on, each craft with a path is a dot on its orbit line round the Moon or Mars once the body is big enough
 // on the screen, named in the page's language, dim when its path is only modelled; from afar none is drawn. Chromium, drawing in software; every wait is on what the page reports.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
