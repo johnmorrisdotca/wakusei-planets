@@ -50,3 +50,7 @@ python3 -I scripts/make-orbiter-data.py --cache .cache/horizons-orbiters
 ```
 
 One header request and one vectors request per craft, two seconds apart, answers cached so a second run asks nothing again. The script prints each fit's error and says which craft Horizons no longer tracks; it rewrites `src/data/orbiters.ts` and the test points in `test/data/orbiters-horizons.json`, and `pnpm test` checks every craft against them.
+
+## In the space view
+
+`<wakusei-space orbiters>` (and `space.orbiters = true`) draws each craft with a path as a small dot where the table puts it on the date shown, scaled with its body in both scales, on its orbit line, with its name beside it in the page's language, once the Moon or Mars is at least 24 CSS pixels in radius on the screen (nearer, every dot would sit on the body's own). A `modelled` or `predicted` path is drawn dim; a craft with `none` is not drawn. Off by default, and this module is loaded the first time they are shown. `stats.orbiters` says what was drawn and each craft's status. To ride along with one: `space.ride(orbiterRidePoint("lro"), { around: "moon" })`, the camera at the craft looking at the Moon ([Riding along](ride-along.md)).

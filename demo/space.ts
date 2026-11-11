@@ -40,6 +40,8 @@ const state = {
   names: address.get("names") !== "0",
   /** Starman and the Roadster, drawn on their orbit (their path is fetched the first time). */
   starman: address.get("starman") === "1",
+  /** The spacecraft in orbit round the Moon and Mars (their paths are fetched the first time). */
+  orbiters: address.get("orbiters") === "1",
   /** Playing: the clock runs from the date shown at `speed` times real time. A page opened with no date, speed or play in its address opens playing, from now, an hour a second (the first speed at which the Earth's turn shows); a link that names a date or a speed, and a reader who asked for reduced motion, get it still with Play ready. */
   play: address.get("play") === "on" || (!["play", "t", "speed"].some((key) => address.get(key) !== null) && !matchMedia("(prefers-reduced-motion: reduce)").matches),
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
@@ -72,6 +74,7 @@ function render(): void {
   space.orbits = state.orbits;
   space.labels = state.names;
   space.roadster = state.starman;
+  space.orbiters = state.orbiters;
   if (replay.playing !== state.play) replay.playing = state.play;
   state.play = replay.playing;
   if (applied !== state.time) {
@@ -95,6 +98,7 @@ function render(): void {
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
   pressed(document.querySelector<HTMLElement>("#starman")!, state.starman);
+  pressed(document.querySelector<HTMLElement>("#orbiters")!, state.orbiters);
   renderBodyLabelRow(bodyLabel, space, address);
   pressed(nowButton, state.time === "now");
   if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
@@ -108,6 +112,7 @@ function render(): void {
   address.set("orbits", state.orbits ? null : "0");
   address.set("names", state.names ? null : "0");
   address.set("starman", state.starman ? "1" : null);
+  address.set("orbiters", state.orbiters ? "1" : null);
   address.set("play", state.play ? "on" : null);
   address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
@@ -133,6 +138,7 @@ for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", 
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
 document.querySelector("#starman")!.addEventListener("click", () => ((state.starman = !state.starman), render()));
+document.querySelector("#orbiters")!.addEventListener("click", () => ((state.orbiters = !state.orbiters), render()));
 bindBodyLabelRow(bodyLabel, render);
 nowButton.addEventListener("click", () => {
   state.time = "now";

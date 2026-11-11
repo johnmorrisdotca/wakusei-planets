@@ -50,3 +50,7 @@ python3 -I scripts/make-orbiter-data.py --cache .cache/horizons-orbiters
 ```
 
 1機につきヘッダーの要求が1回とベクトルの要求が1回、2秒おきです。応答はキャッシュするので、2回目の実行は何も要求しません。スクリプトは合わせた結果ごとの誤差を表示し、Horizons が追跡しなくなった機を知らせ、`src/data/orbiters.ts` と、`test/data/orbiters-horizons.json` にあるテスト用の点を書き直します。`pnpm test` がすべての機をそれらと照らし合わせます。
+
+## 宇宙ビューで
+
+`<wakusei-space orbiters>` (または `space.orbiters = true`) は、経路のある各機を、表示している日付に表が示す位置に小さな点として描きます。どちらの縮尺でも天体に合わせた大きさで、軌道の線の上に置き、横にページの言語で名前を出します。描くのは、月か火星が画面で半径24 CSSピクセル以上になってからです (それより遠いと、点がすべて天体の点に重なります)。`modelled` と `predicted` の経路は暗く描き、`none` の機は描きません。初期値はオフで、このモジュールは初めて表示するときに読み込みます。`stats.orbiters` が、描いたものと各機の状態を返します。1機に乗って見るには `space.ride(orbiterRidePoint("lro"), { around: "moon" })` と書きます。カメラは機の位置から月を見ます ([乗って見る](ride-along.md))。
