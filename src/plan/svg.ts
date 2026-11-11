@@ -151,13 +151,13 @@ const RANK: Record<PlanKind, number> = { star: 1, planet: 2, "dwarf-planet": 3, 
 const n2 = (n: number): string => (Math.round(n * 100) / 100).toString();
 
 /** The width of a name in pixels, at 10 px type: a Japanese character is as wide as it is tall. */
-const widthOf = (text: string): number => [...text].reduce((sum, ch) => sum + (/[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 10 : 5.6), 0);
+const widthOf = (text: string): number => [...text].reduce((sum, ch) => sum + (/[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 10 : 6.1), 0);
 
 /** The places a name may take beside its dot, in the order tried: right and above, right and below, left and above, left and below. Each is kept inside the picture. */
 function boxesFor(text: string, x: number, y: number, size: number, offset: number): LabelBox[] {
   const width = widthOf(text);
   const height = 12;
-  const fit = (left: number, top: number): LabelBox => ({ id: "", x: Math.max(2, Math.min(size - 2 - width, left)), y: Math.max(2, Math.min(size - 18 - height, top)), width, height, rank: 0, size: 0 });
+  const fit = (left: number, top: number): LabelBox => ({ id: "", x: Math.max(2, Math.min(size - 4 - width, left)), y: Math.max(2, Math.min(size - 18 - height, top)), width, height, rank: 0, size: 0 });
   return [fit(x + offset, y - height - 1), fit(x + offset, y + 1), fit(x - offset - width, y - height - 1), fit(x - offset - width, y + 1)];
 }
 
