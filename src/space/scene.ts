@@ -17,7 +17,7 @@ import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow,
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
 import { spinAxis } from "./spin.ts";
-import { createTrack, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createTrack, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
@@ -155,6 +155,8 @@ export interface SpaceModel {
   labels: boolean;
   /** Milliseconds of game time one second of wall time covers (the ephemeris is looked up once per such span). */
   stepMs: number;
+  /** Game seconds for each second of wall time, with its sign (0 when the clock holds): the places a move is worked out for are those the clock reaches by its end. */
+  speed: number;
   /** The body the camera looks at, and (in `zoom`) fills the view with at 1x: any body the package knows that the view can place (the eleven of `SPACE_BODIES` and the moons of the planets). */
   focus: BodyId;
   light: SpaceLight;
@@ -245,6 +247,8 @@ export interface SpaceTransition {
   leavingReach: number;
   input: TravelInput | null;
   plan: TravelPlan | null;
+  /** The scene's origin (the place of the body looked at) when the path was worked out: the path is in places relative to it. */
+  origin: Vec3;
 }
 
 export const newSpaceModel = (): SpaceModel => ({
@@ -256,6 +260,7 @@ export const newSpaceModel = (): SpaceModel => ({
   orbits: true,
   labels: true,
   stepMs: 1000,
+  speed: 1,
   focus: "earth",
   light: "sun",
   look: "realistic",
@@ -676,37 +681,66 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const start = { position: from, forward: [sf.x, sf.y, sf.z] as Vec3, up: [su.x, su.y, su.z] as Vec3, fov: glide.from.fov };
               const ef = scratchA.set(0, 0, -1).applyQuaternion(camera.quaternion);
               const eu = scratchB.set(0, 1, 0).applyQuaternion(camera.quaternion);
-              const end = { position: [camera.position.x, camera.position.y, camera.position.z] as Vec3, forward: [ef.x, ef.y, ef.z] as Vec3, up: [eu.x, eu.y, eu.z] as Vec3, fov: fovNow };
               const radiusOfAny = (id: BodyId): number => {
                 if ((SPACE_BODIES as readonly string[]).includes(id)) return radiusOf(id as SpaceBody);
                 const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
                 return Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusOf(host));
               };
-              const bodyOf = (id: BodyId | null): TravelBody | null => (id === null ? null : { from: absoluteSite(id), radius: radiusOfAny(id) });
-              const destination: TravelBody = bodyOf(glide.destination) ?? { from: focusPos, radius: focusRadius };
-              if (model.regionDrawn !== null && glide.destination === "sun") destination.reach = model.regionDrawn.reach;
-              const leaving: TravelBody = bodyOf(glide.leaving) ?? { ...destination };
-              if (glide.leavingReach > 0 && glide.leaving === "sun") leaving.reach = glide.leavingReach;
-              // two of one planet's family (two moons, or the planet and a moon) circle the planet, which stays in the picture
+              // every body is where the clock puts it as the move starts and where it puts it as the move ends (`later`, in the scene's places as of this draw): a clock that runs moves them, the Moon about three
+              // Earth radii in five game hours
               const familyOf = (id: BodyId | null): BodyId | null => (id === null ? null : id === "moon" ? "earth" : (hostOf(id) as BodyId | undefined) ?? id);
               const family = familyOf(glide.leaving);
-              const around = family !== null && family === familyOf(glide.destination) && (glide.leaving !== glide.destination) && (glide.leaving !== family || glide.destination !== family) ? bodyOf(family) : null;
-              const others = (["sun", "earth", "jupiter", "saturn"] as const).filter((id) => id !== glide.leaving && id !== glide.destination && id !== family).map((id) => bodyOf(id)!);
-              const input: TravelInput = { start, end, leaving, destination, others, aspect: size.width / Math.max(1, size.height), kind: glide.kind, pace: glide.pace };
-              if (around !== null) input.around = around;
-              glide.input = input;
-              glide.plan = travelPlan(input);
+              const around = family !== null && family === familyOf(glide.destination) && (glide.leaving !== glide.destination) && (glide.leaving !== family || glide.destination !== family) ? family : null;
+              const build = (ms: number): { input: TravelInput; plan: TravelPlan } => {
+                const later = ms === model.time ? pos : placeBodies(mode, frameAt(ms));
+                if (later !== pos) for (const id of Object.keys(later) as (keyof typeof later)[]) later[id] = minus(later[id], origin);
+                const siteAt = (id: BodyId, table: typeof pos, at: number): Vec3 => {
+                  if ((SPACE_BODIES as readonly string[]).includes(id)) return table[id as SpaceBody];
+                  const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
+                  const offset = moonSite(id as MoonId, at, host);
+                  const hostRadius = radiusOf(host);
+                  return [table[host][0] + offset[0] * hostRadius, table[host][1] + offset[1] * hostRadius, table[host][2] + offset[2] * hostRadius];
+                };
+                const bodyOf = (id: BodyId | null): TravelBody | null => (id === null ? null : { from: siteAt(id, pos, model.time), to: siteAt(id, later, ms), radius: radiusOfAny(id) });
+                const destination: TravelBody = bodyOf(glide.destination) ?? { from: focusPos, to: focusPos, radius: focusRadius };
+                if (model.regionDrawn !== null && glide.destination === "sun") destination.reach = model.regionDrawn.reach;
+                const leaving: TravelBody = bodyOf(glide.leaving) ?? { ...destination };
+                if (glide.leavingReach > 0 && glide.leaving === "sun") leaving.reach = glide.leavingReach;
+                // the last view is the one framed for the destination where it is now: it moves with the destination
+                const shift = destination.to === undefined ? [0, 0, 0] : [destination.to[0] - destination.from[0], destination.to[1] - destination.from[1], destination.to[2] - destination.from[2]];
+                const end = { position: [camera.position.x + shift[0]!, camera.position.y + shift[1]!, camera.position.z + shift[2]!] as Vec3, forward: [ef.x, ef.y, ef.z] as Vec3, up: [eu.x, eu.y, eu.z] as Vec3, fov: fovNow };
+                // every body of the view is kept clear of, the two ends of the move and the planet circled aside
+                const others = (SPACE_BODIES as readonly BodyId[]).filter((id) => id !== glide.leaving && id !== glide.destination && id !== family).map((id) => bodyOf(id)!);
+                const input: TravelInput = { start, end, leaving, destination, others, aspect: size.width / Math.max(1, size.height), kind: glide.kind, pace: glide.pace };
+                if (around !== null) input.around = bodyOf(around)!;
+                return { input, plan: travelPlan(input) };
+              };
+              // the length of the move is worked out for bodies that stand still, then the move is worked out again for where the clock takes them in that time (once: the length may change a little)
+              let built = build(model.time);
+              if (model.speed !== 0) {
+                const duration = glide.duration > 0 ? glide.duration : built.plan.duration;
+                built = build(model.time + duration * model.speed);
+              }
+              glide.input = built.input;
+              glide.plan = built.plan;
+              glide.origin = origin;
               if (glide.duration <= 0) glide.duration = glide.plan.duration;
             }
             const k = Math.min(1, (performance.now() - glide.start) / Math.max(1, glide.duration));
             const sample = travelPose(glide.input, k, glide.plan!);
-            camera.position.set(sample.position[0], sample.position[1], sample.position[2]);
+            // the path is in the scene's places as of the move's first draw: the scene's origin moves with the body looked at, so the camera is moved by as much
+            const [ox, oy, oz] = [glide.origin[0] - origin[0], glide.origin[1] - origin[1], glide.origin[2] - origin[2]];
+            camera.position.set(sample.position[0] + ox, sample.position[1] + oy, sample.position[2] + oz);
             camera.up.set(sample.up[0], sample.up[1], sample.up[2]);
-            target.set(sample.position[0] + sample.forward[0], sample.position[1] + sample.forward[1], sample.position[2] + sample.forward[2]);
+            target.set(camera.position.x + sample.forward[0], camera.position.y + sample.forward[1], camera.position.z + sample.forward[2]);
             camera.lookAt(target);
             fovNow = sample.fov;
             model.travelling = { kind: glide.plan!.kind, path: glide.plan!.path, stage: sample.stage, progress: k, duration: glide.duration, leaving: sample.leaving.inside, destination: sample.destination.inside };
-            if (k >= 1) model.transition = null;
+            // the move is over at its last draw: nothing is travelling after it
+            if (k >= 1) {
+              model.transition = null;
+              model.travelling = null;
+            }
           }
           // the controls' roll turns the picture clockwise about the line of sight, and a pan moves everything by that many CSS pixels at any depth: the window of the projection moves the other way
           if (model.view.roll !== 0) camera.rotateZ(model.view.roll * RAD);
