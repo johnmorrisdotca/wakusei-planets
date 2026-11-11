@@ -8,6 +8,7 @@ import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
+import { sightChanged, sightOf, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
 import { coverArrows } from "./covered.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
@@ -24,7 +25,7 @@ import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts"
 import type { RideLook } from "./ride.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
-export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type SpaceBody, type SpaceLight };
+export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type Sight, type SightEdge, type SpaceBody, type SpaceLight };
 
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
 export type { BodyPlace };
@@ -75,6 +76,24 @@ export interface BodyInfo {
  */
 export interface BodyHover extends BodyInfo {
   system: { host: BodyId; moons: BodyId[] };
+}
+
+/**
+ * Where a body is for the picture (`sight()` and `wakusei-sight`): whether it is in view, and if not, the edge it lies beyond and where along it, the way to it and whether it is behind the camera (`Sight`), with its id,
+ * its kind and, for a moon, the body it goes round.
+ *
+ * @example
+ * ```ts no-run
+ * import type { BodySight } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const mars: BodySight = { id: "mars", kind: "planet", inView: false, behind: false, edge: "right", x: 640, y: 210, along: 210, angle: 84 };
+ * console.log(mars.inView ? "in view" : `beyond the ${mars.edge} edge`);
+ * ```
+ */
+export interface BodySight extends Sight {
+  id: BodyId;
+  kind: SpaceKind;
+  host?: BodyId;
 }
 
 /**
@@ -184,7 +203,8 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * only when something changes, and nothing while it is out of sight.
  *
  * The names and markers of bodies outside the system in the middle of the view are drawn at half strength (`far-opacity`, 0 to 1). A body under the pointer, a finger or the keyboard's focus lights its own system instead and
- * sends `wakusei-body-hover` with the body and its system (`wakusei-body-hover-end` when none is). Neither draws the picture again.
+ * sends `wakusei-body-hover` with the body and its system (`wakusei-body-hover-end` when none is). `sight()` says which bodies are in view and, for the rest, the edge of the picture each lies beyond; `wakusei-sight`
+ * fires when that changes. None of these draws the picture again.
  *
  * `immersive` makes it a full-screen view: it fills the box it is in, whatever the shape (the body looked at is framed by the shorter side), the plain wheel zooms and a drag anywhere on it turns it. Without it Ctrl, Command or Alt with the wheel zooms and the plain wheel scrolls the page.
  *
@@ -305,6 +325,7 @@ export class WakuseiSpace extends HTMLElement {
         this.#placeLabels(places);
         this.#door.announce();
       },
+      onSight: (bodies, frame) => this.#see(bodies, frame),
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
@@ -503,6 +524,15 @@ export class WakuseiSpace extends HTMLElement {
   /** The body under the pointer, a finger or the keyboard's focus now, or null: its system's names are drawn at full strength. */
   get hovered(): BodyId | null {
     return this.#hovered;
+  }
+
+  /**
+   * Where each body is for the picture at the last draw: in view or not, and for one out of view the edge of the picture it lies beyond, the point on that edge, the way to it, and whether it is behind the camera. It
+   * covers the Sun, the planets, the dwarf planets and the minor bodies, the moons of the body looked at and any other moon drawn; not the body the camera rides on. `wakusei-sight` fires with the same list whenever a
+   * body comes into view or leaves it, changes edge, or moves 8 CSS pixels along its edge, and never at rest: a page draws its own tabs at the edges from it.
+   */
+  sight(): BodySight[] {
+    return Object.values(this.#sight).map((one) => ({ ...one }));
   }
 
   get orbits(): boolean {
@@ -1086,6 +1116,24 @@ export class WakuseiSpace extends HTMLElement {
     const next = event.relatedTarget as HTMLElement | null;
     if (this.#hoverBy === "focus" && !(next && this.#labelBox?.contains(next))) this.#hover(null, "focus");
   };
+
+  /** Where each body is for the picture: kept for `sight()`, and told to the page when it changes enough to matter. */
+  #sight: Record<string, BodySight> = {};
+  #told: Record<string, Sight> = {};
+  #see(bodies: Record<string, SightInput>, frame: { width: number; height: number; axis: { x: number; y: number } }): void {
+    const now: Record<string, BodySight> = {};
+    for (const [id, input] of Object.entries(bodies)) {
+      const body = id as BodyId;
+      const one: BodySight = { id: body, kind: bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis) };
+      const host = hostOf(body);
+      if (host !== undefined) one.host = host;
+      now[id] = one;
+    }
+    this.#sight = now;
+    if (!sightChanged(this.#told, now)) return;
+    this.#told = now;
+    this.dispatchEvent(new CustomEvent("wakusei-sight", { detail: { bodies: this.sight() } }));
+  }
 
   /** The quiet arrows for the bodies behind others (`covered="arrow"`): one per covering disc, just outside its edge, named for the surest body behind and counting the rest. */
   #placeArrows(places: Record<string, BodyPlace | null>): void {

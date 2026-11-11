@@ -1,9 +1,9 @@
-// Far names and the system under the pointer. The names of bodies outside the system in the middle are drawn at the far strength; a body under the mouse, a finger or the
-// keyboard's focus lights its own system and says so. None of it draws the picture again. Chromium, drawing in software; every wait
+// Far names and the system under the pointer, and where the bodies out of view are. The names of bodies outside the system in the middle are drawn at the far strength; a body under the mouse, a finger or the
+// keyboard's focus lights its own system and says so; `sight()` and `wakusei-sight` give the edge each body out of view lies beyond. None of it draws the picture again. Chromium, drawing in software; every wait
 // is on what the page reports.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { drawn, NOV2, openSpace, SPACE } from "./space-ui.ts";
+import { callOn, drawn, NOV2, openSpace, SPACE } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 
@@ -145,3 +145,61 @@ test("a finger on a body lights its system and tells the page; a finger on empty
   expect((await heard(page)).at(-1)?.type).toBe("wakusei-body-hover-end");
 });
 
+// --- where the bodies out of view are --------------------------------------------------------------------------------------------------------------------------------------------------------
+interface BodySight {
+  id: string;
+  kind: string;
+  inView: boolean;
+  behind: boolean;
+  edge: string | null;
+  x: number;
+  y: number;
+  along: number;
+  angle: number;
+}
+const sight = (page: Page): Promise<BodySight[]> => callOn(page, "sight") as Promise<BodySight[]>;
+
+test("sight: the bodies in view are in the picture, the others lie beyond the edge their way points to, behind the camera too; the page hears of a change and nothing at rest", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+  test.setTimeout(180_000);
+  await openSpace(page, `t=${NOV2}`);
+  const box = (await page.locator(SPACE).boundingBox())!;
+  const check = async (): Promise<BodySight[]> => {
+    const all = await sight(page);
+    expect(all.map((one) => one.id)).toEqual(expect.arrayContaining(["sun", "earth", "mars", "jupiter", "neptune"]));
+    for (const one of all) {
+      if (one.inView) {
+        expect(one.edge, one.id).toBeNull();
+        continue;
+      }
+      // the point is on the edge it names, and the way to it leans the same way
+      const on = { top: one.y, bottom: box.height - one.y, left: one.x, right: box.width - one.x }[one.edge as "top" | "bottom" | "left" | "right"];
+      expect(on, `${one.id} on its ${one.edge} edge`).toBeCloseTo(0, 3);
+      const lean = { top: Math.cos((one.angle * Math.PI) / 180), bottom: -Math.cos((one.angle * Math.PI) / 180), right: Math.sin((one.angle * Math.PI) / 180), left: -Math.sin((one.angle * Math.PI) / 180) }[one.edge as "top"];
+      expect(lean, `${one.id} leans ${one.edge}`).toBeGreaterThan(0);
+      // a body ahead of the camera and off the picture is placed beyond that edge
+      const place = await placeOf(page, one.id);
+      if (!one.behind && place) {
+        const beyond = { top: -place.y, bottom: place.y - box.height, left: -place.x, right: place.x - box.width }[one.edge as "top"];
+        expect(beyond + place.r, `${one.id} is beyond its ${one.edge} edge`).toBeGreaterThan(0);
+      }
+    }
+    return all;
+  };
+  const first = await check();
+  expect(first.find((one) => one.id === "earth")?.inView).toBe(true);
+
+  await listen(page, ["wakusei-sight"]);
+  const count = async () => (await heard(page)).length;
+  // at rest: nothing heard
+  const draws = (await readCounts(page)).draws;
+  await expect.poll(async () => (await readCounts(page)).draws, { intervals: [500, 500, 500] }).toBe(draws);
+  expect(await count()).toBe(0);
+  // turned half round, the far side of the sky is ahead and what was ahead is behind the camera
+  await drawn(page, () => callOn(page, "setView", { yaw: 180, tilt: 0, zoom: 1 }));
+  await expect.poll(count).toBeGreaterThan(0);
+  const turned = await check();
+  expect(turned.some((one) => one.behind && one.edge !== null)).toBe(true);
+  const told = (await heard(page)).at(-1)!.detail["bodies"] as BodySight[];
+  expect(told.map((one) => one.id).sort()).toEqual(turned.map((one) => one.id).sort());
+});
