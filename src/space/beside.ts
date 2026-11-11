@@ -105,6 +105,7 @@ export function besideMoon(input: BesideInput): BesideCamera {
   const over = (1 - Math.cos((Math.PI * Math.max(0, SIDE_BLEND - length(side))) / SIDE_BLEND)) / 2;
   const northSide = across(north, away);
   if (over > 0 && length(northSide) > 1e-3) side = add(side, scale(unit(northSide), over));
+  if (length(side) < 1e-3) side = cross(away, north);
   if (length(side) < 1e-3) side = cross(away, [0, 1, 0]);
   if (length(side) < 1e-3) side = cross(away, [1, 0, 0]);
   side = unit(side);
@@ -139,8 +140,9 @@ export function besideMoon(input: BesideInput): BesideCamera {
   let up: Vec3 = across(north, forward);
   const poleward = Math.max(0, POLE_CONE - length(up)) / POLE_CONE;
   if (poleward > 0) {
+    // the +y part is laid the way the pole's part already leans (-y when they would oppose), so the two never cancel and up never collapses inside the cone
     const y = across([0, 1, 0], forward);
-    if (length(y) > 1e-6) up = add(up, scale(unit(y), poleward));
+    if (length(y) > 1e-6) up = add(up, scale(unit(y), dot(up, y) < 0 ? -poleward : poleward));
   }
   if (length(up) < 1e-6) up = cross(unit(across(shift, forward)), forward);
   up = unit(up);
