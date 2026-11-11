@@ -7,8 +7,11 @@ import { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf } from "../src/space/i
 test("the hopper's order holds every body once, the Sun first, and each planet is followed by its moons nearest first", () => {
   assert.equal(HOP_ORDER.length, BODY_IDS.length);
   assert.deepEqual([...HOP_ORDER].sort(), [...BODY_IDS].sort());
-  assert.deepEqual(HOP_ORDER.slice(0, 9), ["sun", "mercury", "venus", "earth", "moon", "mars", "phobos", "deimos", "ceres"]);
+  assert.deepEqual(HOP_ORDER.slice(0, 11), ["sun", "mercury", "venus", "earth", "moon", "mars", "phobos", "deimos", "vesta", "ceres", "pallas"]);
+
   const at = (id: string): number => HOP_ORDER.indexOf(id as (typeof HOP_ORDER)[number]);
+  // the minor bodies are among the planets by the size of their orbits: Chiron and Halley between Saturn and Uranus, Pholus just beyond Uranus
+  assert.ok(at("saturn") < at("chiron") && at("chiron") < at("halley") && at("halley") < at("uranus") && at("uranus") < at("pholus") && at("pholus") < at("neptune"));
   for (const [host, moons] of Object.entries(MOONS_OF)) {
     for (const [i, moon] of (moons as readonly string[]).entries()) assert.equal(at(moon), at(host) + 1 + i, `${moon} follows ${host}`);
   }
@@ -35,6 +38,7 @@ test("a body is read from its name in any case, in English or in Japanese; anyth
   assert.equal(findBody("  TITAN "), "titan");
   assert.equal(findBody("土星"), "saturn");
   assert.equal(findBody("Hiʻiaka"), "hiiaka");
+  assert.equal(findBody("ハレー彗星"), "halley");
   assert.equal(findBody("nowhere"), undefined);
   assert.equal(findBody(""), undefined);
   for (const id of BODY_IDS) assert.equal(findBody(BODIES[id].name.en), id);
@@ -46,6 +50,10 @@ test("kinds and hosts: a moon has its planet, the Moon has the Earth, a planet h
   assert.equal(bodyKindOf("pluto"), "dwarf-planet");
   assert.equal(bodyKindOf("eris"), "dwarf-planet");
   assert.equal(bodyKindOf("titan"), "moon");
+  assert.equal(bodyKindOf("vesta"), "asteroid");
+  assert.equal(bodyKindOf("chiron"), "centaur");
+  assert.equal(bodyKindOf("halley"), "comet");
+  assert.equal(hostOf("halley"), undefined);
   assert.equal(hostOf("titan"), "saturn");
   assert.equal(hostOf("moon"), "earth");
   assert.equal(hostOf("dysnomia"), "eris");

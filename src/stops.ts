@@ -4,10 +4,11 @@
 // (https://nssdc.gsfc.nasa.gov/planetary/factsheet/) for the Sun (132,712 × 10^6), Mercury (0.022032 × 10^6) and Venus (0.32486 × 10^6).
 // Ceres, Eris, Makemake and Haumea: the mass on JPL "Planetary Physical Parameters" (https://ssd.jpl.nasa.gov/planets/phys_par.html)
 // times the CODATA 2018 G that page names. Escape speeds for the Sun and those planets are the speeds those pages print.
+// Vesta (17.2882844) and Pallas (13.63): the GM of JPL's Small-Body Database (https://ssd-api.jpl.nasa.gov/sbdb.api, read 2026-11-10), from Park et al. 2025 and Vernazza et al. 2021.
 // A moon's escape speed is sqrt(2 GM / radius) from this package's radius. Nereid, and the dwarf planets and moons
 // whose pages do not print a mass, are left empty.
 import { heliocentric, meanSunAu, moonVector } from "./ephemeris.ts";
-import { BODIES, BODY_IDS, type BodyFacts, type BodyId, type HostId, type MoonId } from "./facts.ts";
+import { BODIES, BODY_IDS, type BodyFacts, type BodyId, type HostId, type MinorId, type MoonId } from "./facts.ts";
 import { add, scale, type Vec3 } from "./vec.ts";
 
 /** The astronomical unit the ephemeris uses, in kilometres. */
@@ -33,6 +34,8 @@ const GM: Partial<Record<BodyId, number>> = {
   eris: mass(16_600e18),
   makemake: mass(3_100e18),
   haumea: mass(4_006e18),
+  vesta: 17.2882844,
+  pallas: 13.63,
   moon: 4_902.8,
   phobos: 0.0007087,
   deimos: 0.0000962,
@@ -109,7 +112,7 @@ export interface JourneyStop {
 const stopOf = (id: BodyId): JourneyStop => {
   const facts = BODIES[id];
   const gm = GM[id] ?? null;
-  const host = facts.kind === "moon" ? facts.parent : id === "sun" ? undefined : (id as HostId);
+  const host = facts.kind === "moon" ? facts.parent : id === "sun" ? undefined : (id as HostId | MinorId);
   return {
     id,
     kind: facts.kind,
@@ -124,7 +127,7 @@ const stopOf = (id: BodyId): JourneyStop => {
 };
 
 /**
- * Every body, in the same order as `BODY_IDS`: the Sun, the planets, the dwarf planets, then the moons.
+ * Every body, in the same order as `BODY_IDS`: the Sun, the planets, the dwarf planets, the minor bodies, then the moons.
  *
  * @example
  * ```ts

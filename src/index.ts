@@ -1,4 +1,4 @@
-export { BODIES, BODY_IDS, DWARF_IDS, MOONS_OF, PLANET_IDS, ringReach, type BodyFacts, type BodyId, type DwarfId, type Feature, type HostId, type Look, type MoonId, type PlanetId, type RingBand } from "./facts.ts";
+export { BODIES, BODY_IDS, DWARF_IDS, MINOR_IDS, MOONS_OF, PLANET_IDS, ringReach, type BodyFacts, type BodyId, type DwarfId, type Feature, type HostId, type Look, type MinorId, type MoonId, type PlanetId, type RingBand } from "./facts.ts";
 export { apparent, heliocentric, heliocentricModel, meanSunAu, moonGeocentric, orbitPath, system, type Apparent, type MoonPlace, type Pose, type System } from "./ephemeris.ts";
 export { JOURNEY_STOPS, journeyStop, stopPlaceAu, type JourneyStop } from "./stops.ts";
 export { drawnTilt, portrait, type PortraitOptions } from "./pose.ts";

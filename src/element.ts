@@ -5,9 +5,9 @@ import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import "./tables/ceres.ts";
 import "./tables/dwarfs.ts";
-import { loadMoonTheory } from "./tables/lazy.ts";
+import { loadMinorTables, loadMoonTheory } from "./tables/lazy.ts";
 import { orbitPath, type Pose } from "./ephemeris.ts";
-import { BODIES, type BodyFacts, type BodyId, type Look, type MoonId } from "./facts.ts";
+import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId } from "./facts.ts";
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
@@ -619,6 +619,14 @@ export class WakuseiBody extends HTMLElement {
   #frameNow(): LiveFrame {
     const request = this.#request();
     if (request.moons) this.#wantTheory(request.id);
+    // a minor body with a date is placed from its fitted table, fetched the first time one is asked for
+    if (request.start !== undefined && (MINOR_IDS as readonly string[]).includes(request.id)) {
+      void loadMinorTables().then((loaded) => {
+        if (!loaded) return;
+        this.#live = createLive();
+        this.#queue(true);
+      });
+    }
     const frame = this.#live.at(request, performance.now());
     if (frame.anchors !== this.#lastAnchors) {
       this.#lastAnchors = frame.anchors;

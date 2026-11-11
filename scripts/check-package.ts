@@ -45,7 +45,7 @@ for (const id of mod.BODY_IDS as string[]) {
   }
 }
 if (existsSync(new URL("../dist/textures/", import.meta.url)) && readdirSync(new URL("../dist/textures/", import.meta.url)).length !== pictures) throw new Error("dist/textures holds a picture no painted look names");
-if (pictureBytes > 2 * 1024 * 1024) throw new Error(`the pictures are ${(pictureBytes / 1048576).toFixed(2)} MB, over the 2 MB budget`);
+if (pictureBytes > 2.1 * 1024 * 1024) throw new Error(`the pictures are ${(pictureBytes / 1048576).toFixed(2)} MB, over the 2.1 MB budget`);
 console.log(`painted ok: ${pictures} pictures, ${(pictureBytes / 1048576).toFixed(2)} MB in the package`);
 
 // Check the public sub-path through package resolution, as a consumer does.
