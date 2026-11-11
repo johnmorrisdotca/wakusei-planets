@@ -72,6 +72,10 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 `body-label="painted"` をつけると、それぞれの天体の名前をその球面にも書きます。天体とともに回り、ページの言語で書きます。見た目、いくつ、どこに、フォントは[天体に名前を書く](name-on-the-body.md)にあります。画面上で小さすぎる天体には書きません。球面に名前を書いている天体では、横の名前と点がフェードで消えて、ほかの名前に場所をあけます。天体がまた小さくなると、フェードで戻ります。`labels-always` をつけると、どちらも出したままにします。
 
+## 画面の外の天体
+
+`space.sight()` は、最後に描いた絵の上で、それぞれの天体がどこにあるかを、`{ id, kind, host, inView, behind, edge, x, y, along, angle }` の一覧で返します。円盤が絵の上にある天体は `inView` が `true` です。そうでない天体では、`edge` は天体がある方向の絵の辺 (`top`、`right`、`bottom`、`left`)、`x` と `y` は、表示の真ん中から天体へ引いた線がその辺と交わる点、`along` は同じ点を辺にそって測った値 (上と下の辺は左から、左右の辺は上から)、`angle` は天体への向き (絵の上から時計まわりに測った角度、単位は度) です。カメラの後ろにある間は `behind` が `true` になります。一覧には、太陽、惑星、準惑星と小天体、見ている天体の衛星、ほかに描いている衛星が入り、乗って見ている間も同じです (乗っている天体は入りません)。`wakusei-sight` は、天体が絵に入ったり出たり、カメラの後ろに回ったり出てきたり、辺が変わったり、辺にそって8CSSピクセル動いたりしたときに、同じ一覧を入れた `{ bodies }` つきで発火します。止まっているときは発火しません。この要素はタブを描きません。タブはページが自分で、ボタンなどのない辺に置き、押されたら `space.goTo(id)` を呼びます。`/space` の `sightOf` と `sightChanged` がその計算です。
+
 ## すべての天体
 
 この表示は、パッケージが知っているすべての天体、52個を出します。太陽、8つの惑星、9つの準惑星 (冥王星、ケレス、オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナ)、5つの小天体 (小惑星のベスタとパラス、ケンタウルス族のケイロンとポルス、ハレー彗星)、29の衛星です。`/space/element` の `SPACE_BODIES` は、シーンの中心に置く24個の一覧で (準惑星は接触軌道要素から。2026年の前後数年ぶんで有効です。小天体は Horizons に合わせた表から、1秒角以内で置きます。表は表示が自分で読み込みます)、衛星はどれも本当の軌道で、それぞれの惑星のまわりに置きます。どれも表示の中心にでき、行き先に選べ、順にめぐれ、乗って見られます (`space.ride("ceres")`、`space.ride("titan")`、`space.ride("vanth")`)。画面で小さすぎて見えない準惑星や小天体 (半径が半ピクセルに満たないもの。実際の縮尺では、どの小惑星も彗星もこれに当たります) は描かず、名前と輪だけを出し、見に行くまで絵も作りません。衛星は、惑星が数ピクセルの大きさになると描きます。`orbits` がオンなら、準惑星と小天体の軌道の線も出ます (ハレー彗星の線は、海王星の距離までのびる細長い楕円で、太陽のそばで急に曲がります)。`space.zoomFor("mars-moons")` (`jupiter`、`saturn`、`uranus`、`neptune`、`pluto`、`orcus`、`haumea`、`eris` も) は、惑星とその近い衛星が収まるズームを返します。
@@ -110,7 +114,7 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターや指が乗った天体、またはフォーカスのある天体と、それがなくなったとき) です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターや指が乗った天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体) です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 天体から天体への移動
 
