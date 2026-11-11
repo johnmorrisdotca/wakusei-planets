@@ -439,6 +439,11 @@
       "en": "4,183 close approaches of near-Earth objects to the Earth (every one within 0.05 au from 2026 to 2036, and the close ones since 1900) from JPL: dates, distances, speeds, sizes, and searches (about 134 kB gzipped)",
       "ja": "地球近傍天体の地球への接近4,183件 (2026年から2036年の 0.05 au 以内すべてと、1900年以降の近いもの) を JPL から: 日時、距離、速さ、大きさと検索 (gzip で約134 kB)",
       "platform": "node"
+    },
+    "./moon-catalogue": {
+      "en": "Every known moon of the planets and dwarf planets, 468 as JPL lists them on 2026-11-11: names, discovery, mean orbit, group, size where known, and where each is with its measured accuracy (about 35 kB gzipped)",
+      "ja": "惑星と準惑星の、知られている衛星すべて (JPL の 2026-11-11 時点で468個): 名前、発見、平均軌道、グループ、わかっている大きさ、位置とそのずれ (gzip で約35 kB)",
+      "platform": "node"
     }
   }
 }
