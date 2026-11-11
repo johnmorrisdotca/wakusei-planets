@@ -1,5 +1,5 @@
 // What is known about each orbiter: names, operator, launch, instruments, a line about it in our own words, and the state of its mission. Every fact is typed from the craft's own
-// JPL Horizons object page (NASA/JPL, public domain), read 2026-11-11 by scripts/make-orbiter-data.py (NOTICE.md names them); a fact the page does not give is left out, never guessed.
+// JPL Horizons object page as a plain fact, in our own words, read 2026-11-11 by scripts/make-orbiter-data.py (NOTICE.md names the pages and the agency that supplies each trajectory); a fact the page does not give is left out, never guessed.
 // The Japanese names and lines are ours.
 
 /**
@@ -171,7 +171,7 @@ export const ORBITER_FACTS = {
     horizonsId: -53,
   },
   maven: {
-    name: { en: "MAVEN", ja: "メイヴン" },
+    name: { en: "MAVEN", ja: "メイブン" },
     centre: "mars",
     operator: "NASA (Goddard Space Flight Center)",
     launch: { date: "2013-11-18T18:28Z", vehicle: "Atlas V 401", site: "Cape Canaveral, SLC-41" },
@@ -181,7 +181,7 @@ export const ORBITER_FACTS = {
       { name: "Neutral Gas and Ion Mass Spectrometer", short: "NGIMS" },
     ],
     about: { en: "The Mars Atmosphere and Volatile Evolution orbiter studied how the upper atmosphere is lost to space from a 150 by 6,200 km orbit; contact was lost in December 2025 and NASA ended the mission in 2026, so its last known orbit is shown as modelled.", ja: "火星の上層大気がどう宇宙へ失われるかを、150 × 6,200 kmの軌道から調べた探査機。2025年12月に交信が途絶え、2026年にNASAがミッションを終えたので、最後に分かっている軌道をモデルの軌道として示します。" },
-    status: { state: "ended", since: "2025-12-06", note: { en: "Horizons' page: no contact since 2025-12-06, with evidence of an unplanned change of velocity on 2025-12-04; its fit reaches 2025-12-04 and its track ends 2026-03-01.", ja: "Horizonsのページ: 2025-12-06から交信がなく、2025-12-04に予定外の速度変化があった形跡があります。フィットは2025-12-04まで、経路データは2026-03-01で終わります。" } },
+    status: { state: "ended", since: "2025-12-06", note: { en: "Horizons' page: no contact since 2025-12-06, with evidence of an unplanned change of velocity on 2025-12-04; its fit reaches 2025-12-04 and its track ends 2026-03-01.", ja: "Horizonsのページ: 2025-12-06から交信がなく、2025-12-04に予定外の速度変化があった形跡があります。合わせた期間は2025-12-04まで、経路データは2026-03-01で終わります。" } },
     horizonsId: -202,
   },
   "mars-express": {
