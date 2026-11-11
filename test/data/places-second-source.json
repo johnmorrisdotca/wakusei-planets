@@ -1,0 +1,182 @@
+{
+ "read": "2026-11-11",
+ "note": "Positions of places from sources other than the ones the table uses for them. Latitude north, longitude east, -180 to 180. Mars24's latitudes are planetographic or planetocentric as each mission's own team gave them; they can differ from the table's by up to half a degree.",
+ "rows": [
+  {
+   "id": "moon/apollo-11-lunar-module",
+   "source": "NASA NSSDCA, Apollo 11 Lunar Module",
+   "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1969-059C",
+   "figure": "at 0.67416 degrees N latitude, 23.47314 degrees E longitude",
+   "lat": 0.67416,
+   "lon": 23.47314
+  },
+  {
+   "id": "moon/apollo-17-lunar-module",
+   "source": "NASA NSSDCA, Apollo 17 Lunar Module",
+   "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1972-096C",
+   "figure": "at 20.1911 N latitude, 30.7723 E longitude (as determined",
+   "lat": 20.1911,
+   "lon": 30.7723
+  },
+  {
+   "id": "mars/viking-1",
+   "source": "NASA NSSDCA, Viking 1 Lander",
+   "url": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1975-075C",
+   "figure": "at 22.27 deg N latitude and 312.05 deg E longitude (planetocentric)",
+   "lat": 22.27,
+   "lon": -47.95
+  },
+  {
+   "id": "moon/apollo-11-lunar-module",
+   "source": "IAU Gazetteer of Planetary Nomenclature (USGS), Statio Tranquillitatis",
+   "url": "https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip",
+   "figure": "0.6741, 23.4732 (file of 2026-11-11)",
+   "lat": 0.6741,
+   "lon": 23.4732
+  },
+  {
+   "id": "moon/chang-e-3",
+   "source": "IAU Gazetteer of Planetary Nomenclature (USGS), Guang Han Gong",
+   "url": "https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip",
+   "figure": "44.1184, -19.5123 (file of 2026-11-11)",
+   "lat": 44.1184,
+   "lon": -19.5123
+  },
+  {
+   "id": "moon/chang-e-4",
+   "source": "IAU Gazetteer of Planetary Nomenclature (USGS), Statio Tianhe",
+   "url": "https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip",
+   "figure": "-45.45, 177.6 (file of 2026-11-11)",
+   "lat": -45.45,
+   "lon": 177.6
+  },
+  {
+   "id": "moon/chang-e-5-lander",
+   "source": "IAU Gazetteer of Planetary Nomenclature (USGS), Statio Tianchuan",
+   "url": "https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip",
+   "figure": "43.06, -51.92 (file of 2026-11-11)",
+   "lat": 43.06,
+   "lon": -51.92
+  },
+  {
+   "id": "moon/chang-e-6-lander",
+   "source": "IAU Gazetteer of Planetary Nomenclature (USGS), Statio Tianjiang",
+   "url": "https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip",
+   "figure": "-41.63, -153.98 (file of 2026-11-11)",
+   "lat": -41.63,
+   "lon": -153.98
+  },
+  {
+   "id": "moon/chandrayaan-3-vikram",
+   "source": "IAU Gazetteer of Planetary Nomenclature (USGS), Statio Shiv Shakti",
+   "url": "https://planetarynames.wr.usgs.gov/shapefiles/MOON_nomenclature_center_pts.zip",
+   "figure": "-69.3734, 32.3198 (file of 2026-11-11)",
+   "lat": -69.3734,
+   "lon": 32.3198
+  },
+  {
+   "id": "moon/luna-2",
+   "source": "GCAT lander catalogue, AMS E-1A No. 7 (Luna-2)",
+   "url": "https://planet4589.org/space/gcat/tsv/cat/landercat.tsv",
+   "figure": "lon 0.0, lat 30.0",
+   "lat": 30.0,
+   "lon": 0.0
+  },
+  {
+   "id": "moon/luna-9",
+   "source": "GCAT lander catalogue, ALS Luna-9",
+   "url": "https://planet4589.org/space/gcat/tsv/cat/landercat.tsv",
+   "figure": "lon -63.8556, lat 7.6816",
+   "lat": 7.6816,
+   "lon": -63.8556
+  },
+  {
+   "id": "moon/slim",
+   "source": "GCAT lander catalogue, SLIM",
+   "url": "https://planet4589.org/space/gcat/tsv/cat/landercat.tsv",
+   "figure": "lon 25.2508, lat -13.3154",
+   "lat": -13.3154,
+   "lon": 25.2508
+  },
+  {
+   "id": "mars/curiosity",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 137.44°E 4.59°S",
+   "lat": -4.59,
+   "lon": 137.44
+  },
+  {
+   "id": "mars/perseverance",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 77.45°E 18.44°N",
+   "lat": 18.44,
+   "lon": 77.45
+  },
+  {
+   "id": "mars/viking-1",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 312.05°E 22.27°N",
+   "lat": 22.27,
+   "lon": -47.95
+  },
+  {
+   "id": "mars/viking-2",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 134.28°E 48.27°N",
+   "lat": 48.27,
+   "lon": 134.28
+  },
+  {
+   "id": "mars/mars-pathfinder",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 326.75°E 19.47°N",
+   "lat": 19.47,
+   "lon": -33.25
+  },
+  {
+   "id": "mars/spirit",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 175.48°E -14.57°N",
+   "lat": -14.57,
+   "lon": 175.48
+  },
+  {
+   "id": "mars/opportunity",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 354.47°E -1.95°N",
+   "lat": -1.95,
+   "lon": -5.53
+  },
+  {
+   "id": "mars/phoenix",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 234.25°E 68.22°N",
+   "lat": 68.22,
+   "lon": -125.75
+  },
+  {
+   "id": "mars/insight",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 135.62°E 4.50°N",
+   "lat": 4.5,
+   "lon": 135.62
+  },
+  {
+   "id": "mars/zhurong",
+   "source": "NASA GISS Mars24 Sunclock, Mars Lander Missions (list of 2023-12-09)",
+   "url": "https://www.giss.nasa.gov/tools/mars24/help/landers.html",
+   "figure": "at 109.93°E 25.07°N",
+   "lat": 25.07,
+   "lon": 109.93
+  }
+ ]
+}

@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets", "places", "places/moon", "places/mars"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -118,3 +118,23 @@ try {
   strangeComet = error instanceof RangeError;
 }
 if (!strangeComet) throw new Error("comets does not refuse a comet it does not know");
+
+// The places through package resolution: each table loads with its own entry point, Apollo 11 is at Tranquility Base, Perseverance in Jezero, and the helpers load a table on request and refuse a body they do not hold.
+const placesEntry = "@johnmorrisdotca/wakusei-planets/places";
+const places = await import(placesEntry);
+const moonEntry = "@johnmorrisdotca/wakusei-planets/places/moon";
+const marsEntry = "@johnmorrisdotca/wakusei-planets/places/mars";
+const moonPlaces = (await import(moonEntry)).PLACES_MOON;
+const marsPlaces = (await import(marsEntry)).PLACES_MARS;
+const eagle = places.findPlace(moonPlaces, "Apollo 11 lunar module");
+const percy = places.findPlace(marsPlaces, "Perseverance");
+if (eagle === undefined || Math.abs(eagle.lat - 0.674) > 0.01 || Math.abs(eagle.lon - 23.473) > 0.01 || eagle.kind !== "crewed") throw new Error("places: Apollo 11 is not at Tranquility Base");
+if (percy === undefined || Math.abs(percy.lat - 18.44) > 0.01 || Math.abs(percy.lon - 77.45) > 0.01) throw new Error("places: Perseverance is not in Jezero");
+if ((await places.loadPlaces("mars")).length !== marsPlaces.length || (await places.listPlaces("moon", "crewed")).length !== 6) throw new Error("places: the lookups do not load a table");
+let noBody = false;
+try {
+  await places.loadPlaces("venus");
+} catch (error) {
+  noBody = error instanceof RangeError;
+}
+if (!noBody) throw new Error("places does not refuse a body it does not hold");

@@ -176,6 +176,21 @@
       "import": "./dist/comets.js",
       "default": "./dist/comets.js"
     },
+    "./places": {
+      "types": "./dist/places.d.ts",
+      "import": "./dist/places.js",
+      "default": "./dist/places.js"
+    },
+    "./places/moon": {
+      "types": "./dist/places/moon.d.ts",
+      "import": "./dist/places/moon.js",
+      "default": "./dist/places/moon.js"
+    },
+    "./places/mars": {
+      "types": "./dist/places/mars.d.ts",
+      "import": "./dist/places/mars.js",
+      "default": "./dist/places/mars.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",
