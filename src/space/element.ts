@@ -9,6 +9,7 @@ import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, type SpaceKind } from "./bodies.ts";
 import { chooseLabels, type LabelBox } from "./labels.ts";
+import { coverArrows } from "./covered.ts";
 import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
 import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
 import type { Credit, DataSource } from "../data-door.ts";
@@ -153,7 +154,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-label,.sp-ring{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label,.sp-ring{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p>`;
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
@@ -184,7 +185,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #clock: GameClock = createGameClock("now", 1);
@@ -237,6 +238,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.mode = this.getAttribute("scale") === "compressed" ? "compressed" : "true";
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#labelsAlways = this.hasAttribute("labels-always") && this.getAttribute("labels-always") !== "off";
+    this.#covered = this.getAttribute("covered") === "arrow" ? "arrow" : "name";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
@@ -258,6 +260,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#nameScale();
     this.#pool.clear();
     this.#rings.clear();
+    this.#arrows.clear();
 
     const nav = navigator as Navigator & { deviceMemory?: number };
     this.#gate = createGate(1000 / frameCap(30, { deviceMemory: nav.deviceMemory, hardwareConcurrency: nav.hardwareConcurrency }), () => this.#view?.invalidate());
@@ -321,6 +324,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "scale") this.scale = value === "compressed" ? "compressed" : "true";
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "labels-always") this.labelsAlways = value !== null && value !== "off";
+    else if (name === "covered") this.covered = value === "arrow" ? "arrow" : "name";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
@@ -416,10 +420,23 @@ export class WakuseiSpace extends HTMLElement {
   }
   set labels(value: boolean) {
     this.#model.labels = value;
-    if (!value) for (const label of [...this.#pool.values(), ...this.#rings.values()]) label.hidden = true;
+    if (!value) for (const label of [...this.#pool.values(), ...this.#rings.values(), ...this.#arrows.values()]) label.hidden = true;
     this.#gate?.request();
   }
 
+  #covered: "name" | "arrow" = "name";
+  #arrows = new Map<string, HTMLElement>();
+  /**
+   * What a body behind another gets (the attribute `covered`): `name` (the default) draws its floating name and ring over the nearer body's disc as always; `arrow` draws instead one small quiet arrow just outside the
+   * disc's edge on the side nearest the hidden body, pointing in behind it, with the surest hidden body's name beside it and the others counted (`Uranus +4`); a press on it goes to that body. The arrow goes as the body comes out.
+   */
+  get covered(): "name" | "arrow" {
+    return this.#covered;
+  }
+  set covered(value: "name" | "arrow") {
+    this.#covered = value;
+    if (this.#places) this.#placeLabels(this.#places);
+  }
   #labelsAlways = false;
   /**
    * Keep a body's floating name and dot while its name is drawn on its globe (the attribute `labels-always`; off by default). Off, a body that carries its drawn name (`body-label` on, and the body at least 24 CSS pixels in
@@ -898,8 +915,10 @@ export class WakuseiSpace extends HTMLElement {
       if (!at) continue;
       const x = Math.round(at.x + Math.max(4, Math.min(at.r, 40)));
       const y = Math.round(at.y - 8);
-      // a body that carries its drawn name gives its floating name up (it fades, and leaves its place to the others) unless the page keeps both
+      // a body that carries its drawn name gives its floating name up (it fades, and leaves its place to the others) unless the page keeps both; a body behind another gives it up for the arrow
       const carried = at.named === true && !this.#labelsAlways;
+      const covered = at.behind !== undefined && this.#covered === "arrow";
+      if (covered) continue;
       spots.set(id, { x, y, small: at.r < RING_BELOW_PX, carried });
       if (!carried) wanted.push({ id, x, y, width: this.#widthOf(label), height: 16, rank: this.#rank(id), size: at.r });
     }
@@ -927,6 +946,40 @@ export class WakuseiSpace extends HTMLElement {
       if (ring.hidden === spot.small) ring.hidden = !spot.small;
       if (spot.small) ring.style.transform = `translate(${Math.round(places[id]!.x)}px,${Math.round(places[id]!.y)}px)`;
     }
+    this.#placeArrows(places);
+  }
+
+  /** The quiet arrows for the bodies behind others (`covered="arrow"`): one per covering disc, just outside its edge, named for the surest body behind and counting the rest. */
+  #placeArrows(places: Record<string, BodyPlace | null>): void {
+    const box = this.#labelBox;
+    if (!box) return;
+    const arrows = this.#covered === "arrow" && this.#model.labels ? coverArrows(places, (id) => this.#rank(id)) : [];
+    const live = new Set<string>();
+    for (const arrow of arrows) {
+      live.add(arrow.cover);
+      let el = this.#arrows.get(arrow.cover);
+      if (!el) {
+        const button = box.ownerDocument.createElement("button");
+        button.type = "button";
+        el = button;
+        el.className = "sp-arrow";
+        el.dataset["cover"] = arrow.cover;
+        box.append(el);
+        this.#arrows.set(arrow.cover, el);
+      }
+      const text = arrow.bodies.length > 1 ? `${this.#nameOf(arrow.lead)} +${arrow.bodies.length - 1}` : this.#nameOf(arrow.lead);
+      if (el.dataset["body"] !== arrow.lead || el.textContent !== text) {
+        el.dataset["body"] = arrow.lead;
+        el.textContent = text;
+        el.setAttribute("aria-label", `${arrow.bodies.map((id) => this.#nameOf(id)).join(", ")}: ${this.#nameOf(arrow.cover)} ${this.getAttribute("lang") === "ja" ? "の後ろ" : "is in front"}. ${this.#hint}`);
+      }
+      // the tip sits at the arrow's place and points into the disc; the name hangs off the far side, to the right of the tip for an arrow on the right half of the disc and to the left for one on the left
+      const onLeft = Math.cos((arrow.angle * Math.PI) / 180) > 0;
+      el.style.setProperty("--turn", `${Math.round(arrow.angle)}deg`);
+      el.style.transform = `translate(${Math.round(arrow.x)}px,${Math.round(arrow.y - 8)}px)${onLeft ? " translateX(-100%)" : ""}`;
+      if (el.hidden) el.hidden = false;
+    }
+    for (const [cover, el] of this.#arrows) if (!live.has(cover) && !el.hidden) el.hidden = true;
   }
 
   /** How sure a body's name is of its place: the body looked at first, then the Sun, the planets, the dwarf planets and minor bodies, and the moons. */
