@@ -520,6 +520,13 @@ test.describe("a reader who prefers reduced motion", () => {
     await settle(page, 800);
     // The draws are counted over the real time between the two reads, taken with the page's own clock: a wait of 4000 ms on a busy machine is 5 s or more by the time the second read
     // is made,, and a count divided by the 4 it was meant to be overstates the rate (CI read 7 draws as 1.75 a second).
+    // Any picture that is still on its way (the Moon's, a minor body's) draws one frame when it arrives, which is not a step of the clock either: count from when nothing has been fetched for a second and a half.
+    await page.waitForFunction(() => {
+      const w = window as unknown as { __seen?: { n: number; at: number } };
+      const n = performance.getEntriesByType("resource").length;
+      if (w.__seen === undefined || w.__seen.n !== n) w.__seen = { n, at: performance.now() };
+      return performance.now() - w.__seen.at > 1500;
+    }, undefined, { polling: 250, timeout: 60_000 });
     const read = () => page.locator(SPACE).evaluate((el) => ({ draws: (Reflect.get(el, "stats") as { draws: number }).draws, at: performance.now() }));
     const s0 = await read();
     await page.waitForTimeout(4000);
