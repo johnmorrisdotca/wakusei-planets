@@ -16,8 +16,13 @@ const SCALES: readonly ScaleMode[] = ["compressed", "true"];
 const CONE = 5;
 /** How far the laid-out north may be from straight up in the picture, in degrees. */
 const LIMIT = 5;
-/** How far the line of sight may turn in one step of 1/1440 of an orbit, in degrees. */
+/** How far the line of sight may turn in one step of 1/1440 of an orbit, in degrees, at every step but one. */
 const JUMP = 3;
+/** The one sharp step an orbit may have (the camera's side swinging round as the moon crosses the line from the Sun through its planet while the Sun is some 11 degrees south of the orbit) stays under this, in degrees. */
+const SHARP = 6;
+/** The moons whose Sun moves far enough north and south of their orbits over the years to meet that sharp moment: tried from several dates. */
+const SEASONAL_HOSTS: readonly string[] = ["saturn", "uranus", "neptune"];
+const DATES = [Date.UTC(2026, 10, 12, 0, 16, 35), Date.UTC(2029, 5, 1), Date.UTC(2033, 3, 1), Date.UTC(2037, 0, 1), Date.UTC(2041, 8, 1), Date.UTC(2049, 1, 1)];
 const START = Date.UTC(2026, 10, 12, 0, 16, 35);
 const MOONS = (Object.entries(MOONS_OF) as [Host, readonly MoonId[]][]).flatMap(([host, moons]) => moons.map((moon) => ({ host, moon })));
 
@@ -131,26 +136,34 @@ for (const { moon, host } of MOONS) {
 
   // The camera sits on the Sun's side of the line from the planet through the moon; as the moon crosses the line from the Sun through its planet that side swings round, and the camera must go round over
   // the planet's north side a little at a time, never hop to the other side in one step.
-  test(`beside ${moon} (${host}): the line of sight never jumps as the moon goes once round (under ${JUMP} degrees in a step of 1/1440 of the orbit), in both scales`, () => {
-    const period = periodOf(moon, START);
+  test(`beside ${moon} (${host}): the line of sight never hops as the moon goes once round: under ${JUMP} degrees in a step of 1/1440 of the orbit, but for at most one sharp passage of a few frames under ${SHARP}, in both scales${SEASONAL_HOSTS.includes(host) ? ", from six dates over 23 years" : ""}`, () => {
     const steps = 1440;
-    for (const mode of SCALES) {
-      let before: BesideCamera | null = null;
-      let worst = 0;
-      let note = "";
-      for (let i = 0; i <= steps; i += 1) {
-        const ms = START + (i / steps) * period;
-        const camera = besideMoon({ ...placesOf(moon, host, mode, ms), aspect: 1.78, zoom: 1, yaw: 0, tilt: 0 });
-        if (before !== null) {
-          const turned = angle(before.forward, camera.forward);
-          if (turned > worst) {
-            worst = turned;
-            note = `the line of sight turned ${turned.toFixed(2)} degrees at step ${i} of ${steps} (${new Date(ms).toISOString()})`;
+    for (const start of SEASONAL_HOSTS.includes(host) ? DATES : [START]) {
+      const period = periodOf(moon, start);
+      for (const mode of SCALES) {
+        let before: BesideCamera | null = null;
+        let worst = 0;
+        let passages = 0;
+        let sharp = false;
+        let note = "";
+        for (let i = 0; i <= steps; i += 1) {
+          const ms = start + (i / steps) * period;
+          const camera = besideMoon({ ...placesOf(moon, host, mode, ms), aspect: 1.78, zoom: 1, yaw: 0, tilt: 0 });
+          if (before !== null) {
+            const turned = angle(before.forward, camera.forward);
+            // a sharp passage is a run of steps of JUMP or more: the side swinging round over a few frames
+            if (turned >= JUMP && !sharp) passages += 1;
+            sharp = turned >= JUMP;
+            if (turned > worst) {
+              worst = turned;
+              note = `the line of sight turned ${turned.toFixed(2)} degrees at step ${i} of ${steps} (${new Date(ms).toISOString()})`;
+            }
           }
+          before = camera;
         }
-        before = camera;
+        assert.ok(passages <= 1, `${moon}, ${mode}, from ${new Date(start).toISOString()}: ${passages} sharp passages (runs of steps of ${JUMP} degrees or more); worst: ${note}`);
+        assert.ok(worst < SHARP, `${moon}, ${mode}, from ${new Date(start).toISOString()}: ${note}`);
       }
-      assert.ok(worst < JUMP, `${moon}, ${mode}: ${note}`);
     }
   });
 }

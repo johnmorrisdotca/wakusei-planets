@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { besideMoon, BESIDE_RADII, type BesideInput } from "../src/space/index.ts";
-import { cross, dot, length, RAD, type Vec3 } from "../src/vec.ts";
+import { add, cross, dot, length, RAD, scale, unit, type Vec3 } from "../src/vec.ts";
 
 const TRUE: Omit<BesideInput, "aspect" | "zoom" | "yaw" | "tilt"> = { moon: [60.3, 3, -8], moonRadius: 0.2724, host: [0, 0, 0], hostRadius: 1, sun: [-23_000, 5000, 9000] };
 const SQUEEZED: Omit<BesideInput, "aspect" | "zoom" | "yaw" | "tilt"> = { moon: [3.5, 0.4, -0.7], moonRadius: 0.273, host: [0, 0, 0], hostRadius: 1, sun: [-70, 12, 20] };
@@ -79,6 +79,27 @@ test("from beside a moon north is up, always: with no `north` given the picture'
           assert.ok(Math.abs(dot(camera.forward, camera.up)) < 1e-9);
         }
       }
+    }
+  }
+});
+
+test("inside the 10-degree cone about the pole, up blends to the scene's +y without collapsing: as the pole leans across the line of sight on either side of +y, up stays a unit vector square to the line of sight and turns no faster than the pole does", () => {
+  const base = besideMoon({ ...TRUE, aspect: 1.78, zoom: 1, yaw: 0, tilt: 0 });
+  const f = base.forward;
+  const across = (v: Vec3, along: Vec3): Vec3 => add(v, scale(along, -dot(v, along)));
+  const y = unit(across([0, 1, 0], f));
+  for (const sign of [1, -1]) {
+    let last: Vec3 | null = null;
+    for (let deg = 1; deg <= 14; deg += 0.5) {
+      // the planet's pole a few degrees off the line of sight, leaning towards +y (sign 1) or away from it (sign -1)
+      const north = unit(add(scale(f, Math.cos(deg * RAD)), scale(y, sign * Math.sin(deg * RAD))));
+      const camera = besideMoon({ ...TRUE, north, aspect: 1.78, zoom: 1, yaw: 0, tilt: 0 });
+      assert.ok(Math.abs(length(camera.up) - 1) < 1e-9 && Math.abs(dot(camera.up, camera.forward)) < 1e-9, `pole ${deg} degrees off, side ${sign}: up is a unit vector square to the line of sight`);
+      if (last !== null) {
+        const turned = Math.acos(Math.max(-1, Math.min(1, dot(last, camera.up)))) / RAD;
+        assert.ok(turned < 1.5, `pole ${deg} degrees off, side ${sign}: up turned ${turned.toFixed(2)} degrees while the pole leaned half a degree`);
+      }
+      last = camera.up;
     }
   }
 });

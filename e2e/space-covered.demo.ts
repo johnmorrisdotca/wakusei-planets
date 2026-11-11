@@ -1,4 +1,4 @@
-// A body behind another (MODULES-924): with `covered="arrow"` its name and ring are not drawn over the nearer body's disc; one quiet arrow sits outside the disc's edge instead, named for the surest
+// A body behind another : with `covered="arrow"` its name and ring are not drawn over the nearer body's disc; one quiet arrow sits outside the disc's edge instead, named for the surest
 // hidden body, and a press on it goes there. Off (the default) the names are drawn over the disc as before. Chromium, drawing in software; every wait is on what the page reports.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
