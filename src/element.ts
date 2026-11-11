@@ -278,6 +278,7 @@ export class WakuseiBody extends HTMLElement {
   }
   set bodyLabel(value: NameLabelOptions | null | undefined) {
     this.#bodyLabel = value;
+    this.#labelHeld = undefined;
     this.#lastAnchors = -1;
     this.#queue();
   }
@@ -344,6 +345,8 @@ export class WakuseiBody extends HTMLElement {
 
   attributeChangedCallback(name: string): void {
     if (!this.isConnected) return;
+    // the name on the globe is read again when its attributes, the body, a star's numbers or the language change
+    if (name === "body" || name === "star" || name === "lang" || (NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#labelHeld = undefined;
     if (name === "time" || name === "rate") {
       this.#clockFromAttributes();
       this.#syncClock(true);
@@ -543,10 +546,19 @@ export class WakuseiBody extends HTMLElement {
     return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, label };
   }
 
-  /** The name on the globe the attributes or the property ask for, with its text in the element's language. */
+  #labelHeld: { options: ({ text: string } & NameLabelOptions) | null; key: string } | undefined;
+  /** The name on the globe the attributes or the property ask for, with its text in the element's language: the same object (and key) until something about it changes, so a draw compares by reference. */
   #labelNow(): ({ text: string } & NameLabelOptions) | null {
+    return this.#labelHeld === undefined ? (this.#labelHeld = this.#readLabel()).options : this.#labelHeld.options;
+  }
+  #labelKey(): string {
+    return (this.#labelHeld ??= this.#readLabel()).key;
+  }
+  #readLabel(): { options: ({ text: string } & NameLabelOptions) | null; key: string } {
     const options = this.bodyLabel;
-    return options === null ? null : { ...options, text: nameLabelText(this.#facts().name, this.getAttribute("lang") === "ja" ? "ja" : "en") };
+    if (options === null) return { options: null, key: "" };
+    const text = nameLabelText(this.#facts().name, this.getAttribute("lang") === "ja" ? "ja" : "en");
+    return { options: { ...options, text }, key: nameLabelKey(text, options) };
   }
 
   /** Body radii from the middle of the picture to its edge at zoom 1, for the attributes now. */
@@ -761,7 +773,7 @@ export class WakuseiBody extends HTMLElement {
 
   #key(state: SceneState): string {
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
-    return `${this.#star()?.key ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${state.label ? nameLabelKey(state.label.text, state.label) : ""}`;
+    return `${this.#star()?.key ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.
