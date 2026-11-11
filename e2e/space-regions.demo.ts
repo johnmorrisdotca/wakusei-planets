@@ -110,23 +110,28 @@ test("a pinch that goes on for a second is one step, and the next gesture after 
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed");
   await callOn(page, "goTo", "inner-planets");
   await settled(page, "inner-planets");
-  const box = (await page.locator(SPACE).boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  const pinch = async (deltaY: number): Promise<void> => {
-    await page.keyboard.down("Control");
-    // a turn of the wheel that goes on: an event every 100 milliseconds for 1.2 seconds
-    for (let i = 0; i < 12; i += 1) {
-      await page.mouse.wheel(0, deltaY);
-      await page.waitForTimeout(100);
-    }
-    await page.keyboard.up("Control");
-  };
-  await pinch(120);
-  await settled(page, "asteroid-belt");
-  // the gesture is over: nothing steps again on its own
-  await page.waitForTimeout(800);
-  expect((await report(page)).region?.id).toBe("asteroid-belt");
-  await pinch(120);
+  // Ctrl and the wheel as events on the element, on a clock of the test's own: a loaded machine would stretch real gaps, and the gesture's window is a matter of the gaps. `gaps` are the milliseconds between
+  // the events; the clock the element reads is the test's for the length of the call, nothing is drawn in between, and the real one is put back.
+  const pinch = (gaps: number[]): Promise<string | null> =>
+    page.locator(SPACE).evaluate((el, between) => {
+      const real = performance.now.bind(performance);
+      let virtual = real() + 5_000;
+      Object.defineProperty(performance, "now", { value: () => virtual, configurable: true });
+      const box = el.getBoundingClientRect();
+      try {
+        for (const gap of between) {
+          virtual += gap;
+          el.dispatchEvent(new WheelEvent("wheel", { deltaY: 120, ctrlKey: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, bubbles: true, cancelable: true, composed: true }));
+        }
+      } finally {
+        delete (performance as unknown as Record<string, unknown>)["now"];
+      }
+      return (Reflect.get(el, "region") as string | null) ?? null;
+    }, gaps);
+  // one gesture: twelve events 250 ms apart, three seconds in all (a step every 600 ms would take four)
+  expect(await pinch(Array.from({ length: 12 }, () => 250))).toBe("asteroid-belt");
+  // after a pause, the next gesture is the next step
+  expect(await pinch([1_000, 250, 250, 250])).toBe("outer-planets");
   await settled(page, "outer-planets");
   await context.close();
 });
