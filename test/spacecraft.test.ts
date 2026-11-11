@@ -15,6 +15,7 @@ import {
   spacecraftLightTime,
   spacecraftPosition,
   spacecraftSpeed,
+  spacecraftStats,
   spacecraftSunDistance,
   spacecraftVelocity,
   type SpacecraftId,
@@ -120,7 +121,7 @@ test("the facts hold together", () => {
     const [first, last] = craftSpan(table);
     assert.equal(craft.id, id);
     assert.ok(craft.name.en.length > 0 && /[぀-ヿ]/.test(craft.name.ja), `${id} has an English and a Japanese name`);
-    assert.match(craft.url, /^https:\/\/science\.nasa\.gov\/mission\//);
+    assert.match(craft.url, /^https:\/\/(science\.nasa\.gov\/mission|www\.esa\.int\/Science_Exploration\/Space_Science|www\.hayabusa2\.jaxa\.jp)\//);
     const startUtc = first - ttMinusUtc(first) * 1000;
     const endUtc = last - ttMinusUtc(last) * 1000;
     assert.ok(Math.abs(craft.record.start - startUtc) < 5000 && Math.abs(craft.record.end - endUtc) < 5000, `${id}'s record in the facts is the table's span`);
@@ -140,7 +141,7 @@ test("the facts hold together", () => {
 });
 
 test("each table fits its size budget (gzipped)", () => {
-  const budgets: Record<SpacecraftId, number> = { voyager1: 4, voyager2: 5.5, newhorizons: 3, pioneer10: 3.5, pioneer11: 4.5, cassini: 140, galileo: 28, juno: 85, parker: 30, webb: 4 };
+  const budgets: Record<SpacecraftId, number> = { voyager1: 4, voyager2: 5.5, newhorizons: 3, pioneer10: 3.5, pioneer11: 4.5, cassini: 140, galileo: 28, juno: 85, parker: 30, webb: 4, bepicolombo: 112, psyche: 4, europaclipper: 40, lucy: 5.5, juice: 5.5, hayabusa2: 8, osirisapex: 9, solarorbiter: 13 };
   for (const id of SPACECRAFT_IDS) {
     const kilobytes = gzipSync(readFileSync(new URL(`../src/craft/${id}.ts`, import.meta.url))).length / 1024;
     assert.ok(kilobytes <= budgets[id], `${id} is ${kilobytes.toFixed(1)} kB gzipped, over its ${budgets[id]} kB budget`);
@@ -165,4 +166,30 @@ test("bad inputs throw a RangeError that names the value", () => {
   assert.throws(() => spacecraftLightTime("galileo", -1e20), RangeError);
   assert.throws(() => spacecraftErrorKm("nope" as SpacecraftId), (e: unknown) => e instanceof RangeError && /"nope"/.test(e.message));
   return assert.rejects(loadSpacecraft("nope" as SpacecraftId), (e: unknown) => e instanceof RangeError && /"nope"/.test(e.message));
+});
+
+test("the eight deep-space craft: out of their record they throw like the Roadster, and the edges answer", () => {
+  for (const id of ["bepicolombo", "psyche", "europaclipper", "lucy", "juice", "hayabusa2", "osirisapex", "solarorbiter"] as const) {
+    const { start, end } = SPACECRAFT[id].record;
+    assert.throws(() => spacecraftPosition(id, start - 60_000), (e: unknown) => e instanceof RangeError && new RegExp(new Date(start).toISOString().slice(0, 16)).test(e.message) && new RegExp(SPACECRAFT[id].name.en.replace(/[()]/g, ".")).test(e.message), id);
+    assert.throws(() => spacecraftPosition(id, end + 60_000), RangeError, id);
+    assert.throws(() => spacecraftStats(id, Date.UTC(1990, 0, 1)), RangeError, id);
+    assert.doesNotThrow(() => spacecraftPosition(id, start + 1000), id);
+    assert.doesNotThrow(() => spacecraftPosition(id, end - 1000), id);
+  }
+});
+
+test("spacecraftStats: distances, light time, speeds and the age of a craft", () => {
+  const day = Date.UTC(2026, 10, 11);
+  const s = spacecraftStats("lucy", day);
+  assert.equal(s.id, "lucy");
+  assert.equal(s.when, day);
+  assert.ok(Math.abs(s.sun.km - spacecraftSunDistance("lucy", day)) < 1e-6 && Math.abs(s.earth.km - spacecraftEarthDistance("lucy", day)) < 1e-6);
+  assert.ok(Math.abs(s.earth.lightSeconds - spacecraftLightTime("lucy", day)) < 1e-9 && Math.abs(s.sun.au - s.sun.km / 149_597_870.7) < 1e-12);
+  assert.ok(Math.abs(s.speed.sun - spacecraftSpeed("lucy", day)) < 1e-12 && s.speed.earth > 0);
+  assert.ok(Math.abs(s.daysSinceLaunch - (day - SPACECRAFT.lucy.launch.date) / 86_400_000) < 1e-9);
+  assert.ok(s.sun.au > 0.9 && s.sun.au < 5.5, "Lucy is between the Earth's orbit and Jupiter's");
+  // Solar Orbiter's closest pass of the Sun in this record is inside Mercury's orbit
+  assert.ok(Math.min(...[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => spacecraftSunDistance("solarorbiter", Date.UTC(2023 + (k >> 2), (k % 4) * 3, 1)))) / 149_597_870.7 < 1.01);
+  assert.throws(() => spacecraftStats("nope" as SpacecraftId, day), RangeError);
 });

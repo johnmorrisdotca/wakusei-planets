@@ -25,6 +25,14 @@ const LOADERS: Readonly<Record<SpacecraftId, () => Promise<unknown>>> = {
   juno: () => import("./craft/juno.ts"),
   parker: () => import("./craft/parker.ts"),
   webb: () => import("./craft/webb.ts"),
+  bepicolombo: () => import("./craft/bepicolombo.ts"),
+  psyche: () => import("./craft/psyche.ts"),
+  europaclipper: () => import("./craft/europaclipper.ts"),
+  lucy: () => import("./craft/lucy.ts"),
+  juice: () => import("./craft/juice.ts"),
+  hayabusa2: () => import("./craft/hayabusa2.ts"),
+  osirisapex: () => import("./craft/osirisapex.ts"),
+  solarorbiter: () => import("./craft/solarorbiter.ts"),
 };
 
 function facts(id: SpacecraftId): (typeof SPACECRAFT)[SpacecraftId] {
@@ -34,10 +42,10 @@ function facts(id: SpacecraftId): (typeof SPACECRAFT)[SpacecraftId] {
 }
 
 /**
- * Load the fitted paths of some spacecraft (or all of them), each a table of its own that nothing else imports: about 6 kB gzipped for the Voyagers, the Pioneers, New Horizons and JWST, and more for the craft that orbited a planet.
+ * Load the fitted paths of some spacecraft (or all of them), each a table of its own that nothing else imports: about 6 kB gzipped for the Voyagers, the Pioneers, New Horizons and JWST, and more for the craft that orbited a planet or fly past many.
  * Call it once before the other functions; it is safe to call again.
  *
- * @param ids - The craft to load; none means all ten.
+ * @param ids - The craft to load; none means all eighteen.
  * @returns A promise that settles when every table is registered.
  *
  * @example
@@ -205,4 +213,88 @@ export function spacecraftErrorKm(id: SpacecraftId): number {
   const table = craftTable(id);
   if (table === undefined) throw new Error(`the path of ${facts(id).name.en} is not loaded: await loadSpacecraft(${JSON.stringify(id)}) first`);
   return table.worst;
+}
+
+/**
+ * A distance in the units a page shows it in.
+ *
+ * @example
+ * ```ts
+ * import { loadSpacecraft, spacecraftStats, type SpacecraftDistance } from "@johnmorrisdotca/wakusei-planets/spacecraft";
+ *
+ * await loadSpacecraft("lucy");
+ * const d: SpacecraftDistance = spacecraftStats("lucy", Date.UTC(2026, 10, 11)).earth;
+ * console.log(d.km, d.au, d.lightSeconds);
+ * ```
+ */
+export interface SpacecraftDistance {
+  /** In kilometres. */
+  km: number;
+  /** In astronomical units. */
+  au: number;
+  /** The one-way light time in seconds. */
+  lightSeconds: number;
+}
+
+/**
+ * The numbers a page shows about a craft at a moment.
+ *
+ * @example
+ * ```ts
+ * import { loadSpacecraft, spacecraftStats, type SpacecraftStats } from "@johnmorrisdotca/wakusei-planets/spacecraft";
+ *
+ * await loadSpacecraft("juice");
+ * const stats: SpacecraftStats = spacecraftStats("juice", Date.UTC(2026, 10, 11));
+ * console.log(stats.daysSinceLaunch.toFixed(0), "days since launch");
+ * ```
+ */
+export interface SpacecraftStats {
+  /** The craft. */
+  id: SpacecraftId;
+  /** The moment, in milliseconds since 1970 (UTC). */
+  when: number;
+  /** Distance from the Sun's centre. */
+  sun: SpacecraftDistance;
+  /** Distance from the Earth's centre (no allowance for the light's travel). */
+  earth: SpacecraftDistance;
+  /** Speed in kilometres a second relative to the Sun and to the Earth. */
+  speed: { sun: number; earth: number };
+  /** Days since the launch (a fraction of a day counts). */
+  daysSinceLaunch: number;
+}
+
+/**
+ * A craft's numbers at a moment, like the Roadster's: its distance from the Sun and the Earth in kilometres and astronomical units with the light time, its speed relative to each, and the days since launch. The Earth is the
+ * package's own (`heliocentric`). A moment outside the record of the craft throws a `RangeError`.
+ *
+ * @param id - The craft (its path must be loaded).
+ * @param when - A `Date` or milliseconds since 1970 (UTC).
+ * @returns The numbers.
+ *
+ * @example
+ * ```ts
+ * import { loadSpacecraft, spacecraftStats } from "@johnmorrisdotca/wakusei-planets/spacecraft";
+ *
+ * await loadSpacecraft("lucy");
+ * const stats = spacecraftStats("lucy", new Date("2026-11-11T12:00:00Z"));
+ * console.log(stats.sun.au.toFixed(2), "au from the Sun,", (stats.earth.km / 1e6).toFixed(0), "million km from the Earth,", stats.earth.lightSeconds.toFixed(0), "light seconds,", stats.speed.sun.toFixed(1), "km/s");
+ * ```
+ */
+export function spacecraftStats(id: SpacecraftId, when: When): SpacecraftStats {
+  const ms = moment(when);
+  const position = spacecraftPosition(id, ms);
+  const velocity = spacecraftVelocity(id, ms);
+  const h = 3_600_000;
+  const earthAt = (t: number): Vec3 => scale(heliocentric("earth", t), AU_KM);
+  const earth = earthAt(ms);
+  const earthVelocity = scale(sub(earthAt(ms + h), earthAt(ms - h)), 1 / 7200);
+  const distance = (km: number): SpacecraftDistance => ({ km, au: km / AU_KM, lightSeconds: km / LIGHT_KM_PER_SECOND });
+  return {
+    id,
+    when: ms,
+    sun: distance(length(position)),
+    earth: distance(length(sub(position, earth))),
+    speed: { sun: length(velocity), earth: length(sub(velocity, earthVelocity)) },
+    daysSinceLaunch: (ms - facts(id).launch.date) / 86_400_000,
+  };
 }

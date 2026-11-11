@@ -1,9 +1,10 @@
-// What is known about each craft: names, launch, agency, status, NASA's mission page, and its voyage as a list of events. Facts typed from the pages named in NOTICE.md (read 2026-11-08), never guessed:
-// a time is given only where the page gives one, else the event's `precision` is "day". Every flyby is tested against the closest approach of the fitted path (test/spacecraft.test.ts).
+// What is known about each craft: names, launch, agency, status, the mission's page, and its voyage as a list of events. Facts typed from the pages named in NOTICE.md (the first ten read 2026-11-08), never guessed:
+// a time is given only where the page gives one, else the event's `precision` is "day". Every flyby is tested against the closest approach of the fitted path (test/spacecraft.test.ts); the eight craft added on 2026-11-11
+// (BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX and Solar Orbiter) take the day of each flyby from the path itself, which the test checks against Horizons.
 import type { PlanetId } from "./facts.ts";
 
 /**
- * The ten craft: `voyager1`, `voyager2`, `newhorizons`, `pioneer10`, `pioneer11`, `cassini`, `galileo`, `juno`, `parker` and `webb`.
+ * The eighteen craft: `voyager1`, `voyager2`, `newhorizons`, `pioneer10`, `pioneer11`, `cassini`, `galileo`, `juno`, `parker`, `webb`, `bepicolombo`, `psyche`, `europaclipper`, `lucy`, `juice`, `hayabusa2`, `osirisapex` and `solarorbiter`.
  *
  * @example
  * ```ts
@@ -12,7 +13,7 @@ import type { PlanetId } from "./facts.ts";
  * console.log(SPACECRAFT_IDS.join(", "));
  * ```
  */
-export const SPACECRAFT_IDS = ["voyager1", "voyager2", "newhorizons", "pioneer10", "pioneer11", "cassini", "galileo", "juno", "parker", "webb"] as const;
+export const SPACECRAFT_IDS = ["voyager1", "voyager2", "newhorizons", "pioneer10", "pioneer11", "cassini", "galileo", "juno", "parker", "webb", "bepicolombo", "psyche", "europaclipper", "lucy", "juice", "hayabusa2", "osirisapex", "solarorbiter"] as const;
 
 /**
  * The name of a craft: `voyager1`, `cassini`, `webb`...
@@ -76,7 +77,7 @@ export interface SpacecraftFacts {
   end: number | undefined;
   /** "active" while NASA's page lists the mission as active, else "ended". */
   status: "active" | "ended";
-  /** NASA's page for the mission. */
+  /** The mission's page: NASA's, or the lead agency's (ESA's or JAXA's) where NASA has none. */
   url: string;
   /** The craft's number in JPL Horizons. */
   horizons: string;
@@ -94,7 +95,7 @@ const ev = (kind: SpacecraftEvent["kind"], date: number, precision: SpacecraftEv
 const flyby = (date: number, precision: SpacecraftEvent["precision"], en: string, ja: string, body?: PlanetId, distanceKm?: number): SpacecraftEvent => ev("flyby", date, precision, en, ja, { ...(body === undefined ? {} : { body }), ...(distanceKm === undefined ? {} : { distanceKm }) });
 
 /**
- * The ten craft and their facts, keyed by id.
+ * The eighteen craft and their facts, keyed by id.
  *
  * @example
  * ```ts
@@ -290,6 +291,160 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
     events: [
       ev("launch", T(2021, 11, 25, 12, 20), "minute", "Launch", "打ち上げ"),
       ev("arrival", noon(2022, 1, 24), "day", "Arrival at the Sun–Earth second Lagrange point (L2)", "太陽・地球系の第2ラグランジュ点 (L2) に到着"),
+    ],
+  },
+  bepicolombo: {
+    id: "bepicolombo",
+    name: { en: "BepiColombo", ja: "ベピコロンボ" },
+    agency: "ESA, JAXA",
+    launch: { date: T(2018, 9, 20, 1, 45, 28), precision: "minute", site: { en: "Kourou, French Guiana (ELA-3)", ja: "クールー (フランス領ギアナ) ELA-3" }, vehicle: "Ariane 5 ECA" },
+    end: undefined,
+    status: "active",
+    url: "https://www.esa.int/Science_Exploration/Space_Science/BepiColombo",
+    horizons: "-121",
+    record: { start: 1_540_001_540_535, end: 1_807_401_598_535 },
+    joins: [],
+    events: [
+      ev("launch", T(2018, 9, 20, 1, 45, 28), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2020, 4, 10), "day", "Earth flyby", "地球フライバイ", "earth", 12_700),
+      flyby(noon(2020, 10, 15), "day", "Venus flyby", "金星フライバイ", "venus", 10_700),
+      flyby(noon(2021, 8, 10), "day", "Second Venus flyby", "2回目の金星フライバイ", "venus", 550),
+      flyby(noon(2021, 10, 1), "day", "Mercury flyby", "水星フライバイ", "mercury", 200),
+      flyby(noon(2022, 6, 23), "day", "Second Mercury flyby", "2回目の水星フライバイ", "mercury", 200),
+      flyby(noon(2023, 6, 19), "day", "Third Mercury flyby", "3回目の水星フライバイ", "mercury", 236),
+      flyby(noon(2024, 9, 4), "day", "Fourth Mercury flyby", "4回目の水星フライバイ", "mercury", 165),
+      flyby(noon(2024, 12, 1), "day", "Fifth Mercury flyby", "5回目の水星フライバイ", "mercury", 37_600),
+      flyby(noon(2025, 1, 8), "day", "Sixth Mercury flyby", "6回目の水星フライバイ", "mercury", 295),
+    ],
+  },
+  psyche: {
+    id: "psyche",
+    name: { en: "Psyche", ja: "プシケ" },
+    agency: "NASA",
+    launch: { date: T(2023, 9, 13, 14, 19), precision: "minute", site: { en: "Kennedy Space Center, Florida (Launch Complex 39A)", ja: "ケネディ宇宙センター 39A発射施設 (フロリダ州)" }, vehicle: "Falcon Heavy" },
+    end: undefined,
+    status: "active",
+    url: "https://science.nasa.gov/mission/psyche/",
+    horizons: "-255",
+    record: { start: 1_697_210_508_955, end: 1_866_668_591_955 },
+    joins: [{ date: 1_803_902_406_955, km: 1_968_170 }],
+    events: [ev("launch", T(2023, 9, 13, 14, 19), "minute", "Launch", "打ち上げ"), flyby(noon(2026, 5, 15), "day", "Mars flyby", "火星フライバイ", "mars", 4_500)],
+  },
+  europaclipper: {
+    id: "europaclipper",
+    name: { en: "Europa Clipper", ja: "エウロパ・クリッパー" },
+    agency: "NASA",
+    launch: { date: T(2024, 9, 14, 16, 6), precision: "minute", site: { en: "Kennedy Space Center, Florida (Launch Complex 39A)", ja: "ケネディ宇宙センター 39A発射施設 (フロリダ州)" }, vehicle: "Falcon Heavy" },
+    end: undefined,
+    status: "active",
+    url: "https://science.nasa.gov/mission/europa-clipper/",
+    horizons: "-159",
+    record: { start: 1_728_922_435_528, end: 2_040_871_502_528 },
+    joins: [{ date: 1_800_662_414_528, km: 3_985 }],
+    events: [
+      ev("launch", T(2024, 9, 14, 16, 6), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2025, 3, 1), "day", "Mars flyby", "火星フライバイ", "mars", 884),
+      flyby(noon(2026, 12, 3), "day", "Earth flyby", "地球フライバイ", "earth", 3_200),
+    ],
+  },
+  lucy: {
+    id: "lucy",
+    name: { en: "Lucy", ja: "ルーシー" },
+    agency: "NASA",
+    launch: { date: T(2021, 9, 16, 9, 34), precision: "minute", site: { en: "Cape Canaveral, Florida (Space Launch Complex 41)", ja: "ケープカナベラル 41番発射施設 (フロリダ州)" }, vehicle: "Atlas V 401" },
+    end: undefined,
+    status: "active",
+    url: "https://science.nasa.gov/mission/lucy/",
+    horizons: "-49",
+    record: { start: 1_634_380_320_099, end: 1_994_344_859_099 },
+    joins: [],
+    events: [
+      ev("launch", T(2021, 9, 16, 9, 34), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2022, 10, 16), "day", "Earth flyby", "地球フライバイ", "earth", 350),
+      flyby(noon(2023, 11, 1), "day", "Flyby of the asteroid Dinkinesh", "小惑星ディンキネシュのフライバイ"),
+      flyby(noon(2024, 12, 13), "day", "Second Earth flyby", "2回目の地球フライバイ", "earth", 360),
+      flyby(noon(2025, 4, 20), "day", "Flyby of the asteroid Donaldjohanson", "小惑星ドナルドジョハンソンのフライバイ"),
+      flyby(noon(2027, 8, 11), "day", "Flyby of the Jupiter trojan Eurybates", "木星トロヤ群のエウリュバテスのフライバイ"),
+      flyby(noon(2027, 9, 15), "day", "Flyby of the Jupiter trojan Polymele", "木星トロヤ群のポリュメレのフライバイ"),
+      flyby(noon(2028, 4, 18), "day", "Flyby of the Jupiter trojan Leucus", "木星トロヤ群のレウコスのフライバイ"),
+      flyby(noon(2028, 11, 11), "day", "Flyby of the Jupiter trojan Orus", "木星トロヤ群のオルスのフライバイ"),
+      flyby(noon(2033, 2, 27), "day", "Flyby of the Jupiter trojan Patroclus and its moon Menoetius", "木星トロヤ群のパトロクロスと衛星メノイティオスのフライバイ"),
+    ],
+  },
+  juice: {
+    id: "juice",
+    name: { en: "JUICE (Jupiter Icy Moons Explorer)", ja: "ジュース (木星氷衛星探査機)" },
+    agency: "ESA",
+    launch: { date: T(2023, 3, 14, 12, 14, 36), precision: "minute", site: { en: "Kourou, French Guiana (ELA-3)", ja: "クールー (フランス領ギアナ) ELA-3" }, vehicle: "Ariane 5 ECA+" },
+    end: undefined,
+    status: "active",
+    url: "https://www.esa.int/Science_Exploration/Space_Science/Juice",
+    horizons: "-28",
+    record: { start: 1_681_476_138_659, end: 1_942_381_664_659 },
+    joins: [],
+    events: [
+      ev("launch", T(2023, 3, 14, 12, 14, 36), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2024, 8, 19), "day", "Moon flyby", "月フライバイ"),
+      flyby(noon(2024, 8, 20), "day", "Earth flyby", "地球フライバイ", "earth", 6_800),
+      flyby(noon(2025, 8, 31), "day", "Venus flyby", "金星フライバイ", "venus", 5_000),
+      flyby(noon(2026, 9, 28), "day", "Second Earth flyby", "2回目の地球フライバイ", "earth"),
+      flyby(noon(2029, 1, 17), "day", "Third Earth flyby", "3回目の地球フライバイ", "earth"),
+    ],
+  },
+  hayabusa2: {
+    id: "hayabusa2",
+    name: { en: "Hayabusa2", ja: "はやぶさ2" },
+    agency: "JAXA",
+    launch: { date: T(2014, 11, 3, 4, 22, 4), precision: "minute", site: { en: "Tanegashima Space Center, Japan", ja: "種子島宇宙センター (鹿児島県)" }, vehicle: "H-IIA" },
+    end: undefined,
+    status: "active",
+    url: "https://www.hayabusa2.jaxa.jp/en/",
+    horizons: "-37",
+    record: { start: 1_417_587_226_999, end: 1_801_180_729_999 },
+    joins: [{ date: 1_417_737_616_999, km: 2_185 }, { date: 1_418_083_216_999, km: 1_859 }, { date: 1_435_802_403_999, km: 85_277 }, { date: 1_461_887_936_999, km: 29_220 }, { date: 1_472_601_540_999, km: 476_604 }, { date: 1_481_846_346_999, km: 846_314 }, { date: 1_520_380_743_999, km: 39_005 }, { date: 1_574_812_736_999, km: 3_170 }, { date: 1_629_244_750_999, km: 5_730 }, { date: 1_660_694_341_999, km: 1_937 }, { date: 1_661_903_933_999, km: 3_572 }, { date: 1_708_473_544_999, km: 1_970 }, { date: 1_710_892_750_999, km: 1_914 }, { date: 1_715_731_141_999, km: 6_222 }, { date: 1_717_545_540_999, km: 6_692 }, { date: 1_719_359_939_999, km: 2_423 }, { date: 1_748_390_345_999, km: 2_376 }, { date: 1_750_204_744_999, km: 1_950 }, { date: 1_755_043_134_999, km: 2_491 }, { date: 1_785_887_940_999, km: 5_934 }, { date: 1_786_492_746_999, km: 3_540 }, { date: 1_787_702_339_999, km: 3_833 }, { date: 1_788_307_145_999, km: 1_926 }, { date: 1_788_911_931_999, km: 2_361 }, { date: 1_789_516_738_999, km: 2_300 }, { date: 1_793_145_536_999, km: 2_217 }],
+    events: [
+      ev("launch", T(2014, 11, 3, 4, 22, 4), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2015, 12, 3), "day", "Earth flyby", "地球スイングバイ", "earth", 3_090),
+      ev("arrival", noon(2018, 6, 27), "day", "Arrival at the asteroid Ryugu", "小惑星リュウグウに到着"),
+    ],
+  },
+  osirisapex: {
+    id: "osirisapex",
+    name: { en: "OSIRIS-APEX (OSIRIS-REx)", ja: "オシリス・エイペックス (オシリス・レックス)" },
+    agency: "NASA",
+    launch: { date: T(2016, 8, 8, 23, 5), precision: "minute", site: { en: "Cape Canaveral, Florida (Space Launch Complex 41)", ja: "ケープカナベラル 41番発射施設 (フロリダ州)" }, vehicle: "Atlas V 411" },
+    end: undefined,
+    status: "active",
+    url: "https://science.nasa.gov/mission/osiris-apex/",
+    horizons: "-64",
+    record: { start: 1_473_375_901_098, end: 1_900_439_930_098 },
+    joins: [{ date: 1_728_518_339_098, km: 2_622 }],
+    events: [
+      ev("launch", T(2016, 8, 8, 23, 5), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2017, 9, 22), "day", "Earth flyby", "地球フライバイ", "earth", 17_200),
+      ev("arrival", noon(2018, 12, 3), "day", "Arrival at the asteroid Bennu", "小惑星ベンヌに到着"),
+    ],
+  },
+  solarorbiter: {
+    id: "solarorbiter",
+    name: { en: "Solar Orbiter", ja: "ソーラー・オービター" },
+    agency: "ESA, NASA",
+    launch: { date: T(2020, 1, 10, 4, 3), precision: "minute", site: { en: "Cape Canaveral, Florida (Space Launch Complex 41)", ja: "ケープカナベラル 41番発射施設 (フロリダ州)" }, vehicle: "Atlas V 411" },
+    end: undefined,
+    status: "active",
+    url: "https://www.esa.int/Science_Exploration/Space_Science/Solar_Orbiter",
+    horizons: "-144",
+    record: { start: 1_581_310_550_671, end: 1_921_380_611_671 },
+    joins: [],
+    events: [
+      ev("launch", T(2020, 1, 10, 4, 3), "minute", "Launch", "打ち上げ"),
+      flyby(noon(2020, 12, 27), "day", "Venus flyby", "金星フライバイ", "venus", 7_500),
+      flyby(noon(2021, 8, 9), "day", "Second Venus flyby", "2回目の金星フライバイ", "venus", 7_995),
+      flyby(noon(2021, 11, 27), "day", "Earth flyby", "地球フライバイ", "earth", 460),
+      flyby(noon(2022, 9, 4), "day", "Third Venus flyby", "3回目の金星フライバイ", "venus"),
+      flyby(noon(2025, 2, 18), "day", "Fourth Venus flyby", "4回目の金星フライバイ", "venus", 379),
+      flyby(noon(2026, 12, 24), "day", "Fifth Venus flyby", "5回目の金星フライバイ", "venus"),
+      flyby(noon(2030, 9, 3), "day", "Sixth Venus flyby", "6回目の金星フライバイ", "venus"),
     ],
   },
 };
