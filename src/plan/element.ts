@@ -3,7 +3,7 @@
 import { DWARF_IDS, MINOR_IDS } from "../facts.ts";
 import { SPACECRAFT_IDS, type SpacecraftId } from "../spacecraft-facts.ts";
 import { PLAN_AU_KM, planAt, PLAN_SYSTEMS, type Plan, type PlanExtra, type PlanSpacing, type PlanSystem } from "./layout.ts";
-import { planSvg, type PlanLang } from "./svg.ts";
+import { PLAN_FONT, planSvg, type PlanLang, type PlanMeasure } from "./svg.ts";
 
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 240px); max-width: 100%; aspect-ratio: 1; overflow: hidden; contain: layout style; border-radius: var(--wakusei-radius, 10px); background: var(--wakusei-plan-bg, light-dark(#fbf8f1, #1d201e)); }
@@ -14,6 +14,18 @@ const TEMPLATE = `<style>
 </style><div id="plan"></div>`;
 
 type Spacecraft = typeof import("../spacecraft.ts");
+
+/** Text measured in the type the plan is drawn in, whatever font the machine falls back to: a canvas takes the same font list, character by character. Without a canvas (no DOM), the plan's own estimate. */
+let probe: CanvasRenderingContext2D | null | undefined;
+const measure: PlanMeasure | undefined = (() => {
+  if (typeof document === "undefined") return undefined;
+  return (text, bold) => {
+    probe ??= document.createElement("canvas").getContext("2d");
+    if (probe === null) return [...text].length * 6.1;
+    probe.font = bold ? `700 ${PLAN_FONT}` : PLAN_FONT;
+    return probe.measureText(text).width;
+  };
+})();
 
 const READ_TIME = (value: string | null): number | "now" => {
   if (value === null || value.trim() === "" || value.trim() === "now") return "now";
@@ -243,7 +255,7 @@ export class WakuseiPlan extends HTMLElement {
     this.#tables(this.#mark());
     const plan = planAt(time, { system, spacing, mark: this.#mark(), extras: system === "sun" ? this.#extras(craft, time) : [] });
     const held = this.#root.activeElement?.getAttribute("data-id");
-    this.#box.innerHTML = planSvg(plan, { size: this.#size, lang: this.#lang(), names: !off(this.getAttribute("names")) });
+    this.#box.innerHTML = planSvg(plan, { size: this.#size, lang: this.#lang(), names: !off(this.getAttribute("names")), ...(measure === undefined ? {} : { measure }) });
     if (held !== null && held !== undefined) this.#box.querySelector<SVGElement>(`g[data-id="${held}"]`)?.focus();
     this.#plan = plan;
     this.#draws += 1;

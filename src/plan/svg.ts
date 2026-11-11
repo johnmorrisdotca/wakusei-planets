@@ -133,7 +133,21 @@ export interface PlanDrawOptions {
   names?: boolean;
   /** Prefixes the ids inside the SVG. Default `wp`. */
   id?: string;
+  /** Measures text in the type the plan is drawn in (the element does, so a machine whose fallback font is wider or taller than the one assumed still gets names that do not overlap). Default: an estimate by character. */
+  measure?: PlanMeasure;
 }
+
+/**
+ * The type the plan is drawn in, as a CSS `font` value; a page that measures text to fit it (the element does) uses the same string.
+ *
+ * @example
+ * ```ts
+ * import { PLAN_FONT } from "@johnmorrisdotca/wakusei-planets/plan";
+ *
+ * console.log(PLAN_FONT.startsWith("10px"));
+ * ```
+ */
+export const PLAN_FONT = "10px system-ui,-apple-system,'Segoe UI','Hiragino Sans','Noto Sans JP',sans-serif";
 
 const STYLE = [
   // The colours: the page may set --wakusei-plan-* itself; the defaults are the family's inks and follow light and dark.
@@ -151,12 +165,24 @@ const RANK: Record<PlanKind, number> = { star: 1, planet: 2, "dwarf-planet": 3, 
 
 const n2 = (n: number): string => (Math.round(n * 100) / 100).toString();
 
+/**
+ * How wide a piece of text is in the type it is drawn in, in pixels: `bold` for the marked body's name.
+ *
+ * @example
+ * ```ts
+ * import type { PlanMeasure } from "@johnmorrisdotca/wakusei-planets/plan";
+ *
+ * const sixPixelsALetter: PlanMeasure = (text) => text.length * 6;
+ * console.log(sixPixelsALetter("Mars", false));
+ * ```
+ */
+export type PlanMeasure = (text: string, bold: boolean) => number;
+
 /** The width of a name in pixels, at 10 px type: a Japanese character is as wide as it is tall. */
 const widthOf = (text: string): number => [...text].reduce((sum, ch) => sum + (/[\u3000-\u9fff\uff00-\uffef]/.test(ch) ? 10 : 6.1), 0);
 
 /** The places a name may take beside its dot, in the order tried: right and above, right and below, left and above, left and below. Each is kept inside the picture. */
-function boxesFor(text: string, x: number, y: number, size: number, offset: number): LabelBox[] {
-  const width = widthOf(text);
+function boxesFor(text: string, width: number, x: number, y: number, size: number, offset: number): LabelBox[] {
   const height = 12;
   const fit = (left: number, top: number): LabelBox => ({ id: "", x: Math.max(2, Math.min(size - 4 - width, left)), y: Math.max(2, Math.min(size - 18 - height, top)), width, height, rank: 0, size: 0 });
   return [fit(x + offset, y - height - 1), fit(x + offset, y + 1), fit(x - offset - width, y - height - 1), fit(x - offset - width, y + 1)];
@@ -186,6 +212,7 @@ export function planSvg(plan: Plan, options: PlanDrawOptions = {}): string {
   const lang = options.lang ?? "en";
   const names = options.names !== false;
   const prefix = options.id ?? "wp";
+  const measure: PlanMeasure = options.measure ?? ((words) => widthOf(words));
   const text = planText(plan, lang);
   // the disc: a 4 px margin above, the scale line below
   const R = (size - 20) / 2;
@@ -206,12 +233,12 @@ export function planSvg(plan: Plan, options: PlanDrawOptions = {}): string {
   // the middle, then the bodies, the marked one last so it lies on top
   const everyone = [{ dot: plan.centre, centre: true }, ...plan.dots.map((dot) => ({ dot, centre: false }))];
   // names: the surest first (the marked body, then the Sun, planets and the rest), each in the first of four places beside its dot that touches no name already kept; one that fits nowhere is left out
-  const kept: LabelBox[] = [{ id: "\0scale", x: 2, y: size - 14, width: widthOf(text.scale) * 0.9, height: 12, rank: -1, size: 0 }];
+  const kept: LabelBox[] = [{ id: "\0scale", x: 2, y: size - 14, width: measure(text.scale, false) * 0.9, height: 12, rank: -1, size: 0 }];
   const named = new Map<string, LabelBox>();
   const wanting = everyone.filter(({ dot }) => dot.marked || names).sort((a, b) => (a.dot.marked ? 0 : RANK[a.dot.kind]) - (b.dot.marked ? 0 : RANK[b.dot.kind]));
   for (const { dot, centre } of wanting) {
     const [x, y] = at(dot.x, dot.y);
-    const box = boxesFor(nameOf(dot.id, lang), x, y, size, radiusOf(dot, centre) + 3).find((one) => !kept.some((other) => touches(one, other)));
+    const box = boxesFor(nameOf(dot.id, lang), measure(nameOf(dot.id, lang), dot.marked), x, y, size, radiusOf(dot, centre) + 3).find((one) => !kept.some((other) => touches(one, other)));
     if (box !== undefined) {
       kept.push(box);
       named.set(dot.id, box);

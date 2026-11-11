@@ -22,6 +22,11 @@ const settled = (page: Page): Promise<unknown> => page.evaluate(() => new Promis
 const dot = (plan: Locator, id: string): Locator => plan.locator(`g[data-id="${id}"]`);
 /** The dot's own mark, which a press lands on (the group's box also holds its name and its wider hit area, and a neighbour's hit area can lie over the middle of it). */
 const shape = (plan: Locator, id: string): Locator => dot(plan, id).locator("circle:not(.hit):not(.ring), rect").first();
+/** Press a button of the page, then bring the plan to be looked at into view: a plan out of sight is not drawn until it is seen (on a phone the rows of buttons are below it), so a test reads it only once it is in view. */
+const press = async (page: Page, selector: string, plan: Locator): Promise<void> => {
+  await page.locator(selector).click();
+  await plan.scrollIntoViewIfNeeded();
+};
 const search = (page: Page): Promise<string> => page.evaluate(() => location.search);
 
 test("the page: two insets of a size to sit beside another, choices in rows of clicks, no fold-open sections, nothing scrolls sideways", async ({ page }, info) => {
@@ -56,6 +61,7 @@ test("a press on a dot marks it and sends the body's id; a planet with moons als
   await shape(sun(page), "saturn").click();
   expect(await page.evaluate(() => Reflect.get(window, "__picks"))).toEqual([{ id: "saturn", kind: "planet" }]);
   await expect.poll(() => marked(sun(page))).toBe("saturn");
+  await moons(page).scrollIntoViewIfNeeded();
   await expect.poll(() => moons(page).evaluate((el) => (el as Plan).plan?.system)).toBe("saturn");
   expect(await marked(moons(page))).toBe("saturn");
   await shape(moons(page), "titan").click();
@@ -63,7 +69,7 @@ test("a press on a dot marks it and sends the body's id; a planet with moons als
   // the address is written a moment after the choice
   await expect.poll(() => search(page)).toContain("moon=titan");
   // a row of clicks does the same
-  await page.locator('#sun-marks button[data-id="venus"]').click();
+  await press(page, '#sun-marks button[data-id="venus"]', sun(page));
   await expect.poll(() => marked(sun(page))).toBe("venus");
 });
 
@@ -124,10 +130,11 @@ test("squeezed and to scale: to scale crowds the inner planets, squeezed spreads
   const squeezed = await radius("mercury");
   expect(squeezed).toBeGreaterThan(0.2);
   await expect(sun(page).locator("text.sc")).toHaveText("Squeezed (log) to 50 au");
-  await page.locator('#spacings button[data-spacing="true"]').click();
+  await press(page, '#spacings button[data-spacing="true"]', sun(page));
   await expect(sun(page).locator("text.sc")).toHaveText("True scale to 50 au");
   expect(await radius("mercury")).toBeLessThan(0.01);
   expect(await radius("neptune")).toBeGreaterThan(0.5);
+  await moons(page).scrollIntoViewIfNeeded();
   await expect(moons(page).locator("text.sc")).toHaveText("True scale to 29 Jupiter radii");
 });
 
@@ -135,33 +142,34 @@ test("the date moves the dots, in rows of clicks and in the box, and Today goes 
   await open(page);
   const where = (): Promise<string> => sun(page).evaluate((el) => { const d = (el as Plan).plan!.dots.find((one) => one.id === "mercury")!; return `${d.x.toFixed(4)},${d.y.toFixed(4)}`; });
   const start = await where();
-  await page.locator("#steps button[data-step='30']").click();
+  await press(page, "#steps button[data-step='30']", sun(page));
   await expect.poll(where).not.toBe(start);
-  await page.locator("#steps button[data-step='-30']").click();
+  await press(page, "#steps button[data-step='-30']", sun(page));
   await expect.poll(where).toBe(start);
   await page.locator("#date").fill("2030-05-05");
+  await sun(page).scrollIntoViewIfNeeded();
   await expect.poll(() => sun(page).evaluate((el) => new Date((el as Plan).plan!.time).getFullYear())).toBe(2030);
   await expect.poll(() => search(page)).toContain("date=2030-05-05");
 });
 
 test("a craft or a small body can be marked: the plan stands out to hold it", async ({ page }) => {
   await open(page);
-  await page.locator('#sun-marks button[data-id="sedna"]').click();
+  await press(page, '#sun-marks button[data-id="sedna"]', sun(page));
   await expect.poll(() => marked(sun(page))).toBe("sedna");
   expect(await sun(page).evaluate((el) => (el as Plan).plan?.extent)).toBe(100);
-  await page.locator('#sun-marks button[data-id="voyager1"]').click();
+  await press(page, '#sun-marks button[data-id="voyager1"]', sun(page));
   // the craft's path loads when it is first asked for; the plan draws again with the craft when it has
   await expect.poll(() => sun(page).evaluate((el) => (el as Plan).plan?.dots.some((one) => one.id === "voyager1"))).toBe(true);
   expect(await marked(sun(page))).toBe("voyager1");
   expect(await sun(page).evaluate((el) => (el as Plan).plan?.extent)).toBe(200);
   await expect(dot(sun(page), "voyager1")).toHaveAttribute("data-kind", "spacecraft");
   // a second craft is fetched when it is first marked: its mark does not vanish because another is loaded
-  await page.locator('#sun-marks button[data-id="voyager2"]').click();
+  await press(page, '#sun-marks button[data-id="voyager2"]', sun(page));
   await expect.poll(() => sun(page).evaluate((el) => (el as Plan).plan?.dots.some((one) => one.id === "voyager2"))).toBe(true);
   expect(await marked(sun(page))).toBe("voyager2");
   await expect(dot(sun(page), "voyager2")).toHaveAttribute("data-marked", "");
   // and back: the first is still there
-  await page.locator('#sun-marks button[data-id="voyager1"]').click();
+  await press(page, '#sun-marks button[data-id="voyager1"]', sun(page));
   await expect.poll(() => marked(sun(page))).toBe("voyager1");
   expect(await sun(page).evaluate((el) => (el as Plan).plan?.dots.some((one) => one.id === "voyager1"))).toBe(true);
 });
