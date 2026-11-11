@@ -78,6 +78,27 @@ A first press on a body or its name selects it: `wakusei-body-select` fires with
 
 The hopper goes through the bodies in one order: the Sun, Mercury, Venus, the Earth, the Moon, Mars, Phobos, Deimos, Jupiter and its moons, and on outwards, each planet followed by its moons nearest first (`HOP_ORDER` from `/space` is the whole order). `space.next()` and `space.previous()` go to the next and the previous body, round from the last to the Sun, and each return the body's `BodyInfo`. Every change of the middle fires `wakusei-hop` with `{ current, previous, next }` (each a `BodyInfo`, and `zoom` when `goTo` or a hop asked for one), so two arrows can show the names of where they lead; `space.hopper` reads the same at any time. `space.bodyList()` is the jump list: every body the view can go to, in order, with its `kind` (`star`, `planet`, `dwarf-planet`, `moon`) and, for a moon, its `host`. `findBody("Saturn")` and `findBody("土星")` from `/space` read a body from what a reader types.
 
+## Leaving a body
+
+Every trip to another body (`goTo`, the hopper's `next` and `previous`, a ride) starts with a slow launch, so the departure is seen: the camera takes about half a second to cover the first fifth of the way, speeds up, and settles on the destination. How it gets there is a named transition, chosen by the attribute and property `transition`, or for one trip by `space.goTo("jupiter", { transition: "look-back" })`:
+
+| Name | What it does |
+|---|---|
+| `direct` | The default. The slow launch, then straight at the destination, which stays in view and grows. |
+| `look-back` | Pull away watching the body being left, then turn to the destination over the last part of the trip. |
+| `auto` | `direct` when the destination is in view where the trip starts, `look-back` when it is not (it needs the names on: they say where the bodies are on the screen). |
+| `cut` | No glide: the view is at the destination at once. A reader who prefers reduced motion always gets this. |
+
+Two settings tune them, both in milliseconds: `launch` (the attribute, and `space.launchMs`: how long the slow launch lasts, 500 by default; 0 is a quick glide, a longer one is a longer trip) and `turn` (`space.turnMs`: how long the turn at the end of a `look-back` takes, 700 by default). `TRANSITIONS` lists the names and `glideProgress` and `turnProgress` are the curves, for a page that wants to draw them.
+
+```ts
+import { glideDuration, glideProgress, TRANSITIONS } from "@johnmorrisdotca/wakusei-planets/space";
+
+console.log(TRANSITIONS.join(", "));
+// by the end of the launch the camera has covered about a fifth of the way
+console.log(Math.round(glideDuration(500)), "ms in all,", glideProgress(500, 500).toFixed(2), "of the way after the launch");
+```
+
 ## Full screen
 
 `immersive` (an attribute, and `space.immersive`) makes the element a full-screen view: it fills the box it is in, whatever the shape (it is `width: 100%; height: 100%`, and a page that gives it any width and height does the same without the attribute), and a plain wheel zooms and a drag anywhere on it turns it, a touch drag included, instead of scrolling the page. Without `immersive` kazoku-ui's rules stand: Ctrl, Command or Alt with the wheel zooms and the plain wheel scrolls the page. At zoom 1 the body looked at is framed, with a margin of about a fifth, by the shorter side of the view, in a tall window as in a wide one, so it is never cut off (Saturn is framed with its rings), and `zoom-min` takes the camera as far out as the whole solar system.

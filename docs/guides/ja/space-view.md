@@ -78,6 +78,27 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 めぐる順番は一つに決まっています。太陽、水星、金星、地球、月、火星、フォボス、ダイモス、木星とその衛星、と外へ進み、各惑星の次にその衛星が近い順に来ます (全体は `/space` の `HOP_ORDER` です)。`space.next()` と `space.previous()` は、次の天体と前の天体へ行き、最後からは太陽にもどります。どちらも、行った先の `BodyInfo` を返します。中心が変わるたびに `wakusei-hop` が `{ current, previous, next }` (それぞれ `BodyInfo`。`goTo` やめぐる操作がズームを求めたときは `zoom` も) つきで発火するので、矢印を2つ置いて、それぞれの行き先の名前を見せられます。`space.hopper` では、同じ内容がいつでも読めます。`space.bodyList()` はジャンプ用の一覧で、行けるすべての天体を順番に、種類 (`kind`: `star`、`planet`、`dwarf-planet`、`moon`) と、衛星なら `host` つきで返します。`/space` の `findBody("Saturn")` と `findBody("土星")` は、人が入力した言葉から天体を読み取ります。
 
+## 天体を離れるとき
+
+ほかの天体へ向かう移動 (`goTo`、順にめぐる `next` と `previous`、乗って見る) は、どれもゆっくりした出だしから始まります。離れていくところが見えるように、最初の5分の1の道のりに約0.5秒かけ、そこから速くなって、行き先に落ち着きます。どう向かうかは、名前のついたトランジションで決めます。属性とプロパティの `transition` で選ぶか、1回の移動だけなら `space.goTo("jupiter", { transition: "look-back" })` のように指定します。
+
+| 名前 | 動き |
+|---|---|
+| `direct` | 初期値。ゆっくりした出だしのあと、行き先へまっすぐ向かいます。行き先は見えたまま、だんだん大きくなります。 |
+| `look-back` | 離れる天体を見たままうしろへ引いていき、道のりの終わりのほうで行き先へ向きを変えます。 |
+| `auto` | 出発するとき行き先が画面に入っているなら `direct`、入っていないなら `look-back` です (名前の表示がオンのときだけ働きます。天体が画面のどこにあるかは、名前からわかるためです)。 |
+| `cut` | 滑らせずに、一瞬で行き先の画面になります。動きを減らす設定の人には、いつもこれが使われます。 |
+
+2つの設定で調整できます。どちらもミリ秒です。`launch` (属性。プロパティは `space.launchMs`) は、ゆっくりした出だしの長さで、初期値は500です (0なら速い移動で、長くすると、そのぶん移動も長くなります)。`turn` (属性。プロパティは `space.turnMs`) は、`look-back` の終わりの向きの変更にかける時間で、初期値は700です。`TRANSITIONS` は名前の一覧、`glideProgress` と `turnProgress` は動きの曲線で、曲線を自分で描きたいページ向けです。
+
+```ts
+import { glideDuration, glideProgress, TRANSITIONS } from "@johnmorrisdotca/wakusei-planets/space";
+
+console.log(TRANSITIONS.join(", "));
+// 出だしが終わるまでに、道のりの約5分の1を進みます
+console.log(Math.round(glideDuration(500)), "ms in all,", glideProgress(500, 500).toFixed(2), "of the way after the launch");
+```
+
 ## 全画面
 
 `immersive` (属性、または `space.immersive`) をつけると、要素は全画面の表示になります。入れ物の大きさに、どんな形でもぴったり広がり (`width: 100%; height: 100%`。ページが幅と高さを決めれば、属性なしでも同じです)、ホイールだけで拡大縮小し、どこをドラッグしても (タッチのドラッグも) 回ります。ページはスクロールしません。`immersive` がないときは kazoku-ui の決まりのままで、Ctrl、Command、Alt のどれかを押しながらホイールを回すと拡大縮小し、ホイールだけならページがスクロールします。ズーム1では、見ている天体は表示の短いほうの辺の約8割の大きさで、まわりに約5分の1の余白が残るので、縦長の窓でも横長の窓でも切れません (土星は環ごと収まります)。`zoom-min` まで引くと、カメラは太陽系ぜんぶが見えるところまで下がります。
