@@ -130,6 +130,161 @@
       "ja": "火星のすべての場所: 着陸機12件、探査車7件、墜落地点6件、名前のある地形914件。よく知られた38件には日本語名があり、ほかは IAU のラテン語名のままです (gzip で約36 kB)",
       "platform": "node"
     },
+    "./places/mercury": {
+      "en": "Every place on Mercury: 1 crash site, 401 of the Gazetteer's 621 named features (the largest, from 69 km, and the famous ones); 11 marked famous (about 26 kB gzipped)",
+      "ja": "水星のすべての場所: 墜落地点1件、IAU 地名辞典の名前のある地形621件のうち401件 (69 km 以上の大きなものと有名なもの)。有名な場所の印は11件 (gzip で約26 kB)",
+      "platform": "node"
+    },
+    "./places/venus": {
+      "en": "Every place on Venus: 11 landers, 3 crash sites, 4 atmospheric entries, 386 of the Gazetteer's 1,985 named features (the 25 largest of each type and the famous ones); 13 marked famous (about 20 kB gzipped)",
+      "ja": "金星のすべての場所: 着陸機11件、墜落地点3件、大気圏突入地点4件、IAU 地名辞典の名前のある地形1,985件のうち386件 (各種類の大きいもの25件と有名なもの)。有名な場所の印は13件 (gzip で約20 kB)",
+      "platform": "node"
+    },
+    "./places/io": {
+      "en": "Every place on Io: all 261 named features; 8 marked famous (about 14 kB gzipped)",
+      "ja": "イオのすべての場所: 名前のある地形261件すべて。有名な場所の印は8件 (gzip で約14 kB)",
+      "platform": "node"
+    },
+    "./places/europa": {
+      "en": "Every place on Europa: all 129 named features; 9 marked famous (about 7 kB gzipped)",
+      "ja": "エウロパのすべての場所: 名前のある地形129件すべて。有名な場所の印は9件 (gzip で約7 kB)",
+      "platform": "node"
+    },
+    "./places/ganymede": {
+      "en": "Every place on Ganymede: all 196 named features; 9 marked famous (about 10 kB gzipped)",
+      "ja": "ガニメデのすべての場所: 名前のある地形196件すべて。有名な場所の印は9件 (gzip で約10 kB)",
+      "platform": "node"
+    },
+    "./places/callisto": {
+      "en": "Every place on Callisto: all 154 named features; 4 marked famous (about 7 kB gzipped)",
+      "ja": "カリストのすべての場所: 名前のある地形154件すべて。有名な場所の印は4件 (gzip で約7 kB)",
+      "platform": "node"
+    },
+    "./places/titan": {
+      "en": "Every place on Titan: 1 lander, all 304 named features; 15 marked famous (about 17 kB gzipped)",
+      "ja": "タイタンのすべての場所: 着陸機1件、名前のある地形304件すべて。有名な場所の印は15件 (gzip で約17 kB)",
+      "platform": "node"
+    },
+    "./places/enceladus": {
+      "en": "Every place on Enceladus: all 87 named features; 7 marked famous (about 6 kB gzipped)",
+      "ja": "エンケラドスのすべての場所: 名前のある地形87件すべて。有名な場所の印は7件 (gzip で約6 kB)",
+      "platform": "node"
+    },
+    "./places/mimas": {
+      "en": "Every place on Mimas: all 42 named features; 1 marked famous (about 3 kB gzipped)",
+      "ja": "ミマスのすべての場所: 名前のある地形42件すべて。有名な場所の印は1件 (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/tethys": {
+      "en": "Every place on Tethys: all 53 named features; 2 marked famous (about 3 kB gzipped)",
+      "ja": "テティスのすべての場所: 名前のある地形53件すべて。有名な場所の印は2件 (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/dione": {
+      "en": "Every place on Dione: all 98 named features; 3 marked famous (about 6 kB gzipped)",
+      "ja": "ディオネのすべての場所: 名前のある地形98件すべて。有名な場所の印は3件 (gzip で約6 kB)",
+      "platform": "node"
+    },
+    "./places/rhea": {
+      "en": "Every place on Rhea: all 144 named features; 4 marked famous (about 9 kB gzipped)",
+      "ja": "レアのすべての場所: 名前のある地形144件すべて。有名な場所の印は4件 (gzip で約9 kB)",
+      "platform": "node"
+    },
+    "./places/iapetus": {
+      "en": "Every place on Iapetus: all 70 named features; 5 marked famous (about 4 kB gzipped)",
+      "ja": "イアペトゥスのすべての場所: 名前のある地形70件すべて。有名な場所の印は5件 (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/miranda": {
+      "en": "Every place on Miranda: all 18 named features; 4 marked famous (about 1 kB gzipped)",
+      "ja": "ミランダのすべての場所: 名前のある地形18件すべて。有名な場所の印は4件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/ariel": {
+      "en": "Every place on Ariel: all 26 named features; 3 marked famous (about 2 kB gzipped)",
+      "ja": "アリエルのすべての場所: 名前のある地形26件すべて。有名な場所の印は3件 (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/umbriel": {
+      "en": "Every place on Umbriel: all 13 named features; 3 marked famous (about 1 kB gzipped)",
+      "ja": "ウンブリエルのすべての場所: 名前のある地形13件すべて。有名な場所の印は3件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/titania": {
+      "en": "Every place on Titania: all 18 named features; 3 marked famous (about 1 kB gzipped)",
+      "ja": "ティタニアのすべての場所: 名前のある地形18件すべて。有名な場所の印は3件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/oberon": {
+      "en": "Every place on Oberon: all 10 named features; 4 marked famous (about 1 kB gzipped)",
+      "ja": "オベロンのすべての場所: 名前のある地形10件すべて。有名な場所の印は4件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/triton": {
+      "en": "Every place on Triton: all 63 named features; 7 marked famous (about 4 kB gzipped)",
+      "ja": "トリトンのすべての場所: 名前のある地形63件すべて。有名な場所の印は7件 (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/pluto": {
+      "en": "Every place on Pluto: all 73 named features; 7 marked famous (about 8 kB gzipped)",
+      "ja": "冥王星のすべての場所: 名前のある地形73件すべて。有名な場所の印は7件 (gzip で約8 kB)",
+      "platform": "node"
+    },
+    "./places/charon": {
+      "en": "Every place on Charon: all 15 named features; 3 marked famous (about 3 kB gzipped)",
+      "ja": "カロンのすべての場所: 名前のある地形15件すべて。有名な場所の印は3件 (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/ceres": {
+      "en": "Every place on Ceres: all 149 named features; 8 marked famous (about 10 kB gzipped)",
+      "ja": "ケレスのすべての場所: 名前のある地形149件すべて。有名な場所の印は8件 (gzip で約10 kB)",
+      "platform": "node"
+    },
+    "./places/vesta": {
+      "en": "Every place on Vesta: all 106 named features; 5 marked famous (about 7 kB gzipped)",
+      "ja": "ベスタのすべての場所: 名前のある地形106件すべて。有名な場所の印は5件 (gzip で約7 kB)",
+      "platform": "node"
+    },
+    "./places/eros": {
+      "en": "Every place on Eros: 1 lander; 1 marked famous (about 1 kB gzipped)",
+      "ja": "エロスのすべての場所: 着陸機1件。有名な場所の印は1件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/ryugu": {
+      "en": "Every place on Ryugu: 3 landers, 1 impact site; 2 marked famous (about 1 kB gzipped)",
+      "ja": "リュウグウのすべての場所: 着陸機3件、衝突地点1件。有名な場所の印は2件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/bennu": {
+      "en": "Every place on Bennu: 1 lander; 1 marked famous (under 1 kB gzipped)",
+      "ja": "ベンヌのすべての場所: 着陸機1件。有名な場所の印は1件 (gzip で1 kB 未満)",
+      "platform": "node"
+    },
+    "./places/dimorphos": {
+      "en": "Every place on Dimorphos: 1 impact site; 1 marked famous (under 1 kB gzipped)",
+      "ja": "ディモルフォスのすべての場所: 衝突地点1件。有名な場所の印は1件 (gzip で1 kB 未満)",
+      "platform": "node"
+    },
+    "./places/tempel-1": {
+      "en": "Every place on comet Tempel 1: 1 impact site; 1 marked famous (about 1 kB gzipped)",
+      "ja": "テンペル第1彗星のすべての場所: 衝突地点1件。有名な場所の印は1件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/67p": {
+      "en": "Every place on comet 67P/Churyumov-Gerasimenko: 1 lander; 1 marked famous (about 1 kB gzipped)",
+      "ja": "チュリュモフ・ゲラシメンコ彗星のすべての場所: 着陸機1件。有名な場所の印は1件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/jupiter": {
+      "en": "Every place on Jupiter: 2 atmospheric entries; 1 marked famous (about 1 kB gzipped)",
+      "ja": "木星のすべての場所: 大気圏突入地点2件。有名な場所の印は1件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/saturn": {
+      "en": "Every place on Saturn: 1 atmospheric entry; 1 marked famous (about 1 kB gzipped)",
+      "ja": "土星のすべての場所: 大気圏突入地点1件。有名な場所の印は1件 (gzip で約1 kB)",
+      "platform": "node"
+    },
     "./suncalc": {
       "en": "The Sun and Moon from a place: position, sunrise and sunset, Moon rise, set and phase, with suncalc 2's names and a better engine",
       "ja": "場所から見た太陽と月: 位置、日の出と日の入り、月の出入りと月相。suncalc 2 と同じ名前で、より正確です",
