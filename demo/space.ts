@@ -12,6 +12,7 @@ import { findBody } from "../src/space/bodies.ts";
 import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
+import type * as Orbiters from "../src/orbiters.ts";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
 const say = (key: string, values: Record<string, string | number> = {}): string => (chooser()?.word(key) ?? WORDS.en[key] ?? key).replace(/\{(\w+)\}/g, (all, name: string) => String(values[name] ?? all));
@@ -42,12 +43,16 @@ const state = {
   starman: address.get("starman") === "1",
   /** The spacecraft in orbit round the Moon and Mars (their paths are fetched the first time). */
   orbiters: address.get("orbiters") === "1",
+  /** The craft picked out, which orbit lines are drawn, and its ground track. */
+  orbiter: address.get("orbiter") ?? "",
+  orbiterLines: pick(address.get("olines"), ["all", "chosen", "none"], "all"),
+  orbiterTrack: address.get("otrack") === "1",
   /** Playing: the clock runs from the date shown at `speed` times real time. A page opened with no date, speed or play in its address opens playing, from now, an hour a second (the first speed at which the Earth's turn shows); a link that names a date or a speed, and a reader who asked for reduced motion, get it still with Play ready. */
   play: address.get("play") === "on" || (!["play", "t", "speed"].some((key) => address.get(key) !== null) && !matchMedia("(prefers-reduced-motion: reduce)").matches),
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
   speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
   time: address.get("t") ?? "now",
-  ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io"], ""),
+  ride: pick(address.get("ride"), ["", "moon", "moon:beside", "mars", "io", "orbiter"], ""),
   rideLook: pick(address.get("rlook"), ["down", "horizon"], "down"),
   goto: pick<SpacePreset>(address.get("goto"), ["earth", "moon", "sun", "inner", "solar-system", "jupiter-moons"], "earth"),
   /** How the camera moves between bodies: one of the view's named moves, kept in the address so each can be tried. */
@@ -79,6 +84,9 @@ function render(): void {
   space.labels = state.names;
   space.roadster = state.starman;
   space.orbiters = state.orbiters;
+  space.orbiter = state.orbiter || null;
+  space.orbiterLines = state.orbiterLines;
+  space.orbiterTrack = state.orbiterTrack;
   if (replay.playing !== state.play) replay.playing = state.play;
   state.play = replay.playing;
   if (applied !== state.time) {
@@ -99,16 +107,24 @@ function render(): void {
   (document.querySelector("#step-in") as HTMLButtonElement).disabled = space.region === null;
   for (const b of $$("#rides [data-ride]")) pressed(b, b.dataset["ride"] === state.ride);
   for (const b of $$("#ride-looks [data-ride-look]")) pressed(b, b.dataset["rideLook"] === state.rideLook);
-  if (appliedRide !== `${state.ride}|${state.rideLook}`) {
-    appliedRide = `${state.ride}|${state.rideLook}`;
-    // "moon:beside" is the Moon seen from beyond it, with the Earth in view behind
-    const [target, view] = state.ride.split(":") as ["moon" | "mars" | "io" | "", "beside" | undefined];
-    space.ride(target === "" ? null : target, { look: state.rideLook, ...(view ? { view } : {}) });
+  // riding the chosen craft waits for the orbiters' module
+  const rideKey = `${state.ride}|${state.rideLook}|${state.ride === "orbiter" ? `${state.orbiter}|${orbiterModule !== null}` : ""}`;
+  if (appliedRide !== rideKey) {
+    appliedRide = rideKey;
+    if (state.ride === "orbiter") {
+      const id = state.orbiter as Orbiters.OrbiterId;
+      if (orbiterModule !== null && orbiterModule.ORBITER_IDS.includes(id)) space.ride(orbiterModule.orbiterRidePoint(id), { around: orbiterModule.orbiterCentre(id), look: state.rideLook });
+    } else {
+      // "moon:beside" is the Moon seen from beyond it, with the Earth in view behind
+      const [target, view] = state.ride.split(":") as ["moon" | "mars" | "io" | "", "beside" | undefined];
+      space.ride(target === "" ? null : target, { look: state.rideLook, ...(view ? { view } : {}) });
+    }
   }
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
   pressed(document.querySelector<HTMLElement>("#starman")!, state.starman);
   pressed(document.querySelector<HTMLElement>("#orbiters")!, state.orbiters);
+  renderOrbiters();
   renderBodyLabelRow(bodyLabel, space, address);
   pressed(nowButton, state.time === "now");
   if (replay.getAttribute("speed") !== String(state.speed)) replay.setAttribute("speed", String(state.speed));
@@ -123,6 +139,9 @@ function render(): void {
   address.set("names", state.names ? null : "0");
   address.set("starman", state.starman ? "1" : null);
   address.set("orbiters", state.orbiters ? "1" : null);
+  address.set("orbiter", state.orbiters && state.orbiter ? state.orbiter : null);
+  address.set("olines", state.orbiters && state.orbiterLines !== "all" ? state.orbiterLines : null);
+  address.set("otrack", state.orbiters && state.orbiterTrack ? "1" : null);
   address.set("play", state.play ? "on" : null);
   address.set("speed", state.speed === DEFAULT_SPEED ? null : String(state.speed));
   address.set("t", state.time === "now" ? null : state.time);
@@ -165,7 +184,121 @@ for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", 
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
 document.querySelector("#starman")!.addEventListener("click", () => ((state.starman = !state.starman), render()));
-document.querySelector("#orbiters")!.addEventListener("click", () => ((state.orbiters = !state.orbiters), render()));
+document.querySelector("#orbiters")!.addEventListener("click", () => {
+  state.orbiters = !state.orbiters;
+  if (!state.orbiters && state.ride === "orbiter") state.ride = "";
+  render();
+});
+for (const b of $$("#orbiter-lines [data-olines]")) b.addEventListener("click", () => ((state.orbiterLines = b.dataset["olines"] as typeof state.orbiterLines), render()));
+document.querySelector("#orbiter-track")!.addEventListener("click", () => ((state.orbiterTrack = !state.orbiterTrack), render()));
+
+// the orbiters' row and card: the module is fetched when Orbiters is first switched on, as the element fetches it
+let orbiterModule: typeof Orbiters | null = null;
+let orbiterLoading = false;
+/** The famous landing site each body's next pass is worked out for, from `/places`, fetched with the first craft picked there. */
+const PASS_PLACE = { moon: "moon/apollo-11-lunar-module", mars: "mars/perseverance" } as const;
+const passPlaces: Partial<Record<"moon" | "mars", { lat: number; lon: number; name: { en: string; ja: string } } | null>> = {};
+/** The pass worked out last, kept while the moment shown is before its end: the search is not run at every frame. */
+let passCache: { key: string; from: number; pass: Orbiters.OrbiterPass | undefined } | null = null;
+function renderOrbiters(): void {
+  document.querySelector<HTMLElement>("#orbiter-row")!.hidden = !state.orbiters;
+  document.querySelector<HTMLElement>("#orbiter-tools")!.hidden = !state.orbiters;
+  const card = document.querySelector<HTMLElement>("#orbiter-card")!;
+  card.hidden = !state.orbiters;
+  if (!state.orbiters) return;
+  if (orbiterModule === null) {
+    if (!orbiterLoading) {
+      orbiterLoading = true;
+      void import("../src/orbiters.ts").then((mod) => {
+        orbiterModule = mod;
+        render();
+      });
+    }
+    return;
+  }
+  const mod = orbiterModule;
+  const lang = chooser()?.lang ?? "en";
+  for (const centre of ["moon", "mars"] as const) {
+    const group = document.querySelector<HTMLElement>(`#orbiter-picks-${centre}`)!;
+    const ids = mod.ORBITER_IDS.filter((id) => mod.orbiterCentre(id) === centre);
+    if (group.childElementCount !== ids.length) {
+      group.replaceChildren(
+        ...ids.map((id) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset["orbiter"] = id;
+          button.addEventListener("click", () => {
+            state.orbiter = state.orbiter === id ? "" : id;
+            if (state.orbiter === "" && state.ride === "orbiter") state.ride = "";
+            // the craft's body is brought into view, close enough for its craft to be drawn
+            if (state.orbiter !== "" && space.body !== centre) space.goTo(centre);
+            render();
+          });
+          return button;
+        }),
+      );
+    }
+    for (const button of group.querySelectorAll<HTMLButtonElement>("button")) {
+      const id = button.dataset["orbiter"] as Orbiters.OrbiterId;
+      button.textContent = mod.orbiterFacts(id).short[lang];
+      button.title = mod.orbiterFacts(id).name[lang];
+      pressed(button, state.orbiter === id);
+    }
+  }
+  for (const b of $$("#orbiter-lines [data-olines]")) pressed(b, b.dataset["olines"] === state.orbiterLines);
+  pressed(document.querySelector<HTMLElement>("#orbiter-track")!, state.orbiterTrack);
+  const id = mod.ORBITER_IDS.includes(state.orbiter as Orbiters.OrbiterId) ? (state.orbiter as Orbiters.OrbiterId) : null;
+  const elements = id === null ? undefined : mod.orbiterElements(id);
+  document.querySelector<HTMLButtonElement>('#rides [data-ride="orbiter"]')!.hidden = elements === undefined;
+  if (id === null) {
+    card.replaceChildren(line(say("sp_ocard_pick")));
+    return;
+  }
+  const ms = space.time;
+  const facts = mod.orbiterFacts(id);
+  const year = facts.launch.date.slice(0, 4);
+  const lines: HTMLElement[] = [line(`${facts.name[lang]}: ${facts.operator}, ${facts.launch.vehicle ? say("sp_ocard_launch", { year, vehicle: facts.launch.vehicle }) : say("sp_ocard_launch_year", { year })}`)];
+  lines.push(line(facts.about[lang]));
+  if (facts.instruments.length > 0) lines.push(line(say("sp_ocard_instruments", { list: facts.instruments.map((one) => one.short ?? one.name).join(", ") })));
+  const numbers = mod.orbiterNumbers(id, ms);
+  const local = (when: string | number): string => new Date(when).toLocaleString(lang === "ja" ? "ja-JP" : "en-CA", { dateStyle: "medium", timeStyle: "short" });
+  const day = (iso: string): string => new Date(`${iso.slice(0, 10)}T12:00Z`).toLocaleDateString(lang === "ja" ? "ja-JP" : "en-CA", { dateStyle: "medium" });
+  if (numbers !== undefined && elements !== undefined) {
+    const minutes = numbers.periodDays * 1440;
+    const period = minutes < 600 ? say("sp_minutes", { n: Math.round(minutes) }) : say("sp_hours", { n: (minutes / 60).toFixed(1) });
+    lines.push(line(say("sp_ocard_numbers", { alt: Math.round(numbers.altitudeKm).toLocaleString("en-US"), speed: numbers.speedKmS.toFixed(2), period, inc: numbers.inclinationDeg.toFixed(1) })));
+    const err = numbers.errorKm === null ? "" : Math.round(numbers.errorKm).toLocaleString("en-US");
+    const statusLine = numbers.status === "tracked" ? say("sp_ocard_tracked", { err }) : numbers.status === "predicted" ? say("sp_ocard_predicted", { date: local(elements.fitUntil), err }) : say("sp_ocard_modelled");
+    lines.push(line(`${statusLine} ${say("sp_ocard_good", { date: local(elements.validUntil), read: day(elements.retrieved) })}`));
+  } else {
+    lines.push(line(say("sp_ocard_none")));
+  }
+  if (facts.status.state === "ended") lines.push(line(facts.status.note?.[lang] ?? say("sp_ocard_ended")));
+  else if (facts.status.note) lines.push(line(facts.status.note[lang]));
+  if (elements !== undefined) {
+    const centre = mod.orbiterCentre(id);
+    const place = passPlaces[centre];
+    if (place === undefined) {
+      passPlaces[centre] = null;
+      void import("../src/places.ts").then(async (places) => {
+        const found = (await places.loadPlaces(centre)).find((one) => one.id === PASS_PLACE[centre]);
+        passPlaces[centre] = found ? { lat: found.lat, lon: found.lon, name: found.name } : null;
+        render();
+      });
+    } else if (place !== null) {
+      const key = `${id}|${centre}`;
+      if (passCache === null || passCache.key !== key || ms < passCache.from || (passCache.pass !== undefined && ms > passCache.pass.set) || (passCache.pass === undefined && ms > passCache.from + 86_400_000)) {
+        passCache = { key, from: ms, pass: mod.orbiterNextPass(id, place, ms) };
+      }
+      const pass = passCache.pass;
+      lines.push(line(pass === undefined ? say("sp_ocard_nopass", { place: place.name[lang] }) : say("sp_ocard_pass", { place: place.name[lang], time: local(pass.highest), elev: Math.round(pass.elevationDeg) })));
+    }
+  }
+  card.replaceChildren(...lines);
+}
+function line(text: string): HTMLElement {
+  return Object.assign(document.createElement("div"), { textContent: text });
+}
 bindBodyLabelRow(bodyLabel, render);
 nowButton.addEventListener("click", () => {
   state.time = "now";
@@ -187,6 +320,7 @@ when.addEventListener("change", () => {
 space.addEventListener("wakusei-timechange", (event) => {
   const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
   if (document.activeElement !== when) when.value = localValue(time);
+  if (state.orbiters && state.orbiter) renderOrbiters();
   if (running) return;
   // the clock holds: the date it stopped on is the date shown, and the address keeps it
   state.time = isoSecond(time);

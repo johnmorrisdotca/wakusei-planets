@@ -10,7 +10,7 @@ import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
-import type { Vec3 } from "../vec.ts";
+import { turn, type Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
@@ -59,6 +59,9 @@ const ORBITER_PX = 2.2;
 const ORBITER_HOST_PX = 24;
 /** An orbiter's orbit line is worked out again when the moment has moved this far from the line's epoch (the node and periapsis drift a little a day). */
 const ORBITER_LINE_KEEP_MS = 86_400_000;
+/** The chosen orbiter's ground track: this many points, from one trip before the moment to one trip after, a hair above the body's surface. */
+const TRACK_POINTS = 240;
+const TRACK_LIFT = 1.006;
 /** The Roadster is drawn as a dot this many CSS pixels across its radius: a car is nothing at any scale of the view. */
 const ROADSTER_PX = 3;
 /** The Roadster's orbit line spans this long round the moment shown (about one trip round the Sun), and is worked out again when the moment has moved this far from the line's middle. */
@@ -172,6 +175,8 @@ export interface OrbiterSet {
   status(id: string, ms: number): "tracked" | "predicted" | "modelled" | "none";
   /** Whether the craft is drawn dim at a moment: a modelled path, or a predicted one that misses Horizons by more than a small share of its body's radius. */
   dim(id: string, ms: number): boolean;
+  /** One trip round the body, in days; `null` for a craft with no path. */
+  period(id: string): number | null;
   name(id: string): { en: string; ja: string };
 }
 
@@ -215,8 +220,14 @@ export interface SpaceModel {
   /** Show the spacecraft in orbit round the Moon and Mars: a dot each on its orbit line, named, once its body is big enough on the screen. Off by default; their paths are loaded when first shown. */
   orbiters: boolean;
   orbiterSet: OrbiterSet | null;
-  /** The orbiters at the last draw: how many were drawn, each drawn one's status, and which were drawn dim. */
-  orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[] };
+  /** The orbiter picked out: its line drawn brighter, and its ground track when `orbiterTrack` is on. */
+  orbiterChosen: string | null;
+  /** Which orbiters' orbit lines are drawn: every craft's, the chosen one's only, or none. */
+  orbiterLines: "all" | "chosen" | "none";
+  /** Draw the chosen orbiter's ground track on its body. */
+  orbiterTrack: boolean;
+  /** The orbiters at the last draw: how many were drawn, each drawn one's status, which were drawn dim, how many orbit lines, and how many points of ground track. */
+  orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
   /** Show Starman and the Roadster: a small marked body on its orbit line, named. Off by default; its path is loaded when it is first shown. */
   roadster: boolean;
   roadsterPath: RoadsterPath | null;
@@ -319,7 +330,10 @@ export const newSpaceModel = (): SpaceModel => ({
   arrowCount: ARROWS_PER_ORBIT,
   orbiters: false,
   orbiterSet: null,
-  orbitersDrawn: { count: 0, status: {}, dim: [] },
+  orbiterChosen: null,
+  orbiterLines: "all",
+  orbiterTrack: false,
+  orbitersDrawn: { count: 0, status: {}, dim: [], lines: 0, track: 0 },
   roadster: false,
   roadsterPath: null,
   roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
@@ -567,6 +581,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         orbiterDrawings.set(id, drawing);
         return drawing;
       };
+      // the chosen orbiter's ground track: one line, in the body's radii round its centre, kept for the view's life
+      const trackPositions = new Float32Array((TRACK_POINTS + 1) * 3);
+      const trackGeometry = new three.BufferGeometry();
+      trackGeometry.setAttribute("position", new three.BufferAttribute(trackPositions, 3));
+      const trackMaterial = new three.LineBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.85 });
+      const trackLine = new three.Line(trackGeometry, trackMaterial);
+      trackLine.visible = false;
+      trackLine.frustumCulled = false;
+      scene.add(trackLine);
+      const trackMade = { id: "", time: Number.NaN };
 
       const labelFor = (v: Vec3): { x: number; y: number } | null => {
         projected.set(v[0], v[1], v[2]).project(camera);
@@ -985,6 +1009,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const orbiterPlaces: Record<string, { at: Vec3; px: number }> = {};
           const orbiterStatus: Record<string, "tracked" | "predicted" | "modelled" | "none"> = {};
           const orbitersDim: string[] = [];
+          let linesDrawn = 0;
+          let trackDrawn = 0;
           if (orbiterSet !== null) {
             for (const id of orbiterSet.ids) {
               const centre = orbiterSet.centre(id);
@@ -1010,6 +1036,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.mesh.scale.setScalar(drawn);
               (drawing.material.uniforms.uLight!.value as THREE.Vector3).set(...toSunOf(centre));
               const dim = orbiterSet.dim(id, model.time);
+              const chosen = model.orbiterChosen === id;
               (drawing.material.uniforms.uColour!.value as THREE.Vector3).set(dim ? 0.55 : 0.75, dim ? 0.6 : 0.9, dim ? 0.65 : 1);
               if (!Number.isFinite(drawing.epoch) || Math.abs(model.time - drawing.epoch) > ORBITER_LINE_KEEP_MS) {
                 const points = orbiterSet.path(id, model.time, ORBIT_POINTS);
@@ -1025,11 +1052,37 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               // the line is in the body's radii round the origin: placed and scaled with the body
               drawing.line.position.set(pos[centre][0], pos[centre][1], pos[centre][2]);
               drawing.line.scale.setScalar(hostRadius);
-              drawing.lineMaterial.opacity = dim ? 0.25 : 0.45;
-              drawing.line.visible = model.orbits;
+              drawing.lineMaterial.opacity = chosen ? (dim ? 0.5 : 0.85) : dim ? 0.2 : 0.4;
+              drawing.line.visible = model.orbiterLines === "all" || (model.orbiterLines === "chosen" && chosen);
+              if (drawing.line.visible) linesDrawn += 1;
               orbiterPlaces[id] = { at: place, px: dotPx };
               orbiterStatus[id] = status;
               if (dim) orbitersDim.push(id);
+              // the ground track: where the craft was and will be over the surface, one trip either side, each point turned with the body from its moment to the moment shown
+              const period = chosen && model.orbiterTrack ? orbiterSet.period(id) : null;
+              if (period !== null) {
+                if (trackMade.id !== id || trackMade.time !== model.time) {
+                  const pole = orientation(centre, model.time).pole;
+                  const rate = BODIES[centre].prime.rate;
+                  const span = period * 86_400_000;
+                  for (let i = 0; i <= TRACK_POINTS; i += 1) {
+                    const t = model.time - span + (2 * span * i) / TRACK_POINTS;
+                    const below = orbiterSet.position(id, t);
+                    const u = below === null ? ([0, 0, 0] as Vec3) : turn(unit(eclipticToScene(below)), pole, (rate * (model.time - t)) / 86_400_000);
+                    trackPositions[i * 3] = u[0] * TRACK_LIFT;
+                    trackPositions[i * 3 + 1] = u[1] * TRACK_LIFT;
+                    trackPositions[i * 3 + 2] = u[2] * TRACK_LIFT;
+                  }
+                  (trackGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+                  trackMade.id = id;
+                  trackMade.time = model.time;
+                }
+                trackLine.position.set(pos[centre][0], pos[centre][1], pos[centre][2]);
+                trackLine.scale.setScalar(hostRadius);
+                trackMaterial.opacity = dim ? 0.45 : 0.85;
+                trackLine.visible = true;
+                trackDrawn = TRACK_POINTS + 1;
+              }
             }
           } else {
             for (const drawing of orbiterDrawings.values()) {
@@ -1037,7 +1090,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.line.visible = false;
             }
           }
-          model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus, dim: orbitersDim };
+          if (trackDrawn === 0) trackLine.visible = false;
+          model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus, dim: orbitersDim, lines: linesDrawn, track: trackDrawn };
           model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };
 
           // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)
@@ -1248,6 +1302,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             drawing.lineMaterial.dispose();
           }
           orbiterGeometry.dispose();
+          trackGeometry.dispose();
+          trackMaterial.dispose();
         },
       };
     },

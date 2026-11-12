@@ -15,6 +15,8 @@ interface Drawn {
   count: number;
   status: Record<string, string>;
   dim: string[];
+  lines: number;
+  track: number;
 }
 const drawnOrbiters = async (page: Page): Promise<Drawn> => ((await statsOf(page)) as unknown as { orbiters: Drawn }).orbiters;
 const nameOf = (page: Page, id: string) => page.locator(SPACE).locator(`.sp-label[data-body="${id}"]`);
@@ -88,4 +90,50 @@ test("the demo's Orbiters switch is kept in the address", async ({ page }) => {
   await page.locator("#orbiters").dispatchEvent("click");
   await expect.poll(async () => (await drawnOrbiters(page)).count, { timeout: 30_000 }).toBe(0);
   await expect.poll(() => new URL(page.url()).searchParams.get("orbiters"), { timeout: 10_000 }).toBeNull();
+});
+
+test("a picked craft: its card, its line alone or none, its ground track, a ride along with it, all kept in the address", async ({ page }) => {
+  test.setTimeout(240_000);
+  // a moment inside MRO's fit, from the data, so a refresh keeps the test meaning the same
+  const mro = orbiterElements("mro")!;
+  const when = Math.floor((Date.parse(mro.validFrom) + Date.parse(mro.fitUntil)) / 2 / 60_000) * 60_000;
+  await openSpace(page, `t=${new Date(when).toISOString().slice(0, 16)}Z&play=off&orbiters=1`);
+  await expect(page.locator("#orbiter-row")).toBeVisible();
+  await expect(page.locator("#orbiter-card")).toContainText("Pick a craft");
+  // picking MRO brings Mars into view and fills the card
+  await page.locator('#orbiter-picks-mars [data-orbiter="mro"]').dispatchEvent("click");
+  await expect.poll(async () => (await drawnOrbiters(page)).status["mro"], { timeout: 60_000 }).toBeDefined();
+  const card = page.locator("#orbiter-card");
+  await expect(card).toContainText("Mars Reconnaissance Orbiter: NASA");
+  await expect(card).toContainText(/\d+ km up, [\d.]+ km\/s, once round in 11\d min, 92\.\d° to the equator\./);
+  await expect(card).toContainText(/Tracked: within the fit to Horizons' track, \d+ km off at worst\./);
+  await expect(card).toContainText(/Next pass over Perseverance: .+, \d+° up at best\./, { timeout: 30_000 });
+  expect(await page.locator('#orbiter-picks-mars [data-orbiter="mro"]').getAttribute("aria-pressed")).toBe("true");
+  expect((await drawnOrbiters(page)).lines).toBeGreaterThan(1);
+  // only the chosen craft's line, then none
+  await page.locator('#orbiter-lines [data-olines="chosen"]').dispatchEvent("click");
+  await expect.poll(async () => (await drawnOrbiters(page)).lines, { timeout: 30_000 }).toBe(1);
+  await page.locator('#orbiter-lines [data-olines="none"]').dispatchEvent("click");
+  await expect.poll(async () => (await drawnOrbiters(page)).lines, { timeout: 30_000 }).toBe(0);
+  // the ground track
+  expect((await drawnOrbiters(page)).track).toBe(0);
+  await page.locator("#orbiter-track").dispatchEvent("click");
+  await expect.poll(async () => (await drawnOrbiters(page)).track, { timeout: 30_000 }).toBeGreaterThan(100);
+  await expect.poll(() => new URL(page.url()).searchParams.get("otrack"), { timeout: 10_000 }).toBe("1");
+  expect(new URL(page.url()).searchParams.get("orbiter")).toBe("mro");
+  expect(new URL(page.url()).searchParams.get("olines")).toBe("none");
+  // ride along with it
+  const ride = page.locator('#rides [data-ride="orbiter"]');
+  await expect(ride).toBeVisible();
+  await ride.dispatchEvent("click");
+  await expect.poll(async () => ((await statsOf(page)) as unknown as { ride: { riding: boolean } }).ride.riding, { timeout: 30_000 }).toBe(true);
+  // a craft with no path: no numbers, no ride
+  await page.locator('#rides [data-ride=""]').dispatchEvent("click");
+  await page.locator('#orbiter-picks-mars [data-orbiter="tianwen-1"]').dispatchEvent("click");
+  await expect(card).toContainText("No path: there is no public orbit track for it.");
+  await expect(ride).toBeHidden();
+  // Orbiters off: the row goes, and the craft leaves the address
+  await page.locator("#orbiters").dispatchEvent("click");
+  await expect(page.locator("#orbiter-row")).toBeHidden();
+  await expect.poll(() => new URL(page.url()).searchParams.get("orbiter"), { timeout: 10_000 }).toBeNull();
 });
