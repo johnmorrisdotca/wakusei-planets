@@ -500,6 +500,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [How it works](docs/guides/how-it-works.md) | Where the numbers come from |
 | [Asteroids and distant small bodies](docs/guides/asteroids.md) | 104 asteroids, trojans, centaurs and trans-Neptunian objects: orbits, sizes, the spacecraft that visited them, and where each is on any date |
 | [Every known moon](docs/guides/moon-catalogue.md) | every known moon of the planets and dwarf planets as JPL lists them: names, discovery, mean orbit, size, group, and where each is, with its measured accuracy; dots round the planets in the space view (each moon's orbit and rough place: many small outer moons are tens of degrees off within a year) |
+| [You are here, and places on the Earth](docs/guides/earth-places.md) | the reader's own place and places they keep on the space view's Earth: a beam, a pin or a ring standing out of the ground, hidden on the far side, dimmer at night, with names that never overlap; the layout is chikyu-earth's through an optional peer |
 | [Close approaches to the Earth](docs/guides/approaches.md) | 4,183 approaches of near-Earth objects: every one within 0.05 au from 2026 to 2036 and the close ones since 1900, with dates, distances, speeds and sizes |
 | [Architecture](docs/guides/architecture.md) | How the layers fit |
 | [Troubleshooting](docs/guides/troubleshooting.md) | Something does not appear |

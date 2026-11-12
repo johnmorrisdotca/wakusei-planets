@@ -64,6 +64,7 @@ import "@johnmorrisdotca/wakusei-planets/earth";
 
 - **The realistic and painted Earth stay this package's**, so the Earth looks like the other planets beside it.
 - **One WebGL context for the page.** Both packages draw through kazoku-ui's shared renderer, so a page with a planet and a globe still has one context and one budget.
+- **You are here, on the space view's Earth.** `import "@johnmorrisdotca/wakusei-planets/earth-places"` brings chikyu-earth's layout of places (its `/markers`, 0.36.0 or later) to `<wakusei-space>`, whose `earth-places` then marks the reader's place and favourites on its Earth ([the guide](earth-places.md)). Without the import the attribute draws nothing.
 - **The space view.** Today chikyu-earth's `<chikyu-space>` draws the Sun and the planets with this package's painter (`setBodyPainter`; chikyu-earth's guide "The real Sun, planets, Pluto and moons"). That view is moving into this package so the solar system lives in one place; when it lands, this guide and the upgrading notes say how to switch, and chikyu-earth keeps the Earth and its satellites.
 
 ## Why not one package

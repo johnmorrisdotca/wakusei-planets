@@ -92,6 +92,7 @@
     "./dist/lineup/element.js",
     "./dist/space/element.js",
     "./dist/plan/element.js",
+    "./dist/earth-places.js",
     "./dist/bodies/*.js",
     "./dist/tables/*.js",
     "./dist/craft/*.js",
@@ -100,6 +101,7 @@
     "./src/lineup/element.ts",
     "./src/space/element.ts",
     "./src/plan/element.ts",
+    "./src/earth-places.ts",
     "./src/bodies/*.ts",
     "./src/tables/*.ts",
     "./src/craft/*.ts"
@@ -524,6 +526,11 @@
       "import": "./dist/bodies/earth.js",
       "default": "./dist/bodies/earth.js"
     },
+    "./earth-places": {
+      "types": "./dist/earth-places.d.ts",
+      "import": "./dist/earth-places.js",
+      "default": "./dist/earth-places.js"
+    },
     "./coordinates": {
       "types": "./dist/coordinates.d.ts",
       "import": "./dist/coordinates.js",
@@ -589,7 +596,7 @@
     "@angular/core": "^22.2.4",
     "@angular/platform-browser": "^22.2.4",
     "@eslint/js": "^9.0.0",
-    "@johnmorrisdotca/chikyu-earth": "^0.10.0",
+    "@johnmorrisdotca/chikyu-earth": "^0.36.0",
     "@playwright/test": "1.64.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^24.0.0",

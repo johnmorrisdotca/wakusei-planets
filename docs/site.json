@@ -425,6 +425,11 @@
       "ja": "地球 (chikyu-earth が描く)",
       "platform": "browser"
     },
+    "./earth-places": {
+      "en": "You are here, and favourite places, on the space view's Earth, laid out by chikyu-earth",
+      "ja": "宇宙ビューの地球に「現在地」とお気に入りの場所を表示 (配置は chikyu-earth)",
+      "platform": "browser"
+    },
     "./coordinates": {
       "en": "Pure coordinate conversions",
       "ja": "座標変換",

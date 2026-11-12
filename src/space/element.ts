@@ -29,12 +29,14 @@ import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
 import type { MoonDot } from "./all-moons.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
-import { placeMarks, readPlaceLayers, type PlaceLayer } from "../place-marks.ts";
+import { placeMarks, pointUnder, readPlaceLayers, spotView, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
+import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, type Vec3 } from "../vec.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 
 export { setPlacesLoader } from "../scene/place-layer.ts";
+export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceKind, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type Sight, type SightEdge, type SpaceBody, type SpaceLight };
 
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
@@ -261,7 +263,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "all-moons", "far-opacity", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -308,6 +310,11 @@ export class WakuseiSpace extends HTMLElement {
   #markLoading: BodyId | undefined;
   #markHeard: (() => void) | undefined;
   #placeGlide = 0;
+  #earthLayer: EarthPlaceLayerView | undefined;
+  #earthSurface: Parameters<NonNullable<Parameters<typeof createSpaceItem>[1]["onEarth"]>>[0] = null;
+  #earthHeard: (() => void) | undefined;
+  #earthList: { text: string; list: readonly EarthPlace[] } | undefined;
+  #earthOmitted = 0;
   #surface: Parameters<NonNullable<Parameters<typeof createSpaceItem>[1]["onSurface"]>>[0] = null;
 
   /** The shared controller behind the element's own hands: for a page that moves the view itself, such as `controller.set({ zoom: space.zoomFor("moon") })`. It is there while the element is connected, whether `controls` is `none` or not. */
@@ -377,6 +384,11 @@ export class WakuseiSpace extends HTMLElement {
         this.#surface = surface;
         this.#markSurface();
       },
+      wantEarth: () => this.hasAttribute("earth-places"),
+      onEarth: (surface) => {
+        this.#earthSurface = surface;
+        this.#layEarthPlaces();
+      },
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
@@ -399,6 +411,10 @@ export class WakuseiSpace extends HTMLElement {
     this.#markHeard = onPlacesLoader(() => {
       this.#markList = undefined;
       this.#markSurface();
+    });
+    this.#earthHeard = onEarthPlacesLayout(() => {
+      this.#earthList = undefined;
+      this.#askEarthPlaces();
     });
     this.#labelBox.addEventListener("click", this.#labelClick);
     this.#labelBox.addEventListener("focusin", this.#labelFocus);
@@ -430,6 +446,11 @@ export class WakuseiSpace extends HTMLElement {
     this.#markLayer = undefined;
     this.#markHeard?.();
     this.#markHeard = undefined;
+    this.#earthLayer?.dispose();
+    this.#earthLayer = undefined;
+    this.#earthSurface = null;
+    this.#earthHeard?.();
+    this.#earthHeard = undefined;
   }
 
   attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
@@ -460,6 +481,7 @@ export class WakuseiSpace extends HTMLElement {
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
     if (name === "places" || name === "lang") this.#markSurface();
+    if (name === "earth-places" || name === "earth-places-look") this.#askEarthPlaces();
   }
 
   /**
@@ -476,6 +498,41 @@ export class WakuseiSpace extends HTMLElement {
   /** The marks laid on the body looked at now: each place's id, its layer and where its mark is, in CSS pixels from the view's top left. */
   get placesShown(): readonly { id: string; layer: PlaceLayer; x: number; y: number }[] {
     return this.#markLayer?.shown ?? [];
+  }
+
+  /**
+   * The reader's own place and the places they keep, drawn on the Earth wherever the camera looks: a list of `{ id, lon, lat, label, kind, color }` (`kind` is `here` or `favourite`), as JSON in the attribute `earth-places`.
+   * Each is a marker standing out of the ground that turns with the Earth, is hidden on the far side, fades at the edge and keeps its size in pixels; a name shows beside it when there is room, never over another name. Setting the property
+   * writes the attribute, and an empty list takes it away. It reads as the list chikyu-earth cleaned (a place with a longitude or latitude out of range is left out, at most 5,000). It draws nothing, and reads as empty, until the page has
+   * imported `@johnmorrisdotca/wakusei-planets/earth-places`, which brings chikyu-earth's layout (an optional peer).
+   *
+   * @example
+   * ```ts no-run
+   * import "@johnmorrisdotca/wakusei-planets/earth-places";
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.earthPlaces = [{ id: "me", lon: -79.4, lat: 43.7, label: "You are here", kind: "here" }];
+   * ```
+   */
+  get earthPlaces(): EarthPlace[] {
+    return [...this.#readEarthPlaces()];
+  }
+  set earthPlaces(list: readonly EarthPlace[] | null) {
+    if (list === null || list.length === 0) this.removeAttribute("earth-places");
+    else this.setAttribute("earth-places", JSON.stringify(list));
+  }
+  /** How the places on the Earth are drawn (the attribute `earth-places-look`): `beam` (the default), `pin` or `ring`. Setting it writes the attribute. */
+  get earthPlacesLook(): EarthPlaceLook {
+    return readEarthPlaceLook(this.getAttribute("earth-places-look"));
+  }
+  set earthPlacesLook(look: EarthPlaceLook | null) {
+    if (look === null) this.removeAttribute("earth-places-look");
+    else this.setAttribute("earth-places-look", look);
+  }
+  /** The markers laid on the Earth now, as the last draw left them: each place's id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`. */
+  get earthPlacesShown(): { marks: readonly EarthPlaceMark[]; omitted: number } {
+    return { marks: this.#earthLayer?.shown ?? [], omitted: this.#earthOmitted };
   }
 
   /**
@@ -529,6 +586,62 @@ export class WakuseiSpace extends HTMLElement {
     };
     requestAnimationFrame(step);
     return place;
+  }
+
+  #readEarthPlaces(): readonly EarthPlace[] {
+    const text = this.getAttribute("earth-places");
+    const using = earthPlacesLayout();
+    if (text === null || using === undefined) return [];
+    if (this.#earthList?.text === text) return this.#earthList.list;
+    // the places that matter most first: where the reader is, then the rest in the order given
+    const list = using.read(text);
+    const ordered = [...list.filter((place) => place.kind === "here"), ...list.filter((place) => place.kind !== "here")];
+    this.#earthList = { text, list: ordered };
+    return ordered;
+  }
+
+  /** The places, the look or the layout changed: lay them from the last draw's Earth, or when there was none ask for one draw to learn it. */
+  #askEarthPlaces(): void {
+    if (!this.hasAttribute("earth-places")) {
+      this.#earthLayer?.dispose();
+      this.#earthLayer = undefined;
+      this.#earthSurface = null;
+      this.#earthOmitted = 0;
+      return;
+    }
+    if (this.#earthSurface !== null) this.#layEarthPlaces();
+    else this.#gate?.request();
+  }
+
+  /** Lay the places over the Earth as the last draw left it, or take them away. Draws nothing: it runs inside the draw the view makes anyway. */
+  #layEarthPlaces(): void {
+    const surface = this.#earthSurface;
+    const root = this.shadowRoot;
+    const using = earthPlacesLayout();
+    const clear = (): void => {
+      this.#earthLayer?.clear();
+      this.#earthOmitted = 0;
+    };
+    if (surface === null || root === null || using === undefined || !this.hasAttribute("earth-places") || !(surface.radiusPx >= EARTH_PLACES_FROM_PX)) return clear();
+    const places = this.#readEarthPlaces();
+    if (places.length === 0) return clear();
+    this.#earthLayer ??= createEarthPlaceLayer(root);
+    const layer = this.#earthLayer;
+    const facts = BODIES.earth;
+    const scale: Vec3 = [1, 1 - facts.flattening, 1];
+    const view = spotView({ ...surface, scale });
+    const sun = surface.sun === null ? null : pointUnder(surface.sun, surface.pole, surface.meridian);
+    const look = this.earthPlacesLook;
+    const laid = using.layout(places, view, look, {
+      size: (place) => (place.label === undefined ? null : { width: layer.width(place.label), height: 18 }),
+      taken: this.#nameBoxes.map((one) => ({ left: one.x, top: one.y, width: one.width, height: one.height })),
+      sun,
+    });
+    // the first few in sight stand up; the rest are counted, never silently left out
+    const marks = { shapes: laid.shapes.slice(0, EARTH_PLACE_MARKS), labels: laid.labels };
+    marks.labels = laid.labels.filter((spot) => marks.shapes.some((shape) => shape.index === spot.index));
+    this.#earthOmitted = laid.shapes.length - marks.shapes.length;
+    layer.set(places, marks, look);
   }
 
   async #loadMarks(body: BodyId): Promise<readonly Place[]> {

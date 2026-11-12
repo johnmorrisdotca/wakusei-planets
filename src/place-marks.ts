@@ -252,3 +252,111 @@ export function turnToPlace(pole: Vec3, meridian: Vec3, lat: number, lon: number
   const wrap = (deg: number): number => ((((deg + 180) % 360) + 360) % 360) - 180;
   return { yaw: wrap(yaw / RAD), tilt: tilt / RAD };
 }
+
+/**
+ * A point of a body's surface as one picture shows it: where it falls (CSS pixels in the view), which way straight up from the ground there points on the screen (`upX`, `upY`: a direction whose length is how much of an upright
+ * stick the reader sees, 0 looking straight down on it and 1 seeing it side on) and `facing`, the cosine between the ground's upright and the way to the camera (above 0 it faces the reader, at or below it is on the far side).
+ * The shape is chikyu-earth's `SurfacePoint`, so its `layoutPlaces` reads it as it is.
+ *
+ * @example
+ * ```ts
+ * import type { SurfaceSpot } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * const middle: SurfaceSpot = { x: 160, y: 160, upX: 0, upY: 0, facing: 1 };
+ * console.log(middle.facing);
+ * ```
+ */
+export interface SurfaceSpot {
+  x: number;
+  y: number;
+  upX: number;
+  upY: number;
+  facing: number;
+}
+
+/**
+ * A picture of a body for places to be laid on by someone else's layout: its size and a way to find a point of its surface in it. The shape is chikyu-earth's `PlaceView`.
+ *
+ * @example
+ * ```ts
+ * import type { SpotView } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * const view: SpotView = { width: 320, height: 320, radius: 100, at: (lon, lat, out) => ((out.x = 160 + lon), (out.y = 160 - lat), (out.upX = 0), (out.upY = 0), (out.facing = 1), true) };
+ * console.log(view.width);
+ * ```
+ */
+export interface SpotView {
+  width: number;
+  height: number;
+  /** The body's radius in the picture, in CSS pixels. */
+  radius: number;
+  /** Find a longitude and latitude in the picture, writing it to `out`; false when it cannot be drawn. */
+  at(lon: number, lat: number, out: SurfaceSpot): boolean;
+}
+
+/**
+ * A body as a view draws it, made into a picture places can be laid on: for each longitude and latitude, where it falls, which way is up from the ground there and whether it faces the reader. Works with the
+ * perspective of the camera (`eye`) or without it (`toward`), on the body's own ellipsoid, so a tipped, turned or flattened body is right. A point the projection cannot place gives `false`.
+ *
+ * @param view - The body as drawn.
+ * @returns The picture, for a layout such as chikyu-earth's `layoutPlaces`.
+ *
+ * @example
+ * ```ts
+ * import { spotView } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * const view = spotView({ centre: [0, 0, 0], radius: 1, pole: [0, 1, 0], meridian: [0, 0, 1], scale: [1, 1, 1], toward: [0, 0, 1], project: (p) => ({ x: 160 + p[0] * 100, y: 160 - p[1] * 100 }), width: 320, height: 320, radiusPx: 100 });
+ * const spot = { x: 0, y: 0, upX: 0, upY: 0, facing: 0 };
+ * view.at(0, 0, spot);
+ * console.log(Math.round(spot.x), Math.round(spot.y), spot.facing);
+ * ```
+ */
+export function spotView(view: SurfaceView): SpotView {
+  return {
+    width: view.width,
+    height: view.height,
+    radius: view.radiusPx,
+    at(lon, lat, out) {
+      const { point, normal } = surfacePoint(view, lat, lon);
+      const sight: Vec3 = view.eye !== undefined ? [view.eye[0] - point[0], view.eye[1] - point[1], view.eye[2] - point[2]] : (view.toward ?? [0, 0, 1]);
+      const facing = dot(normal, sight) / (Math.hypot(sight[0], sight[1], sight[2]) || 1);
+      const foot = view.project(point);
+      if (foot === null) return false;
+      // the upright is found by projecting a point a little way out along the normal: its direction on the screen, its length how much of the stick is seen side on
+      const reach = view.radius * 0.05;
+      const top = view.project([point[0] + normal[0] * reach, point[1] + normal[1] * reach, point[2] + normal[2] * reach]);
+      const dx = top === null ? 0 : top.x - foot.x;
+      const dy = top === null ? 0 : top.y - foot.y;
+      const length = Math.hypot(dx, dy);
+      const side = Math.sqrt(Math.max(0, 1 - facing * facing));
+      out.x = foot.x;
+      out.y = foot.y;
+      out.upX = length > 1e-6 ? (dx / length) * side : 0;
+      out.upY = length > 1e-6 ? (dy / length) * side : 0;
+      out.facing = facing;
+      return true;
+    },
+  };
+}
+
+/**
+ * The longitude and latitude, in degrees, of the point of a body's surface that lies in a direction from its centre in the scene (the Sun's, for the `sun` of a layout that dims the night), from the body's axes.
+ *
+ * @param direction - The direction from the body's centre, in the scene.
+ * @param pole - The body's north pole.
+ * @param meridian - Its longitude 0 on the equator.
+ * @returns The point, `{ lon, lat }`.
+ *
+ * @example
+ * ```ts
+ * import { pointUnder } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * console.log(pointUnder([1, 0, 0], [0, 1, 0], [0, 0, 1])); // longitude 90 east on the equator
+ * ```
+ */
+export function pointUnder(direction: Vec3, pole: Vec3, meridian: Vec3): { lon: number; lat: number } {
+  const east: Vec3 = [pole[1] * meridian[2] - pole[2] * meridian[1], pole[2] * meridian[0] - pole[0] * meridian[2], pole[0] * meridian[1] - pole[1] * meridian[0]];
+  const len = Math.hypot(direction[0], direction[1], direction[2]) || 1;
+  const s: Vec3 = [direction[0] / len, direction[1] / len, direction[2] / len];
+  return { lon: Math.atan2(dot(s, east), dot(s, meridian)) / RAD, lat: Math.asin(Math.max(-1, Math.min(1, dot(s, pole)))) / RAD };
+}
