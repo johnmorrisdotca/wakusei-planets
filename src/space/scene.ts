@@ -1332,6 +1332,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         dispose() {
           points?.dispose();
           dots?.dispose();
+          oortGeometry.dispose();
+          (oortLines.material as THREE.Material).dispose();
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);
