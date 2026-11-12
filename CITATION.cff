@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: "If you use Wakusei Planets in your work, please cite it as below, and credit the sources of the numbers you use (NOTICE.md)."
 title: "Wakusei Planets"
 type: software
-version: 0.35.0
+version: 0.36.0
 authors:
   - family-names: Morris
     given-names: John
