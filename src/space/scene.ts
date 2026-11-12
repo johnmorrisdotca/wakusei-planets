@@ -170,6 +170,8 @@ export interface OrbiterSet {
   position(id: string, ms: number): Vec3 | null;
   path(id: string, ms: number, points: number): Vec3[];
   status(id: string, ms: number): "tracked" | "predicted" | "modelled" | "none";
+  /** Whether the craft is drawn dim at a moment: a modelled path, or a predicted one that misses Horizons by more than a small share of its body's radius. */
+  dim(id: string, ms: number): boolean;
   name(id: string): { en: string; ja: string };
 }
 
@@ -213,8 +215,8 @@ export interface SpaceModel {
   /** Show the spacecraft in orbit round the Moon and Mars: a dot each on its orbit line, named, once its body is big enough on the screen. Off by default; their paths are loaded when first shown. */
   orbiters: boolean;
   orbiterSet: OrbiterSet | null;
-  /** The orbiters at the last draw: how many were drawn, and each drawn one's status. */
-  orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none"> };
+  /** The orbiters at the last draw: how many were drawn, each drawn one's status, and which were drawn dim. */
+  orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[] };
   /** Show Starman and the Roadster: a small marked body on its orbit line, named. Off by default; its path is loaded when it is first shown. */
   roadster: boolean;
   roadsterPath: RoadsterPath | null;
@@ -317,7 +319,7 @@ export const newSpaceModel = (): SpaceModel => ({
   arrowCount: ARROWS_PER_ORBIT,
   orbiters: false,
   orbiterSet: null,
-  orbitersDrawn: { count: 0, status: {} },
+  orbitersDrawn: { count: 0, status: {}, dim: [] },
   roadster: false,
   roadsterPath: null,
   roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
@@ -982,6 +984,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const orbiterSet = model.orbiters ? model.orbiterSet : null;
           const orbiterPlaces: Record<string, { at: Vec3; px: number }> = {};
           const orbiterStatus: Record<string, "tracked" | "predicted" | "modelled" | "none"> = {};
+          const orbitersDim: string[] = [];
           if (orbiterSet !== null) {
             for (const id of orbiterSet.ids) {
               const centre = orbiterSet.centre(id);
@@ -1006,7 +1009,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.mesh.position.set(place[0], place[1], place[2]);
               drawing.mesh.scale.setScalar(drawn);
               (drawing.material.uniforms.uLight!.value as THREE.Vector3).set(...toSunOf(centre));
-              const dim = status === "modelled" || status === "predicted";
+              const dim = orbiterSet.dim(id, model.time);
               (drawing.material.uniforms.uColour!.value as THREE.Vector3).set(dim ? 0.55 : 0.75, dim ? 0.6 : 0.9, dim ? 0.65 : 1);
               if (!Number.isFinite(drawing.epoch) || Math.abs(model.time - drawing.epoch) > ORBITER_LINE_KEEP_MS) {
                 const points = orbiterSet.path(id, model.time, ORBIT_POINTS);
@@ -1026,6 +1029,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.line.visible = model.orbits;
               orbiterPlaces[id] = { at: place, px: dotPx };
               orbiterStatus[id] = status;
+              if (dim) orbitersDim.push(id);
             }
           } else {
             for (const drawing of orbiterDrawings.values()) {
@@ -1033,7 +1037,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.line.visible = false;
             }
           }
-          model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus };
+          model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus, dim: orbitersDim };
           model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };
 
           // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)

@@ -1,8 +1,8 @@
 // The orbiters in the space view: off by default and their module not fetched; on, each craft with a path is a dot on its orbit line round the Moon or Mars once the body is big enough
-// on the screen, named in the page's language, dim when its path is only modelled; from afar none is drawn. Chromium, drawing in software; every wait is on what the page reports.
+// on the screen, named in the page's language, dim when its path is modelled or predicted with a large error (`orbiterDim`); from afar none is drawn. Chromium, drawing in software; every wait is on what the page reports.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { ORBITER_IDS, orbiterStatus } from "../src/orbiters.ts";
+import { ORBITER_IDS, orbiterDim, orbiterElements, orbiterStatus } from "../src/orbiters.ts";
 import { callOn, openSpace, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
@@ -14,6 +14,7 @@ test.beforeEach(({ page }, testInfo) => {
 interface Drawn {
   count: number;
   status: Record<string, string>;
+  dim: string[];
 }
 const drawnOrbiters = async (page: Page): Promise<Drawn> => ((await statsOf(page)) as unknown as { orbiters: Drawn }).orbiters;
 const nameOf = (page: Page, id: string) => page.locator(SPACE).locator(`.sp-label[data-body="${id}"]`);
@@ -30,8 +31,10 @@ test("off by default and not fetched; at the Moon the lunar orbiters with a path
   page.on("response", (response) => {
     if (/orbiters/i.test(response.url())) fetched.push(response.url());
   });
-  const when = Date.UTC(2026, 10, 11, 12);
-  await openSpace(page, "t=2026-11-11T12:00Z&play=off");
+  // a moment in the days after the fit, from the data, so a refresh of the data keeps the test meaning the same: Hope predicted with a small error, the low orbits with a large one
+  const hope = orbiterElements("hope")!;
+  const when = Math.floor((Date.parse(hope.fitUntil) + Date.parse(hope.validUntil)) / 2 / 60_000) * 60_000;
+  await openSpace(page, `t=${new Date(when).toISOString().slice(0, 16)}Z&play=off`);
   // at the Moon itself (the demo's "goto=moon" is the Earth and the Moon's orbit, where the Moon is a few pixels across)
   await drawn(page, () => callOn(page, "goTo", "moon", { smooth: false }));
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "orbiters"))).toBe(false);
@@ -48,6 +51,7 @@ test("off by default and not fetched; at the Moon the lunar orbiters with a path
   expect(seen.status["capstone"], "CAPSTONE has no path").toBeUndefined();
   expect(seen.status["mro"], "Mars's craft are not drawn from the Moon").toBeUndefined();
   expect(seen.count).toBe(lunar.length);
+  expect(seen.dim.sort(), "dim as orbiterDim says").toEqual(lunar.filter((id) => orbiterDim(id, when)).sort());
   await expect(nameOf(page, "lro")).toHaveText("Lunar Reconnaissance Orbiter");
   // Japanese
   await page.locator(SPACE).evaluate((el) => el.setAttribute("lang", "ja"));
@@ -64,6 +68,11 @@ test("off by default and not fetched; at the Moon the lunar orbiters with a path
   expect(mars.status["tianwen-1"]).toBeUndefined();
   expect(mars.status["maven"]).toBe("modelled");
   expect(mars.status["mro"]).toBe(orbiterStatus("mro", when));
+  const drawnMars = Object.keys(mars.status);
+  expect(mars.dim.sort(), "dim as orbiterDim says").toEqual(drawnMars.filter((id) => orbiterDim(id as never, when)).sort());
+  expect(mars.status["hope"]).toBe("predicted");
+  expect(mars.dim, "a predicted path within 2 per cent of Mars's radius is drawn full").not.toContain("hope");
+  expect(mars.dim, "a modelled path is dim").toContain("maven");
   // and off again
   await drawn(page, () => page.locator("#orbiters").dispatchEvent("click"));
   expect((await drawnOrbiters(page)).count).toBe(0);
