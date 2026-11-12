@@ -16,7 +16,8 @@ Two errors are measured against Horizons for each craft: `fitErrorKm` over the f
 date, `predictedErrorKm` over the window's own length past it (what "predicted" means: the ellipse carried on beyond the data it was fitted to). A craft whose Horizons
 track has ended has none.
 
-Usage: python3 -I scripts/make-orbiter-data.py [--cache DIR] [craft ...]   (needs the network; one request at a time, a pause between requests, stops on any error; keep the cache outside the repository)"""
+Usage: python3 -I scripts/make-orbiter-data.py [--cache DIR] [--brief] [craft ...]   (needs the network; one request at a time, a pause between requests, stops on any error; keep the cache
+outside the repository). `--brief` leaves out the working lines and ends with one line a craft; `pnpm orbiters:refresh` runs it so, with the cache in ~/.cache/wakusei-planets."""
 import datetime, hashlib, json, math, os, re, sys, time, urllib.parse, urllib.request
 
 SOURCE = "https://ssd.jpl.nasa.gov/api/horizons.api"
@@ -261,8 +262,30 @@ def load_existing():
         return {}
 
 
+BRIEF = False
+
+
+def say(text):
+    """A working line, left out with --brief."""
+    if not BRIEF:
+        print(text, file=sys.stderr)
+
+
+def summary(craft, fit):
+    """One line for a craft: what the file now holds for it."""
+    if "a" not in fit:
+        return f"{craft}: {fit.get('basis', 'modelled')}, no path"
+    predicted = fit.get("predictedErrorKm")
+    after = f", predicted worst {predicted['max']} km to {fit['validUntil'][:10]}" if predicted else ""
+    return f"{craft}: {fit['basis']}, fit worst {fit['fitErrorKm']['max']} km to {fit.get('fitUntil', '')[:10]}{after}"
+
+
 def main():
+    global BRIEF
     args = sys.argv[1:]
+    if "--brief" in args:
+        BRIEF = True
+        args.remove("--brief")
     cache = None
     if "--cache" in args:
         at = args.index("--cache")
@@ -304,14 +327,14 @@ def main():
                 kept.update({"id": craft, "center": body, "horizonsId": int(command), "basis": "modelled", "retrieved": read})
                 fits[craft] = kept
                 continue
-            print(f"{craft}: no track now (Horizons ends {ended.date()}): the last {window} days of it, modelled", file=sys.stderr)
+            say(f"{craft}: no track now (Horizons ends {ended.date()}): the last {window} days of it, modelled")
         el = fit(rows, mu)
         median, worst = error_of(el, rows, mu)
         mean_r = sum(norm(r) for _, r, _ in rows) / len(rows)
         allowed = limit if not isinstance(limit, tuple) else limit[1] * mean_r
         if worst > 0.5 * mean_r:
             # no ellipse describes this path (CAPSTONE's near-rectilinear halo orbit): the craft is kept with no elements, so nothing is drawn for it
-            print(f"{craft}: a mean ellipse misses by {worst:.0f} km of a {mean_r:.0f} km orbit: no elements kept, modelled", file=sys.stderr)
+            say(f"{craft}: a mean ellipse misses by {worst:.0f} km of a {mean_r:.0f} km orbit: no elements kept, modelled")
             fits[craft] = {"id": craft, "center": body, "horizonsId": int(command), "basis": "modelled", "retrieved": read, "horizonsRevised": revised, "trackedUntil": through or (ended.strftime("%Y-%m-%d") if ended else ""), "trackEnd": iso_of_tdb(stop) if ended else ""}
             continue
         basis = "tracked" if ended is None else "modelled"
@@ -322,10 +345,10 @@ def main():
             if extra is not None and len(extra) >= 50:
                 p_median, p_worst = error_of(el, extra, mu)
                 predicted = {"median": round(p_median, 1), "max": round(p_worst, 1)}
-                print(f"{craft}: predicted span, {len(extra)} samples over the next {window} days: error median {p_median:.1f} km, worst {p_worst:.1f} km", file=sys.stderr)
+                say(f"{craft}: predicted span, {len(extra)} samples over the next {window} days: error median {p_median:.1f} km, worst {p_worst:.1f} km")
             else:
-                print(f"{craft}: Horizons has nothing for the {window} days after the read date: no predicted error", file=sys.stderr)
-        print(f"{craft}: {len(rows)} samples over {window} days, a {el['a']:.0f} km, e {el['e']:.4f}, i {el['i']:.2f}, node {el['raanRate']:+.4f} and periapsis {el['argpRate']:+.4f} deg/day; error median {median:.1f} km, worst {worst:.1f} km (limit {allowed:.0f}){'' if worst <= allowed else '  OVER THE LIMIT'}", file=sys.stderr)
+                say(f"{craft}: Horizons has nothing for the {window} days after the read date: no predicted error")
+        say(f"{craft}: {len(rows)} samples over {window} days, a {el['a']:.0f} km, e {el['e']:.4f}, i {el['i']:.2f}, node {el['raanRate']:+.4f} and periapsis {el['argpRate']:+.4f} deg/day; error median {median:.1f} km, worst {worst:.1f} km (limit {allowed:.0f}){'' if worst <= allowed else '  OVER THE LIMIT'}")
         period_days = 360 / (math.degrees(math.sqrt(mu / el["a"] ** 3)) * 86400 + el["meanMotionCorrection"])
         fits[craft] = {
             "id": craft, "center": body, "horizonsId": int(command),
@@ -361,6 +384,9 @@ def main():
     with open(FIXTURE, "w") as f:
         json.dump(fixture, f, indent=1)
     print(f"wrote {OUT} ({len(ordered)} craft) and {FIXTURE}; {horizons.requests} requests", file=sys.stderr)
+    if BRIEF:
+        for craft in wanted + [k for k in NO_TRACK if k not in wanted]:
+            print(summary(craft, ordered[craft]))
 
 
 main()
