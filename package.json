@@ -363,6 +363,11 @@
       "import": "./dist/orbiters.js",
       "default": "./dist/orbiters.js"
     },
+    "./ground-track": {
+      "types": "./dist/ground-track.d.ts",
+      "import": "./dist/ground-track.js",
+      "default": "./dist/ground-track.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",

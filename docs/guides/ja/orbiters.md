@@ -68,3 +68,5 @@ python3 -I scripts/make-orbiter-data.py --cache <リポジトリの外のフォ�
 ## 宇宙ビューで
 
 `<wakusei-space orbiters>` (または `space.orbiters = true`) は、経路のある各機を、表示している日付に表が示す位置に小さな点として描きます。どちらの縮尺でも天体に合わせた大きさで、軌道の線の上に置き、横にページの言語で名前を出します。描くのは、月か火星が画面で半径24 CSSピクセル以上になってからです (それより遠いと、点がすべて天体の点に重なります)。`modelled` と `predicted` の経路は暗く描き、`none` の機は描きません。初期値はオフで、このモジュールは初めて表示するときに読み込みます。`stats.orbiters` が、描いたものと各機の状態を返します。1機に乗って見るには `space.ride(orbiterRidePoint("lro"), { around: "moon" })` と書きます。カメラは機の位置から月を見ます ([乗って見る](ride-along.md))。
+
+`space.paint = { id: "lro", length: "1d", swath: "track" }` は、その機の地上軌跡を、周回している天体の表面に塗ります。`length` は時計の時間で `1d` (初期値)、`1w`、`1m` です。`swath` は `track` (機の真下の点) か `coverage` (機が地平線から10度以上の高さに見える地面) です。`space.clearPaint()` で消え、別の機を選ぶと前の軌跡は消えます。`length` より古い部分は薄れて落ちます。フレームのあいだの軌道も埋めるので、速い時計でも線は切れず、時計を戻すと軌跡も戻ります。時刻が進んでいるあいだは、描くフレームごとに絵を1回送り、止まっているときと塗っていないときは送りません。日付変更線の分割と、見える範囲の半径は `@johnmorrisdotca/wakusei-planets/ground-track` にあり、DOM も three.js も使いません。

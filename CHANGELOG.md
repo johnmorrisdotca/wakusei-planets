@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Paint an orbiter's path on the Moon or Mars** (MODULES-1168). `space.paint = { id, length, swath }` on `<wakusei-space>` paints that craft's ground track on the body it goes round (`id` such as `lro` or `mro`; `length` `1d` by default, or `1w`, `1m`, in the clock's time; `swath` `track` by default, or `coverage`, the ground where the craft is at least 10° up). `clearPaint()` takes it off, and another craft clears the old trail. Parts older than `length` fade and are dropped. The line is filled between frames, including backwards. One upload a frame while time moves, nothing at rest, nothing while paint is off. The date-line split, the pole split and the swath radius are `@johnmorrisdotca/wakusei-planets/ground-track` (no DOM, no three.js). The space page has Paint, Clear, and 1 day, 1 week, 1 month.
+
 ## [0.37.1] - 2026-11-12
 
 - **The Earth's line look stays chikyu-earth's globe while it turns** (MODULES-1152). On a page with chikyu-earth's element, `<wakusei-body body="earth" look="line">` showed chikyu-earth's globe with the countries and then, at the next frame of its turn (the line look turns by default, 30 times a second), drew this package's own outline over it. A body that another package draws is now left to that package, and the line look's tick stops while it is shown; the same element made another body turns again. A browser test puts an Earth and a Mars in the line look on one page with chikyu-earth's element and counts what the page reports: the globe is never replaced while Mars is redrawn twenty times.
