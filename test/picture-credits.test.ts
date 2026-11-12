@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import * as THREE from "three";
 import { OWN_SOURCES } from "../src/door/own.ts";
@@ -124,4 +125,20 @@ test("finer tiles add the tile credit while they are on the body, and Mercury's 
   assert.ok(painter.credit.en.includes(mercuryTilesCredit("en")));
   mercury.dispose();
   assert.equal(OWN_SOURCES[1]!.id, "wakusei-tiles");
+});
+
+test("every picture row of NOTICE.md is in PICTURE_CREDITS with the same licence, credit and changes", () => {
+  const notice = readFileSync(new URL("../NOTICE.md", import.meta.url), "utf8").split("\n");
+  const rows = notice.filter((line) => /^\| `[a-z]+-\*\.webp` \|/.test(line));
+  assert.equal(rows.length, PICTURE_CREDITS.length);
+  for (const line of rows) {
+    const cells = line.split(" | ").map((cell) => cell.replace(/^\| /, "").replace(/ \|$/, "").trim());
+    const id = /`([a-z]+)-/.exec(cells[0]!)![1]!;
+    const row = PICTURE_CREDITS.find((one) => one.id === id);
+    assert.ok(row, id);
+    assert.equal(row.licence, cells[3]!.startsWith("CC BY 4.0") ? "CC BY 4.0" : "Public domain", id);
+    if (id !== "earth") assert.equal(row.credit.en, cells[4], id);
+    else assert.ok(row.credit.en.startsWith(cells[4]!), id);
+    if (row.changes !== undefined) assert.ok(cells[5]!.startsWith(row.changes.en.replace(/\.$/, "")), id);
+  }
 });
