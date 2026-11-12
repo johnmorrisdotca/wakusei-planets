@@ -102,7 +102,9 @@ Every grade is below the 29 moons the package draws in full: from the main entry
 
 ## In the space view
 
-`<wakusei-space all-moons>` (or `space.allMoons = true`) draws every catalogue moon the view does not draw in full as a small dot round its planet, all in one draw, at its mean-orbit place, nearer in the compressed scale by the same mapping as the drawn moons. The catalogue is fetched as a chunk of its own the first time the dots are turned on, so a view that never turns them on never loads it. The dots draw only when the view draws; nothing is drawn at rest. `stats.allMoons` says whether they are on, whether the catalogue has loaded and how many dots the last draw drew. A page that hands the element its own subset of three.js (`setThreeLoader`) must include `Points` and `PointsMaterial` for them. The demo's space page has an "All moons" switch that turns them on and lists the moons of the planet in view, with their groups.
+`<wakusei-space all-moons>` (or `space.allMoons = true`) draws every catalogue moon the view does not draw in full as a small dot round its planet, all in one draw, at its mean-orbit place, nearer in the compressed scale by the same mapping as the drawn moons. The catalogue is fetched as a chunk of its own the first time the dots are turned on, so a view that never turns them on never loads it. The dots draw only when the view draws; nothing is drawn at rest. `stats.allMoons` says whether they are on, whether the catalogue has loaded and how many dots the last draw drew. A page that hands the element its own subset of three.js (`setThreeLoader`) must include `Points` and `PointsMaterial` for them. The demo's space page has an "All moons" switch that turns them on and lists the moons of the planet in view, with their groups; a moon measured more than 10 degrees off is marked "rough place" in the list.
+
+The dots show each moon's orbit and roughly where on it the moon is. Regular moons are within about half a degree; many small outer moons can be tens of degrees off within a year (282 of the 468 are more than 10 degrees off), so a dot is not an exact position.
 
 ## Kept current
 
