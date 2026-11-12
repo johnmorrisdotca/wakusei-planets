@@ -584,7 +584,7 @@ pnpm test:readme   # every ts block of the README, type-checked and run against 
 pnpm test:usage    # every way of using it in the README and the guides, built and opened
 pnpm docs:check    # the reference site's checks
 pnpm test:demo     # the demo and the docs site in a real browser
-pnpm dev           # the demo on http://127.0.0.1:8300/wakusei-planets/
+pnpm dev           # the demo on http://127.0.0.1:8225/wakusei-planets/
 ```
 
 The pictures in `docs/images` are made by the package's own script:

@@ -5,7 +5,7 @@ import { acquireBrowserLock, SOFTWARE_GL_ARGS } from "@johnmorrisdotca/kazoku-ui
 import { chromium, type Browser, type Page } from "@playwright/test";
 import { captureDrawing, composeThumbnails } from "./family-thumbnail.mjs";
 
-const port = 8302;
+const port = 8227;
 const server = spawn(process.execPath, ["scripts/dev.ts"], { env: { ...process.env, PORT: String(port) }, stdio: "ignore" });
 const out = (name: string) => new URL(`../docs/images/${name}.png`, import.meta.url).pathname;
 

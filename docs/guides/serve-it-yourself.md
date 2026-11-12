@@ -7,7 +7,7 @@ description: Run a small JSON service on your own computer.
 
 [日本語](ja/serve-it-yourself.md)
 
-You host this service yourself; we do not host it. Build the package and run `node examples/serve/server.mjs`. It listens on `127.0.0.1:8310`; set `PORT` to choose another port.
+You host this service yourself; we do not host it. Build the package and run `node examples/serve/server.mjs`. It listens on `127.0.0.1:8235`; set `PORT` to choose another port.
 
 - `GET /body?id=mars` returns facts.
 - `GET /position?body=mars&date=2026-11-08T00:00Z` returns heliocentric ecliptic J2000 coordinates in au.
@@ -22,7 +22,7 @@ import { createServer } from "node:http";
 import { BODIES, BODY_IDS, stopPlaceAu } from "@johnmorrisdotca/wakusei-planets";
 import { distance } from "@johnmorrisdotca/wakusei-planets/nearest";
 
-const port = Number(process.env.PORT ?? 8310);
+const port = Number(process.env.PORT ?? 8235);
 createServer((request, response) => {
   const send = (status, value) => {
     response.writeHead(status, { "content-type": "application/json; charset=utf-8" });

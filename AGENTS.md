@@ -44,7 +44,7 @@ This repo is one of the family of John Morris's npm packages. The rules every pa
 | Repo | `johnmorrisdotca/wakusei-planets` |
 | Board | `modules` (see the one-home table in spx-stats `docs/package-work.md`) |
 | Title prefix and `--area` | `wakusei-planets` |
-| Ports | 8300 to 8399 (this package's own block in John's port table): 8300 the demo and dev, 8301 the tests, 8302 the picture scripts, 8310 the serve example, 8303 to 8399 anything else |
+| Ports | 8225 to 8249 (this package's own block in John's port table): 8225 the demo and dev, 8226 the tests, 8227 the picture scripts, 8235 the serve example, 8228 to 8249 anything else |
 | Checks before a push | `pnpm check`, `pnpm test:usage`, `pnpm test:demo`, `pnpm test:freeze` |
 | Release | `release.yml` → `reusable-release.yml` (with the CI-green gate and the freeze test); trusted publisher entry: `release.yml` |
 | Hand-off project | `wakusei-planets` |
