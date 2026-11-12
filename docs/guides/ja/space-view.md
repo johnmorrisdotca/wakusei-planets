@@ -116,9 +116,13 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 `help` (属性、または `space.help`。初期値はオフ) はヘルプモードで、見ている天体に、軸にそった線と、回る向きを示す曲がった矢印を描きます。軸の線と矢印は、天体の手前と奥を区別して描くので、天体を突き抜けては描きません。軸の線は、手前の極から天体の中に入ります。奥の極から出ている部分は、その端が天体の後ろに隠れていないときだけ見えます。矢印も、天体の後ろを回る部分は隠れます。`help-through` (属性、または `space.helpThrough`。初期値はオフ) をオンにすると、以前と同じく、線も矢印も、全体を天体の上に重ねて描きます。矢印は、天体が本当に回る軸のまわりを、右ねじの向きにまわります。その軸は、`spinAxis(id, ms)` が本初子午線の動きから求めます。地球、火星、木星やほとんどの天体は軸が北極の向きで、金星と天王星は逆まわりなので、北極と反対向きです。横だおしの天王星は、軸が黄道にほぼそって見えます。いつも同じ面を惑星に向ける衛星は、軌道を1周するあいだに1回まわり、公転と同じ向きです。デモでは、ヘッダーのファミリー共通の「説明」スイッチと結んでいます。`stats.help` は、どの天体か、その軸、描いた矢印がまわる軸を返します。
 
+## 小惑星帯とカイパーベルト
+
+表示は、はじめから小惑星帯とカイパーベルトを描きます。NASA/JPL の小天体データベースの番号つきの小天体3,340個を7つの帯に分け、帯ごとに専用の色で、1回のインスタンス描画です。`space.belts = ["main", "trojan"]` (または属性 `belts`) で出す帯を選び、`[]` や `belts="off"` で消し、`space.enterBelt("main")` でカメラを帯の中へ飛ばし、`space.leaveBelt()` で出ます。表示には、天体が実際にはどれだけまばらにあるかを書いた1行が出ます。表、数、サーバー側の使い方は [帯のガイド](belts.md) にあります。縮めた縮尺では、オールトの雲の内側のふち (太陽から約2,000天文単位) も、名前つきの殻として描きます。
+
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`all-moons` (ほかの衛星をすべて点で)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体) です。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`all-moons` (ほかの衛星をすべて点で)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 天体から天体への移動
 

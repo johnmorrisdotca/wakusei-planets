@@ -7,6 +7,7 @@ import type { ThreeParts } from "../scene/body.ts";
 import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, type PointsThree } from "../door/points.ts";
 import { createMoonDots, type DotsThree, type MoonDot } from "./all-moons.ts";
+import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
@@ -248,7 +249,11 @@ export interface SpaceModel {
   /** What the help arrow drew at the last draw, or null: the body, the axis it spins about (right-hand rule), the north pole, and the axis the drawn arc itself turns about (measured from its points). */
   helpDrawn: { body: BodyId; axis: Vec3; pole: Vec3; retrograde: boolean; arcTurn: Vec3 } | null;
   /** The data door at the last draw: how many small bodies are in the one instanced draw, and how many tiles or marks each source gave (by id): the credits. */
-  door: { points: number; used: Record<string, number> };
+  door: { points: number; belts: number; draws: number; used: Record<string, number> };
+  /** The belts drawn (the package's own source of them, `wakusei-belts`): `[]` for none. The default is every belt. */
+  belts: readonly BeltId[];
+  /** Where the label of the Oort cloud's shell is on the screen at the last draw, in CSS pixels, or null when the shell is not drawn or not in view. */
+  oort: { x: number; y: number } | null;
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -348,7 +353,9 @@ export const newSpaceModel = (): SpaceModel => ({
   labelVersion: 0,
   labelsDrawn: { count: 0, focus: null },
   helpDrawn: null,
-  door: { points: 0, used: {} },
+  door: { points: 0, belts: 0, draws: 0, used: {} },
+  belts: BELT_IDS,
+  oort: null,
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -448,12 +455,22 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       let trackStep = model.stepMs;
       const scene = new three.Scene();
       // the small bodies of the record sources, in one instanced draw (a page's own subset of three needs the two instanced classes for it)
-      const points = deps.book !== undefined && typeof (three as Partial<PointsThree>).InstancedBufferGeometry === "function" ? createSmallBodyPoints(three as unknown as PointsThree) : undefined;
+      const points = deps.book !== undefined && typeof (three as Partial<PointsThree>).InstancedBufferGeometry === "function" ? createSmallBodyPoints(three as unknown as PointsThree, { colours: Object.fromEntries(BELT_IDS.map((id) => [id, BELTS[id].colour])) }) : undefined;
       if (points !== undefined) scene.add(points.object);
       let pointsVersion = -1;
       // the catalogue's other moons as dots (a page's own subset of three needs Points and PointsMaterial for them)
       const dots = typeof (three as Partial<DotsThree>).Points === "function" ? createMoonDots(three as unknown as DotsThree) : undefined;
       if (dots !== undefined) scene.add(dots.object);
+      let pointsBelts: string | null = null;
+      // the Oort cloud: three great circles at the shell's inner edge, drawn where the squeezed scale fits it (true to scale it is 2,000 astronomical units out, far past this view's reach)
+      const OORT_SEGMENTS = 96;
+      const oortPositions = new Float32Array(3 * (OORT_SEGMENTS + 1) * 3);
+      const oortGeometry = new three.BufferGeometry();
+      oortGeometry.setAttribute("position", new three.BufferAttribute(oortPositions, 3));
+      const oortLines = new three.Line(oortGeometry, new three.LineBasicMaterial({ color: 0x8a96c8, transparent: true, opacity: 0.35 }));
+      oortLines.frustumCulled = false;
+      oortLines.visible = false;
+      scene.add(oortLines);
       const camera = new three.PerspectiveCamera(FOV, width / Math.max(1, height), 0.05, 1000);
       const target = new three.Vector3();
       const projected = new three.Vector3();
@@ -949,10 +966,52 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (pointsVersion !== deps.book.version) {
               pointsVersion = deps.book.version;
               points.set(deps.book.smallBodies());
+              pointsBelts = null;
+            }
+            // the belts the view shows: a belt left out of `model.belts` is taken out of the draw (the package's own source of them, whose bodies carry a belt; the bodies of a page's own source are always drawn)
+            const wanted = model.belts.join(",");
+            if (wanted !== pointsBelts) {
+              pointsBelts = wanted;
+              points.set(deps.book.smallBodies().filter((body) => (body as { belt?: string }).belt === undefined || (model.belts as readonly string[]).includes((body as { belt?: string }).belt!)));
             }
             const ratio = model.ratio();
             points.update({ jd: toTerrestrialTime(model.time) / 86_400_000 + 2_440_587.5, mode, sun: sunPos, width: size.width * ratio, height: size.height * ratio, ratio });
-            model.door.points = points.count;
+            let belts = 0;
+            for (const id of BELT_IDS) belts += points.countOf(id);
+            model.door.points = points.count - belts;
+            model.door.belts = belts;
+            model.door.draws = points.draws;
+          }
+
+          // the Oort cloud's shell, labelled, where the squeezed scale has room for it
+          model.oort = null;
+          oortLines.visible = mode === "compressed" && model.orbits && model.belts.length > 0;
+          if (oortLines.visible) {
+            const radius = OORT.innerAu ** 0.45 * 70;
+            const circle = (axis: number): void => {
+              for (let i = 0; i <= OORT_SEGMENTS; i += 1) {
+                const t = (i / OORT_SEGMENTS) * 2 * Math.PI;
+                const c = Math.cos(t) * radius;
+                const sn = Math.sin(t) * radius;
+                const v: Vec3 = axis === 0 ? [c, sn, 0] : axis === 1 ? [0, c, sn] : [c, 0, sn];
+                oortPositions.set([sunPos[0] + v[0], sunPos[1] + v[1], sunPos[2] + v[2]], (axis * (OORT_SEGMENTS + 1) + i) * 3);
+              }
+            };
+            circle(0);
+            circle(1);
+            circle(2);
+            (oortGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+            // the label sits on the shell where it is nearest the middle of the picture and in front of the camera
+            let best = Number.POSITIVE_INFINITY;
+            for (let i = 0; i < 3 * (OORT_SEGMENTS + 1); i += 2) {
+              projected.set(oortPositions[i * 3]!, oortPositions[i * 3 + 1]!, oortPositions[i * 3 + 2]!).project(camera);
+              if (projected.z > 1 || projected.z < -1 || Math.abs(projected.x) > 0.9 || Math.abs(projected.y) > 0.9) continue;
+              const off = projected.x * projected.x + projected.y * projected.y;
+              if (off < best) {
+                best = off;
+                model.oort = { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height };
+              }
+            }
           }
           if (dots !== undefined) {
             const list = model.allMoons?.(model.time) ?? [];
@@ -967,11 +1026,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           // Close to a body (its disc is a few dozen pixels across) the other orbit lines are seen edge-on, long straight scratches across it: only the lines of its own system are kept, and of those the part near it fades
           const nearId = (rideFrom ? rideFrom.around : (SPACE_BODIES as readonly string[]).includes(focus) ? focus : (hostOf(focus) ?? "earth")) as SpaceBody;
           const closeUp = px[nearId] >= CLOSE_UP_PX;
+          // flying through a belt (a point of the ride's own, round the Sun): the planets' orbit lines would be long scratches across the dots, so they are let go
+          const flying = rideFrom !== null && rideFrom.around === "sun" && typeof model.ride?.target !== "string";
           const ownLine = (id: OrbitBody): boolean => id === nearId || (id === "moon" && (nearId === "earth" || nearId === "moon"));
           const nearRadius = radiusOf(nearId);
           for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
-            const hide = closeUp && !ownLine(id);
+            const hide = flying || (closeUp && !ownLine(id));
             o.line.visible = model.orbits && !hide;
             if (!model.orbits) continue;
             const keep = id === "moon" ? MOON_RING_KEEP_MS : 365 * 86_400_000;
@@ -1165,7 +1226,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           });
           model.arrows = arrowsNow;
           model.arrowPx = measured;
-          arrowLines.visible = model.orbits;
+          arrowLines.visible = model.orbits && !flying;
           (arrowGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
           (arrowGeometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
 
@@ -1277,7 +1338,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const held of moonSlots.values()) tally(held.slot.drawing);
           model.labelsDrawn = { count: labelsDrawn, focus: (slots.get(focus)?.drawing ?? moonSlots.get(focus)?.slot.drawing)?.label ?? null };
           model.tiles = tiles;
-          if (points !== undefined && deps.book !== undefined && points.count > 0) for (const [id, read] of deps.book.recordReads()) used[id] = read.records.length;
+          // the package's own belts are credited for the bodies of them that are drawn (a belt switched off gives none)
+          if (points !== undefined && deps.book !== undefined && points.count > 0) for (const [id, read] of deps.book.recordReads()) used[id] = id === "wakusei-belts" ? model.door.belts : read.records.length;
           model.door.used = used;
 
           if (deps.onLabels && model.labels) {
@@ -1344,6 +1406,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         dispose() {
           points?.dispose();
           dots?.dispose();
+          oortGeometry.dispose();
+          (oortLines.material as THREE.Material).dispose();
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);

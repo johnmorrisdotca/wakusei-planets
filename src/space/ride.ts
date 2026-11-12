@@ -1,6 +1,6 @@
 // Riding along: the camera sits at a moving point (a moon, a planet, a satellite someone else tracks) and looks at the body it goes round. This file is the maths of where it looks, pure,
 // so a page or a test can ask the same question the space view does. It knows no satellites: any point with a place and a way of going will do, and any central body, by its radius.
-import { cross, dot, length, RAD, scale, unit, add, type Vec3 } from "../vec.ts";
+import { cross, dot, length, OBLIQUITY, RAD, scale, unit, add, type Vec3 } from "../vec.ts";
 
 /** How far the ground moves in the picture for each pixel of a drag at the middle of it: the same pace as the line globe and the Earth from space (about one and a half). */
 const GRAB = 1.5;
@@ -18,18 +18,18 @@ const GRAB = 1.5;
 export const RIDE_FOV = 60;
 
 /**
- * Where a riding camera looks: `down` straight at the centre of the body it goes round (the ground goes by under the camera), or `horizon` tipped forward along the way it is going until the horizon
- * is a little above the middle of the view.
+ * Where a riding camera looks: `down` straight at the centre of the body it goes round (the ground goes by under the camera), `horizon` tipped forward along the way it is going until the horizon
+ * is a little above the middle of the view, or `ahead` along the way it is going with the ecliptic's north at the top, as a pilot looks (for a flight through a belt, where there is no ground).
  *
  * @example
  * ```ts
  * import type { RideLook } from "@johnmorrisdotca/wakusei-planets/space";
  *
- * const looks: RideLook[] = ["down", "horizon"];
+ * const looks: RideLook[] = ["down", "horizon", "ahead"];
  * console.log(looks.join(" or "));
  * ```
  */
-export type RideLook = "down" | "horizon";
+export type RideLook = "down" | "horizon" | "ahead";
 
 /**
  * What `ridePose` is asked: the camera's place from the centre of the body it goes round and its way of travel (any length), that body's radius in the unit of the place, where it looks,
@@ -110,8 +110,15 @@ export function ridePose(input: RideInput): RidePose {
   ahead = unit(ahead);
   const bodyRadiusDegrees = distance <= radius ? 90 : Math.asin(radius / distance) / RAD;
   const base = input.look === "horizon" ? Math.max(0, bodyRadiusDegrees - 12) * RAD : 0;
-  const forward0 = add(scale(nadir, Math.cos(base)), scale(ahead, Math.sin(base)));
-  const up0 = add(scale(ahead, Math.cos(base)), scale(nadir, -Math.sin(base)));
+  let forward0 = add(scale(nadir, Math.cos(base)), scale(ahead, Math.sin(base)));
+  let up0 = add(scale(ahead, Math.cos(base)), scale(nadir, -Math.sin(base)));
+  if (input.look === "ahead" && length(input.velocity) > 0) {
+    // along the way it goes, the ecliptic's north (in the scene's axes) at the top
+    forward0 = unit(input.velocity);
+    const pole: Vec3 = [0, Math.cos(OBLIQUITY * RAD), Math.sin(OBLIQUITY * RAD)];
+    const raised = add(pole, scale(forward0, -dot(pole, forward0)));
+    up0 = length(raised) > 1e-9 ? unit(raised) : ahead;
+  }
   const fov = Math.min(100, Math.max(5, RIDE_FOV / Math.max(0.05, input.zoom)));
   const turn = input.yaw * ((GRAB * fov) / 180) * RAD;
   const lift = input.tilt * ((GRAB * fov) / 60) * RAD;
