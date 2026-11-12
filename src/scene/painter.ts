@@ -185,7 +185,8 @@ export interface MoonSite {
 }
 
 /**
- * Where the pictures are, if not on jsDelivr: a folder address that ends in a slash. `farBase` holds the widest pictures (2048), which the npm package leaves out.
+ * Where the pictures are, if not on jsDelivr: a folder address that ends in a slash. `farBase` holds the widest pictures (2048), which the npm package leaves out. A page that gives its own
+ * `textureBase` (the package's `dist/textures/`, say) and no `farBase` is never asked for those: the painter stops at the widest the package ships (1024). Give `farBase` too when the 2048s are served.
  *
  * @example
  * ```ts no-run
@@ -277,7 +278,7 @@ function sightOf(T: PainterThree, view: PaintView): Sight {
   };
 }
 
-function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined; book: SourceBook; shared: boolean }): Painting {
+function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string | undefined; tiles: string | undefined; book: SourceBook; shared: boolean }): Painting {
   const facts = BODIES[id];
   const look = lookOf(id) ?? fallbackLook(facts);
   const wantPainted = (context.look === "painted" || look.mapped === true || context.mapped === true) && look.painted !== undefined;
@@ -427,7 +428,9 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   }
 
   // the painted map: the smallest width at once, a sharper one when the body is big on the screen, back to the small one when it is not
-  const widths = (look.painted?.widths ?? []).filter((w, i) => i === 0 || w <= maxWidth);
+  // a width the far base holds (the sharpest, which the npm package leaves out) only when there is a far base: a page that gave its own textureBase and no farBase has only the package's widths
+  const farFrom = look.painted?.far;
+  const widths = (look.painted?.widths ?? []).filter((w, i) => i === 0 || (w <= maxWidth && (bases.far !== undefined || farFrom === undefined || w < farFrom)));
   let small: THREE.Texture | undefined;
   let sharp: THREE.Texture | undefined;
   let sharpWidth = 0;
@@ -435,7 +438,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let failed = false;
   let tooBigSince = 0;
   const tried = new Set<number>();
-  const urlOf = (w: number): string => `${look.painted!.far !== undefined && w >= look.painted!.far ? bases.far : bases.near}${look.painted!.map}-${w}.webp`;
+  const urlOf = (w: number): string => `${look.painted!.far !== undefined && w >= look.painted!.far && bases.far !== undefined ? bases.far : bases.near}${look.painted!.map}-${w}.webp`;
   const prepare = (t: THREE.Texture): THREE.Texture => {
     t.anisotropy = 4;
     t.wrapS = T.RepeatWrapping;
@@ -676,7 +679,8 @@ export interface WakuseiPainter {
  */
 export function createPainter(options: PainterOptions = {}): WakuseiPainter {
   const near = slash(options.textureBase ?? TEXTURE_BASE);
-  const far = slash(options.farBase ?? (options.textureBase !== undefined ? options.textureBase : TEXTURE_FAR_BASE));
+  // the widest pictures are not in the npm package: a page with its own textureBase has them only where it says so with farBase (no far base, and the painter stops at the package's widths)
+  const far = options.farBase !== undefined ? slash(options.farBase) : options.textureBase !== undefined ? undefined : TEXTURE_FAR_BASE;
   const own = options.tiles;
   const tiles = own === "off" || own === "none" || own === "" ? undefined : own !== undefined ? slash(own) : options.textureBase !== undefined ? undefined : TILES_BASE;
   const book = options.book ?? createSourceBook({ kinds: ["tiles"] });

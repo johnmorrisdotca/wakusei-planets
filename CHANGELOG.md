@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A page with its own textureBase is not asked for pictures the package lacks** (MODULES-1175). The npm package ships each map at 512 and 1024; the 2048s are only in the repository. With `textureBase` and no `farBase`, the far base fell back to `textureBase`, so a body big in the view asked it for `<map>-2048.webp` (the Moon, Mars, Venus, the Sun and the rest) and got a 404. The painter now stops at the widest the package ships unless `farBase` says where the 2048s are; the default (jsDelivr) is unchanged. A test makes every painted body fill the screen under each setting and holds that `textureBase` is asked only for 512 and 1024, `farBase` for the 2048, and the default far base for it too; it fails on the old painter (the Sun's 2048 from the package's base). chikyu-earth can drop its stopgap (`maxTexture: 1024` in its demo).
+
 ## [0.37.1] - 2026-11-12
 
 - **The Earth's line look stays chikyu-earth's globe while it turns** (MODULES-1152). On a page with chikyu-earth's element, `<wakusei-body body="earth" look="line">` showed chikyu-earth's globe with the countries and then, at the next frame of its turn (the line look turns by default, 30 times a second), drew this package's own outline over it. A body that another package draws is now left to that package, and the line look's tick stops while it is shown; the same element made another body turns again. A browser test puts an Earth and a Mars in the line look on one page with chikyu-earth's element and counts what the page reports: the globe is never replaced while Mars is redrawn twenty times.

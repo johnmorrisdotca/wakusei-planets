@@ -142,3 +142,53 @@ test("the Sun turns about its own pole with time, and the glow, not the globe, f
   assert.ok(glow.quaternion.angleTo(camera.quaternion) < 1e-6, "the glow does");
   sun.dispose();
 });
+
+test("the painter asks a page's own textureBase only for the widths the npm package ships: the sharpest come from farBase, or are not asked for", async () => {
+  const { BODY_IDS } = await import("../src/index.ts");
+  const { lookOf } = await import("../src/scene/look.ts");
+  const { TEXTURE_FAR_BASE } = await import("../src/scene/textures.ts");
+  // the package ships the 512 and 1024 of each map (scripts/copy-textures.mjs); a look's `far` width and up are only in the repository
+  const shipped = /-(512|1024)\.webp$/;
+  /** Every picture a body asks for while it grows from small to filling the screen; each picture arrives at once. */
+  const asked = async (painter: ReturnType<typeof createPainter>, id: string): Promise<string[]> => {
+    const urls: string[] = [];
+    class Loader {
+      setCrossOrigin(): void {}
+      load(url: string, done: (t: THREE.Texture) => void): void {
+        urls.push(url);
+        done(new THREE.Texture());
+      }
+    }
+    const body = painter.make({ ...THREE, TextureLoader: Loader } as unknown as typeof THREE, id, { look: "painted" });
+    for (const radiusPx of [20, 200, 800, 2000, 4000, 4000]) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      body.update({ toSun: [1, 0, 0], ms, radiusPx });
+    }
+    body.dispose();
+    return urls.filter((url) => /\.webp$/.test(url) && !/-ring-/.test(url));
+  };
+  const own = createPainter({ textureBase: "/pkg/" });
+  const withFar = createPainter({ textureBase: "/pkg/", farBase: "/far/" });
+  const plain = createPainter();
+  let sharpest = 0;
+  for (const id of BODY_IDS as string[]) {
+    const painted = lookOf(id as never)?.painted;
+    if (painted === undefined) continue;
+    const top = Math.max(...painted.widths);
+    // only textureBase: never a width the package lacks (the 404s of moon, mars and venus 2048), and still the widest it has
+    const mine = await asked(own, id);
+    assert.ok(mine.length > 0, `${id} asks for a picture`);
+    for (const url of mine) assert.match(url, shipped, `${id}: ${url} is not in the npm package`);
+    assert.ok(mine.some((url) => url.endsWith("-1024.webp")), `${id} still gets the widest the package ships: ${mine.join(" ")}`);
+    // with farBase: the far width comes from there, the rest from textureBase
+    if (painted.far !== undefined && top >= painted.far) {
+      sharpest += 1;
+      const far = await asked(withFar, id);
+      assert.ok(far.includes(`/far/${painted.map}-${top}.webp`), `${id} asks the far base for ${top}: ${far.join(" ")}`);
+      for (const url of far.filter((u) => u.startsWith("/pkg/"))) assert.match(url, shipped, `${id}: ${url}`);
+      // the default painter: jsDelivr's npm address for the package's widths, its GitHub address for the far one
+      assert.ok((await asked(plain, id)).includes(`${TEXTURE_FAR_BASE}${painted.map}-${top}.webp`), `${id} asks the default far base for ${top}`);
+    }
+  }
+  assert.ok(sharpest >= 10, `bodies with a far 2048: ${sharpest}`);
+});
