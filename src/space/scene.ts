@@ -17,6 +17,7 @@ import { hostOf } from "./bodies.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
+import type { SightInput } from "./sight.ts";
 import { spinAxis } from "./spin.ts";
 import { createTrack, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
@@ -379,6 +380,10 @@ export interface SpaceDeps {
   advance?: () => void;
   /** Where each body is on the screen, in CSS pixels in the box, or null when it is behind the camera. Called at each draw. */
   onLabels?: (places: Record<string, BodyPlace | null>) => void;
+  /** What the camera sees of each body at each draw, by id: the Sun, the planets and the other bodies of `SPACE_BODIES`, the moons of the body looked at, and any other moon drawn; with the picture's size and the point straight ahead of the camera. Not the body the camera rides on. */
+  onSight?: (bodies: Record<string, SightInput>, frame: { width: number; height: number; axis: { x: number; y: number } }) => void;
+  /** Whether `onSight` is wanted at this draw (left out, it always is): the page has asked for it. */
+  wantSight?: () => boolean;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
   onMoving?: () => void;
   /** The target of the ride could not be placed at this draw. */
@@ -1226,6 +1231,21 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             }
             for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
             deps.onLabels(places);
+          }
+          if (deps.onSight && (deps.wantSight?.() ?? true)) {
+            // each body in the camera's own axes: in front when it is ahead (negative z), its place from the projection (a pan included), and the way to it on the screen from its x and y, which holds behind the camera too
+            const sights: Record<string, SightInput> = {};
+            const sight = (id: string, at: Vec3, r: number): void => {
+              projected.set(at[0], at[1], at[2]).applyMatrix4(camera.matrixWorldInverse);
+              const [cx, cy, front] = [projected.x, projected.y, projected.z < 0];
+              projected.applyMatrix4(camera.projectionMatrix);
+              sights[id] = { front, x: front ? ((projected.x + 1) / 2) * size.width : 0, y: front ? ((1 - projected.y) / 2) * size.height : 0, r: front ? r : 0, dx: cx, dy: -cy };
+            };
+            for (const id of SPACE_BODIES) if (id !== hiddenBody && !(rideFrom && id === rideFrom.around)) sight(id, pos[id], px[id]);
+            const moons = new Set<string>([...((MOONS_OF as Record<string, readonly MoonId[]>)[hostOf(model.focus) ?? model.focus] ?? []), ...Object.keys(moonPlaces)]);
+            for (const id of moons) if (id !== hiddenMoon && !(SPACE_BODIES as readonly string[]).includes(id)) sight(id, absoluteSite(id as MoonId), moonPlaces[id]?.r ?? 0);
+            projected.set(0, 0, -1).applyMatrix4(camera.projectionMatrix);
+            deps.onSight(sights, { width: size.width, height: size.height, axis: { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height } });
           }
           if (model.rideLost) deps.onRideLost?.();
           if (model.transition) deps.onMoving?.();
