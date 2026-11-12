@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A 2048 picture is not asked of a folder that does not hold it** (MODULES-1175). When the far folder is a different one, the sharp picture is still asked of it. When both folders are the same, the painter asks for the widest width that folder holds.
+
 ## [0.37.1] - 2026-11-12
 
 - **The Earth's line look stays chikyu-earth's globe while it turns** (MODULES-1152). On a page with chikyu-earth's element, `<wakusei-body body="earth" look="line">` showed chikyu-earth's globe with the countries and then, at the next frame of its turn (the line look turns by default, 30 times a second), drew this package's own outline over it. A body that another package draws is now left to that package, and the line look's tick stops while it is shown; the same element made another body turns again. A browser test puts an Earth and a Mars in the line look on one page with chikyu-earth's element and counts what the page reports: the globe is never replaced while Mars is redrawn twenty times.

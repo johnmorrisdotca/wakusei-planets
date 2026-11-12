@@ -13,6 +13,7 @@ import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURF
 import { fallbackLook } from "./fallback.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import { detailOf, lookOf } from "./look.ts";
+import { pictureUrl } from "./picture-url.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
@@ -435,7 +436,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let failed = false;
   let tooBigSince = 0;
   const tried = new Set<number>();
-  const urlOf = (w: number): string => `${look.painted!.far !== undefined && w >= look.painted!.far ? bases.far : bases.near}${look.painted!.map}-${w}.webp`;
+  const urlOf = (w: number): string => pictureUrl(bases.near, bases.far, look.painted!, w);
   const prepare = (t: THREE.Texture): THREE.Texture => {
     t.anisotropy = 4;
     t.wrapS = T.RepeatWrapping;
