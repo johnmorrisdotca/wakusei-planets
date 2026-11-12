@@ -4,7 +4,7 @@ import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import { wheelMove, wheelZoomFactor } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
 import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
-import { BODIES, DWARF_IDS, drawnTilt, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/index.ts";
+import { BODIES, DWARF_IDS, drawnTilt, MOONS_OF, PLANET_IDS, picturesCredit, type BodyId, type Look } from "../src/index.ts";
 import { EMBED_KINDS, portraitCode, type EmbedKind } from "../src/embed.ts";
 import { addBody, addMoons, ASPECTS, auto, centreCamera, createHistory, decodeScene, encodeScene, fitAll, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, snap, type Guide, type Item, type Portrait } from "../src/portrait/model.ts";
 import { defaultPitch } from "../src/portrait/pose.ts";
@@ -211,7 +211,11 @@ panel.kinds = EMBED_KINDS;
 const kept = address.get("embed");
 if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;
 panel.generate = ({ kind, preview }) => portraitCode({ scene: encodeScene(scene()), width: 720 }, kind as EmbedKind, preview ? { site: "" } : {});
-panel.credits = () => `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${scene().look !== "line" && scene().look !== "illustrated" ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : ""}`;
+panel.credits = () => {
+  const drawsMaps = scene().look !== "line" && scene().look !== "illustrated";
+  const pictures = drawsMaps ? picturesCredit(scene().items.map((i) => i.body), lang()) : "";
+  return `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${pictures === "" ? "" : ` ${pictures}`}`;
+};
 panel.addEventListener("kazoku-embedchange", (event) => {
   const { kind } = (event as CustomEvent<EmbedChangeDetail>).detail;
   address.set("embed", kind === "html" ? null : kind);
