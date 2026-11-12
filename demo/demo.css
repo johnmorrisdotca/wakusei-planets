@@ -139,3 +139,6 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .plan-fig figcaption { color: #c9d4e3; text-align: center; max-width: 260px; }
 .plan-marks { flex-wrap: wrap; }
 #code-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* The space page's orbiter row: a body's name stays with its craft when the row wraps. */
+.orbiter-pair { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
