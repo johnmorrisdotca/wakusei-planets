@@ -315,7 +315,7 @@ function renderOrbiters(): void {
   const ms = space.time;
   const facts = mod.orbiterFacts(id);
   const year = facts.launch.date.slice(0, 4);
-  const lines: HTMLElement[] = [line(`${facts.name[lang]}: ${facts.operator}, ${facts.launch.vehicle ? say("sp_ocard_launch", { year, vehicle: facts.launch.vehicle }) : say("sp_ocard_launch_year", { year })}`)];
+  const lines: HTMLElement[] = [line(say("sp_ocard_head", { name: facts.name[lang], operator: facts.operator, launch: facts.launch.vehicle ? say("sp_ocard_launch", { year, vehicle: facts.launch.vehicle }) : say("sp_ocard_launch_year", { year }) }))];
   lines.push(line(facts.about[lang]));
   if (facts.instruments.length > 0) lines.push(line(say("sp_ocard_instruments", { list: facts.instruments.map((one) => one.short ?? one.name).join(", ") })));
   const numbers = mod.orbiterNumbers(id, ms);

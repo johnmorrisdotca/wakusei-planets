@@ -144,3 +144,5 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .moon-table-box { max-height: 22rem; overflow-y: auto; }
 .moon-table-box th { position: sticky; top: 0; background: var(--surface); }
 .moon-list h2 { margin: 0; }
+/* The space page's orbiter row: a body's name stays with its craft when the row wraps. */
+.orbiter-pair { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
