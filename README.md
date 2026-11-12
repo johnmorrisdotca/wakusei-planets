@@ -19,7 +19,7 @@ Wakusei Planets runs in the browser of a phone, a tablet or a computer: nothing 
 
 <p align="center"><img alt="The demo on a desk: Saturn in the painted look, turning in the big view, with the page's links to the portrait builder, the colouring sheets, the space view, the star page and the size line-up above it, and the choice of body and its moons below" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/home-desk.webp" width="620"> <img alt="The same page on a phone: the same links in rows, and Saturn in the painted look below them" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/main/docs/images/home-phone.webp" width="200"></p>
 
-<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.36.0/docs/images/lineup-desk.png" width="640"></p>
+<p align="center"><img alt="Every body at one scale, the Earth among them: each small body has a magnified picture joined by a line, and the Sun shows only its edge" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.37.0/docs/images/lineup-desk.png" width="640"></p>
 
 ## Who it is for
 
@@ -387,7 +387,7 @@ The tiles of every body share one 48 MB budget, six loads at a time for a source
 
 ## The portrait builder
 
-<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.36.0/docs/images/portrait-family.png" width="640"></p>
+<p align="center"><img alt="The Sun and the planets in an arc, painted, with their names, in the portrait builder" src="https://raw.githubusercontent.com/johnmorrisdotca/wakusei-planets/v0.37.0/docs/images/portrait-family.png" width="640"></p>
 
 [The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies in one picture: drag them, size them, turn them, order them front to back, arrange them in a row, an arc, a grid or at true orbit distance (true or readable sizes, a planet's moons round it in orbit order), light them from one direction, and take the code, a PNG or an SVG. The scene is kept in the address, and every body is drawn in one WebGL scene, so the page holds one WebGL context. [The portrait builder](docs/guides/portrait-builder.md) is its guide.
 
@@ -532,7 +532,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 
 If this package helps a paper, a talk or a class, please cite it as software. GitHub's "Cite this repository" button reads [CITATION.cff](CITATION.cff) and gives BibTeX and APA; in plain text:
 
-> Morris, J. (2026). *Wakusei Planets* (version 0.36.0) [Computer software]. https://github.com/johnmorrisdotca/wakusei-planets
+> Morris, J. (2026). *Wakusei Planets* (version 0.37.0) [Computer software]. https://github.com/johnmorrisdotca/wakusei-planets
 
 Cite the version you used (`npm ls @johnmorrisdotca/wakusei-planets`), and cite the sources of the numbers you use as well: [NOTICE.md](NOTICE.md) names each one, with the paper or the page it was read from (the IAU working group's report for sizes and poles, VSOP87B, ELP2000-82B, L1.2 and TASS1.7 for positions, and NASA's JPL Horizons for the fits and the spacecraft).
 
