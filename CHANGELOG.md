@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- **Orbiters: a predicted path is dim only when its error is large** (MODULES-929). `orbiterDim(id, when)` and `ORBITER_DIM_SHARE` in `/orbiters`: a `modelled` path is dim; a `predicted` one is dim only when its worst error measured after the fit (`predictedErrorKm.max`) is more than 2 per cent of its body's mean radius (about 35 km at the Moon, 68 km at Mars), so Mars Express and Hope (28 km) are drawn full when predicted; a `tracked` path never is. The space view draws by it, and `stats.orbiters.dim` lists the craft drawn dim. Before, every predicted craft was dim, which was all of them a day after the data were read.
+- **`pnpm orbiters:refresh`** (MODULES-929): refits every orbiter from JPL Horizons with the existing script, one request at a time, a generic User-Agent, the cache in `~/.cache/wakusei-planets`, and one line a craft at the end (`--brief`); run by hand about monthly before a patch release, no workflow. The data are refreshed to 2026-11-12 with it.
+- **MAVEN's end has its source** (MODULES-929): NASA's news release of 2026-06-03, "NASA Says Farewell to MAVEN Mars Mission", named in NOTICE.md and in MAVEN's note in `orbiterFacts`.
 - The ports are this package's block in John's port table, 8225 to 8249 (MODULES-1034): the demo and dev on 8225, the tests on 8226, the picture scripts on 8227, the serve example on 8235. They were 8300 to 8310, the Space Program X website's, so a gate run without TEST_PORT met the website's tests.
 
 ## [0.36.0] - 2026-11-11
