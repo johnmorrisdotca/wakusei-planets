@@ -33,6 +33,8 @@ export interface OrbiterInstrument {
 export interface OrbiterFacts {
   /** The craft's name in English and Japanese. */
   name: { en: string; ja: string };
+  /** A short name for a button or a label: the initials the agency uses, or the first word. */
+  short: { en: string; ja: string };
   /** The body it goes round. */
   centre: "moon" | "mars";
   /** The agency or organisation that runs it. */
@@ -62,6 +64,7 @@ export interface OrbiterFacts {
 export const ORBITER_FACTS = {
   lro: {
     name: { en: "Lunar Reconnaissance Orbiter", ja: "ルナー・リコネサンス・オービター" },
+    short: { en: "LRO", ja: "LRO" },
     centre: "moon",
     operator: "NASA (Goddard Space Flight Center)",
     launch: { date: "2009-06-18T09:32Z", vehicle: "Atlas V", site: "Cape Canaveral, launch complex 41" },
@@ -80,6 +83,7 @@ export const ORBITER_FACTS = {
   },
   "chandrayaan-2": {
     name: { en: "Chandrayaan-2 orbiter", ja: "チャンドラヤーン2号 オービター" },
+    short: { en: "Chandrayaan-2", ja: "チャンドラヤーン2号" },
     centre: "moon",
     operator: "ISRO",
     launch: { date: "2019-07-22T09:13Z", vehicle: "GSLV Mk III", site: "Satish Dhawan Space Centre, Sriharikota" },
@@ -90,6 +94,7 @@ export const ORBITER_FACTS = {
   },
   danuri: {
     name: { en: "Danuri (KPLO)", ja: "ダヌリ (KPLO)" },
+    short: { en: "Danuri", ja: "ダヌリ" },
     centre: "moon",
     operator: "KARI (Korea Aerospace Research Institute)",
     launch: { date: "2022-08-04T23:08Z", vehicle: "Falcon 9 Block 5", site: "Cape Canaveral, SLC-40" },
@@ -107,6 +112,7 @@ export const ORBITER_FACTS = {
   },
   "artemis-p1": {
     name: { en: "ARTEMIS P1", ja: "ARTEMIS P1" },
+    short: { en: "ARTEMIS P1", ja: "ARTEMIS P1" },
     centre: "moon",
     operator: "NASA (University of California, Berkeley)",
     launch: { date: "2007-02-17T23:01Z", vehicle: "Delta II 7925-10C", site: "Cape Canaveral" },
@@ -123,6 +129,7 @@ export const ORBITER_FACTS = {
   },
   "artemis-p2": {
     name: { en: "ARTEMIS P2", ja: "ARTEMIS P2" },
+    short: { en: "ARTEMIS P2", ja: "ARTEMIS P2" },
     centre: "moon",
     operator: "NASA (University of California, Berkeley)",
     launch: { date: "2007-02-17T23:01Z", vehicle: "Delta II 7925-10C", site: "Cape Canaveral" },
@@ -139,6 +146,7 @@ export const ORBITER_FACTS = {
   },
   capstone: {
     name: { en: "CAPSTONE", ja: "キャップストーン" },
+    short: { en: "CAPSTONE", ja: "CAPSTONE" },
     centre: "moon",
     operator: "NASA (Advanced Space)",
     launch: { date: "2022-06-28T09:55:52Z", vehicle: "Electron (Rocket Lab)", site: "Mahia Peninsula, New Zealand" },
@@ -149,6 +157,7 @@ export const ORBITER_FACTS = {
   },
   mro: {
     name: { en: "Mars Reconnaissance Orbiter", ja: "マーズ・リコネサンス・オービター" },
+    short: { en: "MRO", ja: "MRO" },
     centre: "mars",
     operator: "NASA (JPL)",
     launch: { date: "2005-08-12T11:43Z", vehicle: "Atlas V", site: "Cape Canaveral" },
@@ -159,6 +168,7 @@ export const ORBITER_FACTS = {
   },
   odyssey: {
     name: { en: "2001 Mars Odyssey", ja: "2001マーズ・オデッセイ" },
+    short: { en: "Odyssey", ja: "オデッセイ" },
     centre: "mars",
     operator: "NASA (JPL)",
     launch: { date: "2001-04-07T15:02Z", vehicle: "Delta II 7925" },
@@ -173,6 +183,7 @@ export const ORBITER_FACTS = {
   },
   maven: {
     name: { en: "MAVEN", ja: "メイブン" },
+    short: { en: "MAVEN", ja: "MAVEN" },
     centre: "mars",
     operator: "NASA (Goddard Space Flight Center)",
     launch: { date: "2013-11-18T18:28Z", vehicle: "Atlas V 401", site: "Cape Canaveral, SLC-41" },
@@ -187,6 +198,7 @@ export const ORBITER_FACTS = {
   },
   "mars-express": {
     name: { en: "Mars Express", ja: "マーズ・エクスプレス" },
+    short: { en: "Mars Express", ja: "マーズ・エクスプレス" },
     centre: "mars",
     operator: "ESA",
     launch: { date: "2003-06-02", vehicle: "Soyuz-Fregat", site: "Baikonur" },
@@ -197,6 +209,7 @@ export const ORBITER_FACTS = {
   },
   tgo: {
     name: { en: "ExoMars Trace Gas Orbiter", ja: "エクソマーズ・トレース・ガス・オービター" },
+    short: { en: "TGO", ja: "TGO" },
     centre: "mars",
     operator: "ESA (with Roscosmos)",
     launch: { date: "2016-03-14T09:31Z", vehicle: "Proton", site: "Baikonur" },
@@ -212,6 +225,7 @@ export const ORBITER_FACTS = {
   },
   hope: {
     name: { en: "Hope (Emirates Mars Mission)", ja: "ホープ (エミレーツ・マーズ・ミッション)" },
+    short: { en: "Hope", ja: "ホープ" },
     centre: "mars",
     operator: "Mohammed Bin Rashid Space Centre (United Arab Emirates)",
     launch: { date: "2020-07-19T21:58:14Z", vehicle: "H-IIA 202", site: "Tanegashima, Japan" },
@@ -226,6 +240,7 @@ export const ORBITER_FACTS = {
   },
   "tianwen-1": {
     name: { en: "Tianwen-1 orbiter", ja: "天問1号 オービター" },
+    short: { en: "Tianwen-1", ja: "天問1号" },
     centre: "mars",
     operator: "CNSA",
     launch: { date: "2020-07-23T04:41Z", vehicle: "Long March 5", site: "Wenchang, Hainan" },
