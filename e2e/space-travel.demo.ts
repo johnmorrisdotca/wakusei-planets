@@ -129,6 +129,8 @@ for (const scale of ["true", "compressed"] as const) {
 test("direct goes straight (a line path), a page can set one move's length, and the view's pace scales the plan's", async ({ page }) => {
   test.setTimeout(240_000);
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed");
+  // four times as slow, so that software drawing on a loaded machine still catches more than a few draws of each move (the demo's own pace control; the other travel tests do the same)
+  await page.locator('#paces [data-pace="4"]').dispatchEvent("click");
   const direct = await move(page, "earth", "mars", { transition: "direct" });
   const moving = direct.filter((f) => f.travelling !== null);
   expect(moving.length).toBeGreaterThan(3);
@@ -140,20 +142,25 @@ test("direct goes straight (a line path), a page can set one move's length, and 
   expect(inViewMoving.length).toBeGreaterThan(3);
   expect(inViewMoving[0]!.onScreen.destination, "Jupiter is on the screen as the move starts").toBe(true);
   for (const [i, frame] of inViewMoving.entries()) expect(frame.onScreen.destination, `frame ${i}: direct, the destination is on the screen the whole way`).toBe(true);
-  // a fixed length: the move lasts about that long (the draws are counted, not the clock: at least a few, and the stats say the length)
-  const quick = await move(page, "mars", "earth", { duration: 900 });
-  const quickMoving = quick.filter((f) => f.travelling !== null);
-  // the length a page asked for is the one the page reports (a move of 900 milliseconds is seen in as few draws as a loaded machine makes of it)
-  expect(quickMoving.length).toBeGreaterThanOrEqual(1);
-  expect((quickMoving[0]!.travelling as unknown as { duration: number }).duration).toBe(900);
-  // the view's pace scales the plan: the same move from the same view takes twice as long at pace 2 (set with the demo's own control, which holds the choice and applies it at every render)
-  const paceOf = (frames: Frame[]): number => (frames.find((f) => f.travelling !== null)!.travelling as unknown as { duration: number }).duration;
   await page.locator('#paces [data-pace="1"]').dispatchEvent("click");
-  const even = paceOf(await move(page, "earth", "mars", { transition: "direct" }, 1, true));
+  // a fixed length: the stats of the move's first draw say the length a page asked for. A move's clock starts when it is asked for, and a loaded machine drawing in software can make its first draw seconds later, so a move of a
+  // few seconds was sometimes over before any draw of it was seen. A long one is asked for, its first draw is waited on (a draw, never a clock), and it is cut short once the length is read.
+  await callOn(page, "goTo", "mars", { smooth: false, zoom: 1 });
+  await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe("mars");
+  await held(page);
+  await callOn(page, "goTo", "earth", { duration: 60_000 });
+  await expect.poll(async () => ((await statsOf(page)) as unknown as { travelling: { duration: number } | null }).travelling?.duration ?? null, { timeout: 60_000, message: "the long move was drawn, and its length is the one asked for" }).toBe(60_000);
+  await callOn(page, "goTo", "mars", { smooth: false });
+  await expect.poll(async () => ((await statsOf(page)) as unknown as { ride: { gliding: boolean } }).ride.gliding, { timeout: 60_000 }).toBe(false);
+  // the view's pace scales the plan: the same move from the same view takes twice as long at pace 4 as at pace 2 (set with the demo's own control, which holds the choice and applies it at every render). The two slow paces are used so that
+  // the move is long enough for its first draw, which works the plan out, to land inside it on a loaded machine drawing in software: a move of a second or two was sometimes over before any draw of it was seen
+  const paceOf = (frames: Frame[]): number => (frames.find((f) => f.travelling !== null)!.travelling as unknown as { duration: number }).duration;
   await page.locator('#paces [data-pace="2"]').dispatchEvent("click");
-  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "pace"))).toBe(2);
+  const even = paceOf(await move(page, "earth", "mars", { transition: "direct" }, 1, true));
+  await page.locator('#paces [data-pace="4"]').dispatchEvent("click");
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "pace"))).toBe(4);
   const slow = paceOf(await move(page, "earth", "mars", { transition: "direct" }, 1, true));
-  expect(slow, `pace 2 doubles the plan's length (${even} ms, then ${slow} ms)`).toBeGreaterThanOrEqual(even * 2 - 2);
+  expect(slow, `pace 4 doubles the plan's length at pace 2 (${even} ms, then ${slow} ms)`).toBeGreaterThanOrEqual(even * 2 - 2);
   expect(slow).toBeLessThanOrEqual(even * 2 + 2);
 });
 
