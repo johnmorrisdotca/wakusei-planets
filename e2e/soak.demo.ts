@@ -70,9 +70,11 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
       await page.waitForTimeout(600);
     }
     await expect.poll(() => sky.evaluate((el) => Reflect.get(el, "stats").ride.gliding), { timeout: 60_000 }).toBe(false);
+    // a look is remade only by a draw made with it: wait for that draw, not a clock, or on a slow machine the two looks go by with no draw between and the bodies a walk made are kept (CI counted 104, 100 and 143 in three walks)
     for (const name of ["Painted", "Realistic"]) {
+      const before = await sky.evaluate((el) => Reflect.get(el, "stats").draws as number);
       await page.getByRole("group", { name: "Look" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
-      await page.waitForTimeout(600);
+      await expect.poll(() => sky.evaluate((el) => Reflect.get(el, "stats").draws as number), { timeout: 60_000 }).toBeGreaterThan(before);
     }
     await sky.evaluate((el) => {
       Reflect.set(el, "speed", 0);
