@@ -851,6 +851,7 @@ export class WakuseiBody extends HTMLElement {
     }
     const delegate = this.look === "line" ? delegates.get(this.body) : undefined;
     if (delegate !== undefined && (await this.#delegated(delegate))) return;
+    const undelegated = this.#delegateEl !== undefined;
     if (this.#delegateEl !== undefined) {
       this.#delegateEl.remove();
       this.#delegateEl = undefined;
@@ -861,6 +862,8 @@ export class WakuseiBody extends HTMLElement {
       if (this.#view !== undefined) this.#disposeView(true);
       this.#drawLine();
       if (this.look === "line") this.#set("line");
+      // the tick stopped while the other package's globe was shown
+      if (undelegated) this.#resume();
       return;
     }
     const sig = `${this.#star()?.key ?? this.body}|${this.look}`;
@@ -1079,7 +1082,8 @@ export class WakuseiBody extends HTMLElement {
 
   #lineTick(): void {
     this.#stopTick();
-    if (!this.#visible || document.visibilityState === "hidden" || !this.#moving || this.look !== "line") return;
+    // a body another package draws (the Earth's globe) is that package's to turn: this package's line drawn here would replace it
+    if (!this.#visible || document.visibilityState === "hidden" || !this.#moving || this.look !== "line" || this.#delegateEl !== undefined) return;
     this.#drawLine();
     this.#tick = setTimeout(() => this.#lineTick(), 1000 / 30);
   }

@@ -47,6 +47,51 @@ test("the Earth's line look is chikyu-earth's own globe, not a second copy; its 
   await expect(page.locator("#main chikyu-earth")).toHaveCount(0);
 });
 
+test("a turning line Earth keeps chikyu-earth's globe while a line Mars beside it turns, and turns again as another body", async ({ page }) => {
+  // chikyu-earth's own page of the two packages together: an Earth and a Mars in the line look, turning at full speed
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto(`${URL}?look=line&body=saturn`);
+  await page.evaluate(() => {
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:0;z-index:99;background:#fff";
+    const make = (body: string, size: string): HTMLElement => {
+      const el = document.createElement("wakusei-body");
+      el.setAttribute("body", body);
+      el.setAttribute("look", "line");
+      el.setAttribute("size", size);
+      box.append(el);
+      return el;
+    };
+    document.body.append(box);
+    const earth = make("earth", "260");
+    const mars = make("mars", "160");
+    const seen = { globesRemoved: 0, marsDrawn: 0, earthDrawn: 0 };
+    Object.assign(globalThis, { together: { earth, mars, seen } });
+    new MutationObserver((records) => {
+      seen.earthDrawn += 1;
+      for (const record of records) for (const node of record.removedNodes) if ((node as Element).localName === "chikyu-earth") seen.globesRemoved += 1;
+    }).observe(earth.shadowRoot!.getElementById("stage")!, { childList: true });
+    new MutationObserver(() => void (seen.marsDrawn += 1)).observe(mars.shadowRoot!.getElementById("stage")!, { childList: true });
+  });
+  type Together = { together: { earth: HTMLElement; mars: HTMLElement; seen: { globesRemoved: number; marsDrawn: number; earthDrawn: number } } };
+  await page.waitForFunction(() => ((globalThis as unknown as Together).together.earth.shadowRoot?.querySelector("chikyu-earth")?.shadowRoot?.querySelectorAll("svg path").length ?? 0) > 50);
+  // Mars's own line drawing is redrawn as it turns: twenty of its frames
+  await page.waitForFunction(() => (globalThis as unknown as Together).together.seen.marsDrawn >= 20);
+  const after = await page.evaluate(() => {
+    const { earth, seen } = (globalThis as unknown as Together).together;
+    return { globesRemoved: seen.globesRemoved, globe: earth.shadowRoot!.querySelector("#stage > chikyu-earth") !== null, ownLine: earth.shadowRoot!.querySelector("#stage > svg") !== null };
+  });
+  expect(after).toEqual({ globesRemoved: 0, globe: true, ownLine: false });
+  // the same element made another body is this package's own turning line drawing again
+  await page.evaluate(() => {
+    const { earth, seen } = (globalThis as unknown as Together).together;
+    earth.setAttribute("body", "jupiter");
+    seen.earthDrawn = 0;
+  });
+  await page.waitForFunction(() => (globalThis as unknown as Together).together.seen.earthDrawn >= 20);
+  expect(await page.evaluate(() => (globalThis as unknown as Together).together.earth.shadowRoot!.querySelector("#stage > chikyu-earth") === null)).toBe(true);
+});
+
 test("the Japanese page names the bodies in Japanese", async ({ page }) => {
   await page.goto(`${URL}?look=line&lang=ja`);
   await expect(page.locator('.tile[data-body="jupiter"]')).toContainText("木星");

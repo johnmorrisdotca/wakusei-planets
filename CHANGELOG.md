@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-11-12
+
+- **The Earth's line look stays chikyu-earth's globe while it turns** (MODULES-1152). On a page with chikyu-earth's element, `<wakusei-body body="earth" look="line">` showed chikyu-earth's globe with the countries and then, at the next frame of its turn (the line look turns by default, 30 times a second), drew this package's own outline over it. A body that another package draws is now left to that package, and the line look's tick stops while it is shown; the same element made another body turns again. A browser test puts an Earth and a Mars in the line look on one page with chikyu-earth's element and counts what the page reports: the globe is never replaced while Mars is redrawn twenty times.
+- kazoku-ui 0.41.0 (the runtime dependency, from ^0.37.0), for browser runs in CI's own Playwright image (`kazoku-ci-image`).
+
 ## [0.37.0] - 2026-11-12
 
 - The ports are this package's block in John's port table, 8225 to 8249 (MODULES-1034): the demo and dev on 8225, the tests on 8226, the picture scripts on 8227, the serve example on 8235. They were 8300 to 8310, the Space Program X website's, so a gate run without TEST_PORT met the website's tests.
