@@ -502,9 +502,26 @@ test("changes to the space view give back what they took: the zooms, the scales,
       await page.getByRole("group", { name: "Ride along" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
       await settle(page, 700);
     }
+    // a ride starts the demo's clock (Play) and Off leaves it running, so the view keeps drawing and the moons come and go with the time: a count read then is of a different moment each round (183 against a limit of 182 on a
+    // busy machine, MODULES-1187). Hold the clock, as a reader would, so that the round ends at rest and the count means something
+    const play = page.locator('#replay [data-act="play"]');
+    if ((await play.getAttribute("aria-pressed")) === "true") await play.dispatchEvent("click");
     await settle(page, 500);
     // the last move (the ride off) may take seconds, and the moons it leaves are let go some seconds after: a count is read at rest, not part way
     await atRest(page);
+    // and with the clock held it draws nothing: thirty of its own frames and none drawn
+    await expect
+      .poll(
+        async () => {
+          const before = (await skyStats(page)).draws;
+          await page.evaluate(async () => {
+            for (let frame = 0; frame < 30; frame += 1) await new Promise((resolve) => requestAnimationFrame(resolve));
+          });
+          return (await skyStats(page)).draws - before;
+        },
+        { timeout: 60_000, message: "the view was still drawing with the clock held" },
+      )
+      .toBe(0);
   };
   const first = await converged(page, round);
   for (let i = 0; i < 3; i += 1) await round();
