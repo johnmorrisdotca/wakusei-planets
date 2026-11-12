@@ -32,7 +32,8 @@ void main() {
 `;
 
 /**
- * The trail drawn on a body. `show` parents it to that body's oriented mesh. `hide` draws nothing. `dispose` frees the geometry, the material and the texture.
+ * The trail drawn on a body. `show` parents it to that body's oriented mesh. `hide` draws nothing and gives the picture's and the sphere's copies on the graphics card back, so a view with paint off
+ * holds none of it. `dispose` frees the geometry, the material and the texture for good.
  */
 export function createPaintOverlay(three: ThreeParts, data: Uint8Array) {
   const texture = new three.DataTexture(data, PAINT_W, PAINT_H, three.RGBAFormat);
@@ -55,16 +56,27 @@ export function createPaintOverlay(three: ThreeParts, data: Uint8Array) {
   mesh.frustumCulled = false;
   mesh.renderOrder = 3;
   mesh.visible = false;
+  /** Whether the texture or the sphere may be on the graphics card. */
+  let held = false;
   return {
     show(host: THREE.Object3D, nowMinute: number, spanMinutes: number, upload: boolean): void {
       if (mesh.parent !== host) host.add(mesh);
       mesh.visible = true;
+      if (!held) {
+        held = true;
+        texture.needsUpdate = true;
+      }
       material.uniforms.uNow!.value = nowMinute;
       material.uniforms.uSpan!.value = spanMinutes;
       if (upload) texture.needsUpdate = true;
     },
     hide(): void {
       mesh.visible = false;
+      if (held) {
+        held = false;
+        texture.dispose();
+        geometry.dispose();
+      }
     },
     dispose(): void {
       mesh.parent?.remove(mesh);

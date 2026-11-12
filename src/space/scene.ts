@@ -240,8 +240,6 @@ export interface SpaceModel {
   paint: PaintSpec | null;
   /** The trail buffer the element and the scene share. */
   paintTrail: PaintTrail;
-  /** Texels painted at the last step. */
-  paintPixels: number;
   /** Show Starman and the Roadster: a small marked body on its orbit line, named. Off by default; its path is loaded when it is first shown. */
   roadster: boolean;
   roadsterPath: RoadsterPath | null;
@@ -356,7 +354,6 @@ export const newSpaceModel = (): SpaceModel => ({
   orbitersDrawn: { count: 0, status: {}, dim: [], lines: 0, track: 0 },
   paint: null,
   paintTrail: createPaintTrail(),
-  paintPixels: 0,
   roadster: false,
   roadsterPath: null,
   roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
@@ -1201,20 +1198,26 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           if (trackDrawn === 0) trackLine.visible = false;
           model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus, dim: orbitersDim, lines: linesDrawn, track: trackDrawn };
+          // the painted trail: stepped and uploaded only while the painted craft's body is drawn, and only when the shown moment moved
           const paintedCraft = model.paint;
-          const trail = model.paintTrail;
-          if (paintedCraft !== null && model.orbiterSet !== null && model.orbiterSet.ids.includes(paintedCraft.id)) {
-            const centre = model.orbiterSet.centre(paintedCraft.id);
-            const upload = trail.step(model.time, BODIES[centre].radiusKm, (at) => {
-              const there = model.orbiterSet!.position(paintedCraft.id, at);
-              return there === null ? null : groundUnder(centre, there, at);
-            });
-            model.paintPixels = trail.pixels;
-            const host = slots.get(centre)?.drawing?.object.children[0];
-            if (host !== undefined) paintOverlay.show(host, paintMinute(model.time), trail.spanMinutes, upload);
-            else paintOverlay.hide();
+          const paintSet = model.orbiterSet;
+          const paintBody = paintedCraft !== null && paintSet !== null && paintSet.ids.includes(paintedCraft.id) ? slots.get(paintSet.centre(paintedCraft.id))?.drawing : undefined;
+          const paintHost = paintBody !== undefined && paintBody.object.visible ? paintBody.object.children[0] : undefined;
+          if (paintedCraft !== null && paintSet !== null && paintHost !== undefined) {
+            const centre = paintSet.centre(paintedCraft.id);
+            const period = paintSet.period(paintedCraft.id);
+            const trail = model.paintTrail;
+            const upload = trail.step(
+              model.time,
+              BODIES[centre].radiusKm,
+              (at) => {
+                const there = paintSet.position(paintedCraft.id, at);
+                return there === null ? null : groundUnder(centre, there, at);
+              },
+              period === null ? undefined : period * 86_400_000,
+            );
+            paintOverlay.show(paintHost, paintMinute(model.time), trail.spanMinutes, upload);
           } else {
-            model.paintPixels = trail.pixels;
             paintOverlay.hide();
           }
           model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };

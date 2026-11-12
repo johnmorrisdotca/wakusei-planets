@@ -905,7 +905,6 @@ export class WakuseiSpace extends HTMLElement {
       this.#model.paintTrail.set(next);
       this.orbiters = true;
     }
-    this.#model.paintPixels = this.#model.paintTrail.pixels;
     this.#gate?.request();
   }
   /** Take the painted trail off the body. */

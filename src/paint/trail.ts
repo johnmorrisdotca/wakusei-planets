@@ -123,48 +123,50 @@ const stampLine = (data: Uint8Array, a: GroundPoint, b: GroundPoint, minute: num
   return added;
 };
 
-const angular = (a: GroundPoint, b: GroundPoint): number => {
-  const lat1 = (a.lat * Math.PI) / 180;
-  const lat2 = (b.lat * Math.PI) / 180;
-  const dLat = lat2 - lat1;
-  const dLon = ((b.lon - a.lon) * Math.PI) / 180;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
-};
+const RAD = Math.PI / 180;
 
+/** Every pixel within `theta` radians of `point`, row by row: each row's half-width in longitude is worked out, and a cap over the date line wraps to the other edge. */
 const stampCap = (data: Uint8Array, point: GroundPoint, theta: number, minute: number): number => {
   if (!(theta > 0)) return stampDot(data, point, minute);
-  const deg = (theta * 180) / Math.PI;
-  const cosLat = Math.max(0.15, Math.cos((point.lat * Math.PI) / 180));
-  const dLon = Math.min(180, deg / cosLat);
-  const pole = Math.abs(point.lat) + deg >= 90;
-  const west = pole ? -180 : point.lon - dLon;
-  const east = pole ? 180 : point.lon + dLon;
-  const south = Math.max(-90, point.lat - deg);
-  const north = Math.min(90, point.lat + deg);
-  const a = paintPixel(west, north);
-  const b = paintPixel(east, south);
+  const deg = theta / RAD;
+  const sin1 = Math.sin(point.lat * RAD);
+  const cos1 = Math.cos(point.lat * RAD);
+  const cosTheta = Math.cos(theta);
+  const y0 = paintPixel(0, Math.min(90, point.lat + deg)).y;
+  const y1 = paintPixel(0, Math.max(-90, point.lat - deg)).y;
   let added = 0;
-  const x0 = pole ? 0 : Math.max(0, Math.min(a.x, b.x));
-  const x1 = pole ? PAINT_W - 1 : Math.min(PAINT_W - 1, Math.max(a.x, b.x));
-  const y0 = Math.max(0, Math.min(a.y, b.y));
-  const y1 = Math.min(PAINT_H - 1, Math.max(a.y, b.y));
   for (let y = y0; y <= y1; y += 1) {
-    const lat = 90 - ((y + 0.5) / PAINT_H) * 180;
-    for (let x = x0; x <= x1; x += 1) {
-      const lon = ((x + 0.5) / PAINT_W) * 360 - 180;
-      if (angular(point, { lon, lat }) <= theta && write(data, x, y, minute)) added += 1;
+    const lat = (90 - ((y + 0.5) / PAINT_H) * 180) * RAD;
+    const denominator = cos1 * Math.cos(lat);
+    const need = cosTheta - sin1 * Math.sin(lat);
+    let half: number;
+    if (denominator < 1e-9) {
+      if (need > 0) continue;
+      half = 180;
+    } else {
+      const ratio = need / denominator;
+      if (ratio > 1) continue;
+      half = ratio <= -1 ? 180 : Math.acos(ratio) / RAD;
+    }
+    const first = Math.floor(((point.lon - half + 180) / 360) * PAINT_W);
+    const last = Math.floor(((point.lon + half + 180) / 360) * PAINT_W);
+    if (last - first >= PAINT_W - 1) {
+      for (let x = 0; x < PAINT_W; x += 1) if (write(data, x, y, minute)) added += 1;
+    } else {
+      for (let x = first; x <= last; x += 1) if (write(data, ((x % PAINT_W) + PAINT_W) % PAINT_W, y, minute)) added += 1;
     }
   }
   return added;
 };
 
 const stampGround = (data: Uint8Array, swath: PaintSwath, ground: GroundPoint & { heightKm: number }, radiusKm: number, previous: GroundPoint | null, minute: number): { added: number; at: GroundPoint } => {
-  const points = previous === null ? [ground] : trackSteps(previous, ground, swath === "coverage" ? 2 : 0.35);
+  const theta = swath === "coverage" ? coverageAngleRad(ground.heightKm, radiusKm) : 0;
+  // a line is made of steps a third of a degree long; a swath of caps that overlap, a step of about seven tenths of the cap's radius
+  const points = previous === null ? [ground] : trackSteps(previous, ground, swath === "coverage" ? Math.max(1, (theta / RAD) * 0.7) : 0.35);
   let added = 0;
   let cursor: GroundPoint | null = previous;
   for (const point of points) {
-    if (swath === "coverage") added += stampCap(data, point, coverageAngleRad(ground.heightKm, radiusKm), minute);
+    if (swath === "coverage") added += stampCap(data, point, theta, minute);
     else if (cursor === null) added += stampDot(data, point, minute);
     else for (const [from, to] of splitTrail(cursor, point)) added += stampLine(data, from, to, minute);
     cursor = point;
@@ -179,6 +181,15 @@ const ageOf = (then: number, now: number): number => {
   return age;
 };
 
+/** The longest gap between two samples of the craft's place, so a line between them is the short way round the same great circle: a twentieth of a trip, and no more than four minutes (the body turns under it). */
+const MAX_GAP = 240_000;
+const MIN_GAP = 30_000;
+/** Samples taken at most in one frame, and at most to lay down a whole length at once (a swath costs more a sample than a line). A gap is never more than a third of a trip, however many that takes. */
+const FRAME_SAMPLES = 600;
+const REBUILD_SAMPLES = { track: 4000, coverage: 1500 };
+
+const gapOf = (periodMs: number | undefined): number => (periodMs !== undefined && periodMs > 0 ? Math.max(MIN_GAP, Math.min(MAX_GAP, periodMs / 20)) : TICK);
+
 export interface PaintTrail {
   readonly data: Uint8Array;
   readonly width: number;
@@ -191,8 +202,11 @@ export interface PaintTrail {
   readonly spanMinutes: number;
   set(spec: PaintSpec | null): void;
   clear(): void;
-  /** Stamp the ground crossed since the last call. Returns true when `data` changed and should be uploaded. At rest, or with painting off, false. */
-  step(ms: number, radiusKm: number, sample: (ms: number) => (GroundPoint & { heightKm: number }) | null): boolean;
+  /**
+   * Stamp the ground crossed since the last call, and drop what has fallen out of the length. Returns true when `data` changed and should be uploaded. At rest, or with painting off, false.
+   * `periodMs` is one trip of the craft: samples are taken often enough that the line between two follows the orbit, however fast the clock. A clock run backwards fills in the older end of the length.
+   */
+  step(ms: number, radiusKm: number, sample: (ms: number) => (GroundPoint & { heightKm: number }) | null, periodMs?: number): boolean;
 }
 
 /**
@@ -210,14 +224,26 @@ export function createPaintTrail(): PaintTrail {
   let spec: { id: string; length: PaintLength; swath: PaintSwath } | null = null;
   let pixels = 0;
   let lastMs = Number.NaN;
+  /** The last point stamped and the way the clock was going then, so a line carries on from it. */
   let previous: GroundPoint | null = null;
-  let uploadClear = false;
+  let heading = 0;
+  /** The buffer was emptied since the last step: the picture must be sent even if nothing new was stamped. */
+  let stale = false;
+  const reset = (): void => {
+    data.fill(0);
+    pixels = 0;
+    lastMs = Number.NaN;
+    previous = null;
+    heading = 0;
+    stale = true;
+  };
   const dropOld = (now: number, span: number): void => {
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] === 0) continue;
       const then = ((data[i] ?? 0) << 8) | (data[i + 1] ?? 0);
       const age = ageOf(then, now);
-      if (age > span || age < -1) {
+      // a tick of slack at each end, for the rounding of the stamp's minute
+      if (age > span + 1 || age < -1) {
         data[i] = 0;
         data[i + 1] = 0;
         data[i + 2] = 0;
@@ -257,48 +283,62 @@ export function createPaintTrail(): PaintTrail {
       const length = paintLengthOf(next.length);
       const swath = paintSwathOf(next.swath);
       if (spec && spec.id === id && spec.length === length && spec.swath === swath) return;
-      data.fill(0);
-      pixels = 0;
-      lastMs = Number.NaN;
-      previous = null;
+      reset();
       spec = { id, length, swath };
     },
     clear() {
-      data.fill(0);
-      pixels = 0;
-      lastMs = Number.NaN;
-      previous = null;
+      reset();
       spec = null;
-      uploadClear = true;
     },
-    step(ms, radiusKm, sample) {
+    step(ms, radiusKm, sample, periodMs) {
       if (!spec) {
-        const upload = uploadClear;
-        uploadClear = false;
+        const upload = stale;
+        stale = false;
         return upload;
       }
       if (!Number.isFinite(ms)) return false;
-      if (Number.isFinite(lastMs) && ms === lastMs) return false;
+      if (Number.isFinite(lastMs) && ms === lastMs) {
+        const upload = stale;
+        stale = false;
+        return upload;
+      }
       const length = LENGTH_MS[spec.length];
-      let dirty = false;
-      const put = (at: number): void => {
-        const ground = sample(at);
-        if (!ground) return;
-        const stamped = stampGround(data, spec!.swath, ground, radiusKm, previous, paintMinute(at));
-        pixels += stamped.added;
-        previous = stamped.at;
-        dirty = true;
+      const gap = gapOf(periodMs);
+      let dirty = stale;
+      stale = false;
+      /** Stamp the craft's place at each of `times`, one line from the one before. */
+      const lay = (times: number[], way: number): void => {
+        if (way !== heading) previous = null;
+        heading = way;
+        for (const at of times) {
+          const ground = sample(at);
+          if (!ground) {
+            previous = null;
+            continue;
+          }
+          const stamped = stampGround(data, spec!.swath, ground, radiusKm, previous, paintMinute(at));
+          pixels += stamped.added;
+          previous = stamped.at;
+          dirty = true;
+        }
+      };
+      const between = (from: number, to: number, cap: number): number[] => {
+        const span = Math.abs(to - from);
+        const count = Math.max(Math.min(cap, Math.max(1, Math.ceil(span / gap))), periodMs === undefined ? 1 : Math.ceil(span / (periodMs / 3)));
+        return Array.from({ length: count + 1 }, (_, i) => from + ((to - from) * i) / count);
       };
       if (!Number.isFinite(lastMs) || Math.abs(ms - lastMs) > length) {
+        // the first moment, or a jump: the whole length is laid down again, oldest first
         data.fill(0);
         pixels = 0;
         previous = null;
-        const steps = Math.min(180, Math.max(1, Math.ceil(length / 120_000)));
-        for (let i = steps; i >= 0; i -= 1) put(ms - (length * i) / steps);
+        heading = 1;
+        lay(between(ms - length, ms, REBUILD_SAMPLES[spec.swath]), 1);
+      } else if (ms > lastMs) {
+        lay(between(lastMs, ms, FRAME_SAMPLES), 1);
       } else {
-        const span = ms - lastMs;
-        const steps = Math.min(64, Math.max(1, Math.ceil(Math.abs(span) / 30_000)));
-        for (let i = 1; i <= steps; i += 1) put(lastMs + (span * i) / steps);
+        // backwards: the newer end falls away below, and the older end, which the clock has just uncovered, is laid down
+        lay(between(lastMs - length, ms - length, FRAME_SAMPLES), -1);
       }
       dropOld(paintMinute(ms), length / TICK);
       lastMs = ms;
