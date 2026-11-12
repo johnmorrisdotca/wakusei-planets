@@ -34,6 +34,14 @@ pnpm test:freeze  # draws, frames, contexts and GPU objects at rest and over a r
 
 The demo runs at `pnpm dev` → http://127.0.0.1:8225/wakusei-planets/.
 
+## Refreshing data
+
+```sh
+pnpm orbiters:refresh  # refit the orbiters of the Moon and Mars from JPL Horizons: one line a craft (needs the network)
+```
+
+Run by hand from the Mac about once a month, then a patch release; no workflow runs it. [The orbiters of the Moon and Mars](docs/guides/orbiters.md) says what it asks for and what it writes.
+
 ## Release
 
 Do not tag and do not publish. A release is prepared by bumping `package.json` (and `src/version.ts`), moving the CHANGELOG's unreleased notes under the new version, and pushing; when CI is green the coordinating session starts the Release workflow, which publishes to npm by trusted publishing. Ask first before a new package name, a first publish, a major version, a deprecation or a licence change.
