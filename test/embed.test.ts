@@ -7,7 +7,7 @@ import { build } from "esbuild";
 import { compile } from "svelte/compiler";
 import ts from "typescript";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
-import { BODY_IDS, embedCode, embedCredit, EMBED_KINDS, type EmbedOptions } from "../src/index.ts";
+import { BODY_IDS, embedCode, embedCredit, EMBED_KINDS, PICTURE_CREDITS, picturesCredit, type EmbedOptions } from "../src/index.ts";
 import { entryOf } from "../src/embed.ts";
 
 const CHOICES: EmbedOptions[] = [
@@ -111,4 +111,40 @@ test("there is a snippet for every kind, and the credit names what is used", () 
   assert.doesNotMatch(embedCredit({ body: "mars", look: "line" }), /public domain/);
   assert.doesNotMatch(embedCredit({ body: "mars", look: "illustrated" }), /public domain/);
   assert.match(embedCredit({ body: "earth", look: "painted" }), /Blue Marble/);
+  assert.doesNotMatch(embedCredit({ body: "mars", look: "painted" }), /CC BY/);
+  assert.match(embedCredit({ body: "jupiter", look: "painted" }), /Nestaeric/);
+  assert.match(embedCredit({ body: "jupiter", look: "painted" }), /CC BY 4.0/);
+  assert.match(embedCredit({ body: "jupiter", look: "painted" }), /Changes made/);
+  assert.match(embedCredit({ body: "mercury", look: "realistic" }), /Shady Tex/);
 });
+
+for (const id of BODY_IDS) {
+  test(`the embed credit for ${id} names that body's picture, in English and Japanese`, () => {
+    const row = PICTURE_CREDITS.find((one) => one.id === id);
+    for (const look of ["painted", "realistic"] as const) {
+      const en = embedCredit({ body: id, look, lang: "en" });
+      const ja = embedCredit({ body: id, look, lang: "ja" });
+      if (row === undefined) {
+        assert.doesNotMatch(en, /Surface pictures/);
+        assert.doesNotMatch(en, /CC BY/);
+        assert.doesNotMatch(ja, /表面の地図/);
+        assert.doesNotMatch(ja, /CC BY/);
+      } else {
+        assert.ok(en.includes(picturesCredit([id], "en")), en);
+        assert.ok(ja.includes(picturesCredit([id], "ja")), ja);
+        if (row.licence === "CC BY 4.0") {
+          assert.match(en, /CC BY 4.0/);
+          assert.match(en, /Changes made/);
+          assert.match(ja, /変更/);
+        } else {
+          assert.doesNotMatch(en, /CC BY/);
+          assert.match(en, /public domain/);
+          assert.match(ja, /パブリックドメイン/);
+          assert.doesNotMatch(ja, /CC BY/);
+        }
+      }
+    }
+    assert.doesNotMatch(embedCredit({ body: id, look: "line" }), /Surface pictures|CC BY/);
+    assert.doesNotMatch(embedCredit({ body: id, look: "illustrated" }), /Surface pictures|CC BY/);
+  });
+}

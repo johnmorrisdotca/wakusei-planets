@@ -74,7 +74,7 @@ The element is `<wakusei-lineup>`; its entry point, `/lineup`, holds the stars' 
 | `layout` | `row` (default) or `stack` |
 | `zoom` / `at` | where the camera starts: 0 to 1, or the id of a body (the Sun by default) |
 | `turn` | `off` stops the bodies turning by themselves; under reduced motion they do not turn unless it is `on` |
-| `look` | the planets': `realistic` (default) or `painted` (public-domain maps) |
+| `look` | the planets': `realistic` (default) or `painted` (the Earth's map is public domain; Jupiter's is Nestaeric, CC BY 4.0, with the changes named) |
 | `labels` | `off` hides the labels |
 | `controls` | `none` hides the zoom slider |
 | `size`, `lang` | pixels across (720), and `en` or `ja` |

@@ -25,3 +25,5 @@ console.log(embedCredit(choices));
 - `iframe`: デモの `embed.html` に、選択をアドレスで渡します。スクリプトを置けないページ向けです。
 
 どのコードもテストしています。React のコンポーネントはビルドして描画し、Vue と Svelte のコンポーネントはコンパイルし、Angular のテンプレートと ES モジュールは構文を調べ、iframe のアドレスは埋め込みページと同じ読み方で確かめます。衛星には日時が必要なので、`moons` は `time` があるときだけ書きます。衛星の陰影つきの見た目は惑星のファイル (`moons-jupiter`) に入っていて、コードが自動で import します。
+
+`embedCredit(choices)` は、見た目が `realistic` か `painted` のとき、その天体の表面の絵の出典を `PICTURE_CREDITS` から書きます。CC BY 4.0 の地図は、作者とライセンスと変更を挙げます。パブリックドメインの地図は挙げません。`lang: "ja"` で同じ行を日本語にします。線画は絵の出典を書きません。

@@ -536,7 +536,7 @@ if (main && controls && pickerBox) {
   const panel = document.querySelector<EmbedPanelElement>("#embed-panel")!;
   const embedOptions = (): EmbedOptions => {
     const real = state.real || (state.moons && hasMoons());
-    return { body: state.body, look: state.look, size: panel.size, ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
+    return { body: state.body, look: state.look, size: panel.size, lang: lang(), ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
   };
   panel.kinds = EMBED_KINDS;
   const kept = address.get("embed");

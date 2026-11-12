@@ -25,3 +25,5 @@ console.log(embedCredit(choices));
 - `iframe`: the demo's `embed.html` with the choices in its address, for a page with no scripts.
 
 Every snippet is tested: the package's tests build the React component and render it, compile the Vue and Svelte components, parse the Angular template and the ES module, and read the iframe's address the way the embed page does. Moons need a date, so `moons` is written only with a `time`. A moon's shaded look is in its planet's file (`moons-jupiter`), which the snippet imports for you.
+
+`embedCredit(choices)` names the surface picture of that body when the look is `realistic` or `painted`, from `PICTURE_CREDITS`. A CC BY 4.0 map names its author, the licence and the changes. A public-domain map does not. `lang: "ja"` writes the same line in Japanese. A line drawing names no picture.

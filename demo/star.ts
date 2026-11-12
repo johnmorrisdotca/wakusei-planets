@@ -199,7 +199,7 @@ for (const input of Object.values(inputs)) {
 }
 
 // --- "Put it in your page" ---------------------------------------------------------------------------------------------------------------------------
-const embedOptions = (): EmbedOptions => ({ body: "sun", star: state.numbers, look: state.look, size: panel.size, ...(state.spin ? { turn: Math.round(star.starLook?.turn.degreesPerSecond ?? 12) } : {}) });
+const embedOptions = (): EmbedOptions => ({ body: "sun", star: state.numbers, look: state.look, size: panel.size, lang: lang(), ...(state.spin ? { turn: Math.round(star.starLook?.turn.degreesPerSecond ?? 12) } : {}) });
 panel.kinds = EMBED_KINDS;
 const kept = address.get("embed");
 if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;

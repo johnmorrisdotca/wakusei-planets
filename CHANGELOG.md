@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Embed and door credits name the CC BY 4.0 pictures** (MODULES-1157). `embedCredit` and `lineupCredit` are written from `picturesCredit` for the bodies shown (`lang` is `en` or `ja`). A painted or realistic Mercury, Venus, Jupiter, Saturn, Uranus, Neptune or Sun names its CC BY 4.0 author and the changes; the Moon and Mars stay public domain. The line-up's painted Earth and Jupiter no longer share one "NASA and Nestaeric" line. `OWN_SOURCES`' `wakusei-pictures` credit is the same table for every picture, so it names Shady Tex and does not call a public-domain map CC BY 4.0. The source's licence name stays the stricter "CC BY 4.0".
+
 - **The painter carries the credit for the pictures it draws** (MODULES-1146). `WakuseiPainter.credit` is `{ en, ja }`. Before `make` it names every surface picture the painter can draw. After `make` it names only the bodies made in a look that draws the map, so the Moon and Mars add no CC BY 4.0 line and a shaded body with no map adds nothing. While finer map tiles are on a body it adds the `wakusei-tiles` credit from `OWN_SOURCES`, and Mercury's tiles say that their colour is the CC BY 4.0 map. `PICTURE_CREDITS` is the table of which body's map comes from which source (the rows of `NOTICE.md`), and `picturesCredit(bodies, lang)` writes the line for the bodies a page shows. Jupiter names Nestaeric and CC BY 4.0, including the changes.
 
 ## [0.37.1] - 2026-11-12
