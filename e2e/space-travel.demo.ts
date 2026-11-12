@@ -29,22 +29,25 @@ interface Frame {
 /** The planet two moons of one planet go round (the move keeps it in the picture, and it is what the turn holds). */
 const PLANET: Record<string, string> = { callisto: "jupiter", europa: "jupiter" };
 
-/** What the page reports now, read in one go so every part is of the same draw: the move, the look direction, and whether each body's disc or marker is on the screen (its place is inside the box, or within its radius, at least a marker's 4 pixels, of the edge). */
-const read = (page: Page, from: string, to: string): Promise<Frame> =>
-  page.locator(SPACE).evaluate(
-    (el, [a, b, c]) => {
-      const stats = Reflect.get(el, "stats") as { draws: number; ride: { gliding: boolean }; travelling: unknown; camera: { forward: [number, number, number] } };
-      const on = (id: string | null): boolean => {
-        if (id === null) return false;
-        const place = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(id);
-        if (!place) return false;
-        const r = Math.max(place.r, 4);
-        return place.x > -r && place.y > -r && place.x < el.clientWidth + r && place.y < el.clientHeight + r;
-      };
-      return { draws: stats.draws, travelling: stats.travelling, gliding: stats.ride.gliding, forward: stats.camera.forward, onScreen: { leaving: on(a), destination: on(b), planet: on(c) } };
-    },
-    [from, to, PLANET[from] !== undefined && PLANET[from] === PLANET[to] ? PLANET[from]! : null] as [string, string, string | null],
-  ) as Promise<Frame>;
+/** Puts the reader of one frame on the page: what the page reports now, read in one go so every part is of the same draw (the move, the look direction, and whether each body's disc or marker is on the screen: its place is inside the box, or within its radius, at least a marker's 4 pixels, of the edge). It lives on the page so that a move can be watched there at every animation frame, not at the pace of a round trip to the test, which a loaded machine stretches to a few readings a move. */
+const installReader = (): void => {
+  Reflect.set(window, "__frameOf", (el: Element, [a, b, c]: [string, string, string | null]) => {
+    const stats = Reflect.get(el, "stats") as { draws: number; ride: { gliding: boolean }; travelling: unknown; camera: { forward: [number, number, number] } };
+    const on = (id: string | null): boolean => {
+      if (id === null) return false;
+      const place = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(id);
+      if (!place) return false;
+      const r = Math.max(place.r, 4);
+      return place.x > -r && place.y > -r && place.x < el.clientWidth + r && place.y < el.clientHeight + r;
+    };
+    return { draws: stats.draws, travelling: stats.travelling, gliding: stats.ride.gliding, forward: stats.camera.forward, onScreen: { leaving: on(a), destination: on(b), planet: on(c) } };
+  });
+};
+const bodiesOf = (from: string, to: string): [string, string, string | null] => [from, to, PLANET[from] !== undefined && PLANET[from] === PLANET[to] ? PLANET[from]! : null];
+const read = async (page: Page, from: string, to: string): Promise<Frame> => {
+  await page.evaluate(installReader);
+  return page.locator(SPACE).evaluate((el, args) => (Reflect.get(window, "__frameOf") as (el: Element, args: [string, string, string | null]) => unknown)(el, args), bodiesOf(from, to)) as Promise<Frame>;
+};
 
 /** Wait until the draws hold (two reads apart with no new draw). */
 async function held(page: Page): Promise<void> {
@@ -71,20 +74,29 @@ async function move(page: Page, from: string, to: string, options: Record<string
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(from);
   await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
   await held(page);
-  const frames: Frame[] = [];
   const base = (await statsOf(page)).draws;
+  await page.evaluate(installReader);
   await callOn(page, "goTo", to, options);
-  const started = Date.now();
-  let lastDraw = base;
-  for (;;) {
-    const now = await read(page, from, to);
-    if (now.draws !== lastDraw) {
-      lastDraw = now.draws;
-      frames.push(now);
-    }
-    if (!now.gliding && frames.length > 0) break;
-    if (Date.now() - started > 60_000) throw new Error("the move never ended");
-  }
+  // watched on the page, at every animation frame, until the move is over: a reading is kept for each new draw. The test's own round trips are slower than the draws on a loaded machine and would see only a few of them
+  const frames = (await page.locator(SPACE).evaluate(
+    async (el, [a, b, c, first]) => {
+      const frameOf = Reflect.get(window, "__frameOf") as (el: Element, args: [string, string, string | null]) => { draws: number; gliding: boolean };
+      const seen: { draws: number; gliding: boolean }[] = [];
+      let lastDraw = first as number;
+      const started = performance.now();
+      for (;;) {
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const now = frameOf(el, [a as string, b as string, c as string | null]);
+        if (now.draws !== lastDraw) {
+          lastDraw = now.draws;
+          seen.push(now);
+        }
+        if (!now.gliding && seen.length > 0) return seen;
+        if (performance.now() - started > 60_000) throw new Error("the move never ended");
+      }
+    },
+    [...bodiesOf(from, to), base] as [string, string, string | null, number],
+  )) as Frame[];
   return frames;
 }
 

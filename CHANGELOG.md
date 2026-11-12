@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The travel test watches a move on the page** (MODULES-1186). `e2e/space-travel.demo.ts` counted the draws of a move from the test, one round trip for each reading, so a loaded machine saw 6 frames of a move it needs more than 6 of. It now records each new draw at every animation frame on the page until the move ends. Test only.
+
 ## [0.39.0] - 2026-11-13
 
 - **The painter carries the credit for the pictures it draws** (MODULES-1146). `WakuseiPainter.credit` is `{ en, ja }`. Before `make` it names every surface picture the painter can draw. After `make` it names only the bodies made in a look that draws the map, so the Moon and Mars add no CC BY 4.0 line and a shaded body with no map adds nothing. While finer map tiles are on a body it adds the `wakusei-tiles` credit from `OWN_SOURCES`, and Mercury's tiles say that their colour is the CC BY 4.0 map. `PICTURE_CREDITS` is the table of which body's map comes from which source (the rows of `NOTICE.md`), and `picturesCredit(bodies, lang)` writes the line for the bodies a page shows. Jupiter names Nestaeric and CC BY 4.0, including the changes.
