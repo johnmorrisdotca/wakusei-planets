@@ -30,15 +30,15 @@ Times: a `Date` is UTC, Horizons' vectors and the fitted epoch (`epochJd`) are T
 
 | Craft | Tracked: median, worst | Predicted: median, worst |
 |---|---|---|
-| LRO | 14, 44 | 80, 235 |
-| Chandrayaan-2 | 11, 33 | 99, 251 |
-| Danuri | 13, 48 | 36, 144 |
-| MRO | 20, 52 | 60, 146 |
-| Odyssey | 17, 54 | 68, 166 |
-| Mars Express | 7, 17 | 8, 27 |
-| Hope | 4, 9 | 17, 33 |
+| LRO | 11, 26 | 92, 206 |
+| Chandrayaan-2 | 12, 38 | 112, 244 |
+| Danuri | 7, 35 | 74, 225 |
+| MRO | 19, 51 | 59, 147 |
+| Odyssey | 17, 53 | 67, 166 |
+| Mars Express | 7, 19 | 8, 29 |
+| Hope | 5, 12 | 16, 28 |
 
-A mean ellipse cannot follow TGO (146 km inside its window, 444 past it; its node swings 2.2 degrees a day) or ARTEMIS P1 and P2 (about 3,000 km of a 10,000 km orbit, pulled about by the Earth), so those are marked `modelled`. These are the numbers of the file read on 2026-11-11; the script rewrites them.
+A mean ellipse cannot follow TGO (150 km inside its window, 441 past it; its node swings 2.2 degrees a day) or ARTEMIS P1 and P2 (about 3,000 km of a 10,000 km orbit, pulled about by the Earth), so those are marked `modelled`. These are the numbers of the file read on 2026-11-12; the script rewrites them.
 
 ## Tracked, predicted, modelled, none
 
