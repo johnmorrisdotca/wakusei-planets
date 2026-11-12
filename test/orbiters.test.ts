@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { ORBITER_DIM_SHARE, ORBITER_FACTS, ORBITER_IDS, orbiterCentre, orbiterDim, orbiterElements, orbiterFacts, orbiterNumbers, orbiterPath, orbiterPosition, orbiterSpeed, orbiterStatus, type OrbiterId } from "../src/orbiters.ts";
+import { ORBITER_FITS } from "../src/data/orbiters.ts";
+import { BODIES } from "../src/facts.ts";
+import { ORBITER_DIM_SHARE, ORBITER_FACTS, ORBITER_IDS, orbiterCentre, orbiterDim, orbiterElements, orbiterGround, orbiterGroundTrack, orbiterNextPass, orbiterFacts, orbiterNumbers, orbiterPath, orbiterPosition, orbiterSpeed, orbiterStatus, type OrbiterId } from "../src/orbiters.ts";
 
 interface Point {
   /** Where the point is from: inside the fit's window, or in the days after it. */
@@ -213,4 +215,76 @@ test("a page draws dim a modelled path, and a predicted one only when it misses 
   assert.equal(orbiterDim("artemis-p1", inside("artemis-p1", "tracked")), true);
   assert.equal(orbiterDim("maven", Date.UTC(2026, 10, 12)), true);
   assert.equal(orbiterDim("tianwen-1", Date.UTC(2026, 10, 12)), true);
+});
+
+test("each craft has a short name, and the data file's pole and prime meridian are the package's own", () => {
+  for (const id of ORBITER_IDS) {
+    const facts = orbiterFacts(id);
+    assert.ok(facts.short.en.length > 0 && facts.short.en.length <= 14 && facts.short.ja.length > 0, `${id} has a short name`);
+    const fit = ORBITER_FITS[id] as unknown as { center: "moon" | "mars"; pole?: readonly number[]; prime?: readonly number[] };
+    if (orbiterElements(id) === undefined) continue;
+    const body = BODIES[fit.center];
+    assert.deepEqual([...fit.pole!], [body.pole.ra, body.pole.dec], `${id}'s pole`);
+    assert.deepEqual([...fit.prime!], [body.prime.w0, body.prime.rate], `${id}'s prime meridian`);
+  }
+});
+
+test("the inclination is to the body's equator: MRO about 92.6 degrees, TGO about 74, Hope about 25, and TGO's fit in Mars's own frame is close enough to be tracked", () => {
+  assert.ok(Math.abs(orbiterElements("mro")!.i - 92.6) < 1, `MRO ${orbiterElements("mro")!.i}`);
+  assert.ok(Math.abs(orbiterElements("tgo")!.i - 74) < 3, `TGO ${orbiterElements("tgo")!.i}`);
+  assert.ok(Math.abs(orbiterElements("hope")!.i - 25) < 3, `Hope ${orbiterElements("hope")!.i}`);
+  const tgo = orbiterElements("tgo")!;
+  assert.equal(tgo.basis, "tracked");
+  assert.ok(tgo.fitErrorKm.max < 60, `TGO misses Horizons by ${tgo.fitErrorKm.max} km at worst`);
+});
+
+test("the ground point is under the craft, and a polar orbit's track reaches near both poles and crosses the equator further west each trip", () => {
+  const e = orbiterElements("mro")!;
+  const when = (Date.parse(e.validFrom) + Date.parse(e.fitUntil)) / 2;
+  const below = orbiterGround("mro", when)!;
+  const p = orbiterPosition("mro", when);
+  const { ra, dec } = BODIES.mars.pole;
+  const r = Math.PI / 180;
+  const c = Math.cos(23.4392911 * r);
+  const s = Math.sin(23.4392911 * r);
+  const eq = [Math.cos(dec * r) * Math.cos(ra * r), Math.cos(dec * r) * Math.sin(ra * r), Math.sin(dec * r)] as const;
+  const pole = [eq[0], eq[1] * c + eq[2] * s, -eq[1] * s + eq[2] * c] as const;
+  const lat = Math.asin((p[0] * pole[0] + p[1] * pole[1] + p[2] * pole[2]) / Math.hypot(...p)) / r;
+  assert.ok(Math.abs(lat - below.lat) < 1e-6, `${lat} against ${below.lat}`);
+  assert.ok(below.lon >= -180 && below.lon <= 180);
+  const trip = e.periodDays * 86_400_000;
+  const track = orbiterGroundTrack("mro", when, when + trip, 240);
+  assert.equal(track.length, 241);
+  assert.ok(Math.max(...track.map((q) => q.lat)) > 80 && Math.min(...track.map((q) => q.lat)) < -80, "MRO passes near both poles");
+  const crossing = (from: number): number => {
+    const t = orbiterGroundTrack("mro", from, from + trip, 480);
+    for (let k = 1; k < t.length; k += 1) if (t[k - 1]!.lat < 0 && t[k]!.lat >= 0) return t[k]!.lon;
+    throw new Error("no crossing");
+  };
+  const drift = (((crossing(when) - crossing(when + trip)) % 360) + 360) % 360;
+  assert.ok(drift > 24 && drift < 31, `the track moves ${drift.toFixed(1)} degrees west a trip`);
+  assert.deepEqual(orbiterGroundTrack("tianwen-1", when, when + 1), []);
+  assert.equal(orbiterGround("capstone", when), undefined);
+});
+
+test("the next pass over a place: above the elevation asked for between its rise and set, highest in between, and the same pass when asked while it is up", () => {
+  const from = Date.parse(orbiterElements("mro")!.validFrom);
+  // Jezero crater, where Perseverance landed, and the Apollo 11 landing site
+  for (const [id, place] of [
+    ["mro", { lat: 18.4446, lon: 77.4508 }],
+    ["hope", { lat: 18.4446, lon: 77.4508 }],
+    ["lro", { lat: 0.6742, lon: 23.4731 }],
+  ] as const) {
+    const pass = orbiterNextPass(id, place, from)!;
+    assert.ok(pass !== undefined, `${id} passes over within 30 days`);
+    assert.ok(pass.set > from && pass.rise < pass.highest && pass.highest < pass.set, `${id}'s pass is in order (a craft up already rose before the moment asked about)`);
+    assert.ok(pass.elevationDeg >= 10 && pass.elevationDeg <= 90, `${id} at best ${pass.elevationDeg.toFixed(1)} degrees`);
+    const again = orbiterNextPass(id, place, pass.highest)!;
+    assert.ok(Math.abs(again.rise - pass.rise) < 5000 && Math.abs(again.set - pass.set) < 5000, `${id}: asked while up, the same pass`);
+    const sooner = orbiterNextPass(id, place, from, { minElevationDeg: 0 })!;
+    assert.ok(sooner.rise <= pass.rise, "a lower limit finds the pass no later");
+    assert.equal(pass.status, orbiterStatus(id, pass.highest));
+  }
+  assert.equal(orbiterNextPass("lro", { lat: 0, lon: 0 }, from, { minElevationDeg: 89.99, withinDays: 0.5 }), undefined);
+  assert.equal(orbiterNextPass("tianwen-1", { lat: 0, lon: 0 }, from), undefined);
 });

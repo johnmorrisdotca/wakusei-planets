@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes src/data/orbiters.ts and test/data/orbiters-horizons.json: the spacecraft in orbit round the Moon and Mars, from JPL Horizons
 (https://ssd.jpl.nasa.gov/api/horizons.api, VECTORS, centre the body, ecliptic and equinox J2000, km and km/s, TDB), as mean orbital elements with
-secular rates fitted over a window of the craft's current track, each with the dates it is good for and the error measured against Horizons.
+secular rates in the body's equator frame (POLE below) fitted over a window of the craft's current track, each with the dates it is good for and the error measured against Horizons.
 
 Time scales: Horizons' vectors are asked for and read in TDB, so every Julian date in the fit (`epochJd`) is TDB. The library takes UTC (a `Date`) and adds
 TDB - UTC = 37 s (TAI - UTC, fixed since 2017-01-01) + 32.184 s (TT - TAI) = 69.184 s; TDB differs from TT by under 2 ms. The dates written as ISO strings are UTC.
@@ -32,6 +32,12 @@ FIXTURE = os.path.join(ROOT, "test", "data", "orbiters-horizons.json")
 GM = {"moon": 4902.800118, "mars": 42828.375816}
 CENTER = {"moon": "500@301", "mars": "500@499"}
 EQUATORIAL_RADIUS_KM = {"moon": 1737.4, "mars": 3396.2}
+# The IAU north poles (right ascension, declination, J2000, degrees) and prime meridians (W = w0 + rate * days from J2000) of Archinal et al. 2018, the same as src/facts.ts. The
+# elements are fitted in the body's equator frame (x to the ascending node of the body's equator on the Earth's J2000 equator, z to the pole): there a low orbit's inclination is
+# the one its agency gives and stays put, and its node turns steadily round the pole; in the ecliptic both swing (TGO's inclination by tens of degrees a month).
+POLE = {"moon": (269.9949, 66.5392), "mars": (317.68143, 52.8865)}
+PRIME = {"moon": (38.3213, 13.17635815), "mars": (176.63, 350.89198226)}
+OBLIQUITY_DEG = 23.4392911
 
 # id: (Horizons id, body, window days, step minutes, error limit in km or ("relative", share of the mean radius))
 CRAFT = {
@@ -147,6 +153,24 @@ def dot(a, b):
 
 def norm(a):
     return math.sqrt(dot(a, a))
+
+
+def body_axes(body):
+    """The body's equator frame as three unit vectors in ecliptic J2000 axes: the node, the third axis, the pole."""
+    ra, dec = (math.radians(x) for x in POLE[body])
+    c, s = math.cos(math.radians(OBLIQUITY_DEG)), math.sin(math.radians(OBLIQUITY_DEG))
+    def ecliptic(a, d):
+        q = [math.cos(d) * math.cos(a), math.cos(d) * math.sin(a), math.sin(d)]
+        return [q[0], q[1] * c + q[2] * s, -q[1] * s + q[2] * c]
+    pole = ecliptic(ra, dec)
+    node = ecliptic(ra + math.pi / 2, 0.0)
+    return node, cross(pole, node), pole
+
+
+def to_body(axes, rows):
+    """Horizons' rows (ecliptic) in the body's equator frame."""
+    turn = lambda v: [dot(v, axes[0]), dot(v, axes[1]), dot(v, axes[2])]
+    return [(t, turn(r), turn(v)) for t, r, v in rows]
 
 
 def elements_of(r, v, mu):
@@ -328,6 +352,8 @@ def main():
                 fits[craft] = kept
                 continue
             say(f"{craft}: no track now (Horizons ends {ended.date()}): the last {window} days of it, modelled")
+        axes = body_axes(body)
+        rows = to_body(axes, rows)
         el = fit(rows, mu)
         median, worst = error_of(el, rows, mu)
         mean_r = sum(norm(r) for _, r, _ in rows) / len(rows)
@@ -343,7 +369,7 @@ def main():
         if ended is None:
             extra, _ = horizons.vectors(command, CENTER[body], stop, stop + window, step)
             if extra is not None and len(extra) >= 50:
-                p_median, p_worst = error_of(el, extra, mu)
+                p_median, p_worst = error_of(el, to_body(axes, extra), mu)
                 predicted = {"median": round(p_median, 1), "max": round(p_worst, 1)}
                 say(f"{craft}: predicted span, {len(extra)} samples over the next {window} days: error median {p_median:.1f} km, worst {p_worst:.1f} km")
             else:
@@ -351,7 +377,7 @@ def main():
         say(f"{craft}: {len(rows)} samples over {window} days, a {el['a']:.0f} km, e {el['e']:.4f}, i {el['i']:.2f}, node {el['raanRate']:+.4f} and periapsis {el['argpRate']:+.4f} deg/day; error median {median:.1f} km, worst {worst:.1f} km (limit {allowed:.0f}){'' if worst <= allowed else '  OVER THE LIMIT'}")
         period_days = 360 / (math.degrees(math.sqrt(mu / el["a"] ** 3)) * 86400 + el["meanMotionCorrection"])
         fits[craft] = {
-            "id": craft, "center": body, "horizonsId": int(command),
+            "id": craft, "center": body, "horizonsId": int(command), "pole": list(POLE[body]), "prime": list(PRIME[body]),
             "epochJd": round(el["epochJd"], 6), "a": round(el["a"], 3), "e": round(el["e"], 7), "i": round(el["i"], 5), "raan": round(el["raan"], 5), "argp": round(el["argp"], 5), "m0": round(el["m0"], 5),
             "raanRate": round(el["raanRate"], 7), "argpRate": round(el["argpRate"], 7), "meanMotionCorrection": round(el["meanMotionCorrection"], 7),
             "periodDays": round(period_days, 7),
@@ -379,7 +405,7 @@ def main():
     ordered = {k: fits[k] for k in list(CRAFT) + list(NO_TRACK) if k in fits}
     with open(OUT, "w") as f:
         f.write("// Made by scripts/make-orbiter-data.py from JPL Horizons (https://ssd.jpl.nasa.gov/api/horizons.api): the spacecraft in orbit round the Moon and Mars, as mean elements with secular rates fitted over a window\n")
-        f.write(f"// of each craft's current track (centre the body, ecliptic and equinox J2000, km and degrees, `epochJd` in TDB, the dates in UTC), with the dates the fit is good for and its error against Horizons, over the fit and past it. Fetched {read}. Do not edit by hand.\n")
+        f.write(f"// of each craft's current track (centre the body, in the body's equator frame of the pole given, km and degrees, `epochJd` in TDB, the dates in UTC), with the dates the fit is good for and its error against Horizons, over the fit and past it. Fetched {read}. Do not edit by hand.\n")
         f.write("export const ORBITER_FITS = " + json.dumps(ordered, indent=2) + " as const;\n")
     with open(FIXTURE, "w") as f:
         json.dump(fixture, f, indent=1)
