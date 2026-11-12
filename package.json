@@ -538,6 +538,11 @@
       "types": "./dist/approaches.d.ts",
       "import": "./dist/approaches.js",
       "default": "./dist/approaches.js"
+    },
+    "./moon-catalogue": {
+      "types": "./dist/moon-catalogue.d.ts",
+      "import": "./dist/moon-catalogue.js",
+      "default": "./dist/moon-catalogue.js"
     }
   },
   "files": [

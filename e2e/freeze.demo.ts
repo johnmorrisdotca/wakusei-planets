@@ -468,6 +468,30 @@ test("changes to the space view give back what they took: the zooms, the scales,
   expect(gpuObjects(gone)).toBeLessThanOrEqual(8);
 });
 
+test("every other known moon as dots: one draw, nothing drawn at rest, and turning them off and on gives back what they took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&goto=jupiter-moons&moons=all`);
+  await liveSky(page);
+  const dots = () => sky(page).evaluate((el) => (el as unknown as { stats: { allMoons: { on: boolean; loaded: boolean; dots: number } } }).stats.allMoons);
+  // the catalogue arrives as a chunk of its own: the page reports how many dots its last draw drew
+  await expect.poll(async () => (await dots()).dots, { timeout: 60_000 }).toBeGreaterThan(400);
+  const before = await settledCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.contexts).toBe(1);
+  expect(after.draws - before.draws).toBe(0);
+  const round = async () => {
+    await page.locator("#all-moons").dispatchEvent("click");
+    await expect.poll(async () => (await dots()).dots, { timeout: 30_000 }).toBe(0);
+    await page.locator("#all-moons").dispatchEvent("click");
+    await expect.poll(async () => (await dots()).dots, { timeout: 30_000 }).toBeGreaterThan(400);
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 3; i += 1) await round();
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 2);
+});
+
 /** The "Name on the body" row's choices, one after another: every look, how many, where, facing and off, so each texture is drawn again and the old one let go. Each waits on the draw it causes. */
 const labelRound = async (page: Page): Promise<void> => {
   const press = (group: string, name: string): Promise<void> => drawn(page, () => page.getByRole("group", { name: group }).getByRole("button", { name, exact: true }).dispatchEvent("click"));
