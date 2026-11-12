@@ -549,7 +549,7 @@ export const WORDS = {
     bl_half: "半分",
     bl_full: "最大",
     bl_facing: "こちらを向く",
-    sp_belts: "小惑星帯",
+    sp_belts: "小天体の帯",
     sp_when: "日付と時刻",
     sp_now: "今",
     sp_back: "もとの日付へ",
