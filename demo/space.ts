@@ -13,6 +13,8 @@ import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
+// chikyu-earth is an optional peer: the demo carries its places layout so a page can lay places on the Earth (`earth-places`)
+import "../src/earth-places.ts";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
 const say = (key: string, values: Record<string, string | number> = {}): string => (chooser()?.word(key) ?? WORDS.en[key] ?? key).replace(/\{(\w+)\}/g, (all, name: string) => String(values[name] ?? all));

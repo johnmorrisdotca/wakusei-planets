@@ -64,6 +64,7 @@ import "@johnmorrisdotca/wakusei-planets/earth";
 
 - **realistic と painted の地球は、このパッケージのままです。** となりのほかの惑星と同じ見た目になります。
 - **ページの WebGL は1つです。** どちらのパッケージも kazoku-ui の共有レンダラーで描くので、惑星と地球儀が並ぶページでも、WebGL は1つ、負荷の上限も1つです。
+- **宇宙ビューの地球に「現在地」。** `import "@johnmorrisdotca/wakusei-planets/earth-places"` を読み込むと、chikyu-earth の場所の配置 (`/markers`、0.36.0 以降) が `<wakusei-space>` に届き、その `earth-places` が、地球の上に読者の場所とお気に入りの印を付けます ([ガイド](earth-places.md))。この import がないと、属性は何も描きません。
 - **宇宙ビュー。** 今は chikyu-earth の `<chikyu-space>` が、このパッケージのペインター (`setBodyPainter`。chikyu-earth のガイド「The real Sun, planets, Pluto and moons」) で太陽と惑星を描いています。太陽系を1か所にまとめるため、このビューはこのパッケージへ移しているところです。移ったら、このガイドと「アップグレード」に切り替え方を書きます。chikyu-earth には地球と人工衛星が残ります。
 
 ## なぜ1つにしないのか

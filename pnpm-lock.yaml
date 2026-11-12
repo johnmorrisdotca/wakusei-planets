@@ -28,8 +28,8 @@ importers:
         specifier: ^9.0.0
         version: 9.39.5
       '@johnmorrisdotca/chikyu-earth':
-        specifier: ^0.10.0
-        version: 0.10.0(@johnmorrisdotca/kazoku-ui@0.41.0(three@0.186.1))(astronomy-engine@2.1.19)(three@0.186.1)
+        specifier: ^0.36.0
+        version: 0.36.0(astronomy-engine@2.1.19)(three@0.186.1)
       '@playwright/test':
         specifier: 1.64.0
         version: 1.64.0
@@ -384,16 +384,22 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@johnmorrisdotca/chikyu-earth@0.10.0':
-    resolution: {integrity: sha512-OYw/Sp0ahaZoQ32D8R1RD7xeI9iq9TF5mqSoBbyovzByo+/vX6ecEnv3/V4VfWRl6l6YKFpkeOgAThQEk4BCmw==}
+  '@johnmorrisdotca/chikyu-earth@0.36.0':
+    resolution: {integrity: sha512-iTg6Czj/bt5VeQMSb/v9eFhP5wBwMq8eM70Uu+kvEofCRVvWY0lfiD31PDp1saB7UIzeXbQtB1YnHeqfAn++CA==}
     engines: {node: '>=24'}
     peerDependencies:
-      '@johnmorrisdotca/kazoku-ui': '>=0.9.0'
+      '@johnmorrisdotca/hoshi-stars': '>=0.30.0'
+      '@johnmorrisdotca/kuni': '>=1.6.1'
+      '@johnmorrisdotca/wakusei-planets': '>=0.5.0'
       astronomy-engine: '>=2.1.0'
       satellite.js: '>=6.0.0'
       three: '>=0.160.0'
     peerDependenciesMeta:
-      '@johnmorrisdotca/kazoku-ui':
+      '@johnmorrisdotca/hoshi-stars':
+        optional: true
+      '@johnmorrisdotca/kuni':
+        optional: true
+      '@johnmorrisdotca/wakusei-planets':
         optional: true
       astronomy-engine:
         optional: true
@@ -1840,12 +1846,12 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@johnmorrisdotca/chikyu-earth@0.10.0(@johnmorrisdotca/kazoku-ui@0.41.0(three@0.186.1))(astronomy-engine@2.1.19)(three@0.186.1)':
+  '@johnmorrisdotca/chikyu-earth@0.36.0(astronomy-engine@2.1.19)(three@0.186.1)':
     dependencies:
       '@johnmorrisdotca/chizu': 1.6.1
+      '@johnmorrisdotca/kazoku-ui': 0.41.0(three@0.186.1)
       d3-geo: 3.1.1
     optionalDependencies:
-      '@johnmorrisdotca/kazoku-ui': 0.41.0(three@0.186.1)
       astronomy-engine: 2.1.19
       three: 0.186.1
 

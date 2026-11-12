@@ -7,7 +7,7 @@ import { cross, dot, type Vec3 } from "./vec.ts";
 import { moment, type When } from "./when.ts";
 
 export type { When } from "./when.ts";
-export { layerOf, MARK_RULES, PLACE_LAYERS, placeMarks, readPlaceLayers, surfacePoint, turnToPlace, type PlaceLayer, type PlaceMark, type SurfaceView } from "./place-marks.ts";
+export { layerOf, MARK_RULES, PLACE_LAYERS, placeMarks, pointUnder, readPlaceLayers, spotView, surfacePoint, turnToPlace, type PlaceLayer, type PlaceMark, type SpotView, type SurfaceSpot, type SurfaceView } from "./place-marks.ts";
 
 /**
  * What a place is: a `crewed` landing (an Apollo lunar module), a `landing` (a lander that worked after touchdown), a `rover` that drove there, a `crash` (a craft that hit the surface and was lost, by accident or at the end of its mission), an

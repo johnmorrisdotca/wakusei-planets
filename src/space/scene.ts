@@ -386,6 +386,10 @@ export interface SpaceDeps {
   wantSight?: () => boolean;
   /** The body looked at, as this draw left it, for marks laid on its surface: its centre and radius in the scene, its pole and prime meridian, the camera's place, the projection to CSS pixels and its radius on the screen. Not while the camera rides. */
   onSurface?: (body: { id: BodyId; centre: Vec3; radius: number; pole: Vec3; meridian: Vec3; eye: Vec3; project(point: Vec3): { x: number; y: number } | null; width: number; height: number; radiusPx: number } | null) => void;
+  /** Whether the Earth's surface is wanted at this draw by `onEarth` (left out, it is not): the page has places to lay on it. */
+  wantEarth?: () => boolean;
+  /** The Earth as this draw left it, wherever the camera looks, for the places laid on it: what `onSurface` gives, and `sun`, the direction of the Sun from the Earth in the scene (null with the light `lit`, when nothing is in the night). Null when the Earth is not drawn, or while the camera rides. */
+  onEarth?: (body: { id: BodyId; centre: Vec3; radius: number; pole: Vec3; meridian: Vec3; eye: Vec3; project(point: Vec3): { x: number; y: number } | null; width: number; height: number; radiusPx: number; sun: Vec3 | null } | null) => void;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
   onMoving?: () => void;
   /** The target of the ride could not be placed at this draw. */
@@ -1244,6 +1248,18 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             }
             for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
             deps.onLabels(places);
+          }
+          // after the names: the places on the Earth keep clear of them
+          if (deps.onEarth && (deps.wantEarth?.() ?? false)) {
+            const earth = rideFrom ? undefined : slots.get("earth")?.drawing;
+            if (earth === undefined || !earth.object.visible) deps.onEarth(null);
+            else {
+              const at = earth.object.position;
+              const r = earth.object.scale.x;
+              const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
+              const { pole, meridian } = orientation("earth", model.time);
+              deps.onEarth({ id: "earth", centre: [at.x, at.y, at.z], radius: r, pole, meridian, eye: [camera.position.x, camera.position.y, camera.position.z], project: labelFor, width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : ((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half, sun: model.light === "lit" ? null : toSunOf("earth") });
+            }
           }
           if (deps.onSight && (deps.wantSight?.() ?? true)) {
             // each body in the camera's own axes: in front when it is ahead (negative z), its place from the projection (a pan included), and the way to it on the screen from its x and y, which holds behind the camera too
