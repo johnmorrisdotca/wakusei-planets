@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { ORBITER_FACTS, ORBITER_IDS, orbiterCentre, orbiterElements, orbiterFacts, orbiterNumbers, orbiterPath, orbiterPosition, orbiterSpeed, orbiterStatus, type OrbiterId } from "../src/orbiters.ts";
+import { ORBITER_DIM_SHARE, ORBITER_FACTS, ORBITER_IDS, orbiterCentre, orbiterDim, orbiterElements, orbiterFacts, orbiterNumbers, orbiterPath, orbiterPosition, orbiterSpeed, orbiterStatus, type OrbiterId } from "../src/orbiters.ts";
 
 interface Point {
   /** Where the point is from: inside the fit's window, or in the days after it. */
@@ -173,4 +173,44 @@ test("the line of every orbit turns by a modest angle at each of its points, wha
     }
     assert.ok(widest < 20, `${id} (e ${elements.e.toFixed(2)}): the line goes round the body by at most ${widest.toFixed(1)} degrees between two points`);
   }
+});
+
+test("a page draws dim a modelled path, and a predicted one only when it misses Horizons by more than 2 per cent of its body's radius; a tracked path never", () => {
+  const radius = { moon: 1737.4, mars: 3389.5 } as const;
+  const inside = (id: OrbiterId, which: "tracked" | "predicted"): number => {
+    const e = orbiterElements(id)!;
+    const from = Date.parse(which === "tracked" ? e.validFrom : e.fitUntil);
+    const to = Date.parse(which === "tracked" ? e.fitUntil : e.validUntil);
+    return (from + to) / 2;
+  };
+  // tracked: never dim
+  for (const id of ["lro", "mro", "hope"] as const) {
+    assert.equal(orbiterStatus(id, inside(id, "tracked")), "tracked");
+    assert.equal(orbiterDim(id, inside(id, "tracked")), false, `${id} tracked`);
+  }
+  // predicted: dim only past the share of the radius, by the worst error measured after the fit
+  let small = 0;
+  let large = 0;
+  for (const id of ORBITER_IDS) {
+    const e = orbiterElements(id);
+    if (e === undefined || e.predictedErrorKm === null) continue;
+    const when = inside(id, "predicted");
+    if (orbiterStatus(id, when) !== "predicted") continue;
+    const limit = ORBITER_DIM_SHARE * radius[orbiterCentre(id)];
+    const over = e.predictedErrorKm.max > limit;
+    assert.equal(orbiterDim(id, when), over, `${id}: predicted worst ${e.predictedErrorKm.max} km against ${limit.toFixed(1)} km`);
+    if (over) large += 1;
+    else small += 1;
+  }
+  assert.ok(small >= 1 && large >= 1, `both cases met: ${small} drawn full, ${large} dim`);
+  assert.ok(Math.abs(ORBITER_DIM_SHARE * radius.moon - 35) < 1 && Math.abs(ORBITER_DIM_SHARE * radius.mars - 68) < 1);
+  // past the days after the fit, and before the window: modelled, dim
+  const lro = orbiterElements("lro")!;
+  assert.equal(orbiterStatus("lro", Date.parse(lro.validUntil) + 3_600_000), "modelled");
+  assert.equal(orbiterDim("lro", Date.parse(lro.validUntil) + 3_600_000), true);
+  assert.equal(orbiterDim("lro", Date.parse(lro.validFrom) - 86_400_000), true);
+  // a mean ellipse only, an ended mission, and no path at all
+  assert.equal(orbiterDim("artemis-p1", inside("artemis-p1", "tracked")), true);
+  assert.equal(orbiterDim("maven", Date.UTC(2026, 10, 12)), true);
+  assert.equal(orbiterDim("tianwen-1", Date.UTC(2026, 10, 12)), true);
 });

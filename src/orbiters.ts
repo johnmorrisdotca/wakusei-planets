@@ -258,6 +258,44 @@ export function orbiterNumbers(id: OrbiterId, when: When): { altitudeKm: number;
 const MEAN_RADIUS_KM: Record<OrbiterCentre, number> = { moon: 1737.4, mars: 3389.5 };
 
 /**
+ * How far a predicted path may miss Horizons, as a share of its body's mean radius, and still be drawn as a tracked one is: 2 per cent, about 35 km at the Moon and 68 km at Mars, a hair's breadth
+ * on a picture of the body.
+ *
+ * @example
+ * ```ts
+ * import { ORBITER_DIM_SHARE } from "@johnmorrisdotca/wakusei-planets/orbiters";
+ *
+ * console.log((ORBITER_DIM_SHARE * 3389.5).toFixed(0), "km at Mars");
+ * ```
+ */
+export const ORBITER_DIM_SHARE = 0.02;
+
+/**
+ * Whether a page should draw an orbiter dim at a moment: a `modelled` path always (outside the fit's days, or a mean orbit only), and a `predicted` one when its worst error measured against
+ * Horizons in the days after the fit (`predictedErrorKm.max`) is more than `ORBITER_DIM_SHARE` of its body's mean radius. A `tracked` path is never dim; a craft with no path (`none`) is not drawn at all,
+ * and answers `true`.
+ *
+ * @param id - The orbiter.
+ * @param when - A `Date` or milliseconds since 1970 (UTC).
+ * @returns `true` to draw it dim.
+ *
+ * @example
+ * ```ts
+ * import { orbiterDim, orbiterStatus } from "@johnmorrisdotca/wakusei-planets/orbiters";
+ *
+ * const when = Date.UTC(2026, 10, 12);
+ * console.log(orbiterStatus("hope", when), orbiterDim("hope", when), orbiterStatus("lro", when), orbiterDim("lro", when));
+ * ```
+ */
+export function orbiterDim(id: OrbiterId, when: When): boolean {
+  const status = orbiterStatus(id, when);
+  if (status === "tracked") return false;
+  if (status !== "predicted") return true;
+  const error = orbiterElements(id)?.predictedErrorKm?.max;
+  return error === undefined || error > ORBITER_DIM_SHARE * MEAN_RADIUS_KM[orbiterCentre(id)];
+}
+
+/**
  * The orbit as points round one trip, in kilometres from the body's centre, ecliptic J2000, at the moment's node and periapsis: for an orbit line.
  *
  * @param id - The orbiter.

@@ -808,7 +808,7 @@ export class WakuseiSpace extends HTMLElement {
   #orbitersLoading = false;
   /**
    * Show the spacecraft in orbit round the Moon and Mars (the attribute `orbiters`; off by default): each a small dot where `/orbiters` puts it on the date shown, scaled with its body, on its orbit line, with its
-   * name beside it in the page's language, once the body is at least 24 CSS pixels in radius on the screen. A modelled or predicted path is drawn dim; a craft with no path is not drawn. The paths (a 9 kB module)
+   * name beside it in the page's language, once the body is at least 24 CSS pixels in radius on the screen. A modelled path is drawn dim, and a predicted one whose measured error is more than 2 per cent of its body's radius (`orbiterDim`); a craft with no path is not drawn. The paths (a 9 kB module)
    * are loaded the first time they are shown. `stats.orbiters` says what was drawn and each one's status.
    */
   get orbiters(): boolean {
@@ -827,6 +827,7 @@ export class WakuseiSpace extends HTMLElement {
             position: (id, ms) => (mod.orbiterElements(id as Id) === undefined ? null : mod.orbiterPosition(id as Id, ms)),
             path: (id, ms, points) => mod.orbiterPath(id as Id, ms, points),
             status: (id, ms) => mod.orbiterStatus(id as Id, ms),
+            dim: (id, ms) => mod.orbiterDim(id as Id, ms),
             name: (id) => ({ ...mod.orbiterFacts(id as Id).name }),
           };
           this.#gate?.request();
@@ -1532,8 +1533,8 @@ export class WakuseiSpace extends HTMLElement {
     bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
     /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
-    /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), and each drawn craft's status (`tracked`, `predicted`, `modelled`). */
-    orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none"> };
+    /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`). */
+    orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[] };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -1558,7 +1559,7 @@ export class WakuseiSpace extends HTMLElement {
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
-      orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status } },
+      orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim] },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
     };
   }
