@@ -52,5 +52,16 @@ test("nothing the builder had before the shared panel is gone: its rows, seven t
   await expect(panel.locator('[part="docs"]')).toHaveAttribute("href", "docs/");
   await expect(panel.locator('[part="credits"]')).toContainText("Wakusei Planets by John Morris (MIT)");
   await page.locator('[data-testid="look-painted"]').click();
-  await expect(panel.locator('[part="credits"]')).toContainText("NASA, USGS and JPL");
+  // Saturn's map is Solar System Scope's CC BY 4.0 map with Nestaeric's pole caps, so the credit names both and the changes; only the rings are public domain
+  const credits = panel.locator('[part="credits"]');
+  await expect(credits).toContainText("Solar System Scope");
+  await expect(credits).toContainText("Nestaeric");
+  await expect(credits).toContainText("CC BY 4.0");
+  await expect(credits).toContainText("Changes made");
+  await expect(credits).toContainText("Rings: NASA / JPL / Space Science Institute (public domain)");
+  // a public-domain body names no CC BY source
+  await page.locator('[data-testid="group-jupiter"]').click();
+  await page.locator('[data-testid="body-io"]').click();
+  await expect(credits).toContainText("NASA / JPL (Galileo SSI and Voyager images)");
+  await expect(credits).not.toContainText("CC BY");
 });
