@@ -128,6 +128,16 @@
             <button type="button" class="fam-button" id="orbiter-track" aria-pressed="false" data-say="sp_otrack">Ground track</button>
           </div>
           <div class="fam-fine orbiter-card" id="orbiter-card" role="status" hidden></div>
+          <div class="fam-row" data-help-en="Paint draws the path of one orbiter on the body it goes round, for the last day, week or month of the clock. Clear takes it off. The line grows only while time is moving." data-help-ja="「塗る」は、周回機の通り道を、その天体の表面に、時計の直近の1日、1週間、または1か月ぶん描きます。「消す」で消えます。線が伸びるのは、時刻が進んでいるあいだだけです。">
+            <span class="fam-label" data-say="sp_paint_label">Paint</span>
+            <button type="button" class="fam-button" id="paint" aria-pressed="false" data-say="sp_paint">Paint</button>
+            <button type="button" class="fam-button" id="paint-clear" data-say="sp_paint_clear">Clear</button>
+            <div class="group fam-seg" id="paint-lengths" role="group" aria-label="Paint length" data-say-label="sp_paint_length">
+              <button type="button" data-paint-length="1d" aria-pressed="true" data-say="sp_paint_1d">1 day</button>
+              <button type="button" data-paint-length="1w" aria-pressed="false" data-say="sp_paint_1w">1 week</button>
+              <button type="button" data-paint-length="1m" aria-pressed="false" data-say="sp_paint_1m">1 month</button>
+            </div>
+          </div>
           <div class="fam-row" data-help-en="Name on the body writes each body's name on its globe, like a title laid over the thing it names: it turns with the body (or faces you), once or on both sides, at the equator or near a pole, in four looks and three strengths. Nothing is drawn on a body too small on the screen." data-help-ja="「天体に名前」は、天体の名前をその球面に書きます。映画のタイトルのように天体に重なり、天体とともに回ります (「こちらを向く」なら見る人のほうを向いたまま)。一つか両側か、赤道か極の近くか、四つの見た目と三つの強さを選べます。画面上で小さい天体には描きません。">
             <span class="fam-label" data-say="bl">Name on the body</span>
             <div class="group fam-seg" id="body-labels" role="group" aria-label="Name on the body" data-say-label="bl">

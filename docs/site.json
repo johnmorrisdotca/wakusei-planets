@@ -125,6 +125,11 @@
       "ja": "月と火星を周回する探査機: JPL Horizonsに合わせた平均軌道要素から任意の時刻の位置、数値、各機の情報 (約9 kB)",
       "platform": "node"
     },
+    "./ground-track": {
+      "en": "The ground track of a craft: the date-line split, the pole split, and the circle where it stands 10° above the horizon. No DOM and no three.js, so another package can import it",
+      "ja": "探査機の地上軌跡: 日付変更線での分割、極での分割、高度10度以上に見える範囲の円。DOMもthree.jsも使わないので、ほかのパッケージから取り込めます",
+      "platform": "node"
+    },
     "./roadster": {
       "en": "Starman and the Tesla Roadster: where it is on any date from 2018 to the start of 2036, its distances, speeds, orbit and the moments worth looking at (about 20 kB gzipped)",
       "ja": "スターマンとテスラ・ロードスター: 2018年から2036年初めまでの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",

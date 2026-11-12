@@ -35,6 +35,9 @@ import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } f
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, type Vec3 } from "../vec.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
+
+export type { PaintSpec };
 
 export { setPlacesLoader } from "../scene/place-layer.ts";
 export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceKind, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
@@ -872,6 +875,46 @@ export class WakuseiSpace extends HTMLElement {
       );
     }
     this.#gate?.request();
+  }
+  /**
+   * Paint one orbiter's path on the body it goes round. `id` is an orbiter such as `lro` or `mro`. `length` is how long the trail is kept, in simulated time (`1d` when left out, or `1w`, `1m`).
+   * `swath` is `track` (the point under the craft, the default) or `coverage` (where it is at least 10° above the horizon). Setting another craft clears the trail. `null` clears it.
+   * The trail is drawn only while time is moving, one upload a frame, and nothing at rest.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const paint = (space: WakuseiSpace): void => {
+   *   space.paint = { id: "lro", length: "1d", swath: "track" };
+   * };
+   * console.log(typeof paint);
+   * ```
+   */
+  get paint(): PaintSpec | null {
+    const spec = this.#model.paint;
+    return spec === null ? null : { id: spec.id, length: paintLengthOf(spec.length), swath: paintSwathOf(spec.swath) };
+  }
+  set paint(value: PaintSpec | null) {
+    if (value === null) {
+      this.#model.paint = null;
+      this.#model.paintTrail.clear();
+    } else {
+      const next = { id: String(value.id), length: paintLengthOf(value.length), swath: paintSwathOf(value.swath) };
+      this.#model.paint = next;
+      this.#model.paintTrail.set(next);
+      this.orbiters = true;
+    }
+    this.#model.paintPixels = this.#model.paintTrail.pixels;
+    this.#gate?.request();
+  }
+  /** Take the painted trail off the body. */
+  clearPaint(): void {
+    this.paint = null;
+  }
+  /** Texels the trail has painted. 0 after `clearPaint`, and again when the painted craft changes. */
+  get paintPixels(): number {
+    return this.#model.paintTrail.pixels;
   }
   #roadsterLoading = false;
   /**

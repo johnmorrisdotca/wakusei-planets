@@ -46,6 +46,9 @@ const state = {
   starman: address.get("starman") === "1",
   /** The spacecraft in orbit round the Moon and Mars (their paths are fetched the first time). */
   orbiters: address.get("orbiters") === "1",
+  /** Paint the ground track of the chosen orbiter (LRO at the Moon, MRO at Mars when none is chosen) for a day, a week or a month. */
+  paint: address.get("paint") === "1",
+  paintLength: pick(address.get("paintlength"), ["1d", "1w", "1m"], "1d") as "1d" | "1w" | "1m",
   /** Every other known moon drawn as a dot, and the list of the planet's moons under the controls (`moons=all`). */
   allMoons: address.get("moons") === "all",
   /** The craft picked out, which orbit lines are drawn, and its ground track. */
@@ -92,6 +95,8 @@ function render(): void {
   space.labels = state.names;
   space.roadster = state.starman;
   space.orbiters = state.orbiters;
+  const mars = space.body === "mars" || space.body === "phobos" || space.body === "deimos";
+  space.paint = state.paint ? { id: state.orbiter || (mars ? "mro" : "lro"), length: state.paintLength } : null;
   space.allMoons = state.allMoons;
   space.orbiter = state.orbiter || null;
   space.orbiterLines = state.orbiterLines;
@@ -139,6 +144,8 @@ function render(): void {
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
   pressed(document.querySelector<HTMLElement>("#starman")!, state.starman);
   pressed(document.querySelector<HTMLElement>("#orbiters")!, state.orbiters);
+  pressed(document.querySelector<HTMLElement>("#paint")!, state.paint);
+  for (const b of $$("#paint-lengths [data-paint-length]")) pressed(b, b.dataset["paintLength"] === state.paintLength);
   pressed(document.querySelector<HTMLElement>("#all-moons")!, state.allMoons);
   renderMoonList();
   renderOrbiters();
@@ -158,6 +165,8 @@ function render(): void {
   address.set("names", state.names ? null : "0");
   address.set("starman", state.starman ? "1" : null);
   address.set("orbiters", state.orbiters ? "1" : null);
+  address.set("paint", state.paint ? "1" : null);
+  address.set("paintlength", state.paintLength === "1d" ? null : state.paintLength);
   address.set("moons", state.allMoons ? "all" : null);
   address.set("orbiter", state.orbiters && state.orbiter ? state.orbiter : null);
   address.set("olines", state.orbiters && state.orbiterLines !== "all" ? state.orbiterLines : null);
@@ -205,6 +214,9 @@ for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", 
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
 document.querySelector("#starman")!.addEventListener("click", () => ((state.starman = !state.starman), render()));
+document.querySelector("#paint")!.addEventListener("click", () => ((state.paint = !state.paint), (state.orbiters = state.orbiters || state.paint), render()));
+document.querySelector("#paint-clear")!.addEventListener("click", () => ((state.paint = false), space.clearPaint(), render()));
+for (const b of $$("#paint-lengths [data-paint-length]")) b.addEventListener("click", () => ((state.paintLength = b.dataset["paintLength"] as typeof state.paintLength), render()));
 document.querySelector("#all-moons")!.addEventListener("click", () => ((state.allMoons = !state.allMoons), render()));
 
 // The moons of the planet in view, from the catalogue (fetched the first time "All moons" is on): the counts, a row of its groups, and a table that scrolls in its own box.

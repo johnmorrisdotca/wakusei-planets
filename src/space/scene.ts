@@ -21,6 +21,8 @@ import { coveredBy, type CoverEntry } from "./covered.ts";
 import type { SightInput } from "./sight.ts";
 import { spinAxis } from "./spin.ts";
 import { createTrack, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createPaintOverlay } from "./paint-overlay.ts";
+import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
@@ -234,6 +236,12 @@ export interface SpaceModel {
   orbiterTrack: boolean;
   /** The orbiters at the last draw: how many were drawn, each drawn one's status, which were drawn dim, how many orbit lines, and how many points of ground track. */
   orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
+  /** The craft whose ground track is painted on its body, or null. */
+  paint: PaintSpec | null;
+  /** The trail buffer the element and the scene share. */
+  paintTrail: PaintTrail;
+  /** Texels painted at the last step. */
+  paintPixels: number;
   /** Show Starman and the Roadster: a small marked body on its orbit line, named. Off by default; its path is loaded when it is first shown. */
   roadster: boolean;
   roadsterPath: RoadsterPath | null;
@@ -346,6 +354,9 @@ export const newSpaceModel = (): SpaceModel => ({
   orbiterLines: "all",
   orbiterTrack: false,
   orbitersDrawn: { count: 0, status: {}, dim: [], lines: 0, track: 0 },
+  paint: null,
+  paintTrail: createPaintTrail(),
+  paintPixels: 0,
   roadster: false,
   roadsterPath: null,
   roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
@@ -479,6 +490,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const scratchB = new three.Vector3();
       // the orbit lines of a stage out from the Sun, kept while the stage, the scale and the day are the same
       let regionLines: { id: SunRegion; mode: ScaleMode; epoch: number; lines: Vec3[][] } | null = null;
+      const paintOverlay = createPaintOverlay(three, model.paintTrail.data);
 
       let ended = false;
       interface Slot {
@@ -1189,6 +1201,22 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           if (trackDrawn === 0) trackLine.visible = false;
           model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus, dim: orbitersDim, lines: linesDrawn, track: trackDrawn };
+          const paintedCraft = model.paint;
+          const trail = model.paintTrail;
+          if (paintedCraft !== null && model.orbiterSet !== null && model.orbiterSet.ids.includes(paintedCraft.id)) {
+            const centre = model.orbiterSet.centre(paintedCraft.id);
+            const upload = trail.step(model.time, BODIES[centre].radiusKm, (at) => {
+              const there = model.orbiterSet!.position(paintedCraft.id, at);
+              return there === null ? null : groundUnder(centre, there, at);
+            });
+            model.paintPixels = trail.pixels;
+            const host = slots.get(centre)?.drawing?.object.children[0];
+            if (host !== undefined) paintOverlay.show(host, paintMinute(model.time), trail.spanMinutes, upload);
+            else paintOverlay.hide();
+          } else {
+            model.paintPixels = trail.pixels;
+            paintOverlay.hide();
+          }
           model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };
 
           // the arrowheads on the lines: small in screen pixels at the place, pointing the way the body goes (the lines run from the body once round in the order it goes, whichever way the clock runs)
@@ -1408,6 +1436,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           dots?.dispose();
           oortGeometry.dispose();
           (oortLines.material as THREE.Material).dispose();
+          paintOverlay.dispose();
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);
