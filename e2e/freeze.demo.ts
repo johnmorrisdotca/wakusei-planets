@@ -104,15 +104,24 @@ test("changes give back what they took: contexts, buffers, vertex arrays, textur
   await page.goto(`${URL}?body=jupiter`);
   await main(page).hover();
   await live(page);
+  // a body is remade, and the one before it let go, only by a draw made with it: after each change wait for that draw, not a clock. With a 400 ms wait a busy machine (load 30 to 50,
+  // a CI image slot) went from pick to pick with no draw between, and the bodies passed over were still held when the count was taken: 37 against 30 (MODULES-1172)
+  const drawnAfter = async (act: () => Promise<unknown>) => {
+    const before = await jobsDrawn(page);
+    await act();
+    await expect.poll(() => jobsDrawn(page), { timeout: 60_000, message: "a draw after the change" }).toBeGreaterThan(before);
+  };
   const round = async () => {
     for (const id of ["saturn", "mars", "earth", "moon", "earth", "neptune", "sun", "mercury", "jupiter"]) {
-      await pick(page, id);
-      await main(page).hover();
-      await live(page);
-      await settle(page, 400);
+      await drawnAfter(async () => {
+        await pick(page, id);
+        await main(page).hover();
+        await live(page);
+      });
     }
-    await page.locator("#moons").click().catch(() => undefined);
-    await settle(page, 600);
+    // the Moons switch, shown for a body that has moons: a press redraws, so wait for that draw too. Dispatched: a real click scrolls the page to the button, and a body scrolled out of
+    // sight is (rightly) not drawn
+    if (await page.locator("#moons").isVisible()) await drawnAfter(() => page.locator("#moons").dispatchEvent("click"));
   };
   // the first rounds make what the page keeps (the stills of the rows, the programs of each body); on a slow machine they finish during the second, so the count is taken after two
   await round();

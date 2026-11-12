@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **The freeze test of changes waits for a draw after each change** (MODULES-1172). "Changes give back what they took" read 37 GPU objects against 30 once on a loaded machine: it waited 400 ms after each body was picked, and a body is remade, and the one before it let go, only by a draw made with it. It now waits for the renderer to draw after each pick and after the Moons switch (dispatched: a real click scrolls the page, and a body scrolled out of sight is not drawn). 5 of 5 in the CI image; with a sphere leaked per body it reads 399 against 284 and fails.
 - **A page with its own textureBase is not asked for pictures the package lacks** (MODULES-1175). The npm package ships each map at 512 and 1024; the 2048s are only in the repository. With `textureBase` and no `farBase`, the far base fell back to `textureBase`, so a body big in the view asked it for `<map>-2048.webp` (the Moon, Mars, Venus, the Sun and the rest) and got a 404. The painter now stops at the widest the package ships unless `farBase` says where the 2048s are; the default (jsDelivr) is unchanged. A test makes every painted body fill the screen under each setting and holds that `textureBase` is asked only for 512 and 1024, `farBase` for the 2048, and the default far base for it too; it fails on the old painter (the Sun's 2048 from the package's base). chikyu-earth can drop its stopgap (`maxTexture: 1024` in its demo).
 
 ## [0.37.1] - 2026-11-12
