@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **Ride Off puts the demo's clock back** (the space page). A ride along starts the clock, and Off used to leave it running, at 3,600 times real time, with the view drawing every frame. Off now holds the clock again when the ride started it, and leaves it running at its own speed when it was already playing. Demo only.
 - **The freeze test of the space view holds the clock** (MODULES-1187). "Changes to the space view give back what they took" read 183 graphics objects against a limit of 182 in the image: the rides in its round started the demo's clock, so the moons came and went with the time and the count was of a different moment each round. The round now holds the clock after the rides and waits for 30 frames with no draw before it counts. Test only.
 
 - **The travel test watches a move on the page** (MODULES-1186). `e2e/space-travel.demo.ts` counted the draws of a move from the test, one round trip for each reading, so a loaded machine saw 6 frames of a move it needs more than 6 of. It now records each new draw at every animation frame on the page until the move ends. Test only.
