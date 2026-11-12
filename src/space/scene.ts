@@ -487,7 +487,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const scratchB = new three.Vector3();
       // the orbit lines of a stage out from the Sun, kept while the stage, the scale and the day are the same
       let regionLines: { id: SunRegion; mode: ScaleMode; epoch: number; lines: Vec3[][] } | null = null;
-      const paintOverlay = createPaintOverlay(three, model.paintTrail.data);
+      // made when the first trail is shown: a view that never paints holds none of it
+      let paintOverlay: ReturnType<typeof createPaintOverlay> | null = null;
 
       let ended = false;
       interface Slot {
@@ -1216,9 +1217,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               },
               period === null ? undefined : period * 86_400_000,
             );
-            paintOverlay.show(paintHost, paintMinute(model.time), trail.spanMinutes, upload);
+            (paintOverlay ??= createPaintOverlay(three, model.paintTrail.data)).show(paintHost, paintMinute(model.time), trail.spanMinutes, upload);
           } else {
-            paintOverlay.hide();
+            paintOverlay?.hide();
           }
           model.roadsterDrawn = { shown: roadsterAt !== null, position: roadsterAt === null ? null : [roadsterAt[0] + origin[0], roadsterAt[1] + origin[1], roadsterAt[2] + origin[2]], radiusPx: roadsterPx };
 
@@ -1439,7 +1440,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           dots?.dispose();
           oortGeometry.dispose();
           (oortLines.material as THREE.Material).dispose();
-          paintOverlay.dispose();
+          paintOverlay?.dispose();
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);

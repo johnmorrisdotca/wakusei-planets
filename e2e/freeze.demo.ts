@@ -714,6 +714,77 @@ test("the orbiters round Mars with a craft picked, its line and its ground track
   expect((await readCounts(page)).draws - rest0.draws).toBe(0);
 });
 
+test("painting an orbiter's track on the Moon uploads nothing at rest, one picture a frame while time runs, and switching paint and craft gives back what it took", async ({ page }) => {
+  // the pictures sent to the graphics card at the paint's size (1024 by 512), counted in the page
+  await page.addInitScript(() => {
+    const seen = window as unknown as { __paintUploads: number };
+    seen.__paintUploads = 0;
+    for (const Context of [WebGL2RenderingContext, WebGLRenderingContext]) {
+      const proto = Context.prototype as unknown as Record<string, (...args: unknown[]) => unknown>;
+      for (const name of ["texImage2D", "texSubImage2D"]) {
+        const original = proto[name]!;
+        proto[name] = function (this: unknown, ...args: unknown[]) {
+          if (args.some((value, i) => value === 1024 && args[i + 1] === 512)) seen.__paintUploads += 1;
+          return original.apply(this, args);
+        };
+      }
+    }
+  });
+  const uploads = () => page.evaluate(() => (window as unknown as { __paintUploads: number }).__paintUploads);
+  const pixels = () => sky(page).evaluate((el) => (el as unknown as { paintPixels: number }).paintPixels);
+  await page.goto(`${SPACE_PAGE}?t=2026-11-12T12:00Z&orbiters=1&paint=1`);
+  await liveSky(page);
+  await sky(page).evaluate((el) => (el as unknown as { goTo(body: string, options: { smooth: boolean }): void }).goTo("moon", { smooth: false }));
+  await expect.poll(pixels, { timeout: 90_000 }).toBeGreaterThan(20);
+  await atRest(page);
+  await settle(page, 1500);
+  // at rest: no draw and no picture sent
+  const rest0 = { counts: await readCounts(page), sent: await uploads() };
+  await settle(page, 3000);
+  expect((await readCounts(page)).draws - rest0.counts.draws, "nothing drawn at rest with the track painted").toBe(0);
+  expect((await uploads()) - rest0.sent, "no picture sent at rest").toBe(0);
+  // time running: a picture at most a frame, and frames at most thirty a second
+  await sky(page).evaluate((el) => Reflect.set(el, "speed", 3600));
+  await settle(page, 1500);
+  const run0 = { stats: await skyStats(page), sent: await uploads() };
+  await settle(page, 4000);
+  const run1 = { stats: await skyStats(page), sent: await uploads() };
+  const frames = run1.stats.draws - run0.stats.draws;
+  expect(frames).toBeGreaterThan(0);
+  expect(frames).toBeLessThanOrEqual(4 * 31);
+  expect(run1.sent - run0.sent, "a picture sent for each frame drawn at most").toBeLessThanOrEqual(frames + 1);
+  expect(run1.sent - run0.sent, "the picture is sent while time runs").toBeGreaterThan(0);
+  await sky(page).evaluate((el) => Reflect.set(el, "speed", 0));
+  await settle(page, 2000);
+  const stop0 = { counts: await readCounts(page), sent: await uploads() };
+  await settle(page, 3000);
+  expect((await readCounts(page)).draws - stop0.counts.draws, "nothing drawn once time stops").toBe(0);
+  expect((await uploads()) - stop0.sent, "no picture sent once time stops").toBe(0);
+  // paint off and on, another craft and back, Clear: the graphics objects alive come back to where they were
+  const round = async () => {
+    for (const button of ["#paint", "#paint", '[data-orbiter="danuri"]', '[data-orbiter="lro"]', '[data-paint-length="1w"]', '[data-paint-length="1d"]', "#paint-clear", "#paint"]) {
+      await page.locator(button).dispatchEvent("click");
+      await settle(page, 300);
+    }
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  await expect.poll(pixels, { timeout: 30_000 }).toBeGreaterThan(20);
+  const after0 = await readCounts(page);
+  await settle(page, 3000);
+  expect((await readCounts(page)).draws - after0.draws, "nothing drawn at rest after the rounds").toBe(0);
+  // and with paint off, nothing of it is held: Clear, then the objects alive are no more than before it was first shown
+  await page.locator("#paint-clear").dispatchEvent("click");
+  await expect.poll(pixels, { timeout: 30_000 }).toBe(0);
+  await settle(page, 2500);
+  const cleared = await settledCounts(page);
+  expect(gpuObjects(cleared)).toBeLessThan(gpuObjects(last));
+});
+
 test("the space view's canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 5120, height: 2880 }, deviceScaleFactor: 2, reducedMotion: "no-preference" });
   const page = await context.newPage();

@@ -220,7 +220,9 @@ export interface PaintTrail {
  * ```
  */
 export function createPaintTrail(): PaintTrail {
-  const data = new Uint8Array(PAINT_W * PAINT_H * 4);
+  // the two megabytes are taken when the first craft is painted, not when the view is made
+  let buffer: Uint8Array | null = null;
+  const grab = (): Uint8Array => (buffer ??= new Uint8Array(PAINT_W * PAINT_H * 4));
   let spec: { id: string; length: PaintLength; swath: PaintSwath } | null = null;
   let pixels = 0;
   let lastMs = Number.NaN;
@@ -230,14 +232,14 @@ export function createPaintTrail(): PaintTrail {
   /** The buffer was emptied since the last step: the picture must be sent even if nothing new was stamped. */
   let stale = false;
   const reset = (): void => {
-    data.fill(0);
+    buffer?.fill(0);
     pixels = 0;
     lastMs = Number.NaN;
     previous = null;
     heading = 0;
     stale = true;
   };
-  const dropOld = (now: number, span: number): void => {
+  const dropOld = (data: Uint8Array, now: number, span: number): void => {
     for (let i = 0; i < data.length; i += 4) {
       if (data[i + 3] === 0) continue;
       const then = ((data[i] ?? 0) << 8) | (data[i + 1] ?? 0);
@@ -253,7 +255,9 @@ export function createPaintTrail(): PaintTrail {
     }
   };
   const self: PaintTrail = {
-    data,
+    get data() {
+      return grab();
+    },
     width: PAINT_W,
     height: PAINT_H,
     get pixels() {
@@ -302,6 +306,7 @@ export function createPaintTrail(): PaintTrail {
         stale = false;
         return upload;
       }
+      const data = grab();
       const length = LENGTH_MS[spec.length];
       const gap = gapOf(periodMs);
       let dirty = stale;
@@ -340,7 +345,7 @@ export function createPaintTrail(): PaintTrail {
         // backwards: the newer end falls away below, and the older end, which the clock has just uncovered, is laid down
         lay(between(lastMs - length, ms - length, FRAME_SAMPLES), -1);
       }
-      dropOld(paintMinute(ms), length / TICK);
+      dropOld(data, paintMinute(ms), length / TICK);
       lastMs = ms;
       return dirty || pixels > 0;
     },
