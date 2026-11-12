@@ -208,8 +208,19 @@ document.querySelector("#step-in")!.addEventListener("click", () => {
 });
 space.addEventListener("wakusei-region", () => render());
 space.addEventListener("wakusei-hop", () => render());
-// riding along is for watching it go by: a ride starts the clock (Play), and the date box moves with it
-for (const b of $$("#rides [data-ride]")) b.addEventListener("click", () => ((state.ride = b.dataset["ride"] as typeof state.ride), (state.play = state.play || state.ride !== ""), render()));
+// riding along is for watching it go by: a ride starts the clock (Play), and the date box moves with it. Off puts the clock back as it was before the ride: held if the ride started it, as it was (running, at its speed) if it was already playing.
+let startedByRide = false;
+for (const b of $$("#rides [data-ride]"))
+  b.addEventListener("click", () => {
+    const next = b.dataset["ride"] as typeof state.ride;
+    if (next !== "" && state.ride === "" && !state.play) startedByRide = true;
+    if (next === "") {
+      if (startedByRide) state.play = false;
+      startedByRide = false;
+    } else state.play = true;
+    state.ride = next;
+    render();
+  });
 for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", () => ((state.rideLook = b.dataset["rideLook"] as typeof state.rideLook), render()));
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
