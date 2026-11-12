@@ -1,10 +1,10 @@
 // The demo's own tests: a real browser, real taps. `pnpm test:demo` builds the site and runs them; `pnpm test:freeze` runs the freeze test alone.
-// The server is scripts/dev.ts on port 8301, at the site's real address /wakusei-planets/: this package's ports are 8300 to 8399, and tests use 8301.
+// The server is scripts/dev.ts on port 8226, at the site's real address /wakusei-planets/: this package's ports are 8225 to 8249, and tests use 8226.
 // Every Chromium project draws WebGL in software, never on the machine's graphics card. WebKit has no software switch, so off CI its projects skip the pages that draw WebGL (the freeze test).
 import { SOFTWARE_GL_ARGS } from "@johnmorrisdotca/kazoku-ui/testing";
 import { defineConfig, devices } from "@playwright/test";
 
-const port = Number(process.env.TEST_PORT ?? 8301);
+const port = Number(process.env.TEST_PORT ?? 8226);
 const phone = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 const gl = { launchOptions: { args: [...SOFTWARE_GL_ARGS, "--enable-precise-memory-info", "--js-flags=--expose-gc"] } };
 const others = ["freeze.demo.ts", "lineup-freeze.demo.ts", "soak.demo.ts"];

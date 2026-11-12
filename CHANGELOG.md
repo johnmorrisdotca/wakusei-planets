@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- The ports are this package's block in John's port table, 8225 to 8249 (MODULES-1034): the demo and dev on 8225, the tests on 8226, the picture scripts on 8227, the serve example on 8235. They were 8300 to 8310, the Space Program X website's, so a gate run without TEST_PORT met the website's tests.
+
 ## [0.36.0] - 2026-11-11
 
 - **The space demo opens at the Go to view its address names.** `?goto=moon` (or `inner`, `solar-system`, `sun`, `jupiter-moons`) was read, kept in the address and shown as the pressed button, but only a click went there, so a link or a reload showed the Earth. It goes there at load now.

@@ -7,7 +7,7 @@ description: 自分のコンピューターで小さな JSON サービスを動�
 
 [English](../serve-it-yourself.md)
 
-このサービスは自分で動かします。私たちはホストしません。パッケージをビルドしてから `node examples/serve/server.mjs` を実行してください。`127.0.0.1:8310` で待ち受けます。`PORT` でポートを変えられます。
+このサービスは自分で動かします。私たちはホストしません。パッケージをビルドしてから `node examples/serve/server.mjs` を実行してください。`127.0.0.1:8235` で待ち受けます。`PORT` でポートを変えられます。
 
 - `GET /body?id=mars` は天体の情報を返します。
 - `GET /position?body=mars&date=2026-11-08T00:00Z` は太陽中心、黄道 J2000 の座標を au で返します。
@@ -22,7 +22,7 @@ import { createServer } from "node:http";
 import { BODIES, BODY_IDS, stopPlaceAu } from "@johnmorrisdotca/wakusei-planets";
 import { distance } from "@johnmorrisdotca/wakusei-planets/nearest";
 
-const port = Number(process.env.PORT ?? 8310);
+const port = Number(process.env.PORT ?? 8235);
 createServer((request, response) => {
   const send = (status, value) => {
     response.writeHead(status, { "content-type": "application/json; charset=utf-8" });

@@ -9,7 +9,7 @@ pnpm install
 pnpm check        # lint, typecheck, unit tests, build, package check
 ```
 
-Work in a git worktree from `origin/main`, one branch per change. Ports: this package owns **8300–8399**, its own block (8300 the demo, 8301 the tests, 8302 the picture scripts); check a port is free before you use it, and stop only your own processes by PID.
+Work in a git worktree from `origin/main`, one branch per change. Ports: this package owns **8225–8249**, its own block (8225 the demo, 8226 the tests, 8227 the picture scripts); check a port is free before you use it, and stop only your own processes by PID.
 
 ## The rules
 
@@ -32,7 +32,7 @@ pnpm test:demo:one --project=webkit-phone  # one of the four (chromium-desk, chr
 pnpm test:freeze  # draws, frames, contexts and GPU objects at rest and over a run of changes
 ```
 
-The demo runs at `pnpm dev` → http://127.0.0.1:8300/wakusei-planets/.
+The demo runs at `pnpm dev` → http://127.0.0.1:8225/wakusei-planets/.
 
 ## Release
 
