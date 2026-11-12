@@ -2,6 +2,7 @@
 // section shows these as the reader changes a choice, and the tests build or parse every one. Pure: no DOM.
 import { embedSnippet } from "@johnmorrisdotca/kazoku-ui/embed-panel";
 import { BODIES, DWARF_IDS, MINOR_IDS, type BodyId, type Look } from "./facts.ts";
+import { picturesCredit } from "./picture-credits.ts";
 import { decodeScene } from "./portrait/model.ts";
 import type { LineupSet } from "./lineup/data.ts";
 import type { LineupLayout } from "./lineup/layout.ts";
@@ -57,6 +58,8 @@ export interface EmbedOptions {
   turn?: number;
   /** Pixels across. */
   size?: number;
+  /** The credit's language: `en` (the default) or `ja`. */
+  lang?: "en" | "ja";
   /** How far in the embed page starts, as its `zoom` address key has it (1 is the whole body). Left out or 1, the page starts at Fit. Only the iframe way carries it: the element's own start is Fit. */
   zoom?: number;
 }
@@ -298,6 +301,7 @@ export function lineupCode(options: LineupEmbed, kind: EmbedKind = "html", setti
 
 /**
  * The credits that travel with a picture of the size line-up: the radii are from refereed papers, the stars are drawn from numbers and not photographs, and the planets' sizes are the IAU's and NASA's.
+ * A painted Earth and Jupiter add `picturesCredit` for those two, in `options.lang` (`en` when left out).
  *
  * @param options - The choices, so the planets and their pictures are named only when they are used.
  * @returns A short line of credit to put near the picture.
@@ -310,13 +314,19 @@ export function lineupCode(options: LineupEmbed, kind: EmbedKind = "html", setti
  * ```
  */
 export function lineupCredit(options: LineupEmbed): string {
-  const base = "Wakusei Planets by John Morris (MIT). Sizes at true relative scale; each star's radius is from a refereed paper that measured its angular diameter (sources and disagreements in the package's NOTICE.md). The stars are drawn from their numbers, not photographs: the cells, spots and glow are illustrative.";
-  const planets = options.planets === true ? " Earth and Jupiter: IAU and NASA sizes." + (options.look === "painted" ? " Surface pictures: NASA and Nestaeric (CC BY 4.0), see NOTICE.md." : "") : "";
-  return `${base}${planets}`;
+  const lang = options.lang ?? "en";
+  const base =
+    lang === "ja"
+      ? "Wakusei Planets（John Morris、MIT）。大きさは実際の比です。星の半径は、角直径を測った査読論文によります（出典と食い違いはパッケージのNOTICE.md）。星は数字から描いたもので、写真ではありません。表面の模様、黒点、輝きは説明のためのものです。"
+      : "Wakusei Planets by John Morris (MIT). Sizes at true relative scale; each star's radius is from a refereed paper that measured its angular diameter (sources and disagreements in the package's NOTICE.md). The stars are drawn from their numbers, not photographs: the cells, spots and glow are illustrative.";
+  if (options.planets !== true) return base;
+  const sizes = lang === "ja" ? " 地球と木星：IAUとNASAの大きさ。" : " Earth and Jupiter: IAU and NASA sizes.";
+  const pictures = options.look === "painted" ? ` ${picturesCredit(["earth", "jupiter"], lang)}` : "";
+  return `${base}${sizes}${pictures}`;
 }
 
 /**
- * The credits that travel with a picture of a body: the line and illustrated looks are drawn from numbers, and `realistic` and `painted` use the surface maps.
+ * The credits that travel with a picture of a body: the line and illustrated looks are drawn from numbers, and `realistic` and `painted` use the surface map of that body (`picturesCredit`). `lang` is `en` or `ja` (`en` when left out).
  *
  * @param options - The choices, so only what is used is named.
  * @returns A short line of credit to put near the picture.
@@ -329,10 +339,14 @@ export function lineupCredit(options: LineupEmbed): string {
  * ```
  */
 export function embedCredit(options: EmbedOptions): string {
-  if (options.star !== undefined) return "Wakusei Planets by John Morris (MIT). A star drawn from its numbers, not a photo: the colour from its temperature, the size from its radius; the surface cells, spots and glow are illustrative.";
-  const base = "Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.";
+  const lang = options.lang ?? "en";
+  if (options.star !== undefined) {
+    return lang === "ja"
+      ? "Wakusei Planets（John Morris、MIT）。数字から描いた星で、写真ではありません。色は温度から、大きさは半径から。表面の模様、黒点、輝きは説明のためのものです。"
+      : "Wakusei Planets by John Morris (MIT). A star drawn from its numbers, not a photo: the colour from its temperature, the size from its radius; the surface cells, spots and glow are illustrative.";
+  }
+  const base = lang === "ja" ? "Wakusei Planets（John Morris、MIT）。大きさ、傾き、自転はIAUとNASAのファクトシートによります。" : "Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.";
   const photos = options.look !== "line" && options.look !== "illustrated";
-  const painted = photos ? " Surface pictures: NASA, USGS and JPL imagery in the public domain (details in the package's NOTICE.md)." : "";
-  const earth = options.body === "earth" ? " Earth: NASA Earth Observatory, Blue Marble." : "";
-  return `${base}${painted}${earth}`;
+  const pictures = photos ? picturesCredit([options.body], lang) : "";
+  return pictures === "" ? base : `${base} ${pictures}`;
 }

@@ -18,6 +18,7 @@ const GROUPS: readonly { id: string; label: string; bodies: readonly BodyId[] }[
   ...Object.entries(MOONS_OF).map(([planet, moons]) => ({ id: planet, label: `Moons of ${BODIES[planet as keyof typeof MOONS_OF].name.en}`, bodies: moons as readonly BodyId[] })),
 ];
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
+const pageLang = (): "en" | "ja" => ((Reflect.get(globalThis, "wakuseiLanguage") as { lang?: string } | undefined)?.lang === "ja" ? "ja" : "en");
 const state = { group: "sun", body: "saturn" as BodyId, look: "line" as Look, sky: "portrait", turn: 0, zoom: 1 };
 const panel = byId<EmbedPanelElement>("embed-panel");
 
@@ -38,7 +39,7 @@ function fill(id: string, choices: readonly { id: string; label: string }[], cho
 
 function options(withZoom = true): EmbedOptions {
   const sky = state.sky === "now" ? { time: "now" } : {};
-  return { body: state.body, look: state.look, size: panel.size, ...sky, ...(state.turn > 0 ? { turn: state.turn } : {}), ...(withZoom ? { zoom: state.zoom } : {}) };
+  return { body: state.body, look: state.look, size: panel.size, lang: pageLang(), ...sky, ...(state.turn > 0 ? { turn: state.turn } : {}), ...(withZoom ? { zoom: state.zoom } : {}) };
 }
 
 const openHref = (): string => `embed.html?${new URLSearchParams({ body: state.body, look: state.look, ...(state.sky === "now" ? { time: "now" } : {}), ...(state.turn > 0 ? { turn: String(state.turn) } : {}), ...(state.zoom !== 1 ? { zoom: String(state.zoom) } : {}) }).toString()}`;

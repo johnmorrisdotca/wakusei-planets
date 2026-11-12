@@ -1,6 +1,9 @@
 // The package's own data as sources of the data door, written from the rows of NOTICE.md: the surface pictures, the finer map tiles and the numbers the positions come from. The credit of what a view draws is written from these,
 // so the package's data and a caller's go through one path. A test holds that none is non-commercial or share-alike, so the package can pass all of it on under the MIT licence. Pure: no DOM, no three.js.
 import type { Credit, SourceInfo } from "../data-door.ts";
+import { PICTURE_CREDITS, picturesCredit } from "../picture-credits.ts";
+
+const PICTURE_IDS = PICTURE_CREDITS.map((row) => row.id);
 
 const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md";
 
@@ -25,8 +28,8 @@ export const OWN_SOURCES: readonly SourceInfo[] = freeze([
     id: "wakusei-pictures",
     name: { en: "Surface pictures", ja: "表面の地図" },
     credit: {
-      en: "Surface pictures: maps by NASA, USGS and JPL (public domain), Solar System Scope and Nestaeric",
-      ja: "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System ScopeとNestaericの地図",
+      en: picturesCredit(PICTURE_IDS, "en"),
+      ja: picturesCredit(PICTURE_IDS, "ja"),
     },
     licence: { name: "CC BY 4.0", url: `${NOTICE}#surface-pictures`, spdx: "CC-BY-4.0" },
     url: "https://github.com/johnmorrisdotca/wakusei-planets/tree/main/textures",

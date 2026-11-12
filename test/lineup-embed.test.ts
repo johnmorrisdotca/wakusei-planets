@@ -102,4 +102,13 @@ test("there is a snippet for every kind, and the credit names what is used", () 
   assert.match(lineupCredit({ planets: true }), /Earth and Jupiter/);
   assert.doesNotMatch(lineupCredit({ planets: true }), /Nestaeric/);
   assert.match(lineupCredit({ planets: true, look: "painted" }), /Nestaeric/);
+  assert.match(lineupCredit({ planets: true, look: "painted" }), /CC BY 4.0/);
+  assert.match(lineupCredit({ planets: true, look: "painted" }), /Changes made/);
+  assert.match(lineupCredit({ planets: true, look: "painted" }), /Blue Marble/);
+  assert.match(lineupCredit({ planets: true, look: "painted" }), /public domain/);
+  const ja = lineupCredit({ planets: true, look: "painted", lang: "ja" });
+  assert.match(ja, /木星/);
+  assert.match(ja, /Nestaeric/);
+  assert.match(ja, /CC BY 4.0/);
+  assert.doesNotMatch(lineupCredit({ planets: true, lang: "ja" }), /Nestaeric/);
 });

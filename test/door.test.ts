@@ -7,6 +7,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import * as THREE from "three";
 import { MAX_RECORDS, TILE_BUDGET_BYTES, creditLine, validateSource, type Credit, type RecordSource } from "../src/data-door.ts";
+import { PICTURE_CREDITS, picturesCredit } from "../src/picture-credits.ts";
 import {
   OWN_SOURCES,
   createSourceBook,
@@ -542,7 +543,13 @@ test("7. the package's own sources are clear to pass on: none is non-commercial 
   assert.equal(tilesSource("/tiles/").info, OWN_SOURCES[1]);
   assert.equal(ownCredit("wakusei-tiles", 3).own, true);
   assert.throws(() => ownCredit("fake", 1), RangeError);
-  assert.equal(creditLine([ownCredit("wakusei-pictures", 1), ownCredit("wakusei-orbits", 5)], "ja"), "表面の地図：NASA、USGS、JPLの地図（パブリックドメイン）、Solar System ScopeとNestaericの地図（CC BY 4.0）／位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）（出典を示せば利用可）");
+  const pictureIds = PICTURE_CREDITS.map((row) => row.id);
+  assert.equal(OWN_SOURCES[0]!.credit.en, picturesCredit(pictureIds, "en"));
+  assert.equal(OWN_SOURCES[0]!.credit.ja, picturesCredit(pictureIds, "ja"));
+  assert.match(OWN_SOURCES[0]!.credit.en, /Shady Tex/);
+  assert.match(OWN_SOURCES[0]!.credit.en, /public domain/);
+  assert.match(OWN_SOURCES[0]!.credit.ja, /パブリックドメイン/);
+  assert.equal(creditLine([ownCredit("wakusei-pictures", 1), ownCredit("wakusei-orbits", 5)], "ja"), `${picturesCredit(pictureIds, "ja")}（CC BY 4.0）／位置：VSOP87BとELP2000-82B（パリ天文台IMCCE）、JPL Horizons（NASA/JPL-Caltech）（出典を示せば利用可）`);
 });
 
 // ----- 8: the template -----
