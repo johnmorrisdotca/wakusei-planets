@@ -70,6 +70,16 @@
             </div>
             <button type="button" class="fam-button" id="body-label-facing" aria-pressed="false" data-say="bl_facing">Facing you</button>
           </div>
+          <div class="fam-row" data-help-en="Places marks where craft landed, drove, crashed or are planned to land, and the named features, on the Moon, Mars and 31 more bodies. Each layer goes on and off by itself. Hover or touch a mark for its name; the marks turn with the body and hide on the far side." data-help-ja="「場所」は、探査機が着陸した場所や墜落した場所、探査車が走った場所、着陸する予定の場所、名前のある地形に印をつけます。月、火星など33の天体で使えます。種類ごとにオンとオフを切り替えられます。印にカーソルを合わせるかタッチすると名前が出ます。印は天体といっしょに回り、裏側では隠れます。">
+            <span class="fam-label" data-say="pl">Places</span>
+            <div class="group fam-seg" id="place-layers" role="group" aria-label="Places" data-say-label="pl">
+              <button type="button" data-layer="landing" aria-pressed="false" data-say="pl_landing">Landings</button>
+              <button type="button" data-layer="crash" aria-pressed="false" data-say="pl_crash">Crashes</button>
+              <button type="button" data-layer="planned" aria-pressed="false" data-say="pl_planned">Planned</button>
+              <button type="button" data-layer="feature" aria-pressed="false" data-say="pl_feature">Features</button>
+            </div>
+            <span class="fam-fine" id="place-picked" role="status"></span>
+          </div>
           <div class="fam-row" data-help-en="Show the body as the Earth sees it at a date and time (its real tilt, its rings, how much is lit), or as a portrait. With moons on, the planet is drawn with its moons where they are then." data-help-ja="ある日時に地球から見える姿 (実際の傾き、輪、光の当たり方) か、飾りのない肖像のどちらかで描きます。衛星をオンにすると、その時刻の衛星の位置も描きます。">
             <span class="fam-label" data-say="sky">Sky</span>
             <div class="group fam-seg" id="skies" role="group" aria-label="Sky" data-say-label="sky">
@@ -122,6 +132,7 @@
       </section>
 
       <p class="fam-fine credits"><span data-say="credits">Sizes, tilt and rotation: the IAU and NASA fact sheets. Positions: published theories (VSOP87B, ELP2000-82B and others) and fits to JPL Horizons. The realistic look is drawn from these numbers, with no pictures; the painted look uses NASA, USGS and JPL maps and a few CC BY 4.0 maps. Details in</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+      <p class="fam-fine credits" id="place-credit" hidden></p>
       <p class="fam-fine credits" id="door-credit" data-testid="door-credit"></p>
 
       <!--family:unreviewed-->

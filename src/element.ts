@@ -28,8 +28,12 @@ import { NAME_LABEL_ATTRIBUTES, nameLabelKey, nameLabelText, readNameLabel, type
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
 import { turn as turnVec, type Vec3 } from "./vec.ts";
+import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "./places.ts";
+import { placeMarks, readPlaceLayers, turnToPlace, type PlaceLayer } from "./place-marks.ts";
+import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "./scene/place-layer.ts";
 
 export { setThreeLoader };
+export { placeLine, setPlacesLoader } from "./scene/place-layer.ts";
 
 /**
  * What the element is doing: `line` (an SVG), `loading` (waiting for three.js or a picture), `still` (a picture of the 3D look, nothing running), `live` (drawing), `lost` (the GPU took the context; it comes back by itself) or `unavailable` (no WebGL: the line drawing is shown).
@@ -107,6 +111,7 @@ const TEMPLATE = `<style>
  * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
+ * `places` marks the places on the body in the shaded looks, by layer (`landing`, `crash`, `planned`, `feature`; the lists come from `setPlacesLoader`), with `wakusei-place` on a click and `goToPlace` to turn one to the middle: see the guide "Places on the Moon, Mars and 31 more bodies".
  * `body-label` writes the body's name on its globe in the shaded looks (`painted`, `etched`, `outline` or `burned`; absent for none), with `body-label-strength`, `-repeat`, `-latitude`, `-facing`, `-font` and `-fallback-font` beside it, and the `bodyLabel` property takes the same as an object: see the guide "A name on the body".
  * A dated picture (a `time`, or `moons`) has a clock: `rate` is the simulated seconds for each real second, and `rate="0"` holds it, drawing nothing. While it runs (`rate` not 0), `wakusei-timechange` carries
  * `detail: { time, running: true }` (`time` is the moment shown in milliseconds since 1970; four times a second, once a second at real time; only while the tab is shown, whether or not the picture is on screen), and once with
@@ -124,7 +129,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -167,6 +172,12 @@ export class WakuseiBody extends HTMLElement {
   #tileLevels: readonly TileLevel[] | undefined;
   #tiles: DetailStats | undefined;
   #bodyLabel: NameLabelOptions | null | undefined;
+  #placeLayer: PlaceLayerView | undefined;
+  #placeList: { body: BodyId; list: readonly Place[] } | undefined;
+  #placeLoading: BodyId | undefined;
+  #placeGlide = 0;
+  #placeResize: ResizeObserver | undefined;
+  #placeHeard: (() => void) | undefined;
   #door: DoorHost = createDoorHost(
     this,
     {
@@ -282,6 +293,135 @@ export class WakuseiBody extends HTMLElement {
     this.#lastAnchors = -1;
     this.#queue();
   }
+  /**
+   * The layers of places marked on the body in the shaded looks: any of `landing` (the crewed landings, landers and rovers), `crash` (the crash, impact and atmospheric-entry sites), `planned` (announced landings) and
+   * `feature` (named features), from the `places` attribute (`places="landing crash"`; `places` alone or `all` for every layer). A body with no places (see `PLACE_BODIES` from `/places`) shows none. Setting it writes the attribute.
+   */
+  get places(): PlaceLayer[] {
+    return readPlaceLayers(this.getAttribute("places"));
+  }
+  set places(layers: readonly PlaceLayer[] | null) {
+    if (layers === null || layers.length === 0) this.removeAttribute("places");
+    else this.setAttribute("places", layers.join(" "));
+  }
+  /** The marks laid on the body now: each place's id, its layer and where its mark is, in CSS pixels from the picture's top left. */
+  get placesShown(): readonly { id: string; layer: PlaceLayer; x: number; y: number }[] {
+    return this.#placeLayer?.shown ?? [];
+  }
+
+  /**
+   * Turn the body so a place is in the middle of the disc, at a pace you can follow while the picture is live (at once for a still, for a reader who prefers reduced motion, or with `smooth: false`); the zoom stays. The place is an id (`moon/apollo-11-lunar-module`),
+   * or an English or Japanese name. A body that turns by itself carries the place on from there (`turn="0"` keeps it). Resolves the place, or `undefined` when the body has no place by that name.
+   *
+   * @param text - The place's id or name.
+   * @param options - `smooth` (true by default).
+   * @returns The place, once the turn has started.
+   */
+  async goToPlace(text: string, options: { smooth?: boolean } = {}): Promise<Place | undefined> {
+    const list = await this.#loadPlaces();
+    const place = list === undefined ? undefined : findPlace(list, text);
+    if (place === undefined) return undefined;
+    const frame = this.#frameNow();
+    const aim = turnToPlace(frame.pose.pole, frame.pose.meridian, place.lat, place.lon);
+    const to = { yaw: aim.yaw, tilt: this.#pitchDelta - aim.tilt };
+    const from = { yaw: this.#yaw, tilt: this.#tilt };
+    // the shorter way round
+    to.yaw = from.yaw + ((((to.yaw - from.yaw + 180) % 360) + 360) % 360) - 180;
+    const apply = (yaw: number, tilt: number, final: boolean): void => {
+      const controller = this.#hands?.controller;
+      if (controller !== undefined && !this.hasAttribute("data-kazoku-bar")) controller.set({ yaw, tilt }, final, "place");
+      else this.setView({ yaw, tilt, roll: this.#roll, zoom: this.#zoom });
+    };
+    const glide = (this.#placeGlide += 1);
+    // a still (not live) is made again for every change of view: it goes there at once
+    if (options.smooth === false || this.#reduce || this.#view?.live !== true || typeof requestAnimationFrame !== "function") {
+      apply(to.yaw, to.tilt, true);
+      return place;
+    }
+    const start = performance.now();
+    const step = (): void => {
+      if (glide !== this.#placeGlide || !this.isConnected) return;
+      const k = Math.min(1, (performance.now() - start) / 900);
+      const ease = k * k * (3 - 2 * k);
+      apply(from.yaw + (to.yaw - from.yaw) * ease, from.tilt + (to.tilt - from.tilt) * ease, k >= 1);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    return place;
+  }
+
+  /** The body's list of places, loaded the first time it is asked for; `undefined` for a body that has none. */
+  async #loadPlaces(): Promise<readonly Place[] | undefined> {
+    const body = this.body;
+    if (this.#placeList?.body === body) return this.#placeList.list;
+    const load = placesLoader();
+    if (load === undefined || this.hasAttribute("star") || !(PLACE_BODIES as readonly string[]).includes(body)) return undefined;
+    const list = await load(body as PlaceBody);
+    if (this.body === body) this.#placeList = { body, list };
+    return list;
+  }
+
+  /** Lay the marks of the places over the picture as the scene state has it, or take them away. Draws nothing. */
+  #markPlaces(state: SceneState | undefined = this.#sceneState): void {
+    const layers = this.places;
+    const shaded = this.look !== "line" && this.#view !== undefined && !this.hasAttribute("star");
+    if (layers.length === 0 || !shaded || state === undefined) {
+      if (this.#placeLayer !== undefined) {
+        this.#placeLayer.dispose();
+        this.#placeLayer = undefined;
+        if (this.getAttribute("role") === "group") this.setAttribute("role", "img");
+      }
+      return;
+    }
+    const body = this.body;
+    if (this.#placeList?.body !== body) {
+      if (this.#placeLoading !== body && placesLoader() !== undefined && (PLACE_BODIES as readonly string[]).includes(body)) {
+        this.#placeLoading = body;
+        void this.#loadPlaces().then(() => {
+          this.#placeLoading = undefined;
+          if (this.#placeList?.body === body) this.#markPlaces();
+        }, () => {
+          this.#placeLoading = undefined;
+        });
+      }
+      this.#placeLayer?.clear();
+      return;
+    }
+    if (this.#placeLayer === undefined && this.shadowRoot !== null) {
+      this.#placeLayer = createPlaceLayer(this.shadowRoot, {
+        lang: () => (this.getAttribute("lang") === "ja" ? "ja" : "en"),
+        pick: (place, at) => this.dispatchEvent(new CustomEvent("wakusei-place", { detail: { body, place, x: at.x, y: at.y }, bubbles: true, composed: true })),
+      });
+      // a picture with buttons in it is a group, not an image
+      if (this.getAttribute("role") === "img") this.setAttribute("role", "group");
+    }
+    const w = this.#stage.clientWidth;
+    const h = this.#stage.clientHeight;
+    if (this.#placeLayer === undefined || w <= 0 || h <= 0) return;
+    const aspect = w / h;
+    const half = state.extent / Math.max(0.05, state.zoom);
+    const halfW = aspect >= 1 ? half * aspect : half;
+    const halfH = aspect >= 1 ? half : half / aspect;
+    const left = state.panX * half - halfW;
+    const top = state.panY * half + halfH;
+    const facts = this.#facts();
+    const ax = facts.axesKm;
+    const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
+    const marks = placeMarks(this.#placeList.list, layers, {
+      centre: [0, 0, 0],
+      radius: 1,
+      pole: state.pose.pole,
+      meridian: state.pose.meridian,
+      scale,
+      toward: [0, 0, 1],
+      project: (p) => ({ x: ((p[0] - left) / (2 * halfW)) * w, y: ((top - p[1]) / (2 * halfH)) * h }),
+      width: w,
+      height: h,
+      radiusPx: (Math.min(w, h) / 2) * (state.zoom / state.extent),
+    }, facts.radiusKm);
+    this.#placeLayer.set(marks);
+  }
+
   /** What the element is doing now. */
   get state(): WakuseiState {
     return this.#state;
@@ -323,6 +463,16 @@ export class WakuseiBody extends HTMLElement {
     });
     this.#applyHover();
     for (const name of ["pointerdown", "wheel", "keydown"]) this.addEventListener(name, this.#measure, true);
+    if (typeof ResizeObserver === "function") {
+      this.#placeResize = new ResizeObserver(() => {
+        if (this.#placeLayer !== undefined) this.#markPlaces();
+      });
+      this.#placeResize.observe(this.#stage);
+    }
+    this.#placeHeard = onPlacesLoader(() => {
+      this.#placeList = undefined;
+      this.#markPlaces();
+    });
     this.#carry();
     this.#queue();
   }
@@ -341,6 +491,12 @@ export class WakuseiBody extends HTMLElement {
     this.#hands = undefined;
     this.#handsKey = "";
     this.#disposeView(true);
+    this.#placeLayer?.dispose();
+    this.#placeLayer = undefined;
+    this.#placeResize?.disconnect();
+    this.#placeResize = undefined;
+    this.#placeHeard?.();
+    this.#placeHeard = undefined;
   }
 
   attributeChangedCallback(name: string): void {
@@ -359,6 +515,7 @@ export class WakuseiBody extends HTMLElement {
       this.#refreshLimits();
     }
     this.#lastAnchors = -1;
+    if (name === "places" || name === "lang" || name === "body" || name === "look" || name === "star") this.#markPlaces();
     this.#queue();
   }
 
@@ -839,6 +996,7 @@ export class WakuseiBody extends HTMLElement {
       },
     });
     this.#view = this.#renderer!.view(this.#stage, item);
+    this.#markPlaces(state);
     this.#set("loading");
     if (this.#visible) this.#still();
   }
@@ -899,6 +1057,7 @@ export class WakuseiBody extends HTMLElement {
     const state = this.#sceneOf(this.#frameNow());
     this.#sceneState = state;
     scene.apply(state);
+    this.#markPlaces(state);
     this.#textureWidth = scene.textureWidth;
     this.#door.announce();
   }

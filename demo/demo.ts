@@ -19,6 +19,7 @@ import { creditLine } from "../src/door/index.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
+import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
 
 type Look = "line" | "realistic" | "painted" | "illustrated";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
@@ -87,6 +88,7 @@ if (main && controls && pickerBox) {
     time: address.get("t") ?? "now",
   };
   const bodyLabel = readBodyLabelState(address);
+  const places = readPlacesState(address);
 
   const localValue = (ms: number): string => {
     const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000);
@@ -484,6 +486,7 @@ if (main && controls && pickerBox) {
     setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     renderBodyLabelRow(bodyLabel, main!, address);
+    renderPlacesRow(places, main!, address);
     for (const picker of pickers) picker.sync();
     syncGrab();
     renderNotes();
@@ -572,6 +575,7 @@ if (main && controls && pickerBox) {
   for (const b of scaleRefs.querySelectorAll<HTMLButtonElement>("[data-ref]")) b.addEventListener("click", () => ((state.ref = (b.dataset["ref"] ?? "earth") as typeof state.ref), render()));
   spinButton.addEventListener("click", () => ((state.spin = !state.spin), render()));
   bindBodyLabelRow(bodyLabel, render);
+  bindPlacesRow(places, main, render, lang);
   nowButton.addEventListener("click", () => {
     state.time = "now";
     origin = Date.now();

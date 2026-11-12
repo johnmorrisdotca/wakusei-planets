@@ -138,6 +138,22 @@
             </div>
             <button type="button" class="fam-button" id="body-label-facing" aria-pressed="false" data-say="bl_facing">Facing you</button>
           </div>
+          <div class="fam-row" data-help-en="Places marks where craft landed, drove, crashed or are planned to land, and the named features, on the Moon, Mars and 31 more bodies. Each layer goes on and off by itself. Hover or touch a mark for its name; the marks turn with the body and hide on the far side." data-help-ja="「場所」は、探査機が着陸した場所や墜落した場所、探査車が走った場所、着陸する予定の場所、名前のある地形に印をつけます。月、火星など33の天体で使えます。種類ごとにオンとオフを切り替えられます。印にカーソルを合わせるかタッチすると名前が出ます。印は天体といっしょに回り、裏側では隠れます。">
+            <span class="fam-label" data-say="pl">Places</span>
+            <div class="group fam-seg" id="place-layers" role="group" aria-label="Places" data-say-label="pl">
+              <button type="button" data-layer="landing" aria-pressed="false" data-say="pl_landing">Landings</button>
+              <button type="button" data-layer="crash" aria-pressed="false" data-say="pl_crash">Crashes</button>
+              <button type="button" data-layer="planned" aria-pressed="false" data-say="pl_planned">Planned</button>
+              <button type="button" data-layer="feature" aria-pressed="false" data-say="pl_feature">Features</button>
+            </div>
+            <span class="fam-label" data-say="pl_go">Go to</span>
+            <div class="group fam-seg" id="place-gos" role="group" aria-label="Go to a place" data-say-label="pl_go_place">
+              <button type="button" data-place="moon/apollo-11-lunar-module" data-body="moon" data-say="pl_apollo11">Apollo 11</button>
+              <button type="button" data-place="mars/perseverance" data-body="mars" data-say="pl_perseverance">Perseverance</button>
+              <button type="button" data-place="mars/olympus-mons" data-body="mars" data-say="pl_olympus">Olympus Mons</button>
+            </div>
+            <span class="fam-fine" id="place-picked" role="status"></span>
+          </div>
           <div class="fam-row">
             <span class="fam-label" data-say="sp_ride">Ride along</span>
             <div class="group fam-seg" id="rides" role="group" aria-label="Ride along" data-say-label="sp_ride">
@@ -177,6 +193,7 @@
         </section>
       </div>
 
+      <p class="fam-fine credits" id="place-credit" hidden></p>
       <p class="fam-fine credits" id="door-credit" data-testid="door-credit"></p>
 
       <!--family:unreviewed-->
