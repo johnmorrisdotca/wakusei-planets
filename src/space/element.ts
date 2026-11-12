@@ -230,6 +230,8 @@ const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
 const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p>`;
 
+const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value === "chosen" || value === "none" ? value : "all");
+
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
  * (`"lon,lat"`), `time` (`now` or an ISO date), `speed` (1 is real time, 0 holds, 86400 is a day a second, negative runs backwards), `scale` (`compressed` or `true`), `look` (`realistic` or `painted`),
@@ -263,7 +265,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -332,6 +334,9 @@ export class WakuseiSpace extends HTMLElement {
     this.#covered = this.getAttribute("covered") === "arrow" ? "arrow" : "name";
     this.roadster = this.hasAttribute("roadster") && this.getAttribute("roadster") !== "off";
     this.orbiters = this.hasAttribute("orbiters") && this.getAttribute("orbiters") !== "off";
+    this.#model.orbiterChosen = this.getAttribute("orbiter") || null;
+    this.#model.orbiterLines = orbiterLines(this.getAttribute("orbiter-lines"));
+    this.#model.orbiterTrack = this.hasAttribute("orbiter-track") && this.getAttribute("orbiter-track") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
@@ -463,6 +468,9 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "covered") this.covered = value === "arrow" ? "arrow" : "name";
     else if (name === "roadster") this.roadster = value !== null && value !== "off";
     else if (name === "orbiters") this.orbiters = value !== null && value !== "off";
+    else if (name === "orbiter") this.orbiter = value || null;
+    else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
+    else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
@@ -828,6 +836,7 @@ export class WakuseiSpace extends HTMLElement {
             path: (id, ms, points) => mod.orbiterPath(id as Id, ms, points),
             status: (id, ms) => mod.orbiterStatus(id as Id, ms),
             dim: (id, ms) => mod.orbiterDim(id as Id, ms),
+            period: (id) => mod.orbiterElements(id as Id)?.periodDays ?? null,
             name: (id) => ({ ...mod.orbiterFacts(id as Id).name }),
           };
           this.#gate?.request();
@@ -862,6 +871,36 @@ export class WakuseiSpace extends HTMLElement {
         },
       );
     }
+    this.#gate?.request();
+  }
+  /**
+   * The orbiter picked out (the attribute `orbiter`, an id from `/orbiters` such as `lro`; none by default): its orbit line is drawn brighter, it alone keeps its line when `orbiterLines` is
+   * `chosen`, and its ground track is drawn when `orbiterTrack` is on.
+   */
+  get orbiter(): string | null {
+    return this.#model.orbiterChosen;
+  }
+  set orbiter(value: string | null) {
+    this.#model.orbiterChosen = value;
+    this.#gate?.request();
+  }
+  /** Which orbiters' orbit lines are drawn (the attribute `orbiter-lines`): `all` (the default), `chosen` (the one `orbiter` names) or `none`. Apart from the planets' and moons' lines (`orbits`). */
+  get orbiterLines(): "all" | "chosen" | "none" {
+    return this.#model.orbiterLines;
+  }
+  set orbiterLines(value: "all" | "chosen" | "none") {
+    this.#model.orbiterLines = orbiterLines(value);
+    this.#gate?.request();
+  }
+  /**
+   * Draw the chosen orbiter's ground track (the attribute `orbiter-track`; off by default): the line on its body under the craft from one trip before the moment shown to one trip after, the body
+   * turning beneath it, so each trip crosses the equator further west.
+   */
+  get orbiterTrack(): boolean {
+    return this.#model.orbiterTrack;
+  }
+  set orbiterTrack(value: boolean) {
+    this.#model.orbiterTrack = value;
     this.#gate?.request();
   }
   #covered: "name" | "arrow" = "name";
@@ -1533,8 +1572,8 @@ export class WakuseiSpace extends HTMLElement {
     bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
     /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
-    /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`). */
-    orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[] };
+    /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
+    orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -1559,7 +1598,7 @@ export class WakuseiSpace extends HTMLElement {
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
-      orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim] },
+      orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
     };
   }

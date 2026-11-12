@@ -686,6 +686,34 @@ test("riding along draws at most thirty frames a second at a day a second, nothi
   expect(rest1.rafRequests - rest0.rafRequests).toBe(0);
 });
 
+test("the orbiters round Mars with a craft picked, its line and its ground track draw nothing at rest, and switching them gives back what it took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-12T12:00Z&orbiters=1&orbiter=mro&otrack=1`);
+  await liveSky(page);
+  await sky(page).evaluate((el) => (el as unknown as { goTo(id: string, options: { smooth: boolean }): void }).goTo("mars", { smooth: false }));
+  const track = async () => ((await skyStats(page)) as unknown as { orbiters: { track: number } }).orbiters.track;
+  await expect.poll(track, { timeout: 60_000 }).toBeGreaterThan(100);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the orbiters, a line and a track").toBe(0);
+  const round = async () => {
+    for (const button of ['#orbiter-lines [data-olines="chosen"]', '#orbiter-lines [data-olines="none"]', '#orbiter-lines [data-olines="all"]', "#orbiter-track", "#orbiter-track", '[data-orbiter="tgo"]', '[data-orbiter="mro"]']) {
+      await page.locator(button).dispatchEvent("click");
+      await settle(page, 300);
+    }
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 3; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  const rest0 = await readCounts(page);
+  await settle(page, 3000);
+  expect((await readCounts(page)).draws - rest0.draws).toBe(0);
+});
+
 test("the space view's canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 5120, height: 2880 }, deviceScaleFactor: 2, reducedMotion: "no-preference" });
   const page = await context.newPage();
