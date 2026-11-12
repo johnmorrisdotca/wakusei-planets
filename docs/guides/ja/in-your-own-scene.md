@@ -29,3 +29,5 @@ console.log(scene.children.length);
 - 近いビューでは、`update` にカメラを渡します。`jupiter.update({ toSun, ms, radiusPx, view: { camera, width, height } })` のように書き、カメラの行列は最新の状態にして、大きさはCSSピクセルで渡します。ビューで大きく見える天体には、カメラに見えている部分の細かい地図のタイルが載ります。タイルはデモサイトの `tiles/` フォルダから、または `createPainter({ tiles: "/tiles/" })` で指したところから読みます (`"off"` でなし。自分の `textureBase` を渡したペインターは、場所を教えるまでタイルを使いません)。`painting.tiles` は窓がしていることを返し、`context.onLevels` はその天体のタイルのレベルを教えてくれます。`view` を渡さなければ、これまでどおり天体自身の絵で描きます。しくみは [近づくズームと地図のタイル](close-zoom.md) にあります。
 
 渡す three.js には、天体が使う部品と `Group` が必要です。chikyu-earth の宇宙ビューは `setBodyPainter(painter)` でこのペインターを受け取り、太陽・惑星・冥王星・衛星を描きます (そちらのガイド「本物の惑星」を見てください)。
+
+`painter.credit` は `{ en, ja }` で、そのペインターが描いている絵の出典です。`make` の前は、描ける表面の絵をすべて挙げます。`make` のあとでは、地図を描く見た目で作った天体だけを挙げます。地図のない陰影だけの木星は何も加えず、月と火星は CC BY 4.0 の行を加えません。細かい地図のタイルが天体に載っているあいだは、タイルの出典も加えます。水星のタイルは、色が CC BY 4.0 の地図の色であることも書きます。`picturesCredit(bodies, lang)` は、天体のリストに対して同じ行を書きます。もとになる表は `PICTURE_CREDITS`（`NOTICE.md` の表）です。絵の下に `painter.credit` を置いてください。

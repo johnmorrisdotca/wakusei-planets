@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The painter carries the credit for the pictures it draws** (MODULES-1146). `WakuseiPainter.credit` is `{ en, ja }`. Before `make` it names every surface picture the painter can draw. After `make` it names only the bodies made in a look that draws the map, so the Moon and Mars add no CC BY 4.0 line and a shaded body with no map adds nothing. While finer map tiles are on a body it adds the `wakusei-tiles` credit from `OWN_SOURCES`, and Mercury's tiles say that their colour is the CC BY 4.0 map. `PICTURE_CREDITS` is the table of which body's map comes from which source (the rows of `NOTICE.md`), and `picturesCredit(bodies, lang)` writes the line for the bodies a page shows. Jupiter names Nestaeric and CC BY 4.0, including the changes.
+
 ## [0.37.1] - 2026-11-12
 
 - **The Earth's line look stays chikyu-earth's globe while it turns** (MODULES-1152). On a page with chikyu-earth's element, `<wakusei-body body="earth" look="line">` showed chikyu-earth's globe with the countries and then, at the next frame of its turn (the line look turns by default, 30 times a second), drew this package's own outline over it. A body that another package draws is now left to that package, and the line look's tick stops while it is shown; the same element made another body turns again. A browser test puts an Earth and a Mars in the line look on one page with chikyu-earth's element and counts what the page reports: the globe is never replaced while Mars is redrawn twenty times.

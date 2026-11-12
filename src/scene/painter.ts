@@ -7,6 +7,8 @@ import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../fact
 import { writeBasis } from "./basis.ts";
 import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, mapSourceFor, tilesAllowed } from "./textures.ts";
 import { createSourceBook, type SourceBook } from "../door/book.ts";
+import { OWN_BY_ID } from "../door/own.ts";
+import { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit } from "../picture-credits.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import type { ThreeParts } from "./body.ts";
 import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
@@ -20,6 +22,7 @@ import { createNameLabel, nameLabelText, type NameLabel, type NameLabelOptions }
 
 export { moonOffset, orientation };
 export { nameLabelText, readNameLabel, setBodyLabelFontUrl, type NameLabelOptions } from "./name-label.ts";
+export { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit, type PictureCredit } from "../picture-credits.ts";
 
 // The parts of three.js the painter uses: the ones the bodies use, and `Group`.
 type PainterThree = ThreeParts & Pick<typeof THREE, "Group">;
@@ -277,7 +280,14 @@ function sightOf(T: PainterThree, view: PaintView): Sight {
   };
 }
 
-function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined; book: SourceBook; shared: boolean }): Painting {
+/** One body a painter is holding, so the credit can read which picture and which tile window are on it now. */
+interface CreditBody {
+  id: BodyId;
+  picture: boolean;
+  tiles(): boolean;
+}
+
+function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string; tiles: string | undefined; book: SourceBook; shared: boolean }, hold?: (body: CreditBody) => () => void): Painting {
   const facts = BODIES[id];
   const look = lookOf(id) ?? fallbackLook(facts);
   const wantPainted = (context.look === "painted" || look.mapped === true || context.mapped === true) && look.painted !== undefined;
@@ -568,6 +578,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   };
   if (context.label) setLabel(context.label);
 
+  const drop = hold?.({ id, picture: wantPainted, tiles: () => detail?.stats.shown != null });
+
   return {
     object: group,
     setLabel,
@@ -623,6 +635,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     },
     dispose() {
       gone = true;
+      drop?.();
       setLabel(null);
       if (windowUniforms !== undefined) {
         windowUniforms.uDetailOn!.value = 0;
@@ -653,6 +666,13 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
 export interface WakuseiPainter {
   /** The looks `make` takes in `context.look`. */
   readonly looks: readonly PainterLook[];
+  /**
+   * The credit for the pictures this painter is drawing, in English and Japanese, written from `PICTURE_CREDITS` and from `OWN_SOURCES`.
+   * Until `make` has been called it names every surface picture the painter can draw, because it does not yet know which a page will show. After `make` it names only the bodies it has made in a look that draws the map
+   * (`painted`, or a body whose look is mapped). A shaded body with no map is left out, so the Moon and Mars name no CC BY 4.0 source. While a window of finer map tiles is on a body, the `wakusei-tiles` credit is added;
+   * Mercury's tiles also say that their colour is the CC BY 4.0 map.
+   */
+  readonly credit: { readonly en: string; readonly ja: string };
   /** Make a body: `Sun`, a planet, `Pluto` or a moon, in any case. Throws for a name it does not know. */
   /** `three` is the three.js module (or a subset of it holding the parts `PainterThree` names); it is typed loosely so that another package can hand over its own subset. */
   make(three: object, name: string, context?: PaintContext): Painting;
@@ -680,9 +700,31 @@ export function createPainter(options: PainterOptions = {}): WakuseiPainter {
   const own = options.tiles;
   const tiles = own === "off" || own === "none" || own === "" ? undefined : own !== undefined ? slash(own) : options.textureBase !== undefined ? undefined : TILES_BASE;
   const book = options.book ?? createSourceBook({ kinds: ["tiles"] });
+  let made = false;
+  const live = new Set<CreditBody>();
+  const creditLine = (lang: "en" | "ja"): string => {
+    const ids = made ? [...live].filter((body) => body.picture).map((body) => body.id) : PICTURE_CREDITS.map((row) => row.id);
+    const parts = [picturesCredit(ids, lang)];
+    const tiled = [...live].filter((body) => body.tiles());
+    if (tiled.length > 0) {
+      parts.push(OWN_BY_ID.get("wakusei-tiles")!.credit[lang]);
+      if (tiled.some((body) => body.id === "mercury")) parts.push(mercuryTilesCredit(lang));
+    }
+    return parts.filter((part) => part !== "").join(" ");
+  };
   return {
     looks: LOOKS,
-    make: (three, name, context = {}) => paint(three as PainterThree, idOf(name), context, { near, far, tiles, book, shared: options.book !== undefined }),
+    get credit() {
+      return { en: creditLine("en"), ja: creditLine("ja") };
+    },
+    make: (three, name, context = {}) => {
+      const id = idOf(name);
+      made = true;
+      return paint(three as PainterThree, id, context, { near, far, tiles, book, shared: options.book !== undefined }, (body) => {
+        live.add(body);
+        return () => live.delete(body);
+      });
+    },
     moons(planet, ms) {
       const radius = BODIES[idOf(planet) as HostId]?.radiusKm;
       if (radius === undefined) return [];
