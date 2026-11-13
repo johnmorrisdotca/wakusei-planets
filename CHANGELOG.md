@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-11-13
+
 - **Which face of the body the view looks at** (MODULES-1330). `<wakusei-space>` has `subCameraPoint()`, the longitude (east) and latitude (north), in the centred body's own fixed frame at the moment shown, of the point under the camera (`null` while riding along), and `faceTo({ lon, lat }, { smooth })`, which turns the view round the body to bring a point there (the glide of `goToPlace`); `stats.camera.sub` says the same point as of the last draw. `<wakusei-body>` has the same pair for its picture (the date's or the portrait's pose, the view's turn, tilt and roll counted in). The pure functions `subCameraPoint` and `faceView` are exported from `/space`. For a card picture that follows the main view, and the reverse. Guide: `docs/guides/which-face.md` and its Japanese twin.
 
 ## [0.47.0] - 2026-11-13
