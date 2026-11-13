@@ -5,8 +5,11 @@ import { expect, test, type Page } from "@playwright/test";
 import { routeSurface } from "./surface-fixture.ts";
 
 test.describe.configure({ mode: "serial" });
-test.beforeEach((_fixtures, testInfo) => {
+test.beforeEach(async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+  // a slow machine: the page runs at a quarter of the speed, so a test that only passes on a quiet one fails here (the rules of the test-rules page)
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
 });
 
 type Surface = HTMLElement & {
@@ -14,7 +17,7 @@ type Surface = HTMLElement & {
   look: { azimuth: number; pitch: number; fov: number };
   position: { east: number; north: number; up: number };
   sky: { sun: { altitude: number }; earth: { altitude: number } };
-  stats: { state: string; draws: number; quality: string; renderer?: { draws: number; contexts: number; canvas: { width: number; height: number; pixels: number } } };
+  stats: { state: string; draws: number; quality: string; tiles?: { done: number; total: number; first: number }; renderer?: { draws: number; contexts: number; canvas: { width: number; height: number; pixels: number } } };
   time: number;
 };
 
@@ -122,4 +125,37 @@ test("a site with no heights says so and draws nothing", async ({ page }) => {
     document.querySelector("main")!.prepend(el);
   });
   await expect(page.locator("#test-surface")).toHaveAttribute("data-state", "unavailable", { timeout: 60_000 });
+});
+
+test("the first view is enough to stand on: the view is live while the far level is still on its way, and the rest comes in place", async ({ page }) => {
+  test.setTimeout(240_000);
+  // the far level's tiles are held until the test lets them go
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => (release = resolve));
+  await page.route("**/tiles/moon/apollo-17/terrain/far/**", async (route) => {
+    await held;
+    await route.fallback();
+  });
+  await open(page);
+  expect(await view(page).getAttribute("data-loading"), "the far level is not in").toBe("more");
+  // the view at rest first (its draws have stopped), so a draw after this is the far level's
+  let held4 = "";
+  let same = 0;
+  await expect
+    .poll(async () => {
+      const now = String(await draws(page));
+      same = now === held4 ? same + 1 : 0;
+      held4 = now;
+      return same;
+    }, { intervals: [400], timeout: 120_000 })
+    .toBeGreaterThanOrEqual(3);
+  const before = await read(page, (el) => ({ ...el.stats.tiles!, draws: el.stats.renderer!.draws }));
+  expect(before.done).toBeLessThan(before.total);
+  expect(before.done).toBeGreaterThanOrEqual(before.first);
+  release();
+  await expect.poll(() => view(page).getAttribute("data-loading"), { timeout: 120_000 }).toBe("done");
+  const after = await read(page, (el) => ({ ...el.stats.tiles!, draws: el.stats.renderer!.draws }));
+  expect(after.done).toBe(after.total);
+  // what came in was drawn: the view drew again after the far tiles landed
+  await drawnTo(page, before.draws + 1);
 });
