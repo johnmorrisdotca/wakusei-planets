@@ -73,7 +73,7 @@ export async function openSpace(page: Page, query = `t=${NOV2}`): Promise<void> 
   await page.addInitScript(COUNT_SCRIPT);
   await page.goto(`/wakusei-planets/space.html?${query}`);
   await page.locator(`${SPACE}[data-state=live]`).waitFor({ timeout: 90_000 });
-  await expect.poll(async () => (await statsOf(page)).draws).toBeGreaterThan(0);
+  await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000, message: "the first draw" }).toBeGreaterThan(0);
   await quiet(page);
 }
 

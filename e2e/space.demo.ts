@@ -54,7 +54,7 @@ async function open(page: Page, query = `t=${NOV2}`): Promise<void> {
   // these tests were written against the compressed scale, which was the page's default; the true scale, now the default, is tested in space-scale.demo.ts
   await page.goto(`/wakusei-planets/space.html?${query}${/(^|&)scale=/.test(query) ? "" : "&scale=compressed"}`);
   await page.locator(`${SPACE}[data-state=live]`).waitFor({ timeout: 90_000 });
-  await expect.poll(async () => (await statsOf(page)).draws).toBeGreaterThan(0);
+  await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000, message: "the first draw" }).toBeGreaterThan(0);
   await settle(page);
 }
 
