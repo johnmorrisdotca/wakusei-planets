@@ -646,6 +646,33 @@ test("the space view with Starman shown draws nothing at rest, and switching the
   expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
 });
 
+test("the space view with every deep-space craft draws nothing at rest, and switching them gives back what they took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-12T12:00:00Z&craft=all`);
+  await liveSky(page);
+  const drawnCraft = async () => ((await skyStats(page)) as unknown as { spacecraft: { count: number } }).spacecraft.count;
+  await expect.poll(drawnCraft, { timeout: 60_000 }).toBeGreaterThan(0);
+  await atRest(page);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the deep-space craft").toBe(0);
+  const round = async () => {
+    for (let i = 0; i < 2; i += 1) {
+      await page.locator("#craft").dispatchEvent("click");
+      await expect.poll(drawnCraft, { timeout: 30_000 }).toBe(0);
+      await page.locator("#craft").dispatchEvent("click");
+      await expect.poll(drawnCraft, { timeout: 60_000 }).toBeGreaterThan(0);
+    }
+  };
+  const first = await converged(page, round);
+  for (let i = 0; i < 2; i += 1) await round();
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+});
+
 test("the space view with the orbiters shown draws nothing at rest, and switching them on and off gives back what it took", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&orbiters=1`);
   await liveSky(page);

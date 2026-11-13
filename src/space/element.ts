@@ -108,8 +108,9 @@ export interface BodyHover extends BodyInfo {
  * ```
  */
 export interface BodySight extends Sight {
-  id: BodyId;
-  kind: SpaceKind;
+  /** A body's id, or a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`. */
+  id: string;
+  kind: SpaceKind | "spacecraft";
   host?: BodyId;
 }
 
@@ -279,7 +280,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -353,6 +354,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#labelsAlways = this.hasAttribute("labels-always") && this.getAttribute("labels-always") !== "off";
     this.#covered = this.getAttribute("covered") === "arrow" ? "arrow" : "name";
     this.roadster = this.hasAttribute("roadster") && this.getAttribute("roadster") !== "off";
+    const craft = this.getAttribute("spacecraft");
+    if (craft !== null && craft !== "off") this.spacecraft = craft;
     this.orbiters = this.hasAttribute("orbiters") && this.getAttribute("orbiters") !== "off";
     this.#model.orbiterChosen = this.getAttribute("orbiter") || null;
     this.#model.orbiterLines = orbiterLines(this.getAttribute("orbiter-lines"));
@@ -494,6 +497,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "labels-always") this.labelsAlways = value !== null && value !== "off";
     else if (name === "covered") this.covered = value === "arrow" ? "arrow" : "name";
     else if (name === "roadster") this.roadster = value !== null && value !== "off";
+    else if (name === "spacecraft") this.spacecraft = value === null || value === "off" ? false : value;
     else if (name === "orbiters") this.orbiters = value !== null && value !== "off";
     else if (name === "orbiter") this.orbiter = value || null;
     else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
@@ -952,6 +956,47 @@ export class WakuseiSpace extends HTMLElement {
         },
       );
     }
+    this.#gate?.request();
+  }
+
+  #craftToken = 0;
+  /**
+   * The deep-space craft (the attribute `spacecraft`; off by default). `true` or `"all"` draws every craft whose record covers the date. A space-separated list (`"voyager1 juno"`) draws those. Each craft's table loads the first time it is shown, and nothing loads while this is off. `stats.spacecraft` says what was drawn.
+   */
+  get spacecraft(): false | "all" | string {
+    const show = this.#model.craftShow;
+    if (show === null) return false;
+    return show === "all" ? "all" : show.join(" ");
+  }
+  set spacecraft(value: boolean | string) {
+    const next = value === false || value === "off" ? null : value === true || value === "all" || value === "true" ? "all" : value.split(/\s+/).filter((id) => id.length > 0);
+    this.#model.craftShow = next === null || next === "all" ? next : next;
+    if (next === null) {
+      this.#model.craftPlaces = null;
+      this.#model.craftIds = [];
+      this.#model.craftNames = null;
+      this.#gate?.request();
+      return;
+    }
+    const token = ++this.#craftToken;
+    const wanted = next;
+    void import("../spacecraft.ts").then(async (mod) => {
+      if (token !== this.#craftToken) return;
+      const known = mod.SPACECRAFT_IDS as readonly string[];
+      const ids = (wanted === "all" ? [...known] : wanted.filter((id) => known.includes(id))) as (typeof mod.SPACECRAFT_IDS)[number][];
+      await mod.loadSpacecraft(...ids);
+      if (token !== this.#craftToken || this.#model.craftShow === null) return;
+      const au = 149_597_870.7;
+      this.#model.craftIds = ids;
+      this.#model.craftNames = (id, lang) => mod.SPACECRAFT[id as (typeof ids)[number]].name[lang];
+      this.#model.craftPlaces = (ms) => ids.map((id) => {
+        const craft = mod.SPACECRAFT[id];
+        if (ms < craft.record.start || ms > craft.record.end || craft.record.end === 0) return { id, au: null };
+        const km = mod.spacecraftPosition(id, ms);
+        return { id, au: [km[0] / au, km[1] / au, km[2] / au] as [number, number, number] };
+      });
+      this.#gate?.request();
+    });
     this.#gate?.request();
   }
   /**
@@ -1784,6 +1829,8 @@ export class WakuseiSpace extends HTMLElement {
     bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number; look: string } | null };
     /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
+    /** The deep-space craft at the last draw: how many dots, each id's status (`drawn` or `outside` the record), and the ids drawn. */
+    spacecraft: { count: number; status: Record<string, "drawn" | "outside">; drawn: string[] };
     /** How large the squeezed view drew the moons of the system in the middle: the factor asked for, the one used, and whether a limit cut it. At true distances `factor` is 1. */
     moonSize: { asked: number; factor: number; clamped: boolean };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
@@ -1816,6 +1863,7 @@ export class WakuseiSpace extends HTMLElement {
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
       orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
+      spacecraft: { count: this.#model.craftDrawn.count, status: { ...this.#model.craftDrawn.status }, drawn: [...this.#model.craftDrawn.drawn] },
       companion: this.#model.companion,
       moonSize: { asked: this.#model.moonSize, factor: this.#model.moonDrawn.factor, clamped: this.#model.moonDrawn.clamped },
     };
@@ -1866,6 +1914,7 @@ export class WakuseiSpace extends HTMLElement {
   #nameOf(id: string): string {
     const lang = this.getAttribute("lang") === "ja" ? "ja" : "en";
     if (id === "roadster") return this.#names[id] ?? this.#model.roadsterPath?.name[lang] ?? "Starman";
+    if (this.#model.craftIds.includes(id)) return this.#names[id] ?? this.#model.craftNames?.(id, lang) ?? id;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return this.#names[id] ?? this.#model.orbiterSet.name(id)[lang];
     return this.#names[id] ?? BODIES[id as BodyId].name[lang];
   }
@@ -1914,6 +1963,7 @@ export class WakuseiSpace extends HTMLElement {
     }
     // no two names overlap: a moon gives way to its planet and a planet to the Sun
     const shown = chooseLabels(wanted);
+    for (const id of this.#model.craftIds) if (spots.has(id)) shown.add(id);
     const companion = this.#model.companion;
     if (companion !== null && spots.has(companion)) shown.add(companion);
     this.#nameBoxes = wanted.filter((one) => shown.has(one.id));
@@ -1986,7 +2036,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#hovered = id;
     this.#hoverBy = by;
     this.#markFar();
-    if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
+    if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
+    else if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
     else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: was }, bubbles: true, composed: true }));
   }
 
@@ -2034,8 +2085,9 @@ export class WakuseiSpace extends HTMLElement {
     const now: Record<string, BodySight> = {};
     for (const [id, input] of Object.entries(bodies)) {
       const body = id as BodyId;
-      const one: BodySight = { id: body, kind: bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis) };
-      const host = hostOf(body);
+      const craft = this.#model.craftIds.includes(id) || id === "roadster";
+      const one: BodySight = { id, kind: craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis) };
+      const host = craft ? undefined : hostOf(body);
       if (host !== undefined) one.host = host;
       now[id] = one;
     }
@@ -2093,7 +2145,7 @@ export class WakuseiSpace extends HTMLElement {
   #rank(id: string): number {
     if (id === this.#model.focus) return 0;
     if (id === "sun") return 1;
-    if (id === "roadster") return 3;
+    if (id === "roadster" || this.#model.craftIds.includes(id)) return 3;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return 5;
     const kind = bodyKindOf(id as BodyId);
     return kind === "moon" ? 4 : kind === "planet" || kind === "star" ? 2 : 3;
@@ -2209,7 +2261,7 @@ export class WakuseiSpace extends HTMLElement {
    */
   #press(id: BodyId): void {
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
-    if ((id as string) === "roadster" || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id))) {
+    if ((id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id))) {
       this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
       return;
     }
