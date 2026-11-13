@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-11-13
+
 - **Sharper Moon and Mars maps, switched off until asked** (MODULES-1264). `pnpm tiles:moon` and `pnpm tiles:mars` cut level 4 (32768 pixels across) from the LROC WAC 100 m mosaic and the Viking MDIM 2.1 mosaic at 232 m. The Pages build runs them only when the repository variable `WAKUSEI_SHARP_TILES` is `1`, and does not download those files otherwise. `tilePoint` names the tile pixel of a longitude and latitude.
 
 - **A cutaway of the interior** (MODULES-1246). `cutaway` on a body (off unless set) opens a quarter of the globe toward the camera, turning with the body, and draws the layers as flat-coloured shells. The legend names each layer, its depth from the surface and what it is made of. `interiorOf` returns the layers. Only the Earth and Mars have figures, read from NASA pages on 2026-11-13; a body without them stays whole.
