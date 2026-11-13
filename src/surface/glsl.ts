@@ -466,3 +466,7 @@ void main() {
   gl_FragColor = vec4(0.0, 0.0, 0.0, a);
 }
 `;
+
+/** The things at a site: the rocks' light, with a flat colour for each corner (the gold of the lunar module's foil, the grey of the rover's frame). */
+export const OBJECT_VERTEX = ROCK_VERTEX.replace("attribute float tone;", "attribute float tone;\nattribute vec3 tint;").replace("varying float vTone;", "varying float vTone;\nvarying vec3 vTint;").replace("vTone = tone;", "vTone = tone;\n  vTint = tint;");
+export const OBJECT_FRAGMENT = ROCK_FRAGMENT.replace("varying float vTone;", "varying float vTone;\nvarying vec3 vTint;").replace("gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);", "gl_FragColor = vec4(pow(clamp(vec3(light) * vTint, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);");

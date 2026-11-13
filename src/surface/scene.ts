@@ -4,7 +4,7 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { ThreeParts } from "../scene/body.ts";
 import { rocksAround } from "./detail.ts";
-import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX } from "./glsl.ts";
+import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX } from "./glsl.ts";
 import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
 import type { MoonSky } from "./sky.ts";
@@ -298,7 +298,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       };
       // the things at the site: their parts as one mesh (the rocks' shader and light), their shadows (the rocks' shadow material) and the rover's traverse as a strip along the line. The parts are built where the ground
       // is (from the callback), so they are made again when the ground has changed or the Sun has moved.
-      const objectMaterial = rockMaterial;
+      const objectMaterial = new T.ShaderMaterial({ vertexShader: OBJECT_VERTEX, fragmentShader: OBJECT_FRAGMENT, uniforms });
       let objectMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
       let objectShadowMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
       let objectKey = "";
@@ -316,6 +316,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const position: number[] = [];
         const normal: number[] = [];
         const tone: number[] = [];
+        const tint: number[] = [];
         const shadow: number[] = [];
         for (const object of list) {
           const base = ground(object.east, object.north);
@@ -323,7 +324,10 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           for (const part of parts) {
             position.push(...part.position);
             normal.push(...part.normal);
-            for (let i = 0; i < part.position.length / 3; i += 1) tone.push(part.tone);
+            for (let i = 0; i < part.position.length / 3; i += 1) {
+              tone.push(part.tone);
+              tint.push(...(part.colour ?? [1, 1, 1]));
+            }
           }
           shadow.push(...partShadows(parts, base, state.sky.sun.azimuth, state.sky.sun.altitude));
         }
@@ -331,6 +335,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(position), 3));
         geometry.setAttribute("normal", new T.BufferAttribute(new Float32Array(normal), 3));
         geometry.setAttribute("tone", new T.BufferAttribute(new Float32Array(tone), 1));
+        geometry.setAttribute("tint", new T.BufferAttribute(new Float32Array(tint), 3));
         const shadowGeometry = new T.BufferGeometry();
         shadowGeometry.setAttribute("position", new T.BufferAttribute(new Float32Array(shadow), 3));
         shadowGeometry.setAttribute("uv", new T.BufferAttribute(new Float32Array((shadow.length / 3) * 2).fill(0.5).map((v, i) => (i % 2 === 1 ? 0 : v)), 2));
@@ -541,6 +546,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           objectShadowMesh?.geometry.dispose();
           trackGeometry?.dispose();
           trackMaterial?.dispose();
+          objectMaterial.dispose();
           blitMaterial.dispose();
         },
       };

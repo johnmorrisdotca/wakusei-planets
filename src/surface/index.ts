@@ -5,6 +5,7 @@ export { EYE_HEIGHT, FOV_LIMITS, WALK_SPEED, clampLook, forward, stepOver, viewP
 export { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, sampleLevel, tileAddress, type HeightLevel, type HeightLevelInfo, type TerrainManifest } from "./height.ts";
 export { loadPlan, loadTerrain, type LoadJob, type LoadOptions, type Terrain, type TerrainProgress } from "./load.ts";
 export type { SurfaceState } from "./element.ts";
+export { landerParts, roverParts } from "./shapes.ts";
 export { keepAway, objectParts, objectsOf, partShadows, traverseOf, KEEP_OUT, type Part, type SiteObject } from "./objects.ts";
 export { craterIn, craterProfile, madeGround, setKeepOut, rimBoost, rocksAround, standingPlace, type Crater, type Rock } from "./detail.ts";
 export { rockMesh, type RockMesh } from "./rocks.ts";
