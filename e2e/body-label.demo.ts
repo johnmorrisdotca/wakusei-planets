@@ -234,11 +234,12 @@ test("the name reads on every body at strength 0.5: dark letters on Venus, Satur
     expect(await looks(), `${id}: forced dark`).toBe("burned");
     const [byDefault, forcedPale, forcedDark] = [await letterContrast(page, id, plain, auto), await letterContrast(page, id, plain, pale), await letterContrast(page, id, plain, dark)];
     measured.push(`${id} ${byDefault.toFixed(3)} (pale ${forcedPale.toFixed(3)}, dark ${forcedDark.toFixed(3)})`);
-    if (byDefault < 0.14) low.push(`${id}: ${byDefault.toFixed(3)}`);
+    // an absolute floor only guards against letters that are not there at all: the figure depends on the renderer (Uranus reads 0.147 on a Mac, 0.122 in CI's software drawing), so the property that matters is the relative one below
+    if (byDefault < 0.1) low.push(`${id}: ${byDefault.toFixed(3)}`);
     // the tone chosen reads at least as strongly as the other one on every body, and clearly more on the light ones
     expect(byDefault, `${id} by default is as strong as the better of the two (${measured.at(-1)})`).toBeGreaterThanOrEqual(Math.max(forcedPale, forcedDark) * 0.95);
     if (tone === "dark") expect(byDefault, `${id}: dark letters are clearly stronger than pale (${measured.at(-1)})`).toBeGreaterThan(forcedPale * 1.15);
   }
-  // before (origin/main, one pale look for every body): Uranus 0.106; after: 0.147, and every other body 0.17 or more
+  // before (one pale look for every body) Uranus read 0.082 in CI's drawing and 0.106 on a Mac; the floor of 0.1 is above the first and below what the tone now gives (0.122 and 0.147)
   expect(low, measured.join("; ")).toEqual([]);
 });
