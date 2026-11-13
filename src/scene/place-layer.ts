@@ -246,8 +246,14 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
         // a name for a place the page asked for stands in for its dot and takes the press as the dot does; a name only is the picture's, and takes no press
         const pure = mark.label === true && mark.nameOnly === true ? "1" : undefined;
         if (entry.button.dataset.pure !== pure) {
-          if (pure === undefined) delete entry.button.dataset.pure;
-          else entry.button.dataset.pure = pure;
+          if (pure === undefined) {
+            delete entry.button.dataset.pure;
+            entry.button.removeAttribute("tabindex");
+          } else {
+            entry.button.dataset.pure = pure;
+            // a written name is part of the picture, and a dozen of them would be a dozen stops between the view and its controls
+            entry.button.tabIndex = -1;
+          }
         }
         const opacity = mark.label === true ? (mark.fade ?? 1).toFixed(2) : "";
         if (entry.button.style.opacity !== opacity) entry.button.style.opacity = opacity;

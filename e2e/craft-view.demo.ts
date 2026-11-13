@@ -51,9 +51,15 @@ test("deep-space craft are drawn, Voyager 1 is beyond the Earth's view, a press 
   await expect.poll(() => clicked).toMatchObject({ id: "voyager1", kind: "spacecraft" });
   expect(await view(), "a pick does not move the camera").toBe(viewBefore);
 
-  await space.evaluate((el) => {
-    (el as unknown as { time: number }).time = Date.UTC(1980, 0, 1);
+  // the draw count is read in the same breath as the new date: the list reads what the last draw drew, so it means something only once a draw has come after the change. A draw already on its way (a tile or a table arriving
+  // on a slow runner) carries the old date, which is why the list is read only after the count has gone past what it was, and why it is waited for, not read once
+  const changed = await space.evaluate((el) => {
+    const view = el as unknown as { stats: { draws: number }; time: number };
+    const draws = view.stats.draws;
+    view.time = Date.UTC(1980, 0, 1);
+    return draws;
   });
+  await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws), { message: "a draw came after the date changed" }).toBeGreaterThan(changed);
   await expect.poll(() => space.evaluate((el) => {
     const stats = (el as unknown as { stats: { spacecraft: { drawn: string[]; status: Record<string, string> } } }).stats.spacecraft;
     return { drawn: stats.drawn.slice().sort(), juno: stats.status.juno, voyager: stats.drawn.includes("voyager1") };
