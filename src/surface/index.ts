@@ -5,7 +5,8 @@ export { EYE_HEIGHT, FOV_LIMITS, WALK_SPEED, clampLook, forward, stepOver, viewP
 export { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, sampleLevel, tileAddress, type HeightLevel, type HeightLevelInfo, type TerrainManifest } from "./height.ts";
 export { loadPlan, loadTerrain, type LoadJob, type LoadOptions, type Terrain, type TerrainProgress } from "./load.ts";
 export type { SurfaceState } from "./element.ts";
-export { landerParts, roverParts } from "./shapes.ts";
+export { ascentParts, landerParts, roverParts } from "./shapes.ts";
+export { calloutsBy, CALLOUTS, clockText, LANDING, landingAt, type Callout, type LandingPose } from "./landing.ts";
 export { DustField } from "./dust.ts";
 export { driveParts, driveStep, driveView, startDrive, ROVER, type DriveInput, type DriveState, type DriveView } from "./drive.ts";
 export { keepAway, objectParts, objectsOf, partShadows, traverseOf, KEEP_OUT, type Part, type SiteObject } from "./objects.ts";

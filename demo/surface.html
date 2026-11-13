@@ -15,6 +15,14 @@
         <div class="fam-row landing-row">
           <button type="button" class="fam-button" id="land" data-say="sf_land" data-testid="land">Land at Apollo 17</button>
           <button type="button" class="fam-button" id="leave" data-say="sf_leave" data-testid="leave" hidden>Go back up</button>
+          <button type="button" class="fam-button" id="watch" data-say="sf_watch" data-testid="watch" hidden>Watch the landing</button>
+        </div>
+        <div class="fam-row landing-row" id="watching" hidden>
+          <button type="button" class="fam-button" id="watch-play" data-say="sf_pause" data-testid="watch-play">Pause</button>
+          <button type="button" class="fam-button" id="watch-camera" data-say="sf_camera_ground" data-testid="watch-camera">From the ground</button>
+          <button type="button" class="fam-button" id="watch-rate" data-say="sf_rate_4" data-testid="watch-rate">4 times as fast</button>
+          <input type="range" id="watch-scrub" min="0" max="725" step="1" value="240" aria-label="Time in the descent" data-say-label="sf_scrub" data-testid="watch-scrub" />
+          <button type="button" class="fam-button" id="watch-stop" data-say="sf_stop_watching" data-testid="watch-stop">Stand on the ground</button>
         </div>
         <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
         <p class="fam-fine stage-name" id="hint" data-say="sf_orbit" data-testid="hint">The Moon from orbit. Land at the Apollo 17 site to stand on it.</p>

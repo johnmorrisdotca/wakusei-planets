@@ -81,6 +81,7 @@ landButton.addEventListener("click", () => {
       view = surface as WakuseiSurface;
       landButton.hidden = true;
       leaveButton.hidden = false;
+      watchButton.hidden = false;
       choices(true);
       look("massif");
       orbitHint("sf_hint");
@@ -93,11 +94,70 @@ landButton.addEventListener("click", () => {
   );
 });
 leaveButton.addEventListener("click", () => void leave(orbit));
+// watching the descent: the standing view runs Apollo 17's powered descent when its `watch` is `landing`
+const watchButton = $<HTMLButtonElement>("#watch");
+const watching = $("#watching");
+const scrub = $<HTMLInputElement>("#watch-scrub");
+const playButton = $<HTMLButtonElement>("#watch-play");
+const cameraButton = $<HTMLButtonElement>("#watch-camera");
+const rateButton = $<HTMLButtonElement>("#watch-rate");
+const word = (button: HTMLElement, key: string): void => {
+  button.dataset["say"] = key;
+  button.textContent = say(key);
+};
+const watchOn = (on: boolean): void => {
+  watching.hidden = !on;
+  watchButton.hidden = on || view === undefined;
+};
+watchButton.addEventListener("click", () => {
+  if (view === undefined) return;
+  view.setAttribute("watch-camera", "lander");
+  view.setAttribute("watch", "landing");
+  word(cameraButton, "sf_camera_ground");
+  word(playButton, "sf_pause");
+  word(rateButton, "sf_rate_4");
+  watchOn(true);
+});
+playButton.addEventListener("click", () => {
+  const e = view as unknown as { landing?: { playing: boolean }; playLanding(): void; pauseLanding(): void };
+  if (e.landing?.playing === true) {
+    e.pauseLanding();
+    word(playButton, "sf_play");
+  } else {
+    e.playLanding();
+    word(playButton, "sf_pause");
+  }
+});
+cameraButton.addEventListener("click", () => {
+  const ground = view?.getAttribute("watch-camera") !== "ground";
+  view?.setAttribute("watch-camera", ground ? "ground" : "lander");
+  word(cameraButton, ground ? "sf_camera_lander" : "sf_camera_ground");
+});
+rateButton.addEventListener("click", () => {
+  const e = view as unknown as { landingRate: number };
+  const fast = e.landingRate === 1;
+  e.landingRate = fast ? 4 : 1;
+  word(rateButton, fast ? "sf_rate_1" : "sf_rate_4");
+});
+scrub.addEventListener("input", () => {
+  (view as unknown as { landingTime: number }).landingTime = Number(scrub.value);
+});
+$("#watch-stop").addEventListener("click", () => {
+  view?.removeAttribute("watch");
+  watchOn(false);
+});
+orbit.addEventListener("wakusei-landing-clock", (event) => {
+  const detail = (event as CustomEvent<{ t: number; playing: boolean }>).detail;
+  scrub.value = String(Math.round(detail.t));
+  if (!detail.playing && detail.t >= 725) word(playButton, "sf_play");
+});
 orbit.addEventListener("wakusei-left", () => {
   view = undefined;
   landButton.hidden = false;
   landButton.disabled = false;
   leaveButton.hidden = true;
+  watchButton.hidden = true;
+  watching.hidden = true;
   choices(false);
   orbitHint("sf_orbit");
   caption();

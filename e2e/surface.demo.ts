@@ -23,6 +23,10 @@ type Surface = HTMLElement & {
   choose(id: string | undefined): boolean;
   vehicle?: { east: number; north: number; heading: number; speed: number; y: number; airborne: boolean; distance: number };
   driveCamera: "chase" | "seat";
+  landing?: { t: number; playing: boolean; camera: string; altitude: number; speed: number };
+  landingTime: number;
+  pauseLanding(): void;
+  playLanding(): void;
   driveFor(seconds: number, input?: { throttle: number; steer: number }): boolean;
 };
 
@@ -307,4 +311,88 @@ test("driveFor drives by a set time: two seconds at full throttle is about two m
   expect(result.run).toBeGreaterThan(1.8);
   expect(result.run).toBeLessThan(3.1);
   expect(result.turned, "full right turns the heading to the right").toBeGreaterThan(20);
+});
+
+test("watching the landing: the clock starts at T+4:00 and runs, the report's moments are shown as they pass with the made curve said, and a seek goes to the touchdown where it stops and nothing is drawn", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off");
+  await page.evaluate(() => {
+    const log: string[] = [];
+    Reflect.set(window, "__clock", log);
+    document.querySelector("#test-surface")!.addEventListener("wakusei-landing-clock", (event) => {
+      const c = (event as CustomEvent).detail.callout;
+      if (c !== undefined) log.push(c.id);
+    });
+    document.querySelector("#test-surface")!.setAttribute("watch", "landing");
+  });
+  const start = await read(page, (el) => ({ ...el.landing!, text: el.shadowRoot!.getElementById("clock")!.textContent ?? "" }));
+  expect(start.t).toBeGreaterThanOrEqual(240);
+  expect(start.t, "it began at T+4:00").toBeLessThan(260);
+  expect(start.playing).toBe(true);
+  expect(start.camera).toBe("lander");
+  // read the clock and pause in one call, then go to the high gate
+  const high = await read(page, (el) => {
+    el.pauseLanding();
+    el.landingTime = 562;
+    return { ...el.landing!, text: el.shadowRoot!.getElementById("clock")!.textContent ?? "", curve: el.shadowRoot!.getElementById("curve")!.textContent ?? "", callouts: [...el.shadowRoot!.querySelectorAll("#callouts li")].map((li) => li.textContent ?? "") };
+  });
+  expect(high.playing).toBe(false);
+  expect(Math.abs(high.altitude - 2286)).toBeLessThan(1);
+  expect(high.text).toContain("T+09:22");
+  expect(high.text).toContain("110:19:15");
+  expect(high.curve, "the made curve is said on the picture").toBe("Altitude and speed between the reported moments are a smooth curve of ours.");
+  expect(high.callouts.at(-1)).toContain("High gate");
+  // the touchdown: the dust call-out comes before it, and the clock stops
+  const down = await read(page, (el) => {
+    el.landingTime = 725;
+    return { ...el.landing!, log: [...(Reflect.get(window, "__clock") as string[])] };
+  });
+  expect(down.altitude).toBe(0);
+  expect(down.playing).toBe(false);
+  expect(down.log.at(-1)).toBe("touchdown");
+  expect(down.log).toContain("high-gate");
+  // at the end nothing is drawn (that nothing happens: a wait to say so)
+  let held = -1;
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = await draws(page);
+        same = now === held ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { timeout: 120_000, intervals: [500] },
+    )
+    .toBeGreaterThanOrEqual(3);
+  const rest = await draws(page);
+  await page.waitForTimeout(1500);
+  expect(await draws(page)).toBe(rest);
+});
+
+test("the ground camera stands 150 m north of the touchdown point, looking south at the lander, and watch-from moves it", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off");
+  const near = await read(page, (el) => {
+    el.setAttribute("watch-camera", "ground");
+    el.setAttribute("watch", "landing");
+    el.pauseLanding();
+    el.landingTime = 725;
+    const lm = el.objects.find((o) => o.id === "lm")!;
+    return { gap: Math.hypot(el.position.east - lm.east, el.position.north - lm.north), north: el.position.north - lm.north, azimuth: el.look.azimuth, fov: el.look.fov, camera: el.landing!.camera };
+  });
+  expect(near.camera).toBe("ground");
+  expect(near.gap).toBeGreaterThan(149);
+  expect(near.gap).toBeLessThan(151);
+  expect(near.north, "north of it").toBeGreaterThan(149);
+  expect(Math.abs(near.azimuth - 180), "looking south at it").toBeLessThan(5);
+  expect(near.fov, "narrowed so that the stage is about a tenth of the picture").toBeLessThan(30);
+  const east = await read(page, (el) => {
+    el.setAttribute("watch-from", "300 90");
+    const lm = el.objects.find((o) => o.id === "lm")!;
+    return { gap: Math.hypot(el.position.east - lm.east, el.position.north - lm.north), east: el.position.east - lm.east };
+  });
+  expect(east.gap).toBeGreaterThan(299);
+  expect(east.gap).toBeLessThan(301);
+  expect(east.east, "bearing 90 is east").toBeGreaterThan(299);
 });

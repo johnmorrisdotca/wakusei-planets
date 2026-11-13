@@ -152,3 +152,58 @@ test("driving the rover: rounds of driving, turning and settling leave no more g
   expect(gone.created.VertexArray - gone.deleted.VertexArray, "vertex arrays left").toBeLessThanOrEqual(0);
   expect(gone.created.Program - gone.deleted.Program, "programs left").toBeLessThanOrEqual(0);
 });
+
+test("watching the landing: seeking through the descent and back leaves no more graphics objects alive than the round before, nothing is drawn once it has stopped, and removal gives it all back", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page);
+  type Landing = HTMLElement & { landingTime: number; pauseLanding(): void; stats: { renderer: { draws: number } } };
+  await page.locator("#test-surface").evaluate((el) => {
+    el.setAttribute("watch", "landing");
+    (el as Landing).pauseLanding();
+  });
+  const seek = (t: number) => page.locator("#test-surface").evaluate((el, t) => void ((el as Landing).landingTime = t), t);
+  const round = async (): Promise<void> => {
+    for (const t of [562, 658, 714.5, 725, 300]) {
+      const draws = await page.locator("#test-surface").evaluate((el) => (el as Landing).stats.renderer.draws);
+      await seek(t);
+      await expect.poll(() => page.locator("#test-surface").evaluate((el) => (el as Landing).stats.renderer.draws), { timeout: 90_000 }).toBeGreaterThan(draws);
+    }
+    await page.locator("#test-surface").evaluate((el) => el.setAttribute("watch-camera", "ground"));
+    await seek(725);
+    await page.locator("#test-surface").evaluate((el) => el.setAttribute("watch-camera", "lander"));
+    await settledCounts(page);
+  };
+  let before = Infinity;
+  for (let i = 0; i < 6; i += 1) {
+    await round();
+    const seen = await settledCounts(page);
+    if (gpuObjects(seen) <= before) break;
+    before = gpuObjects(seen);
+    expect(i, "the graphics objects alive were still growing after six rounds").toBeLessThan(5);
+  }
+  // stopped at the touchdown: nothing is drawn (that nothing happens: a wait to say so)
+  await seek(725);
+  await settledCounts(page);
+  let held = -1;
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = await page.locator("#test-surface").evaluate((el) => (el as Landing).stats.renderer.draws);
+        same = now === held ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { intervals: [500], timeout: 120_000 },
+    )
+    .toBeGreaterThanOrEqual(4);
+  const a = await readCounts(page);
+  await page.waitForTimeout(2500);
+  const b = await readCounts(page);
+  expect(b.draws - a.draws, "nothing drawn once the descent has stopped").toBe(0);
+  await page.locator("#test-surface").evaluate((el) => el.remove());
+  const gone = await settledCounts(page);
+  expect(gone.created.Buffer - gone.deleted.Buffer, "buffers left").toBeLessThanOrEqual(0);
+  expect(gone.created.VertexArray - gone.deleted.VertexArray, "vertex arrays left").toBeLessThanOrEqual(0);
+  expect(gone.created.Program - gone.deleted.Program, "programs left").toBeLessThanOrEqual(0);
+});

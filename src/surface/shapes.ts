@@ -274,3 +274,34 @@ export function roverParts(): Part[] {
   parts.push(box([0, 0.78, -1.15], [0.9, 0.3, 0.5], 0, 1.05, 0, SILVER));
   return parts;
 }
+
+/**
+ * The lunar module's ascent stage in the same frame as `landerParts` (it sits on the descent stage's deck, 3.2 m up): the cabin, its two triangular windows, the hatch section on top with the docking tunnel, the four
+ * thruster quads at its corners, the rendezvous radar on its boom and the antenna. Plain shapes from the published sizes (the whole craft stands about 7 m on its legs); no mark or flag is drawn.
+ *
+ * @returns The parts.
+ *
+ * @example
+ * ```ts
+ * import { ascentParts } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * console.log(ascentParts().length, "parts");
+ * ```
+ */
+export function ascentParts(): Part[] {
+  const parts: Part[] = [];
+  const cabin: V3 = [0.86, 0.83, 0.76];
+  const dark: V3 = [0.2, 0.22, 0.26];
+  parts.push(box([0, 4.1, 0.1], [3.0, 1.8, 2.6], 0, 1.2, 0, cabin));
+  // the front face's two windows, and the hatch section with its tunnel on top
+  for (const x of [-0.8, 0.8]) parts.push(box([x, 4.3, 1.42], [0.5, 0.55, 0.05], 0, 0.6, 0, dark));
+  parts.push(box([0, 5.2, 0], [2.2, 0.7, 2.0], 0, 1.1, 0, cabin));
+  parts.push(cylinder([0, 5.55, 0], 0.5, 0.45, 12, 1.0, false, [0.7, 0.7, 0.72]));
+  // the four thruster quads at the corners of the cabin
+  for (const x of [-1, 1]) for (const z of [-1, 1]) parts.push(box([x * 1.65, 4.1, z * 1.2], [0.45, 0.45, 0.45], 0, 1.0, 0, [0.78, 0.78, 0.8]));
+  // the rendezvous radar on a boom and the antenna
+  parts.push(strut([0.6, 5.4, 0.2], [1.1, 6.1, 0.2], 0.06, 1.1, [0.8, 0.8, 0.82]));
+  parts.push(dish([1.1, 6.15, 0.2], [0.4, 0.8, 0.4], 0.35, 0.1, 10, 1.4, [0.95, 0.95, 0.97]));
+  parts.push(strut([-0.5, 5.4, -0.4], [-0.5, 6.4, -0.4], 0.02, 1.0, [0.5, 0.5, 0.52]));
+  return parts;
+}

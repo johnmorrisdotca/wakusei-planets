@@ -496,3 +496,32 @@ void main() {
   gl_FragColor = vec4(vec3(0.6), 0.55 * (1.0 - r * r));
 }
 `;
+
+/** The engine's plume: a cone below the bell, its place and size in uniforms, faint and warm, widest at its end (a vacuum lets a plume spread). position.x is the angle round it (0 to 1), position.y the way along it (0 to 1). */
+export const PLUME_VERTEX = /* glsl */ `
+precision highp float;
+uniform mat4 uVP;
+uniform vec3 uBell; // the bell's exit, in the site's plane (east, up, north)
+uniform float uLength;
+uniform float uRadius;
+varying float vAlong;
+void main() {
+  float a = position.x * 6.2831853;
+  float u = position.y;
+  float r = 0.7 + (uRadius - 0.7) * pow(u, 0.6);
+  vec3 w = uBell + vec3(cos(a) * r, -u * uLength, sin(a) * r);
+  vAlong = u;
+  gl_Position = uVP * vec4(w.x, w.y, -w.z, 1.0);
+}
+`;
+
+export const PLUME_FRAGMENT = /* glsl */ `
+precision highp float;
+uniform float uPlume; // the share of full thrust
+varying float vAlong;
+void main() {
+  float a = uPlume * 0.38 * (1.0 - vAlong) * (1.0 - vAlong);
+  if (a < 0.003) discard;
+  gl_FragColor = vec4(1.0, 0.92, 0.78, a);
+}
+`;

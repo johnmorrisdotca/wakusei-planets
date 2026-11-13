@@ -22,6 +22,12 @@ export interface LandOptions {
   time?: number | string;
   /** Where to look first: the site's own look when left out. */
   look?: { heading?: number; pitch?: number; fov?: number };
+  /** `"landing"` to watch Apollo 17's powered descent once down (the real moment: its Sun and Earth, the clock from T+4:00 or T+9:00): see `watch` of the standing view. */
+  watch?: "landing";
+  /** Which camera watches: `lander` (the commander's window, the default) or `ground` (an observer standing off the touchdown point). */
+  watchCamera?: "lander" | "ground";
+  /** Where the ground camera stands, as `"150 0"`: metres from the touchdown point and the bearing in degrees clockwise from north (150 m north by default). */
+  watchFrom?: string;
   /** False to cut straight to the ground with no turn, no zoom and no fade (reduced motion does the same). */
   smooth?: boolean;
   /** Milliseconds to wait for the standing view to be live before giving up (20,000 by default). */
@@ -205,6 +211,12 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
       await space.resume();
       veil.style.opacity = "0";
       fail(live ? "this device cannot draw the ground" : "the ground did not come in time");
+    }
+    // watching the descent: the standing view starts it as the veil goes up, so the first thing seen is its first frame
+    if (options.watch === "landing") {
+      if (options.watchCamera !== undefined) surface.setAttribute("watch-camera", options.watchCamera);
+      if (options.watchFrom !== undefined) surface.setAttribute("watch-from", options.watchFrom);
+      surface.setAttribute("watch", "landing");
     }
     veil.style.opacity = "0";
     if (smooth) await sleep(FADE_MS, landing);
