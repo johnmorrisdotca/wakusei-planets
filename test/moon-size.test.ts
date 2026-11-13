@@ -21,3 +21,14 @@ test("true distances ignore moon size, and a squeezed view keeps the real order 
   assert.ok(0.1 * tight.factor <= 1.7 - 1.05 + 1e-9, "the moon does not reach the planet");
   assert.ok(0.02 * tight.factor < 0.1 * tight.factor);
 });
+
+test("the factor a camera frames a moon at is the one the drawing uses, for the real moons", async () => {
+  const { moonScaleFor } = await import("../src/space/scene.ts");
+  const time = Date.UTC(2026, 10, 11, 12);
+  assert.deepEqual(moonScaleFor("true", "jupiter", 8, time), { factor: 1, clamped: false });
+  assert.equal(moonScaleFor("compressed", "jupiter", 4, time).factor, 4);
+  const cut = moonScaleFor("compressed", "jupiter", 8, time);
+  assert.ok(cut.clamped && cut.factor < 8 && cut.factor > 4, String(cut.factor));
+  // a moon already larger than a quarter of its planet is not grown (Charon beside Pluto)
+  assert.equal(moonScaleFor("compressed", "pluto", 8, time).factor, 1);
+});

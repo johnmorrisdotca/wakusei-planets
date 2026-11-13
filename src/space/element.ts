@@ -35,7 +35,7 @@ import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } f
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
-import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { createSpaceItem, FIT_DISTANCE, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
@@ -1311,7 +1311,7 @@ export class WakuseiSpace extends HTMLElement {
     const d = Math.hypot(real[0], real[1], real[2]);
     const k = (d === 0 ? 1 : moonDistance(mode, host, d) / d) * radiusIn(host, mode);
     const centre = pos[host];
-    return { at: [centre[0] + real[0] * k, centre[1] + real[1] * k, centre[2] + real[2] * k], radius: Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusIn(host, mode)) };
+    return { at: [centre[0] + real[0] * k, centre[1] + real[1] * k, centre[2] + real[2] * k], radius: Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusIn(host, mode) * moonScaleFor(mode, host, this.#model.moonSize, this.#model.time).factor) };
   }
 
   #siding = false;

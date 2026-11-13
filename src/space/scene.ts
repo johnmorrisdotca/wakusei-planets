@@ -440,6 +440,30 @@ export interface SpaceDeps {
 
 const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 
+/**
+ * The factor the squeezed view draws the moons of one planet at (1 at true distances), worked out from the planet's moons as the drawing does, so a camera that frames a moon frames the size it is drawn.
+ *
+ * @param mode - The scale.
+ * @param host - The planet or dwarf planet the moons go round.
+ * @param size - The `moon-size` asked for.
+ * @param time - The moment, in milliseconds, that sets where the moons are.
+ * @returns The factor used, and whether a limit cut it.
+ *
+ * @example
+ * ```ts no-run
+ * import { moonScaleFor } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * console.log(moonScaleFor("compressed", "jupiter", 4, Date.UTC(2026, 10, 11)).factor);
+ * ```
+ */
+export function moonScaleFor(mode: ScaleMode, host: SpacePlanet | SpaceDwarf, size: number, time: number): { factor: number; clamped: boolean } {
+  const moons = ((MOONS_OF as Record<string, readonly MoonId[]>)[host] ?? []).map((moon) => {
+    const offset = moonOffset(moon, time);
+    return { radius: BODIES[moon].radiusKm / BODIES[host].radiusKm, orbit: moonDistance(mode, host, Math.hypot(offset[0], offset[1], offset[2])) };
+  });
+  return moonSizeFactor(mode, host, size, moons);
+}
+
 /** How far a place is from the nearest point of a line through `points`, in the line's units. */
 const plus = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 
@@ -712,7 +736,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const offset = moonSite(focus as MoonId, model.time, host);
             const hostRadius = radiusOf(host);
             focusPos = [pos[host][0] + offset[0] * hostRadius, pos[host][1] + offset[1] * hostRadius, pos[host][2] + offset[2] * hostRadius];
-            focusRadius = Math.max(1e-9, (BODIES[focus].radiusKm / BODIES[host].radiusKm) * hostRadius);
+            // a moon the view draws larger than life is framed at the size it is drawn
+            focusRadius = Math.max(1e-9, (BODIES[focus].radiusKm / BODIES[host].radiusKm) * hostRadius * moonScaleFor(mode, host, model.moonSize, model.time).factor);
           }
           let aimWay = 1;
           let besideIn: Omit<BesideInput, "aspect" | "zoom" | "yaw" | "tilt"> | null = null;
