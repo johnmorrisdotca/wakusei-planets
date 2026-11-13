@@ -11,6 +11,7 @@ export const WORDS = {
     pageEmbed: "Embed",
     pageSpace: "Space",
     pageStar: "Star",
+    pageCraft: "Spacecraft",
     cr_stage: "Spacecraft",
     cr_pick: "Craft",
     cr_when: "Date",

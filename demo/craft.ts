@@ -56,7 +56,12 @@ function tick(): void {
 
 async function show(): Promise<void> {
   const craft = SPACECRAFT[id];
-  for (const button of crafts.querySelectorAll("button")) button.setAttribute("aria-pressed", String(button.dataset["craft"] === id));
+  const named = lang();
+  for (const button of crafts.querySelectorAll("button")) {
+    const one = button.dataset["craft"] as SpacecraftId;
+    button.setAttribute("aria-pressed", String(one === id));
+    button.textContent = SPACECRAFT[one].name[named];
+  }
   if (!loaded.has(id)) {
     await loadSpacecraft(id);
     loaded.add(id);
