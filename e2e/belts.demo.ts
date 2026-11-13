@@ -65,7 +65,7 @@ test("at rest the belts are not drawn again, and the whole solar system shows th
     controller.set({ zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") }, true, "jump");
   });
   // the pictures of the bodies that came into view finish loading, each with one more draw; then it is at rest
-  await quietElement(page, "wakusei-space");
+  await quietElement(page, "wakusei-space", 60_000, { moons: true });
   const before = await sky(page).evaluate((el) => (Reflect.get(el, "stats") as { draws: number }).draws);
   // only to say that nothing happens: the draws were held still above, and this is a stretch in which none may come
   await page.waitForTimeout(2500);
