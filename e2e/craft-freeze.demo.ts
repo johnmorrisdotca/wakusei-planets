@@ -46,10 +46,14 @@ test("playing, a frame is asked for each page frame and the page changes with ea
   await reset(page);
   await advance(page, 1000);
   const playing = await seen(page);
-  // the craft page's own loop asks for one a page frame (62 here), never more; the family frame's help labels ask once for each batch of changes the page makes, and are counted apart
+  // the craft page's own loop asks for one a page frame (62 here), never more
   expect(playing.craft, "the craft loop asks for a frame each of the 62 page frames").toBeGreaterThan(55);
   expect(playing.craft, "and never twice in a frame").toBeLessThanOrEqual(63);
-  expect(playing.mutations, "and the page changed with them").toBeGreaterThan(50);
+  // only the marker and the where line move: no change to the page's tree, so the family frame's help labels have nothing to refresh and ask for no frame of their own
+  expect(playing.frames - playing.craft, "the family label refresh does not fire while the date plays").toBe(0);
+  // the marker's two attributes and the where line's text: three changes a frame at the most
+  expect(playing.mutations, "the page changed with the frames").toBeGreaterThan(50);
+  expect(playing.mutations, "and only by the marker and the where line").toBeLessThanOrEqual(3 * 63);
   // pause: the frame in flight ends, and then nothing
   await page.locator("#play").click();
   await expect(page.locator("#play")).toHaveAttribute("aria-pressed", "false");
