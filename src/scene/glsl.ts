@@ -35,7 +35,7 @@ float craters(vec3 p, float freq, float amp, float seed) {
     float d = length(q - ctr) / rad;
     float bowl = d < 1.0 ? (d * d - 1.0) : 0.0;
     float rim = d >= 1.0 ? exp(-pow((d - 1.0) * 5.0, 2.0)) * 0.3 * smoothstep(1.0, 1.08, d) : 0.0;
-    h += on * amp * rad * (bowl + rim) * (1.0 - smoothstep(0.35, 0.9, fw / rad));
+    h += on * amp * rad * (bowl + rim) * (1.0 - smoothstep(0.14, 0.34, fw / rad));
   }
   return h;
 }
@@ -134,7 +134,9 @@ ${detail ? "  s.rgb *= microDetail(p);\n" : ""}
   float det = dot(dpx, cross(dpy, n));
   // relief is worked out from differences between neighbouring pixels, which cannot show a bump only a few pixels wide: on a small disc it fades out and the colour alone carries the craters
   float reliefLod = 1.0 - smoothstep(0.008, 0.024, length(fwidth(p)));
-  vec3 nb = normalize(abs(det) * n - sign(det) * uRelief * reliefLod * grad * 22.0);
+  // a wall steeper than about 50 degrees is not tipped further: the tilt of two pixels' difference on a steep bowl would turn the surface away from the light and draw a hard black ring
+  vec3 tilt = sign(det) * uRelief * reliefLod * grad * 22.0;
+  vec3 nb = normalize(abs(det) * n - tilt * min(1.0, 1.2 * abs(det) / max(length(tilt), 1e-20)));
   float d = dot(nb, uLight);
   float diff = clamp((d + uWrap) / (1.0 + uWrap), 0.0, 1.0) * smoothstep(-0.02 - uWrap * 0.6, 0.1 + uWrap * 0.8, dg);
   if (uRingOn > 0.5) {
