@@ -23,14 +23,18 @@ test("deep-space craft are drawn, Voyager 1 is beyond the Earth's view, a press 
   const edge = await voyager();
   expect(edge?.edge === "left" || edge?.edge === "right" || edge?.edge === "top" || edge?.edge === "bottom").toBe(true);
 
+  // Voyager 1 is in view for about 30 degrees of yaw (in a view as tall as wide, 35 degrees of sight), so turn in steps of 10 and not one that can land on the edge of it
   let faced = false;
-  for (let yaw = -180; yaw < 180 && !faced; yaw += 30) {
-    const stateOf = () => space.evaluate((el) => JSON.stringify((el as unknown as { controller: { state: unknown } }).controller.state));
-    const draws = await space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws);
-    const was = await stateOf();
-    await space.evaluate((el, turn) => (el as unknown as { controller?: { set: (v: { yaw: number; zoom: number }, f?: boolean, r?: string) => void } }).controller?.set({ yaw: turn, zoom: 0.4 }, true, "set"), yaw);
+  for (let yaw = -180; yaw < 180 && !faced; yaw += 10) {
+    // the draw count is read in the same breath as the turn: a draw that lands between a separate read and the turn (a tile or a table arriving on a slow runner) would end the wait on a picture of the view before the turn
+    const turned = await space.evaluate((el, turn) => {
+      const view = el as unknown as { stats: { draws: number }; controller: { state: unknown; set: (v: { yaw: number; zoom: number }, f?: boolean, r?: string) => void } };
+      const [draws, was] = [view.stats.draws, JSON.stringify(view.controller.state)];
+      view.controller.set({ yaw: turn, zoom: 0.4 }, true, "set");
+      return { draws, changed: JSON.stringify(view.controller.state) !== was };
+    }, yaw);
     // a turn that leaves the view as it was draws nothing, so wait for a draw only when the view changed
-    if ((await stateOf()) !== was) await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws)).toBeGreaterThan(draws);
+    if (turned.changed) await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws)).toBeGreaterThan(turned.draws);
     faced = await space.evaluate((el) => (el as unknown as { sight: () => { id: string; inView: boolean }[] }).sight().some((one) => one.id === "voyager1" && one.inView));
   }
   expect(faced).toBe(true);
