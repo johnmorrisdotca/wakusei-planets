@@ -120,9 +120,44 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 表示は、はじめから小惑星帯とカイパーベルトを描きます。NASA/JPL の小天体データベースの番号つきの小天体3,340個を7つの帯に分け、帯ごとに専用の色で、1回のインスタンス描画です。`space.belts = ["main", "trojan"]` (または属性 `belts`) で出す帯を選び、`[]` や `belts="off"` で消し、`space.enterBelt("main")` でカメラを帯の中へ飛ばし、`space.leaveBelt()` で出ます。表示には、天体が実際にはどれだけまばらにあるかを書いた1行が出ます。表、数、サーバー側の使い方は [帯のガイド](belts.md) にあります。縮めた縮尺では、オールトの雲の内側のふち (太陽から約2,000天文単位) も、名前つきの殻として描きます。
 
+## 自分の軌道を自分の見た目で
+
+`paths` は、ページが指定した天体の軌道を、通常の軌道線の上に、それぞれ好きな見た目で描きます。天体は `earth`、惑星、準惑星、小天体、`moon`、ほかの惑星の衛星 (`io`、`titan`、`triton`) のどれかです。衛星の輪は、その衛星を置いている平均軌道から (表示が衛星の位置を決めるのと同じ要素から) 惑星のまわりに描くので、表示している時刻の衛星の位置を通ります。探査機など (`roadster`、周回機、深宇宙探査機) はこの版では軌道を描かず、id は `unresolved` に数えられます。
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mars, Jupiter and Io picked out on their orbits</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space id="sky" time="2026-11-02T14:00Z" speed="0" style="width: 420px"></wakusei-space>
+    <p id="said">Press an orbit.</p>
+    <script type="module">
+      const sky = document.getElementById("sky");
+      await customElements.whenDefined("wakusei-space");
+      sky.setPathStyles({ favourite: { color: "#ffd166", width: 2 } });
+      sky.setPaths([{ id: "mars", style: "favourite" }, { id: "jupiter", style: "selected" }, "io"]);
+      sky.addEventListener("wakusei-path-click", (event) => {
+        document.getElementById("said").textContent = `${event.detail.name}: the ${event.detail.style} look`;
+      });
+    </script>
+  </body>
+</html>
+```
+
+`setPaths(list)` (プロパティ `paths`、または JSON の属性 `paths`) は id か `{ id, style }` を16個まで受け取ります。それより長いと最後の16個が残り、同じ天体を2回書くと最後の見た目の1本になります。`style` は見た目の名前、または `path` に重ねる一部の見た目です。`setPathStyles(table)` (プロパティ `pathStyles`、属性 `path-styles`) は名前つきの見た目 `selected`、`hovered`、`favourite`、`path`、または自分の名前を変えます。各見た目は `color`、`width` (0.5〜8 CSSピクセル)、`opacity` (0〜1)、`dash` (線に沿った `[線, すきま]` のCSSピクセル、各1〜64、`null` なら実線) です。組み込みの見た目は色だけでなく太さと破線でも違うので、色の区別がつかない人にも線の区別がつきます。`selected` は2 px の実線、`hovered` は1.5 px で6と4の破線、`favourite` は金色1.75 px で3と4の破線、`path` は1.5 px の実線です。渡した見た目は同じ名前の組み込みに重ねる一部の見た目で、`null` で変更を取り消せます。
+
+すべての軌道は1回の描画で、実際の太さと、画面上で線に沿って測った破線で描かれます。ページの `paths` は `orbits` の設定にかかわらず描かれ (ページが求めたため)、通常の軌道線を持つ天体では、その線は軌道の下に二重には描かれません。ふだんの近接ルールも同じです。小惑星帯を通り抜けている間は惑星の軌道が消え、天体に近いときはその天体の系の軌道だけが残り、天体に近い部分は薄くなります。衛星の輪は惑星の円盤を横切る部分を消すので、球の上に線が走ることはありません。静止中は何も描きません。軌道は表示を動かす描画の一部で、`paths` や `pathStyles` を変えると1回描くだけです。
+
+`path-hit` (プロパティ `pathHit`。初期値8 CSSピクセル、0〜40、`off` か 0 でなし。タッチは2倍で、最低16) で、ポインターが軌道を見つけられます。`wakusei-path-hover` (マウスとペン) と `wakusei-path-click` (押す、またはタップ) が、その下にある軌道を `{ id, name, style, x, y, distancePx, pointer }` で知らせます (`x`、`y` は軌道上の最も近い点、`style` は見た目の名前)。`wakusei-path-hover-end` はポインターが離れたことを知らせます。`pathAt(x, y, radiusPx?)` は要素上の任意の点について同じことを答えます。1回の押下は1つのことだけを意味します。先に天体 (円盤か名前)、次に軌道、最後に空です。表示を回すドラッグはクリックではありません。ライドの間は `path-hit` を指定しない限り判定しません。`stats.paths` は `{ requested, drawn, dropped, unresolved, hidden, solid, draws, hover, hits }` で、`draws` は 0 か 1、`hidden` は直近の描画で消した id、`solid` は破線が多すぎて実線で描いた軌道です。
+
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`all-moons` (ほかの衛星をすべて点で)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`paths`、`path-styles`、`path-hit` (自分の軌道を自分の見た目で。上記)、`all-moons` (ほかの衛星をすべて点で)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-path-hover`、`wakusei-path-hover-end`、`wakusei-path-click` (ポインターの下にある自分の軌道)、`wakusei-sight` (絵の中と外の天体) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 天体から天体への移動
 

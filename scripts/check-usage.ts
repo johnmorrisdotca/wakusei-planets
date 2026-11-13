@@ -251,6 +251,25 @@ await step("space", async () => {
   });
 });
 
+await step("space-paths", async () => {
+  await opened(browser, async (page) => {
+    await page.route("https://cdn.jsdelivr.net/**", async (route) => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm") return route.fulfill({ body: await bundleOf(modules("space/element.js")), contentType: "text/javascript" });
+      const picture = pathname.split("/").pop() ?? "";
+      if (picture.endsWith(".webp") && existsSync(at("textures", picture))) return route.fulfill({ body: readFileSync(at("textures", picture)), contentType: "image/webp" });
+      return route.fulfill({ status: 404, body: "" });
+    });
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples(""), "space-paths.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    await page.locator("wakusei-space[data-state=live]").waitFor({ timeout: 60_000 });
+    // the three paths asked for are in the one draw
+    await page.waitForFunction(() => (document.querySelector("wakusei-space") as unknown as { stats: { paths: { drawn: number; draws: number } } }).stats.paths.drawn === 3, undefined, { timeout: 60_000 });
+    const paths = await page.locator("wakusei-space").evaluate((el) => (el as unknown as { stats: { paths: { drawn: number; draws: number } } }).stats.paths);
+    if (paths.draws !== 1) throw new Error(`the paths took ${paths.draws} draws`);
+  });
+});
+
 await step("controls", async () => {
   await opened(browser, async (page) => {
     await page.route("https://cdn.jsdelivr.net/**", async (route) => {
@@ -523,6 +542,7 @@ const FILES: Record<string, string[]> = {
   "controls.html": ["README.md", "docs/guides/getting-started.md", "docs/guides/ja/getting-started.md"],
   "cdn-unpkg.html": ["docs/guides/html-and-cdn.md", "docs/guides/ja/html-and-cdn.md"],
   "space.html": ["docs/guides/space-view.md", "docs/guides/ja/space-view.md"],
+  "space-paths.html": ["docs/guides/space-view.md", "docs/guides/ja/space-view.md"],
   "iframe.html": ["docs/guides/embed-in-an-iframe.md", "docs/guides/ja/embed-in-an-iframe.md"],
   "vite/main.ts": ["docs/guides/bundlers.md", "docs/guides/ja/bundlers.md"],
   "vite/index.html": ["docs/guides/bundlers.md", "docs/guides/ja/bundlers.md"],

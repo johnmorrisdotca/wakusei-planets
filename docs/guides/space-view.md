@@ -120,9 +120,44 @@ With `orbits` on, two small arrowheads sit along each orbit line, pointing the w
 
 The view draws the asteroid belts and the Kuiper belt by default: 3,340 numbered small bodies from NASA/JPL's Small-Body Database in seven belts, each one instanced draw of its own colour. `space.belts = ["main", "trojan"]` (or the attribute `belts`) chooses them, `[]` or `belts="off"` turns them off, `space.enterBelt("main")` flies the camera into a belt and `space.leaveBelt()` comes out, with a line on the view saying how thinly the bodies really lie. [The belts](belts.md) has the table, the numbers and the server side. In the squeezed scale the view also draws the inner edge of the Oort cloud, about 2,000 au out, as a labelled shell.
 
+## Orbits of your own, in looks of your own
+
+`paths` draws the orbits of the bodies a page names, each in a look of its own, over the plain orbit lines. A body is `earth`, a planet, a dwarf planet, a minor body, `moon`, or a moon of another planet (`io`, `titan`, `triton`). A moon's ring is drawn round its planet from the mean orbit that places it (the same elements the view uses to put the moon where it is), so it runs through the moon at the moment shown. A craft (`roadster`, the orbiters, the deep-space craft) has no path in this release: its id counts as `unresolved` and nothing is drawn for it.
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mars, Jupiter and Io picked out on their orbits</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space id="sky" time="2026-11-02T14:00Z" speed="0" style="width: 420px"></wakusei-space>
+    <p id="said">Press an orbit.</p>
+    <script type="module">
+      const sky = document.getElementById("sky");
+      await customElements.whenDefined("wakusei-space");
+      sky.setPathStyles({ favourite: { color: "#ffd166", width: 2 } });
+      sky.setPaths([{ id: "mars", style: "favourite" }, { id: "jupiter", style: "selected" }, "io"]);
+      sky.addEventListener("wakusei-path-click", (event) => {
+        document.getElementById("said").textContent = `${event.detail.name}: the ${event.detail.style} look`;
+      });
+    </script>
+  </body>
+</html>
+```
+
+`setPaths(list)` (or the property `paths`, or the attribute `paths` as JSON) takes up to 16 entries, each an id or `{ id, style }`; a longer list keeps the last 16, and a body named twice has one path, in the look of the last entry. `style` is the name of a look or a partial look over `path`. `setPathStyles(table)` (the property `pathStyles`, the attribute `path-styles`) changes the named looks: `selected`, `hovered`, `favourite` and `path`, or a name of your own, each a `color`, a `width` (0.5 to 8 CSS pixels), an `opacity` (0 to 1) and a `dash` (`[dash, gap]` in CSS pixels along the line, each 1 to 64, or `null` for solid). The built-in looks differ by width and dash as well as colour, so a reader who cannot tell the colours apart can still tell the lines apart: `selected` is a 2 px solid line, `hovered` 1.5 px with dashes of 6 and 4, `favourite` 1.75 px in gold with dashes of 3 and 4, `path` 1.5 px solid. A look you give is a partial look over the built-in of that name, and `null` takes your change away.
+
+All the paths are one draw, with a real width and with dashes measured along the line on the screen. A page's paths are drawn whatever `orbits` says (it asked for them), and a body that has a plain orbit line does not have it drawn again beneath its path. The usual close-up rules hold: flying through a belt lets the planets' paths go, and close to a body only the paths of its own system are drawn, with the part near the body faded; a moon's ring is let go where it crosses its planet's disc, so there is never a line across a globe. Nothing is drawn at rest: a path is part of the draw that moves the view, and changing `paths` or `pathStyles` costs one draw.
+
+`path-hit` (the property `pathHit`; 8 CSS pixels by default, 0 to 40, `off` or 0 for none; a touch gets twice the reach, at least 16) lets the pointer find a path. `wakusei-path-hover` (a mouse or a pen) and `wakusei-path-click` (a press or a tap) say which is under it, `{ id, name, style, x, y, distancePx, pointer }` (`x` and `y` are the nearest point on the path, `style` the name of its look); `wakusei-path-hover-end` says the pointer has left it. `pathAt(x, y, radiusPx?)` asks the same of any point of the element. One press means one thing: a body (its disc or its name) first, then a path, then the sky; a drag that turns the view is no click. In a ride there is no hit test unless `path-hit` is set. `stats.paths` is `{ requested, drawn, dropped, unresolved, hidden, solid, draws, hover, hits }`: `draws` is 0 or 1, `hidden` the ids let go at the last draw, and `solid` the dashed paths that were drawn solid because their dashes would have been too many.
+
 ## Properties, events, stats
 
-Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale` (`true`, the default, or `compressed`), `help` (the help mode; off by default), `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `all-moons` (every other known moon as a dot), `belts` (which belts are drawn; `off` for none), `lang`, `texture-base`, `texture-far-base`, `max-texture`, `tiles` (where the finer map tiles are; `off` for none), `far-opacity` (the strength of the far names, 0.5 by default). Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-timechange` (the date, four times a second at most while time runs, and once when it holds: `{ time, running }`), `wakusei-time` (every step the clock takes), `wakusei-body-click`, `wakusei-body-focus`, `wakusei-body-hover` and `wakusei-body-hover-end` (a body under the pointer, a finger or the focus, and none), `wakusei-sight` (bodies in view and out of it). `belts`, `enterBelt`, `leaveBelt` and `flyingThrough` are described in the section above. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera`, `bodies` and `tiles`.
+Attributes: `center` (`"lon,lat"`), `time`, `speed`, `scale` (`true`, the default, or `compressed`), `help` (the help mode; off by default), `look` (`realistic` or `painted`), `light`, `labels` and `orbits` (`off` hides them), `paths`, `path-styles` and `path-hit` (orbits in looks of your own, above), `all-moons` (every other known moon as a dot), `belts` (which belts are drawn; `off` for none), `lang`, `texture-base`, `texture-far-base`, `max-texture`, `tiles` (where the finer map tiles are; `off` for none), `far-opacity` (the strength of the far names, 0.5 by default). Events: `wakusei-view` (the view changed: `yaw`, `tilt`, `zoom`), `wakusei-ready`, `wakusei-unavailable`, `wakusei-state`, `wakusei-timechange` (the date, four times a second at most while time runs, and once when it holds: `{ time, running }`), `wakusei-time` (every step the clock takes), `wakusei-body-click`, `wakusei-body-focus`, `wakusei-body-hover` and `wakusei-body-hover-end` (a body under the pointer, a finger or the focus, and none), `wakusei-path-hover`, `wakusei-path-hover-end` and `wakusei-path-click` (an orbit of your own under the pointer), `wakusei-sight` (bodies in view and out of it). `belts`, `enterBelt`, `leaveBelt` and `flyingThrough` are described in the section above. `stats` has `state`, `draws`, `contexts`, `canvas`, `distance`, `time`, `lookups`, `camera`, `bodies` and `tiles`.
 
 ## Travelling between bodies
 

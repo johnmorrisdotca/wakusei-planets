@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mars, Jupiter and Io picked out on their orbits</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space id="sky" time="2026-11-02T14:00Z" speed="0" style="width: 420px"></wakusei-space>
+    <p id="said">Press an orbit.</p>
+    <script type="module">
+      const sky = document.getElementById("sky");
+      await customElements.whenDefined("wakusei-space");
+      sky.setPathStyles({ favourite: { color: "#ffd166", width: 2 } });
+      sky.setPaths([{ id: "mars", style: "favourite" }, { id: "jupiter", style: "selected" }, "io"]);
+      sky.addEventListener("wakusei-path-click", (event) => {
+        document.getElementById("said").textContent = `${event.detail.name}: the ${event.detail.style} look`;
+      });
+    </script>
+  </body>
+</html>
