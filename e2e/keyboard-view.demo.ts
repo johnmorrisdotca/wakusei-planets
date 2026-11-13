@@ -40,7 +40,10 @@ for (const [tag, url] of [["wakusei-body", "/wakusei-planets/embed.html"], ["wak
     await page.evaluate((name) => {
       const el = document.createElement(name);
       el.id = "bare";
-      if (name === "wakusei-body") el.setAttribute("look", "line");
+      if (name === "wakusei-body") {
+        el.setAttribute("body", "mars");
+        el.setAttribute("look", "line");
+      }
       document.body.append(el);
     }, tag);
     await expect.poll(() => page.evaluate(() => (document.getElementById("bare") as HTMLElement).tabIndex), { message: "a Tab stop" }).toBe(0);
