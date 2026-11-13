@@ -1,9 +1,9 @@
-// A long run: the demo plays through every body, with the date running, for SOAK_MINUTES (ten by default; the CI run is one). The JavaScript heap, the GPU objects and the contexts must be flat.
+// A long run: the demo plays through every body, with the date running, for SOAK_MINUTES (one by default, which is what CI runs: with the warm-up the run takes a third of the test's limit of the minutes plus four, so a slow machine has room; a longer soak is asked for with SOAK_MINUTES and is a run to read, not a test to rely on). The JavaScript heap, the GPU objects and the contexts must be flat.
 import { COUNT_SCRIPT, GPU_KINDS, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test } from "@playwright/test";
 import "./load.ts";
 
-const MINUTES = Number(process.env.SOAK_MINUTES ?? 10);
+const MINUTES = Number(process.env.SOAK_MINUTES ?? 1);
 test.use({ reducedMotion: "no-preference" });
 
 test(`${MINUTES} minutes of changes leave memory, GPU objects and contexts flat`, async ({ page }) => {
