@@ -14,6 +14,7 @@ const STYLE = `.wk-places{position:absolute;inset:0;pointer-events:none;overflow
 .wk-place-tip{position:absolute;left:0;top:0;max-width:min(260px,80%);padding:3px 7px;border-radius:5px;background:rgba(10,14,22,.86);color:#fff;font:12px/1.35 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;visibility:hidden}
 .wk-place-tip small{display:block;font-size:11px;opacity:.8}
 .wk-place[data-name]{width:auto;height:auto;margin:0;padding:0 3px;color:#fff;font:600 12px/1.2 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:auto}
+.wk-place[data-pure]{pointer-events:none}
 .wk-place[data-name]::before{display:none}
 .wk-place-tip[data-on]{visibility:visible}`;
 
@@ -172,7 +173,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
     button.addEventListener("pointerleave", () => hideTip(id));
     button.addEventListener("focus", () => showTip(id));
     button.addEventListener("blur", () => hideTip(id));
-    // a press on a mark is the mark's, not the start of a drag or a pick of the body under it; a touch shows the name as well
+    // a press on a dot is the dot's, not the start of a drag or a pick of the body under it; a touch shows the name as well. (A written name takes no press at all: see `name press` below.)
     button.addEventListener("pointerdown", (event) => {
       event.stopPropagation();
       if (event.pointerType !== "mouse") showTip(id);
@@ -185,6 +186,36 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
     return button;
   };
 
+  // name press: a written name lies over the middle of the body, where a drag starts, and the view's controls leave a press that begins on a button to the button. So a name takes no pointer (CSS) and a press goes
+  // on to the controls, which turn the body; a tap that did not move, up over a name, picks its place.
+  const host = root.host;
+  let pressed: { x: number; y: number; id: number } | null = null;
+  const nameDown = (event: PointerEvent): void => {
+    pressed = event.button === 0 && event.composedPath().includes(host) ? { x: event.clientX, y: event.clientY, id: event.pointerId } : null;
+  };
+  const nameUp = (event: PointerEvent): void => {
+    const down = pressed;
+    pressed = null;
+    if (down === null || down.id !== event.pointerId || Math.hypot(event.clientX - down.x, event.clientY - down.y) > 6) return;
+    const first = event.composedPath()[0];
+    // a press on a dot was the dot's
+    if (first instanceof Element && first.classList.contains("wk-place")) return;
+    let best: { entry: (typeof held) extends Map<string, infer E> ? E : never; away: number } | undefined;
+    for (const entry of held.values()) {
+      if (entry.button.dataset.pure === undefined || Number(entry.button.style.opacity || "1") < 0.2) continue;
+      const r = entry.button.getBoundingClientRect();
+      if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) continue;
+      const away = Math.hypot(event.clientX - (r.left + r.right) / 2, event.clientY - (r.top + r.bottom) / 2);
+      if (best === undefined || away < best.away) best = { entry, away };
+    }
+    if (best !== undefined) options.pick(best.entry.mark.place, { x: best.entry.x, y: best.entry.y });
+  };
+  const nameCancel = (): void => {
+    pressed = null;
+  };
+  window.addEventListener("pointerdown", nameDown, true);
+  window.addEventListener("pointerup", nameUp, true);
+  window.addEventListener("pointercancel", nameCancel, true);
   return {
     set(marks) {
       const lang = options.lang();
@@ -211,6 +242,12 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
             entry.button.textContent = "";
           }
           entry.button.setAttribute("aria-label", `${mark.place.name[lang]}, ${placeLine(mark.place, lang)}`);
+        }
+        // a name for a place the page asked for stands in for its dot and takes the press as the dot does; a name only is the picture's, and takes no press
+        const pure = mark.label === true && mark.nameOnly === true ? "1" : undefined;
+        if (entry.button.dataset.pure !== pure) {
+          if (pure === undefined) delete entry.button.dataset.pure;
+          else entry.button.dataset.pure = pure;
         }
         const opacity = mark.label === true ? (mark.fade ?? 1).toFixed(2) : "";
         if (entry.button.style.opacity !== opacity) entry.button.style.opacity = opacity;
@@ -241,6 +278,9 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
       return shown;
     },
     dispose() {
+      window.removeEventListener("pointerdown", nameDown, true);
+      window.removeEventListener("pointerup", nameUp, true);
+      window.removeEventListener("pointercancel", nameCancel, true);
       this.clear();
       box.remove();
       style.remove();

@@ -78,3 +78,46 @@ test("a name never covers a landing dot or another name, and a press at the cent
   await page.mouse.click((eagle.left + eagle.right) / 2, (eagle.top + eagle.bottom) / 2);
   await expect.poll(() => space.evaluate((el) => (el as unknown as { _picked?: string })._picked ?? "")).toBe("moon/apollo-11-lunar-module");
 });
+
+test("a drag that starts on a name turns the body, and a tap on a name picks the place", async ({ page }) => {
+  await page.goto("/wakusei-planets/?body=mars&look=painted");
+  const main = page.locator("#main");
+  await main.hover();
+  await expect(main).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+  await page.locator("#controls").evaluate((el) => (el as unknown as { pause(): void }).pause());
+  const names = () => main.evaluate((el) => [...(el.shadowRoot?.querySelectorAll("[data-name]") ?? [])].map((node) => {
+    const r = node.getBoundingClientRect();
+    return { text: node.textContent ?? "", x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
+  }));
+  await expect.poll(async () => (await names()).length, { timeout: 60_000 }).toBeGreaterThan(1);
+  await page.waitForTimeout(1500);
+  const box = (await main.boundingBox())!;
+  // the name nearest the middle of the picture, where a drag starts
+  const before = await names();
+  const mid = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const start = [...before].sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))[0]!;
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 40, start.y, { steps: 5 });
+  await page.mouse.move(start.x + 90, start.y, { steps: 5 });
+  await page.mouse.up();
+  await page.waitForTimeout(800);
+  const after = await names();
+  const shifts = before.flatMap((one) => after.filter((other) => other.text === one.text).map((other) => other.x - one.x));
+  expect(shifts.length, "names stay in the picture after the turn").toBeGreaterThan(0);
+  expect(Math.max(...shifts.map(Math.abs)), `a drag of 90 px that began on ${start.text} turned the body (names moved ${shifts.map((x) => x.toFixed(0)).join(", ")})`).toBeGreaterThan(8);
+  // a tap on a name, no movement, picks its place
+  await main.evaluate((el) => {
+    const host = el as unknown as { _picked?: string };
+    host._picked = "";
+    el.addEventListener("wakusei-place", (event) => {
+      host._picked = (event as CustomEvent<{ place: { id: string } }>).detail.place.id;
+    });
+  });
+  const now = await names();
+  const tap = now[0]!;
+  await page.mouse.move(tap.x, tap.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect.poll(() => main.evaluate((el) => (el as unknown as { _picked?: string })._picked ?? "")).toMatch(/^mars\//);
+});
