@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { orientation } from "../src/scene/orient.ts";
-import { cross, dot, RAD, type Vec3 } from "../src/vec.ts";
-import { faceView, frameAt, groundDirection, subCameraPoint } from "../src/space/index.ts";
+import { cross, dot, RAD, unit as unitOf, type Vec3 } from "../src/vec.ts";
+import { besideFace, besideMoon, faceView, facingPoint, frameAt, groundDirection, subCameraPoint, surfaceDirection } from "../src/space/index.ts";
 
 const MS = Date.UTC(2026, 10, 2, 14);
 const CENTRE = { lon: 10, lat: 20 };
@@ -60,4 +60,30 @@ test("the shorter way round: the yaw asked for is within half a turn of where th
   const { pole, meridian } = orientation("mars", MS);
   assert.ok(Math.abs(Math.asin(dot(d, pole)) / RAD - 20) < 1e-6);
   assert.ok(Math.abs(wrap(Math.atan2(dot(d, cross(pole, meridian)), dot(d, meridian)) / RAD - 100)) < 1e-6);
+});
+
+test("beside the Moon, at two moments: the point under the camera is the one the camera stands over, and the yaw and tilt that stand it there are found again, as near as the view allows", () => {
+  for (const ms of [MS, MS + 9 * 86_400_000 + 5 * 3_600_000]) {
+    const frame = frameAt(ms);
+    const input = { moon: frame.moon as unknown as Vec3, moonRadius: 0.2725, host: [0, 0, 0] as Vec3, hostRadius: 1, sun: frame.sun as unknown as Vec3, aspect: 1.6, zoom: 1, north: orientation("earth", ms).pole };
+    const { aspect, zoom, ...rest } = input;
+    void rest;
+    for (const [yaw, tilt] of [[0, 0], [40, 20], [-130, 35], [170, -10]] as const) {
+      const camera = besideMoon({ ...input, yaw, tilt });
+      const away = [camera.position[0] - input.moon[0], camera.position[1] - input.moon[1], camera.position[2] - input.moon[2]] as Vec3;
+      const point = facingPoint("moon", away, ms);
+      // the camera's side of the Moon is a face: the same direction comes back from it
+      const back = surfaceDirection("moon", point, ms);
+      assert.ok(Math.acos(Math.min(1, dot(unitOf(away), back))) / RAD < 1e-3);
+      const found = besideFace({ moon: input.moon, moonRadius: input.moonRadius, host: input.host, hostRadius: input.hostRadius, sun: input.sun, aspect, zoom, north: input.north }, "moon", point, ms);
+      // the opening off the line to the Earth grows in steps of a degree, so the pair found is within a degree or so of a camera that is there
+      assert.ok(found.error < 1.5, `${ms} ${yaw},${tilt}: still ${found.error} degrees off`);
+      const again = besideMoon({ ...input, yaw: found.yaw, tilt: found.tilt });
+      const a2 = [again.position[0] - input.moon[0], again.position[1] - input.moon[1], again.position[2] - input.moon[2]] as Vec3;
+      assert.ok(Math.acos(Math.min(1, dot(unitOf(away), unitOf(a2)))) / RAD < 1.5);
+    }
+    // the camera stays beyond the Moon, off the line to the Earth: the side that faces the Earth is only approached, and the answer says by how much
+    const near = besideFace({ moon: input.moon, moonRadius: input.moonRadius, host: input.host, hostRadius: input.hostRadius, sun: input.sun, aspect, zoom, north: input.north }, "moon", { lon: 0, lat: 0 }, ms);
+    assert.ok(near.error > 5 && near.error < 130, `the Earth side: ${near.error}`);
+  }
 });

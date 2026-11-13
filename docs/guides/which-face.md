@@ -19,8 +19,8 @@ console.log(space.subCameraPoint(), space.stats.camera.sub);
 
 | Call | On | Means |
 |---|---|---|
-| `subCameraPoint()` | `<wakusei-space>` | The point of the centred body under the camera, `{ lon, lat }`, at the moment shown. `null` while the camera is riding along with something. |
-| `faceTo(point, { smooth })` | `<wakusei-space>` | Turn the view round the body so the point is under the camera: a glide (at once with `smooth: false` or for reduced motion), the zoom kept. `false` while riding. |
+| `subCameraPoint()` | `<wakusei-space>` | The point of the centred body under the camera, `{ lon, lat }`, at the moment shown. Beside a moon (the way a moon is visited) it is the point under the line from the moon's centre to the camera. `null` while the camera is riding along with anything else. |
+| `faceTo(point, { smooth })` | `<wakusei-space>` | Turn the view round the body so the point is under the camera: a glide (at once with `smooth: false` or for reduced motion), the zoom kept. Beside a moon the camera keeps beyond the moon, off the line to its planet, so it is stood as near the side of the point as the view allows: in a ride beside a moon the face is "as near as the view allows" (the opening off the line to the planet grows in steps of a degree, so a point can be missed by a degree or so, and the planet's own side by a good deal more). `false` while riding along with anything else. |
 | `stats.camera.sub` | `<wakusei-space>` | The same point as of the last draw, for tests and readouts. |
 | `subCameraPoint()` | `<wakusei-body>` | The point in the middle of the picture, with the date's pose (or the portrait's), the view's turn, tilt and roll counted in. `undefined` for a star. |
 | `faceTo(point, { smooth })` | `<wakusei-body>` | Turn the body so the point is in the middle: what `goToPlace` does for a named place. |

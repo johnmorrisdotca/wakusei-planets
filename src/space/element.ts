@@ -25,7 +25,7 @@ import { moonOffset, orientation } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, readMoonSize, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
 import { groundDirection } from "./aim.ts";
-import { faceView, subCameraPoint } from "./face.ts";
+import { besideFace, faceView, facingPoint, subCameraPoint } from "./face.ts";
 import { besideMoon } from "./beside.ts";
 import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
@@ -652,7 +652,7 @@ export class WakuseiSpace extends HTMLElement {
   /**
    * Which point of the body in the middle of the view is under the camera, as a longitude (east) and latitude (north) in the body's own fixed frame at the moment shown: the camera looks along the line
    * from that point through the body's centre. It carries the body's spin and, for the Moon, the way its pole and prime meridian are set; a camera held in the stars sees the body turn under it, so the same
-   * view names another point as the clock runs. `null` while the camera is riding along with something (it is not looking at the body from outside then). `faceTo` is the other way round.
+   * view names another point as the clock runs. Beside a moon (`ride(moon, { view: "beside" })`, the way a moon is visited) it is the point under the line from the moon's centre to the camera. `null` while the camera is riding along with anything else. `faceTo` is the other way round.
    *
    * @returns The point, or `null`.
    *
@@ -667,13 +667,22 @@ export class WakuseiSpace extends HTMLElement {
    */
   subCameraPoint(): { lon: number; lat: number } | null {
     const model = this.#model;
-    if (model.ride !== null) return null;
+    const ride = model.ride;
+    if (ride !== null) {
+      // beside a moon (the way a moon is visited): the camera stands outside it, so the point is the one under the line from the moon's centre to the camera as the last draw left it
+      if (ride.view !== "beside" || typeof ride.target !== "string") return null;
+      const moon = ride.target as BodyId;
+      const here = this.#site(moon).at;
+      const eye = model.camera.position;
+      const away: Vec3 = [eye[0] - here[0], eye[1] - here[1], eye[2] - here[2]];
+      return length(away) < 1e-12 ? null : facingPoint(moon, away, model.time);
+    }
     return subCameraPoint(model.focus, model.view, model.centre, model.anchor ?? model.time, model.time);
   }
 
   /**
    * Turn the view round the body in the middle so that a point of its surface (east longitude, north latitude, degrees) is under the camera: a glide the way `goToPlace` goes (at once with `smooth: false`
-   * or for a reader who prefers reduced motion); the zoom stays. The turn is the shorter way round and never through the body. Resolves false while the camera is riding along with something.
+   * or for a reader who prefers reduced motion); the zoom stays. The turn is the shorter way round and never through the body. Beside a moon it stands the camera as near the side the point is on as the view allows (the camera keeps beyond the moon, off the line to its planet). Returns false while the camera is riding along with anything else.
    *
    * @param point - The longitude and latitude to bring to the middle.
    * @param options - `smooth` (true by default).
@@ -689,10 +698,21 @@ export class WakuseiSpace extends HTMLElement {
    */
   faceTo(point: { lon: number; lat: number }, options: { smooth?: boolean } = {}): boolean {
     const model = this.#model;
-    if (model.ride !== null || !Number.isFinite(point.lon) || !Number.isFinite(point.lat)) return false;
+    if (!Number.isFinite(point.lon) || !Number.isFinite(point.lat)) return false;
+    const ride = model.ride;
+    if (ride !== null && (ride.view !== "beside" || typeof ride.target !== "string")) return false;
     model.anchor ??= model.time;
     const from = { ...model.view };
-    const to = faceView(model.focus, point, model.centre, model.anchor, model.time, from.yaw);
+    let to: { yaw: number; tilt: number };
+    if (ride !== null) {
+      // beside a moon: the pair of the ride's yaw and tilt that stands the camera nearest the side of the moon the point is on (the view keeps the camera beyond the moon, so some sides are only approached)
+      const moon = ride.target as BodyId;
+      const host = (hostOf(moon) ?? "earth") as BodyId;
+      const m = this.#site(moon), h = this.#site(host);
+      const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
+      const found = besideFace({ moon: m.at, moonRadius: m.radius, host: h.at, hostRadius: h.radius, sun: this.#site("sun").at, north: orientation(host, model.time).pole, aspect, zoom: from.zoom }, moon, point, model.time);
+      to = { yaw: from.yaw + ((((found.yaw - from.yaw + 180) % 360) + 360) % 360) - 180, tilt: found.tilt };
+    } else to = faceView(model.focus, point, model.centre, model.anchor, model.time, from.yaw);
     const apply = (yaw: number, tilt: number, final: boolean): void => {
       if (this.#hands !== undefined && !this.hasAttribute("data-kazoku-bar")) this.#hands.controller.set({ yaw, tilt, zoom: from.zoom }, final, "place");
       else this.setView({ yaw, tilt, zoom: from.zoom, roll: from.roll, panX: from.panX, panY: from.panY }, final);

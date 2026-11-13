@@ -1,7 +1,7 @@
 // Which face of the centred body the space view looks at, and turning it to one (MODULES-1330): `subCameraPoint` and `faceTo` on <wakusei-space> and on <wakusei-body>. The clock is held (speed 0) at a
 // fixed moment, so the body does not turn under the camera while it is read; every wait is on what the page reports.
 import { expect, test } from "@playwright/test";
-import { callOn, drawn, openSpace, SPACE, statsOf } from "./space-ui.ts";
+import { callOn, drawn, openSpace, quiet, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -38,4 +38,23 @@ test("a body in a picture names its middle and turns to a point: <wakusei-body> 
   const read = () => body.evaluate((el) => (el as unknown as { subCameraPoint(): Point }).subCameraPoint());
   await body.evaluate((el) => (el as unknown as { faceTo(p: unknown, o: unknown): void }).faceTo({ lon: 80, lat: -25 }, { smooth: false }));
   await expect.poll(async () => { const at = await read(); return at ? Math.hypot(wrap(at.lon - 80), at.lat + 25) : 999; }, { timeout: 30_000 }).toBeLessThan(0.05);
+});
+
+test("beside the Moon (the way it is visited) the point under the camera is read from the camera, and faceTo stands the camera as near the wanted side as the view allows", async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSpace(page, "t=2026-11-02T14:00Z&speed=0");
+  await callOn(page, "ride", "moon", { view: "beside", smooth: false });
+  await expect.poll(async () => (await sub(page)) !== null, { timeout: 60_000 }).toBe(true);
+  const distance = (a: { lon: number; lat: number }, b: { lon: number; lat: number }) => Math.hypot(wrap(a.lon - b.lon) * Math.cos((a.lat * Math.PI) / 180), a.lat - b.lat);
+  const set = async (act: () => Promise<unknown>) => { await act(); await quiet(page); };
+  for (const [yaw, tilt] of [[0, 0], [60, 15], [-100, 30]] as const) {
+    // a side the camera can stand over (it is where the view put it): turn away, ask for that side, and the camera comes back to it
+    await set(() => callOn(page, "setView", { yaw, tilt, zoom: 1 }, true));
+    const there = (await sub(page))!;
+    await set(() => callOn(page, "setView", { yaw: yaw + 120, tilt: 40, zoom: 1 }, true));
+    expect(distance((await sub(page))!, there), "the camera moved").toBeGreaterThan(20);
+    await set(() => callOn(page, "faceTo", there, { smooth: false }));
+    const back = (await sub(page))!;
+    expect(distance(back, there), `${yaw},${tilt}: ${there.lon.toFixed(1)},${there.lat.toFixed(1)} against ${back.lon.toFixed(1)},${back.lat.toFixed(1)}`).toBeLessThan(3);
+  }
 });

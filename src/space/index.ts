@@ -12,4 +12,4 @@ export { COVER_ARROW_GAP, COVER_MIN_PX, coverArrows, coveredBy, type CoverArrow,
 export { TRAVEL_CLEARANCE, arrivalSide, travelArrival, travelPlan, travelPose, type ArrivalCompanion, type TravelBody, type TravelInput, type TravelKind, type TravelPlan, type TravelSample, type TravelSight, type TravelView } from "./travel.ts";
 export { regionOrbits, regionView, SUN_REGIONS, type SunRegion } from "./regions.ts";
 export { SIGHT_STEP_PX, sightChanged, sightOf, type Sight, type SightEdge, type SightInput } from "./sight.ts";
-export { faceView, subCameraPoint, type Face, type FaceView } from "./face.ts";
+export { besideFace, facingPoint, faceView, subCameraPoint, surfaceDirection, type Face, type FaceView } from "./face.ts";
