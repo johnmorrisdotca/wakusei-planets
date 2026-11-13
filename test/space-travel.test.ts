@@ -2,11 +2,12 @@
 // (`besideMoon` for a moon, a whole-body view otherwise), and every move is sampled at 240 moments in both scales and three picture shapes. The rules are the owner's: never an empty picture, the destination
 // in view and growing from the end of the turn, one turn that is never undone, nothing passed close, and a bounded pace. Set TRAVEL_TABLE=1 to print the numbers for every pair.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../src/facts.ts";
 import { moonOffset, orientation } from "../src/scene/orient.ts";
 import { besideMoon, frameAt, hostOf, moonDistance, placeBodies, radiusIn, regionOrbits, regionView, SUN_REGIONS, TRAVEL_CLEARANCE, travelArrival, travelPlan, travelPose, type ScaleMode, type SpaceDwarf, type SpacePlanet, type TravelBody, type TravelInput, type TravelKind, type TravelSample, type TravelView } from "../src/space/index.ts";
-import { cross, dot, length, RAD, sub, unit, type Vec3 } from "../src/vec.ts";
+import { cross, dot, length, RAD, sub, turn, unit, type Vec3 } from "../src/vec.ts";
 
 const SCALES: readonly ScaleMode[] = ["compressed", "true"];
 const SHAPES: readonly { name: string; aspect: number }[] = [{ name: "wide", aspect: 16 / 9 }, { name: "square", aspect: 1 }, { name: "tall", aspect: 9 / 19.5 }];
@@ -126,7 +127,9 @@ function walk(move: Move, options: { shrink?: boolean; bent?: { back: number; tu
   for (let i = 0; i <= SAMPLES; i += 1) samples.push(travelPose(input, i / SAMPLES, plan));
   const faults: string[] = [];
   const fault = (i: number, text: string): void => {
-    if (faults.length < 6) faults.push(`sample ${i} (${samples[i]!.stage}): ${text}`);
+    const kind = text.slice(0, 42);
+    const seen = faults.filter((line) => line.includes(kind)).length;
+    if (seen < 3) faults.push(`sample ${i} (${samples[i]!.stage}): ${text}`);
   };
   const last = samples[SAMPLES]!;
   let turned = 0;
@@ -143,10 +146,9 @@ function walk(move: Move, options: { shrink?: boolean; bent?: { back: number; tu
     const t = i / SAMPLES;
     // 7: sound numbers
     for (const n of [...s.position, ...s.forward, ...s.up, s.fov, s.leaving.x, s.leaving.y, s.destination.x, s.destination.y]) if (!Number.isFinite(n)) fault(i, "a number that is not finite");
-    // 1: never an empty picture
-    if (!s.leaving.inside && !s.destination.inside) fault(i, "neither body is in the picture");
-    // moon to moon of one planet: the planet stays in the picture
-    if (input.around && !s.around!.inside) fault(i, "the planet circled is out of the picture");
+    // never an empty picture: one of the two bodies, or the planet a family move circles, is in it
+    const planet = input.around !== undefined && s.around!.inside;
+    if (!s.leaving.inside && !s.destination.inside && !planet) fault(i, "neither body is in the picture");
     // 5: clearance
     for (const { id, body } of move.bodies) {
       const d = length(sub(s.position, placeAt(body, t)));
@@ -266,9 +268,28 @@ for (const [a, b] of [["callisto", "europa"], ["io", "ganymede"], ["titan", "enc
         for (const side of SIDES) {
           const w = walk(moveOf(a, b, mode, shape.aspect, undefined, side), { bent: BENT[`${a} to ${b}`] });
           row(`${a} to ${b} (plain)`, mode, shape.name, w);
-          assert.deepEqual(w.faults.filter((text) => !/planet circled/.test(text)), [], `${a} to ${b}, ${mode}, ${shape.name}, from ${side.join(",")}`);
+          assert.deepEqual(w.faults, [], `${a} to ${b}, ${mode}, ${shape.name}, from ${side.join(",")}`);
         }
       }
+    });
+  }
+}
+
+// The saved callisto to europa inputs of the report (travel-empty-inputs.jsonl: arriving on the side that frames Jupiter; travel-empty-inputs2.jsonl: arriving on the side it comes from), each from the view it was saved with and from arbitrary starting views: the same camera place looked
+// away by a few degrees, and the camera looked down and across. The whole walk holds for each: no empty picture, and no jump, no clearance fault, no look turned back.
+const SAVED = ["travel-empty-inputs.jsonl", "travel-empty-inputs2.jsonl"].map((file) => JSON.parse(readFileSync(new URL(`./${file}`, import.meta.url), "utf8").split("\n")[0]!) as TravelInput);
+const ARBITRARY: { name: string; start: (v: TravelView) => TravelView }[] = [
+  { name: "as saved", start: (v) => v },
+  { name: "looking 12 degrees to the side", start: (v) => ({ ...v, forward: turn(v.forward, v.up, 12) }) },
+  { name: "looking 10 degrees down, 10 to the other side", start: (v) => ({ ...v, forward: turn(turn(v.forward, v.up, -10), unit(cross(v.forward, v.up)), 10) }) },
+];
+for (const [n, saved] of SAVED.entries()) {
+  for (const view of ARBITRARY) {
+    test(`callisto to europa, saved input ${n + 1}, ${view.name}: a body is in the picture throughout, and the move does not jump`, () => {
+      const input: TravelInput = { ...saved, start: view.start(saved.start) };
+      const bodies = [{ id: "callisto" as BodyId, body: input.leaving }, { id: "europa" as BodyId, body: input.destination }, ...(input.around === undefined ? [] : [{ id: "jupiter" as BodyId, body: input.around }])];
+      const w = walk({ input, bodies });
+      assert.deepEqual(w.faults, []);
     });
   }
 }
@@ -437,6 +458,56 @@ for (const mode of SCALES) {
     }
   });
 }
+
+test("the reported callisto to europa inputs keep a body in the picture, and so does every moon pair of Jupiter, Saturn, Uranus and Neptune", () => {
+  const fixed = (row: number[]): TravelBody => ({ from: [row[0]!, row[1]!, row[2]!], to: [row[0]!, row[1]!, row[2]!], radius: row[3]! });
+  const others = [[150.6053, -22.0915, 46.8336, 1], [97.0043, -39.8461, 87.7926, 5], [147.9747, -21.15, 44.7616, 0.273], [133.4866, -32.8806, 67.6751, 0.5], [139.408, -24.4021, 47.5088, 0.8], [80.2659, -4.1384, 10.9282, 0.6], [284.7914, -31.5745, 48.1858, 1.6], [217.6852, 53.8402, -130.0196, 1], [419.3633, -40.5894, 70.006, 1], [293.669, -178.2337, 341.3927, 0.4], [94.4457, 6.8591, -10.1201, 0.3], [-269.2283, -134.6788, -40.7192, 0.3], [-201.7542, 57.8239, 344.9409, 0.3], [173.3693, -137.6608, 445.6173, 0.3], [-266.0503, 104.0128, 233.7842, 0.3], [579.8062, -132.7558, 285.6163, 0.3], [582.2719, -39.7951, -159.1774, 0.3], [335.3166, 38.8239, -357.0997, 0.3], [192.1408, -34.3352, 42.7078, 0.2], [197.3525, -55.6595, 45.0071, 0.2], [324.6422, 9.3769, -24.3382, 0.2], [161.636, -124.1793, 396.7634, 0.2], [-94.5106, -21.1192, -200.6321, 0.2]].map(fixed);
+  const start = { position: [-20.2476, 1.8598, -4.7398] as Vec3, forward: [-0.9434, 0.1392, -0.3009] as Vec3, up: [0.1326, 0.9903, 0.0423] as Vec3, fov: 35 };
+  const ends = [
+    { position: [0.0015, -0.1611, 0.2791] as Vec3, forward: [-0.0047, 0.5, -0.866] as Vec3, up: [0.0027, 0.866, 0.5] as Vec3, fov: 35 },
+    { position: [-0.1614, -0.1207, 0.2515] as Vec3, forward: [0.5008, 0.3746, -0.7803] as Vec3, up: [-0.2023, 0.9272, 0.3153] as Vec3, fov: 35 },
+  ];
+  const emptyOf = (input: TravelInput): number => {
+    const plan = travelPlan(input);
+    let missed = 0;
+    const steps = 200;
+    for (let i = 1; i < steps; i += 1) {
+      const t = 0.005 + (0.99 * i) / steps;
+      const p = travelPose(input, t, plan);
+      const planet = input.around !== undefined && p.around!.inside;
+      if (!p.leaving.inside && !p.destination.inside && !planet) missed += 1;
+    }
+    return missed;
+  };
+  for (const end of ends) {
+    const input: TravelInput = { start, end, leaving: fixed([-20.7171, 1.9291, -4.8896, 0.0607]), destination: fixed([0, 0, 0, 0.0393]), around: fixed([-5.6112, 4.5308, -9.9135, 1.8]), others: others.map((one) => one), aspect: 1.9214, kind: "turn-travel", pace: 2 };
+    const missed = emptyOf(input);
+    console.log(`callisto to europa reported input missed ${missed} of 200`);
+    assert.equal(missed, 0);
+    assert.ok(travelPose(input, 1, travelPlan(input)).destination.inside);
+  }
+  const hosts = ["jupiter", "saturn", "uranus", "neptune"] as const;
+  let worst = 0;
+  let worstName = "";
+  for (const mode of SCALES) {
+    for (const host of hosts) {
+      const moons = MOONS_OF[host];
+      for (const a of moons) for (const b of moons) {
+        if (a === b) continue;
+        const missed = emptyOf(moveOf(a, b, mode, 16 / 9).input);
+        if (missed > worst) {
+          worst = missed;
+          worstName = `${a} to ${b} ${mode}`;
+        }
+        assert.equal(missed, 0, `${a} to ${b}, ${mode}: ${missed} empty samples`);
+      }
+    }
+  }
+  console.log(`worst family move ${worstName || "none"} missed ${worst}`);
+  const sunJupiter = emptyOf(moveOf("sun", "jupiter", "compressed", 16 / 9).input);
+  console.log(`sun to jupiter compressed missed ${sunJupiter}`);
+  assert.equal(sunJupiter, 0);
+});
 
 test("the numbers, for the owner to judge the feel from", () => {
   if (process.env.TRAVEL_TABLE) console.log(`\n${rows.join("\n")}\n`);
