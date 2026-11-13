@@ -20,6 +20,30 @@ import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, nameLabelText, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 
+let pictureLoads = 0;
+
+/**
+ * How many surface pictures are still being fetched. A view draws once more when one arrives, so a rest test waits for this to be 0.
+ *
+ * @returns The number of picture fetches that have not finished.
+ *
+ * @example
+ * ```ts
+ * import { picturesPending } from "@johnmorrisdotca/wakusei-planets/painter";
+ *
+ * console.log(picturesPending());
+ * ```
+ */
+export function picturesPending(): number {
+  return pictureLoads;
+}
+
+function trackPicture<T>(load: Promise<T>): Promise<T> {
+  pictureLoads += 1;
+  return load.finally(() => {
+    pictureLoads -= 1;
+  });
+}
 export { moonOffset, orientation };
 export { nameLabelLook, nameLabelText, nameTone, readNameLabel, setBodyLabelFontUrl, type NameLabelOptions, type NameLabelTone } from "./name-label.ts";
 export { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit, type PictureCredit } from "../picture-credits.ts";
@@ -464,7 +488,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     redraw();
   };
   if (wantPainted && paintedMaterial !== undefined && widths[0] !== undefined) {
-    void loadImage(T, urlOf(widths[0])).then(
+    void trackPicture(loadImage(T, urlOf(widths[0]))).then(
       (t) => {
         if (gone) {
           t.dispose();
@@ -485,7 +509,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     if (next > sharpWidth && next > widths[0]! && !tried.has(next)) {
       tried.add(next);
       loading = true;
-      void loadImage(T, urlOf(next)).then(
+      void trackPicture(loadImage(T, urlOf(next))).then(
         (t) => {
           loading = false;
           if (gone) {

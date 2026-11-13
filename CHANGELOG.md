@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A view at rest waits until its pictures have arrived** (MODULES-1209). `stats.pictures.pending` is how many surface pictures are still being fetched. A sharper picture draws one frame when it arrives, so a test of a still view waits for this to be 0 and then for the draw count to stay still, instead of a longer quiet timer.
+
 ## [0.43.0] - 2026-11-13
 
 - **The space view draws the deep-space craft** (MODULES-1207). `spacecraft` on `<wakusei-space>` (and `space.spacecraft`) is off by default. `"all"` or `true` draws every craft whose record covers the date, as one points object with a name each; a space-separated list draws those. A craft outside its record is not drawn and `stats.spacecraft.status[id]` is `"outside"`. Each table loads the first time that craft is shown. `sight()` and `wakusei-sight` give each drawn craft `{ id, kind: "spacecraft" }` using the craft's own id. A press sends `wakusei-body-click` with that kind and does not go to the craft. No path line.

@@ -363,6 +363,7 @@ const atRest = async (page: Page): Promise<void> => {
   const reading = () => skyStats(page) as unknown as Promise<Reading>;
   await expect.poll(async () => (await reading()).ride.gliding, { timeout: 90_000, message: "the camera never stopped gliding" }).toBe(false);
   await expect.poll(async () => (await reading()).travelling, { timeout: 30_000, message: "the travel never ended" }).toBeNull();
+  await expect.poll(async () => ((await skyStats(page)) as unknown as { pictures: { pending: number } }).pictures.pending, { timeout: 30_000, message: "a picture was still on its way" }).toBe(0);
   await expect.poll(async () => { const { bodies } = await reading(); return bodies.held - bodies.moons; }, { timeout: 30_000, message: "moons out of sight were never let go" }).toBe(0);
 };
 const goTo = (page: Page, name: string) => page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
@@ -527,8 +528,9 @@ test("changes to the space view give back what they took: the zooms, the scales,
   for (let i = 0; i < 3; i += 1) await round();
   await settle(page, 2500);
   const last = await settledCounts(page);
+  const held = (["Buffer", "Texture", "VertexArray", "Program", "Framebuffer", "Renderbuffer"] as const).map((kind) => `${kind} ${last.created[kind] - last.deleted[kind]}`).join(", ");
   expect(last.contexts).toBe(1);
-  expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
+  expect(gpuObjects(last), `still held: ${held}`).toBeLessThanOrEqual(gpuObjects(first) + 4);
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
   await sky(page).evaluate((el) => el.remove());
   await settle(page, 3500);
