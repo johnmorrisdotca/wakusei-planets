@@ -102,7 +102,7 @@ test("driving the rover: rounds of driving, turning and settling leave no more g
   await open(page, "drive=on");
   await settledCounts(page);
   const drive = (seconds: number, throttle: number, steer: number) =>
-    call(page, (el) => void (el as unknown as { driveFor(s: number, i: { throttle: number; steer: number }): boolean }).driveFor(seconds, { throttle, steer }));
+    page.locator("#test-surface").evaluate((el, a) => void (el as unknown as { driveFor(s: number, i: { throttle: number; steer: number }): boolean }).driveFor(a[0]!, { throttle: a[1]!, steer: a[2]! }), [seconds, throttle, steer]);
   // a round: ahead, round to the right, back, then let it settle (driven by set times: the same on a slow machine)
   const round = async (): Promise<void> => {
     for (const [seconds, throttle, steer] of [[0.6, 1, 0], [0.6, 1, 1], [0.6, -1, -1]] as const) {
