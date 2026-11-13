@@ -13,7 +13,8 @@ const STYLE = `.wk-places{position:absolute;inset:0;pointer-events:none;overflow
 .wk-place:focus-visible{outline:2px solid #6cd0ff;outline-offset:-3px;border-radius:50%}
 .wk-place-tip{position:absolute;left:0;top:0;max-width:min(260px,80%);padding:3px 7px;border-radius:5px;background:rgba(10,14,22,.86);color:#fff;font:12px/1.35 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;visibility:hidden}
 .wk-place-tip small{display:block;font-size:11px;opacity:.8}
-.wk-place-tip[data-on]{visibility:visible}`;
+.wk-place[data-name]{width:auto;height:auto;margin:0;padding:0 3px;color:#fff;font:600 12px/1.2 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:auto}
+.wk-place[data-name]::before{display:none}`;
 
 const KIND_WORD: Record<Place["kind"], { en: string; ja: string }> = {
   crewed: { en: "crewed landing", ja: "有人着陸" },
@@ -198,15 +199,26 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
           box.insertBefore(button, tip);
         }
         entry.mark = mark;
-        if (entry.lang !== lang) {
+        if (entry.lang !== lang || entry.button.dataset.name !== (mark.label === true ? "1" : undefined)) {
           entry.lang = lang;
           entry.button.dataset.layer = mark.layer;
+          if (mark.label === true) {
+            entry.button.dataset.name = "1";
+            entry.button.textContent = mark.place.name[lang];
+          } else {
+            delete entry.button.dataset.name;
+            entry.button.textContent = "";
+          }
           entry.button.setAttribute("aria-label", `${mark.place.name[lang]}, ${placeLine(mark.place, lang)}`);
         }
-        if (!(Math.abs(entry.x - mark.x) < 0.25 && Math.abs(entry.y - mark.y) < 0.25)) {
+        const opacity = mark.label === true ? (mark.fade ?? 1).toFixed(2) : "";
+        if (entry.button.style.opacity !== opacity) entry.button.style.opacity = opacity;
+        const shift = mark.label === true ? " translate(-50%, -50%)" : "";
+        if (!(Math.abs(entry.x - mark.x) < 0.25 && Math.abs(entry.y - mark.y) < 0.25) || entry.button.dataset.shift !== shift) {
           entry.x = mark.x;
           entry.y = mark.y;
-          entry.button.style.transform = `translate(${mark.x.toFixed(1)}px,${mark.y.toFixed(1)}px)`;
+          entry.button.dataset.shift = shift;
+          entry.button.style.transform = `translate(${mark.x.toFixed(1)}px,${mark.y.toFixed(1)}px)${shift}`;
         }
       }
       for (const [id, entry] of held) {

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Names of the great features are written on a body** (MODULES-1231). When the body looked at is big enough, `surface-names` (on unless `off`) writes its most important named features on the surface: fame first, then size (`placeRank`). They face the camera, fade at the limb, and stay apart so they do not crowd. A number is how many. A press sends `wakusei-place`. Nothing is drawn for a name.
+
 ## [0.43.0] - 2026-11-13
 
 - **The space view draws the deep-space craft** (MODULES-1207). `spacecraft` on `<wakusei-space>` (and `space.spacecraft`) is off by default. `"all"` or `true` draws every craft whose record covers the date, as one points object with a name each; a space-separated list draws those. A craft outside its record is not drawn and `stats.spacecraft.status[id]` is `"outside"`. Each table loads the first time that craft is shown. `sight()` and `wakusei-sight` give each drawn craft `{ id, kind: "spacecraft" }` using the craft's own id. A press sends `wakusei-body-click` with that kind and does not go to the craft. No path line.
