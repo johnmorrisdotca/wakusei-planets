@@ -13,8 +13,12 @@ const open = async (page: Page, query = "?date=2026-11-11", both = true): Promis
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`/wakusei-planets/plan.html${query}`);
   await expect(sun(page)).toHaveAttribute("data-state", "ready");
-  // a plan below the first screen is not drawn until it is seen
-  if (both) await expect(moons(page)).toHaveAttribute("data-state", "ready");
+  // a plan below the first screen is not drawn until it is seen: on a phone the second inset sits below the first and, with the page's links in more rows, below the screen, so it is brought into view (and the first back after it)
+  if (both) {
+    await moons(page).scrollIntoViewIfNeeded();
+    await expect(moons(page)).toHaveAttribute("data-state", "ready");
+    await sun(page).scrollIntoViewIfNeeded();
+  }
   return errors;
 };
 /** Two animation frames: whatever the page was going to do about a change has been done. */
@@ -202,6 +206,8 @@ test("light and dark follow the page, and Japanese follows the page's language",
   await expect(sun(page).locator("text.tm")).toHaveText("火星");
   await expect(sun(page).locator("text.sc")).toHaveText("対数で圧縮、縁は50 au");
   await expect(page.locator("#cap-sun")).toHaveText("真上から見た太陽系(火星に印)");
+  // the second inset is below the first on a phone: it is drawn once it is seen
+  await moons(page).scrollIntoViewIfNeeded();
   await expect(moons(page).locator("text.tm")).toHaveText("イオ");
   await page.locator(".plan-pair").screenshot({ path: info.outputPath("plan-ja.png") });
   info.annotations.push({ type: "picture", description: info.outputPath("plan-ja.png") });

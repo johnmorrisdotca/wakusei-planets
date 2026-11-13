@@ -186,9 +186,12 @@ test("a drag on a star turns it by hand, a press on the empty sky holds nothing;
   // the cheap star has a still surface: the full one boils with the clock, so two draws of the same turn differ a little
   await lineup(page).evaluate((el) => el.setAttribute("quality", "low"));
   await live(page);
+  // the mouse works on the screen's own coordinates: the line-up is brought to the top of the screen first, so the Sun's dot is on it whatever the rows of links above the line-up make of a phone
+  await lineup(page).evaluate((el) => el.scrollIntoView({ block: "start" }));
   const box = (await lineup(page).boundingBox())!;
   const sun = (await lineup(page).evaluate((el) => (el as Lineup).metrics.dots)).find((dot) => dot.id === "sun")!;
   const at = { x: box.x + sun.cx, y: box.y + sun.cy };
+  expect(at.y, "the Sun's dot is on the screen").toBeLessThan(page.viewportSize()!.height);
   const before = await stable(page);
   await page.waitForTimeout(400);
   expect((await shot(page)).equals(before), "a star at rest does not change").toBe(true);
