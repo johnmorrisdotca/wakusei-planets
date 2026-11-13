@@ -36,7 +36,7 @@ whenBox.addEventListener("input", () => {
 play.addEventListener("click", () => {
   playing = play.getAttribute("aria-pressed") !== "true";
   play.setAttribute("aria-pressed", String(playing));
-  if (playing) tick();
+  if (playing) schedule();
 });
 
 function localValue(ms: number): string {
@@ -45,13 +45,25 @@ function localValue(ms: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-function tick(): void {
+// Play runs on the page's frames, and only while it is on and the tab is seen: nothing is scheduled when it is paused or hidden, and a frame asks for the next only while it plays.
+let frame = 0;
+let last = 0;
+function schedule(): void {
+  if (frame !== 0 || !playing || document.hidden) return;
+  last = performance.now();
+  frame = requestAnimationFrame(step);
+}
+/** One frame of play: the date moves on by the time the frame took, at the pace the page always had, a ninetieth of the record in 0.7 s. */
+function step(now: number): void {
+  frame = 0;
   if (!playing || document.hidden) return;
   const craft = SPACECRAFT[id];
   const span = craft.record.end - craft.record.start;
-  when += span / 90;
+  when += (span / 90) * ((now - last) / 700);
+  last = now;
   if (when > craft.record.end) when = craft.record.start;
   void show();
+  frame = requestAnimationFrame(step);
 }
 
 async function show(): Promise<void> {
@@ -123,7 +135,7 @@ async function show(): Promise<void> {
 
 window.addEventListener("wakusei-language", () => void show());
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && playing) tick();
+  if (!document.hidden) schedule();
 });
-setInterval(tick, 700);
 void show();
+schedule();
