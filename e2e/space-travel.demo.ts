@@ -3,7 +3,7 @@
 // scales and for several pairs, Mercury to the Sun among them. Chromium, drawing in software; every reading is what the page reports at each draw.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { callCounted, openSpace, SPACE, statsOf } from "./space-ui.ts";
+import { callCounted, callOn, openSpace, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
