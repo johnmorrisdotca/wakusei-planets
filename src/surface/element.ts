@@ -57,7 +57,7 @@ const num = (value: string | null, fallback: number): number => {
  *
  * @example
  * ```ts no-run
- * import { WakuseiSurface } from "@johnmorrisdotca/wakusei-planets/surface";
+ * import type { WakuseiSurface } from "@johnmorrisdotca/wakusei-planets/surface/element";
  *
  * const view = document.createElement("wakusei-surface") as WakuseiSurface;
  * view.setAttribute("site", "apollo-17");
@@ -65,7 +65,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -90,6 +90,13 @@ export class WakuseiSurface extends HTMLElement {
   #walkAt = 0;
   #progress: TerrainProgress | undefined;
   #placed = false;
+  /** Whether the view is being moved now (a drag, a step, a zoom): drawn at the quality of motion, and once more at the quality of rest when it stops. */
+  #moving = false;
+  #settle: ReturnType<typeof setTimeout> | undefined;
+  /** The quality of rest in `auto`: stepped down when a draw at rest takes too long on this machine. */
+  #restQuality: "full" | "medium" | "fast" = "full";
+  #drawMs: number | undefined;
+  #measured = 0;
   #pointers = new Map<number, { x: number; y: number }>();
   #pinch = 0;
   #draws = 0;
@@ -137,9 +144,17 @@ export class WakuseiSurface extends HTMLElement {
     return this.#terrain;
   }
 
-  /** Numbers for a test or a status line. */
-  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined } {
-    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: (this.#view?.scene as SurfaceScene | undefined)?.mesh };
+  /** Numbers for a test or a status line: the draws, the tiles, the renderer's own counts, the mesh, the quality of the last draw and the milliseconds of the last measured one. */
+  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; drawMs: number | undefined; rocks: number } {
+    const scene = this.#view?.scene as SurfaceScene | undefined;
+    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
+  }
+
+  /** The quality of the next draw: the `quality` attribute, or in `auto` the quality of motion while the view moves and the machine's own quality of rest otherwise. */
+  #quality(): "full" | "medium" | "fast" {
+    const own = this.getAttribute("quality");
+    if (own === "full" || own === "medium" || own === "fast") return own;
+    return this.#moving ? "fast" : this.#restQuality;
   }
 
   connectedCallback(): void {
@@ -267,7 +282,7 @@ export class WakuseiSurface extends HTMLElement {
         this.#renderer = taken.renderer;
         this.#release = taken.release;
       }
-      const item = createSurfaceItem({ levels: this.#terrain.levels, pictures: this.#terrain.pictures, manifest: this.#terrain.manifest, groundY: (east, north) => this.#groundAt(east, north), key: `surface:${site.id}` });
+      const item = createSurfaceItem({ levels: this.#terrain.levels, pictures: this.#terrain.pictures, horizons: this.#terrain.horizons, manifest: this.#terrain.manifest, groundY: (east, north) => this.#groundAt(east, north), key: `surface:${site.id}` });
       this.#view = this.#renderer.view(this.#stage, item, { still: null });
     }
     const ok = await this.#view.focus();
@@ -321,8 +336,18 @@ export class WakuseiSurface extends HTMLElement {
     return this.#groundAt(this.#at.east, this.#at.north) + EYE_HEIGHT;
   }
 
-  #changed(): void {
-    if (this.#view?.live) this.#gate?.request();
+  /** Ask for a draw. A change of the view (`moving`, the default) is drawn at the quality of motion and followed, a moment after the last, by one at the quality of rest. */
+  #changed(moving = true): void {
+    if (!this.#view?.live) return;
+    if (moving) {
+      this.#moving = true;
+      clearTimeout(this.#settle);
+      this.#settle = setTimeout(() => {
+        this.#moving = false;
+        this.#gate?.request();
+      }, 160);
+    }
+    this.#gate?.request();
   }
 
   #draw(): void {
@@ -331,7 +356,16 @@ export class WakuseiSurface extends HTMLElement {
     const site = this.#site();
     if (site === undefined) return;
     this.#sky = moonSky(site.lat, site.lon, this.#time);
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6) });
+    // `auto`: a draw at rest is timed now and then, and a machine that takes too long at rest steps down (a card does a draw at full quality in a few milliseconds; a phone may not)
+    const auto = this.getAttribute("quality") === null || this.getAttribute("quality") === "auto";
+    const was = scene.drawMs;
+    if (auto && !this.#moving && was !== undefined && this.#measured > 0) {
+      if (was > 120 && this.#restQuality === "full") this.#restQuality = "medium";
+      else if (was > 250 && this.#restQuality === "medium") this.#restQuality = "fast";
+    }
+    const measure = auto && !this.#moving && this.#measured < 4;
+    if (measure) this.#measured += 1;
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
   }

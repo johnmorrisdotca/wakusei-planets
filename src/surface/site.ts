@@ -1,7 +1,17 @@
 // The sites a person can stand at, one table. Each is a place the package has heights for (a pyramid of tiles made by `scripts/make-moon-terrain.py`).
 import type { Look } from "./view.ts";
 
-/** A site's record. */
+/**
+ * A site's record.
+ *
+ * @example
+ * ```ts
+ * import { siteById, type SurfaceSite } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const site: SurfaceSite | undefined = siteById("apollo-17");
+ * console.log(site?.name.en, site?.lat, site?.lon);
+ * ```
+ */
 export interface SurfaceSite {
   /** The name in the `site` attribute. */
   id: string;
@@ -40,5 +50,18 @@ export const SURFACE_SITES: readonly SurfaceSite[] = [
   },
 ];
 
-/** A site by name, or `undefined`. */
+/**
+ * A site by name, or `undefined`.
+ *
+ * @param id - The site's name, as in the `site` attribute.
+ * @returns The site's record, or `undefined` when there is no such site.
+ *
+ * @example
+ * ```ts
+ * import { siteById } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const site = siteById("apollo-17");
+ * console.log(site?.name.en, siteById("nowhere"));
+ * ```
+ */
 export const siteById = (id: string): SurfaceSite | undefined => SURFACE_SITES.find((site) => site.id === id);

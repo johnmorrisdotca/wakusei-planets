@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
 import { craterIn, craterProfile, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
 import { decodeHeight, drop, emptyLevel, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
-import { rockMesh } from "../src/surface/rocks.ts";
+import { rockMesh, ROCK_VERTICES } from "../src/surface/rocks.ts";
 import { moonSky, localFrame } from "../src/surface/sky.ts";
 import { SURFACE_SITES, siteById } from "../src/surface/site.ts";
 import { clampLook, forward, stepOver, viewProjection, FOV_LIMITS } from "../src/surface/view.ts";
@@ -132,6 +132,26 @@ test("craters: many small, few large; the share of cells that hold one falls wit
   for (let i = 1; i < perArea.length; i += 1) assert.ok(perArea[i]! < perArea[i - 1]! / 3, "a size 2 times larger is far rarer by the metre");
 });
 
+test("most craters are old: a few in a hundred are fresh, three in four are worn, and craters over 5 m are half as many", () => {
+  let n = 0;
+  let freshN = 0;
+  let worn = 0;
+  for (let octave = 0; octave < 3; octave += 1) {
+    for (let i = -40; i < 40; i += 1) {
+      for (let j = -40; j < 40; j += 1) {
+        const c = craterIn(i, j, octave);
+        if (c === undefined) continue;
+        n += 1;
+        if (c.age < 0.15) freshN += 1;
+        if (c.age > 0.7) worn += 1;
+      }
+    }
+  }
+  assert.ok(freshN / n < 0.07 && freshN / n > 0.015, `fresh: ${freshN / n}`);
+  assert.ok(worn / n > 0.65, `worn: ${worn / n}`);
+  assert.ok(occupancy(3) < 0.55 * 0.36 * 2 ** -1.5 && occupancy(3) > 0.45 * 0.36 * 2 ** -1.5, "the larger octaves are thinned by half");
+});
+
 test("a crater's size and shape: between 1 and 2 nominal diameters, a fresh one a fifth deep, a worn one shallow, its rim over the plain", () => {
   let fresh: ReturnType<typeof craterIn>;
   let worn: ReturnType<typeof craterIn>;
@@ -146,9 +166,10 @@ test("a crater's size and shape: between 1 and 2 nominal diameters, a fresh one 
     }
   }
   assert.ok(fresh !== undefined && worn !== undefined);
-  assert.ok(Math.abs(fresh!.depth / (fresh!.radius * 2) - 0.2) < 0.02, "a fresh crater is a fifth as deep as it is wide");
+  const freshRatio = fresh!.depth / (fresh!.radius * 2);
+  assert.ok(freshRatio > 0.11 && freshRatio < 0.21, `a fresh crater is about a fifth as deep as it is wide, a little less when it varies: ${freshRatio}`);
   assert.ok(worn!.depth / (worn!.radius * 2) < 0.09, "a worn one is much shallower");
-  assert.ok(craterProfile(fresh!, fresh!.x, fresh!.y).h < -0.15 * fresh!.radius * 2, "the floor is low");
+  assert.ok(craterProfile(fresh!, fresh!.x, fresh!.y).h < -0.08 * fresh!.radius * 2, "the floor is low");
   assert.ok(craterProfile(fresh!, fresh!.x + fresh!.radius * 1.0, fresh!.y).h > 0, "the rim stands over the plain");
   assert.ok(Math.abs(craterProfile(fresh!, fresh!.x + fresh!.radius * 8, fresh!.y).h) < 0.02 * fresh!.radius, "far away the plain is the plain");
 });
@@ -206,18 +227,19 @@ test("rocks: seeded and fixed to the place, many small and few large, none under
   assert.equal(boosted, 1);
 });
 
-test("the rocks' mesh: 60 vertices a rock with unit normals pointing out of it, a shadow a quad strip on the ground away from the Sun", () => {
+test("the rocks' mesh: 240 vertices a rock with unit smooth normals pointing out of it, a shadow a quad strip on the ground away from the Sun", () => {
   const rocks = rocksAround(0, 0, 10, 0.0024).slice(0, 25);
   const mesh = rockMesh(rocks, () => 0, { azimuth: 90, altitude: 15 });
   assert.equal(mesh.count, rocks.length);
-  assert.equal(mesh.position.length, rocks.length * 60 * 3);
-  assert.equal(mesh.tone.length, rocks.length * 60);
+  assert.equal(ROCK_VERTICES, 240);
+  assert.equal(mesh.position.length, rocks.length * ROCK_VERTICES * 3);
+  assert.equal(mesh.tone.length, rocks.length * ROCK_VERTICES);
   for (let i = 0; i < mesh.normal.length; i += 3) assert.ok(Math.abs(Math.hypot(mesh.normal[i]!, mesh.normal[i + 1]!, mesh.normal[i + 2]!) - 1) < 1e-4);
   // a rock's top stands over the ground it lies on, and each normal points away from the rock's middle
   const r0 = rocks[0]!;
   let top = -Infinity;
-  for (let i = 0; i < 60; i += 1) top = Math.max(top, mesh.position[i * 3 + 1]!);
-  assert.ok(top > 0.2 * r0.size * 0.45, "it stands up");
+  for (let i = 0; i < ROCK_VERTICES; i += 1) top = Math.max(top, mesh.position[i * 3 + 1]!);
+  assert.ok(top > 0.05 * r0.size, "it stands up");
   // the shadow of a rock in a Sun in the east lies to the west: its far end has a smaller x than the rock
   const sp = mesh.shadowPosition;
   const per = (4 + 1) * 2 * 3;

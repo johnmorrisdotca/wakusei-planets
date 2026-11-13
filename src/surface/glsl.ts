@@ -23,24 +23,25 @@ uniform float uHrange;
 uniform float uGround;
 uniform float uRadius;
 
-float dec(vec4 t) { return uHmin + (t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0 * uHrange; }
+uniform vec2 uFarHeight; // the range the coarse level is encoded over: its minimum and its span
+float dec(vec4 t, vec2 hr) { return hr.x + (t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0 * hr.y; }
 
-float lin(sampler2D s, vec2 p, vec4 l) {
+float lin(sampler2D s, vec2 p, vec4 l, vec2 hr) {
   vec2 f = vec2((p.x + l.x) / l.y - 0.5, (l.x - p.y) / l.y - 0.5);
   vec2 i = floor(f);
   vec2 t = f - i;
   float st = 1.0 / l.z;
   vec2 uv = (i + 0.5) * st;
-  float a = dec(texture2D(s, uv));
-  float b = dec(texture2D(s, uv + vec2(st, 0.0)));
-  float c = dec(texture2D(s, uv + vec2(0.0, st)));
-  float d = dec(texture2D(s, uv + vec2(st, st)));
+  float a = dec(texture2D(s, uv), hr);
+  float b = dec(texture2D(s, uv + vec2(st, 0.0)), hr);
+  float c = dec(texture2D(s, uv + vec2(0.0, st)), hr);
+  float d = dec(texture2D(s, uv + vec2(st, st)), hr);
   return mix(mix(a, b, t.x), mix(c, d, t.x), t.y);
 }
 
-float nearest(sampler2D s, vec2 p, vec4 l) {
+float nearest(sampler2D s, vec2 p, vec4 l, vec2 hr) {
   vec2 uv = vec2((p.x + l.x) / (l.y * l.z), (l.x - p.y) / (l.y * l.z));
-  return dec(texture2D(s, uv));
+  return dec(texture2D(s, uv), hr);
 }
 
 bool holds(vec2 p, vec4 l, float dist) { return dist < l.w && abs(p.x) < l.x - 2.0 * l.y && abs(p.y) < l.x - 2.0 * l.y; }
@@ -48,10 +49,10 @@ bool holds(vec2 p, vec4 l, float dist) { return dist < l.w && abs(p.x) < l.x - 2
 // the ground's height over the site's, the sphere's fall taken off; \`fine\` reads four samples, otherwise one
 float terrainY(vec2 p, float dist, bool fine) {
   float h;
-  if (holds(p, uL0, dist)) h = fine ? lin(uH0, p, uL0) : nearest(uH0, p, uL0);
-  else if (holds(p, uL1, dist)) h = fine ? lin(uH1, p, uL1) : nearest(uH1, p, uL1);
-  else if (holds(p, uL2, dist)) h = fine ? lin(uH2, p, uL2) : nearest(uH2, p, uL2);
-  else h = fine ? lin(uH3, p, uL3) : nearest(uH3, p, uL3);
+  if (holds(p, uL0, dist)) h = fine ? lin(uH0, p, uL0, vec2(uHmin, uHrange)) : nearest(uH0, p, uL0, vec2(uHmin, uHrange));
+  else if (holds(p, uL1, dist)) h = fine ? lin(uH1, p, uL1, vec2(uHmin, uHrange)) : nearest(uH1, p, uL1, vec2(uHmin, uHrange));
+  else if (holds(p, uL2, dist)) h = fine ? lin(uH2, p, uL2, vec2(uHmin, uHrange)) : nearest(uH2, p, uL2, vec2(uHmin, uHrange));
+  else h = fine ? lin(uH3, p, uL3, uFarHeight) : nearest(uH3, p, uL3, uFarHeight);
   return h - uGround - dot(p, p) / (2.0 * uRadius);
 }
 
@@ -63,6 +64,34 @@ float albedoAt(vec2 p, float dist) {
   if (holds(p, uL1, dist)) { l = uL1; return 2.0 * texture2D(uA1, vec2((p.x + l.x) / (l.y * l.z), (l.x - p.y) / (l.y * l.z))).r; }
   if (holds(p, uL2, dist)) { l = uL2; return 2.0 * texture2D(uA2, vec2((p.x + l.x) / (l.y * l.z), (l.x - p.y) / (l.y * l.z))).r; }
   return 1.0;
+}
+
+// the measured ground's shadows, baked (scripts/make-moon-terrain.py): for a point, the elevation angle in degrees of the horizon toward the Sun, read from the finest of the three horizon maps that holds the point
+uniform sampler2D uZ0;
+uniform sampler2D uZ1;
+uniform sampler2D uZ2;
+uniform float uHzOn; // 1 where the maps are there
+uniform vec3 uHzSun; // the two directions (of 18) the Sun's azimuth lies between, and the share of the second
+uniform vec2 uHzRange; // the degrees the codes 0 and 255 stand for
+
+float hzSector(sampler2D s, vec2 cell, float k) {
+  float slab = floor(k / 3.0);
+  float ch = k - slab * 3.0;
+  vec3 v = texture2D(s, vec2((cell.x + slab) / 6.0, cell.y)).rgb;
+  return ch < 0.5 ? v.r : (ch < 1.5 ? v.g : v.b);
+}
+
+float hzFrom(sampler2D s, vec2 p, float reach) {
+  vec2 cell = clamp(vec2((p.x + reach) / (2.0 * reach), (reach - p.y) / (2.0 * reach)), vec2(0.5 / 512.0), vec2(1.0 - 0.5 / 512.0));
+  float code = mix(hzSector(s, cell, uHzSun.x), hzSector(s, cell, uHzSun.y), uHzSun.z);
+  return uHzRange.x + code * (uHzRange.y - uHzRange.x);
+}
+
+float horizonAt(vec2 p) {
+  if (abs(p.x) < uL0.x && abs(p.y) < uL0.x) return hzFrom(uZ0, p, uL0.x);
+  if (abs(p.x) < uL1.x && abs(p.y) < uL1.x) return hzFrom(uZ1, p, uL1.x);
+  if (abs(p.x) < uL2.x && abs(p.y) < uL2.x) return hzFrom(uZ2, p, uL2.x);
+  return -90.0;
 }
 
 // the spacing of the level that serves a point, for the step of a slope
@@ -102,7 +131,7 @@ vec3 madeGround(vec2 p, float fromD) {
     float cell = 3.0 * nominal;
     ivec2 base = ivec2(floor(p / cell));
     vec2 fr = p / cell - vec2(base);
-    float occ = 0.36 * exp2(-0.5 * float(octave));
+    float occ = (octave >= 3 ? 0.5 : 1.0) * 0.36 * exp2(-0.5 * float(octave));
     for (int j = -1; j <= 1; j += 1) {
       for (int i = -1; i <= 1; i += 1) {
         // a crater is kept to the middle of its cell, so a neighbour's reaches this cell only within a fifth of the edge
@@ -112,19 +141,20 @@ vec3 madeGround(vec2 p, float fromD) {
         if (u24(ab.x) >= occ) continue;
         uvec2 cd = pcg2d(uvec2(uint(c.x + 104729), uint(c.y + octave * 7919 + 15485863)));
         float diameter = nominal * (1.0 + (octave == 5 ? 0.25 : 1.0) * u24(cd.y));
-        float age = float(ab.x & 255u) / 255.0;
-        age = age * age;
+        float r4 = float(ab.x & 255u) / 255.0;
+        float age = 1.0 - r4 * r4 * r4 * r4;
         float radius = 0.5 * diameter;
-        float depth = 0.2 * diameter * (1.0 - 0.7 * age);
-        float rim = 0.045 * diameter * (1.0 - age);
-        float rimWidth = 0.22 + 0.3 * age;
+        float vary = 0.6 + 0.4 * (float(cd.x & 255u) / 255.0);
+        float depth = diameter * (0.2 - 0.17 * age) * vary;
+        float rim = 0.045 * diameter * pow(1.0 - age, 1.5);
+        float rimWidth = 0.22 + 0.5 * age;
         vec2 centre = vec2(float(c.x) + 0.25 + 0.5 * u24(ab.y), float(c.y) + 0.25 + 0.5 * u24(cd.x)) * cell;
         vec2 d = p - centre;
         float r = length(d);
         float x = r / radius;
         float h = 0.0;
         float dh = 0.0;
-        if (x < 1.0) { h = -depth * (1.0 - x * x); dh = 2.0 * depth * x; }
+        if (x < 1.0) { float bowl = 1.0 - x * x; float pw = 1.0 + age; h = -depth * pow(bowl, pw); dh = 2.0 * depth * pw * x * pow(bowl, age); }
         float e = (x - 1.0) / rimWidth;
         float ex = exp(-e * e);
         h += rim * ex;
@@ -204,6 +234,8 @@ uniform float uAlbedo;
 uniform float uMaxY; // the highest ground over the site's, for the end of a shadow's march
 uniform float uEarthshine; // the light of the sunlit ground round the shade, a small share of a lit slope's
 uniform float uShadows; // 1 for the ground to shadow itself (the default), 0 for none (a try-out)
+uniform float uSunDegrees; // the Sun's elevation in degrees
+uniform vec3 uNear; // the near march: steps, the distance it reaches in metres, the distance out to which the made craters are in it (the quality of the draw)
 ${HEIGHTS}
 ${DETAIL}
 
@@ -214,26 +246,30 @@ float groundY(vec2 p, float dist, bool fine, float fromD) {
   return y;
 }
 
-// 1 where the Sun reaches a point, 0 where the ground, craters and all, is in its way: a march from the point toward the Sun over the same heights
+// 1 where the Sun reaches a point, 0 where the ground is in its way. The measured ground's shadow is read from the baked horizon; the march toward the Sun over the heights (and the made craters) is the near
+// field's only, a few tens of metres with a fixed number of steps, as sharp as the Sun's edge. Where there is no baked horizon the march goes all the way, as it did before the maps.
 float lit(vec3 P, float dist0) {
   vec2 dir = normalize(uSun.xz);
   float slope = uSun.y / max(length(uSun.xz), 1e-4);
+  if (uHzOn > 0.5 && horizonAt(P.xz) - 0.3 > uSunDegrees) return 0.0;
   // the ground at the point from the heights themselves, not the mesh's slope between its corners, which can be a long way off on a far mountain
   P.y = max(P.y, groundY(P.xz, dist0, true, 2.5 * dist0 * uPixel));
   float t = 0.5 * spacing(P.xz, dist0) + 0.25;
   if (uDetail > 0.5) t = min(t, 0.2 + 0.02 * dist0);
   // a pixel's own start along the ray: the edge of a rim's shadow is a line of steps, and a line of steps is jagged; with a start of its own each pixel it becomes a fine grain instead
   float jitter = fract(sin(dot(P.xz, vec2(12.9898, 78.233))) * 43758.5453);
+  float range = uHzOn > 0.5 ? uNear.y : 80000.0;
   for (int i = 0; i < 260; i += 1) {
+    if (float(i) >= uNear.x) break;
     vec2 q = P.xz + dir * t;
     float y = P.y + slope * t;
     float dist = max(t, distance(q, uEyeEN));
     float res = spacing(q, dist);
-    float h = groundY(q, dist, t < 600.0, t < 36.0 ? max(0.2 * t, 2.5 * dist * uPixel) : 99.0);
+    float h = groundY(q, dist, t < 600.0, t < uNear.z ? max(0.2 * t, 2.5 * dist * uPixel) : 99.0);
     float bias = (t < 40.0 ? 0.01 : 0.3 * res) + 0.002 * t;
     if (h > y + bias) return 0.0;
-    if (y > uMaxY || t > 80000.0) break;
-    float step = t < 30.0 ? t * 0.03 + 0.03 : t * 0.06 + 0.5;
+    if (y > uMaxY || t > range) break;
+    float step = t < 30.0 ? t * 0.045 + 0.04 : t * 0.06 + 0.5;
     t += step * (0.65 + 0.7 * jitter);
   }
   return 1.0;
@@ -301,7 +337,7 @@ void main() {
   float dist = distance(vP.xz, uEyeEN);
   float shine = 0.0;
   if (mu0 > 0.0 && uSun.y > -0.01) shine = (uShadows > 0.5 ? lit(vP + n * 0.02, dist) : 1.0) * 2.0 * mu0 / (mu0 + mu);
-  float light = uAlbedo * 0.85 * vTone * (shine + 0.12 * (n.y * 0.5 + 0.5)) * uExposure; // the shade of a stone is lit by the ground round it
+  float light = uAlbedo * 1.1 * vTone * (shine + 0.12 * (n.y * 0.5 + 0.5)) * uExposure; // the shade of a stone is lit by the ground round it
   gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);
 }
 `;

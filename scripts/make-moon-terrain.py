@@ -214,22 +214,26 @@ def bilinear_valid(grid, rows, cols):
     return np.where(ok, value, np.nan).astype(np.float32)
 
 
-def encode(heights):
-    """Heights in metres to an RGB array: 16 bits over HEIGHT_MIN and HEIGHT_RANGE, high byte red, low byte green."""
-    v = np.clip(np.rint((heights - HEIGHT_MIN) / HEIGHT_RANGE * 65535.0), 0, 65535).astype(np.uint16)
+FAR_MIN = -10000.0
+FAR_RANGE = 20000.0
+
+
+def encode(heights, lo=HEIGHT_MIN, span=HEIGHT_RANGE):
+    """Heights in metres to an RGB array: 16 bits over `lo` and `span` (the site's range, or the coarse level's wider one), high byte red, low byte green."""
+    v = np.clip(np.rint((heights - lo) / span * 65535.0), 0, 65535).astype(np.uint16)
     rgb = np.zeros(v.shape + (3,), dtype=np.uint8)
     rgb[..., 0] = v >> 8
     rgb[..., 1] = v & 255
     return rgb
 
 
-def decode(rgb):
+def decode(rgb, lo=HEIGHT_MIN, span=HEIGHT_RANGE):
     """The inverse of `encode`, for the self test and for anything that reads the tiles back."""
     v = (rgb[..., 0].astype(np.uint16) << 8) | rgb[..., 1].astype(np.uint16)
-    return v.astype(np.float64) / 65535.0 * HEIGHT_RANGE + HEIGHT_MIN
+    return v.astype(np.float64) / 65535.0 * span + lo
 
 
-def write_level(out_dir, level_id, grid):
+def write_level(out_dir, level_id, grid, lo=HEIGHT_MIN, span=HEIGHT_RANGE):
     """Cut `grid` (tiles x TILE square) into PNG tiles. Returns the bytes written."""
     total = 0
     n = grid.shape[0] // TILE
@@ -239,7 +243,7 @@ def write_level(out_dir, level_id, grid):
         for row in range(n):
             tile = grid[row * TILE : (row + 1) * TILE, col * TILE : (col + 1) * TILE]
             path = os.path.join(folder, f"{row}.png")
-            Image.fromarray(encode(tile), "RGB").save(path, optimize=True)
+            Image.fromarray(encode(tile, lo, span), "RGB").save(path, optimize=True)
             total += os.path.getsize(path)
     return total
 
@@ -322,6 +326,82 @@ def far_sampler(site, path):
         return bilinear(grid, r, c)
 
     return sample
+
+
+HORIZON_CELLS = 512
+HORIZON_SECTORS = 18
+HORIZON_FROM = -10.0
+HORIZON_TO = 60.0
+
+
+def height_sampler(levels, site, ground):
+    """A function (x, y) -> the ground's height over the site's, the Moon's curve taken off, from the finest level that holds the point (the nearest sample), as the viewer's shader reads it."""
+    specs = []
+    for level_id, level_res, tiles in site["levels"]:
+        specs.append((levels[level_id], level_res, tiles * TILE / 2 * level_res, tiles * TILE))
+    far_id, far_res, far_tiles = site["far_level"]
+    specs.append((levels[far_id], far_res, far_tiles * TILE / 2 * far_res, far_tiles * TILE))
+
+    def sample(x, y):
+        out = np.empty(x.shape, dtype=np.float32)
+        todo = np.ones(x.shape, dtype=bool)
+        for grid, res, half, size in specs:
+            inside = todo & (np.abs(x) < half - 2 * res) & (np.abs(y) < half - 2 * res)
+            if not inside.any():
+                continue
+            col = np.clip(((x[inside] + half) / res).astype(np.int64), 0, size - 1)
+            row = np.clip(((half - y[inside]) / res).astype(np.int64), 0, size - 1)
+            out[inside] = grid[row, col]
+            todo &= ~inside
+        # beyond every level: the coarsest level's edge
+        if todo.any():
+            grid, res, half, size = specs[-1]
+            col = np.clip(((x[todo] + half) / res).astype(np.int64), 0, size - 1)
+            row = np.clip(((half - y[todo]) / res).astype(np.int64), 0, size - 1)
+            out[todo] = grid[row, col]
+        return out - ground - (x * x + y * y) / (2.0 * R_MOON)
+
+    return sample
+
+
+def build_horizon(levels, site, ground, out):
+    """The measured ground's shadows, baked: for the cells of the first three levels (512 across, so 20, 80 and 320 m) and eighteen directions, how high above the horizontal the ground rises as seen from the cell, out to 100 km:
+    the elevation angle of the horizon, 8 bits over -10 to 60 degrees. The viewer's shader asks it whether the Sun is under the horizon in its direction, so no march over the heights is needed for them."""
+    sample = height_sampler(levels, site, ground)
+    info = []
+    total = 0
+    os.makedirs(os.path.join(out, "horizon"), exist_ok=True)
+    for level_id, level_res, tiles in site["levels"]:
+        half = tiles * TILE / 2 * level_res
+        cell = 2 * half / HORIZON_CELLS
+        xs = -half + (np.arange(HORIZON_CELLS) + 0.5) * cell
+        ys = half - (np.arange(HORIZON_CELLS) + 0.5) * cell
+        gx, gy = np.meshgrid(xs, ys)
+        gx, gy = gx.ravel(), gy.ravel()
+        here = sample(gx, gy)
+        angles = np.zeros((HORIZON_SECTORS, gx.size), dtype=np.float32)
+        for k in range(HORIZON_SECTORS):
+            az = math.radians(k * 360.0 / HORIZON_SECTORS)
+            sx, sy = math.sin(az), math.cos(az)
+            best = np.full(gx.size, -1e9, dtype=np.float32)
+            t = max(cell, 10.0)
+            while t < 100_000.0:
+                slope = (sample(gx + sx * t, gy + sy * t) - here) / t
+                np.maximum(best, slope, out=best)
+                t *= 1.1
+            angles[k] = np.degrees(np.arctan(best))
+        code = np.clip(np.rint((angles - HORIZON_FROM) / (HORIZON_TO - HORIZON_FROM) * 255.0), 0, 255).astype(np.uint8).reshape(HORIZON_SECTORS, HORIZON_CELLS, HORIZON_CELLS)
+        slabs = HORIZON_SECTORS // 3
+        image = np.zeros((HORIZON_CELLS, HORIZON_CELLS * slabs, 3), dtype=np.uint8)
+        for slab in range(slabs):
+            for channel in range(3):
+                image[:, slab * HORIZON_CELLS : (slab + 1) * HORIZON_CELLS, channel] = code[slab * 3 + channel]
+        path = os.path.join(out, "horizon", f"{level_id}.png")
+        Image.fromarray(image, "RGB").save(path, optimize=True)
+        total += os.path.getsize(path)
+        info.append({"id": level_id, "file": f"horizon/{level_id}.png", "bytes": os.path.getsize(path)})
+        print(f"  horizon {level_id}: {HORIZON_CELLS} x {HORIZON_CELLS} cells of {cell:g} m, {HORIZON_SECTORS} directions, {os.path.getsize(path) / 1e6:.1f} MB", flush=True)
+    return {"cells": HORIZON_CELLS, "sectors": HORIZON_SECTORS, "from": HORIZON_FROM, "to": HORIZON_TO, "levels": info, "bytes": total}
 
 
 def build_ground(args, site, dtm, out):
@@ -413,14 +493,20 @@ def build(args):
     for level_id, grid in levels.items():
         spec = next((l for l in site["levels"] if l[0] == level_id), None) or site["far_level"]
         assert np.isfinite(grid).all(), f"{level_id} has gaps"
-        assert grid.min() > HEIGHT_MIN and grid.max() < HEIGHT_MIN + HEIGHT_RANGE
-        written = write_level(os.path.join(out, "terrain"), level_id, grid)
+        # the coarse level reaches over mountains and basins the site's own range cannot hold: its own, wider one, said in the manifest
+        wide = level_id == site["far_level"][0]
+        lo, span = (FAR_MIN, FAR_RANGE) if wide else (HEIGHT_MIN, HEIGHT_RANGE)
+        assert grid.min() > lo and grid.max() < lo + span, f"{level_id} out of range"
+        written = write_level(os.path.join(out, "terrain"), level_id, grid, lo, span)
         total += written
-        info.append({"id": level_id, "res": spec[1], "tiles": spec[2], "half": spec[2] * TILE * spec[1] / 2, "bytes": written, "min": float(grid.min()), "max": float(grid.max())})
+        info.append({"id": level_id, "res": spec[1], "tiles": spec[2], "half": spec[2] * TILE * spec[1] / 2, "bytes": written, "min": float(grid.min()), "max": float(grid.max()), "height": {"min": lo, "range": span}})
         print(f"  {level_id}: {spec[2]} x {spec[2]} tiles of {TILE}, {spec[1]:g} m, {written / 1e6:.1f} MB, heights {grid.min():.0f} to {grid.max():.0f} m", flush=True)
     ground = build_ground(args, site, dtm, out) if not args.no_ground else None
     centre = levels[site["levels"][0][0]]
     mid = centre.shape[0] // 2
+    ground_height = float(centre[mid - 1 : mid + 1, mid - 1 : mid + 1].mean())
+    print("baking the shadows of the measured ground ...", flush=True)
+    horizon = build_horizon(levels, site, ground_height, out)
     manifest = {
         "version": 1,
         "body": "moon",
@@ -431,12 +517,13 @@ def build(args):
         "radius": R_MOON,
         "tile": TILE,
         "height": {"min": HEIGHT_MIN, "range": HEIGHT_RANGE},
-        "ground": float(centre[mid - 1 : mid + 1, mid - 1 : mid + 1].mean()),
+        "ground": ground_height,
         "levels": info,
         "picture": ground,
+        "horizon": horizon,
         "credit": site["heights_credit"],
         "accuracy": site["accuracy"],
-        "bytes": total + (ground["bytes"] if ground else 0),
+        "bytes": total + (ground["bytes"] if ground else 0) + horizon["bytes"],
     }
     with open(os.path.join(out, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=1)
@@ -484,6 +571,20 @@ def selftest(_args):
     alb = albedo_of(hill, patch, 5.0, 225.0, 25.0)
     assert alb[50, 50] > 1.3 * alb[150, 150], "the patch stays brighter"
     assert abs(float(alb[100, 100]) - float(alb[150, 150])) < 0.25, "the hill's own shading is gone"
+    # the horizon: a wall 100 m high 200 m to the east is seen at about 27 degrees from the cell at its foot, to the east, and not at all to the west
+    wall = {"levels": [("h5", 5.0, 1), ("h20", 20.0, 1), ("h80", 80.0, 1)], "far_level": ("far", 480.0, 1)}
+    grids = {"h5": np.zeros((TILE, TILE), np.float32), "h20": np.zeros((TILE, TILE), np.float32), "h80": np.zeros((TILE, TILE), np.float32), "far": np.zeros((TILE, TILE), np.float32)}
+    for name, res in (("h5", 5.0), ("h20", 20.0), ("h80", 80.0), ("far", 480.0)):
+        half = TILE / 2 * res
+        for col in range(TILE):
+            x = (col + 0.5) * res - half
+            if 200.0 <= x <= 400.0:
+                grids[name][:, col] = 100.0
+    sampler = height_sampler(grids, wall, 0.0)
+    here = sampler(np.array([0.0]), np.array([0.0]))
+    east = max((sampler(np.array([t]), np.array([0.0]))[0] - here[0]) / t for t in (210.0, 250.0, 300.0))
+    west = max((sampler(np.array([-t]), np.array([0.0]))[0] - here[0]) / t for t in (10.0, 50.0, 70.0))
+    assert 0.3 < east < 0.55 and west < 0.01, (east, west)
     print("selftest ok")
 
 

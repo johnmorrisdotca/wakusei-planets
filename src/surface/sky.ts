@@ -3,14 +3,34 @@ import { apparent } from "../ephemeris.ts";
 import { surfacePoint } from "../pose.ts";
 import { cross, dot, unit, DEG, type Vec3 } from "../vec.ts";
 
-/** A direction in the viewer's own sky: a unit vector east, north and up (`enu`), and the same as an azimuth (degrees clockwise from north) and an altitude (degrees above the horizon). */
+/**
+ * A direction in the viewer's own sky: a unit vector east, north and up (`enu`), and the same as an azimuth (degrees clockwise from north) and an altitude (degrees above the horizon).
+ *
+ * @example
+ * ```ts
+ * import { moonSky, type SkyDirection } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const sun: SkyDirection = moonSky(20.1911, 30.7723, Date.UTC(1972, 11, 11, 19, 54)).sun;
+ * console.log(`${sun.azimuth.toFixed(0)} degrees clockwise from north, ${sun.altitude.toFixed(0)} degrees up`);
+ * ```
+ */
 export interface SkyDirection {
   enu: Vec3;
   azimuth: number;
   altitude: number;
 }
 
-/** What the sky holds at one place and moment. */
+/**
+ * What the sky holds at one place and moment.
+ *
+ * @example
+ * ```ts
+ * import { moonSky, type MoonSky } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const sky: MoonSky = moonSky(20.1911, 30.7723, Date.UTC(1972, 11, 11, 19, 54));
+ * console.log(`the Earth is ${(sky.earthIllumination * 100).toFixed(0)}% lit and ${sky.earthDiameter.toFixed(1)} degrees across`);
+ * ```
+ */
 export interface MoonSky {
   /** The Sun's centre. */
   sun: SkyDirection;

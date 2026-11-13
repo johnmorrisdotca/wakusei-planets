@@ -2,7 +2,17 @@
 // ground's height is a function handed in. All made, none measured.
 import { pcg2d, unit24, type Rock } from "./detail.ts";
 
-/** The arrays of the rocks' mesh, in the site's plane (east, up, north): 60 vertices a rock, and 10 for its shadow. */
+/**
+ * The arrays of the rocks' mesh, in the site's plane (east, up, north): `ROCK_VERTICES` (240) a rock, and 10 for its shadow.
+ *
+ * @example
+ * ```ts
+ * import { rockMesh, type RockMesh } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const mesh: RockMesh = rockMesh([{ x: 2, y: 3, size: 0.5, shape: 0, turn: 0, tone: 1, flat: 0.6 }], () => 0, { azimuth: 95, altitude: 13 });
+ * console.log(mesh.count, mesh.position.length / 3, mesh.shadowIndex.length);
+ * ```
+ */
 export interface RockMesh {
   position: Float32Array;
   normal: Float32Array;
@@ -27,13 +37,57 @@ const FACES: readonly (readonly [number, number, number])[] = [
   [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
 ];
 
-/** The three shapes: the icosahedron with each corner pulled in or out by a seeded share, so a rock is lumpy and each shape is its own. */
-export const SHAPES: readonly (readonly (readonly [number, number, number])[])[] = [0, 1, 2].map((shape) =>
-  ICOSAHEDRON.map((v, i) => {
-    const k = 0.72 + 0.5 * unit24(pcg2d(shape * 101 + 5, i * 13 + 9)[0]);
+/** The icosahedron cut once: each edge's middle pushed out to the sphere, so 42 corners and 80 faces, round enough that a rock seen close is not a die. */
+const subdivided = ((): { vertices: (readonly [number, number, number])[]; faces: (readonly [number, number, number])[] } => {
+  const vertices = [...ICOSAHEDRON];
+  const middle = new Map<string, number>();
+  const mid = (a: number, b: number): number => {
+    const key = a < b ? `${a}:${b}` : `${b}:${a}`;
+    let at = middle.get(key);
+    if (at === undefined) {
+      const p = vertices[a]!;
+      const q = vertices[b]!;
+      const m: [number, number, number] = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2];
+      const l = Math.hypot(m[0], m[1], m[2]);
+      at = vertices.push([m[0] / l, m[1] / l, m[2] / l]) - 1;
+      middle.set(key, at);
+    }
+    return at;
+  };
+  const faces: (readonly [number, number, number])[] = [];
+  for (const [a, b, c] of FACES) {
+    const ab = mid(a, b);
+    const bc = mid(b, c);
+    const ca = mid(c, a);
+    faces.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]);
+  }
+  return { vertices, faces };
+})();
+
+/** Vertices a rock's mesh has: 80 faces of 3. */
+export const ROCK_VERTICES = subdivided.faces.length * 3;
+
+/** The three shapes: the cut icosahedron with each corner pulled in or out by a seeded share, in lumps (a corner takes the share of its neighbours too), so each shape is its own and none is a ball. */
+export const SHAPES: readonly (readonly (readonly [number, number, number])[])[] = [0, 1, 2].map((shape) => {
+  const raw = subdivided.vertices.map((_, i) => 0.78 + 0.42 * unit24(pcg2d(shape * 101 + 5, i * 13 + 9)[0]));
+  return subdivided.vertices.map((v, i) => {
+    // smoothed over the corner's own face neighbours, so the lumps are broad
+    let sum = raw[i]!;
+    let n = 1;
+    for (const f of subdivided.faces) {
+      if (f[0] === i || f[1] === i || f[2] === i) {
+        for (const j of f) {
+          if (j !== i) {
+            sum += raw[j]!;
+            n += 1;
+          }
+        }
+      }
+    }
+    const k = (raw[i]! + sum / n) / 2;
     return [v[0] * k, v[1] * k, v[2] * k] as const;
-  }),
-);
+  });
+});
 
 /** How many segments a shadow is cut into along its length, so it follows the ground it lies on. */
 const SEGMENTS = 4;
@@ -56,9 +110,10 @@ const SEGMENTS = 4;
  */
 export function rockMesh(rocks: readonly Rock[], ground: (x: number, y: number) => number, sun: { azimuth: number; altitude: number }): RockMesh {
   const n = rocks.length;
-  const position = new Float32Array(n * 60 * 3);
-  const normal = new Float32Array(n * 60 * 3);
-  const tone = new Float32Array(n * 60);
+  const per = ROCK_VERTICES;
+  const position = new Float32Array(n * per * 3);
+  const normal = new Float32Array(n * per * 3);
+  const tone = new Float32Array(n * per);
   const shadowPosition = new Float32Array(n * (SEGMENTS + 1) * 2 * 3);
   const shadowUv = new Float32Array(n * (SEGMENTS + 1) * 2 * 2);
   const shadowIndex = new Uint32Array(n * SEGMENTS * 6);
@@ -71,7 +126,7 @@ export function rockMesh(rocks: readonly Rock[], ground: (x: number, y: number) 
   let sp = 0;
   let su = 0;
   let si = 0;
-  rocks.forEach((rock, index) => {
+  rocks.forEach((rock) => {
     const base = SHAPES[rock.shape]!;
     const half = rock.size / 2;
     const sx = half;
@@ -79,43 +134,31 @@ export function rockMesh(rocks: readonly Rock[], ground: (x: number, y: number) 
     const sy = half * rock.flat;
     const c = Math.cos(rock.turn);
     const s = Math.sin(rock.turn);
-    const lift = sy * 0.55;
+    // half buried: the middle is only a quarter of its height over the ground
+    const lift = sy * 0.25;
     const ground0 = ground(rock.x, rock.y);
-    const world = base.map(([vx, vy, vz]) => {
+    const corner = base.map(([vx, vy, vz]) => {
       const lx = vx * sx;
       const lz = vz * sz;
-      return [rock.x + lx * c - lz * s, ground0 + lift + vy * sy, rock.y + lx * s + lz * c] as const;
+      const ly = vy * sy;
+      // the smooth normal of the ellipsoid it is cut from, turned with the rock: a stone with lumps, not a die
+      const ex = vx / sx;
+      const ey = vy / sy;
+      const ez = vz / sz;
+      const l = Math.hypot(ex, ey, ez) || 1;
+      const nx0 = ex / l;
+      const nz0 = ez / l;
+      return { pos: [rock.x + lx * c - lz * s, ground0 + lift + ly, rock.y + lx * s + lz * c] as const, normal: [nx0 * c - nz0 * s, ey / l, nx0 * s + nz0 * c] as const };
     });
-    for (const [a, b, d] of FACES) {
-      const A = world[a]!;
-      const B = world[b]!;
-      const D = world[d]!;
-      const ux = B[0] - A[0];
-      const uy = B[1] - A[1];
-      const uz = B[2] - A[2];
-      const vx = D[0] - A[0];
-      const vy = D[1] - A[1];
-      const vz = D[2] - A[2];
-      // (up, north) are the scene's y and z; a face's normal points out of the rock
-      let nx = uy * vz - uz * vy;
-      let ny = uz * vx - ux * vz;
-      let nz = ux * vy - uy * vx;
-      const cx = (A[0] + B[0] + D[0]) / 3 - rock.x;
-      const cy = (A[1] + B[1] + D[1]) / 3 - (ground0 + lift);
-      const cz = (A[2] + B[2] + D[2]) / 3 - rock.y;
-      if (nx * cx + ny * cy + nz * cz < 0) {
-        nx = -nx;
-        ny = -ny;
-        nz = -nz;
-      }
-      const l = Math.hypot(nx, ny, nz) || 1;
-      for (const V of [A, B, D]) {
-        position[p++] = V[0];
-        position[p++] = V[1];
-        position[p++] = V[2];
-        normal[q++] = nx / l;
-        normal[q++] = ny / l;
-        normal[q++] = nz / l;
+    for (const [a, b, d] of subdivided.faces) {
+      for (const k of [a, b, d]) {
+        const v = corner[k]!;
+        position[p++] = v.pos[0];
+        position[p++] = v.pos[1];
+        position[p++] = v.pos[2];
+        normal[q++] = v.normal[0];
+        normal[q++] = v.normal[1];
+        normal[q++] = v.normal[2];
         tone[(p - 3) / 3] = rock.tone;
       }
     }
@@ -145,7 +188,6 @@ export function rockMesh(rocks: readonly Rock[], ground: (x: number, y: number) 
       shadowIndex[si++] = a + 3;
       shadowIndex[si++] = a + 2;
     }
-    void index;
   });
   return { position, normal, tone, count: n, shadowPosition, shadowUv, shadowIndex };
 }

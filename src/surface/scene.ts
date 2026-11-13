@@ -24,6 +24,10 @@ export interface SurfaceState {
   shadows?: boolean;
   /** Whether the made detail (craters, roughness) is there (default true). */
   detail?: boolean;
+  /** How much the draw spends on shadows: `full` (the default), `medium` or `fast` (the near march shortened, the made craters left out of it): a draw while the view moves is `fast`. */
+  quality?: "full" | "medium" | "fast";
+  /** Time the next draw to the end of the graphics queue (it waits for the card, so it is for a few draws, not every one). */
+  measure?: boolean;
 }
 
 /** The scene the shared renderer draws, with the one call that moves it. */
@@ -31,6 +35,8 @@ export interface SurfaceScene extends Scene3D {
   apply(state: SurfaceState): void;
   /** The rocks made round the eyes now. */
   readonly rocks: number;
+  /** How long the last measured draw took, in milliseconds, the card finished (asked for with `measure` in the state: a pixel is read back to wait for the card), or `undefined` before one. */
+  readonly drawMs: number | undefined;
   /** The mesh's size, for a test or a status line. */
   readonly mesh: { rings: number; rays: number; triangles: number };
 }
@@ -40,6 +46,8 @@ export interface SurfaceItemOptions {
   levels: readonly HeightLevel[];
   /** The ground picture's levels, where the site has them. */
   pictures?: readonly HeightLevel[];
+  /** The baked horizons (see the manifest's `horizon`), where the site has them. */
+  horizons?: readonly { id: string; width: number; height: number; data: Uint8Array }[];
   /** The ground's height at a point, metres east and north of the site, for the rocks to stand on: the measured heights, the made craters, the Moon's curve taken off. */
   groundY?(east: number, north: number): number;
   manifest: TerrainManifest;
@@ -135,6 +143,24 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           (texture) => texture.dispose(),
         ),
       );
+      const horizons = (options.horizons ?? []).map((h) =>
+        context.assets.acquire(
+          `surface:${manifest.site}:horizon:${h.id}`,
+          () => {
+            const texture = new T.DataTexture(h.data, h.width, h.height, T.RGBAFormat);
+            texture.minFilter = T.LinearFilter; // a smooth horizon between the cells; each colour is its own direction, so blending them is blending the same direction's neighbours
+            texture.magFilter = T.LinearFilter;
+            texture.wrapS = T.ClampToEdgeWrapping;
+            texture.wrapT = T.ClampToEdgeWrapping;
+            texture.generateMipmaps = false;
+            texture.flipY = false;
+            texture.needsUpdate = true;
+            return texture;
+          },
+          (texture) => texture.dispose(),
+        ),
+      );
+      const hz = manifest.horizon;
       const level = (i: number): { value: [number, number, number, number] } => {
         const l = options.levels[i]!;
         return { value: [l.half, l.res, l.size, BANDS[i] ?? Infinity] };
@@ -156,6 +182,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uShadows: { value: 1 },
         uHmin: { value: manifest.height.min },
         uHrange: { value: manifest.height.range },
+        uFarHeight: { value: new T.Vector2(options.levels[3]?.height?.min ?? manifest.height.min, options.levels[3]?.height?.range ?? manifest.height.range) },
         uGround: { value: manifest.ground },
         uRadius: { value: manifest.radius },
         uH0: { value: textures[0] },
@@ -166,6 +193,14 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uA1: { value: pictures[1] ?? textures[0] },
         uA2: { value: pictures[2] ?? textures[0] },
         uPicture: { value: pictures.length >= 3 ? 1 : 0 },
+        uZ0: { value: horizons[0] ?? textures[0] },
+        uZ1: { value: horizons[1] ?? textures[0] },
+        uZ2: { value: horizons[2] ?? textures[0] },
+        uHzOn: { value: horizons.length >= 3 && hz !== null && hz !== undefined ? 1 : 0 },
+        uHzSun: { value: new T.Vector3(0, 1, 0) },
+        uHzRange: { value: new T.Vector2(hz?.from ?? -10, hz?.to ?? 60) },
+        uSunDegrees: { value: 13 },
+        uNear: { value: new T.Vector3(56, 80, 36) },
         uPixel: { value: 0.0024 },
         uDetail: { value: 1 },
         uL0: level(0),
@@ -249,6 +284,8 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           shadowMeshObject!.geometry = shadowGeometry as never;
         }
       };
+      let measuring = false;
+      let drawMs: number | undefined;
       let aspect = context.width / Math.max(1, context.height);
       let pixelHeight = Math.max(1, context.height);
       let last: SurfaceState | undefined;
@@ -256,6 +293,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         last = state;
         const { eye, look, sky } = state;
         makeRocks(state);
+        measuring = state.measure === true;
         const world = new T.Vector3(eye.east, eye.up, -eye.north);
         const vp = viewProjection([world.x, world.y, world.z], look, aspect);
         (uniforms.uVP.value as Float32Array).set(vp);
@@ -271,6 +309,15 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uniforms.uAlbedo.value = state.albedo ?? 0.14;
         uniforms.uShadows.value = state.shadows === false ? 0 : 1;
         uniforms.uDetail.value = state.detail === false ? 0 : 1;
+        uniforms.uSunDegrees.value = sky.sun.altitude;
+        // the sector pair the Sun's azimuth lies between, in the baked horizon's eighteen directions
+        const sectors = hz?.sectors ?? 18;
+        const f = (((sky.sun.azimuth % 360) + 360) % 360) / (360 / sectors);
+        const a = Math.floor(f);
+        uniforms.uHzSun.value.set(a % sectors, (a + 1) % sectors, f - a);
+        const q = state.quality ?? "full";
+        const near = q === "full" ? [56, 80, 36] : q === "medium" ? [28, 40, 16] : [10, 14, 0];
+        uniforms.uNear.value.set(near[0]!, near[1]!, near[2]!);
         uniforms.uPixel.value = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelHeight;
         const axes = cameraAxes(look);
         const toEnu = (v: readonly [number, number, number]): [number, number, number] => [v[0], -v[2], v[1]];
@@ -294,12 +341,27 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         sun.mesh.visible = sky.sun.altitude > -1;
         earth.mesh.visible = sky.earth.altitude > -1;
       };
+      const camera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       return {
         scene,
-        camera: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1),
+        camera,
         mesh: { rings: RINGS, rays: RAYS, triangles },
         get rocks() {
           return rockCount;
+        },
+        get drawMs() {
+          return drawMs;
+        },
+        render(gl) {
+          const t0 = performance.now();
+          gl.render(scene, camera);
+          if (measuring) {
+            const canvas = gl.domElement;
+            // reading one pixel back waits for the card to finish the draw (`finish` returns at once in a browser that draws in another process)
+            const g = (canvas.getContext("webgl2") ?? canvas.getContext("webgl")) as WebGL2RenderingContext | null;
+            g?.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, new Uint8Array(4));
+            drawMs = performance.now() - t0;
+          }
         },
         apply: place,
         resize(width, height) {

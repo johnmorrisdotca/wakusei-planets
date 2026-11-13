@@ -1,7 +1,17 @@
 // The Moon's measured heights at a site, as the tile pyramid `scripts/make-moon-terrain.py` makes: square levels centred on the landing point, each a grid of 16 bit heights, the finest
 // first. Pure: no DOM; the decoding of a picture into bytes is the loader's (`load.ts`).
 
-/** One level of a site's pyramid, as the manifest says it. */
+/**
+ * One level of a site's pyramid, as the manifest says it.
+ *
+ * @example
+ * ```ts
+ * import { type HeightLevelInfo } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const info: HeightLevelInfo = { id: "h5", res: 5, tiles: 4, half: 512 };
+ * console.log(`${info.id}: ${info.tiles} x ${info.tiles} tiles, ${info.res} m apart, reaching ${info.half} m each way`);
+ * ```
+ */
 export interface HeightLevelInfo {
   /** The level's name: `h5`, `h20`, `h80`, `far`. */
   id: string;
@@ -11,9 +21,25 @@ export interface HeightLevelInfo {
   tiles: number;
   /** Half the level's width in metres: the square reaches this far east, west, north and south of the site. */
   half: number;
+  /** The range the level's heights are encoded over, where it is not the manifest's (the coarse level reaches over mountains and basins the site's range cannot hold). */
+  height?: { min: number; range: number };
 }
 
-/** What a site's `manifest.json` holds. */
+/**
+ * What a site's `manifest.json` holds.
+ *
+ * @example
+ * ```ts
+ * import { type TerrainManifest } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const manifest: TerrainManifest = {
+ *   version: 1, body: "moon", site: "apollo-17", name: { en: "Apollo 17", ja: "アポロ17号" },
+ *   lat: 20.1911, lon: 30.7723, radius: 1_737_400, tile: 256, height: { min: -2000, range: 4000 }, ground: -1930,
+ *   levels: [{ id: "h5", res: 5, tiles: 4, half: 512 }], credit: "made for this example", accuracy: "to the metre",
+ * };
+ * console.log(`${manifest.name.en}: ${manifest.levels.length} level, ${manifest.height.range} m of range`);
+ * ```
+ */
 export interface TerrainManifest {
   version: 1;
   body: "moon";
@@ -33,13 +59,25 @@ export interface TerrainManifest {
   levels: readonly HeightLevelInfo[];
   /** The ground picture, where the site has one: levels on the same grids as the first of the height levels, its credit and the Sun the mosaic was lit by (fitted to the heights; divided out). */
   picture?: { levels: readonly HeightLevelInfo[]; credit: string; sun: { azimuth: number; elevation: number; correlation: number } } | null;
+  /** The measured ground's shadows, baked: for each of the first three levels a picture of `cells` x `cells` cells by `sectors / 3` slabs side by side, three directions to a slab (red, green, blue), the elevation angle of the horizon in each, 8 bits over `from` to `to` degrees. */
+  horizon?: { cells: number; sectors: number; from: number; to: number; levels: readonly { id: string; file: string }[] } | null;
   /** The credit the page says beside the picture. */
   credit: string;
   /** How well the heights are known, in words, for the line the page shows. */
   accuracy: string;
 }
 
-/** The bytes of one level: `size` x `size` samples of four bytes (red high, green low), row 0 at the north edge. */
+/**
+ * The bytes of one level: `size` x `size` samples of four bytes (red high, green low), row 0 at the north edge.
+ *
+ * @example
+ * ```ts
+ * import { type HeightLevel } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const level: HeightLevel = { id: "h5", res: 5, tiles: 1, half: 10, size: 4, data: new Uint8Array(4 * 4 * 4) };
+ * console.log(`${level.size} x ${level.size} samples, ${level.data.length} bytes`);
+ * ```
+ */
 export interface HeightLevel extends HeightLevelInfo {
   size: number;
   data: Uint8Array;
@@ -89,10 +127,43 @@ export function placeTile(level: HeightLevel, tile: number, column: number, row:
   }
 }
 
-/** A height in metres from the two bytes the tiles hold. */
+/**
+ * A height in metres from the two bytes the tiles hold.
+ *
+ * @param high - The high byte, from the red of a pixel.
+ * @param low - The low byte, from the green of a pixel.
+ * @param height - The manifest's height encoding.
+ * @returns The height in metres from the sphere.
+ *
+ * @example
+ * ```ts
+ * import { decodeHeight } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * console.log(decodeHeight(128, 0, { min: -2000, range: 4000 }).toFixed(1));
+ * ```
+ */
 export const decodeHeight = (high: number, low: number, height: TerrainManifest["height"]): number => height.min + ((high * 256 + low) / 65535) * height.range;
 
-/** One level's height at a point in metres east and north of the site, bilinear, or `undefined` where the point is outside the level. */
+/**
+ * One level's height at a point in metres east and north of the site, bilinear, or `undefined` where the point is outside the level.
+ *
+ * @param level - The level to read.
+ * @param height - The manifest's height encoding (the level's own, where it has one, is used instead).
+ * @param x - Metres east of the site.
+ * @param y - Metres north of the site.
+ * @returns The height in metres from the sphere, or `undefined` outside the level.
+ *
+ * @example
+ * ```ts
+ * import { sampleLevel } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const height = { min: -2000, range: 4000 };
+ * const level = { id: "h5", res: 5, tiles: 1, half: 10, size: 4, data: new Uint8Array(4 * 4 * 4) };
+ * for (let i = 0; i < 16; i += 1) level.data[i * 4] = 128; // every sample 128 * 256 / 65535 of the range up
+ *
+ * console.log(sampleLevel(level, height, 0, 0)?.toFixed(2), sampleLevel(level, height, 100, 0));
+ * ```
+ */
 export function sampleLevel(level: HeightLevel, height: TerrainManifest["height"], x: number, y: number): number | undefined {
   const fx = (x + level.half) / level.res - 0.5;
   const fy = (level.half - y) / level.res - 0.5;
@@ -103,7 +174,7 @@ export function sampleLevel(level: HeightLevel, height: TerrainManifest["height"
   const ty = fy - y0;
   const at = (ix: number, iy: number): number => {
     const i = (iy * level.size + ix) * 4;
-    return decodeHeight(level.data[i]!, level.data[i + 1]!, height);
+    return decodeHeight(level.data[i]!, level.data[i + 1]!, level.height ?? height);
   };
   const top = at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx;
   const bottom = at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx;
@@ -118,6 +189,17 @@ export function sampleLevel(level: HeightLevel, height: TerrainManifest["height"
  * @param x - Metres east of the site.
  * @param y - Metres north of the site.
  * @returns The height in metres from the sphere, or `undefined` outside every level.
+ *
+ * @example
+ * ```ts
+ * import { groundAt } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const height = { min: -2000, range: 4000 };
+ * const level = { id: "h5", res: 5, tiles: 1, half: 10, size: 4, data: new Uint8Array(4 * 4 * 4) };
+ * for (let i = 0; i < 16; i += 1) level.data[i * 4] = 128;
+ *
+ * console.log(groundAt([level], height, 0, 0)?.toFixed(2), groundAt([level], height, 100, 0));
+ * ```
  */
 export function groundAt(levels: readonly HeightLevel[], height: TerrainManifest["height"], x: number, y: number): number | undefined {
   for (const level of levels) {
@@ -127,5 +209,18 @@ export function groundAt(levels: readonly HeightLevel[], height: TerrainManifest
   return undefined;
 }
 
-/** How far the ground at `distance` metres falls away from a plane tangent at the viewer's feet: the Moon is round. */
+/**
+ * How far the ground at `distance` metres falls away from a plane tangent at the viewer's feet: the Moon is round.
+ *
+ * @param distance - Metres from the viewer.
+ * @param radius - The body's radius in metres.
+ * @returns The fall in metres.
+ *
+ * @example
+ * ```ts
+ * import { drop } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * console.log(drop(1000, 1_737_400).toFixed(3));
+ * ```
+ */
 export const drop = (distance: number, radius: number): number => (distance * distance) / (2 * radius);

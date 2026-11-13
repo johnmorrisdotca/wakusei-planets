@@ -31,7 +31,17 @@ export function pcg2d(x: number, y: number): [number, number] {
 /** A hash cut to a number from 0 up to but not including 1, exact in 24 bits. */
 export const unit24 = (h: number): number => (h >>> 8) / 16777216;
 
-/** One crater: where its middle is (metres in the site's plane), its radius, how deep and how high its rim, how wide its rim, and how old (0 fresh, 1 worn flat). */
+/**
+ * One crater: where its middle is (metres in the site's plane), its radius, how deep and how high its rim, how wide its rim, and how old (0 fresh, 1 worn flat).
+ *
+ * @example
+ * ```ts
+ * import { craterProfile, type Crater } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const crater: Crater = { x: 0, y: 0, radius: 4, depth: 0.8, rim: 0.2, rimWidth: 0.3, age: 0.2 };
+ * console.log(`${craterProfile(crater, 0, 0).h.toFixed(2)} m at the middle`);
+ * ```
+ */
 export interface Crater {
   x: number;
   y: number;
@@ -43,7 +53,7 @@ export interface Crater {
 }
 
 /** The share of cells that hold a crater in an octave: many small, few large. */
-export const occupancy = (octave: number): number => 0.36 * Math.pow(2, -0.5 * octave);
+export const occupancy = (octave: number): number => (octave >= 3 ? 0.5 : 1) * 0.36 * Math.pow(2, -0.5 * octave);
 
 /**
  * The crater in a cell of an octave, or `undefined` for an empty cell.
@@ -51,13 +61,13 @@ export const occupancy = (octave: number): number => 0.36 * Math.pow(2, -0.5 * o
  * @param cx - The cell's column.
  * @param cy - The cell's row.
  * @param octave - 0 for the smallest (0.5 m) up.
- * @returns The crater.
+ * @returns The crater, or `undefined` when the cell holds none (most cells do not: see `occupancy`).
  *
  * @example
  * ```ts
  * import { craterIn } from "@johnmorrisdotca/wakusei-planets/surface";
  *
- * console.log(craterIn(3, -2, 2) ?? "no crater here");
+ * console.log(craterIn(4, -2, 3)?.radius.toFixed(2), craterIn(0, 0, 3));
  * ```
  */
 export function craterIn(cx: number, cy: number, octave: number): Crater | undefined {
@@ -67,20 +77,38 @@ export function craterIn(cx: number, cy: number, octave: number): Crater | undef
   const nominal = D0 * 2 ** octave;
   const cell = CELL * nominal;
   const diameter = nominal * (1 + (octave === OCTAVES - 1 ? 0.25 : 1) * unit24(d));
-  const age = ((a & 255) / 255) ** 2;
+  // most craters are old: of every hundred, about four are fresh (age under 0.15) and three in four are worn (over 0.7): soft, shallow, nearly rimless bowls
+  const r = (a & 255) / 255;
+  const age = 1 - r * r * r * r;
   const radius = diameter / 2;
+  const vary = 0.6 + 0.4 * ((c & 255) / 255);
   return {
     x: (cx + 0.25 + 0.5 * unit24(b)) * cell,
     y: (cy + 0.25 + 0.5 * unit24(c)) * cell,
     radius,
-    depth: 0.2 * diameter * (1 - 0.7 * age),
-    rim: 0.045 * diameter * (1 - age),
-    rimWidth: 0.22 + 0.3 * age,
+    depth: diameter * (0.2 - 0.17 * age) * vary,
+    rim: 0.045 * diameter * (1 - age) ** 1.5,
+    rimWidth: 0.22 + 0.5 * age,
     age,
   };
 }
 
-/** A crater's height at a point: the bowl, the soft rim. Also the slope along x and y. */
+/**
+ * A crater's height at a point: the bowl, the soft rim. Also the slope along x and y.
+ *
+ * @param c - The crater.
+ * @param px - Metres east of the site.
+ * @param py - Metres north of the site.
+ * @returns The height in metres (negative in the bowl, positive on the rim) and the slope along east (`gx`) and north (`gy`).
+ *
+ * @example
+ * ```ts
+ * import { craterProfile, type Crater } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const crater: Crater = { x: 0, y: 0, radius: 4, depth: 0.8, rim: 0.2, rimWidth: 0.3, age: 0.2 };
+ * console.log(craterProfile(crater, 0, 0).h.toFixed(2), craterProfile(crater, 4, 0).h.toFixed(2));
+ * ```
+ */
 export function craterProfile(c: Crater, px: number, py: number): { h: number; gx: number; gy: number } {
   const dx = px - c.x;
   const dy = py - c.y;
@@ -89,8 +117,11 @@ export function craterProfile(c: Crater, px: number, py: number): { h: number; g
   let h = 0;
   let dh = 0;
   if (x < 1) {
-    h = -c.depth * (1 - x * x);
-    dh = 2 * c.depth * x;
+    // a fresh bowl is a plain parabola with a sharp edge; a worn one has a flat rim and a slope that dies out at the edge, so no outline shows
+    const bowl = 1 - x * x;
+    const pw = 1 + c.age;
+    h = -c.depth * bowl ** pw;
+    dh = 2 * c.depth * pw * x * bowl ** c.age;
   }
   const e = (x - 1) / c.rimWidth;
   const rim = c.rim * Math.exp(-e * e);
@@ -154,7 +185,17 @@ export function madeGround(x: number, y: number, fromDiameter: number): { h: num
   return { h, gx, gy };
 }
 
-/** One rock: where it lies, how big (its longest side in metres), which of the three shapes, how it is turned, how bright it is, and how flat. */
+/**
+ * One rock: where it lies, how big (its longest side in metres), which of the three shapes, how it is turned, how bright it is, and how flat.
+ *
+ * @example
+ * ```ts
+ * import { rocksAround, type Rock } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const rock: Rock | undefined = rocksAround(0, 0, 20, 0.0024)[0];
+ * console.log(rock?.size.toFixed(2), rock?.shape);
+ * ```
+ */
 export interface Rock {
   x: number;
   y: number;
@@ -172,7 +213,20 @@ export const ROCK_CLASSES = 6;
 const ROCK_DENSITY = 0.8;
 const ROCK_CELL = 6;
 
-/** How much denser the rocks are at a point for fresh crater rims near it: 1 away from any, up to 5 on a young crater's rim. */
+/**
+ * How much denser the rocks are at a point for fresh crater rims near it: 1 away from any, up to 5 on a young crater's rim.
+ *
+ * @param x - Metres east of the site.
+ * @param y - Metres north of the site.
+ * @returns A factor from 1 (no young rim near) up to 5 (on one).
+ *
+ * @example
+ * ```ts
+ * import { rimBoost } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * console.log(rimBoost(0, 0), rimBoost(51, -19) >= 1);
+ * ```
+ */
 export function rimBoost(x: number, y: number): number {
   let boost = 1;
   for (let octave = 2; octave < OCTAVES; octave += 1) {
@@ -218,7 +272,7 @@ export function rocksAround(cx: number, cy: number, radius: number, pixel: numbe
     for (let i = i0; i <= i1; i += 1) {
       for (let k = 0; k < ROCK_CLASSES; k += 1) {
         const [a, b] = pcg2d((i | 0) >>> 0, ((j | 0) + k * 6151 + 1000003) >>> 0);
-        const lambda = ROCK_DENSITY * ROCK_CELL * ROCK_CELL * 0.35 ** k;
+        const lambda = ROCK_DENSITY * ROCK_CELL * ROCK_CELL * 0.3 ** k;
         let count = Math.floor(lambda);
         if (unit24(a) < lambda - count) count += 1;
         for (let n = 0; n < Math.min(count, 48); n += 1) {
@@ -231,7 +285,7 @@ export function rocksAround(cx: number, cy: number, radius: number, pixel: numbe
           if (size < 3 * dist * pixel) continue;
           // fewer where the rims are not near: two fifths of what is dealt on the plain, all of it by a young rim
           const boost = rimBoost(x, y);
-          if (unit24(pcg2d(c, d)[0]) > 0.4 * boost) continue;
+          if (unit24(pcg2d(c, d)[0]) > 0.3 * boost) continue;
           const [e, f] = pcg2d(c ^ 0x9e3779b9, d + 17);
           out.push({ x, y, size, shape: e % 3, turn: unit24(f) * Math.PI * 2, tone: 0.75 + 0.5 * unit24(e >>> 3), flat: 0.45 + 0.4 * unit24(f >>> 5) });
         }
