@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.44.1] - 2026-11-13
+
+- **Few names on a small body** (MODULES-1231). On a phone the Moon at 49 px of radius had five names laid across it, wider than the disc. A name is now written only from 70 px of radius (`MARK_RULES.nameFromPx`), comes in over the next 20 px, at most one to every 20 px of radius, and never wider than the disc.
+
+- **Written names are not Tab stops** (MODULES-1275). With names on by default every name was a stop between the view and its controls. A name that only names is out of the Tab order; Tab reaches the view and the arrow keys turn it, with no click, on the body page, the space view and the embed page (tested), and an element added with no `tabindex` is a stop all the same.
+
+- **The 1980 craft step waits for a draw after the date change** (MODULES-1274, test only): it read the drawn list from the draw before the change.
+
 ## [0.44.0] - 2026-11-13
 
 - **Names of the great features are written on a body** (MODULES-1231). When the body looked at is big enough, `surface-names` (on unless `off`) writes its most important named features on the surface: fame first, then size (`placeRank`). They face the camera, fade at the limb, and stay apart so they do not crowd: a name is not written over a dot of the places asked for, a craft or another body's dot, another body's name, or another feature name, and gives way when it would be. A number is how many. A press sends `wakusei-place`. Nothing is drawn for a name.
