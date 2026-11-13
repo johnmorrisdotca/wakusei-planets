@@ -58,6 +58,25 @@ test.describe("with reduced motion the descent is a cut", () => {
     expect(await page.locator("#land").isVisible()).toBe(true);
   });
 
+  test("land with watch: \"landing\" starts Apollo 17's descent once the ground is down: the clock at T+4:00, the lander window, the clock events reaching the orbit view", async ({ page }) => {
+    test.setTimeout(300_000);
+    await open(page);
+    const result = await page.locator("#orbit").evaluate(async (el) => {
+      const orbit = el as Orbit;
+      const clocks: number[] = [];
+      orbit.addEventListener("wakusei-landing-clock", (event) => clocks.push(Math.round((event as CustomEvent).detail.t)));
+      const surface = (await orbit.land("apollo-17", { tiles: "tiles/", watch: "landing", watchCamera: "lander" })) as HTMLElement & { landing?: { t: number; camera: string; playing: boolean }; pauseLanding(): void };
+      const at = { ...surface.landing! };
+      surface.pauseLanding();
+      return { at, first: clocks[0], heard: clocks.length > 0 };
+    });
+    expect(result.at.camera).toBe("lander");
+    expect(result.at.t).toBeGreaterThanOrEqual(240);
+    expect(result.at.t).toBeLessThan(300);
+    expect(result.heard, "the clock events come up to the orbit view's own element").toBe(true);
+    await page.evaluate(() => (document.querySelector("#orbit") as Orbit).leave());
+  });
+
   test("a site that does not exist is refused, and nothing is left over the orbit view", async ({ page }) => {
     await open(page);
     const result = await page.locator("#orbit").evaluate(async (el) => {

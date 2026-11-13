@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
 import { driveParts, driveStep, driveView, ROVER, startDrive, type DriveState } from "../src/surface/drive.ts";
 import { DustField } from "../src/surface/dust.ts";
+import { calloutsBy, CALLOUTS, clockText, LANDING as DESCENT, landingAt } from "../src/surface/landing.ts";
 import { keepAway, objectParts, objectsOf, partShadows, traverseOf } from "../src/surface/objects.ts";
 import { craterIn, craterProfile, setKeepOut, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
 import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
@@ -533,4 +534,63 @@ test("a thrown grain flies a parabola at the Moon's gravity and lands where it s
   const other = new DustField(8, 6);
   other.emit([0, 0.3, 0], [2, 1.5, 0], 10);
   assert.notEqual(other.velocity[0], again.velocity[0], "another seed scatters differently");
+});
+
+test("the descent goes through the moments the report prints: the start state, the altitudes it names, and touchdown at about 3 ft/s", () => {
+  const FT = 0.3048;
+  const start = landingAt(0);
+  assert.ok(Math.abs(start.altitude - 8.7 * 1852) < 1, "8.7 nautical miles at ignition");
+  assert.ok(Math.abs(start.speed - 5550.3 * FT) < 1, "5,550.3 ft/s at ignition");
+  assert.ok(Math.abs(landingAt(255).altitude - 30_000 * FT) < 1, "30,000 ft after the radar locked");
+  assert.ok(Math.abs(landingAt(500).altitude - 13_000 * FT) < 1, "13,000 ft: the South Massif in the window");
+  assert.ok(Math.abs(landingAt(562).altitude - 7_500 * FT) < 1, "about 7,500 ft at the high gate (the approach phase at T+9:22)");
+  const end = landingAt(DESCENT.duration);
+  assert.equal(end.altitude, 0);
+  const down = landingAt(DESCENT.duration - 0.5).descent;
+  assert.ok(down > 0.6 && down < 1.3, `about 3 ft/s (0.9 m/s) down at touchdown: ${down}`);
+  assert.ok(end.speed < 1, "near zero along the ground");
+  assert.equal(DESCENT.duration, 12 * 60 + 5, "12:05 after ignition");
+  // 110:09:53 plus 12:05 is 110:21:58, which was 19:54:57 UTC
+  assert.equal(new Date(DESCENT.ignition + DESCENT.duration * 1000).toISOString(), "1972-12-11T19:54:57.000Z");
+  assert.deepEqual(clockText(0), { t: "T+00:00", get: "110:09:53" });
+  assert.equal(clockText(725).get, "110:21:58");
+});
+
+test("the made curve between the moments never rises or speeds up, and covers the real distance from ignition to touchdown", () => {
+  let altitude = Infinity;
+  let speed = Infinity;
+  for (let t = 0; t <= DESCENT.duration; t += 1) {
+    const p = landingAt(t);
+    assert.ok(p.altitude <= altitude + 1e-6, `altitude rose at ${t}`);
+    assert.ok(p.speed <= speed + 1e-6, `speed rose at ${t}`);
+    altitude = p.altitude;
+    speed = p.speed;
+    assert.ok(p.descent >= -1e-6, `rising at ${t}`);
+  }
+  // the ground still to go at ignition is the distance from the start place to the touchdown: about 514 km on a sphere of 1,737.4 km
+  assert.ok(Math.abs(landingAt(0).toGo / 1000 - 514) < 3, `${landingAt(0).toGo / 1000} km`);
+  // it flies west: it arrives from the east, a little to the south of the site
+  const first = landingAt(0);
+  assert.ok(first.east > 500_000 && first.north < 0, "the start is far to the east of the touchdown");
+  assert.ok(first.heading > 265 && first.heading < 280, `heading ${first.heading}`);
+  // the distance to go is the integral of the speed
+  let integral = 0;
+  for (let t = 0; t < DESCENT.duration; t += 0.5) integral += (landingAt(t).speed + landingAt(t + 0.5).speed) / 2 * 0.5;
+  assert.ok(Math.abs(integral - landingAt(0).toGo) / landingAt(0).toGo < 0.01, "the speed adds up to the distance");
+});
+
+test("the events come in order, the report's times are the table's, and the altitude events are placed on the curve", () => {
+  const times = CALLOUTS.map((c) => c.t);
+  assert.deepEqual([...times].sort((a, b) => a - b), times, "in order");
+  const at = (id: string) => CALLOUTS.find((c) => c.id === id)!;
+  assert.equal(at("high-gate").t, 9 * 60 + 22);
+  assert.equal(at("low-gate").t, 10 * 60 + 58);
+  assert.equal(at("throttle").t, 7 * 60 + 26);
+  assert.equal(at("touchdown").t, 12 * 60 + 5);
+  assert.ok(Math.abs(landingAt(at("high-gate").t).altitude - 7_500 * 0.3048) < 1, "the high gate is where the report puts the pitchover, about 7,500 ft");
+  assert.equal(at("dust").reported, false);
+  assert.ok(Math.abs(landingAt(at("dust").t).altitude - 70 * 0.3048) < 1.5, "dust at 60 to 70 ft");
+  assert.ok(Math.abs(landingAt(at("manual").t).altitude - 300 * 0.3048) < 3, "manual takeover just under 300 ft");
+  assert.deepEqual(calloutsBy(600).map((c) => c.id), ["ignition", "full", "radar", "throttle", "high-gate", "redesignation"]);
+  assert.equal(calloutsBy(725).length, CALLOUTS.length);
 });

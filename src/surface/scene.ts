@@ -4,8 +4,9 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { ThreeParts } from "../scene/body.ts";
 import { rocksAround } from "./detail.ts";
-import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX, DUST_FRAGMENT, DUST_VERTEX } from "./glsl.ts";
+import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX, DUST_FRAGMENT, DUST_VERTEX, PLUME_FRAGMENT, PLUME_VERTEX } from "./glsl.ts";
 import { driveParts, type DriveState } from "./drive.ts";
+import { placePart, ascentParts, landerParts } from "./shapes.ts";
 import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
 import type { MoonSky } from "./sky.ts";
@@ -34,6 +35,8 @@ export interface SurfaceState {
   vehicle?: DriveState;
   /** The path the driven rover has left, east, north, east, north, ... in metres: drawn as tracks. */
   trail?: readonly number[];
+  /** The lunar module coming down (Apollo 17's descent): where it is, how high over the ground under it, which way it flies and the share of full thrust; drawn whole, with its plume, in place of the one standing at its place. */
+  lander?: { east: number; north: number; altitude: number; heading: number; throttle: number; inside?: boolean };
   /** The grains of dust in flight, east, up, north for each (`DustField.position`), drawn as small squares. */
   dust?: Float32Array;
   /** Whether the things at the site (the lander, the rover, the flag, the station) and the rover's tracks are drawn (default true; the made ground keeps away from them while they are). */
@@ -318,7 +321,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         if (objectShadowMesh !== undefined) objectShadowMesh.visible = on;
         if (trackMesh !== undefined) trackMesh.visible = on;
         if (!on || ground === undefined) return;
-        const key = `${state.sky.sun.azimuth.toFixed(1)}|${state.sky.sun.altitude.toFixed(1)}|${objectVersion}|${driving}|${state.shadows !== false}`;
+        const key = `${state.sky.sun.azimuth.toFixed(1)}|${state.sky.sun.altitude.toFixed(1)}|${objectVersion}|${driving}|${state.shadows !== false}|${state.lander !== undefined}`;
         if (key === objectKey) return;
         objectKey = key;
         const position: number[] = [];
@@ -328,6 +331,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const shadow: number[] = [];
         for (const object of list) {
           if (driving && object.kind === "rover") continue;
+          if (state.lander !== undefined && object.kind === "lander") continue;
           const base = ground(object.east, object.north);
           const parts: Part[] = objectParts(object, base);
           for (const part of parts) {
@@ -537,7 +541,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       // the dust: one small square for each grain in the pool, in the corners of a fixed set of triangles
       let dustMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
       let dustMaterial: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
-      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.022 } };
+      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.022 }, uEyeWorld: { value: new T.Vector3() }, uMinAngle: { value: 0 } };
       const makeDust = (state: SurfaceState): void => {
         const grains = state.dust;
         if (grains === undefined) {
@@ -570,7 +574,96 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const axes = cameraAxes(state.look);
         dustUniforms.uRight.value.set(axes.right[0], axes.right[1], axes.right[2]);
         dustUniforms.uUp.value.set(axes.up[0], axes.up[1], axes.up[2]);
+        dustUniforms.uSize.value = state.lander === undefined ? 0.022 : 0.09;
+        dustUniforms.uEyeWorld.value.set(state.eye.east, state.eye.up, -state.eye.north);
+        dustUniforms.uMinAngle.value = state.lander === undefined ? 0 : 2.6 * fullPixel; // seen from far off a grain still shows as about two pixels // a blast's grains are thrown wider and bigger than a wheel's
         dustMesh.visible = true;
+      };
+      // the lunar module coming down: its parts placed at each draw (a few thousand corners), its shadow on the ground far below it, and its plume
+      let landerMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let landerShadow: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let plumeMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let plumeMaterial: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
+      const plumeUniforms = { uVP: uniforms.uVP, uBell: { value: new T.Vector3() }, uLength: { value: 5 }, uRadius: { value: 2 }, uPlume: { value: 1 } };
+      const landerLocal = [...landerParts(), ...ascentParts()];
+      const landerVertices = landerLocal.reduce((n, part) => n + part.position.length / 3, 0);
+      const makeLander = (state: SurfaceState): void => {
+        const l = state.lander;
+        const groundOf = options.groundY;
+        if (l === undefined || groundOf === undefined) {
+          if (landerMesh !== undefined) landerMesh.visible = false;
+          if (landerShadow !== undefined) landerShadow.visible = false;
+          if (plumeMesh !== undefined) plumeMesh.visible = false;
+          return;
+        }
+        const base = groundOf(l.east, l.north);
+        const turn = (l.heading * Math.PI) / 180;
+        const parts = landerLocal.map((part) => placePart(part, l.east, base + l.altitude, l.north, turn));
+        if (landerMesh === undefined) {
+          const geometry = new T.BufferGeometry();
+          geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(landerVertices * 3), 3));
+          geometry.setAttribute("normal", new T.BufferAttribute(new Float32Array(landerVertices * 3), 3));
+          const tone = new Float32Array(landerVertices);
+          const tint = new Float32Array(landerVertices * 3);
+          let at = 0;
+          for (const part of parts) {
+            for (let i = 0; i < part.position.length / 3; i += 1) {
+              tone[at] = part.tone;
+              tint.set(part.colour ?? [1, 1, 1], at * 3);
+              at += 1;
+            }
+          }
+          geometry.setAttribute("tone", new T.BufferAttribute(tone, 1));
+          geometry.setAttribute("tint", new T.BufferAttribute(tint, 3));
+          landerMesh = new T.Mesh(geometry as never, objectMaterial);
+          landerMesh.frustumCulled = false;
+          landerMesh.renderOrder = 1;
+          scene.add(landerMesh);
+          // the plume: a fixed cone of 24 by 12 corners, sized and placed by uniforms
+          const pos: number[] = [];
+          const index: number[] = [];
+          for (let j = 0; j <= 12; j += 1) for (let i = 0; i <= 24; i += 1) pos.push(i / 24, j / 12, 0);
+          for (let j = 0; j < 12; j += 1) for (let i = 0; i < 24; i += 1) index.push(j * 25 + i, j * 25 + i + 1, (j + 1) * 25 + i, j * 25 + i + 1, (j + 1) * 25 + i + 1, (j + 1) * 25 + i);
+          const cone = new T.BufferGeometry();
+          cone.setAttribute("position", new T.BufferAttribute(new Float32Array(pos), 3));
+          cone.setIndex(new T.BufferAttribute(new Uint16Array(index), 1));
+          plumeMaterial = new T.ShaderMaterial({ vertexShader: PLUME_VERTEX, fragmentShader: PLUME_FRAGMENT, uniforms: plumeUniforms, transparent: true, depthWrite: false, side: 2 });
+          plumeMesh = new T.Mesh(cone as never, plumeMaterial);
+          plumeMesh.frustumCulled = false;
+          plumeMesh.renderOrder = 4;
+          scene.add(plumeMesh);
+        }
+        const position = landerMesh.geometry.getAttribute("position");
+        const normal = landerMesh.geometry.getAttribute("normal");
+        let at = 0;
+        for (const part of parts) {
+          (position.array as Float32Array).set(part.position, at * 3);
+          (normal.array as Float32Array).set(part.normal, at * 3);
+          at += part.position.length / 3;
+        }
+        position.needsUpdate = true;
+        normal.needsUpdate = true;
+        landerMesh.visible = l.inside !== true;
+        const shadow = state.shadows === false ? [] : partShadows(parts, base, state.sky.sun.azimuth, state.sky.sun.altitude);
+        const shadowGeometry = new T.BufferGeometry();
+        shadowGeometry.setAttribute("position", new T.BufferAttribute(new Float32Array(shadow), 3));
+        shadowGeometry.setAttribute("uv", new T.BufferAttribute(new Float32Array((shadow.length / 3) * 2).map((_, i) => (i % 2 === 1 ? 0 : 0.5)), 2));
+        if (landerShadow === undefined) {
+          landerShadow = new T.Mesh(shadowGeometry as never, shadowMaterial);
+          landerShadow.frustumCulled = false;
+          landerShadow.renderOrder = 2;
+          scene.add(landerShadow);
+        } else {
+          landerShadow.geometry.dispose();
+          landerShadow.geometry = shadowGeometry as never;
+        }
+        landerShadow.visible = true;
+        // the bell's exit is 0.3 m up; the plume reaches farther and wider the harder the engine works
+        plumeUniforms.uBell.value.set(l.east, base + l.altitude + 0.3, l.north);
+        plumeUniforms.uLength.value = 3 + 9 * l.throttle;
+        plumeUniforms.uRadius.value = 1.3 + 2.6 * l.throttle;
+        plumeUniforms.uPlume.value = l.throttle;
+        plumeMesh!.visible = l.throttle > 0.02 && l.inside !== true;
       };
       let measuring = false;
       let drawMs: number | undefined;
@@ -586,6 +679,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         makeRocks(state);
         makeObjects(state);
         makeVehicle(state);
+        makeLander(state);
         makeTrail(state);
         makeDust(state);
         measuring = state.measure === true;
@@ -720,6 +814,10 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           vehicleShadow?.geometry.dispose();
           trailMesh?.geometry.dispose();
           dustMesh?.geometry.dispose();
+          landerMesh?.geometry.dispose();
+          landerShadow?.geometry.dispose();
+          plumeMesh?.geometry.dispose();
+          plumeMaterial?.dispose();
           trailMaterialDriven?.dispose();
           dustMaterial?.dispose();
           objectMaterial.dispose();

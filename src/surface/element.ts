@@ -9,6 +9,7 @@ import { TILES_BASE } from "../scene/textures.ts";
 import { madeGround, rocksAround, setKeepOut, standingPlace } from "./detail.ts";
 import { driveStep, driveView, ROVER, startDrive, toWorld, type DriveState } from "./drive.ts";
 import { DustField } from "./dust.ts";
+import { calloutsBy, clockText, LANDING, landingAt, type Callout } from "./landing.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
 import { createSurfaceItem, type SurfaceScene } from "./scene.ts";
@@ -48,10 +49,20 @@ const TEMPLATE = `<style>
 .label[aria-pressed="true"] { background: rgba(255, 255, 255, 0.85); color: #10141c; }
 #about { position: absolute; left: 8px; right: 8px; top: 8px; margin: 0; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.62); color: #e8ecf2; font: 400 12px/1.4 system-ui, sans-serif; pointer-events: none; max-width: 32em; }
 #about[hidden] { display: none; }
+#landing { position: absolute; inset: 8px; margin: 0; color: #e8ecf2; font: 400 12px/1.4 system-ui, sans-serif; text-shadow: 0 1px 2px #000; pointer-events: none; }
+#landing[hidden] { display: none; }
+#clock { margin: 0 0 4px; font-weight: 600; }
+#callouts { margin: 0; padding: 0; list-style: none; }
+#callouts li { opacity: 0.75; }
+#callouts li:last-child { opacity: 1; font-weight: 600; }
+#marker { position: absolute; left: 0; top: 0; width: 24px; height: 24px; margin: -12px 0 0 -12px; box-sizing: border-box; border: 1.5px solid rgba(255, 255, 255, 0.9); border-radius: 50%; box-shadow: 0 0 3px #000; pointer-events: none; will-change: transform; }
+#markerText { position: absolute; left: 0; top: 0; margin: 0; font: 600 11px/1.2 system-ui, sans-serif; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; white-space: nowrap; pointer-events: none; will-change: transform; }
+#marker[hidden], #markerText[hidden] { display: none; }
+#curve { position: absolute; left: 0; right: 0; bottom: 50px; margin: 0; font-size: 11px; color: #c8ccd4; }
 #stick { position: absolute; left: 18px; bottom: 44px; width: 104px; height: 104px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); touch-action: none; }
 #stick[hidden] { display: none; }
 #knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); pointer-events: none; }
-</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="labels"></div><p id="about" role="status" hidden></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
+</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="labels"></div><div id="landing" hidden><span id="marker" hidden></span><span id="markerText" hidden></span><p id="clock"></p><ul id="callouts"></ul><p id="curve"></p></div><p id="about" role="status" hidden></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
 
 const num = (value: string | null, fallback: number): number => {
   const n = value === null || value.trim() === "" ? NaN : Number(value);
@@ -78,7 +89,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera", "watch", "watch-from", "watch-camera"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -134,6 +145,11 @@ export class WakuseiSurface extends HTMLElement {
   #dust = new DustField(900, 17);
   #blockers: { x: number; y: number; r: number }[] = [];
   #blockersAt: { east: number; north: number } | undefined;
+  /** The descent being watched (`watch="landing"`): the clock in seconds from ignition, whether it runs, how fast, which camera, where the ground camera stands, and how far the callouts have got. */
+  #landing: { t: number; playing: boolean; rate: number; camera: "lander" | "ground"; from: { distance: number; bearing: number }; passed: number; second: number } | undefined;
+  #landingTimer: ReturnType<typeof setTimeout> | undefined;
+  #landingAt = 0;
+  #landingEyeUp = 0;
   #stickPointer = -1;
   #pointers = new Map<number, { x: number; y: number }>();
   #pinch = 0;
@@ -188,9 +204,9 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /** Numbers for a test or a status line: the draws, the tiles, the renderer's own counts, the mesh, the quality of the last draw and the milliseconds of the last measured one. */
-  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number } {
+  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; landing: { t: number; playing: boolean; camera: string; altitude: number; speed: number } | undefined; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number } {
     const scene = this.#view?.scene as SurfaceScene | undefined;
-    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
+    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, landing: this.landing, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
   }
 
   /** The quality of the next draw: the `quality` attribute, or in `auto` the quality of motion while the view moves and the machine's own quality of rest otherwise. */
@@ -243,6 +259,7 @@ export class WakuseiSurface extends HTMLElement {
     this.#abort?.abort();
     clearTimeout(this.#flush);
     this.#flush = undefined;
+    clearTimeout(this.#landingTimer);
     this.#gate?.cancel();
     clearTimeout(this.#walkTimer);
     for (const [type, fn] of [["pointerdown", this.#onPointerDown], ["pointermove", this.#onPointerMove], ["pointerup", this.#onPointerUp], ["pointercancel", this.#onPointerUp], ["wheel", this.#onWheel], ["keydown", this.#onKeyDown], ["keyup", this.#onKeyUp], ["blur", this.#onBlur]] as const) this.removeEventListener(type, fn as EventListener);
@@ -257,6 +274,10 @@ export class WakuseiSurface extends HTMLElement {
     if (!this.isConnected) return;
     if (name === "drive") {
       this.#syncDrive();
+      return;
+    }
+    if (name === "watch" || name === "watch-from" || name === "watch-camera") {
+      this.#syncLanding(name !== "watch");
       return;
     }
     if (name === "drive-camera") {
@@ -350,6 +371,7 @@ export class WakuseiSurface extends HTMLElement {
       this.#at = { east: stand.x, north: stand.y };
       this.#placed = true;
       this.#syncDrive();
+      this.#syncLanding();
     }
     if (this.#view === undefined) {
       if (this.#renderer === undefined) {
@@ -437,6 +459,7 @@ export class WakuseiSurface extends HTMLElement {
   /** The eyes' height over the site's origin: the ground under them (the made craters too: the feet follow them) and a person's height. */
   #eyeUp(): number {
     if (this.#vehicle !== undefined) return this.#driveEyeUp;
+    if (this.#landing !== undefined) return this.#landingEyeUp;
     return this.#groundAt(this.#at.east, this.#at.north) + EYE_HEIGHT;
   }
 
@@ -484,7 +507,7 @@ export class WakuseiSurface extends HTMLElement {
     const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
     if (measure && !this.#moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, trail: this.#trail, dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
     this.#placeLabels();
@@ -623,6 +646,225 @@ export class WakuseiSurface extends HTMLElement {
     return true;
   }
 
+  // --- watching the landing (`watch="landing"`): Apollo 17's powered descent from the lunar module's window or from the ground ---------------------------------------------------------------------
+
+  /** The descent being watched: its clock in seconds from ignition, whether it runs, the camera and what the lunar module is doing at that moment; `undefined` when it is not watched. */
+  get landing(): { t: number; playing: boolean; rate: number; camera: "lander" | "ground"; altitude: number; speed: number; descent: number } | undefined {
+    const l = this.#landing;
+    if (l === undefined) return undefined;
+    const pose = landingAt(l.t);
+    return { t: l.t, playing: l.playing, rate: l.rate, camera: l.camera, altitude: pose.altitude, speed: pose.speed, descent: pose.descent };
+  }
+
+  /** The clock of the descent, in seconds from ignition (0 to 725). Setting it goes there at once, whether it runs or not. */
+  get landingTime(): number {
+    return this.#landing?.t ?? 0;
+  }
+  set landingTime(value: number) {
+    const l = this.#landing;
+    if (l === undefined) return;
+    const old = l.t;
+    l.t = Math.min(LANDING.duration, Math.max(0, value));
+    // a seek forward announces the latest moment it passes (the picture lists the last three); a step of a second or less carries the dust on, a jump or a step back starts it afresh
+    const delta = l.t - old;
+    if (delta < 0 || delta > 1) this.#dust = new DustField(20000, 17);
+    this.#landingAt = performance.now();
+    this.#landingFrame(delta > 0 && delta <= 1 ? delta : 0, true);
+  }
+
+  /** How fast the descent runs: 1 is the real time of it (12 minutes 5 seconds); 2, 4 and 8 are quicker. */
+  get landingRate(): number {
+    return this.#landing?.rate ?? 1;
+  }
+  set landingRate(value: number) {
+    if (this.#landing !== undefined) this.#landing.rate = Math.min(16, Math.max(0.25, value));
+  }
+
+  /** Run the descent from where the clock is (from the start again if it had ended). */
+  playLanding(): void {
+    const l = this.#landing;
+    if (l === undefined) return;
+    if (l.t >= LANDING.duration) this.landingTime = l.camera === "ground" ? 540 : LANDING.viewStart;
+    l.playing = true;
+    this.#landingAt = performance.now();
+    this.#landingTick();
+  }
+
+  /** Hold the descent where it is. */
+  pauseLanding(): void {
+    if (this.#landing === undefined) return;
+    this.#landing.playing = false;
+    clearTimeout(this.#landingTimer);
+    this.#landingFrame(0, true);
+  }
+
+  /** The touchdown point: where the lunar module stands at Apollo 17 (the published place), or the site point where it has none. */
+  #touchdown(): { east: number; north: number } {
+    const lm = this.#objects.find((o) => o.kind === "lander");
+    return lm === undefined ? { east: 0, north: 0 } : { east: lm.east, north: lm.north };
+  }
+
+  /** The lunar module as the scene draws it now: its place, its height over the ground under it, its heading and its thrust. */
+  #landerState(): { east: number; north: number; altitude: number; heading: number; throttle: number; inside: boolean } {
+    const l = this.#landing!;
+    const pose = landingAt(l.t);
+    const td = this.#touchdown();
+    return { east: td.east + pose.east, north: td.north + pose.north, altitude: pose.altitude, heading: pose.heading, throttle: l.t >= LANDING.duration ? 0 : pose.throttle, inside: l.camera === "lander" };
+  }
+
+  /** Start or stop watching as the `watch` attribute says; `again` re-reads the camera and the place the ground camera stands at. */
+  #syncLanding(again = false): void {
+    const on = this.getAttribute("watch") === "landing" && this.#terrain !== undefined && this.#placed;
+    if (!on) {
+      if (this.#landing === undefined) return;
+      this.#landing = undefined;
+      clearTimeout(this.#landingTimer);
+      this.#root.getElementById("landing")!.hidden = true;
+      this.#readAttributes();
+      const td = this.#touchdown();
+      this.#at = { east: td.east, north: td.north };
+      this.#changed();
+      return;
+    }
+    const camera = this.getAttribute("watch-camera") === "ground" ? "ground" : "lander";
+    const [distance, bearing] = (this.getAttribute("watch-from") ?? "150 0").split(/[\s,]+/).map(Number);
+    const from = { distance: Number.isFinite(distance) ? distance! : 150, bearing: Number.isFinite(bearing) ? bearing! : 0 };
+    if (this.#landing !== undefined) {
+      if (!again) return;
+      if (this.#landing.camera !== camera) this.#look = clampLook({ ...this.#look, fov: camera === "ground" ? 27 : 74 });
+      this.#landing.camera = camera;
+      this.#landing.from = from;
+      this.#camOffset = { azimuth: 0, pitch: 0 };
+      this.#landingFrame(0, true);
+      return;
+    }
+    this.#landing = { t: camera === "ground" ? 540 : LANDING.viewStart, playing: true, rate: 1, camera, from, passed: 0, second: -1 };
+    this.#landing.passed = calloutsBy(this.#landing.t).length;
+    this.#dust = new DustField(20000, 17);
+    this.#camOffset = { azimuth: 0, pitch: 0 };
+    for (const el of this.#labelEls.values()) el.hidden = true;
+    this.choose(undefined);
+    this.#root.getElementById("landing")!.hidden = false;
+    this.#root.getElementById("curve")!.textContent = this.#lang() === "ja" ? "報告された時刻のあいだの高度と速度は、こちらで作った滑らかな曲線です。" : "Altitude and speed between the reported moments are a smooth curve of ours.";
+    if (camera === "ground") this.#look = clampLook({ ...this.#look, fov: 27 });
+    this.#landingAt = performance.now();
+    this.#landingFrame(0, true);
+    this.#landingTick();
+  }
+
+  /** The frame of the descent at the clock: the eyes of the chosen camera, the sky of that real moment, the dust of the blast, the words on the picture and the event for a page; `seconds` is how far the clock has just moved. */
+  #landingFrame(seconds: number, announce: boolean): void {
+    const l = this.#landing;
+    if (l === undefined) return;
+    const pose = landingAt(l.t);
+    const td = this.#touchdown();
+    const ground = (e: number, n: number): number => this.#groundAt(e, n);
+    const [lx, ly] = [td.east + pose.east, td.north + pose.north];
+    const lz = ground(lx, ly);
+    this.#time = LANDING.ignition + l.t * 1000;
+    // the dust of the blast: from the altitude the Commander first saw it (60 to 70 ft), outward along the ground from under the engine, faster the nearer the ground
+    if (seconds > 0 && pose.altitude < 21.3 && l.t < LANDING.duration) {
+      // the report's dust is a low sheet driven outward along the ground, thickest in the last metres: most grains leave nearly flat and fast, a few higher
+      const strength = Math.pow(1 - pose.altitude / 21.3, 0.7) * pose.throttle;
+      const grains = strength * 12000 * seconds;
+      for (let k = 0; k < grains + Math.random() * 0.999; k += 1) {
+        const a = Math.random() * Math.PI * 2;
+        const r0 = 1.5 + Math.random() * 3;
+        const v = 6 + Math.random() * 26;
+        const lift = Math.random() < 0.85 ? 0.35 + Math.random() * 0.9 : 1.2 + Math.random() * 3;
+        const [e, n] = [lx + Math.sin(a) * r0, ly + Math.cos(a) * r0];
+        this.#dust.emit([e, ground(e, n) + 0.3, n], [Math.sin(a) * v, lift, Math.cos(a) * v], 4);
+      }
+    }
+    if (seconds > 0) this.#dust.step(seconds, ground);
+    if (l.camera === "lander") {
+      this.#at = { east: lx, north: ly };
+      this.#landingEyeUp = lz + pose.altitude + 4;
+      this.#look = clampLook({ azimuth: (((pose.heading + this.#camOffset.azimuth) % 360) + 360) % 360, pitch: pose.pitch + this.#camOffset.pitch, fov: this.#look.fov });
+    } else {
+      const b = (l.from.bearing * Math.PI) / 180;
+      const [ox, oy] = [td.east + Math.sin(b) * l.from.distance, td.north + Math.cos(b) * l.from.distance];
+      this.#at = { east: ox, north: oy };
+      this.#landingEyeUp = ground(ox, oy) + 1.7;
+      const horizontal = Math.hypot(lx - ox, ly - oy) || 1;
+      const azimuth = ((Math.atan2(lx - ox, ly - oy) * 180) / Math.PI + 360) % 360;
+      const pitch = (Math.atan2(lz + pose.altitude + 3.4 - this.#landingEyeUp, horizontal) * 180) / Math.PI;
+      this.#look = clampLook({ azimuth: azimuth + this.#camOffset.azimuth, pitch: pitch + this.#camOffset.pitch, fov: this.#look.fov });
+    }
+    // the marker: while the stage is smaller than about 6 pixels in the ground camera a ring and its height mark where it is, fading out as it grows
+    const ring = this.#root.getElementById("marker") as HTMLElement;
+    const ringText = this.#root.getElementById("markerText") as HTMLElement;
+    let showRing = false;
+    if (l.camera === "ground") {
+      const box = this.getBoundingClientRect();
+      const [w, h] = [box.width, box.height];
+      const vp = viewProjection([this.#at.east, this.#landingEyeUp, -this.#at.north], this.#look, w / Math.max(1, h));
+      const [x, y, z] = [lx, lz + pose.altitude + 3.4, -ly];
+      const cw = vp[3]! * x + vp[7]! * y + vp[11]! * z + vp[15]!;
+      const px = cw > 0 ? (7 * h) / 2 / (cw * Math.tan((this.#look.fov * Math.PI) / 360)) : 0;
+      const fade = Math.min(1, Math.max(0, (9 - px) / 5));
+      if (cw > 0 && fade > 0) {
+        const nx = (vp[0]! * x + vp[4]! * y + vp[8]! * z + vp[12]!) / cw;
+        const ny = (vp[1]! * x + vp[5]! * y + vp[9]! * z + vp[13]!) / cw;
+        if (Math.abs(nx) < 1 && Math.abs(ny) < 1) {
+          showRing = true;
+          const [sx, sy] = [((nx + 1) / 2) * w, ((1 - ny) / 2) * h];
+          ring.style.transform = `translate(${sx}px, ${sy}px)`;
+          ring.style.opacity = String(fade);
+          ringText.textContent = `${Math.round(pose.altitude).toLocaleString(this.#lang() === "ja" ? "ja-JP" : "en-US")} m`;
+          ringText.style.transform = `translate(${sx + 16}px, ${sy - 7}px)`;
+          ringText.style.opacity = String(fade);
+        }
+      }
+    }
+    ring.hidden = !showRing;
+    ringText.hidden = !showRing;
+    // the words: the clock and what the lunar module is doing, and the reported moments as they pass
+    const clock = clockText(l.t);
+    const ja = this.#lang() === "ja";
+    const metres = (v: number): string => Math.round(v).toLocaleString(ja ? "ja-JP" : "en-US");
+    this.#root.getElementById("clock")!.textContent = `${clock.t}  ·  ${clock.get} ${ja ? "ミッション経過時間" : "ground elapsed"}  ·  ${ja ? "高度" : "altitude"} ${metres(pose.altitude)} m  ·  ${ja ? "対地速度" : "speed"} ${metres(pose.speed)} m/s`;
+    const passed = calloutsBy(l.t);
+    const list = this.#root.getElementById("callouts")!;
+    if (announce || passed.length !== l.passed) {
+      const show = passed.slice(-3);
+      list.replaceChildren(
+        ...show.map((c: Callout) => {
+          const li = document.createElement("li");
+          li.textContent = `${clockText(c.t).t}  ${ja ? c.ja : c.en}${c.reported ? "" : ja ? "（時刻はこちらの曲線による）" : " (the time is from our curve)"}`;
+          return li;
+        }),
+      );
+    }
+    const newest = passed.length > l.passed ? passed[passed.length - 1] : undefined;
+    l.passed = passed.length;
+    const second = Math.floor(l.t);
+    if (announce || newest !== undefined || second !== l.second) {
+      l.second = second;
+      this.dispatchEvent(new CustomEvent("wakusei-landing-clock", { detail: { t: l.t, clock, altitude: pose.altitude, speed: pose.speed, descent: pose.descent, playing: l.playing, callout: newest === undefined ? undefined : { id: newest.id, t: newest.t, en: newest.en, ja: newest.ja, reported: newest.reported } }, bubbles: true, composed: true }));
+    }
+    this.#changed(l.playing);
+  }
+
+  /** While the descent runs: the clock moves by the real time between frames (times the rate), at most thirty times a second; at the touchdown, or paused, nothing is drawn. */
+  #landingTick = (): void => {
+    clearTimeout(this.#landingTimer);
+    const l = this.#landing;
+    if (l === undefined || !l.playing) return;
+    const now = performance.now();
+    const dt = Math.min(0.25, (now - this.#landingAt) / 1000);
+    this.#landingAt = now;
+    const seconds = Math.min(dt * l.rate, LANDING.duration - l.t);
+    l.t += seconds;
+    if (l.t >= LANDING.duration - 1e-6) {
+      l.t = LANDING.duration;
+      l.playing = false;
+    }
+    this.#landingFrame(seconds, false);
+    if (l.playing) this.#landingTimer = setTimeout(this.#landingTick, 33);
+    else this.#changed(true);
+  };
+
   // --- the things at the site: a small button on each, which goes to it and says what it is ----------------------------------------------------------------------------------------------------
 
   /** The things at the site, at their published places (none where the site has none or `objects="off"`). */
@@ -665,7 +907,7 @@ export class WakuseiSurface extends HTMLElement {
 
   /** Put each button on its thing in the picture, or hide it behind the viewer, off the picture or too far to tell. Done at each draw: nothing moves by itself. */
   #placeLabels(): void {
-    if (this.#labelEls.size === 0 || this.#vehicle !== undefined) return;
+    if (this.#labelEls.size === 0 || this.#vehicle !== undefined || this.#landing !== undefined) return;
     const box = this.getBoundingClientRect();
     const [w, h] = [box.width, box.height];
     const vp = viewProjection([this.#at.east, this.#eyeUp(), -this.#at.north], this.#look, w / Math.max(1, h));
@@ -691,7 +933,7 @@ export class WakuseiSurface extends HTMLElement {
    * @returns Whether there is such a thing here.
    */
   choose(id: string | undefined): boolean {
-    if (this.#vehicle !== undefined) return false; // the rover is being driven: the eyes are its
+    if (this.#vehicle !== undefined || this.#landing !== undefined) return false; // the rover is being driven or the landing watched: the eyes are not ours to move
     const about = this.#root.getElementById("about")!;
     const o = id === undefined ? undefined : this.#objects.find((x) => x.id === id);
     if (id !== undefined && o === undefined) return false;
