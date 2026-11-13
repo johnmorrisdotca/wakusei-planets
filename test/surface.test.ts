@@ -4,6 +4,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
+import { driveParts, driveStep, driveView, ROVER, startDrive, type DriveState } from "../src/surface/drive.ts";
+import { DustField } from "../src/surface/dust.ts";
 import { keepAway, objectParts, objectsOf, partShadows, traverseOf } from "../src/surface/objects.ts";
 import { craterIn, craterProfile, setKeepOut, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
 import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
@@ -414,4 +416,117 @@ test("the shapes stand on the ground at the sizes they should be, and their shad
   for (let i = 0; i < shadow.length; i += 3) west = Math.min(west, shadow[i]!);
   assert.ok(flag.east - west > 8 && flag.east - west < 14, `the shadow reaches ${flag.east - west} m west`);
   assert.equal(partShadows(objectParts(flag, 0), 0, 90, 0.2).length, 0, "no shadow when the Sun is down");
+});
+
+const run = (state: DriveState, input: { throttle: number; steer: number }, seconds: number, ground: (e: number, n: number) => number = () => 0, blocked?: (e: number, n: number) => boolean): DriveState => {
+  let s = state;
+  for (let t = 0; t < seconds; t += 1 / 60) s = driveStep(s, input, 1 / 60, ground, blocked);
+  return s;
+};
+
+test("the rover speeds up at a steady rate to its top speed, 12 km/h, and stops when the throttle is let go", () => {
+  const two = run(startDrive(0, 0, 0, 0), { throttle: 1, steer: 0 }, 2);
+  assert.ok(Math.abs(two.speed - 2.2) < 0.1, `2 s: ${two.speed}`);
+  assert.ok(two.north > 1.8 && two.north < 2.6 && Math.abs(two.east) < 1e-6, `${two.north}`);
+  const top = run(two, { throttle: 1, steer: 0 }, 8);
+  assert.ok(Math.abs(top.speed - ROVER.maxSpeed) < 0.01 && ROVER.maxSpeed * 3.6 > 11 && ROVER.maxSpeed * 3.6 < 13, `${top.speed}`);
+  const stopped = run(top, { throttle: 0, steer: 0 }, 12);
+  assert.equal(stopped.speed, 0);
+  const back = run(startDrive(0, 0, 0, 0), { throttle: -1, steer: 0 }, 6);
+  assert.ok(back.north < -3 && back.speed >= -ROVER.maxReverse - 1e-9, "backing is slower and goes the other way");
+});
+
+test("steering to the right turns the heading to the right, tightly: all four wheels steer", () => {
+  const moving = run(startDrive(0, 0, 0, 0), { throttle: 1, steer: 0 }, 3);
+  const turned = run(moving, { throttle: 1, steer: 1 }, 2);
+  assert.ok(turned.heading > 20 && turned.heading < 200, `heading ${turned.heading}`);
+  assert.ok(turned.east > moving.east + 1, "and the rover went round to the east");
+  const left = run(moving, { throttle: 1, steer: -1 }, 2);
+  assert.ok(left.heading > 160 && left.heading < 340, "left is the other way round");
+  // a standing rover does not turn
+  assert.equal(run(startDrive(0, 0, 10, 0), { throttle: 0, steer: 1 }, 2).heading, 10);
+});
+
+test("the rover follows the ground: it tilts with the slope across it and along it, sits at the mean of its four wheels, and will not climb past 25 degrees", () => {
+  const across = run(startDrive(0, 0, 0, 0), { throttle: 0, steer: 0 }, 2, (e) => 0.3 * e);
+  assert.ok(Math.abs(across.roll - Math.atan(0.3)) < 0.02, `roll ${across.roll}`);
+  assert.ok(Math.abs(across.y) < 0.05, "at the mean of the four");
+  const along = run(startDrive(0, 0, 0, 0), { throttle: 0, steer: 0 }, 2, (_e, n) => 0.2 * n);
+  assert.ok(Math.abs(along.pitch - Math.atan(0.2)) < 0.02, `pitch ${along.pitch}`);
+  // a slope of 30 degrees ahead: it goes up the foot of it and stops
+  const wall = run(startDrive(0, -4, 0, 0), { throttle: 1, steer: 0 }, 15, (_e, n) => (n > 0 ? Math.tan(0.52) * n : 0));
+  assert.ok(wall.north < 4 && wall.speed === 0, `it stopped at ${wall.north} m with ${wall.speed}`);
+  // a gentle slope of 10 degrees it climbs, slower than on the flat
+  const hill = run(startDrive(0, 0, 0, 0), { throttle: 1, steer: 0 }, 6, (_e, n) => Math.tan(0.175) * Math.max(0, n));
+  assert.ok(hill.north > 5 && hill.speed < ROVER.maxSpeed, `${hill.north} ${hill.speed}`);
+});
+
+test("where the ground drops away the rover is in free fall at the Moon's gravity, and lands on its springs", () => {
+  const cliff = (_e: number, n: number): number => (n > 1 ? -2 : 0);
+  let s = startDrive(0, 0, 0, 0);
+  let air = false;
+  for (let t = 0; t < 6; t += 1 / 60) {
+    s = driveStep(s, { throttle: t < 1.5 ? 1 : 0, steer: 0 }, 1 / 60, cliff);
+    air ||= s.airborne;
+  }
+  assert.ok(s.north > 1, "it went over the edge");
+  assert.ok(air, "it was in the air");
+  assert.ok(Math.abs(s.y - -2) < 0.1 && !s.airborne, `it landed: ${s.y}`);
+  // a fall of 2 m at 1.62 m/s2 takes 1.57 s; at the Earth's 9.8 it would take 0.64 s
+  let fall = startDrive(0, 5, 0, 0);
+  fall = { ...fall, y: 2 };
+  let t = 0;
+  while (fall.y > 0.04 && t < 5) {
+    fall = driveStep(fall, { throttle: 0, steer: 0 }, 1 / 60, () => 0);
+    t += 1 / 60;
+  }
+  assert.ok(t > 1.3 && t < 1.8, `fell in ${t} s`);
+});
+
+test("a blocked place stops the rover, and does not move it", () => {
+  const stuck = run(startDrive(0, 0, 0, 0), { throttle: 1, steer: 0 }, 5, () => 0, (_e, n) => n > 3);
+  assert.ok(stuck.north < 3.2 && stuck.speed === 0, `${stuck.north}`);
+});
+
+test("the drawn rover is turned and placed with it: its heading puts the dish on the way it points, a wheel that has rolled is turned about its axle, and the eyes are behind it or in its seat", () => {
+  const east = startDrive(100, 50, 90, 3);
+  const dishAt = (parts: ReturnType<typeof driveParts>) => {
+    let best = -Infinity;
+    for (const part of parts) for (let i = 0; i < part.position.length; i += 3) best = Math.max(best, part.position[i]!);
+    return best;
+  };
+  assert.ok(dishAt(driveParts(east)) > 100 + 1.2, "pointing east the front is to the east");
+  const north = driveParts(startDrive(0, 0, 0, 0));
+  const wheel = north.find((p) => p.wheel === 0)!;
+  const turned = driveParts({ ...startDrive(0, 0, 0, 0), spin: [Math.PI / 2, 0, 0, 0] }).find((p) => p.wheel === 0)!;
+  // the hub's lighter colour is a part of its own, so compare the wheel's middle: the same, since a wheel turns about it
+  const middle = (p: typeof wheel) => [0, 1, 2].map((k) => p.position.filter((_, i) => i % 3 === k).reduce((a, b) => a + b, 0) / (p.position.length / 3));
+  for (let k = 0; k < 3; k += 1) assert.ok(Math.abs(middle(wheel)[k]! - middle(turned)[k]!) < 0.01, "a wheel turns about its own middle");
+  assert.notDeepEqual(wheel.position.slice(0, 9), turned.position.slice(0, 9), "and its corners moved");
+  for (const part of north) for (let i = 0; i < part.normal.length; i += 3) assert.ok(Math.abs(Math.hypot(part.normal[i]!, part.normal[i + 1]!, part.normal[i + 2]!) - 1) < 1e-5);
+  const chase = driveView(startDrive(0, 0, 0, 0), "chase", { azimuth: 0, pitch: 0 }, () => 0);
+  assert.ok(Math.abs(chase.eye.north - -6.5) < 1e-6 && chase.eye.up > 2.5 && chase.pitch < 0 && chase.azimuth === 0, "behind and above, looking down at it");
+  const seat = driveView(startDrive(0, 0, 90, 0), "seat", { azimuth: 10, pitch: 0 }, () => 0);
+  assert.ok(Math.abs(seat.eye.up - ROVER.seat[1]) < 1e-6 && seat.azimuth === 100, "in the seat: the eyes' height, and the view turned by the driver");
+});
+
+test("a thrown grain flies a parabola at the Moon's gravity and lands where it should: the same every time for one seed", () => {
+  const dust = new DustField(8, 5);
+  dust.emit([0, 0.3, 0], [2, 1.5, 0], 10);
+  assert.equal(dust.age.filter((a) => a < 1e8).length, 1);
+  let t = 0;
+  let top = -Infinity;
+  while (dust.age.some((a) => a < 1e8) && t < 10) {
+    dust.step(1 / 60, () => 0);
+    t += 1 / 60;
+    top = Math.max(top, dust.position[1]!);
+  }
+  assert.ok(t > 1.0 && t < 5, `it fell in ${t} s`);
+  assert.ok(top > 0.5 && top < 3, `it rose to ${top}`);
+  const again = new DustField(8, 5);
+  again.emit([0, 0.3, 0], [2, 1.5, 0], 10);
+  assert.deepEqual([...again.velocity.slice(0, 3)], [...new DustField(8, 5).velocity.slice(0, 3)].map((_, i) => again.velocity[i]!));
+  const other = new DustField(8, 6);
+  other.emit([0, 0.3, 0], [2, 1.5, 0], 10);
+  assert.notEqual(other.velocity[0], again.velocity[0], "another seed scatters differently");
 });

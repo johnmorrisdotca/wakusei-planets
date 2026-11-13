@@ -21,6 +21,9 @@ type Surface = HTMLElement & {
   time: number;
   objects: readonly { id: string; east: number; north: number }[];
   choose(id: string | undefined): boolean;
+  vehicle?: { east: number; north: number; heading: number; speed: number; y: number; airborne: boolean; distance: number };
+  driveCamera: "chase" | "seat";
+  driveFor(seconds: number, input?: { throttle: number; steer: number }): boolean;
 };
 
 const open = async (page: Page, attributes = "shadows=off detail=off", routed = false): Promise<void> => {
@@ -245,4 +248,62 @@ test("the things at the site have a button each: a press goes to it, says what i
   await open(page, "shadows=off detail=off objects=off");
   expect(await read(page, (el) => el.objects.length)).toBe(0);
   expect(await view(page).evaluate((el) => el.shadowRoot!.querySelectorAll(".label").length)).toBe(0);
+});
+
+test("drive=on puts the eyes behind the rover at its place: W drives it west along its heading, the view follows, and at rest nothing is drawn", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off drive=on");
+  const start = await read(page, (el) => ({ ...el.vehicle!, eyeEast: el.position.east, camera: el.driveCamera }));
+  expect(start.heading, "it points the way its last traverse ended").toBeGreaterThan(200);
+  expect(start.heading).toBeLessThan(300);
+  expect(start.speed).toBe(0);
+  expect(start.camera).toBe("chase");
+  expect(Math.hypot(start.east - 76.9, start.north - 11.1), "at its published place").toBeLessThan(0.5);
+  await view(page).focus();
+  await page.keyboard.down("w");
+  await expect.poll(() => read(page, (el) => el.vehicle!.distance), { timeout: 120_000 }).toBeGreaterThan(1);
+  await page.keyboard.up("w");
+  const moving = await read(page, (el) => ({ ...el.vehicle!, eyeEast: el.position.east }));
+  expect(moving.east, "west is where it points").toBeLessThan(start.east - 0.8);
+  expect(moving.eyeEast, "and the eyes went with it").toBeLessThan(start.eyeEast - 0.8);
+  // it rolls to a stop and settles; then nothing is drawn (that nothing happens: a wait to say so)
+  await expect.poll(() => read(page, (el) => Math.abs(el.vehicle!.speed)), { timeout: 120_000, intervals: [400] }).toBe(0);
+  let held = -1;
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = await draws(page);
+        same = now === held ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { timeout: 120_000, intervals: [500] },
+    )
+    .toBeGreaterThanOrEqual(3);
+  const rest = await draws(page);
+  await page.waitForTimeout(1500);
+  expect(await draws(page)).toBe(rest);
+  // the camera: C turns to the seat, the eyes at the seat's height over the rover
+  await page.keyboard.press("c");
+  const seat = await read(page, (el) => ({ camera: el.driveCamera, eyeUp: el.position.up, y: el.vehicle!.y }));
+  expect(seat.camera).toBe("seat");
+});
+
+test("driveFor drives by a set time: two seconds at full throttle is about two metres and a quarter a second, and steering turns it", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off drive=on");
+  const result = await read(page, (el) => {
+    const a = { ...el.vehicle! };
+    el.driveFor(2, { throttle: 1, steer: 0 });
+    const b = { ...el.vehicle! };
+    el.driveFor(2, { throttle: 1, steer: 1 });
+    const c = { ...el.vehicle! };
+    return { speed: b.speed, run: b.distance - a.distance, turned: ((c.heading - b.heading + 540) % 360) - 180 };
+  });
+  expect(result.speed).toBeGreaterThan(1.8);
+  expect(result.speed).toBeLessThan(2.5);
+  expect(result.run).toBeGreaterThan(1.8);
+  expect(result.run).toBeLessThan(3);
+  expect(result.turned, "full right turns the heading to the right").toBeGreaterThan(20);
 });

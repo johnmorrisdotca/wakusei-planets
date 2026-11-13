@@ -6,7 +6,9 @@ import { createGate, frameCap, type Gate } from "../gate.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared.ts";
 import { TILES_BASE } from "../scene/textures.ts";
-import { madeGround, setKeepOut, standingPlace } from "./detail.ts";
+import { madeGround, rocksAround, setKeepOut, standingPlace } from "./detail.ts";
+import { driveStep, driveView, ROVER, startDrive, toWorld, type DriveState } from "./drive.ts";
+import { DustField } from "./dust.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
 import { createSurfaceItem, type SurfaceScene } from "./scene.ts";
@@ -76,7 +78,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -123,6 +125,15 @@ export class WakuseiSurface extends HTMLElement {
   #objects: readonly SiteObject[] = [];
   #labelEls = new Map<string, HTMLButtonElement>();
   #chosen: string | undefined;
+  /** The rover being driven (`drive="on"`), the view of it, the driver's own turn of the view, the path left, the dust thrown, and the places it cannot go. */
+  #vehicle: DriveState | undefined;
+  #driveCamera: "chase" | "seat" = "chase";
+  #camOffset = { azimuth: 0, pitch: 0 };
+  #driveEyeUp = 0;
+  #trail: number[] = [];
+  #dust = new DustField(480, 17);
+  #blockers: { x: number; y: number; r: number }[] = [];
+  #blockersAt: { east: number; north: number } | undefined;
   #stickPointer = -1;
   #pointers = new Map<number, { x: number; y: number }>();
   #pinch = 0;
@@ -177,9 +188,9 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /** Numbers for a test or a status line: the draws, the tiles, the renderer's own counts, the mesh, the quality of the last draw and the milliseconds of the last measured one. */
-  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; drawMs: number | undefined; rocks: number } {
+  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number } {
     const scene = this.#view?.scene as SurfaceScene | undefined;
-    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
+    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
   }
 
   /** The quality of the next draw: the `quality` attribute, or in `auto` the quality of motion while the view moves and the machine's own quality of rest otherwise. */
@@ -244,6 +255,14 @@ export class WakuseiSurface extends HTMLElement {
 
   attributeChangedCallback(name: string): void {
     if (!this.isConnected) return;
+    if (name === "drive") {
+      this.#syncDrive();
+      return;
+    }
+    if (name === "drive-camera") {
+      this.driveCamera = this.getAttribute("drive-camera") === "seat" ? "seat" : "chase";
+      return;
+    }
     if (name === "stick") {
       this.#showStick();
       return;
@@ -330,6 +349,7 @@ export class WakuseiSurface extends HTMLElement {
       const stand = this.getAttribute("detail") === "off" ? { x: 0, y: 0 } : standingPlace(0, 0);
       this.#at = { east: stand.x, north: stand.y };
       this.#placed = true;
+      this.#syncDrive();
     }
     if (this.#view === undefined) {
       if (this.#renderer === undefined) {
@@ -416,6 +436,7 @@ export class WakuseiSurface extends HTMLElement {
 
   /** The eyes' height over the site's origin: the ground under them (the made craters too: the feet follow them) and a person's height. */
   #eyeUp(): number {
+    if (this.#vehicle !== undefined) return this.#driveEyeUp;
     return this.#groundAt(this.#at.east, this.#at.north) + EYE_HEIGHT;
   }
 
@@ -463,10 +484,140 @@ export class WakuseiSurface extends HTMLElement {
     const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
     if (measure && !this.#moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, measure: measure || this.getAttribute("measure") !== null });
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, trail: this.#trail, dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
     this.#placeLabels();
+  }
+
+  // --- driving the rover (`drive="on"`) ---------------------------------------------------------------------------------------------------------------
+
+  /** Which view of the rover: `chase` (from behind and above, the default) or `seat` (the commander's). The key C turns from one to the other. */
+  get driveCamera(): "chase" | "seat" {
+    return this.#driveCamera;
+  }
+  set driveCamera(value: "chase" | "seat") {
+    this.#driveCamera = value === "seat" ? "seat" : "chase";
+    this.#syncDriveCamera();
+    this.#changed();
+  }
+
+  /** The rover being driven, or `undefined` when it is not. */
+  get vehicle(): DriveState | undefined {
+    return this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] };
+  }
+
+  /** Start or stop driving as the `drive` attribute says: the rover starts at its published place (where its last traverse ends), looking along its heading from behind; stopping puts the eyes back on the ground there. */
+  #syncDrive(): void {
+    const on = this.getAttribute("drive") === "on" && this.#terrain !== undefined && this.#placed;
+    if (!on) {
+      if (this.#vehicle === undefined) return;
+      const v = this.#vehicle;
+      this.#vehicle = undefined;
+      this.#trail = [];
+      this.#at = { east: v.east, north: v.north };
+      this.#changed();
+      return;
+    }
+    if (this.#vehicle !== undefined) return;
+    const rover = this.#objects.find((o) => o.kind === "rover");
+    const [east, north, heading] = rover === undefined ? [this.#at.east, this.#at.north, this.#look.azimuth] : [rover.east, rover.north, rover.heading ?? 0];
+    this.#driveCamera = this.getAttribute("drive-camera") === "seat" ? "seat" : "chase";
+    this.#vehicle = startDrive(east, north, heading, this.#groundAt(east, north));
+    this.#trail = [east, north];
+    this.#dust = new DustField(480, 17);
+    this.#camOffset = { azimuth: 0, pitch: 0 };
+    this.#blockersAt = undefined;
+    for (const el of this.#labelEls.values()) el.hidden = true;
+    this.choose(undefined);
+    this.#syncDriveCamera();
+    this.#changed();
+  }
+
+  /** The eyes where the view of the rover puts them. */
+  #syncDriveCamera(): void {
+    const v = this.#vehicle;
+    if (v === undefined) return;
+    const view = driveView(v, this.#driveCamera, this.#camOffset, (e, n) => this.#groundAt(e, n));
+    this.#at = { east: view.eye.east, north: view.eye.north };
+    this.#driveEyeUp = view.eye.up;
+    this.#look = clampLook({ azimuth: view.azimuth, pitch: view.pitch, fov: this.#look.fov });
+  }
+
+  /** The big rocks and the things near the rover, as circles it cannot enter (found again when it has gone 8 m from where they were found). */
+  #obstacles(): { x: number; y: number; r: number }[] {
+    const v = this.#vehicle!;
+    if (this.#blockersAt === undefined || Math.hypot(v.east - this.#blockersAt.east, v.north - this.#blockersAt.north) > 8) {
+      this.#blockersAt = { east: v.east, north: v.north };
+      const list: { x: number; y: number; r: number }[] = [];
+      if (this.getAttribute("detail") !== "off") for (const rock of rocksAround(v.east, v.north, 28, 0.0024)) if (rock.size >= 0.6) list.push({ x: rock.x, y: rock.y, r: rock.size * 0.5 + 1.1 });
+      const near: Record<string, number> = { lander: 6, flag: 1.6, station: 2.8, instrument: 1.8, rover: 0 };
+      for (const o of this.#objects) if (near[o.kind]! > 0) list.push({ x: o.east, y: o.north, r: near[o.kind]! });
+      this.#blockers = list;
+    }
+    return this.#blockers;
+  }
+
+  /** Advance the rover by `seconds` (in steps of at most a sixtieth), throwing dust from the wheels that are down and leaving tracks. */
+  #advance(seconds: number, input: { throttle: number; steer: number }): void {
+    let v = this.#vehicle!;
+    const ground = (e: number, n: number): number => this.#groundAt(e, n);
+    const blockers = this.#obstacles();
+    const blocked = (e: number, n: number): boolean => blockers.some((b) => (e - b.x) ** 2 + (n - b.y) ** 2 < b.r * b.r);
+    const steps = Math.max(1, Math.ceil(seconds * 60));
+    const dt = seconds / steps;
+    for (let i = 0; i < steps; i += 1) {
+      v = driveStep(v, input, dt, ground, blocked);
+      // each wheel on the ground throws grains up and back: the faster, the more
+      if (!v.airborne && Math.abs(v.speed) > 0.6) {
+        const h = (v.heading * Math.PI) / 180;
+        const [fx, fz] = [Math.sin(h), Math.cos(h)];
+        const grains = Math.abs(v.speed) * dt * 7;
+        for (const [wx, , wz] of ROVER.wheels) {
+          const w = toWorld(v, [wx, 0, wz]);
+          for (let k = 0; k < grains + Math.random() * 0.999; k += 1) {
+            const back = -Math.sign(v.speed) * Math.abs(v.speed) * 0.5;
+            this.#dust.emit([w[0], w[1] + 0.05, w[2]], [fx * back, 0.9 + 0.35 * Math.abs(v.speed), fz * back], 3);
+          }
+        }
+      }
+      this.#dust.step(dt, ground);
+    }
+    this.#vehicle = v;
+    // the tracks: a point every 1.2 m
+    const last = this.#trail.length >= 2 ? [this.#trail[this.#trail.length - 2]!, this.#trail[this.#trail.length - 1]!] : [Infinity, Infinity];
+    if (Math.hypot(v.east - last[0]!, v.north - last[1]!) >= 1.2 && this.#trail.length < 12_000) this.#trail.push(v.east, v.north);
+    this.#syncDriveCamera();
+  }
+
+  /** While a key or the stick is asked for, and while the rover is still rolling, settling on its springs or throwing dust: a step at most thirty times a second, and nothing once it is at rest. */
+  #driveTick(): void {
+    const k = this.#keys;
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - this.#walkAt) / 1000);
+    this.#walkAt = now;
+    const throttle = Math.max(-1, Math.min(1, (k.has("w") || k.has("ArrowUp") ? 1 : 0) - (k.has("s") || k.has("ArrowDown") ? 1 : 0) + this.#push.y));
+    const steer = Math.max(-1, Math.min(1, (k.has("d") || k.has("ArrowRight") ? 1 : 0) - (k.has("a") || k.has("ArrowLeft") ? 1 : 0) + this.#push.x));
+    this.#advance(dt, { throttle, steer });
+    this.#changed();
+    const v = this.#vehicle!;
+    const rolling = Math.abs(v.speed) > 0.01 || v.airborne || Math.abs(v.vy) > 0.02 || Math.abs(v.steer) > 0.005 || this.#dust.live > 0;
+    if (throttle !== 0 || steer !== 0 || rolling) this.#walkTimer = setTimeout(this.#walkTick, 33);
+  }
+
+  /**
+   * Drive by a set time, whatever the clock says: advance the rover `seconds` with the throttle and steering given (each -1 to 1) and draw. For a test or a sequence of pictures taken one step at a time; the keys and the
+   * stick do the same by the real time between frames.
+   *
+   * @param seconds - How long to drive.
+   * @param input - The throttle and the steering.
+   * @returns Whether the element is driving.
+   */
+  driveFor(seconds: number, input: { throttle: number; steer: number } = { throttle: 0, steer: 0 }): boolean {
+    if (this.#vehicle === undefined) return false;
+    this.#advance(seconds, input);
+    this.#changed();
+    return true;
   }
 
   // --- the things at the site: a small button on each, which goes to it and says what it is ----------------------------------------------------------------------------------------------------
@@ -511,7 +662,7 @@ export class WakuseiSurface extends HTMLElement {
 
   /** Put each button on its thing in the picture, or hide it behind the viewer, off the picture or too far to tell. Done at each draw: nothing moves by itself. */
   #placeLabels(): void {
-    if (this.#labelEls.size === 0) return;
+    if (this.#labelEls.size === 0 || this.#vehicle !== undefined) return;
     const box = this.getBoundingClientRect();
     const [w, h] = [box.width, box.height];
     const vp = viewProjection([this.#at.east, this.#eyeUp(), -this.#at.north], this.#look, w / Math.max(1, h));
@@ -537,6 +688,7 @@ export class WakuseiSurface extends HTMLElement {
    * @returns Whether there is such a thing here.
    */
   choose(id: string | undefined): boolean {
+    if (this.#vehicle !== undefined) return false; // the rover is being driven: the eyes are its
     const about = this.#root.getElementById("about")!;
     const o = id === undefined ? undefined : this.#objects.find((x) => x.id === id);
     if (id !== undefined && o === undefined) return false;
@@ -636,6 +788,12 @@ export class WakuseiSurface extends HTMLElement {
     }
     const box = this.getBoundingClientRect();
     const perPixel = this.#look.fov / Math.max(1, box.height);
+    if (this.#vehicle !== undefined) {
+      this.#camOffset = { azimuth: this.#camOffset.azimuth - (event.clientX - was.x) * perPixel, pitch: Math.max(-60, Math.min(60, this.#camOffset.pitch + (event.clientY - was.y) * perPixel)) };
+      this.#syncDriveCamera();
+      this.#changed();
+      return;
+    }
     this.#look = clampLook({ ...this.#look, azimuth: this.#look.azimuth - (event.clientX - was.x) * perPixel, pitch: this.#look.pitch + (event.clientY - was.y) * perPixel });
     this.#changed();
   };
@@ -664,6 +822,10 @@ export class WakuseiSurface extends HTMLElement {
 
   #onKeyDown = (event: KeyboardEvent): void => {
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    if (key === "c" && this.#vehicle !== undefined) {
+      this.driveCamera = this.#driveCamera === "chase" ? "seat" : "chase";
+      return;
+    }
     if (key === "+" || key === "=") return this.#zoom(0.85);
     if (key === "-" || key === "_") return this.#zoom(1 / 0.85);
     if (!["w", "a", "s", "d", "q", "e", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) return;
@@ -686,6 +848,7 @@ export class WakuseiSurface extends HTMLElement {
   /** While a key is held: a step every frame at a walking pace (and a turn at a quarter turn a second), at most thirty a second; nothing when no key is held. */
   #walkTick = (): void => {
     clearTimeout(this.#walkTimer);
+    if (this.#vehicle !== undefined) return this.#driveTick();
     if (this.#keys.size === 0 && this.#push.x === 0 && this.#push.y === 0) return;
     const now = performance.now();
     const dt = Math.min(0.1, (now - this.#walkAt) / 1000);

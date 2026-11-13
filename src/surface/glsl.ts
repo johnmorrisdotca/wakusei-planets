@@ -469,4 +469,30 @@ void main() {
 
 /** The things at a site: the rocks' light, with a flat colour for each corner (the gold of the lunar module's foil, the grey of the rover's frame). */
 export const OBJECT_VERTEX = ROCK_VERTEX.replace("attribute float tone;", "attribute float tone;\nattribute vec3 tint;").replace("varying float vTone;", "varying float vTone;\nvarying vec3 vTint;").replace("vTone = tone;", "vTone = tone;\n  vTint = tint;");
-export const OBJECT_FRAGMENT = ROCK_FRAGMENT.replace("varying float vTone;", "varying float vTone;\nvarying vec3 vTint;").replace("gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);", "gl_FragColor = vec4(pow(clamp(vec3(light) * vTint, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);");
+export const OBJECT_FRAGMENT = ROCK_FRAGMENT.replace("varying float vTone;", "varying float vTone;\nvarying vec3 vTint;").replace("uAlbedo * 1.1 * vTone * (shine + 0.12 * (n.y * 0.5 + 0.5))", "uAlbedo * 2.4 * vTone * (shine + 0.3 * (n.y * 0.5 + 0.5))").replace("gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);", "gl_FragColor = vec4(pow(clamp(vec3(light) * vTint, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);");
+
+/** A grain of dust in flight: a small square that always faces the viewer, at a place in the site's plane, its size in metres. */
+export const DUST_VERTEX = /* glsl */ `
+precision highp float;
+// position (declared by three.js) is the grain's place; the corner of its square is in uv, -1 to 1
+uniform mat4 uVP;
+uniform vec3 uRight;
+uniform vec3 uUp;
+uniform float uSize;
+varying vec2 vUv;
+void main() {
+  vUv = uv * 2.0 - 1.0;
+  vec3 w = vec3(position.x, position.y, -position.z) + (uRight * vUv.x + uUp * vUv.y) * uSize;
+  gl_Position = uVP * vec4(w, 1.0);
+}
+`;
+
+export const DUST_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+void main() {
+  float r = length(vUv);
+  if (r > 1.0) discard;
+  gl_FragColor = vec4(vec3(0.78), 0.5 * (1.0 - r * r));
+}
+`;

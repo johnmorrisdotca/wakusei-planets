@@ -4,7 +4,8 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { ThreeParts } from "../scene/body.ts";
 import { rocksAround } from "./detail.ts";
-import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX } from "./glsl.ts";
+import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX, DUST_FRAGMENT, DUST_VERTEX } from "./glsl.ts";
+import { driveParts, type DriveState } from "./drive.ts";
 import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
 import type { MoonSky } from "./sky.ts";
@@ -29,6 +30,12 @@ export interface SurfaceState {
   quality?: "full" | "medium" | "fast";
   /** The share of the canvas's width and height the ground is drawn at, 1 (the default) to 0.25: below 1 it is drawn to a smaller target and stretched, which is what a draw while the view moves does on a machine that is slow. It needs `WebGLRenderTarget` in the three.js module (a page's own cut-down module may not have it; the draw is then at full size). */
   scale?: number;
+  /** The rover being driven, as `driveStep` leaves it: drawn in place of the one standing at its published place. */
+  vehicle?: DriveState;
+  /** The path the driven rover has left, east, north, east, north, ... in metres: drawn as tracks. */
+  trail?: readonly number[];
+  /** The grains of dust in flight, east, up, north for each (`DustField.position`), drawn as small squares. */
+  dust?: Float32Array;
   /** Whether the things at the site (the lander, the rover, the flag, the station) and the rover's tracks are drawn (default true; the made ground keeps away from them while they are). */
   objects?: boolean;
   /** Time the next draw to the end of the graphics queue (it waits for the card, so it is for a few draws, not every one). */
@@ -306,11 +313,12 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const list = options.objects ?? [];
         const ground = options.groundY;
         const on = state.objects !== false && list.length > 0 && ground !== undefined;
+        const driving = state.vehicle !== undefined;
         if (objectMesh !== undefined) objectMesh.visible = on;
         if (objectShadowMesh !== undefined) objectShadowMesh.visible = on;
         if (trackMesh !== undefined) trackMesh.visible = on;
         if (!on || ground === undefined) return;
-        const key = `${state.sky.sun.azimuth.toFixed(1)}|${state.sky.sun.altitude.toFixed(1)}|${objectVersion}`;
+        const key = `${state.sky.sun.azimuth.toFixed(1)}|${state.sky.sun.altitude.toFixed(1)}|${objectVersion}|${driving}|${state.shadows !== false}`;
         if (key === objectKey) return;
         objectKey = key;
         const position: number[] = [];
@@ -319,6 +327,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const tint: number[] = [];
         const shadow: number[] = [];
         for (const object of list) {
+          if (driving && object.kind === "rover") continue;
           const base = ground(object.east, object.north);
           const parts: Part[] = objectParts(object, base);
           for (const part of parts) {
@@ -329,7 +338,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
               tint.push(...(part.colour ?? [1, 1, 1]));
             }
           }
-          shadow.push(...partShadows(parts, base, state.sky.sun.azimuth, state.sky.sun.altitude));
+          if (state.shadows !== false) shadow.push(...partShadows(parts, base, state.sky.sun.azimuth, state.sky.sun.altitude));
         }
         const geometry = new T.BufferGeometry();
         geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(position), 3));
@@ -405,6 +414,160 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         trackMesh.renderOrder = 0.5;
         scene.add(trackMesh);
       }
+      // the rover being driven: its parts as one mesh turned and placed at each draw (a few thousand corners: cheap), its shadow, the path it has left as tracks and the grains it throws as small squares
+      let vehicleMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let vehicleShadow: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let vehicleCount = 0;
+      const makeVehicle = (state: SurfaceState): void => {
+        const v = state.vehicle;
+        if (v === undefined || state.objects === false) {
+          if (vehicleMesh !== undefined) vehicleMesh.visible = false;
+          if (vehicleShadow !== undefined) vehicleShadow.visible = false;
+          return;
+        }
+        const parts = driveParts(v);
+        const count = parts.reduce((n, part) => n + part.position.length / 3, 0);
+        if (vehicleMesh === undefined || count !== vehicleCount) {
+          vehicleMesh?.geometry.dispose();
+          const geometry = new T.BufferGeometry();
+          geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(count * 3), 3));
+          geometry.setAttribute("normal", new T.BufferAttribute(new Float32Array(count * 3), 3));
+          const tone = new Float32Array(count);
+          const tint = new Float32Array(count * 3);
+          let at = 0;
+          for (const part of parts) {
+            for (let i = 0; i < part.position.length / 3; i += 1) {
+              tone[at] = part.tone;
+              tint.set(part.colour ?? [1, 1, 1], at * 3);
+              at += 1;
+            }
+          }
+          geometry.setAttribute("tone", new T.BufferAttribute(tone, 1));
+          geometry.setAttribute("tint", new T.BufferAttribute(tint, 3));
+          vehicleCount = count;
+          if (vehicleMesh === undefined) {
+            vehicleMesh = new T.Mesh(geometry as never, objectMaterial);
+            vehicleMesh.frustumCulled = false;
+            vehicleMesh.renderOrder = 1;
+            scene.add(vehicleMesh);
+          } else vehicleMesh.geometry = geometry as never;
+        }
+        const position = vehicleMesh.geometry.getAttribute("position");
+        const normal = vehicleMesh.geometry.getAttribute("normal");
+        let at = 0;
+        for (const part of parts) {
+          (position.array as Float32Array).set(part.position, at * 3);
+          (normal.array as Float32Array).set(part.normal, at * 3);
+          at += part.position.length / 3;
+        }
+        position.needsUpdate = true;
+        normal.needsUpdate = true;
+        vehicleMesh.visible = true;
+        const shadow = state.shadows === false ? [] : partShadows(parts, v.y, state.sky.sun.azimuth, state.sky.sun.altitude);
+        const geometry = new T.BufferGeometry();
+        geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(shadow), 3));
+        geometry.setAttribute("uv", new T.BufferAttribute(new Float32Array((shadow.length / 3) * 2).map((_, i) => (i % 2 === 1 ? 0 : 0.5)), 2));
+        if (vehicleShadow === undefined) {
+          vehicleShadow = new T.Mesh(geometry as never, shadowMaterial);
+          vehicleShadow.frustumCulled = false;
+          vehicleShadow.renderOrder = 2;
+          scene.add(vehicleShadow);
+        } else {
+          vehicleShadow.geometry.dispose();
+          vehicleShadow.geometry = geometry as never;
+        }
+        vehicleShadow.visible = true;
+      };
+      // the driven path: a strip like the published traverse's, grown as the rover goes (room for 6,000 points)
+      const TRAIL_MAX = 6000;
+      let trailMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let trailBuilt = 0;
+      const makeTrail = (state: SurfaceState): void => {
+        const points = state.trail;
+        if (points === undefined || points.length < 4) {
+          if (trailMesh !== undefined) trailMesh.visible = false;
+          trailBuilt = 0;
+          return;
+        }
+        if (trailMesh === undefined) {
+          const geometry = new T.BufferGeometry();
+          geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(TRAIL_MAX * 2 * 3), 3));
+          geometry.setAttribute("uv", new T.BufferAttribute(new Float32Array(TRAIL_MAX * 2 * 2), 2));
+          const indices = new Uint32Array((TRAIL_MAX - 1) * 6);
+          for (let i = 1; i < TRAIL_MAX; i += 1) indices.set([2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i], (i - 1) * 6);
+          geometry.setIndex(new T.BufferAttribute(indices, 1));
+          const material = new T.ShaderMaterial({ vertexShader: TRACK_VERTEX, fragmentShader: TRACK_FRAGMENT, uniforms, transparent: true, depthWrite: false, side: 2 });
+          material.polygonOffset = true;
+          material.polygonOffsetFactor = -3;
+          material.polygonOffsetUnits = -3;
+          trailMesh = new T.Mesh(geometry as never, material);
+          trailMesh.frustumCulled = false;
+          trailMesh.renderOrder = 0.6;
+          scene.add(trailMesh);
+        }
+        const count = Math.min(TRAIL_MAX, points.length / 2);
+        if (count < trailBuilt) trailBuilt = 0;
+        const position = trailMesh.geometry.getAttribute("position").array as Float32Array;
+        const uv = trailMesh.geometry.getAttribute("uv").array as Float32Array;
+        let along = trailBuilt > 0 ? uv[(trailBuilt - 1) * 4]! : 0;
+        for (let i = Math.max(0, trailBuilt - 1); i < count; i += 1) {
+          const a = Math.max(0, i - 1);
+          const b = Math.min(count - 1, i + 1);
+          const [dx, dy] = [points[2 * b]! - points[2 * a]!, points[2 * b + 1]! - points[2 * a + 1]!];
+          const len = Math.hypot(dx, dy) || 1;
+          const [nx, ny] = [-dy / len, dx / len];
+          if (i > 0) along += Math.hypot(points[2 * i]! - points[2 * i - 2]!, points[2 * i + 1]! - points[2 * i - 1]!);
+          for (const side of [-1, 1]) {
+            const k = i * 2 + (side === 1 ? 1 : 0);
+            position[k * 3] = points[2 * i]! + nx * 1.4 * side;
+            position[k * 3 + 1] = points[2 * i + 1]! + ny * 1.4 * side;
+            position[k * 3 + 2] = 0;
+            uv[k * 2] = along;
+            uv[k * 2 + 1] = side;
+          }
+        }
+        trailBuilt = count;
+        trailMesh.geometry.getAttribute("position").needsUpdate = true;
+        trailMesh.geometry.getAttribute("uv").needsUpdate = true;
+        trailMesh.geometry.setDrawRange(0, Math.max(0, (count - 1) * 6));
+        trailMesh.visible = true;
+      };
+      // the dust: one small square for each grain in the pool, in the corners of a fixed set of triangles
+      let dustMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.04 } };
+      const makeDust = (state: SurfaceState): void => {
+        const grains = state.dust;
+        if (grains === undefined) {
+          if (dustMesh !== undefined) dustMesh.visible = false;
+          return;
+        }
+        const n = grains.length / 3;
+        if (dustMesh === undefined) {
+          const geometry = new T.BufferGeometry();
+          geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(n * 4 * 3), 3));
+          const uv = new Float32Array(n * 4 * 2);
+          const index = new Uint32Array(n * 6);
+          for (let i = 0; i < n; i += 1) {
+            uv.set([0, 0, 1, 0, 1, 1, 0, 1], i * 8);
+            index.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+          }
+          geometry.setAttribute("uv", new T.BufferAttribute(uv, 2));
+          geometry.setIndex(new T.BufferAttribute(index, 1));
+          const material = new T.ShaderMaterial({ vertexShader: DUST_VERTEX, fragmentShader: DUST_FRAGMENT, uniforms: dustUniforms, transparent: true, depthWrite: false });
+          dustMesh = new T.Mesh(geometry as never, material);
+          dustMesh.frustumCulled = false;
+          dustMesh.renderOrder = 3;
+          scene.add(dustMesh);
+        }
+        const position = dustMesh.geometry.getAttribute("position");
+        const array = position.array as Float32Array;
+        for (let i = 0; i < n; i += 1) for (let c = 0; c < 4; c += 1) array.set([grains[i * 3]!, grains[i * 3 + 1]!, grains[i * 3 + 2]!], (i * 4 + c) * 3);
+        position.needsUpdate = true;
+        const axes = cameraAxes(state.look);
+        dustUniforms.uRight.value.set(axes.right[0], axes.right[1], axes.right[2]);
+        dustUniforms.uUp.value.set(axes.up[0], axes.up[1], axes.up[2]);
+        dustMesh.visible = true;
+      };
       let measuring = false;
       let drawMs: number | undefined;
       let aspect = context.width / Math.max(1, context.height);
@@ -418,6 +581,9 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         fullPixel = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelHeight;
         makeRocks(state);
         makeObjects(state);
+        makeVehicle(state);
+        makeTrail(state);
+        makeDust(state);
         measuring = state.measure === true;
         const world = new T.Vector3(eye.east, eye.up, -eye.north);
         const vp = viewProjection([world.x, world.y, world.z], look, aspect);
@@ -546,6 +712,10 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           objectShadowMesh?.geometry.dispose();
           trackGeometry?.dispose();
           trackMaterial?.dispose();
+          vehicleMesh?.geometry.dispose();
+          vehicleShadow?.geometry.dispose();
+          trailMesh?.geometry.dispose();
+          dustMesh?.geometry.dispose();
           objectMaterial.dispose();
           blitMaterial.dispose();
         },

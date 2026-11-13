@@ -203,8 +203,8 @@ export function landerParts(): Part[] {
 
 /**
  * The lunar rover in its own frame (x right, z forward, the middle of its wheelbase on the ground at the origin): a frame and floor, four wheels (parts 0 to 3: front left, front right, rear left, rear right) with a
- * fender over each, two seats, the console with its handle, the dish on its mast, the television camera on its own mast, a whip antenna and the boxes at both ends. Sizes from the published ones (3.1 m long, 2.3 m
- * wide, wheels 0.82 m across, the wheelbase 2.3 m).
+ * fender over each, two seats, the console with its handle, the dish on its mast, the television camera on its own mast, a whip antenna and the boxes at both ends. Sizes from the published ones (about 3.05 m long, 2.13 m
+ * wide, wheels 0.81 m across, the wheelbase 2.29 m).
  *
  * @returns The parts.
  *
@@ -228,7 +228,7 @@ export function roverParts(): Part[] {
   parts.push(box([0, 0.57, -1.1], [1.15, 0.03, 0.6], 0, 1.0, 0, grey));
   const wheels: [number, number][] = [[-1, 1], [1, 1], [-1, -1], [1, -1]];
   wheels.forEach(([sx, sz], index) => {
-    const centre: V3 = [sx * 1.03, 0.41, sz * 1.15];
+    const centre: V3 = [sx * 0.95, 0.41, sz * 1.15];
     // a wheel of wire mesh (dark, with a lighter hub), its strut to the frame and its fender over the top
     const wheel = cylinder([-0.115, 0, 0], 0.41, 0.23, 16, 0.55, true, DARK);
     const hub = cylinder([-0.12, 0, 0], 0.16, 0.24, 10, 1.0, true, [0.7, 0.72, 0.76]);
@@ -241,7 +241,7 @@ export function roverParts(): Part[] {
       }
       parts.push(part);
     }
-    parts.push(strut([sx * 0.55, 0.55, sz * 1.15], [sx * 0.95, 0.45, sz * 1.15], 0.07, 1.1, grey));
+    parts.push(strut([sx * 0.55, 0.55, sz * 1.15], [sx * 0.85, 0.45, sz * 1.15], 0.07, 1.1, grey));
     // the fender: five narrow boards along an arc a hand above the tyre
     for (let s = 0; s < 5; s += 1) {
       const a0 = ((-65 + s * 26) * Math.PI) / 180;

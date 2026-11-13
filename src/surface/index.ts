@@ -6,6 +6,8 @@ export { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, sampleLevel,
 export { loadPlan, loadTerrain, type LoadJob, type LoadOptions, type Terrain, type TerrainProgress } from "./load.ts";
 export type { SurfaceState } from "./element.ts";
 export { landerParts, roverParts } from "./shapes.ts";
+export { DustField } from "./dust.ts";
+export { driveParts, driveStep, driveView, startDrive, ROVER, type DriveInput, type DriveState, type DriveView } from "./drive.ts";
 export { keepAway, objectParts, objectsOf, partShadows, traverseOf, KEEP_OUT, type Part, type SiteObject } from "./objects.ts";
 export { craterIn, craterProfile, madeGround, setKeepOut, rimBoost, rocksAround, standingPlace, type Crater, type Rock } from "./detail.ts";
 export { rockMesh, type RockMesh } from "./rocks.ts";
