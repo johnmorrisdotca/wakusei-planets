@@ -753,6 +753,46 @@ test("the space view with the orbiters shown draws nothing at rest, and switchin
   await givenBackOnRemoval(page);
 });
 
+test("the space view with orbit paths of a page's own draws nothing at rest, one draw call for all sixteen, and setting and clearing them gives back what they took", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&goto=solar-system`);
+  await liveSky(page);
+  const SIXTEEN = ["earth", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "eris", "moon", "io", "europa", "titan", "triton"];
+  const drawnPaths = async () => ((await skyStats(page)) as unknown as { paths: { drawn: number; draws: number } }).paths;
+  const setPaths = (list: string[]) =>
+    sky(page).evaluate((el, ids) => (el as unknown as { setPaths(list: unknown[]): void }).setPaths(ids.map((id, i) => ({ id, style: i % 2 === 0 ? "favourite" : "hovered" }))), list);
+  await atRest(page);
+  await setPaths(SIXTEEN);
+  await expect.poll(async () => (await drawnPaths()).drawn, { timeout: 60_000 }).toBeGreaterThan(8);
+  await atRest(page);
+  expect((await drawnPaths()).draws, "all the paths are one draw call").toBe(1);
+  await settle(page, 1500);
+  const before = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the paths shown").toBe(0);
+  expect(after.rafRequests - before.rafRequests, "no frame asked for at rest with the paths shown").toBe(0);
+  const round = async () => {
+    for (let i = 0; i < 3; i += 1) {
+      await setPaths([]);
+      await expect.poll(async () => (await drawnPaths()).drawn, { timeout: 30_000 }).toBe(0);
+      await setPaths(SIXTEEN);
+      await expect.poll(async () => (await drawnPaths()).drawn, { timeout: 30_000 }).toBeGreaterThan(8);
+    }
+  };
+  const seen: number[] = [];
+  await converged(page, round, seen);
+  for (let i = 0; i < 3; i += 1) await round();
+  await atRest(page);
+  await settle(page, 2500);
+  const last = await settledCounts(page);
+  expect(last.contexts).toBe(1);
+  expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 4);
+  const again = await readCounts(page);
+  await settle(page, 3000);
+  expect((await readCounts(page)).draws - again.draws, "nothing drawn at rest after the rounds").toBe(0);
+  await givenBackOnRemoval(page);
+});
+
 test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=on&speed=86400&ride=mars`);
   await liveSky(page);
