@@ -17,7 +17,7 @@ type Surface = HTMLElement & {
   look: { azimuth: number; pitch: number; fov: number };
   position: { east: number; north: number; up: number };
   sky: { sun: { altitude: number }; earth: { altitude: number } };
-  stats: { state: string; draws: number; quality: string; tiles?: { done: number; total: number; first: number }; renderer?: { draws: number; contexts: number; canvas: { width: number; height: number; pixels: number } } };
+  stats: { state: string; draws: number; quality: string; scale: number; scaled: number; tiles?: { done: number; total: number; first: number }; renderer?: { draws: number; contexts: number; canvas: { width: number; height: number; pixels: number } } };
   time: number;
 };
 
@@ -172,4 +172,43 @@ test("the first view is enough to stand on: the view is live while the far level
   expect(after.done).toBe(after.total);
   // what came in was drawn: the view drew again after the far tiles landed
   await drawnTo(page, before.draws + 1);
+});
+
+test("the walking stick walks and does not look: a press on it pushes the eyes forward, the view does not turn, and letting go stops the walk", async ({ page }) => {
+  test.setTimeout(240_000);
+  await open(page, "shadows=off detail=off heading=0 stick=on");
+  const stick = (await page.locator("#test-surface").evaluate((el) => {
+    const box = el.shadowRoot!.getElementById("stick")!.getBoundingClientRect();
+    return { x: box.left + box.width / 2, y: box.top + box.height / 2, r: box.width / 2 };
+  }));
+  const start = await read(page, (el) => ({ ...el.position, azimuth: el.look.azimuth }));
+  await page.mouse.move(stick.x, stick.y);
+  await page.mouse.down();
+  await page.mouse.move(stick.x, stick.y - stick.r * 0.8, { steps: 3 }); // up on the stick is forward
+  await expect.poll(() => read(page, (el) => el.position.north), { timeout: 60_000 }).toBeGreaterThan(start.north + 0.3);
+  await page.mouse.up();
+  const end = await read(page, (el) => ({ ...el.position, azimuth: el.look.azimuth }));
+  expect(end.azimuth, "the finger on the stick does not look").toBe(start.azimuth);
+  expect(Math.abs(end.east - start.east), "straight ahead").toBeLessThan(0.05);
+  // the stick is up: no more steps (that nothing happens after it is let go)
+  await page.waitForTimeout(800);
+  const rest = await read(page, (el) => el.position.north);
+  await page.waitForTimeout(800);
+  expect(await read(page, (el) => el.position.north)).toBe(rest);
+});
+
+test("a machine that is slow draws the ground smaller while it moves and at full size at rest; a scale asked for is kept", async ({ page }) => {
+  test.setTimeout(240_000);
+  await open(page, "shadows=off detail=off scale=0.5");
+  expect(await read(page, (el) => el.stats.scale), "a scale asked for is every draw's").toBe(0.5);
+  await page.evaluate(() => document.querySelector("#test-surface")!.remove());
+  await open(page, "shadows=off detail=off");
+  // moved a few times, then at rest: the moving draws are timed, software drawing is slow, so the moving size is a half and the size at rest stays whole
+  for (let i = 0; i < 4; i += 1) {
+    const before = await draws(page);
+    await view(page).evaluate((el) => void ((el as Surface).look = { ...(el as Surface).look, azimuth: (el as Surface).look.azimuth + 15 }));
+    await drawnTo(page, before + 1);
+  }
+  expect(await read(page, (el) => el.stats.scaled), "some of the moving draws were at a half").toBeGreaterThanOrEqual(1);
+  await expect.poll(() => read(page, (el) => el.stats.scale), { timeout: 120_000, intervals: [400] }).toBe(1);
 });

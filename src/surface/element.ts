@@ -38,7 +38,10 @@ const TEMPLATE = `<style>
 #note { position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; font: 400 11px/1.35 system-ui, sans-serif; color: #c8ccd4; text-shadow: 0 1px 2px #000; pointer-events: none; }
 #status { position: absolute; inset: 0; display: grid; place-items: center; font: 500 13px system-ui, sans-serif; color: #c8ccd4; pointer-events: none; }
 #status[hidden] { display: none; }
-</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p>`;
+#stick { position: absolute; left: 18px; bottom: 44px; width: 104px; height: 104px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); touch-action: none; }
+#stick[hidden] { display: none; }
+#knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); pointer-events: none; }
+</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
 
 const num = (value: string | null, fallback: number): number => {
   const n = value === null || value.trim() === "" ? NaN : Number(value);
@@ -65,7 +68,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -100,6 +103,15 @@ export class WakuseiSurface extends HTMLElement {
   #restQuality: "full" | "medium" | "fast" = "full";
   #drawMs: number | undefined;
   #measured = 0;
+  /** The share the ground is drawn at while the view moves (1, or a half where the machine is slow), and the moving draws timed to decide it. */
+  #moveScale = 1;
+  #movingTimes: number[] = [];
+  #movingPending = false;
+  #drawScale = 1;
+  #scaled = 0;
+  /** The walking stick's push, east and north, each -1 to 1, and the finger that holds it. */
+  #push = { x: 0, y: 0 };
+  #stickPointer = -1;
   #pointers = new Map<number, { x: number; y: number }>();
   #pinch = 0;
   #draws = 0;
@@ -153,9 +165,9 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /** Numbers for a test or a status line: the draws, the tiles, the renderer's own counts, the mesh, the quality of the last draw and the milliseconds of the last measured one. */
-  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; drawMs: number | undefined; rocks: number } {
+  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; drawMs: number | undefined; rocks: number } {
     const scene = this.#view?.scene as SurfaceScene | undefined;
-    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
+    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
   }
 
   /** The quality of the next draw: the `quality` attribute, or in `auto` the quality of motion while the view moves and the machine's own quality of rest otherwise. */
@@ -184,6 +196,12 @@ export class WakuseiSurface extends HTMLElement {
     this.addEventListener("keydown", this.#onKeyDown);
     this.addEventListener("keyup", this.#onKeyUp);
     this.addEventListener("blur", this.#onBlur);
+    const stick = this.#root.getElementById("stick")!;
+    stick.addEventListener("pointerdown", this.#onStickDown);
+    stick.addEventListener("pointermove", this.#onStickMove);
+    stick.addEventListener("pointerup", this.#onStickUp);
+    stick.addEventListener("pointercancel", this.#onStickUp);
+    this.#showStick();
     if (typeof IntersectionObserver === "function") {
       this.#io = new IntersectionObserver((entries) => {
         const last = entries[entries.length - 1];
@@ -214,6 +232,10 @@ export class WakuseiSurface extends HTMLElement {
 
   attributeChangedCallback(name: string): void {
     if (!this.isConnected) return;
+    if (name === "stick") {
+      this.#showStick();
+      return;
+    }
     if (name === "standby") {
       if (!this.hasAttribute("standby")) void this.#start();
       return;
@@ -407,12 +429,77 @@ export class WakuseiSurface extends HTMLElement {
       if (was > 120 && this.#restQuality === "full") this.#restQuality = "medium";
       else if (was > 250 && this.#restQuality === "medium") this.#restQuality = "fast";
     }
-    const measure = auto && !this.#moving && this.#measured < 4;
-    if (measure) this.#measured += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), measure: measure || this.getAttribute("measure") !== null });
+    // the draws while the view moves are timed too (the first few), and a machine that takes over 24 ms for one is given a half size for them: a quarter of the pixels, stretched
+    const scaleAttr = this.getAttribute("scale");
+    if (this.#movingPending && was !== undefined) {
+      this.#movingPending = false;
+      this.#movingTimes.push(was);
+      if (this.#movingTimes.length >= 2 && this.#moveScale === 1) {
+        const sorted = [...this.#movingTimes].sort((a, b) => a - b);
+        if (sorted[Math.floor(sorted.length / 2)]! > 24) this.#moveScale = 0.5;
+      }
+    }
+    const forced = scaleAttr === null || scaleAttr === "auto" ? undefined : Number(scaleAttr);
+    const timeMoving = auto && this.#moving && this.#movingTimes.length < 4 && forced === undefined;
+    if (timeMoving) this.#movingPending = true;
+    this.#drawScale = forced !== undefined && Number.isFinite(forced) ? Math.min(1, Math.max(0.25, forced)) : this.#moving ? this.#moveScale : 1;
+    const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
+    if (measure && !this.#moving) this.#measured += 1;
+    if (this.#drawScale < 1) this.#scaled += 1;
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
   }
+
+  // --- the walking stick: for a touch screen, where there are no keys. One finger on the view looks, two fingers pinch to zoom, and the finger on the stick walks ----------------------------------------
+
+  /** Whether the stick is shown: `stick="on"` or `off`, and left out it is shown where the main pointer is a finger (`pointer: coarse`). */
+  #showStick(): void {
+    const own = this.getAttribute("stick");
+    const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
+    const on = own === "on" || (own !== "off" && coarse);
+    const stick = this.#root?.getElementById("stick");
+    if (stick !== null && stick !== undefined) stick.hidden = !on;
+  }
+
+  #onStickDown = (event: PointerEvent): void => {
+    event.stopPropagation(); // the view's own hands (look, pinch) never hear the finger that walks
+    if (this.#stickPointer !== -1) return;
+    this.#stickPointer = event.pointerId;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    this.#onStickMove(event);
+  };
+
+  #onStickMove = (event: PointerEvent): void => {
+    if (event.pointerId !== this.#stickPointer) return;
+    event.stopPropagation();
+    const stick = event.currentTarget as HTMLElement;
+    const box = stick.getBoundingClientRect();
+    const reach = box.width / 2;
+    let x = (event.clientX - (box.left + reach)) / reach;
+    let y = (event.clientY - (box.top + reach)) / reach;
+    const length = Math.hypot(x, y);
+    if (length > 1) {
+      x /= length;
+      y /= length;
+    }
+    // a small dead centre: a finger resting on the stick does not creep
+    this.#push = length < 0.12 ? { x: 0, y: 0 } : { x, y: -y };
+    const knob = this.#root.getElementById("knob") as HTMLElement;
+    knob.style.transform = `translate(${x * reach * 0.6}px, ${y * reach * 0.6}px)`;
+    if (this.#push.x !== 0 || this.#push.y !== 0) {
+      this.#walkAt = performance.now();
+      this.#walkTick();
+    }
+  };
+
+  #onStickUp = (event: PointerEvent): void => {
+    if (event.pointerId !== this.#stickPointer) return;
+    event.stopPropagation();
+    this.#stickPointer = -1;
+    this.#push = { x: 0, y: 0 };
+    (this.#root.getElementById("knob") as HTMLElement).style.transform = "";
+  };
 
   // --- hands ---------------------------------------------------------------------------------------------------------------------------------------
 
@@ -485,16 +572,17 @@ export class WakuseiSurface extends HTMLElement {
   /** While a key is held: a step every frame at a walking pace (and a turn at a quarter turn a second), at most thirty a second; nothing when no key is held. */
   #walkTick = (): void => {
     clearTimeout(this.#walkTimer);
-    if (this.#keys.size === 0) return;
+    if (this.#keys.size === 0 && this.#push.x === 0 && this.#push.y === 0) return;
     const now = performance.now();
     const dt = Math.min(0.1, (now - this.#walkAt) / 1000);
     this.#walkAt = now;
     const k = this.#keys;
-    const ahead = (k.has("w") || k.has("ArrowUp") ? 1 : 0) - (k.has("s") || k.has("ArrowDown") ? 1 : 0);
-    const aside = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0);
+    const ahead = (k.has("w") || k.has("ArrowUp") ? 1 : 0) - (k.has("s") || k.has("ArrowDown") ? 1 : 0) + this.#push.y;
+    const aside = (k.has("d") ? 1 : 0) - (k.has("a") ? 1 : 0) + this.#push.x;
     const turn = (k.has("e") || k.has("ArrowRight") ? 1 : 0) - (k.has("q") || k.has("ArrowLeft") ? 1 : 0);
     if (turn !== 0) this.#look = clampLook({ ...this.#look, azimuth: this.#look.azimuth + turn * 60 * dt });
-    if (ahead !== 0 || aside !== 0) this.#at = stepOver(this.#at, this.#look.azimuth, ahead * WALK_SPEED * dt, aside * WALK_SPEED * dt);
+    const speed = Math.min(1, Math.hypot(ahead, aside)) / Math.max(1e-9, Math.hypot(ahead, aside));
+    if (ahead !== 0 || aside !== 0) this.#at = stepOver(this.#at, this.#look.azimuth, ahead * speed * WALK_SPEED * dt, aside * speed * WALK_SPEED * dt);
     this.#changed();
     this.#walkTimer = setTimeout(this.#walkTick, 33);
   };

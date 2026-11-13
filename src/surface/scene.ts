@@ -26,6 +26,8 @@ export interface SurfaceState {
   detail?: boolean;
   /** How much the draw spends on shadows: `full` (the default), `medium` or `fast` (the near march shortened, the made craters left out of it): a draw while the view moves is `fast`. */
   quality?: "full" | "medium" | "fast";
+  /** The share of the canvas's width and height the ground is drawn at, 1 (the default) to 0.25: below 1 it is drawn to a smaller target and stretched, which is what a draw while the view moves does on a machine that is slow. It needs `WebGLRenderTarget` in the three.js module (a page's own cut-down module may not have it; the draw is then at full size). */
+  scale?: number;
   /** Time the next draw to the end of the graphics queue (it waits for the card, so it is for a few draws, not every one). */
   measure?: boolean;
 }
@@ -256,7 +258,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       const makeRocks = (state: SurfaceState): void => {
         const ground = options.groundY;
         if (ground === undefined || state.detail === false) return;
-        const pixel = uniforms.uPixel.value as number;
+        const pixel = fullPixel;
         const key = `${Math.round(state.eye.east / 8)}|${Math.round(state.eye.north / 8)}|${state.sky.sun.azimuth.toFixed(0)}|${state.sky.sun.altitude.toFixed(0)}|${pixel.toFixed(4)}`;
         if (key === rockKey) return;
         rockKey = key;
@@ -290,10 +292,13 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       let drawMs: number | undefined;
       let aspect = context.width / Math.max(1, context.height);
       let pixelHeight = Math.max(1, context.height);
+      let fullPixel = 0.0024;
+      let scale = 1;
       let last: SurfaceState | undefined;
       const place = (state: SurfaceState): void => {
         last = state;
         const { eye, look, sky } = state;
+        fullPixel = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelHeight;
         makeRocks(state);
         measuring = state.measure === true;
         const world = new T.Vector3(eye.east, eye.up, -eye.north);
@@ -320,7 +325,9 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const q = state.quality ?? "full";
         const near = q === "full" ? [56, 80, 36] : q === "medium" ? [28, 40, 16] : [10, 14, 0];
         uniforms.uNear.value.set(near[0]!, near[1]!, near[2]!);
-        uniforms.uPixel.value = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelHeight;
+        scale = Math.min(1, Math.max(0.25, state.scale ?? 1));
+        // a pixel of a smaller target is wider by the share it is drawn at
+        uniforms.uPixel.value = fullPixel / (T.WebGLRenderTarget === undefined ? 1 : scale);
         const axes = cameraAxes(look);
         const toEnu = (v: readonly [number, number, number]): [number, number, number] => [v[0], -v[2], v[1]];
         const sunWorld: [number, number, number] = [sky.sun.enu[0], sky.sun.enu[2], -sky.sun.enu[1]];
@@ -344,6 +351,20 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         earth.mesh.visible = sky.earth.altitude > -1;
       };
       const camera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      // the stretch of a smaller draw to the canvas: one square with the target as its texture (made when first needed)
+      let target: InstanceType<NonNullable<ThreeParts["WebGLRenderTarget"]>> | undefined;
+      const blitUniforms = { uMap: { value: null as unknown } };
+      const blitMaterial = new T.ShaderMaterial({
+        vertexShader: "varying vec2 vUv; void main() { vUv = position.xy * 0.5 + 0.5; gl_Position = vec4(position.xy, 0.0, 1.0); }",
+        fragmentShader: "precision highp float; uniform sampler2D uMap; varying vec2 vUv; void main() { gl_FragColor = texture2D(uMap, vUv); }",
+        uniforms: blitUniforms,
+        depthTest: false,
+        depthWrite: false,
+      });
+      const blitMesh = new T.Mesh(square as never, blitMaterial);
+      blitMesh.frustumCulled = false;
+      const blitScene = new T.Scene();
+      blitScene.add(blitMesh);
       return {
         scene,
         camera,
@@ -356,7 +377,20 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         },
         render(gl) {
           const t0 = performance.now();
-          gl.render(scene, camera);
+          if (scale < 1 && T.WebGLRenderTarget !== undefined) {
+            // the ground at a smaller size, stretched to the canvas by one textured square
+            const w = Math.max(1, Math.round(gl.domElement.width * scale));
+            const h = Math.max(1, Math.round(gl.domElement.height * scale));
+            const three = gl as unknown as { setRenderTarget(target: unknown): void };
+            if (target === undefined) {
+              target = new T.WebGLRenderTarget(w, h, { minFilter: T.LinearFilter, magFilter: T.LinearFilter, depthBuffer: true });
+              blitUniforms.uMap.value = target.texture;
+            } else if (target.width !== w || target.height !== h) target.setSize(w, h);
+            three.setRenderTarget(target);
+            gl.render(scene, camera);
+            three.setRenderTarget(null);
+            gl.render(blitScene, camera);
+          } else gl.render(scene, camera);
           if (measuring) {
             const canvas = gl.domElement;
             // reading one pixel back waits for the card to finish the draw (`finish` returns at once in a browser that draws in another process)
@@ -388,6 +422,8 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           shadowMaterial.dispose();
           sun.material.dispose();
           earth.material.dispose();
+          target?.dispose();
+          blitMaterial.dispose();
         },
       };
     },

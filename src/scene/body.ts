@@ -26,7 +26,7 @@ export type ThreeParts = Pick<
   typeof THREE,
   | "AdditiveBlending" | "BufferAttribute" | "BufferGeometry" | "ClampToEdgeWrapping" | "DataTexture" | "DoubleSide" | "Group" | "Line" | "LineBasicMaterial" | "LineSegments" | "LinearFilter" | "Mesh" | "NoColorSpace"
   | "OrthographicCamera" | "PlaneGeometry" | "RepeatWrapping" | "RGBAFormat" | "RingGeometry" | "Scene" | "ShaderMaterial" | "SphereGeometry" | "TextureLoader" | "Vector2" | "Vector3" | "WebGLRenderer"
-> & Partial<Pick<typeof THREE, "CanvasTexture" | "SRGBColorSpace" | "NormalBlending">>;
+> & Partial<Pick<typeof THREE, "CanvasTexture" | "SRGBColorSpace" | "NormalBlending" | "WebGLRenderTarget">>;
 
 /** One moon in a system view: its place in planet radii (viewer's frame) and the points of its orbit, if they changed. */
 export interface MoonDraw {
