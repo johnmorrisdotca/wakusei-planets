@@ -481,6 +481,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       // the driven path: a strip like the published traverse's, grown as the rover goes (room for 6,000 points)
       const TRAIL_MAX = 6000;
       let trailMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let trailMaterialDriven: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
       let trailBuilt = 0;
       const makeTrail = (state: SurfaceState): void => {
         const points = state.trail;
@@ -500,6 +501,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           material.polygonOffset = true;
           material.polygonOffsetFactor = -3;
           material.polygonOffsetUnits = -3;
+          trailMaterialDriven = material;
           trailMesh = new T.Mesh(geometry as never, material);
           trailMesh.frustumCulled = false;
           trailMesh.renderOrder = 0.6;
@@ -534,6 +536,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       };
       // the dust: one small square for each grain in the pool, in the corners of a fixed set of triangles
       let dustMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let dustMaterial: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
       const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.04 } };
       const makeDust = (state: SurfaceState): void => {
         const grains = state.dust;
@@ -554,6 +557,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           geometry.setAttribute("uv", new T.BufferAttribute(uv, 2));
           geometry.setIndex(new T.BufferAttribute(index, 1));
           const material = new T.ShaderMaterial({ vertexShader: DUST_VERTEX, fragmentShader: DUST_FRAGMENT, uniforms: dustUniforms, transparent: true, depthWrite: false });
+          dustMaterial = material;
           dustMesh = new T.Mesh(geometry as never, material);
           dustMesh.frustumCulled = false;
           dustMesh.renderOrder = 3;
@@ -716,6 +720,8 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           vehicleShadow?.geometry.dispose();
           trailMesh?.geometry.dispose();
           dustMesh?.geometry.dispose();
+          trailMaterialDriven?.dispose();
+          dustMaterial?.dispose();
           objectMaterial.dispose();
           blitMaterial.dispose();
         },
