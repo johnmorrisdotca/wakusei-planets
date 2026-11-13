@@ -32,7 +32,9 @@ export async function quiet(page: Page, timeout = 60_000): Promise<void> {
     .poll(
       async () => {
         const now = (await readCounts(page)).draws;
-        held = now === last ? held + 1 : 0;
+        // the pictures that are still being fetched will each draw a frame when they arrive: not at rest until none is pending
+        const pending = Number(((await statsOf(page)) as unknown as { pictures?: { pending: number } }).pictures?.pending ?? 0);
+        held = now === last && pending === 0 ? held + 1 : 0;
         last = now;
         return held;
       },

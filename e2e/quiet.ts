@@ -8,8 +8,13 @@ export async function quietElement(page: Page, selector: string, timeout = 60_00
   await expect
     .poll(
       async () => {
-        const now = await page.locator(selector).evaluate((el) => Number((Reflect.get(el, "stats") as { draws?: number } | undefined)?.draws ?? -1));
-        held = now === last && now >= 0 ? held + 1 : 0;
+        const read = await page.locator(selector).evaluate((el) => {
+          const stats = Reflect.get(el, "stats") as { draws?: number; pictures?: { pending: number } } | undefined;
+          return { draws: Number(stats?.draws ?? -1), pending: Number(stats?.pictures?.pending ?? 0) };
+        });
+        // the pictures still being fetched will each draw a frame when they arrive (`stats.pictures.pending`): not at rest until none is
+        const now = read.draws;
+        held = now === last && now >= 0 && read.pending === 0 ? held + 1 : 0;
         last = now;
         return held;
       },
