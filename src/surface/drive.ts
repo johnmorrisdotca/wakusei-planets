@@ -40,7 +40,7 @@ export const ROVER = {
     [0.95, 0.41, -1.15],
   ] as readonly V3[],
   /** The commander's eyes in the rover's frame, the left seat. */
-  seat: [-0.42, 1.3, -0.3] as V3,
+  seat: [-0.42, 1.45, -0.3] as V3,
 } as const;
 
 /**

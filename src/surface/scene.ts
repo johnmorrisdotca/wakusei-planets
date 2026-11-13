@@ -537,7 +537,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       // the dust: one small square for each grain in the pool, in the corners of a fixed set of triangles
       let dustMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
       let dustMaterial: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
-      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.04 } };
+      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.022 } };
       const makeDust = (state: SurfaceState): void => {
         const grains = state.dust;
         if (grains === undefined) {

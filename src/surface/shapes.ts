@@ -264,11 +264,11 @@ export function roverParts(): Part[] {
   parts.push(strut([0, 1.1, 0.35], [0, 1.4, 0.3], 0.03, 1.0, DARK));
   parts.push(box([0, 1.42, 0.3], [0.2, 0.04, 0.05], 0, 1.0, 0, DARK));
   // the dish on its mast at the front, turned up and back toward the Earth, and the camera's own mast beside it
-  parts.push(strut([0, 0.6, 1.2], [0, 1.65, 1.2], 0.05, 1.2, grey));
-  parts.push(dish([0, 1.75, 1.2], [0, 0.55, -0.55], 0.46, 0.14, 14, 1.4, [0.95, 0.95, 0.97]));
-  parts.push(strut([-0.38, 0.6, 1.3], [-0.38, 1.4, 1.3], 0.04, 1.2, grey));
-  parts.push(box([-0.38, 1.5, 1.3], [0.26, 0.16, 0.18], 0, 1.0, 0, [0.5, 0.52, 0.56]));
-  parts.push(strut([0.4, 0.6, 1.05], [0.4, 1.8, 1.05], 0.012, 1.0, DARK));
+  parts.push(strut([0, 0.6, 1.2], [0, 2.1, 1.2], 0.05, 1.2, grey));
+  parts.push(dish([0, 2.2, 1.2], [0, 0.55, -0.55], 0.46, 0.14, 14, 1.4, [0.95, 0.95, 0.97]));
+  parts.push(strut([0.5, 0.6, 1.3], [0.5, 1.3, 1.3], 0.04, 1.2, grey));
+  parts.push(box([0.5, 1.4, 1.3], [0.26, 0.16, 0.18], 0, 1.0, 0, [0.5, 0.52, 0.56]));
+  parts.push(strut([-0.8, 0.6, 1.3], [-0.8, 1.9, 1.3], 0.012, 1.0, DARK));
   // the boxes: the batteries at the front, the tools at the back
   for (const x of [-0.4, 0.4]) parts.push(box([x, 0.76, 0.85], [0.36, 0.26, 0.38], 0, 1.0, 0, SILVER));
   parts.push(box([0, 0.78, -1.15], [0.9, 0.3, 0.5], 0, 1.05, 0, SILVER));

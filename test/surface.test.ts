@@ -408,7 +408,7 @@ test("the shapes stand on the ground at the sizes they should be, and their shad
   const rover = objectParts(objects.find((o) => o.id === "rover")!, 0);
   let rt = 0;
   for (const part of rover) for (let i = 1; i < part.position.length; i += 3) rt = Math.max(rt, part.position[i]!);
-  assert.ok(rt > 1.5 && rt < 2.2, `the rover with its mast is about 1.9 m: ${rt}`);
+  assert.ok(rt > 2.3 && rt < 2.7, `the rover with its dish on a tall mast (ours, raised so the commander sees under it) is about 2.5 m: ${rt}`);
   // a 2.4 m flag pole with the Sun 13 degrees up in the east throws a shadow of about 10 m to the west
   const flag = objects.find((o) => o.id === "flag")!;
   const shadow = partShadows(objectParts(flag, 0), 0, 90, 13);

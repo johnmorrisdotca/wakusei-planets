@@ -493,6 +493,6 @@ varying vec2 vUv;
 void main() {
   float r = length(vUv);
   if (r > 1.0) discard;
-  gl_FragColor = vec4(vec3(0.78), 0.5 * (1.0 - r * r));
+  gl_FragColor = vec4(vec3(0.6), 0.55 * (1.0 - r * r));
 }
 `;

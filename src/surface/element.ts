@@ -131,7 +131,7 @@ export class WakuseiSurface extends HTMLElement {
   #camOffset = { azimuth: 0, pitch: 0 };
   #driveEyeUp = 0;
   #trail: number[] = [];
-  #dust = new DustField(480, 17);
+  #dust = new DustField(900, 17);
   #blockers: { x: number; y: number; r: number }[] = [];
   #blockersAt: { east: number; north: number } | undefined;
   #stickPointer = -1;
@@ -525,7 +525,7 @@ export class WakuseiSurface extends HTMLElement {
     this.#driveCamera = this.getAttribute("drive-camera") === "seat" ? "seat" : "chase";
     this.#vehicle = startDrive(east, north, heading, this.#groundAt(east, north));
     this.#trail = [east, north];
-    this.#dust = new DustField(480, 17);
+    this.#dust = new DustField(900, 17);
     this.#camOffset = { azimuth: 0, pitch: 0 };
     this.#blockersAt = undefined;
     for (const el of this.#labelEls.values()) el.hidden = true;
@@ -572,12 +572,15 @@ export class WakuseiSurface extends HTMLElement {
       if (!v.airborne && Math.abs(v.speed) > 0.6) {
         const h = (v.heading * Math.PI) / 180;
         const [fx, fz] = [Math.sin(h), Math.cos(h)];
-        const grains = Math.abs(v.speed) * dt * 7;
+        const grains = Math.abs(v.speed) * dt * 26;
+        const [rx, rz] = [Math.cos(h), -Math.sin(h)];
         for (const [wx, , wz] of ROVER.wheels) {
           const w = toWorld(v, [wx, 0, wz]);
           for (let k = 0; k < grains + Math.random() * 0.999; k += 1) {
-            const back = -Math.sign(v.speed) * Math.abs(v.speed) * 0.5;
-            this.#dust.emit([w[0], w[1] + 0.05, w[2]], [fx * back, 0.9 + 0.35 * Math.abs(v.speed), fz * back], 3);
+            // thrown up and back from the tyre in a fan: the faster the rover, the wider and farther
+            const back = -Math.sign(v.speed) * Math.abs(v.speed) * (0.3 + 0.3 * Math.random());
+            const side = (Math.random() - 0.5) * 1.6 * Math.min(1, Math.abs(v.speed));
+            this.#dust.emit([w[0], w[1] + 0.05, w[2]], [fx * back + rx * side, 0.5 + 0.18 * Math.abs(v.speed), fz * back + rz * side], 2);
           }
         }
       }
