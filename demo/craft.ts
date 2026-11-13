@@ -62,8 +62,39 @@ function step(now: number): void {
   when += (span / 90) * ((now - last) / 700);
   last = now;
   if (when > craft.record.end) when = craft.record.start;
-  void show();
+  // the chart, the facts and the events are the craft's, not the moment's: only the marker and the where line move with it
+  if (drawn === id) place();
+  else void show();
   frame = requestAnimationFrame(step);
+}
+
+/** The craft whose chart is drawn, and the chart's way of putting a place on it; the marker moves with the date, nothing else of the chart does. */
+let drawn: SpacecraftId | null = null;
+let chartMap: ((p: { x: number; y: number }) => string) | null = null;
+let chartWords: "en" | "ja" = "en";
+
+/** Put the marker and the where line at the moment: the only things that change while the date plays. */
+function place(): void {
+  if (chartMap === null || drawn === null) return;
+  const craft = SPACECRAFT[drawn];
+  const [px, py] = spacecraftPosition(drawn, when);
+  const [x, y] = chartMap({ x: px / AU, y: py / AU }).split(",");
+  const marker = $<SVGCircleElement>("#chart #mark");
+  if (marker.getAttribute("cx") !== x) marker.setAttribute("cx", x!);
+  if (marker.getAttribute("cy") !== y) marker.setAttribute("cy", y!);
+  const au = spacecraftSunDistance(drawn, when) / AU;
+  const speed = spacecraftSpeed(drawn, when);
+  const hours = spacecraftLightTime(drawn, when) / 3600;
+  const local = new Date(when).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const text = chartWords === "ja"
+    ? `${craft.name.ja}、${local}、太陽から ${au.toFixed(2)} au、${speed.toFixed(1)} km/s、電波で ${hours.toFixed(1)} 時間`
+    : `${craft.name.en}, ${local}, ${au.toFixed(2)} au from the Sun, ${speed.toFixed(1)} km/s, ${hours.toFixed(1)} h by radio`;
+  const where = $<HTMLElement>("#where");
+  // the text node is changed in place: replacing the element's children would tell every watcher of the page's tree that it changed
+  if (where.firstChild instanceof Text && where.childNodes.length === 1) {
+    if (where.firstChild.data !== text) where.firstChild.data = text;
+  } else if (where.textContent !== text) where.textContent = text;
+  whenBox.value = localValue(when);
 }
 
 async function show(): Promise<void> {
@@ -92,8 +123,8 @@ async function show(): Promise<void> {
   }
   const [px, py] = spacecraftPosition(id, when);
   const here = { x: px / AU, y: py / AU };
-  const xs = samples.map((p) => p.x).concat(here.x, 0);
-  const ys = samples.map((p) => p.y).concat(here.y, 0);
+  const xs = samples.map((p) => p.x).concat(0);
+  const ys = samples.map((p) => p.y).concat(0);
   const minX = Math.min(...xs);
   const maxX = Math.max(...xs);
   const minY = Math.min(...ys);
@@ -113,14 +144,11 @@ async function show(): Promise<void> {
   }
   const mark = map(here);
   const sun = map({ x: 0, y: 0 });
-  $<SVGSVGElement>("#chart").innerHTML = `<path d="${d}" fill="none" stroke="currentColor" stroke-width="0.6"/><circle cx="${sun.split(",")[0]}" cy="${sun.split(",")[1]}" r="1.2" fill="#e7c36a"/><circle cx="${mark.split(",")[0]}" cy="${mark.split(",")[1]}" r="1.4" fill="#fff"/>`;
-  const au = spacecraftSunDistance(id, when) / AU;
-  const speed = spacecraftSpeed(id, when);
-  const hours = spacecraftLightTime(id, when) / 3600;
-  const local = new Date(when).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-  $<HTMLElement>("#where").textContent = words === "ja"
-    ? `${craft.name.ja}、${local}、太陽から ${au.toFixed(2)} au、${speed.toFixed(1)} km/s、電波で ${hours.toFixed(1)} 時間`
-    : `${craft.name.en}, ${local}, ${au.toFixed(2)} au from the Sun, ${speed.toFixed(1)} km/s, ${hours.toFixed(1)} h by radio`;
+  $<SVGSVGElement>("#chart").innerHTML = `<path d="${d}" fill="none" stroke="currentColor" stroke-width="0.6"/><circle cx="${sun.split(",")[0]}" cy="${sun.split(",")[1]}" r="1.2" fill="#e7c36a"/><circle id="mark" cx="${mark.split(",")[0]}" cy="${mark.split(",")[1]}" r="1.4" fill="#fff"/>`;
+  drawn = id;
+  chartMap = map;
+  chartWords = words;
+  place();
   const status = words === "ja" ? (craft.status === "active" ? "飛行中" : "終了") : craft.status;
   $<HTMLElement>("#facts").textContent = words === "ja"
     ? `${craft.name.ja}（${craft.agency}、${status}）。打上げ: ${new Date(craft.launch.date).toLocaleString()}、${craft.launch.site.ja}、${craft.launch.vehicle}。`
