@@ -96,13 +96,13 @@ test("pick a planet and its moons come up on the next row: every moon has a tile
   await page.goto(`${URL}?look=line&body=sun`);
   await expect(page.locator("#moon-row")).toBeHidden();
   for (const [planet, moons] of Object.entries(MOONS_OF)) {
-    await page.locator(`[data-testid="group-${(DWARF_IDS as readonly string[]).includes(planet) ? "dwarfs" : "planets"}"]:visible`).click();
+    await page.locator(`#picker [data-testid="group-${(DWARF_IDS as readonly string[]).includes(planet) ? "dwarfs" : "planets"}"]`).click();
     await page.locator(`#tiles .tile[data-body="${planet}"]`).click();
     await expect(page.locator("#moon-row")).toBeVisible();
     await expect(page.locator("#moon-row .tile")).toHaveCount(moons.length);
     for (const moon of moons) await expect(page.locator(`#moon-row .tile[data-body="${moon}"]`), `${planet}: ${moon}`).toBeAttached();
   }
-  await page.locator('[data-testid="group-planets"]:visible').click();
+  await page.locator('#picker [data-testid="group-planets"]').click();
   await page.locator('#tiles .tile[data-body="mercury"]').click();
   await expect(page.locator("#moon-row")).toBeHidden();
   await page.locator('#tiles .tile[data-body="jupiter"]').click();

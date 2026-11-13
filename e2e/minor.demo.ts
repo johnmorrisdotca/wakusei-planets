@@ -6,14 +6,14 @@ const URL = "/wakusei-planets/";
 
 test("the body page has a row of small bodies, each a click away, and the address keeps the choice", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=mars`);
-  await page.locator('[data-testid="group-minor"]:visible').click();
+  await page.locator('#picker [data-testid="group-minor"]').click();
   await expect(page.locator("#tiles .tile")).toHaveCount(5);
   await page.locator('#tiles .tile[data-body="halley"]').click();
   await expect(page.locator("#main")).toHaveAttribute("body", "halley");
   await expect(page).toHaveURL(/body=halley/);
   await expect(page.locator("#caption")).toContainText("Halley");
   await page.goto(`${URL}?look=line&body=pholus`);
-  await expect(page.locator('[data-testid="group-minor"]:visible')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('#picker [data-testid="group-minor"]')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#main svg")).toBeVisible();
 });
 
