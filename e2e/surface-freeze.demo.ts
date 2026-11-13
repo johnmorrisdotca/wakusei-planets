@@ -7,6 +7,9 @@ import { routeSurface } from "./surface-fixture.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(async ({ page }) => {
+  // a slow machine: a quarter of the speed, as the test-rules page asks
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   await page.addInitScript(COUNT_SCRIPT);
 });
 
@@ -35,6 +38,8 @@ const open = async (page: Page, extra = ""): Promise<void> => {
   await page.goto("/wakusei-planets/surface.html");
   await page.evaluate((extra) => {
     document.querySelector("#surface")?.remove();
+    // the page's orbit view is another view of the same shared renderer and draws when its own pictures arrive: it is not what this test measures
+    document.querySelector("#orbit")?.remove();
     const el = document.createElement("wakusei-surface");
     el.id = "test-surface";
     el.setAttribute("site", "apollo-17");
@@ -46,6 +51,21 @@ const open = async (page: Page, extra = ""): Promise<void> => {
     document.querySelector("main")!.prepend(el);
   }, extra);
   await expect(page.locator("#test-surface")).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+  // at rest means: every tile is in and the draws that came of them (and of the first look) have been made: the draw count is the same on four reads
+  await expect(page.locator("#test-surface")).toHaveAttribute("data-loading", "done", { timeout: 120_000 });
+  let held = -1;
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = await page.locator("#test-surface").evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws);
+        same = now === held ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { intervals: [500], timeout: 180_000, message: "the view never stopped drawing" },
+    )
+    .toBeGreaterThanOrEqual(4);
 };
 const call = <T>(page: Page, fn: (el: HTMLElement & { look: { azimuth: number; pitch: number; fov: number }; walk(a: number, b?: number): void; time: number; stats: { renderer: { draws: number } } }) => T): Promise<T> =>
   page.locator("#test-surface").evaluate(fn as never) as Promise<T>;
