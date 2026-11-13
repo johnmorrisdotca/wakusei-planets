@@ -639,6 +639,8 @@ test("the space view with names on the Moon draws nothing at rest and adds no gr
   const nameCount = () => sky(page).evaluate((el) => el.shadowRoot?.querySelectorAll("[data-name]").length ?? 0);
   await expect.poll(nameCount, { timeout: 60_000 }).toBeGreaterThan(2);
   await atRest(page);
+  // the Moon's pictures arrive after the move ends, as in the other tests: let them come before the count is taken
+  await settle(page, 2500);
   const before = await readCounts(page);
   await settle(page, 2000);
   const after = await readCounts(page);
