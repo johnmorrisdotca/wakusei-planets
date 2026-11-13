@@ -86,3 +86,15 @@ test("a line through a corner of the picture belongs to the top or the bottom ed
   assert.equal(down.along, W);
   assert.equal(sightOf({ front: false, x: 0, y: 0, r: 0, dx: -4, dy: -3 }, W, H).edge, "top");
 });
+
+test("withinMargin keeps the picture's inner part: 0.15 of each side is the edge band", async () => {
+  const { withinMargin } = await import("../src/space/sight.ts");
+  assert.equal(withinMargin(0, 0, 0.15), true);
+  assert.equal(withinMargin(0.7, 0.7, 0.15), true, "0.7 is the inner edge: 1 - 2 x 0.15");
+  assert.equal(withinMargin(0.71, 0, 0.15), false);
+  assert.equal(withinMargin(0, -0.71, 0.15), false);
+  assert.equal(withinMargin(1, 0, 0), true, "no margin: the whole picture");
+  assert.equal(withinMargin(1.01, 0, 0), false);
+  assert.equal(withinMargin(0.09, 0, 0.45), true);
+  assert.equal(withinMargin(0.11, 0, 0.45), false, "a margin of 0.45 leaves a tenth of the picture");
+});

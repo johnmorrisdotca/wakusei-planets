@@ -8,7 +8,7 @@ import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
-import { sightChanged, sightOf, type Sight, type SightEdge, type SightInput } from "./sight.ts";
+import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { chooseLabels, nameSpot, type LabelBox } from "./labels.ts";
 import { coverArrows } from "./covered.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
@@ -1479,7 +1479,7 @@ export class WakuseiSpace extends HTMLElement {
     const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 1;
     if (c[2] < 0) {
       const nx = c[0] / (-c[2] * tall * aspect), ny = c[1] / (-c[2] * tall);
-      if (Math.abs(nx) <= 1 - 2 * margin && Math.abs(ny) <= 1 - 2 * margin) return false;
+      if (withinMargin(nx, ny, margin)) return false;
     }
     // the camera's place as seen from the body: the controls' yaw and tilt and the zoom that put the camera there, looking at it
     const away = Math.hypot(v[0], v[1], v[2]);

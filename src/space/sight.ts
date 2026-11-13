@@ -106,6 +106,27 @@ export function sightOf(input: SightInput, width: number, height: number, axis: 
 const angleOf = (dx: number, dy: number): number => (dx === 0 && dy === 0 ? 0 : ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360);
 
 /**
+ * Whether a point of the picture is inside it less a margin on every side: `nx` and `ny` are its place from the middle in halves of the picture's width and height (-1 the left or top edge, 1 the right or bottom),
+ * and `margin` a fraction of the width for the left and right and of the height for the top and bottom. `turnTo` and a page's own "show" use the same test.
+ *
+ * @param nx - The place across, -1 to 1.
+ * @param ny - The place down, -1 to 1.
+ * @param margin - The fraction of each side kept clear, 0 to 0.5.
+ * @returns True when the point is inside the picture less the margin.
+ *
+ * @example
+ * ```ts
+ * import { withinMargin } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(withinMargin(0.5, 0, 0.15), withinMargin(0.8, 0, 0.15));
+ * ```
+ */
+export function withinMargin(nx: number, ny: number, margin: number): boolean {
+  const inner = 1 - 2 * margin;
+  return Math.abs(nx) <= inner && Math.abs(ny) <= inner;
+}
+
+/**
  * How far, in CSS pixels, a body out of view moves along its edge before the view tells the page again.
  *
  * @example
