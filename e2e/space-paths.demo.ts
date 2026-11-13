@@ -218,7 +218,8 @@ test("the pointer finds a path: hover, click, the style's name, a body first, an
   await page.mouse.click(box.x + free!.x, box.y + free!.y);
   await expect.poll(async () => (await pathsOf(page)).hits).toBe(1);
   const log = await page.evaluate(() => (window as unknown as { __paths: { type: string; detail: Record<string, unknown> }[] }).__paths);
-  expect(log.filter((e) => e.type === "wakusei-path-hover").length).toBe(1);
+  // the first move onto the path, and the press's own move back onto it after the pointer had left; one end, at the corner
+  expect(log.filter((e) => e.type === "wakusei-path-hover").length).toBe(2);
   expect(log.filter((e) => e.type === "wakusei-path-hover-end").length).toBe(1);
   const click = log.find((e) => e.type === "wakusei-path-click")!;
   expect(click.detail).toMatchObject({ id: "neptune", style: "favourite", pointer: "mouse" });
