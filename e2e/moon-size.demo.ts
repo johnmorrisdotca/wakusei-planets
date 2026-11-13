@@ -14,11 +14,11 @@ test("squeezed moons grow from the default size to 4", async ({ page }, testInfo
   await expect(space).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { distance: number } }).stats.distance)).toBeGreaterThan(1);
 
+  // no glide (smooth: false): the camera stands still, so the radii read before and after a change are of the same view
   const show = (body: string, zoom: number) => space.evaluate((el, arg) => {
-    const view = el as unknown as { scale: string; goTo: (name: string) => void; controller?: { set: (state: { zoom: number }, final?: boolean, reason?: string) => void } };
+    const view = el as unknown as { scale: string; goTo: (name: string, options: { smooth: boolean; zoom: number }) => void };
     view.scale = "compressed";
-    view.goTo(arg.body);
-    view.controller?.set({ zoom: arg.zoom }, true, "set");
+    view.goTo(arg.body, { smooth: false, zoom: arg.zoom });
   }, { body, zoom });
   const size = (n: number) => space.evaluate((el, value) => {
     (el as unknown as { moonSize: number }).moonSize = value;
@@ -31,26 +31,26 @@ test("squeezed moons grow from the default size to 4", async ({ page }, testInfo
   await size(2);
   await expect.poll(() => radius("ganymede")).toBeGreaterThan(2);
   const atDefault = await radius("ganymede");
-  if (testInfo.project.name === "chromium-desk") await page.screenshot({ path: "/opt/cursor/artifacts/moon-jupiter-size-2.png" });
-  const draws = await space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws);
+  await testInfo.attach("moon-jupiter-size-2", { body: await page.screenshot(), contentType: "image/png" });
+  expect((await report()).factor).toBeCloseTo(2, 5);
   await size(4);
-  await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws)).toBeGreaterThan(draws);
+  // twice the factor draws Ganymede about twice as wide (nothing at Jupiter limits 4); read until the next draw has it
+  await expect.poll(() => radius("ganymede")).toBeGreaterThan(atDefault * 1.6);
   const atFour = await radius("ganymede");
+  expect(atFour).toBeLessThan(atDefault * 2.4);
   const jupiter = await report();
   expect(jupiter.asked).toBe(4);
-  expect(jupiter.factor).toBeGreaterThanOrEqual(1);
-  expect(jupiter.factor).toBeLessThanOrEqual(4);
-  expect(atFour + 0.05).toBeGreaterThanOrEqual(atDefault);
-  if (testInfo.project.name === "chromium-desk") await page.screenshot({ path: "/opt/cursor/artifacts/moon-jupiter-size-4.png" });
+  expect(jupiter.factor).toBeCloseTo(4, 5);
+  await testInfo.attach("moon-jupiter-size-4", { body: await page.screenshot(), contentType: "image/png" });
 
   for (const body of ["saturn", "uranus"]) {
     await show(body, 0.1);
     await expect.poll(() => space.evaluate((el) => (el as unknown as { body: string }).body)).toBe(body);
     await size(2);
-    await expect.poll(() => report()).toMatchObject({ asked: 2 });
-    if (testInfo.project.name === "chromium-desk") await page.screenshot({ path: `/opt/cursor/artifacts/moon-${body}-size-2.png` });
+    await expect.poll(() => report()).toMatchObject({ asked: 2, factor: 2 });
+    await testInfo.attach(`moon-${body}-size-2`, { body: await page.screenshot(), contentType: "image/png" });
     await size(4);
-    await expect.poll(() => report()).toMatchObject({ asked: 4 });
-    if (testInfo.project.name === "chromium-desk") await page.screenshot({ path: `/opt/cursor/artifacts/moon-${body}-size-4.png` });
+    await expect.poll(() => report()).toMatchObject({ asked: 4, factor: 4 });
+    await testInfo.attach(`moon-${body}-size-4`, { body: await page.screenshot(), contentType: "image/png" });
   }
 });
