@@ -33,7 +33,7 @@ console.log(`Mars: magnitude ${mars.magnitude.toFixed(1)}, ${mars.elongationDeg.
 | `magnitude` | 見かけの視等級 (土星は環を含む)。 |
 | `angularDiameterArcsec` | 円盤の視直径 (秒角)。 |
 | `phaseAngleDeg`、`illuminatedFraction` | 太陽・天体・地球の角度 (0 が満、180 が新) と、円盤の光っている割合 (0〜1)。 |
-| `elongationDeg`、`east` | 太陽からの離れ (度)と、天体が太陽の夕方側 (東) にあるか。太陽にはありません。 |
+| `elongationDeg`、`east` | 太陽からの離れ (度)と、天体が太陽の夕方側 (東) にあるか (赤経が太陽より半周未満だけ先にあれば東)。太陽にはありません。 |
 | `moon` | 月だけ。`phase` (0 が新月、1 で1周期)、`waxing`、`brightLimbAngleDeg`。 |
 | `horizontal`、`aboveHorizon` | 観測者を渡したときだけ。北から東まわりの `azimuthDeg`、`altitudeDeg` (幾何学的、視差を含む)、`apparentAltitudeDeg` (標準の大気差を含む)、`hourAngleDeg`、`parallacticAngleDeg`。そして見かけの高度が 0 より上かどうか。天頂と天底 (0.0001度以内) と地球の極では、方位角と視差角が定まらないので、いつも 0 を返します (丸め誤差の値ではありません)。月の視差は地球の中心からその場所へ引き直すので、地心の高度とは最大で1度ほど違います。 |
 

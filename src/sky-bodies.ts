@@ -137,7 +137,7 @@ export interface SkyBody {
   /** The Sun-body-Earth angle in degrees (0 full, 180 new). */
   phaseAngleDeg: number;
   illuminatedFraction: number;
-  /** Degrees from the Sun, and which side: `east` is the evening side (the body follows the Sun). Left out for the Sun. */
+  /** Degrees from the Sun, and which side: `east` is the evening side (the body follows the Sun): its right ascension is ahead of the Sun's by less than half a turn. Left out for the Sun. */
   elongationDeg?: number;
   east?: boolean;
   /** The Moon only: the phase (0 new to 1, one cycle), waxing, and the bright limb's position angle in degrees eastward from north. */
