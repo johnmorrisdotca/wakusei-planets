@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Pluto's unseen south is a plain tone with a soft edge, not a dark half** (MODULES-993). New Horizons never saw the south in daylight, and the map made it a dark brown that began on one straight line about 7 degrees south of the equator, so a globe showed a hard-edged dark half and the name written on the equator ran into it. The never-imaged part is now one plain tone, the mapped ground's average times 0.85, and the mapped detail fades into it over 8 percent of the map's height along an edge that follows the real coverage (about 30 degrees south), so the equator, and a name on it, are all on mapped ground. The three maps (512, 1024 and 2048) are 12.6, 44.6 and 179.4 KB, up from 10.0, 36.2 and 147.5 KB (+43.9 KB in all). Picture test `e2e/map-gaps.demo.ts` reads the shipped map: the detail lost over 1.5 percent of its height is 0.59 to 0.64 of the most before and 0.16 to 0.19 after; the unseen part's brightness is 0.26 of the mapped ground's before and 0.75 after. The finer map tiles of Pluto are made from this picture and need making again (`pnpm tiles`).
+
 - **A floating name is no longer cut off at the view's edge** (MODULES-1144). A name beside a body near the right edge ran past the edge and was cut. It now goes to the dot's left side (the dot follows the text), and if it fits on neither side, or would pass the top or the bottom, it is held inside the edge; a body whose dot is outside the view keeps its name where it falls. `nameSpot(dot, size, frame)` from `/space` is the placing on plain numbers. `e2e/space-names.demo.ts` reads 3 names cut at three view sizes on the old code, none now.
 
 ## [0.40.0] - 2026-11-13
