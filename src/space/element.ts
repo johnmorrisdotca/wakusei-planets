@@ -2012,8 +2012,10 @@ export class WakuseiSpace extends HTMLElement {
   /** The bodies drawn at full strength: the system of the body under the pointer, or else the one in the middle of the view. */
   #lit(): Set<string> {
     // the Sun in the middle lights the Sun and the eight planets; a body pointed at, the Sun too, lights its own system
-    if (this.#hovered === null && this.#model.focus === "sun") return new Set<string>(["sun", ...BODY_IDS.filter((id) => BODIES[id].kind === "planet")]);
-    const { host, moons } = systemOf(this.#hovered ?? this.#model.focus);
+    // a craft's name under the pointer is no body: it lights what the view's own focus lights
+    const pointed = this.#hovered !== null && Object.hasOwn(BODIES, this.#hovered) ? this.#hovered : null;
+    if (pointed === null && this.#model.focus === "sun") return new Set<string>(["sun", ...BODY_IDS.filter((id) => BODIES[id].kind === "planet")]);
+    const { host, moons } = systemOf(pointed ?? this.#model.focus);
     return new Set<string>([host, ...moons]);
   }
 

@@ -25,9 +25,12 @@ test("deep-space craft are drawn, Voyager 1 is beyond the Earth's view, a press 
 
   let faced = false;
   for (let yaw = -180; yaw < 180 && !faced; yaw += 30) {
+    const stateOf = () => space.evaluate((el) => JSON.stringify((el as unknown as { controller: { state: unknown } }).controller.state));
     const draws = await space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws);
+    const was = await stateOf();
     await space.evaluate((el, turn) => (el as unknown as { controller?: { set: (v: { yaw: number; zoom: number }, f?: boolean, r?: string) => void } }).controller?.set({ yaw: turn, zoom: 0.4 }, true, "set"), yaw);
-    await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws)).toBeGreaterThan(draws);
+    // a turn that leaves the view as it was draws nothing, so wait for a draw only when the view changed
+    if ((await stateOf()) !== was) await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws)).toBeGreaterThan(draws);
     faced = await space.evaluate((el) => (el as unknown as { sight: () => { id: string; inView: boolean }[] }).sight().some((one) => one.id === "voyager1" && one.inView));
   }
   expect(faced).toBe(true);
@@ -53,7 +56,7 @@ test("deep-space craft are drawn, Voyager 1 is beyond the Earth's view, a press 
   })).toEqual({ drawn: ["pioneer10", "pioneer11", "voyager1", "voyager2"], juno: "outside", voyager: true });
 });
 
-test("a craft's name can be focused without a fault, and the Roadster is not drawn twice when its own switch is on", async ({ page }) => {
+test("a craft's name can be hovered and focused without a fault, and the Roadster is not drawn twice when its own switch is on", async ({ page }) => {
   const faults: string[] = [];
   page.on("pageerror", (error) => faults.push(error.message));
   await page.goto(`${PAGE}&starman=1`);
