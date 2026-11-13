@@ -174,7 +174,7 @@ export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4
  * @param layers - The layers to show.
  * @param view - The body as drawn.
  * @param radiusKm - The body's radius in kilometres, to tell a feature's size on the screen.
- * @param options - `limit` caps how many marks, `gapPx` is how far apart they stay, and `label` writes the name, `avoid` lists boxes a name keeps clear of (dots, other names) and `lang` is the language the name is written in. All may be left out.
+ * @param options - `limit` caps how many marks, `gapPx` is how far apart they stay, and `label` writes the name, `avoid` lists boxes a name keeps clear of (dots, other names) `lang` is the language the name is written in, and `nudge` lets a name move a little off its place (by up to 24 pixels) to find room. All may be left out.
  * @returns The marks, in the order they were chosen.
  *
  * @example
@@ -187,7 +187,7 @@ export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4
  * console.log(placeMarks(PLACES_MOON, ["landing"], view, 1737.4).slice(0, 3).map((mark) => mark.place.name.en));
  * ```
  */
-export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer[], view: SurfaceView, radiusKm: number, options?: { limit?: number; gapPx?: number; label?: boolean; avoid?: readonly Obstacle[]; lang?: "en" | "ja" }): PlaceMark[] {
+export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer[], view: SurfaceView, radiusKm: number, options?: { limit?: number; gapPx?: number; label?: boolean; avoid?: readonly Obstacle[]; lang?: "en" | "ja"; nudge?: boolean }): PlaceMark[] {
   if (layers.length === 0 || !(view.radiusPx >= MARK_RULES.fromPx)) return [];
   const wanted: Place[] = [];
   for (const place of places) {
@@ -215,8 +215,8 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
     if (face < 0.12) continue;
     const at = view.project(point);
     if (at === null || at.x < 0 || at.y < 0 || at.x > view.width || at.y > view.height) continue;
-    const x = at.x;
-    const y = at.y;
+    let x = at.x;
+    let y = at.y;
     if (options?.label === true) {
       const lang = options.lang ?? "en";
       const mine = { ...nameBox(place.name[lang]), id: place.id };
@@ -226,8 +226,17 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
         if ((options.avoid ?? []).some((one) => one.id !== place.id && touches(box, one))) return true;
         return out.some((mark) => mark.label === true && touches(box, { x: mark.x, y: mark.y, ...nameBox(mark.place.name[lang]) }));
       };
-      // a name stays on its feature, where the place is: if it would cover a dot or another name it gives way
-      if (clash(x, y)) continue;
+      // a name stays on its feature unless it may nudge: it moves a little up, down or aside to find room, and gives way if there is none. A name that stands in for a dot the page asked for does not nudge: its mark is where the place is.
+      let spot: { x: number; y: number } | undefined;
+      for (const [dx, dy] of options.nudge === true ? ([[0, 0], [0, -10], [0, 10], [0, -18], [0, 18], [-24, 0], [24, 0]] as const) : ([[0, 0]] as const)) {
+        if (!clash(x + dx, y + dy)) {
+          spot = { x: x + dx, y: y + dy };
+          break;
+        }
+      }
+      if (spot === undefined) continue;
+      x = spot.x;
+      y = spot.y;
     }
     if (x < 0 || y < 0 || x > view.width || y > view.height) continue;
     if (options?.label !== true && out.some((mark) => Math.hypot(mark.x - x, mark.y - y) < gap)) continue;
@@ -327,7 +336,7 @@ export function marksToShow(places: readonly Place[], layers: readonly PlaceLaye
   const asked = layers.length === 0 ? [] : placeMarks(places, layers, view, radiusKm);
   // a mark the page drew always wins over a name: a name keeps off every dot that stays, and off what the page itself draws over the body
   const avoid: Obstacle[] = [...keepClear, ...asked.map((mark) => ({ x: mark.x, y: mark.y, halfWidth: 12, halfHeight: 12, id: mark.place.id }))];
-  const named = names.on ? placeMarks(places, ["feature"], view, radiusKm, { ...(names.limit === null ? {} : { limit: names.limit }), gapPx: 48, label: true, avoid, lang }) : [];
+  const named = names.on ? placeMarks(places, ["feature"], view, radiusKm, { ...(names.limit === null ? {} : { limit: names.limit }), gapPx: 48, label: true, avoid, lang, nudge: !layers.includes("feature") }) : [];
   const ids = new Set(named.map((mark) => mark.place.id));
   const wanted = new Set(asked.map((mark) => mark.place.id));
   return [...named.map((mark) => (wanted.has(mark.place.id) || layers.includes("feature") ? mark : { ...mark, nameOnly: true })), ...asked.filter((mark) => !ids.has(mark.place.id))];
