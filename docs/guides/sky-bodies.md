@@ -35,7 +35,7 @@ console.log(`Mars: magnitude ${mars.magnitude.toFixed(1)}, ${mars.elongationDeg.
 | `phaseAngleDeg`, `illuminatedFraction` | The Sun-body-Earth angle (0 full, 180 new) and the share of the disc that is lit, 0 to 1. |
 | `elongationDeg`, `east` | Degrees from the Sun and whether the body is on the evening side (east) of it. Left out for the Sun. |
 | `moon` | The Moon only: `phase` (0 new to 1, one cycle), `waxing` and `brightLimbAngleDeg`. |
-| `horizontal`, `aboveHorizon` | With an observer only: `azimuthDeg` from north through east, `altitudeDeg` (geometric, parallax in), `apparentAltitudeDeg` (with the standard refraction), `hourAngleDeg`, `parallacticAngleDeg`; and whether the apparent altitude is above 0. The Moon's parallax is taken out of the Earth's centre to the place, so it is up to about a degree different from the geocentric altitude. |
+| `horizontal`, `aboveHorizon` | With an observer only: `azimuthDeg` from north through east, `altitudeDeg` (geometric, parallax in), `apparentAltitudeDeg` (with the standard refraction), `hourAngleDeg`, `parallacticAngleDeg`; and whether the apparent altitude is above 0. At the zenith and the nadir (within 0.0001 degrees) and at a pole of the Earth the azimuth and the parallactic angle are not defined: they are 0 there, always, and not whatever rounding gives. The Moon's parallax is taken out of the Earth's centre to the place, so it is up to about a degree different from the geocentric altitude. |
 
 Angles are in degrees, distances in astronomical units (and kilometres), sizes in arcseconds, and the unit or the frame is in each field's name.
 

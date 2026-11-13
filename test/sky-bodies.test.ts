@@ -308,3 +308,34 @@ test("the apparent altitude is Horizons' airless elevation lifted by the standar
   // Jupiter is 4.7 degrees up over Tokyo on the first date: above the horizon
   assert.equal(skyBody("jupiter", DATES[0]!, { latitude: SITES[0]!.latitude, longitude: SITES[0]!.longitude }).aboveHorizon, true);
 });
+
+test("at the zenith and at a pole the azimuth and the parallactic angle are 0, not whatever rounding gives", async () => {
+  const { greenwichSiderealTime } = await import("../src/sky/engine.ts");
+  const when = DATES[1]!;
+  const ms = when;
+  const at = skyBody("neptune", when);
+  const dec = at.equatorialDate.declinationDeg;
+  const lon = at.equatorialDate.rightAscensionDeg - greenwichSiderealTime(ms);
+  // standing under Neptune, a hair either way: a body 1e-6 degrees off the zenith has an azimuth that swings round the compass
+  for (const dLon of [-1e-9, 0, 1e-9]) {
+    for (const dLat of [-1e-9, 0, 1e-9]) {
+      const h = skyBody("neptune", when, { latitude: dec + dLat, longitude: lon + dLon }).horizontal!;
+      assert.ok(h.altitudeDeg > 89.9999, `altitude ${h.altitudeDeg}`);
+      assert.equal(h.azimuthDeg, 0);
+      assert.equal(h.parallacticAngleDeg, 0);
+    }
+  }
+  // at a pole the azimuth does not depend on the longitude
+  for (const latitude of [90, -90]) {
+    for (const longitude of [0, 37, -122.5, 400]) {
+      for (const id of ["moon", "sun", "mars"] as const) {
+        const h = skyBody(id, when, { latitude, longitude }).horizontal!;
+        assert.equal(h.azimuthDeg, 0, `${id} at ${latitude}, ${longitude}`);
+        assert.equal(h.parallacticAngleDeg, 0);
+      }
+    }
+  }
+  // and one step away from the pole it is a real azimuth again
+  const near = skyBody("moon", when, { latitude: 89, longitude: 37 }).horizontal!;
+  assert.ok(Number.isFinite(near.azimuthDeg) && near.azimuthDeg >= 0 && near.azimuthDeg < 360);
+});

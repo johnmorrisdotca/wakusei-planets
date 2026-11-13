@@ -19,6 +19,9 @@ const LIGHT_KM_S = 299792.458;
 const LIGHT_DAYS_PER_AU = AU_KM / LIGHT_KM_S / 86400;
 const OBLIQUITY_J2000 = (meanObliquityArcseconds(0) * Math.PI) / 648000;
 const SUN_RADIUS_KM = 695700;
+/** Within this many degrees of the zenith (0.36 arcseconds), and of a pole, the azimuth and the parallactic angle are 0: they are not defined there. */
+const ZENITH_EPSILON_DEG = 1e-4;
+const POLE_EPSILON_DEG = 1e-9;
 
 type Vec = readonly [number, number, number];
 const length = (v: Vec): number => Math.hypot(v[0], v[1], v[2]);
@@ -84,7 +87,7 @@ export const SKY_BODY_IDS = ["sun", "moon", "mercury", "venus", "mars", "jupiter
 export type SkyBodyId = (typeof SKY_BODY_IDS)[number];
 
 /**
- * Where a body is in the sky of a place: azimuth in degrees from north through east (0 to 360), altitude in degrees (geometric, parallax in, no refraction) and with the standard refraction (`apparentAltitude`),
+ * Where a body is in the sky of a place: azimuth in degrees from north through east (0 to 360; 0 where it is not defined, at the zenith and the nadir and at a pole), altitude in degrees (geometric, parallax in, no refraction) and with the standard refraction (`apparentAltitude`),
  * the hour angle (degrees, 0 on the meridian, positive west) and the parallactic angle.
  *
  * @example
@@ -299,7 +302,11 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
   if (observer !== undefined) {
     const h = horizontalOf(equatorial, ms, observer);
     const apparent = h.altitude + refraction(h.altitude);
-    out.horizontal = { azimuthDeg: h.azimuth, altitudeDeg: h.altitude, apparentAltitudeDeg: apparent, hourAngleDeg: h.hourAngle, parallacticAngleDeg: h.parallacticAngle };
+    // At the zenith (or the nadir) every direction is the same, and at a pole every direction is south (or north): the azimuth and the parallactic angle are not defined there, and the arithmetic gives
+    // 0 or 180 by rounding noise, and an azimuth that depends on the longitude at a pole. They are 0 there, always.
+    const atZenith = Math.abs(h.altitude) >= 90 - ZENITH_EPSILON_DEG;
+    const atPole = Math.abs(observer.latitude) >= 90 - POLE_EPSILON_DEG;
+    out.horizontal = { azimuthDeg: atZenith || atPole ? 0 : h.azimuth, altitudeDeg: h.altitude, apparentAltitudeDeg: apparent, hourAngleDeg: h.hourAngle, parallacticAngleDeg: atZenith || atPole ? 0 : h.parallacticAngle };
     out.aboveHorizon = apparent > 0;
   }
   return out;
