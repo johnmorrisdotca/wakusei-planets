@@ -751,8 +751,8 @@ export class WakuseiSpace extends HTMLElement {
     const facts = BODIES[id];
     const ax = facts.axesKm;
     const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
-    // what the page draws over the body that a name keeps off: the names of the other bodies and of the craft, and the dots of the craft and the other bodies
-    const keepClear: Obstacle[] = this.#nameBoxes.map((one) => ({ x: one.x + one.width / 2, y: one.y + one.height / 2, halfWidth: one.width / 2, halfHeight: one.height / 2 }));
+    // what the page draws over the body that a name keeps off: the names of the other bodies and of the craft (not the body's own name, which is the body they are written on), and the dots of the craft and the other bodies
+    const keepClear: Obstacle[] = this.#nameBoxes.filter((one) => one.id !== id).map((one) => ({ x: one.x + one.width / 2, y: one.y + one.height / 2, halfWidth: one.width / 2, halfHeight: one.height / 2 }));
     for (const [other, at] of Object.entries(this.#places ?? {})) if (at !== null && other !== id) keepClear.push({ x: at.x, y: at.y, halfWidth: 8, halfHeight: 8 });
     this.#markLayer.set(marksToShow(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm, names, keepClear, this.getAttribute("lang") === "ja" ? "ja" : "en"));
   }
