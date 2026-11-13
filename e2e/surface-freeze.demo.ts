@@ -29,11 +29,11 @@ const settledCounts = async (page: Page) => {
   return readCounts(page);
 };
 
-const open = async (page: Page): Promise<void> => {
+const open = async (page: Page, extra = ""): Promise<void> => {
   await routeSurface(page);
   await page.setViewportSize({ width: 360, height: 300 });
   await page.goto("/wakusei-planets/surface.html");
-  await page.evaluate(() => {
+  await page.evaluate((extra) => {
     document.querySelector("#surface")?.remove();
     const el = document.createElement("wakusei-surface");
     el.id = "test-surface";
@@ -42,8 +42,9 @@ const open = async (page: Page): Promise<void> => {
     el.setAttribute("quality", "fast");
     el.setAttribute("shadows", "off");
     el.style.cssText = "width: 200px";
+    for (const pair of extra.split(" ")) if (pair !== "") el.setAttribute(pair.split("=")[0]!, pair.split("=")[1] ?? "");
     document.querySelector("main")!.prepend(el);
-  });
+  }, extra);
   await expect(page.locator("#test-surface")).toHaveAttribute("data-state", "live", { timeout: 120_000 });
 };
 const call = <T>(page: Page, fn: (el: HTMLElement & { look: { azimuth: number; pitch: number; fov: number }; walk(a: number, b?: number): void; time: number; stats: { renderer: { draws: number } } }) => T): Promise<T> =>
@@ -89,6 +90,42 @@ test("nothing is drawn at rest; one context, a canvas in budget; a round of chan
     before2 = gpuObjects(seen);
     expect(i, "the graphics objects alive were still growing after six rounds").toBeLessThan(5);
   }
+  await page.locator("#test-surface").evaluate((el) => el.remove());
+  const gone = await settledCounts(page);
+  expect(gone.created.Buffer - gone.deleted.Buffer, "buffers left").toBeLessThanOrEqual(0);
+  expect(gone.created.VertexArray - gone.deleted.VertexArray, "vertex arrays left").toBeLessThanOrEqual(0);
+  expect(gone.created.Program - gone.deleted.Program, "programs left").toBeLessThanOrEqual(0);
+});
+
+test("driving the rover: rounds of driving, turning and settling leave no more graphics objects alive than the round before, nothing is drawn once it is at rest, and removal gives it all back", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "drive=on");
+  await settledCounts(page);
+  const drive = (seconds: number, throttle: number, steer: number) =>
+    call(page, (el) => void (el as unknown as { driveFor(s: number, i: { throttle: number; steer: number }): boolean }).driveFor(seconds, { throttle, steer }));
+  // a round: ahead, round to the right, back, then let it settle (driven by set times: the same on a slow machine)
+  const round = async (): Promise<void> => {
+    for (const [seconds, throttle, steer] of [[0.6, 1, 0], [0.6, 1, 1], [0.6, -1, -1]] as const) {
+      const draws = await call(page, (el) => el.stats.renderer.draws);
+      await drive(seconds, throttle, steer);
+      await expect.poll(() => call(page, (el) => el.stats.renderer.draws), { timeout: 90_000 }).toBeGreaterThan(draws);
+    }
+    await drive(3, 0, 0);
+    await settledCounts(page);
+  };
+  let before = Infinity;
+  for (let i = 0; i < 6; i += 1) {
+    await round();
+    const seen = await settledCounts(page);
+    if (gpuObjects(seen) <= before) break;
+    before = gpuObjects(seen);
+    expect(i, "the graphics objects alive were still growing after six rounds").toBeLessThan(5);
+  }
+  // at rest nothing is drawn (that nothing happens: a wait to say so)
+  const a = await readCounts(page);
+  await page.waitForTimeout(2500);
+  const b = await readCounts(page);
+  expect(b.draws - a.draws, "nothing drawn at rest").toBe(0);
   await page.locator("#test-surface").evaluate((el) => el.remove());
   const gone = await settledCounts(page);
   expect(gone.created.Buffer - gone.deleted.Buffer, "buffers left").toBeLessThanOrEqual(0);
