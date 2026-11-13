@@ -13,7 +13,7 @@ const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOT
 const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"></span>', `<span><span data-say="foot"></span> <a href="${NOTICE}" data-say="creditsAll"></a></span>`);
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [{ href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -47,6 +47,10 @@ export const renderSpace = (): string =>
 /** The full-screen space page: the element on its own, filling the window. */
 export const renderSpaceFull = (): string =>
   render("space-full.html", "Wakusei Planets 惑星: the space view, full screen", "The Earth, the Moon, the Sun and the planets filling the whole window: drag anywhere to turn, the wheel to zoom, from the Earth out to the whole solar system.");
+
+/** The spacecraft page. */
+export const renderCraft = (): string =>
+  render("craft.html", "Wakusei Planets 惑星: spacecraft", "Eighteen spacecraft, from Pioneer 10 to Solar Orbiter: the path and the place on a date, the facts and the voyage, in English and Japanese. Each craft's table loads only when it is chosen.");
 
 /** The star page. */
 export const renderStar = (): string =>
