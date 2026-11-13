@@ -62,7 +62,7 @@ export type SkyBodyId = (typeof SKY_BODY_IDS)[number];
  * ```ts no-run
  * import type { SkyHorizontal } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
  *
- * const up = (h: SkyHorizontal): boolean => h.apparentAltitude > 0;
+ * const up = (h: SkyHorizontal): boolean => h.apparentAltitudeDeg > 0;
  * console.log(typeof up);
  * ```
  */
