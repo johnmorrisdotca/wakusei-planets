@@ -1,6 +1,12 @@
 // The space page's controls as a person uses them, and the readings the space tests share: a click that does not scroll the page (a view scrolled out of sight is rightly not drawn).
 import { COUNT_SCRIPT, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
-import { expect, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { underLoad } from "./under-load.ts";
+
+// every space spec that uses these helpers can be tried on a busy machine: CPU_THROTTLE=4 runs its Chromium at a quarter of the speed (e2e/under-load.ts)
+test.beforeEach(async ({ page, browserName }) => {
+  await underLoad(page, browserName);
+});
 
 export const setLight = (page: Page, name: "The Sun's" | "Always lit") => page.getByRole("group", { name: "Light" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
 
@@ -20,6 +26,32 @@ export interface Stats {
 }
 export const statsOf = (page: Page): Promise<Stats> => page.locator(SPACE).evaluate((el) => Reflect.get(el, "stats") as Stats);
 export const settle = (page: Page, ms = 600) => page.waitForTimeout(ms);
+/**
+ * Waits until the draws have held still for four reads in a row, 250 ms apart (a frame on a slow runner takes longer than one quiet read), in place of a fixed sleep for the view to settle. Nothing arriving late
+ * (a picture, a tile, a table) shows as a draw, so the count holding still means it has all come.
+ */
+export async function quiet(page: Page): Promise<void> {
+  let held = 0;
+  let last = -1;
+  await expect
+    .poll(
+      async () => {
+        const now = (await readCounts(page)).draws;
+        held = now === last ? held + 1 : 0;
+        last = now;
+        return held;
+      },
+      { timeout: 60_000, intervals: [250], message: "the draws held still" },
+    )
+    .toBeGreaterThanOrEqual(4);
+}
+/** Dispatch a click on a button and say how many draws had been made, in the one call: no draw can land between the count and the click and be taken for the click's. */
+export const clickCounted = (button: Locator): Promise<number> =>
+  button.evaluate((el) => {
+    const before = (window as unknown as { __kazokuCount: { draws: number } }).__kazokuCount.draws;
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, composed: true }));
+    return before;
+  });
 export const setOn = (page: Page, key: string, value: unknown) => page.locator(SPACE).evaluate((el, [k, v]) => Reflect.set(el, k as string, v), [key, value] as const);
 /** Call a method of the element with arguments. */
 export const callOn = (page: Page, method: string, ...args: unknown[]) => page.locator(SPACE).evaluate((el, [m, a]) => (Reflect.get(el, m as string) as (...x: unknown[]) => unknown).apply(el, a as unknown[]), [method, args] as const);
@@ -30,15 +62,14 @@ export async function openSpace(page: Page, query = `t=${NOV2}`): Promise<void> 
   await page.goto(`/wakusei-planets/space.html?${query}`);
   await page.locator(`${SPACE}[data-state=live]`).waitFor({ timeout: 90_000 });
   await expect.poll(async () => (await statsOf(page)).draws).toBeGreaterThan(0);
-  await settle(page);
+  await quiet(page);
 }
 
 /** Press a "Go to" button of the page, then wait until the frame that shows it has drawn. */
 export async function goTo(page: Page, name: string): Promise<void> {
-  const before = (await readCounts(page)).draws;
-  await page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
+  const before = await clickCounted(page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }));
   await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
-  await settle(page, 400);
+  await quiet(page);
 }
 
 export interface Box {
@@ -72,18 +103,7 @@ export async function drawn(page: Page, act: () => Promise<unknown>, until?: (st
   await act();
   await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
   if (until) await expect.poll(async () => until(await statsOf(page)), { timeout: 60_000 }).toBe(true);
-  let held = -1;
-  await expect
-    .poll(
-      async () => {
-        const now = (await readCounts(page)).draws;
-        const same = now === held;
-        held = now;
-        return same;
-      },
-      { timeout: 30_000, intervals: [300] },
-    )
-    .toBe(true);
+  await quiet(page);
 }
 
 /** A picture of the view, as a base64 PNG. */
