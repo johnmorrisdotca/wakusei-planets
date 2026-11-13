@@ -25,6 +25,7 @@ import { moonOffset, orientation } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, readMoonSize, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
 import { groundDirection } from "./aim.ts";
+import { faceView, subCameraPoint } from "./face.ts";
 import { besideMoon } from "./beside.ts";
 import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
@@ -646,6 +647,72 @@ export class WakuseiSpace extends HTMLElement {
     };
     requestAnimationFrame(step);
     return place;
+  }
+
+  /**
+   * Which point of the body in the middle of the view is under the camera, as a longitude (east) and latitude (north) in the body's own fixed frame at the moment shown: the camera looks along the line
+   * from that point through the body's centre. It carries the body's spin and, for the Moon, the way its pole and prime meridian are set; a camera held in the stars sees the body turn under it, so the same
+   * view names another point as the clock runs. `null` while the camera is riding along with something (it is not looking at the body from outside then). `faceTo` is the other way round.
+   *
+   * @returns The point, or `null`.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.goTo("moon");
+   * console.log(space.subCameraPoint());
+   * ```
+   */
+  subCameraPoint(): { lon: number; lat: number } | null {
+    const model = this.#model;
+    if (model.ride !== null) return null;
+    return subCameraPoint(model.focus, model.view, model.centre, model.anchor ?? model.time, model.time);
+  }
+
+  /**
+   * Turn the view round the body in the middle so that a point of its surface (east longitude, north latitude, degrees) is under the camera: a glide the way `goToPlace` goes (at once with `smooth: false`
+   * or for a reader who prefers reduced motion); the zoom stays. The turn is the shorter way round and never through the body. Resolves false while the camera is riding along with something.
+   *
+   * @param point - The longitude and latitude to bring to the middle.
+   * @param options - `smooth` (true by default).
+   * @returns Whether the turn was made.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.faceTo({ lon: 30.8, lat: 20.2 }, { smooth: false });
+   * ```
+   */
+  faceTo(point: { lon: number; lat: number }, options: { smooth?: boolean } = {}): boolean {
+    const model = this.#model;
+    if (model.ride !== null || !Number.isFinite(point.lon) || !Number.isFinite(point.lat)) return false;
+    model.anchor ??= model.time;
+    const from = { ...model.view };
+    const to = faceView(model.focus, point, model.centre, model.anchor, model.time, from.yaw);
+    const apply = (yaw: number, tilt: number, final: boolean): void => {
+      if (this.#hands !== undefined && !this.hasAttribute("data-kazoku-bar")) this.#hands.controller.set({ yaw, tilt, zoom: from.zoom }, final, "place");
+      else this.setView({ yaw, tilt, zoom: from.zoom, roll: from.roll, panX: from.panX, panY: from.panY }, final);
+    };
+    const glide = (this.#placeGlide += 1);
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (options.smooth === false || reduced || typeof requestAnimationFrame !== "function") {
+      apply(to.yaw, to.tilt, true);
+      return true;
+    }
+    const start = performance.now();
+    const step = (): void => {
+      if (glide !== this.#placeGlide || !this.isConnected) return;
+      const k = Math.min(1, (performance.now() - start) / 900);
+      const ease = k * k * (3 - 2 * k);
+      apply(from.yaw + (to.yaw - from.yaw) * ease, from.tilt + (to.tilt - from.tilt) * ease, k >= 1);
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    return true;
   }
 
   #readEarthPlaces(): readonly EarthPlace[] {
@@ -1841,7 +1908,7 @@ export class WakuseiSpace extends HTMLElement {
     /** How many frames the ephemeris has worked out. */
     lookups: number;
     /** The camera as the last draw left it: its place in Earth radii from the Earth's centre, and its field of view in degrees. */
-    camera: { position: [number, number, number]; fov: number; up: [number, number, number]; forward: [number, number, number] };
+    camera: { position: [number, number, number]; fov: number; up: [number, number, number]; forward: [number, number, number]; /** The point of the body in the middle that is under the camera (`subCameraPoint`), or `null` while riding. */ sub: { lon: number; lat: number } | null };
     /** What the painter has made at the last draw: the bodies with a drawing, the moons shown round a planet that is near, and the moons made and not yet let go. */
     bodies: { look: string; painted: number; moons: number; held: number };
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
@@ -1888,7 +1955,7 @@ export class WakuseiSpace extends HTMLElement {
       assets: { entries: stats?.assets.entries ?? 0, refs: stats?.assets.refs ?? 0 },
       time: this.time,
       lookups: this.#model.lookups,
-      camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov, up: [...this.#model.camera.up], forward: [...this.#model.camera.forward] },
+      camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov, up: [...this.#model.camera.up], forward: [...this.#model.camera.forward], sub: this.subCameraPoint() },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, belts: this.#model.door.belts, draws: this.#model.door.draws, sources: this.#door.book.stats() },
