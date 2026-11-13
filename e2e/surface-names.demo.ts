@@ -38,3 +38,39 @@ test("the Moon shows Mare Imbrium and Tycho, closer in a smaller crater, the far
   });
   await expect.poll(() => space.evaluate((el) => (el as unknown as { _picked?: string })._picked ?? "")).toBe("moon/tycho");
 });
+
+test("a name never covers a landing dot or another name, and a press at the centre of the Apollo 11 dot reaches the dot", async ({ page }) => {
+  await page.goto(`${PAGE}&places=landing,crash,planned`);
+  const space = page.locator("wakusei-space");
+  await expect(space).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+  await space.evaluate((el) => (el as unknown as { goTo(id: string, options: { smooth: boolean }): void }).goTo("moon", { smooth: false }));
+  await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Apollo 11 lunar module", { smooth: false, zoom: 1 }));
+  const boxes = () =>
+    space.evaluate((el) => {
+      const rect = (node: Element) => {
+        const r = node.getBoundingClientRect();
+        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, text: node.textContent ?? "", id: (node as HTMLElement).dataset["place"] ?? "" };
+      };
+      const all = [...(el.shadowRoot?.querySelectorAll(".wk-place") ?? [])];
+      return { names: all.filter((n) => n.hasAttribute("data-name")).map(rect), dots: all.filter((n) => !n.hasAttribute("data-name")).map(rect), labels: [...(el.shadowRoot?.querySelectorAll(".sp-label:not([hidden])") ?? [])].map(rect) };
+    });
+  await expect.poll(async () => ((await boxes()).names.length > 2 && (await boxes()).dots.some((d) => d.id === "moon/apollo-11-lunar-module")), { timeout: 60_000 }).toBe(true);
+  const { names, dots, labels } = await boxes();
+  const overlap = (a: { left: number; top: number; right: number; bottom: number }, b: { left: number; top: number; right: number; bottom: number }) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+  for (const name of names) {
+    for (const dot of dots) expect(overlap(name, dot), `the name ${name.text} is over a dot (${dot.id})`).toBe(false);
+    for (const label of labels) expect(overlap(name, label), `the name ${name.text} is over the label ${label.text}`).toBe(false);
+    for (const other of names) if (other !== name) expect(overlap(name, other), `the name ${name.text} is over the name ${other.text}`).toBe(false);
+  }
+  // a real press at the middle of the dot goes to the dot, not to a name written over it
+  const eagle = dots.find((dot) => dot.id === "moon/apollo-11-lunar-module")!;
+  await space.evaluate((el) => {
+    const host = el as unknown as { _picked?: string };
+    host._picked = "";
+    el.addEventListener("wakusei-place", (event) => {
+      host._picked = (event as CustomEvent<{ place: { id: string } }>).detail.place.id;
+    });
+  });
+  await page.mouse.click((eagle.left + eagle.right) / 2, (eagle.top + eagle.bottom) / 2);
+  await expect.poll(() => space.evaluate((el) => (el as unknown as { _picked?: string })._picked ?? "")).toBe("moon/apollo-11-lunar-module");
+});

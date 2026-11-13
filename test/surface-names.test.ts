@@ -45,3 +45,35 @@ test("Mars names Olympus Mons, Valles Marineris and Hellas on the side that face
   };
   for (const id of ["mars/olympus-mons", "mars/valles-marineris", "mars/hellas-planitia"]) assert.ok(shows(id), id);
 });
+
+test("a name never lies over a dot that stays, nor over another name, and moves aside or gives way", () => {
+  const radiusPx = 320;
+  const v = view(radiusPx, [0, 0, 1]);
+  const plain = marksToShow(PLACES_MOON, [], v, 1737.4, readSurfaceNames(null));
+  assert.ok(plain.length > 2);
+  const names = (list: typeof plain) => list.filter((mark) => mark.label === true);
+  // a dot set right on the first name's spot: the name moves off it or is dropped, never lies over it
+  const first = names(plain)[0]!;
+  const dot = { x: first.x, y: first.y, halfWidth: 12, halfHeight: 12 };
+  const after = names(marksToShow(PLACES_MOON, [], v, 1737.4, readSurfaceNames(null), [dot]));
+  const again = after.find((mark) => mark.place.id === first.place.id);
+  if (again !== undefined) assert.ok(Math.abs(again.x - dot.x) >= 12 + 3 || Math.abs(again.y - dot.y) >= 12 + 9, "moved clear of the dot");
+  for (const mark of after) assert.ok(!(Math.abs(mark.x - dot.x) < 12 + 3 && Math.abs(mark.y - dot.y) < 12 + 9), `${mark.place.id} is over the dot`);
+  // no two names overlap
+  for (const a of names(plain)) {
+    for (const b of names(plain)) {
+      if (a === b) continue;
+      const wa = Math.ceil(a.place.name.en.length * 3.7) + 5;
+      const wb = Math.ceil(b.place.name.en.length * 3.7) + 5;
+      assert.ok(Math.abs(a.x - b.x) >= wa + wb || Math.abs(a.y - b.y) >= 18, `${a.place.id} and ${b.place.id} overlap`);
+    }
+  }
+  // a dot the page drew in the layers asked for is an obstacle too: a landing dot is never under a name
+  const withDots = marksToShow(PLACES_MOON, ["landing"], v, 1737.4, readSurfaceNames(null));
+  for (const landing of withDots.filter((mark) => mark.label !== true)) {
+    for (const name of withDots.filter((mark) => mark.label === true)) {
+      const w = Math.ceil(name.place.name.en.length * 3.7) + 5;
+      assert.ok(!(Math.abs(name.x - landing.x) < w + 12 && Math.abs(name.y - landing.y) < 9 + 12), `${name.place.id} is over the dot of ${landing.place.id}`);
+    }
+  }
+});

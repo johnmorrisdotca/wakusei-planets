@@ -30,7 +30,7 @@ import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
 import type { MoonDot } from "./all-moons.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
-import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type PlaceLayer } from "../place-marks.ts";
+import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
@@ -751,7 +751,10 @@ export class WakuseiSpace extends HTMLElement {
     const facts = BODIES[id];
     const ax = facts.axesKm;
     const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
-    this.#markLayer.set(marksToShow(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm, names));
+    // what the page draws over the body that a name keeps off: the names of the other bodies and of the craft, and the dots of the craft and the other bodies
+    const keepClear: Obstacle[] = this.#nameBoxes.map((one) => ({ x: one.x + one.width / 2, y: one.y + one.height / 2, halfWidth: one.width / 2, halfHeight: one.height / 2 }));
+    for (const [other, at] of Object.entries(this.#places ?? {})) if (at !== null && other !== id) keepClear.push({ x: at.x, y: at.y, halfWidth: 8, halfHeight: 8 });
+    this.#markLayer.set(marksToShow(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm, names, keepClear, this.getAttribute("lang") === "ja" ? "ja" : "en"));
   }
 
   #bodyLabel: NameLabelOptions | null | undefined;
@@ -2022,6 +2025,8 @@ export class WakuseiSpace extends HTMLElement {
     }
     this.#placeArrows(places);
     this.#markFar();
+    // the names written on the body keep off the names and dots just placed
+    this.#markSurface();
   }
 
   // --- far names, and the system under the pointer ---------------------------------------------------------------------------------------------------

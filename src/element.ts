@@ -419,7 +419,7 @@ export class WakuseiBody extends HTMLElement {
       width: w,
       height: h,
       radiusPx: (Math.min(w, h) / 2) * (state.zoom / state.extent),
-    }, facts.radiusKm, names);
+    }, facts.radiusKm, names, [], this.getAttribute("lang") === "ja" ? "ja" : "en");
     this.#placeLayer.set(marks);
   }
 
