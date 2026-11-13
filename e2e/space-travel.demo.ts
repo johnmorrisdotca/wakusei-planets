@@ -122,12 +122,21 @@ for (const scale of ["true", "compressed"] as const) {
         if (t.stage === "turn") expect(frame.onScreen.leaving || (PLANET[from] === PLANET[to] && frame.onScreen.planet), `frame ${i}: the ${from} (or its planet) is on the screen through the turn`).toBe(true);
         if (t.stage !== "turn" && t.progress > 0.3) expect(frame.onScreen.destination, `frame ${i}: the ${to} is on the screen on the way`).toBe(true);
       }
-      // one turn, never undone: the angle left to the final look direction never grows between draws (half a degree of slack for a drawn frame's rounding)
+      // two turns, neither undone. The camera arrives from the side that keeps a companion in the picture, which may be well round from the way it came, so the look direction turns twice: in the turn stage to face the way
+      // on (the angle left to where the turn ends never grows between draws), then, from there to the end of the move, round to the arrival side (the angle left to the final look direction never grows). Half a degree of slack for a drawn frame's rounding.
       const last = moving[moving.length - 1]!.forward;
+      const turned = moving.filter((f) => f.travelling!.stage === "turn");
+      const faced = (turned.length > 0 ? turned[turned.length - 1]! : moving[0]!).forward;
+      let toFaced = Infinity;
+      for (const [i, frame] of turned.entries()) {
+        const now = angle(frame.forward, faced);
+        expect(now, `turn frame ${i}: the turn is not undone (${now.toFixed(2)} degrees left, was ${toFaced.toFixed(2)})`).toBeLessThanOrEqual(toFaced + 0.5);
+        toFaced = Math.min(toFaced, now);
+      }
       let left = Infinity;
-      for (const [i, frame] of moving.entries()) {
+      for (const [i, frame] of moving.slice(turned.length).entries()) {
         const now = angle(frame.forward, last);
-        expect(now, `frame ${i}: the look direction does not turn back (${now.toFixed(2)} degrees left, was ${left.toFixed(2)})`).toBeLessThanOrEqual(left + 0.5);
+        expect(now, `frame ${i} after the turn: the look direction does not turn back (${now.toFixed(2)} degrees left, was ${left.toFixed(2)})`).toBeLessThanOrEqual(left + 0.5);
         left = Math.min(left, now);
       }
       expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe(to);
@@ -250,7 +259,6 @@ test("with a bar bound to the element a move that travels announces the side the
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=true");
   await callOn(page, "goTo", "earth", { smooth: false });
   await held(page);
-  const before = (await statsOf(page)).camera.position;
   // every announcement of a hop, kept as the page hears it
   await page.locator(SPACE).evaluate((el) => {
     const heard: unknown[] = [];
@@ -269,9 +277,13 @@ test("with a bar bound to the element a move that travels announces the side the
   const bar = await page.locator("#controls").evaluate((el) => (Reflect.get(el, "controller") as { state: { yaw: number; tilt: number } }).state);
   expect(bar.yaw).toBeCloseTo(hop.yaw!, 6);
   expect(bar.tilt).toBeCloseTo(hop.tilt!, 6);
-  // and the camera arrives from that side: looking the way it came, along the line from where it started (Jupiter is far off, so the way in is the way there)
-  const after = (await statsOf(page)) as unknown as { camera: { position: [number, number, number]; forward: [number, number, number] } };
-  const way: [number, number, number] = [after.camera.position[0] - before[0], after.camera.position[1] - before[1], after.camera.position[2] - before[2]];
-  const length = Math.hypot(...way);
-  expect(angle(after.camera.forward, [way[0] / length, way[1] / length, way[2] / length]), "the camera looks along the way it came").toBeLessThan(10);
+  // and the camera arrives from that side, looking at the body with its middle in the middle of the picture. The side is the one that keeps a companion in the picture (a moon of Jupiter), so it need not be the way the camera came
+  const after = (await statsOf(page)) as unknown as { companion: string | null };
+  expect(after.companion, "the arrival keeps a companion in the picture").not.toBeNull();
+  const place = await page.locator(SPACE).evaluate((el) => {
+    const at = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } }).placeOf("jupiter");
+    return { x: at.x, y: at.y, w: el.clientWidth, h: el.clientHeight };
+  });
+  expect(Math.abs(place.x - place.w / 2), "Jupiter is in the middle across").toBeLessThan(2);
+  expect(Math.abs(place.y - place.h / 2), "Jupiter is in the middle up and down").toBeLessThan(2);
 });
