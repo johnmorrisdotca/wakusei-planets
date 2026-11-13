@@ -365,8 +365,8 @@ interface Turn {
   lift: number;
   fov0: number;
   fov1: number;
-  /** Where the camera starts near the body left and the pivot is far off: the turn begins as a turn about that body (kept at `u`, `d` away, backing off to `far` times that) and gives way to the pivot's circle over the first `q` of the turn. */
-  hold?: { body: TravelBody; u: Vec3; d: number; q: number; far: number };
+  /** Where the camera starts near the body left and the pivot is far off: the turn begins as a turn about that body (kept at `u`, `d` away, backing off to `far` times that) and gives way to the pivot's circle over the first `q` of the turn. `delay` holds that body until this share of the turn, then hands over by the end. */
+  hold?: { body: TravelBody; u: Vec3; d: number; q: number; far: number; delay?: number };
 }
 /** The way on, from the camera's place relative to the body `about`: a straight `line`, or straight at the body and then round it (`swing`). */
 interface Leg {
@@ -413,7 +413,9 @@ function turnAt(turn: Turn, p: number, t: number): { position: Vec3; o: Facing; 
   if (turn.hold === undefined) return { position, o, fov: fovBetween(turn.fov0, turn.fov1, p) };
   // the turn about the body left, kept where it was in the picture, handing over to the circle of the pivot
   const near = sub(placeOf(turn.hold.body, t), scale(toScene(o, turn.hold.u), turn.hold.d * (1 + (turn.hold.far - 1) * smooth(p / turn.hold.q))));
-  return { position: mix(near, position, smooth(p / turn.hold.q)), o, fov: fovBetween(turn.fov0, turn.fov1, p) };
+  // `delay` keeps the body left until late in the turn: the handover starts then, instead of at once
+  const hand = turn.hold.delay === undefined ? p / turn.hold.q : (p - turn.hold.delay) / Math.max(1e-6, 1 - turn.hold.delay);
+  return { position: mix(near, position, smooth(Math.max(0, Math.min(1, hand)))), o, fov: fovBetween(turn.fov0, turn.fov1, p) };
 }
 
 function legAt(leg: Leg, q: number, t: number): { position: Vec3; o: Facing; fov: number } {
@@ -693,6 +695,66 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
         const again = standAt(input, share, family);
         turn = again.turn;
         leg = again.leg;
+      }
+    }
+  }
+  // a family move must not show an empty picture: one of the two moons, or the planet, stays in it. When the circle of the planet lets the moon left slide out before the next body comes in, hold that moon and hand over late.
+  if (input.around !== undefined && turn !== null && kind === "turn-travel" && !region) {
+    const gapsOf = (candidate: Turn, candidateLeg: Leg = leg): { moons: number; all: number } => {
+      const turnTime = turnMs(candidate);
+      const shareNow = turnTime === 0 ? 0 : turnTime / (turnTime + legMs(candidateLeg, turnTime));
+      const near = candidateLeg.type === "line" ? 2 * candidateLeg.eb : candidateLeg.dn - candidateLeg.d1;
+      let lo = 0;
+      let hi = 1;
+      for (let n = 0; n < 20; n += 1) {
+        const mid = (lo + hi) / 2;
+        if (leftOf(ease(mid), candidateLeg.l, candidateLeg.ea, candidateLeg.eb) > near) lo = mid;
+        else hi = mid;
+      }
+      const arrive = shareNow + (1 - shareNow) * Math.min(0.9, Math.max(0.6, hi));
+      const route: Route = { ...base, cut: false, turn: candidate, share: shareNow, arrive, leg: candidateLeg };
+      let moons = 0;
+      let all = 0;
+      for (let i = 1; i < 240; i += 1) {
+        const t = i / 240;
+        const at = along(route, t);
+        const frame = frameOf(at.fov, input.aspect);
+        const seen = (body: TravelBody): boolean => sightOf(body, t, at.position, at.o, frame).inside;
+        const left = seen(input.leaving);
+        const dest = seen(input.destination);
+        const planet = seen(input.around!);
+        if (!left && !dest) moons += 1;
+        if (!left && !dest && !planet) all += 1;
+      }
+      return { moons, all };
+    };
+    const plain = gapsOf(turn);
+    let best: { turn: Turn; leg: Leg; moons: number; all: number } = { turn, leg, ...plain };
+    if (plain.moons > 0 || plain.all > 0) {
+      const u = unit(toCamera(facingOf(input.start), sub(input.leaving.from, input.start.position)));
+      const d = Math.max(1e-12, length(sub(input.leaving.from, input.start.position)));
+      for (const delay of [0.55, 0.75, 0.88, 0.95, 0.99]) {
+        for (const far of [1, 8, 40]) {
+          const candidate: Turn = { ...turn, hold: { body: input.leaving, u, d, q: 1, far, delay } };
+          const ended = turnAt(candidate, 1, share);
+          const from = sub(ended.position, placeOf(leg.about, share));
+          const nextLeg: Leg = { ...leg, from, d0: length(from), l: length(sub(leg.to, from)) };
+          const got = gapsOf(candidate, nextLeg);
+          if (got.all < best.all || (got.all === best.all && got.moons < best.moons)) best = { turn: candidate, leg: nextLeg, ...got };
+          if (got.moons === 0 && got.all === 0) break;
+        }
+        if (best.moons === 0 && best.all === 0) break;
+      }
+      if (best.all > 0) {
+        const aboutLeft = standAt(input, share, false);
+        const got = gapsOf(aboutLeft.turn, aboutLeft.leg);
+        if (got.all < best.all) best = { turn: aboutLeft.turn, leg: aboutLeft.leg, ...got };
+      }
+      if (best.all < plain.all || (best.all === 0 && best.moons < plain.moons)) {
+        turn = best.turn;
+        leg = best.leg;
+        const turnTime = turnMs(turn);
+        share = turnTime === 0 ? 0 : turnTime / (turnTime + legMs(leg, turnTime));
       }
     }
   }

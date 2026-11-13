@@ -110,15 +110,15 @@ for (const scale of ["true", "compressed"] as const) {
       expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "transition")), "turn then travel is the default").toBe("turn-travel");
       // twice as slow, so that software drawing on a loaded machine still catches frames of every stage (the demo's own pace control)
       await page.locator('#paces [data-pace="2"]').dispatchEvent("click");
-      // two moons of one planet start from the controls' own view: the view a cut leaves on a moon (the side that frames its planet, or the one the Sun lights) can look away from the planet, and the planet's circle does not yet keep a moon in the picture from there (a ticket of its own)
-      const frames = await move(page, from, to, {}, 1, PLANET[from] !== undefined && PLANET[from] === PLANET[to]);
+      // a cut to the first body arrives on the side the move will leave from; the move to the second starts there
+      const frames = await move(page, from, to, {}, 1, false);
       const moving = frames.filter((f) => f.travelling !== null);
       expect(moving.length, `${moving.length} frames of the move were seen`).toBeGreaterThan(6);
       expect(moving[0]!.travelling!.kind).toBe("turn-travel");
       expect(moving.some((f) => f.travelling!.stage === "travel" || f.travelling!.stage === "arrive"), "the move travels").toBe(true);
       for (const [i, frame] of moving.entries()) {
         const t = frame.travelling!;
-        expect(frame.onScreen.leaving || frame.onScreen.destination, `frame ${i} (${t.stage} ${t.progress.toFixed(2)}): the ${from} or the ${to} is on the screen`).toBe(true);
+        expect(frame.onScreen.leaving || frame.onScreen.destination || (PLANET[from] === PLANET[to] && frame.onScreen.planet), `frame ${i} (${t.stage} ${t.progress.toFixed(2)}): the ${from}, the ${to} or their planet is on the screen`).toBe(true);
         // the turn holds the body left, or, for two moons of one planet, the planet circled: one of the two is on the screen through the turn
         if (t.stage === "turn") expect(frame.onScreen.leaving || (PLANET[from] === PLANET[to] && frame.onScreen.planet), `frame ${i}: the ${from} (or its planet) is on the screen through the turn`).toBe(true);
         if (t.stage !== "turn" && t.progress > 0.3) expect(frame.onScreen.destination, `frame ${i}: the ${to} is on the screen on the way`).toBe(true);

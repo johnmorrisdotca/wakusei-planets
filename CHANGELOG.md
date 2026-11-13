@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A move between two moons keeps a body in the picture** (MODULES-1228). The circle of their planet could swing the camera so that neither moon nor the planet was in the frame for part of the move. The turn now holds the moon it leaves until the planet or the moon it goes to has come in. The picture is empty only when all three are out.
+
 ## [0.42.0] - 2026-11-13
 
 - **An arrival keeps a companion in the picture** (MODULES-1026). `arrivalSide` (and `travelArrival`, which uses it) stands on the side where the frame is not empty black: the body's own moons, or its planet when it is a moon; else the body the camera came from, or the nearest planet in that direction; else the Sun, only while at least half the body stays lit. A side that would turn the globe black is refused. `goTo` and a double click (the zoom jump to 1 or to 2) set the controls to that side; a drag afterwards is left as the reader set it. `stats.companion` names the body kept beside it, and that name is not dropped when names would otherwise clash. The swing is not applied to a straight move (`direct`, `look-back`), which keeps its destination in the picture the whole way.
