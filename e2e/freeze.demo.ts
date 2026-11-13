@@ -618,6 +618,21 @@ test("the space view with names on the bodies draws nothing at rest, and every c
   expect(gpuObjects(last)).toBeLessThanOrEqual(gpuObjects(first) + 4);
 });
 
+test("the space view with names on the Moon draws nothing at rest and adds no graphics object per name", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=off`);
+  await liveSky(page);
+  await sky(page).evaluate((el) => (el as unknown as { goTo(id: string, options: { smooth: boolean }): void }).goTo("moon", { smooth: false }));
+  const nameCount = () => sky(page).evaluate((el) => el.shadowRoot?.querySelectorAll("[data-name]").length ?? 0);
+  await expect.poll(nameCount, { timeout: 60_000 }).toBeGreaterThan(2);
+  await atRest(page);
+  const before = await readCounts(page);
+  await settle(page, 2000);
+  const after = await readCounts(page);
+  expect(after.draws - before.draws, "nothing drawn at rest with the names on").toBe(0);
+  expect(gpuObjects(after), "a name adds no graphics object").toBe(gpuObjects(before));
+  expect(await nameCount()).toBeGreaterThan(2);
+});
+
 test("the space view with Starman shown draws nothing at rest, and switching the car on and off gives back what it took", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&starman=1&goto=solar-system`);
   await liveSky(page);

@@ -30,7 +30,7 @@ import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
 import type { MoonDot } from "./all-moons.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
-import { placeMarks, pointUnder, readPlaceLayers, spotView, type PlaceLayer } from "../place-marks.ts";
+import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
@@ -279,7 +279,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -517,7 +517,7 @@ export class WakuseiSpace extends HTMLElement {
       this.#showNote();
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
-    if (name === "places" || name === "lang") this.#markSurface();
+    if (name === "places" || name === "lang" || name === "surface-names") this.#markSurface();
     if (name === "earth-places" || name === "earth-places-look") this.#askEarthPlaces();
   }
 
@@ -535,6 +535,25 @@ export class WakuseiSpace extends HTMLElement {
   /** The marks laid on the body looked at now: each place's id, its layer and where its mark is, in CSS pixels from the view's top left. */
   get placesShown(): readonly { id: string; layer: PlaceLayer; x: number; y: number }[] {
     return this.#markLayer?.shown ?? [];
+  }
+
+  /**
+   * Names of the most important features on the body looked at, on by default (`surface-names`). A bare attribute or `on` is the view's own cap. A positive number is how many, at most. `off` or `0` turns them off.
+   * Fame comes first, then size. They are written only on the side facing the camera, fade at the limb, and never overlap. Setting the property writes the attribute.
+   *
+   * @example
+   * ```ts no-run
+   * document.querySelector("wakusei-space")!.setAttribute("surface-names", "8");
+   * ```
+   */
+  get surfaceNames(): number | boolean {
+    const read = readSurfaceNames(this.getAttribute("surface-names"));
+    return read.on ? (read.limit ?? true) : false;
+  }
+  set surfaceNames(value: number | boolean) {
+    if (value === false || value === 0) this.setAttribute("surface-names", "off");
+    else if (value === true) this.removeAttribute("surface-names");
+    else this.setAttribute("surface-names", String(value));
   }
 
   /**
@@ -693,10 +712,11 @@ export class WakuseiSpace extends HTMLElement {
   /** Lay the marks of the places over the body looked at, as the last draw left it, or take them away. Draws nothing. */
   #markSurface(): void {
     const layers = this.places;
+    const names = readSurfaceNames(this.getAttribute("surface-names"));
     const surface = this.#surface;
     const root = this.shadowRoot;
-    if (layers.length === 0 || surface === null || root === null || !(PLACE_BODIES as readonly string[]).includes(surface.id)) {
-      if (layers.length === 0 && this.#markLayer !== undefined) {
+    if ((!names.on && layers.length === 0) || surface === null || root === null || !(PLACE_BODIES as readonly string[]).includes(surface.id)) {
+      if (!names.on && layers.length === 0 && this.#markLayer !== undefined) {
         this.#markLayer.dispose();
         this.#markLayer = undefined;
         if (this.getAttribute("role") === "group") this.setAttribute("role", "img");
@@ -727,7 +747,7 @@ export class WakuseiSpace extends HTMLElement {
     const facts = BODIES[id];
     const ax = facts.axesKm;
     const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
-    this.#markLayer.set(placeMarks(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm));
+    this.#markLayer.set(marksToShow(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm, names));
   }
 
   #bodyLabel: NameLabelOptions | null | undefined;

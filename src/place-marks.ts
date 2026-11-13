@@ -144,6 +144,10 @@ export interface PlaceMark {
   layer: PlaceLayer;
   x: number;
   y: number;
+  /** 1 facing the camera, falling to 0 at the limb. Set on a name. */
+  fade?: number;
+  /** The name is written, not only a dot. */
+  label?: boolean;
 }
 
 /**
@@ -168,6 +172,7 @@ export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4
  * @param layers - The layers to show.
  * @param view - The body as drawn.
  * @param radiusKm - The body's radius in kilometres, to tell a feature's size on the screen.
+ * @param options - `limit` caps how many marks, `gapPx` is how far apart they stay, and `label` writes the name. All may be left out.
  * @returns The marks, in the order they were chosen.
  *
  * @example
@@ -180,7 +185,7 @@ export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4
  * console.log(placeMarks(PLACES_MOON, ["landing"], view, 1737.4).slice(0, 3).map((mark) => mark.place.name.en));
  * ```
  */
-export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer[], view: SurfaceView, radiusKm: number): PlaceMark[] {
+export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer[], view: SurfaceView, radiusKm: number, options?: { limit?: number; gapPx?: number; label?: boolean }): PlaceMark[] {
   if (layers.length === 0 || !(view.radiusPx >= MARK_RULES.fromPx)) return [];
   const wanted: Place[] = [];
   for (const place of places) {
@@ -189,23 +194,112 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
     if (layer === "feature" && place.famous !== true && ((place.feature?.diameterKm ?? 0) / radiusKm) * view.radiusPx < MARK_RULES.featureFromPx) continue;
     wanted.push(place);
   }
-  const rank = (place: Place): number => (place.kind === "feature" ? 2 : 0) + (place.famous === true ? 0 : 1);
-  wanted.sort((a, b) => rank(a) - rank(b) || (b.feature?.diameterKm ?? 0) - (a.feature?.diameterKm ?? 0));
+  if (options?.label === true) wanted.sort((a, b) => placeRank(a) - placeRank(b));
+  else {
+    const rank = (place: Place): number => (place.kind === "feature" ? 2 : 0) + (place.famous === true ? 0 : 1);
+    wanted.sort((a, b) => rank(a) - rank(b) || (b.feature?.diameterKm ?? 0) - (a.feature?.diameterKm ?? 0));
+  }
   const most = Math.max(8, Math.min(MARK_RULES.most, Math.round(view.radiusPx / MARK_RULES.sharePx)));
+  const cap = options?.limit === undefined ? most : Math.max(0, Math.min(MARK_RULES.most, options.limit));
+  const gap = options?.gapPx ?? MARK_RULES.gapPx;
   const out: PlaceMark[] = [];
   for (const place of wanted) {
-    if (out.length >= most) break;
+    if (out.length >= cap) break;
     const { point, normal } = surfacePoint(view, place.lat, place.lon);
     const sight: Vec3 = view.eye !== undefined ? [view.eye[0] - point[0], view.eye[1] - point[1], view.eye[2] - point[2]] : (view.toward ?? [0, 0, 1]);
     const len = Math.hypot(sight[0], sight[1], sight[2]) || 1;
+    const face = dot(normal, sight) / len;
     // a little short of the limb: a mark seen edge-on is a crowd of dots on the rim, and the surface there is a sliver
-    if (dot(normal, sight) / len < 0.12) continue;
+    if (face < 0.12) continue;
     const at = view.project(point);
     if (at === null || at.x < 0 || at.y < 0 || at.x > view.width || at.y > view.height) continue;
-    if (out.some((mark) => Math.hypot(mark.x - at.x, mark.y - at.y) < MARK_RULES.gapPx)) continue;
-    out.push({ place, layer: layerOf(place.kind), x: at.x, y: at.y });
+    let x = at.x;
+    let y = at.y;
+    if (options?.label === true) {
+      for (let step = 0; step < 4; step += 1) {
+        const hit = out.find((mark) => Math.hypot(mark.x - x, mark.y - y) < gap);
+        if (hit === undefined) break;
+        const dx = x - hit.x;
+        const dy = y - hit.y;
+        const d = Math.hypot(dx, dy) || 1;
+        x += (dx / d) * (gap - d + 4);
+        y += (dy / d) * (gap - d + 4);
+      }
+    }
+    if (x < 0 || y < 0 || x > view.width || y > view.height) continue;
+    if (out.some((mark) => Math.hypot(mark.x - x, mark.y - y) < gap)) continue;
+    out.push({ place, layer: layerOf(place.kind), x, y, ...(options?.label === true ? { label: true, fade: Math.min(1, (face - 0.12) / 0.4) } : {}) });
   }
   return out;
+}
+
+/**
+ * How important a place is for a name on the surface. Lower is more important. Fame comes first: a famous place ranks ahead of every place that is not. Within each group a larger feature ranks ahead of a smaller one (its diameter in kilometres is taken off the rank). A place with no size ranks last in its group.
+ *
+ * @param place - One place.
+ * @returns The rank.
+ *
+ * @example
+ * ```ts
+ * import { PLACES_MOON } from "@johnmorrisdotca/wakusei-planets/places/moon";
+ * import { placeRank } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * const tycho = PLACES_MOON.find((place) => place.id === "moon/tycho")!;
+ * const small = PLACES_MOON.find((place) => place.kind === "feature" && place.famous !== true)!;
+ * console.log(placeRank(tycho) < placeRank(small));
+ * ```
+ */
+export function placeRank(place: Place): number {
+  const size = Math.min(1_000_000, place.feature?.diameterKm ?? 0);
+  return (place.famous === true ? 0 : 1_000_000) - size;
+}
+
+/**
+ * Read the `surface-names` attribute. Omitted, empty or `on` is on, with the view's own cap. `off` or `0` is off. A positive whole number is on and is the most names to show.
+ *
+ * @param value - The attribute's value, or null when it is omitted.
+ * @returns Whether names are on, and `limit`: the most names, or null when the attribute sets no number.
+ *
+ * @example
+ * ```ts
+ * import { readSurfaceNames } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * console.log(readSurfaceNames(null).on, readSurfaceNames("8").limit, readSurfaceNames("off").on);
+ * ```
+ */
+export function readSurfaceNames(value: string | null): { on: boolean; limit: number | null } {
+  if (value === null || value === "" || value === "on") return { on: true, limit: null };
+  if (value === "off" || value === "0") return { on: false, limit: null };
+  const n = Number(value);
+  if (Number.isInteger(n) && n > 0 && n <= 60) return { on: true, limit: n };
+  return { on: true, limit: null };
+}
+
+/**
+ * The marks to lay for the places a page asked for and, when names are on, the most important features written as names. A name keeps its place ahead of a dot on the same feature. Names use a wider gap so the words do not crowd, and they fade toward the limb.
+ *
+ * @param places - The body's list.
+ * @param layers - The layers asked for, possibly none.
+ * @param view - The body as drawn.
+ * @param radiusKm - The body's radius in kilometres.
+ * @param names - From `readSurfaceNames`.
+ * @returns The marks.
+ *
+ * @example
+ * ```ts
+ * import { marksToShow, readSurfaceNames } from "@johnmorrisdotca/wakusei-planets/places";
+ * import { PLACES_MOON } from "@johnmorrisdotca/wakusei-planets/places/moon";
+ *
+ * const view = { centre: [0, 0, 0] as [number, number, number], radius: 1, pole: [0, 1, 0] as [number, number, number], meridian: [0, 0, 1] as [number, number, number], scale: [1, 1, 1] as [number, number, number], toward: [0, 0, 1] as [number, number, number],
+ *   project: (p: [number, number, number]) => ({ x: 200 + p[0] * 180, y: 200 - p[1] * 180 }), width: 400, height: 400, radiusPx: 180 };
+ * console.log(marksToShow(PLACES_MOON, [], view, 1737.4, readSurfaceNames(null)).some((mark) => mark.place.id === "moon/tycho"));
+ * ```
+ */
+export function marksToShow(places: readonly Place[], layers: readonly PlaceLayer[], view: SurfaceView, radiusKm: number, names: { on: boolean; limit: number | null }): PlaceMark[] {
+  const named = names.on ? placeMarks(places, ["feature"], view, radiusKm, { ...(names.limit === null ? {} : { limit: names.limit }), gapPx: 48, label: true }) : [];
+  const asked = layers.length === 0 ? [] : placeMarks(places, layers, view, radiusKm);
+  const ids = new Set(named.map((mark) => mark.place.id));
+  return [...named, ...asked.filter((mark) => !ids.has(mark.place.id))];
 }
 
 /**

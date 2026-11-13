@@ -29,7 +29,7 @@ import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
 import { turn as turnVec, type Vec3 } from "./vec.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "./places.ts";
-import { placeMarks, readPlaceLayers, turnToPlace, type PlaceLayer } from "./place-marks.ts";
+import { marksToShow, readPlaceLayers, readSurfaceNames, turnToPlace, type PlaceLayer } from "./place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "./scene/place-layer.ts";
 
 export { setThreeLoader };
@@ -129,7 +129,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -364,8 +364,9 @@ export class WakuseiBody extends HTMLElement {
   /** Lay the marks of the places over the picture as the scene state has it, or take them away. Draws nothing. */
   #markPlaces(state: SceneState | undefined = this.#sceneState): void {
     const layers = this.places;
+    const names = readSurfaceNames(this.getAttribute("surface-names"));
     const shaded = this.look !== "line" && this.#view !== undefined && !this.hasAttribute("star");
-    if (layers.length === 0 || !shaded || state === undefined) {
+    if ((!names.on && layers.length === 0) || !shaded || state === undefined) {
       if (this.#placeLayer !== undefined) {
         this.#placeLayer.dispose();
         this.#placeLayer = undefined;
@@ -407,7 +408,7 @@ export class WakuseiBody extends HTMLElement {
     const facts = this.#facts();
     const ax = facts.axesKm;
     const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
-    const marks = placeMarks(this.#placeList.list, layers, {
+    const marks = marksToShow(this.#placeList.list, layers, {
       centre: [0, 0, 0],
       radius: 1,
       pole: state.pose.pole,
@@ -418,7 +419,7 @@ export class WakuseiBody extends HTMLElement {
       width: w,
       height: h,
       radiusPx: (Math.min(w, h) / 2) * (state.zoom / state.extent),
-    }, facts.radiusKm);
+    }, facts.radiusKm, names);
     this.#placeLayer.set(marks);
   }
 
@@ -515,7 +516,7 @@ export class WakuseiBody extends HTMLElement {
       this.#refreshLimits();
     }
     this.#lastAnchors = -1;
-    if (name === "places" || name === "lang" || name === "body" || name === "look" || name === "star") this.#markPlaces();
+    if (name === "places" || name === "lang" || name === "body" || name === "look" || name === "star" || name === "surface-names") this.#markPlaces();
     this.#queue();
   }
 
