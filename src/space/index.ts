@@ -12,3 +12,5 @@ export { COVER_ARROW_GAP, COVER_MIN_PX, coverArrows, coveredBy, type CoverArrow,
 export { TRAVEL_CLEARANCE, arrivalSide, travelArrival, travelPlan, travelPose, type ArrivalCompanion, type TravelBody, type TravelInput, type TravelKind, type TravelPlan, type TravelSample, type TravelSight, type TravelView } from "./travel.ts";
 export { regionOrbits, regionView, SUN_REGIONS, type SunRegion } from "./regions.ts";
 export { SIGHT_STEP_PX, sightChanged, sightOf, type Sight, type SightEdge, type SightInput } from "./sight.ts";
+export { BUILT_IN_PATH_STYLES, capPaths, colourOf, completeStyle, DEFAULT_PATH_HIT, hitRadius, MAX_PATH_HIT, MAX_PATH_WIDTH, MAX_PATHS, MIN_PATH_WIDTH, nearestLine, nearestOnSegment, normalisePaths, normaliseStyles, parsePaths, parsePathStyles, readPathHit, resolvePathId, ringPeriodDays, styleOf, styleTable, TOUCH_HIT_MIN, type PathHit, type PathInfo, type PathRequest, type PathStyle, type ScreenLine } from "./paths.ts";
+export { MAX_RIBBON_QUADS, newRibbonBuffer, projectLine, QUAD_BUDGET_PER_PATH, writeRibbon, type RibbonBuffer, type RibbonInput, type RibbonView } from "./path-ribbons.ts";

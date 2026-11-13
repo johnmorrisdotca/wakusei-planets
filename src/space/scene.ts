@@ -22,6 +22,9 @@ import type { SightInput } from "./sight.ts";
 import { spinAxis } from "./spin.ts";
 import { createTrack, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { createPaintOverlay } from "./paint-overlay.ts";
+import { colourOf, ringPeriodDays, type PathStyle, type ScreenLine } from "./paths.ts";
+import { newRibbonBuffer, projectLine, writeRibbon, type RibbonView } from "./path-ribbons.ts";
+import { ORBITS } from "../data/orbits.ts";
 import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
@@ -50,6 +53,26 @@ const CLOSE_UP_PX = 30;
 /** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
 const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
+
+/** The bodies whose orbit a page may draw as a styled path: the ones that have a line (the Earth, the planets, the dwarf planets, the minor bodies, the Moon) and every other moon that has mean elements to draw its ring from. */
+export const PATH_IDS: ReadonlySet<string> = new Set<string>([...ORBIT_BODIES, ...Object.values(MOONS_OF as Record<string, readonly string[]>).flat().filter((id) => ORBITS[id] !== undefined)]);
+
+/** A path to draw: the body, the look it has and the name of that look. */
+export interface PathDraw {
+  id: string;
+  name: string;
+  style: PathStyle;
+}
+
+/** The styled paths at the last draw. `lines` are the screen points of each drawn path, in CSS pixels from the picture's top left, for the hit test. */
+export interface PathsDrawn {
+  drawn: string[];
+  hidden: string[];
+  unplaced: string[];
+  solid: string[];
+  quads: number;
+  lines: { id: string; name: string; line: ScreenLine }[];
+}
 /** How many radii across the picture of a body is at zoom 1 when it has more than its globe: Saturn's rings (to 2.27 radii) are inside the view, not cut by it. */
 const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.3 };
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
@@ -223,6 +246,9 @@ export interface SpaceModel {
   tiles: { requested: number; loading: number; failed: number; shown: number | null };
   /** The orbit lines drawn at the last draw, and how far each body is from its own line as a fraction of the line's radius (0 when it is on it). */
   rings: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
+  /** The styled orbit paths a page asked for, in order (at most 16): each drawn in its look, whatever `orbits` says. */
+  paths: readonly PathDraw[];
+  pathsDrawn: PathsDrawn;
   /** The arrowheads on the orbit lines at the last draw, by line: where each is and the way it points. */
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
@@ -358,6 +384,8 @@ export const newSpaceModel = (): SpaceModel => ({
   painted: { bodies: 0, moons: 0, held: 0 },
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
   rings: { drawn: [], miss: {}, hidden: [] },
+  paths: [],
+  pathsDrawn: { drawn: [], hidden: [], unplaced: [], solid: [], quads: 0, lines: [] },
   arrows: {},
   help: false,
   helpThrough: false,
@@ -581,6 +609,31 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         slot.drawing.setLabel(model.label);
       };
 
+      // the styled paths a page asked for: one mesh of flat quads that face the camera, made when the first is wanted, one draw for all of them
+      const makeRibbons = (): { buffer: ReturnType<typeof newRibbonBuffer>; mesh: THREE.Mesh; position: THREE.BufferAttribute; colour: THREE.BufferAttribute; slots: { pts: Float64Array; fade: Float64Array; xy: Float64Array; ok: Uint8Array; depth: Float64Array; hitOk: Uint8Array }[] } => {
+        const buffer = newRibbonBuffer();
+        const position = new three.BufferAttribute(buffer.positions, 3);
+        const colour = new three.BufferAttribute(buffer.colours, 4);
+        const geometry = new three.BufferGeometry();
+        geometry.setAttribute("position", position);
+        geometry.setAttribute("aColor", colour);
+        geometry.setDrawRange(0, 0);
+        const material = new three.ShaderMaterial({
+          vertexShader: "attribute vec4 aColor; varying vec4 vColor; void main() { vColor = aColor; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+          fragmentShader: "varying vec4 vColor; void main() { gl_FragColor = vColor; }",
+          transparent: true,
+          depthWrite: false,
+          side: 2,
+        });
+        const mesh = new three.Mesh(geometry, material);
+        mesh.frustumCulled = false;
+        mesh.visible = false;
+        scene.add(mesh);
+        const slots = Array.from({ length: 16 }, () => ({ pts: new Float64Array((ORBIT_POINTS + 1) * 3), fade: new Float64Array(ORBIT_POINTS + 1), xy: new Float64Array((ORBIT_POINTS + 1) * 2), ok: new Uint8Array(ORBIT_POINTS + 1), depth: new Float64Array(ORBIT_POINTS + 1), hitOk: new Uint8Array(ORBIT_POINTS + 1) }));
+        return { buffer, mesh, position, colour, slots };
+      };
+      let ribbons: ReturnType<typeof makeRibbons> | null = null;
+      const moonRings = new Map<string, { time: number; mode: ScaleMode; offsets: Vec3[] }>();
       // each line has its colour and a fade (the fourth number of the colour) at every point, so that near the body looked at the part of a line that would cross it is let go
       const orbits = new Map<OrbitBody, { line: THREE.Line; positions: Float32Array; colours: Float32Array; faded: boolean; samples: Vec3[]; epoch: number }>();
       for (const id of ORBIT_BODIES) {
@@ -1101,10 +1154,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const flying = rideFrom !== null && rideFrom.around === "sun" && typeof model.ride?.target !== "string";
           const ownLine = (id: OrbitBody): boolean => id === nearId || (id === "moon" && (nearId === "earth" || nearId === "moon"));
           const nearRadius = radiusOf(nearId);
+          const styled = new Set<string>(model.paths.map((p) => p.id));
           for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
             const hide = flying || (closeUp && !ownLine(id));
-            o.line.visible = model.orbits && !hide;
+            o.line.visible = model.orbits && !hide && !styled.has(id);
             if (!model.orbits) continue;
             const keep = id === "moon" ? MOON_RING_KEEP_MS : 365 * 86_400_000;
             if (!Number.isFinite(o.epoch) || Math.abs(model.time - o.epoch) > keep) {
@@ -1138,6 +1192,106 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             miss[id] = distanceToLine(pos[id as SpaceBody], line) / radius;
           }
           model.rings = { drawn: drawnRings, miss, hidden: hiddenRings };
+
+          // the styled paths: each ring is cut into flat quads that face the camera, a real width in CSS pixels and dashes along its length on the screen, all in one buffer and one draw. A page's `paths` are drawn
+          // whatever `orbits` says, and the plain line of a body that has one is not drawn twice. The same close-up rules as the plain lines hold: a belt ride lets the planets' paths go, and near the body looked at only its own system's are kept.
+          const pathsNow: PathsDrawn = { drawn: [], hidden: [], unplaced: [], solid: [], quads: 0, lines: [] };
+          if (model.paths.length > 0) {
+            const parts = (ribbons ??= makeRibbons());
+            parts.buffer.used = 0;
+            const ce = camera.matrixWorld.elements;
+            const view: RibbonView = { eye: [camera.position.x, camera.position.y, camera.position.z], right: [ce[0]!, ce[1]!, ce[2]!], up: [ce[4]!, ce[5]!, ce[6]!], forward: [-ce[8]!, -ce[9]!, -ce[10]!], width: size.width, height: size.height, half };
+            model.paths.forEach((request, k) => {
+              const id = request.id;
+              const slot = parts.slots[k]!;
+              const isRing = (ORBIT_BODIES as readonly string[]).includes(id);
+              const host = isRing ? null : ((hostOf(id as BodyId) ?? null) as SpacePlanet | SpaceDwarf | null);
+              const own = isRing ? ownLine(id as OrbitBody) : host === nearId;
+              if (flying || (closeUp && !own)) {
+                pathsNow.hidden.push(id);
+                return;
+              }
+              // the ring's points in the scene
+              if (isRing) {
+                const o = orbits.get(id as OrbitBody)!;
+                const keep = id === "moon" ? MOON_RING_KEEP_MS : 365 * 86_400_000;
+                if (!Number.isFinite(o.epoch) || Math.abs(model.time - o.epoch) > keep) {
+                  o.samples = id === "moon" ? moonOrbit(model.time, ORBIT_POINTS) : planetOrbit(id as Exclude<OrbitBody, "moon">, model.time, ORBIT_POINTS);
+                  o.epoch = model.time;
+                }
+                const line = id === "moon" ? o.samples.map((p) => plus(placeMoon(mode, p), pos.earth)) : orbitLine(mode, sunPos, o.samples);
+                for (let i = 0; i <= ORBIT_POINTS; i += 1) slot.pts.set(line[i]!, i * 3);
+              } else {
+                const period = ringPeriodDays(ORBITS[id]?.sid ?? 0);
+                if (host === null || period === null || pos[host] === undefined) {
+                  pathsNow.unplaced.push(id);
+                  return;
+                }
+                let held = moonRings.get(id);
+                if (held === undefined || held.time !== model.time || held.mode !== mode) {
+                  const offsets: Vec3[] = [];
+                  for (let i = 0; i < ORBIT_POINTS; i += 1) offsets.push(moonSite(id as MoonId, model.time + (i / ORBIT_POINTS) * period * 86_400_000, host));
+                  offsets.push(offsets[0]!);
+                  held = { time: model.time, mode, offsets };
+                  moonRings.set(id, held);
+                }
+                const hostRadius = radiusOf(host);
+                for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+                  const at = held.offsets[i]!;
+                  slot.pts[i * 3] = pos[host][0] + at[0] * hostRadius;
+                  slot.pts[i * 3 + 1] = pos[host][1] + at[1] * hostRadius;
+                  slot.pts[i * 3 + 2] = pos[host][2] + at[2] * hostRadius;
+                }
+              }
+              projectLine(view, slot.pts, ORBIT_POINTS + 1, slot.xy, slot.ok, slot.depth);
+              // the part of the line near the body looked at is let go: a ring of a planet's own system (and the Moon's) by its distance in radii, as the plain lines are; a moon's ring round its planet where it crosses the planet's disc on the screen
+              slot.fade.fill(1);
+              if (closeUp && own) {
+                if (isRing) {
+                  for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+                    const away = Math.hypot(slot.pts[i * 3]! - pos[nearId][0], slot.pts[i * 3 + 1]! - pos[nearId][1], slot.pts[i * 3 + 2]! - pos[nearId][2]) / nearRadius;
+                    const t = Math.max(0, Math.min(1, (away - 3) / 9));
+                    slot.fade[i] = t * t * (3 - 2 * t);
+                  }
+                }
+              }
+              if (!isRing && host !== null && px[host] > 0) {
+                const hostScreen = new Float64Array(2);
+                const hostOk = new Uint8Array(1);
+                const hostDepth = new Float64Array(1);
+                projectLine(view, pos[host], 1, hostScreen, hostOk, hostDepth);
+                if (hostOk[0]) {
+                  for (let i = 0; i <= ORBIT_POINTS; i += 1) {
+                    if (!slot.ok[i] || slot.depth[i]! >= hostDepth[0]!) continue;
+                    const inside = Math.hypot(slot.xy[i * 2]! - hostScreen[0]!, slot.xy[i * 2 + 1]! - hostScreen[1]!) - px[host];
+                    slot.fade[i] = Math.max(0, Math.min(1, inside / 6 + 0.5));
+                  }
+                }
+              }
+              const [r, g, b] = colourOf(request.style.color);
+              const line: ScreenLine = { xy: slot.xy, ok: slot.ok, count: ORBIT_POINTS + 1 };
+              const wrote = writeRibbon(view, { points: slot.pts, count: ORBIT_POINTS + 1, fade: slot.fade, colour: [r, g, b], width: request.style.width, opacity: request.style.opacity, dash: request.style.dash }, line, slot.depth, parts.buffer);
+              pathsNow.quads += wrote.quads;
+              if (wrote.solidified) pathsNow.solid.push(id);
+              pathsNow.drawn.push(id);
+              // the hit test sees the segments a reader can see
+              for (let i = 0; i <= ORBIT_POINTS; i += 1) slot.hitOk[i] = slot.ok[i] && slot.fade[i]! > 0.1 ? 1 : 0;
+              pathsNow.lines.push({ id, name: request.name, line: { xy: slot.xy, ok: slot.hitOk, count: ORBIT_POINTS + 1 } });
+            });
+            parts.mesh.visible = parts.buffer.used > 0;
+            parts.mesh.geometry.setDrawRange(0, parts.buffer.used);
+            const touch = (attribute: THREE.BufferAttribute, per: number): void => {
+              const ranged = attribute as THREE.BufferAttribute & { clearUpdateRanges?: () => void; addUpdateRange?: (start: number, count: number) => void };
+              ranged.clearUpdateRanges?.();
+              ranged.addUpdateRange?.(0, parts.buffer.used * per);
+              attribute.needsUpdate = true;
+            };
+            touch(parts.position, 3);
+            touch(parts.colour, 4);
+          } else if (ribbons !== null) {
+            ribbons.mesh.visible = false;
+          }
+          model.pathsDrawn = pathsNow;
 
           // Starman and the Roadster: where the table puts the car, in the same mapping as the planets, as a dot a few pixels across, on its orbit line (about one trip round the Sun, from the table, worked out again every month)
           const path = model.roadster ? model.roadsterPath : null;
@@ -1546,6 +1700,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           oortGeometry.dispose();
           (oortLines.material as THREE.Material).dispose();
           paintOverlay?.dispose();
+          if (ribbons !== null) {
+            ribbons.mesh.geometry.dispose();
+            (ribbons.mesh.material as THREE.Material).dispose();
+          }
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
           ended = true;
           for (const slot of slots.values()) empty(slot);

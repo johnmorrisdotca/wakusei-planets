@@ -35,7 +35,8 @@ import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } f
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
-import { createSpaceItem, FIT_DISTANCE, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { capPaths, hitRadius, nearestLine, normalisePaths, normaliseStyles, parsePaths, parsePathStyles, readPathHit, resolvePathId, styleOf, styleTable, type PathHit, type PathRequest, type PathStyle } from "./paths.ts";
+import { createSpaceItem, FIT_DISTANCE, moonScaleFor, newSpaceModel, PATH_IDS, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
@@ -280,7 +281,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", "paths", "path-styles", "path-hit", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -503,6 +504,9 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
     else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
+    else if (name === "paths") this.paths = parsePaths(value);
+    else if (name === "path-styles") this.pathStyles = parsePathStyles(value);
+    else if (name === "path-hit") this.#pathHitChanged();
     else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
@@ -1146,6 +1150,115 @@ export class WakuseiSpace extends HTMLElement {
     if (listener === null) return;
     super.removeEventListener(type, listener as EventListenerOrEventListenerObject, options);
     if (type === "wakusei-sight") this.#sightListeners.delete(listener);
+  }
+
+  // --- paths of a page's own ----------------------------------------------------------------------------------------------------------------------
+  #pathRequests: PathRequest[] = [];
+  #pathOverrides: Record<string, Partial<PathStyle> | null> = {};
+  #pathCounts = { requested: 0, dropped: 0, unresolved: 0 };
+  #pathHover: PathHit | null = null;
+  #pathClicks = 0;
+
+  /**
+   * Orbits to draw at once, each in a named look (the attribute `paths`, a JSON list of ids or `{ id, style }`). An id is a body that has an orbit: `earth`, a planet, a dwarf planet, a minor body, `moon`, or a moon of another planet
+   * (`io`, `titan`), whose ring is drawn round its planet from the mean orbit that places it. The craft (`roadster`, the orbiters, the deep-space craft) have no path here and count as `unresolved`. At most 16 are drawn (the last 16 of a longer list).
+   * They are drawn whatever `orbits` says; a body's plain line is not drawn beneath its path. The `style` is the name of a look (`selected`, `hovered`, `favourite`, `path`, or one of the page's own) or a partial look over `path`.
+   */
+  get paths(): PathRequest[] {
+    return this.#pathRequests.map((r) => ({ ...r }));
+  }
+  set paths(list: readonly PathRequest[] | string[]) {
+    this.setPaths(list);
+  }
+  /** Set the paths: see {@link WakuseiSpace.paths}. */
+  setPaths(list: readonly (PathRequest | string)[]): void {
+    this.#pathRequests = normalisePaths(list);
+    this.#applyPaths();
+  }
+
+  /** The looks in use by name: the built-in `selected`, `hovered`, `favourite` and `path` with the page's own laid over them. */
+  get pathStyles(): Record<string, PathStyle> {
+    return styleTable(this.#pathOverrides);
+  }
+  set pathStyles(table: Readonly<Record<string, Partial<PathStyle> | null>>) {
+    this.setPathStyles(table);
+  }
+  /** Change the named looks: each entry is a partial look over the built-in of that name (or over `path` for a new name), `null` takes a page's change away. What the page gave before is kept for the names not in `table`. */
+  setPathStyles(table: Readonly<Record<string, Partial<PathStyle> | null>>): void {
+    for (const [name, given] of Object.entries(normaliseStyles(table))) {
+      if (given === null) delete this.#pathOverrides[name];
+      else this.#pathOverrides[name] = given;
+    }
+    this.#applyPaths();
+  }
+
+  /** How near, in CSS pixels, a pointer must be to a path to be on it (the attribute `path-hit`, 8 by default, 0 to 40, `off` or 0 for no test). A touch has twice the reach, at least 16. */
+  get pathHit(): number {
+    return readPathHit(this.getAttribute("path-hit"));
+  }
+  set pathHit(value: number) {
+    this.setAttribute("path-hit", String(value));
+  }
+  #pathHitChanged(): void {
+    if (this.pathHit === 0 && this.#pathHover !== null) this.#setPathHover(null);
+  }
+
+  #applyPaths(): void {
+    const table = styleTable(this.#pathOverrides);
+    const { kept, dropped } = capPaths(this.#pathRequests);
+    const resolved = new Map<string, { id: string; name: string; style: PathStyle }>();
+    let unresolved = 0;
+    for (const request of kept) {
+      const id = resolvePathId(request.id, PATH_IDS);
+      if (id === null) {
+        unresolved += 1;
+        continue;
+      }
+      const { name, style } = styleOf(request, table);
+      // a body named twice has one path, in the look of the last entry
+      resolved.delete(id);
+      resolved.set(id, { id, name, style });
+    }
+    this.#pathCounts = { requested: this.#pathRequests.length, dropped, unresolved };
+    this.#model.paths = [...resolved.values()];
+    if (this.#pathHover !== null && !resolved.has(this.#pathHover.id)) this.#setPathHover(null);
+    this.#gate?.request();
+  }
+
+  /**
+   * The path under a point of the element, in CSS pixels from its top left, as of the last draw: `{ id, style, x, y, distancePx, pointer }` (the nearest point of the path and how far it is), or `null`. `radiusPx` is how
+   * near the point must be (the page's `path-hit` when left out; with that off, no path is found unless a radius is given).
+   */
+  pathAt(x: number, y: number, radiusPx?: number): PathHit | null {
+    return this.#pathUnder(x, y, radiusPx === undefined ? hitRadius(this.pathHit, "mouse") : Math.max(0, Math.min(radiusPx, 200)), "mouse");
+  }
+
+  #pathUnder(x: number, y: number, radius: number, pointer: PathHit["pointer"]): PathHit | null {
+    if (!(radius > 0)) return null;
+    const lines = this.#model.pathsDrawn.lines;
+    if (lines.length === 0) return null;
+    const near = nearestLine(x, y, lines.map((l) => l.line), radius);
+    if (near === null) return null;
+    const hit = lines[near.index]!;
+    return { id: hit.id, style: hit.name, x: near.x, y: near.y, distancePx: near.distance, pointer };
+  }
+
+  /** The reach of a pointer of this kind: none in a ride unless the page set `path-hit`. */
+  #pathRadius(pointer: PathHit["pointer"]): number {
+    if (this.#model.ride !== null && !this.hasAttribute("path-hit")) return 0;
+    return hitRadius(this.pathHit, pointer);
+  }
+
+  #setPathHover(hit: PathHit | null): void {
+    const was = this.#pathHover;
+    if (hit === null && was === null) return;
+    if (hit !== null && was !== null && hit.id === was.id) {
+      this.#pathHover = hit;
+      return;
+    }
+    this.#pathHover = hit;
+    if (hit !== null) this.dispatchEvent(new CustomEvent("wakusei-path-hover", { detail: { ...hit, name: this.#nameOf(hit.id) }, bubbles: true, composed: true }));
+    else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-path-hover-end", { detail: { id: was.id }, bubbles: true, composed: true }));
   }
 
   get orbits(): boolean {
@@ -1857,6 +1970,9 @@ export class WakuseiSpace extends HTMLElement {
     allMoons: { on: boolean; loaded: boolean; dots: number };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
     orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
+    /** The page's own paths (`paths`): how many were asked for, how many are in the one draw as of the last draw, how many were left out for being past 16 (the earliest), how many named no body that has an orbit, which were let go
+     * (`hidden`: a belt ride, or a body looked at close whose system they are not of), which dashed ones were drawn solid for being too long, the draw calls they took (0 or 1), the path the mouse is on and the `wakusei-path-click` events sent. */
+    paths: { requested: number; drawn: number; dropped: number; unresolved: number; hidden: string[]; solid: string[]; draws: number; hover: string | null; hits: number };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
     arrows: Record<string, { position: [number, number, number]; direction: [number, number, number] }[]>;
     /** How long an arrowhead on an orbit line is on the screen at the last draw, in CSS pixels (0 when none is drawn): the same at every zoom. */
@@ -1897,6 +2013,7 @@ export class WakuseiSpace extends HTMLElement {
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden] },
+      paths: { requested: this.#pathCounts.requested, drawn: this.#model.pathsDrawn.drawn.length, dropped: this.#pathCounts.dropped, unresolved: this.#pathCounts.unresolved + this.#model.pathsDrawn.unplaced.length, hidden: [...this.#model.pathsDrawn.hidden], solid: [...this.#model.pathsDrawn.solid], draws: this.#model.pathsDrawn.quads > 0 ? 1 : 0, hover: this.#pathHover?.id ?? null, hits: this.#pathClicks },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
@@ -2113,10 +2230,17 @@ export class WakuseiSpace extends HTMLElement {
   #move = (event: PointerEvent): void => {
     if (event.pointerType === "touch" || event.buttons !== 0) return;
     if (this.#hoverBy === "focus" && this.#hovered !== null) return;
-    this.#hover(this.#pointAt(event), "pointer");
+    const body = this.#pointAt(event);
+    this.#hover(body, "pointer");
+    // a body comes first: a path is under the pointer only where no body is
+    if (body === null && this.#model.pathsDrawn.lines.length > 0) {
+      const rect = this.getBoundingClientRect();
+      this.#setPathHover(this.#pathUnder(event.clientX - rect.left, event.clientY - rect.top, this.#pathRadius(event.pointerType === "pen" ? "pen" : "mouse"), event.pointerType === "pen" ? "pen" : "mouse"));
+    } else if (this.#pathHover !== null) this.#setPathHover(null);
   };
   #leave = (event: PointerEvent): void => {
     if (event.pointerType !== "touch" && this.#hoverBy === "pointer") this.#hover(null, "pointer");
+    if (this.#pathHover !== null) this.#setPathHover(null);
   };
   #labelBlur = (event: FocusEvent): void => {
     const next = event.relatedTarget as HTMLElement | null;
@@ -2285,7 +2409,17 @@ export class WakuseiSpace extends HTMLElement {
         bestD = d;
       }
     }
-    if (best) this.#press(best);
+    if (best) {
+      this.#press(best);
+      return;
+    }
+    // one press means one thing: a body (its disc, or its name), then a path, then the sky
+    if (this.#model.pathsDrawn.lines.length === 0 || this.#bodyAt(x, y) !== null || (this.#labelBox !== undefined && event.composedPath().includes(this.#labelBox))) return;
+    const pointer = event.pointerType === "touch" ? "touch" : event.pointerType === "pen" ? "pen" : "mouse";
+    const hit = this.#pathUnder(x, y, this.#pathRadius(pointer), pointer);
+    if (hit === null) return;
+    this.#pathClicks += 1;
+    this.dispatchEvent(new CustomEvent("wakusei-path-click", { detail: { ...hit, name: this.#nameOf(hit.id) }, bubbles: true, composed: true }));
   };
   #labelClick = (event: Event): void => {
     const target = event.target as HTMLElement | null;
