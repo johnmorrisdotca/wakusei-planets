@@ -56,6 +56,23 @@ The cost is the fragment shader, in three tiers set by `quality`. `full` marches
 
 The ground is fetched in rings. The first view is 4.2 MB: the coarse level whole (80 m between samples), the finest level (5 m) over the middle 4 by 4 tiles round the landing site, their pictures and the finest horizon map. The levels are whole from the first draw, and a tile not yet fetched holds what the coarser level makes of it, so the ground gets sharper in place as the rest comes in, nearest first: the other 5 m and 20 m tiles, the other horizon maps, and last the far terrain beyond 80 km, which only the farthest mountains need. The whole site is 12.9 MB (heights 7.0 MB, ground picture 2.0 MB, horizon maps 3.9 MB). The element's `data-loading` attribute is `more` while tiles are still coming, `done` at the end and `failed` if one could not be had (the first view still stands), and `stats.tiles` counts them.
 
+## Coming down from orbit
+
+`<wakusei-space>` can bring the viewer down to a site in one move. Import `@johnmorrisdotca/wakusei-planets/surface/land` for its effect and the space element gains `land(site)`, `leave()` and two readers, `landed` and `standing`; a page that never imports it carries none of the standing view.
+
+```ts no-run
+import "@johnmorrisdotca/wakusei-planets/space/element";
+import "@johnmorrisdotca/wakusei-planets/surface/land";
+
+const space = document.querySelector("wakusei-space")!;
+space.addEventListener("wakusei-landed", (event) => console.log("down at", (event as CustomEvent).detail.site));
+await space.land("apollo-17", { tiles: "https://johnmorrisdotca.github.io/wakusei-planets/tiles/" });
+console.log(space.landed); // "apollo-17"
+await space.leave();
+```
+
+The camera goes to the Moon if it is not there, turns over the site and comes in to the Moon's closest zoom; the standing view is made and its first 4.2 MB fetched meanwhile, and it fades in over the picture when both are ready (a person who asked for reduced motion gets a cut). `wakusei-landing` is sent when it starts and `wakusei-landed`, with the site, when the person is standing; `leave()` (or the Escape key on the ground) fades it out, lifts the camera back to the whole Moon and sends `wakusei-left`. `land` resolves the `<wakusei-surface>` element, so its `time` and `heading` can be set at once, and rejects when there is no such site, the device cannot draw 3D, the ground does not come in (`timeout`, 20 seconds by default) or `leave` was called first. A second `land` at the same site returns the same view.
+
 ## What the package exports
 
-`WakuseiSurface` (the element, from `surface/element`) and `SURFACE_SITES` say what can be stood on; `moonSky` and `localFrame` the sky; `forward`, `viewProjection`, `clampLook` and `stepOver` the camera; `loadTerrain`, `tileAddress`, `groundAt`, `sampleLevel` and `decodeHeight` the heights; `madeGround`, `craterIn`, `rocksAround` and `rockMesh` the made detail, with the same formulas as the shader (written once, in `src/surface/detail.ts`, and held together by the tests).
+`WakuseiSurface` (the element, from `surface/element`) and `SURFACE_SITES` say what can be stood on; `moonSky` and `localFrame` the sky; `forward`, `viewProjection`, `clampLook` and `stepOver` the camera; `loadTerrain`, `tileAddress`, `groundAt`, `sampleLevel` and `decodeHeight` the heights; `loadPlan` the order the files come in, `fillFromCoarser` what a tile not yet fetched holds, `madeGround`, `craterIn`, `rocksAround` and `rockMesh` the made detail, with the same formulas as the shader (written once, in `src/surface/detail.ts`, and held together by the tests).

@@ -1,6 +1,6 @@
 // The descent: from `<wakusei-space>`'s view of the Moon to standing at a site, in one move. `import "@johnmorrisdotca/wakusei-planets/surface/land"` for its effect adds `land(site)`, `leave()` and `landed` to
 // `<wakusei-space>` (the way `earth-places` adds its places): a page that never imports it carries none of the standing view, and the space element is unchanged. Only what the space element already offers is
-// used: `goTo`, `goToPlace`, `stats` and its shadow root. The standing view is made and loaded while the camera comes in, and fades in over it when both are ready.
+// used: `goTo`, `goToPlace` (the package's own places are given to the views if the page has not given any), `stats` and its shadow root. The standing view is made and loaded while the camera comes in, and fades in over it when both are ready.
 import type { WakuseiSpace } from "../space/element.ts";
 import { siteById, type SurfaceSite } from "./site.ts";
 
@@ -138,6 +138,9 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
   const root = space.shadowRoot;
   if (root === null) throw new Error("the orbit view is not connected");
   await import("./element.ts");
+  // the orbit view turns to a site by its place in the Moon's list: where the page has given the views no lists, the package's own are given
+  const { placesLoader, setPlacesLoader } = await import("../scene/place-layer.ts");
+  if (placesLoader() === undefined) setPlacesLoader((await import("../places.ts")).loadPlaces);
   const smooth = options.smooth !== false && !reduced();
   const surface = document.createElement("wakusei-surface");
   surface.setAttribute("site", site.id);

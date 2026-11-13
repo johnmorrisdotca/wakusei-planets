@@ -1,6 +1,7 @@
 // The standing page: <wakusei-surface> at the Apollo 17 landing site with a few choices: where to look, how high the Sun is (days after the landing), and whether the made detail is shown. A choice sets
 // an attribute; nothing here runs on a timer. The page's tiles are the Pages build's `tiles/` folder.
 import "../src/space/element.ts";
+import "../src/surface/element.ts";
 import type { WakuseiSpace } from "../src/space/element.ts";
 import { land, leave } from "../src/surface/land.ts";
 import type { WakuseiSurface } from "../src/surface/element.ts";
