@@ -156,6 +156,8 @@ export interface PlaceMark {
  * The rules that keep the marks quiet, in CSS pixels: nothing is marked on a body under `fromPx` of radius on the screen; a named feature is marked once it is `featureFromPx` across (a famous one at any size);
  * no two marks are closer than `gapPx` (the one chosen first keeps its place); and a body gets one mark for every `sharePx` of its radius, 8 at least and `most` at most.
  *
+ * Written names (not dots) keep to a smaller rule: none below `nameFromPx` of radius, fading in over the next `nameFadePx`, at most one for every `namePerPx` of radius, and never one wider than the disc.
+ *
  * @example
  * ```ts
  * import { MARK_RULES } from "@johnmorrisdotca/wakusei-planets/places";
@@ -163,7 +165,7 @@ export interface PlaceMark {
  * console.log(MARK_RULES.gapPx, MARK_RULES.most);
  * ```
  */
-export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4, most: 60 } as const;
+export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4, most: 60, nameFromPx: 70, nameFadePx: 20, namePerPx: 20 } as const;
 
 /**
  * The marks to lay over a body: the places of the layers asked for that face the viewer (not too near the edge of the disc, where they would crowd), are inside the view, and are not crowded out by a mark
@@ -189,6 +191,9 @@ export const MARK_RULES = { fromPx: 40, featureFromPx: 14, gapPx: 12, sharePx: 4
  */
 export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer[], view: SurfaceView, radiusKm: number, options?: { limit?: number; gapPx?: number; label?: boolean; avoid?: readonly Obstacle[]; lang?: "en" | "ja"; nudge?: boolean }): PlaceMark[] {
   if (layers.length === 0 || !(view.radiusPx >= MARK_RULES.fromPx)) return [];
+  // a written name takes room: none on a small disc, a few on a middling one, and they come in gently
+  if (options?.label === true && !(view.radiusPx >= MARK_RULES.nameFromPx)) return [];
+  const come = options?.label === true ? Math.min(1, (view.radiusPx - MARK_RULES.nameFromPx) / MARK_RULES.nameFadePx) : 1;
   const wanted: Place[] = [];
   for (const place of places) {
     const layer = layerOf(place.kind);
@@ -202,7 +207,7 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
     wanted.sort((a, b) => rank(a) - rank(b) || (b.feature?.diameterKm ?? 0) - (a.feature?.diameterKm ?? 0));
   }
   const most = Math.max(8, Math.min(MARK_RULES.most, Math.round(view.radiusPx / MARK_RULES.sharePx)));
-  const cap = options?.limit === undefined ? most : Math.max(0, Math.min(MARK_RULES.most, options.limit));
+  const cap = Math.min(options?.limit === undefined ? most : Math.max(0, Math.min(MARK_RULES.most, options.limit)), options?.label === true ? Math.floor(view.radiusPx / MARK_RULES.namePerPx) : Infinity);
   const gap = options?.gapPx ?? MARK_RULES.gapPx;
   const out: PlaceMark[] = [];
   for (const place of wanted) {
@@ -220,6 +225,8 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
     if (options?.label === true) {
       const lang = options.lang ?? "en";
       const mine = { ...nameBox(place.name[lang]), id: place.id };
+      // never wider than the disc it is written on
+      if (mine.halfWidth > view.radiusPx) continue;
       const clash = (px: number, py: number): boolean => {
         const box: Obstacle = { x: px, y: py, ...mine };
         if (px - mine.halfWidth < 0 || px + mine.halfWidth > view.width || py - mine.halfHeight < 0 || py + mine.halfHeight > view.height) return true;
@@ -240,7 +247,7 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
     }
     if (x < 0 || y < 0 || x > view.width || y > view.height) continue;
     if (options?.label !== true && out.some((mark) => Math.hypot(mark.x - x, mark.y - y) < gap)) continue;
-    out.push({ place, layer: layerOf(place.kind), x, y, ...(options?.label === true ? { label: true, fade: Math.min(1, (face - 0.12) / 0.4) } : {}) });
+    out.push({ place, layer: layerOf(place.kind), x, y, ...(options?.label === true ? { label: true, fade: Math.min(1, (face - 0.12) / 0.4) * come } : {}) });
   }
   return out;
 }

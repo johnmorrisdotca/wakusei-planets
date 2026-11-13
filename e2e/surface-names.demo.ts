@@ -1,10 +1,27 @@
 // Names of the great features are written on the body looked at: Mare Imbrium and Tycho at fit, more craters closer in, none of those on the far side, and a press sends the place event.
 import { expect, test } from "@playwright/test";
+import { underLoad } from "./under-load.ts";
 
-test.beforeEach(({ page }, testInfo) => {
-  void page;
+test.beforeEach(async ({ page, browserName }, testInfo) => {
+  await underLoad(page, browserName);
   test.skip(testInfo.project.name !== "chromium-desk" && testInfo.project.name !== "chromium-phone" && testInfo.project.name !== "webkit-desk" && testInfo.project.name !== "webkit-phone", "the four browser projects");
 });
+
+/** Waits until what the names are, and where, has been the same for four reads in a row, each two frames apart (they arrive in waves: the data, the first draw, the fade), in place of a fixed sleep. */
+const steadyNames = async (main: import("@playwright/test").Locator): Promise<void> => {
+  let steady = 0;
+  let last = "";
+  await expect.poll(async () => {
+    const now = await main.evaluate(async (el) => {
+      const read = () => JSON.stringify([...(el.shadowRoot?.querySelectorAll("[data-name]") ?? [])].map((n) => { const b = n.getBoundingClientRect(); return [n.textContent, Math.round(b.left), Math.round(b.top), (n as HTMLElement).style.opacity]; }));
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      return read();
+    });
+    steady = now === last && now !== "[]" ? steady + 1 : 0;
+    last = now;
+    return steady;
+  }, { timeout: 30_000, message: "the names settled" }).toBeGreaterThanOrEqual(4);
+};
 
 const PAGE = "/wakusei-planets/space.html?t=2026-11-11T12:00:00Z&speed=0&play=off";
 
@@ -15,13 +32,20 @@ test("the Moon shows Mare Imbrium and Tycho, closer in a smaller crater, the far
   const names = () => space.evaluate((el) => [...(el.shadowRoot?.querySelectorAll("[data-name]") ?? [])].map((node) => (node as HTMLElement).textContent ?? ""));
   await space.evaluate((el) => (el as unknown as { goTo(id: string, options: { smooth: boolean }): void }).goTo("moon", { smooth: false }));
   await expect.poll(async () => (await names()).length, { timeout: 60_000 }).toBeGreaterThan(2);
-  await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Sinus Medii", { smooth: false, zoom: 1 }));
+  const radius = () => space.evaluate((el) => (el as unknown as { placeOf(id: string): { r: number } | null }).placeOf("moon")?.r ?? 0);
+  const at = (zoom: number) => space.evaluate((el, z) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Sinus Medii", { smooth: false, zoom: z }), zoom);
+  // at fit the most important one is named, and within the cap of one name to 20 px of radius
+  await at(1);
+  await expect.poll(names, { timeout: 30_000 }).toEqual(expect.arrayContaining(["Mare Imbrium"]));
+  const fitted = await names();
+  expect(fitted.length, "no more names than a twentieth of the radius").toBeLessThanOrEqual(Math.floor((await radius()) / 20));
+  // closer in more are named, a smaller crater among them, and Tycho
+  await at(2.4);
   await expect.poll(names, { timeout: 30_000 }).toEqual(expect.arrayContaining(["Mare Imbrium", "Tycho"]));
-  await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Sinus Medii", { smooth: false, zoom: 0.4 }));
-  await expect.poll(async () => (await names()).includes("Mare Imbrium"), { timeout: 30_000 }).toBe(true);
-  const pulled = await names();
-  await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Sinus Medii", { smooth: false, zoom: 1.4 }));
-  await expect.poll(async () => (await names()).filter((name) => !pulled.includes(name)).length, { timeout: 30_000 }).toBeGreaterThan(0);
+  expect((await names()).filter((name) => !fitted.includes(name)).length, "closer in a name that was not there").toBeGreaterThan(0);
+  // far out (a small Moon): none below 70 px of radius, and never more than the cap
+  await at(0.3);
+  await expect.poll(async () => (await radius()) < 70 ? (await names()).length : -1, { timeout: 30_000 }).toBeLessThanOrEqual(0);
   await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean }): Promise<unknown> }).goToPlace("Poincaré", { smooth: false }));
   await expect.poll(names, { timeout: 30_000 }).not.toEqual(expect.arrayContaining(["Mare Imbrium"]));
   await expect.poll(names, { timeout: 30_000 }).not.toEqual(expect.arrayContaining(["Tycho"]));
@@ -90,7 +114,7 @@ test("a drag that starts on a name turns the body, and a tap on a name picks the
     return { text: node.textContent ?? "", x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, opacity: Number((node as HTMLElement).style.opacity || "1") };
   }));
   await expect.poll(async () => (await names()).length, { timeout: 60_000 }).toBeGreaterThan(1);
-  await page.waitForTimeout(1500);
+  await steadyNames(main);
   const box = (await main.boundingBox())!;
   // the name nearest the middle of the picture, where a drag starts
   const before = await names();
@@ -101,7 +125,7 @@ test("a drag that starts on a name turns the body, and a tap on a name picks the
   await page.mouse.move(start.x + 40, start.y, { steps: 5 });
   await page.mouse.move(start.x + 90, start.y, { steps: 5 });
   await page.mouse.up();
-  await page.waitForTimeout(800);
+  await steadyNames(main);
   const after = await names();
   const shifts = before.flatMap((one) => after.filter((other) => other.text === one.text).map((other) => other.x - one.x));
   expect(shifts.length, "names stay in the picture after the turn").toBeGreaterThan(0);
@@ -145,7 +169,7 @@ test.describe("Venus painted with its names on", () => {
       return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
     }));
     await expect.poll(async () => (await names()).length, { timeout: 60_000 }).toBeGreaterThan(0);
-    await page.waitForTimeout(1500);
+    await steadyNames(main);
     const yaw = () => page.locator("#controls").evaluate((el) => Number((Reflect.get(el, "state") as { yaw: number }).yaw));
     return { main, names, yaw };
   };
@@ -161,8 +185,7 @@ test.describe("Venus painted with its names on", () => {
     await page.mouse.move(start.x + 40, start.y, { steps: 5 });
     await page.mouse.move(start.x + 90, start.y, { steps: 5 });
     await page.mouse.up();
-    await page.waitForTimeout(500);
-    expect(Math.abs((await yaw()) - before), "the view's yaw turned by the drag").toBeGreaterThan(1);
+    await expect.poll(async () => Math.abs((await yaw()) - before), { message: "the view's yaw turned by the drag" }).toBeGreaterThan(1);
   });
 
   test("a reader with the keyboard only Tabs to the view, past no name, and the arrow keys turn it, with no click", async ({ page }) => {
@@ -184,3 +207,40 @@ test.describe("Venus painted with its names on", () => {
     expect(await page.evaluate(() => (document.activeElement?.shadowRoot?.activeElement ?? null) !== null && document.activeElement?.id === "main"), "no name takes the next Tab").toBe(false);
   });
 });
+
+// A small Moon is not covered by its names: below 70 px of radius none are written, above it at most one to 20 px of radius, and none wider than the disc. Measured on a phone at 49 px (the names were five, laid across it) and 61 px.
+for (const target of [49, 61, 90]) {
+  test(`the Moon at ${target} px of radius: no name below 70 px, otherwise within the cap and the disc`, async ({ page }) => {
+    await page.goto("/wakusei-planets/?body=moon&look=painted");
+    const main = page.locator("#main");
+    await main.hover();
+    await expect(main).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+    await page.locator("#controls").evaluate((el) => (el as unknown as { pause(): void }).pause());
+    // the zoom that makes the disc `target` px, set and read in the same call
+    const radius = await page.locator("#controls").evaluate((el, want) => {
+      const host = document.getElementById("main") as unknown as { discRadius: number };
+      const zoom = want / host.discRadius;
+      (Reflect.get(el, "controller") as { set(v: unknown, f: boolean, r: string): void }).set({ zoom }, true, "set");
+      return host.discRadius * zoom;
+    }, target);
+    expect(radius).toBeGreaterThan(target * 0.8);
+    // what is written is read in one call, and waited for until it has been the same for several reads in a row (names arrive after the data does)
+    const written = () => main.evaluate(async (el) => {
+      const read = () => [...(el.shadowRoot?.querySelectorAll("[data-name]") ?? [])].map((n) => { const b = n.getBoundingClientRect(); return { w: b.width, op: Number((n as HTMLElement).style.opacity || "1") }; }).filter((n) => n.op >= 0.2);
+      const first = read();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const second = read();
+      return { stable: first.length === second.length, names: second, r: (el as unknown as { discRadius: number }).discRadius * Number((Reflect.get(document.getElementById("controls")!, "state") as { zoom: number }).zoom) };
+    });
+    let steady = 0;
+    await expect.poll(async () => {
+      const now = await written();
+      steady = now.stable ? steady + 1 : 0;
+      return steady;
+    }, { timeout: 30_000 }).toBeGreaterThanOrEqual(4);
+    const now = await written();
+    expect(now.names.length, `names at ${Math.round(now.r)} px`).toBeLessThanOrEqual(Math.floor(now.r / 20));
+    if (now.r < 70) expect(now.names.length, "none below 70 px").toBe(0);
+    for (const one of now.names) expect(one.w, "no name wider than the disc").toBeLessThanOrEqual(now.r * 2);
+  });
+}

@@ -78,11 +78,11 @@ test("a name never lies over a dot that stays, nor over another name, and moves 
   }
 });
 
-test("Tycho, a famous crater, is named at the Moon's fit on a narrow picture, whatever its tilt: a name nudges to find room and does not give way to a larger crater beside it", () => {
+test("Tycho, a famous crater, is named once the Moon is big enough for a dozen names, whatever its tilt: a name nudges to find room and does not give way to a larger crater beside it", () => {
   const rad = Math.PI / 180;
   const tycho = PLACES_MOON.find((place) => place.id === "moon/tycho")!;
   for (const tilt of [0, 5, 7, 9, 12]) {
-    for (const radiusPx of [110, 120, 133, 150, 170]) {
+    for (const radiusPx of [240, 280, 320, 400]) {
       const size = Math.round(radiusPx * 2 + 70);
       // the view looks at Sinus Medii (0, 0); the pole leans toward the camera by `tilt` degrees, as a libration does
       const pole: [number, number, number] = [0, Math.cos(tilt * rad), Math.sin(tilt * rad)];
@@ -94,4 +94,24 @@ test("Tycho, a famous crater, is named at the Moon's fit on a narrow picture, wh
       assert.ok(marks.some((mark) => mark.place.id === tycho.id), `Tycho is named at ${radiusPx} px with the pole leaning ${tilt} degrees`);
     }
   }
+});
+
+test("names are few on a small Moon: none below 70 px, at most a twentieth of the radius, none wider than the disc, and they fade in above the floor", () => {
+  const rad = Math.PI / 180;
+  const make = (radiusPx: number): SurfaceView => {
+    const size = Math.round(radiusPx * 2 + 70);
+    return { centre: [0, 0, 0], radius: 1, pole: [0, 1, 0], meridian: [0, 0, 1], scale: [1, 1, 1], toward: [0, 0, 1], project: (p) => ({ x: size / 2 + p[0] * radiusPx, y: size / 2 - p[1] * radiusPx }), width: size, height: size, radiusPx };
+  };
+  void rad;
+  // the radii measured on a phone: 38, 49, 61, 76 and 106 px
+  for (const [radiusPx, most] of [[38, 0], [49, 0], [61, 0], [69, 0], [76, 3], [106, 5]] as const) {
+    const names = marksToShow(PLACES_MOON, [], make(radiusPx), 1737.4, readSurfaceNames(null)).filter((mark) => mark.label === true);
+    assert.ok(names.length <= most, `${names.length} names at ${radiusPx} px, at most ${most}`);
+    for (const mark of names) assert.ok((Math.ceil(mark.place.name.en.length * 3.7) + 5) <= radiusPx, `${mark.place.name.en} is wider than a disc of ${radiusPx} px`);
+  }
+  // 76 px is inside the band above the floor: they come in at part strength; 90 px and over at full
+  const faded = marksToShow(PLACES_MOON, [], make(76), 1737.4, readSurfaceNames(null)).filter((mark) => mark.label === true);
+  assert.ok(faded.length > 0 && faded.every((mark) => (mark.fade ?? 1) <= 0.31), "at 76 px they are only coming in");
+  const full = marksToShow(PLACES_MOON, [], make(200), 1737.4, readSurfaceNames(null)).filter((mark) => mark.label === true);
+  assert.ok(full.length > 5 && full.some((mark) => (mark.fade ?? 0) > 0.9), "at 200 px they are written at full strength");
 });

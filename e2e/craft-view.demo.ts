@@ -1,8 +1,9 @@
 // Deep-space craft in the space view: how many are drawn, Voyager 1 beyond the edge from the Earth, a press, and 1980.
 import { expect, test } from "@playwright/test";
+import { underLoad } from "./under-load.ts";
 
-test.beforeEach(({ page }, testInfo) => {
-  void page;
+test.beforeEach(async ({ page, browserName }, testInfo) => {
+  await underLoad(page, browserName);
   test.skip(testInfo.project.name !== "chromium-desk" && testInfo.project.name !== "chromium-phone" && testInfo.project.name !== "webkit-desk" && testInfo.project.name !== "webkit-phone", "the four browser projects");
 });
 
