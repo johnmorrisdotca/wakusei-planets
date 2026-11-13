@@ -74,7 +74,9 @@ export async function openSpace(page: Page, query = `t=${NOV2}`): Promise<void> 
   await page.goto(`/wakusei-planets/space.html?${query}`);
   await page.locator(`${SPACE}[data-state=live]`).waitFor({ timeout: 90_000 });
   await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000, message: "the first draw" }).toBeGreaterThan(0);
-  await quiet(page);
+  // a view whose clock runs draws every frame and never holds still: it has its first draw, and that is all there is to wait for
+  const running = await page.locator(SPACE).evaluate((el) => Number(Reflect.get(el, "speed")) !== 0);
+  if (!running) await quiet(page);
 }
 
 /** Press a "Go to" button of the page, then wait until the frame that shows it has drawn. */
