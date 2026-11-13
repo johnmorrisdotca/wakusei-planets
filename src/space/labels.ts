@@ -62,3 +62,39 @@ export function chooseLabels(boxes: readonly LabelBox[], gap = LABEL_GAP): Set<s
   for (const box of order) if (!kept.some((other) => crosses(box, other, gap))) kept.push(box);
   return new Set(kept.map((box) => box.id));
 }
+
+/**
+ * Where a floating name goes: beside its body's dot, and kept inside the view (MODULES-1144). It starts to the right of the dot, at `max(4, min(r, 40))` pixels from its middle and 8 pixels above it. A name that would run past the right edge goes to the dot's left side instead (`flipped`); one that fits on neither side is held against the edge, and a name past the top or the bottom is held inside. A body whose dot is itself outside the view keeps its name where it falls, since the view cuts it with the body.
+ *
+ * @param dot - The body's place on the screen in CSS pixels: its middle and its radius on the screen.
+ * @param size - The name's width and height in CSS pixels.
+ * @param frame - The view's width and height in CSS pixels.
+ * @returns The name's top-left corner, and whether it went to the left of the dot.
+ *
+ * @example
+ * ```ts
+ * import { nameSpot } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * // a body 20 pixels from the right edge of a 400 pixel view: its 60 pixel name goes to the left of it
+ * const spot = nameSpot({ x: 380, y: 100, r: 10 }, { width: 60, height: 16 }, { width: 400, height: 300 });
+ * console.log(spot.flipped, spot.x + 60 <= 380);
+ * ```
+ */
+export function nameSpot(dot: { x: number; y: number; r: number }, size: { width: number; height: number }, frame: { width: number; height: number }): { x: number; y: number; flipped: boolean } {
+  const gap = Math.max(4, Math.min(dot.r, 40));
+  let x = Math.round(dot.x + gap);
+  let y = Math.round(dot.y - 8);
+  let flipped = false;
+  if (frame.width <= 0 || frame.height <= 0) return { x, y, flipped };
+  if (dot.x >= 0 && dot.x <= frame.width) {
+    if (x + size.width > frame.width) {
+      const left = Math.round(dot.x - gap - size.width);
+      if (left >= 0) {
+        x = left;
+        flipped = true;
+      } else x = Math.max(0, frame.width - size.width);
+    }
+  }
+  if (dot.y >= 0 && dot.y <= frame.height) y = Math.max(0, Math.min(y, frame.height - size.height));
+  return { x, y, flipped };
+}

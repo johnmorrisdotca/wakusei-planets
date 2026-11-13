@@ -3,7 +3,7 @@ export { AU_IN_EARTH_RADII, blend, createTrack, EARTH_RADIUS_KM, eclipticToScene
 export { compress, MOON_COMPRESSED, moonDistance, orbitLine, placeAround, placeBodies, placeMoon, placeSun, radiusIn, SUN_COMPRESSED, truePosition, type ScaleMode } from "./scale.ts";
 export { groundDirection } from "./aim.ts";
 export { RIDE_FOV, ridePose, type RideInput, type RideLook, type RidePose } from "./ride.ts";
-export { chooseLabels, LABEL_GAP, type LabelBox } from "./labels.ts";
+export { chooseLabels, LABEL_GAP, nameSpot, type LabelBox } from "./labels.ts";
 export { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, systemOf, type SpaceKind } from "./bodies.ts";
 export { besideMoon, BESIDE_RADII, type BesideCamera, type BesideInput } from "./beside.ts";
 export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";

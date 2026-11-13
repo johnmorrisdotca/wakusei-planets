@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A floating name is no longer cut off at the view's edge** (MODULES-1144). A name beside a body near the right edge ran past the edge and was cut. It now goes to the dot's left side (the dot follows the text), and if it fits on neither side, or would pass the top or the bottom, it is held inside the edge; a body whose dot is outside the view keeps its name where it falls. `nameSpot(dot, size, frame)` from `/space` is the placing on plain numbers. `e2e/space-names.demo.ts` reads 3 names cut at three view sizes on the old code, none now.
+
 ## [0.40.0] - 2026-11-13
 
 - **Paint an orbiter's path on the Moon or Mars** (MODULES-1168). `space.paint = { id, length, swath }` on `<wakusei-space>` paints that craft's ground track on the body it goes round (`id` such as `lro` or `mro`; `length` `1d` by default, or `1w`, `1m`, in the clock's time; `swath` `track` by default, or `coverage`, the ground where the craft is at least 10° up). `clearPaint()` takes it off, and another craft clears the old trail. Parts older than `length` fade and are dropped. The line is filled between frames, including backwards. One upload a frame while time moves, nothing at rest, and nothing while paint is off, when the picture and its sphere are freed on the graphics card. The craft's place is sampled at most a third of a trip apart, so a fast clock follows the orbit; a clock run backwards lays down the older end; a `coverage` swath over the date line is painted on both edges. The date-line split, the pole split and the swath radius are `@johnmorrisdotca/wakusei-planets/ground-track` (no DOM, no three.js). The space page has Paint, Clear, and 1 day, 1 week, 1 month.
