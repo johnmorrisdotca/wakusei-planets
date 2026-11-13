@@ -218,6 +218,8 @@ test("the name reads on every body at strength 0.5: dark letters on Venus, Satur
   for (const [id, tone] of [["uranus", "dark"], ["venus", "dark"], ["saturn", "dark"], ["europa", "dark"], ["mars", "light"], ["moon", "light"], ["earth", "light"], ["neptune", "light"]] as const) {
     await setOn(page, "bodyLabel", null);
     await drawnShared(page, () => callOn(page, "goTo", id, { smooth: false }));
+    // the same view of every body, the controls' own start: a move now stands on the side the camera came from (so a companion is in the picture), and which part of the face the letters land on changes how strongly they read, so the comparison is made on one fixed view
+    await drawnShared(page, () => callOn(page, "setView", { yaw: 0, tilt: 0, zoom: 1 }));
     await page.waitForTimeout(600);
     const plain = await shot(page);
     const named = async (extra: object): Promise<string> => {
