@@ -140,7 +140,7 @@ if (process.env["SKY_TABLE"]) console.log("HORIZONTAL " + JSON.stringify(Object.
 /** What the figures above prove, per body: the most each differs from JPL Horizons on the three dates (the TSDoc of `skyBodies` and the guide say the same numbers). */
 const TOLERANCE: Record<SkyBodyId, { position: number; positionJ2000: number; magnitude: number }> = {
   sun: { position: 0.1, positionJ2000: 0.1, magnitude: 0.02 },
-  moon: { position: 0.05, positionJ2000: 0.3, magnitude: 0.06 },
+  moon: { position: 0.02, positionJ2000: 0.015, magnitude: 0.06 },
   mercury: { position: 0.1, positionJ2000: 0.1, magnitude: 0.02 },
   venus: { position: 0.1, positionJ2000: 0.1, magnitude: 0.02 },
   mars: { position: 0.1, positionJ2000: 0.1, magnitude: 0.1 },

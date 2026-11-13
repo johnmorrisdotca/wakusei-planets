@@ -149,6 +149,13 @@ const equatorialOf = (v: Vec): { rightAscensionDeg: number; declinationDeg: numb
 /** A J2000 ecliptic vector in the J2000 equatorial frame. */
 const j2000Equatorial = (v: Vec): Vec => [v[0], v[1] * Math.cos(OBLIQUITY_J2000) - v[2] * Math.sin(OBLIQUITY_J2000), v[1] * Math.sin(OBLIQUITY_J2000) + v[2] * Math.cos(OBLIQUITY_J2000)];
 
+/** The annual aberration: the Earth's speed over the speed of light, a vector in the J2000 ecliptic that moves the apparent direction toward where the Earth is heading. */
+function earthBeta(ms: number): Vec {
+  const earth = earthPosition(ms) as Vec;
+  const later = earthPosition(ms + 60_000) as Vec;
+  return [(later[0] - earth[0]) / 60 / (LIGHT_KM_S / AU_KM), (later[1] - earth[1]) / 60 / (LIGHT_KM_S / AU_KM), (later[2] - earth[2]) / 60 / (LIGHT_KM_S / AU_KM)];
+}
+
 /** A planet as the Earth's centre sees it at `ms`: its direction in the J2000 ecliptic with light time, the same with the Earth's aberration, its distance and its distance from the Sun at the moment the light left it. */
 function planetGeometry(id: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto", ms: number): { geo: Vec; aberrated: Vec; distanceAu: number; sunAu: number; helio: Vec } {
   const earth = earthPosition(ms) as Vec;
@@ -160,9 +167,7 @@ function planetGeometry(id: "mercury" | "venus" | "mars" | "jupiter" | "saturn" 
   }
   const geo = sub(helio, earth);
   const distanceAu = length(geo);
-  // the annual aberration: the Earth's speed over the speed of light moves the apparent direction toward where the Earth is heading
-  const later = earthPosition(ms + 60_000) as Vec;
-  const beta: Vec = [(later[0] - earth[0]) / 60 / (LIGHT_KM_S / AU_KM), (later[1] - earth[1]) / 60 / (LIGHT_KM_S / AU_KM), (later[2] - earth[2]) / 60 / (LIGHT_KM_S / AU_KM)];
+  const beta = earthBeta(ms);
   const direction = unit(geo);
   return { geo, aberrated: [direction[0] + beta[0], direction[1] + beta[1], direction[2] + beta[2]], distanceAu, sunAu: length(helio), helio };
 }
@@ -240,7 +245,12 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
     const first = moonGeocentric(ms) as Vec;
     const retarded = moonGeocentric(ms - (length(first) / LIGHT_KM_S) * 1000) as Vec;
     geoDirection = unit(retarded);
-    j2000 = j2000Equatorial(retarded);
+    // The Moon's series of this package gives the direction with the Earth's aberration already in it (its place of date agrees with JPL Horizons' apparent place to under an arcsecond, and with the aberration
+    // taken out its J2000 place agrees with Horizons' astrometric (ICRF) place to 0.7 arcsecond; left in, it is 1 to 13 arcseconds off, the size and the pattern of the annual aberration). So the J2000 direction,
+    // which has none, is the retarded one with the aberration taken out.
+    const beta = earthBeta(ms);
+    const direction = unit(retarded);
+    j2000 = j2000Equatorial(unit([direction[0] - beta[0], direction[1] - beta[1], direction[2] - beta[2]]));
     const phase = moonPhase(ms);
     const phaseAngle = Math.acos(Math.max(-1, Math.min(1, 2 * phase.fraction - 1))) * DEG;
     const distanceKm = equatorial.distanceKm;
@@ -326,7 +336,7 @@ export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer)
  * Every body has `accurate`: true where the figures hold to the accuracy below; Pluto outside the years its table is fitted for (1800 to 2199) is returned with `accurate: false`, because its place there is from an approximate orbit that can be wrong by degrees.
  *
  * Accuracy, as the tests prove it, CHECKED against JPL Horizons on three dates, 2024-03-20, 2026-06-21 and 2030-12-01 (2024 to 2030 only), and two places; the series are held to it for the years 1750 to 2250 by the package's own checks, and a moment outside those years throws a `RangeError` ({@link SKY_RANGE}). Within them: the Sun, the planets and Pluto are within 0.1 arcminute in right ascension and declination, of date and of J2000;
- * the Moon within 0.05 arcminute of date and 0.3 of J2000; the distance-derived diameters within 0.1 per cent; the illuminated fraction within 0.02 per cent points and the elongation within 0.02 degrees; azimuth and altitude within
+ * the Moon within 0.02 arcminute of date and 0.015 of J2000; the distance-derived diameters within 0.1 per cent; the illuminated fraction within 0.02 per cent points and the elongation within 0.02 degrees; azimuth and altitude within
  * 0.1 arcminute, the Moon's parallax in. Magnitudes: within 0.02 for the Sun, Mercury, Venus, Jupiter and Saturn, 0.03 for Uranus and Neptune, 0.06 for the Moon, 0.1 for Mars (its surface markings are not modelled) and 0.5 for Pluto
  * (a fixed absolute magnitude, no more). Angles are degrees, distances astronomical units, sizes arcseconds.
  *
