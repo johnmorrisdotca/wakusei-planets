@@ -260,3 +260,11 @@ The rows of `/moon-catalogue` (`src/data/moon-catalogue.ts`, made by `scripts/ma
 - **Sizes worked out from the brightness**: D = 10^(3.1236 − 0.5 log10(albedo) − 0.2 V), the formula of NASA/JPL CNEOS's asteroid size estimator (https://cneos.jpl.nasa.gov/tools/ast_size_est.html and its script, read 2026-11-11), with the sheet's albedo where it gives one and 0.04 (the sheet's albedo for Himalia, the largest irregular moon) where it does not. These radii are flagged `derived` and are this package's own estimate, not a measurement.
 - **Groups** are this package's own sorting of the mean orbits by a stated rule (the guide "Every known moon"); the group names are the usual ones, each named after its largest member.
 - **Japanese names** are given only for the 29 moons the package draws in full, whose katakana was checked; the other moons keep their English names and designations.
+
+## Interior cutaway
+
+The cutaway's figures were read on 2026-11-13. NASA content is not subject to copyright in the United States. Nothing was copied from the pages; the numbers and the materials they name are the pages' facts, and a figure the page gives as "about" stays marked about.
+
+- **Earth.** Volumetric mean radius 6371.000 km and core radius 3485 km: NASA Space Science Data Coordinated Archive, Earth Fact Sheet (https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html). Inner core about 1,221 km in radius, of iron and nickel, solid; outer core of iron and nickel, fluid; mantle of rock; crust of rock, about 30 km deep on land (about 5 km under the ocean, which this cutaway does not draw as its own layer): NASA Science, Earth Facts (https://science.nasa.gov/earth/facts/). The mantle's outside in the table is the mean radius minus that 30 km, so it is about, not a figure the page prints.
+- **Mars.** Volumetric mean radius 3389.5 km and core radius 1830 km: NASA Space Science Data Coordinated Archive, Mars Fact Sheet (https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html). The page does not say what the core or the rest is made of, and it does not split the rest into a crust and a mantle, so the cutaway does not either.
+- **Left out,** because those pages do not state a layer boundary: the Moon, Mercury, Venus, Jupiter, Saturn, Uranus, Neptune, Io, Europa, Ganymede and Titan. The same fact sheets were read for them on 2026-11-13.

@@ -3,6 +3,7 @@ export { apparent, heliocentric, heliocentricModel, meanSunAu, moonGeocentric, o
 export { JOURNEY_STOPS, journeyStop, stopPlaceAu, type JourneyStop } from "./stops.ts";
 export { drawnTilt, portrait, type PortraitOptions } from "./pose.ts";
 export { lineSvg, mix, type LineOptions } from "./line.ts";
+export { interiorLegend, interiorOf } from "./interior.ts";
 export { ringStrip, type RingStrip } from "./scene/rings.ts";
 export { embedCode, embedCredit, EMBED_KINDS, lineupCode, lineupCredit, portraitCode, type EmbedKind, type EmbedOptions, type EmbedSettings, type LineupEmbed, type PortraitEmbed } from "./embed.ts";
 export { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit, type PictureCredit } from "./picture-credits.ts";
