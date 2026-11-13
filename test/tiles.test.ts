@@ -4,7 +4,7 @@ import "../src/bodies/saturn.ts";
 import { BODIES } from "../src/facts.ts";
 import { lookOf } from "../src/scene/look.ts";
 import { mapWidthOf, ringWidthOf, zoomLimit, ZOOM_CEILING, ZOOM_FLOOR } from "../src/scene/reach.ts";
-import { BASE_WIDTH, chooseWindow, covers, parseManifest, texelAngle, tilePath, seenRegion, visibleRegion, windowOf, windowRect, windowTiles, TILE_SIZE, WINDOW_TILES, type Axes, type Sight, type TileLevel } from "../src/scene/tiles.ts";
+import { BASE_WIDTH, chooseWindow, covers, parseManifest, texelAngle, tilePath, tilePoint, seenRegion, visibleRegion, windowOf, windowRect, windowTiles, TILE_SIZE, WINDOW_TILES, type Axes, type Sight, type TileLevel } from "../src/scene/tiles.ts";
 
 const level = (n: number): TileLevel => ({ level: n, width: BASE_WIDTH * 2 ** n, height: BASE_WIDTH * 2 ** (n - 1), columns: (BASE_WIDTH * 2 ** n) / TILE_SIZE, rows: (BASE_WIDTH * 2 ** (n - 1)) / TILE_SIZE });
 const levels = [1, 2, 3].map(level);
@@ -18,13 +18,13 @@ test("a manifest is read level by level, and a level that does not fit the pyram
   const manifest = parseManifest({
     tileSize: 512,
     bodies: {
-      mars: { levels: [level(2), level(1), { ...level(3), columns: 7 }] },
+      mars: { levels: [level(2), level(1), { ...level(3), columns: 7 }, level(4)] },
       moon: { levels: [] },
       junk: 3,
     },
   });
   assert.deepEqual(Object.keys(manifest!.bodies), ["mars"]);
-  assert.deepEqual(manifest!.bodies["mars"]!.map((l) => l.level), [1, 2]);
+  assert.deepEqual(manifest!.bodies["mars"]!.map((l) => l.level), [1, 2, 4]);
   assert.equal(parseManifest({ tileSize: 256, bodies: {} }), undefined, "another tile size is not this loader's");
   assert.equal(parseManifest([]), undefined);
   assert.equal(parseManifest(null), undefined);
@@ -67,6 +67,34 @@ test("a window is whole tiles of one level, wrapping at the antimeridian, and is
   assert.equal(tilePath("mars", { level: 3, col: 12, row: 5 }), "mars/3/12/5");
 });
 
+test("a named place falls on the tile pixel its longitude and latitude name, for the Moon and for Mars", () => {
+  // The Moon's 0° is the mean-Earth point. Mars's 0° is Airy-0. Both maps run east from -180, north at the top. These figures are the places table.
+  const places = [
+    ["Tycho", -11.2153, -43.2958],
+    ["Copernicus", -20.0786, 9.6209],
+    ["Mare Crisium", 59.1037, 16.1774],
+    ["Olympus Mons", -133.8025, 18.6528],
+    ["Valles Marineris", -58.5877, -14.0059],
+    ["Hellas", 70.5025, -42.4301],
+    ["Gale", 137.811, -5.3672],
+  ] as const;
+  for (const [name, lon, lat] of places) {
+    for (const level of [3, 4]) {
+      const at = tilePoint(lon, lat, level);
+      const width = BASE_WIDTH * 2 ** level;
+      const height = width / 2;
+      const backLon = ((at.column * TILE_SIZE + at.x) / width) * 360 - 180;
+      const backLat = 90 - ((at.row * TILE_SIZE + at.y) / height) * 180;
+      assert.ok(Math.abs(backLon - lon) < 1e-9 && Math.abs(backLat - lat) < 1e-9, `${name} level ${level}: ${backLon} ${backLat}`);
+      assert.ok(at.x >= 0 && at.x < TILE_SIZE && at.y >= 0 && at.y < TILE_SIZE, name);
+    }
+  }
+  // level 3 is 16384 across: half a pixel is 0.011 degrees, so the crater's own point is inside that pixel
+  const tycho = tilePoint(-11.2153, -43.2958, 3);
+  assert.equal(tycho.column, 15);
+  assert.equal(tycho.row, 11);
+});
+
 test("the level follows the zoom: none while the 2048 picture is sharp, finer as the disc grows, never past what fits", () => {
   const patch = (half: number) => visibleRegion(box(half), front)!;
   assert.equal(chooseWindow(patch(1.1), levels, 300), undefined, "a small disc: the package's own picture is sharp");
@@ -78,6 +106,9 @@ test("the level follows the zoom: none while the 2048 picture is sharp, finer as
   const l3 = chooseWindow(patch(0.05), levels, 4000)!;
   assert.equal(l3.level, 3, "the finest there is when the zoom wants more than it has");
   assert.ok(l3.cols * l3.rows <= WINDOW_TILES);
+  const l4 = chooseWindow(patch(0.02), [1, 2, 3, 4].map(level), 4000)!;
+  assert.equal(l4.level, 4, "a level 4 in the manifest is used when the zoom wants it and the window fits");
+  assert.ok(l4.cols * l4.rows <= WINDOW_TILES);
   // a view that wants level 3 over a wide patch gets the finest level whose window fits
   const wide = chooseWindow(patch(0.5), levels, 4000);
   assert.ok(wide === undefined || wide.level < 3);
@@ -108,6 +139,8 @@ test("the zoom limit grows with the finest map and with the picture's reach, and
   assert.equal(zoomLimit(100, 16384, true), ZOOM_CEILING);
   assert.equal(mapWidthOf(undefined, true, undefined), 4096, "a body drawn by its shader alone");
   assert.equal(mapWidthOf({ id: "mars", surface: "", painted: { map: "mars", widths: [512, 1024, 2048] } }, true, levels), 8192 * 2);
+  assert.equal(mapWidthOf({ id: "mars", surface: "", painted: { map: "mars", widths: [512, 1024, 2048] } }, true, [1, 2, 3, 4].map(level)), 32768);
+  assert.ok(zoomLimit(2.2, 32768, false) > zoomLimit(2.2, 16384, false), "level 4 (32768 across) lets the view go further than level 3");
   assert.equal(mapWidthOf({ id: "mars", surface: "", painted: { map: "mars", widths: [512, 1024, 2048] } }, true, undefined), 2048);
   assert.equal(mapWidthOf({ id: "mars", surface: "", painted: { map: "mars", widths: [512, 1024, 2048] } }, false, levels), 4096, "the illustrated look has no map");
 });

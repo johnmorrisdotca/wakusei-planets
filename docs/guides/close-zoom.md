@@ -87,8 +87,8 @@ A tile set is the body's map cut into 512 pixel WebP squares at several sizes. L
 
 | Body | Top level | Source |
 |---|---|---|
-| Mars | 3 (16384) | Viking Mars Digital Image Mosaic 2.1, colour, 1 km a pixel |
-| The Moon | 3 (16384) | LRO Camera colour map (NASA SVS, CGI Moon Kit) |
+| Mars | 3 (16384) | Viking Mars Digital Image Mosaic 2.1, colour, 1 km a pixel. The same mosaic at 232 m a pixel is cut to level 4 (32768 across) by `pnpm tiles:mars` only when `WAKUSEI_SHARP_TILES=1` |
+| The Moon | 3 (16384) | LRO Camera colour map (NASA SVS, CGI Moon Kit). The LROC WAC morphology mosaic at 100 m a pixel is cut to level 4 by `pnpm tiles:moon`, under the same switch |
 | Earth | 3 (16384) | Blue Marble Next Generation with topography and bathymetry |
 | Mercury | 2 (8192) | MESSENGER MDIS global basemap |
 | Io, Callisto | 2 | Galileo and Voyager mosaics (NASA, USGS) |
@@ -122,7 +122,7 @@ Gas giants, Venus, Titan, Ceres, Ganymede, Europa and the Sun have no finer map 
 
 ## Where the tiles are
 
-The tiles are **not in the npm package and not in the repository**: 15 bodies at up to 16384 pixels are about 77 MB, and a repository keeps every version of every file for ever. They are made from the sources by `scripts/make-body-tiles.py`, built by the Pages workflow and served beside the demo at https://johnmorrisdotca.github.io/wakusei-planets/tiles/ (GitHub Pages sends `access-control-allow-origin: *`; on a public repository it costs nothing).
+The tiles are **not in the npm package and not in the repository**: 15 bodies at up to 16384 pixels are about 77 MB, and a repository keeps every version of every file for ever. They are made from the sources by `scripts/make-body-tiles.py`, built by the Pages workflow and served beside the demo at https://johnmorrisdotca.github.io/wakusei-planets/tiles/ (GitHub Pages sends `access-control-allow-origin: *`; on a public repository it costs nothing). A level 4 for the Moon or Mars (32768 pixels across, 2048 tiles) is not built unless the repository variable `WAKUSEI_SHARP_TILES` is `1`. With it off, the Pages build does not download those two mosaics. Measured on 2026-11-13, once each file was on disk: the Moon is 72.79 MB, cut in 96 seconds from the 5.5 GB mosaic, and Mars is 66.02 MB, cut in 107 seconds from the 12 GB mosaic. The two add about 139 MB to the tile folder. The ordinary tiles of all 15 bodies are about 77 MB, so the folder stays under the 1 GB Pages limit. `WAKUSEI_SHARP_TILES=1 pnpm tiles:moon` and `pnpm tiles:mars` cut them.
 
 An element looks there by default. A page that serves its own pictures (it sets `texture-base`) has no tiles unless it says where they are, so nothing reaches out from a page that did not ask:
 

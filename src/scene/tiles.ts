@@ -266,6 +266,36 @@ export function windowTiles(window: TileWindow): { level: number; col: number; r
 /** `layer/level/column/row` as the tile's path under the tile set (without the `.webp`). */
 export const tilePath = (body: string, tile: { level: number; col: number; row: number }): string => `${body}/${tile.level}/${tile.col}/${tile.row}`;
 
+/**
+ * Where a place on the surface falls in the tile pyramid. Longitude is degrees east of the prime meridian, from -180 to 180, and latitude is planetocentric, north positive.
+ * Column 0 is longitude -180 and row 0 is latitude 90, the same layout as the maps. For the Moon the prime meridian is the mean-Earth point. For Mars it is Airy-0.
+ *
+ * @param lon - East longitude in degrees.
+ * @param lat - Planetocentric latitude in degrees.
+ * @param level - The pyramid level. Level L is `2048 * 2^L` pixels across.
+ * @returns The tile's column and row, and the pixel inside that tile.
+ *
+ * @example
+ * ```ts
+ * import { tilePoint } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * const tycho = tilePoint(-11.2153, -43.2958, 3);
+ * console.log(tycho.column, tycho.row);
+ * ```
+ */
+export function tilePoint(lon: number, lat: number, level: number): { column: number; row: number; x: number; y: number } {
+  const width = BASE_WIDTH * 2 ** level;
+  const height = width / 2;
+  const columns = width / TILE_SIZE;
+  const rows = height / TILE_SIZE;
+  const u = ((lon + 180) / 360) * width;
+  const v = ((90 - lat) / 180) * height;
+  const column = Math.floor(u / TILE_SIZE);
+  const row = Math.min(rows - 1, Math.max(0, Math.floor(v / TILE_SIZE)));
+  const wrapped = ((column % columns) + columns) % columns;
+  return { column: wrapped, row, x: u - column * TILE_SIZE, y: v - row * TILE_SIZE };
+}
+
 /** True when the region lies inside the window (the window is then still the right one for the view, whatever else changed). */
 export function covers(window: TileWindow, region: Region): boolean {
   const need = region.lonMax - region.lonMin;

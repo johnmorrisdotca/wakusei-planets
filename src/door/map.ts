@@ -57,7 +57,7 @@ export type BodyMapSource = TileSource<BodyMapPlace, number, ImageTile> & {
 };
 
 /**
- * The levels a source has when it does not say: the three the package's cutter makes at most.
+ * The levels a source has when it does not say: levels 1 to 3, which the ordinary cut makes. A manifest can name a finer level, and the view then uses that.
  *
  * @example
  * ```ts
