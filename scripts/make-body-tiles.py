@@ -368,20 +368,75 @@ def write_manifest(out, bodies):
         file.write("\n")
 
 
+def park_sharp(out, name, previous):
+    """Before a body's folder is replaced: take its level 4 (the sharp cut, made from a mosaic that is not downloaded again) aside, with its manifest entry. Returns what to give `restore_sharp`, or None when there is none."""
+    if name not in SHARP or previous is None:
+        return None
+    level = SHARP[name]["level"]
+    entry = next((one for one in previous.get("levels", []) if one.get("level") == level), None)
+    folder = os.path.join(out, name, str(level))
+    if entry is None or not os.path.isdir(folder):
+        return None
+    parked = os.path.join(out, f".sharp-{name}-{level}")
+    shutil.rmtree(parked, ignore_errors=True)
+    shutil.move(folder, parked)
+    return {"parked": parked, "folder": folder, "entry": entry, "sharp": previous.get("sharp")}
+
+
+def restore_sharp(kept, body):
+    """Put a parked level 4 back, and its entry and credit in the body's manifest entry."""
+    if kept is None:
+        return body
+    os.makedirs(os.path.dirname(kept["folder"]), exist_ok=True)
+    shutil.move(kept["parked"], kept["folder"])
+    levels = [one for one in body["levels"] if one.get("level") != kept["entry"]["level"]] + [kept["entry"]]
+    levels.sort(key=lambda one: one["level"])
+    body = {**body, "levels": levels, "tiles": sum(one["tiles"] for one in levels), "bytes": sum(one["bytes"] for one in levels)}
+    if kept["sharp"] is not None:
+        body["sharp"] = kept["sharp"]
+    return body
+
+
 def build(cache, out, names):
     textures = os.path.join(ROOT, "textures")
     os.makedirs(out, exist_ok=True)
     manifest_path = os.path.join(out, "manifest.json")
+    previous = {}
+    if os.path.exists(manifest_path):
+        previous = json.load(open(manifest_path, encoding="utf8")).get("bodies", {})
     bodies = {}
-    if os.path.exists(manifest_path) and set(names) != set(SOURCES):
-        bodies = json.load(open(manifest_path, encoding="utf8"))["bodies"]
+    if previous and set(names) != set(SOURCES):
+        bodies = dict(previous)
     for name in names:
+        # a level 4 already made (`sharp`) is kept: the ordinary build does not make it and must not take it away
+        kept = park_sharp(out, name, previous.get(name))
         shutil.rmtree(os.path.join(out, name), ignore_errors=True)
-        bodies[name] = build_body(name, cache, out, textures)
+        bodies[name] = restore_sharp(kept, build_body(name, cache, out, textures))
     bodies = {name: bodies[name] for name in SOURCES if name in bodies}
     write_manifest(out, bodies)
     total = sum(b["bytes"] for b in bodies.values())
     print(f"{sum(b['tiles'] for b in bodies.values())} tiles, {total / 1048576:.1f} MB, in {out}")
+
+
+def sharp_kept():
+    """A level 4 that was made is still there after the ordinary build has replaced the body's folder (a fake level, no download)."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as out:
+        level = SHARP["moon"]["level"]
+        folder = os.path.join(out, "moon", str(level), "0")
+        os.makedirs(folder)
+        open(os.path.join(folder, "0.webp"), "wb").write(b"fake")
+        previous = {"levels": [{"level": 3, "tiles": 5, "bytes": 5}, {"level": level, "tiles": 2048, "bytes": 99}], "sharp": {"file": "x.tif"}}
+        kept = park_sharp(out, "moon", previous)
+        assert kept is not None, "a level 4 that was there was not found"
+        shutil.rmtree(os.path.join(out, "moon"))
+        assert not os.path.exists(folder)
+        body = restore_sharp(kept, {"levels": [{"level": 1, "tiles": 32, "bytes": 1}, {"level": 3, "tiles": 5, "bytes": 5}], "tiles": 37, "bytes": 6})
+        assert os.path.exists(os.path.join(folder, "0.webp")), "the level 4 tiles were lost"
+        assert [one["level"] for one in body["levels"]] == [1, 3, level] and body["tiles"] == 32 + 5 + 2048 and body["sharp"] == {"file": "x.tif"}, body
+        assert park_sharp(out, "mars", previous) is None and park_sharp(out, "moon", None) is None
+        assert park_sharp(out, "jupiter", previous) is None
 
 
 def selftest():
@@ -582,6 +637,8 @@ def main():
             os.environ["WAKUSEI_SHARP_TILES"] = saved
         if "not downloaded" not in gate.getvalue():
             raise SystemExit("the sharp cut ran with WAKUSEI_SHARP_TILES off")
+        sharp_kept()
+        print("sharp level kept ok")
         return
     elif args.command == "sharp":
         sharp(args.cache, args.out, [n for n in args.bodies.split(",") if n])
