@@ -215,11 +215,13 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
         const opacity = mark.label === true ? (mark.fade ?? 1).toFixed(2) : "";
         if (entry.button.style.opacity !== opacity) entry.button.style.opacity = opacity;
         const shift = mark.label === true ? " translate(-50%, -50%)" : "";
-        if (!(Math.abs(entry.x - mark.x) < 0.25 && Math.abs(entry.y - mark.y) < 0.25) || entry.button.dataset.shift !== shift) {
-          entry.x = mark.x;
-          entry.y = mark.y;
+        const lx = mark.x + (mark.shiftX ?? 0);
+        const ly = mark.y + (mark.shiftY ?? 0);
+        if (!(Math.abs(entry.x - lx) < 0.25 && Math.abs(entry.y - ly) < 0.25) || entry.button.dataset.shift !== shift) {
+          entry.x = lx;
+          entry.y = ly;
           entry.button.dataset.shift = shift;
-          entry.button.style.transform = `translate(${mark.x.toFixed(1)}px,${mark.y.toFixed(1)}px)${shift}`;
+          entry.button.style.transform = `translate(${lx.toFixed(1)}px,${ly.toFixed(1)}px)${shift}`;
         }
       }
       for (const [id, entry] of held) {
