@@ -671,10 +671,11 @@ export class WakuseiSpace extends HTMLElement {
     if (ride !== null) {
       // beside a moon (the way a moon is visited): the camera stands outside it, so the point is the one under the line from the moon's centre to the camera as the last draw left it
       if (ride.view !== "beside" || typeof ride.target !== "string") return null;
+      // worked out from the view as it is now (the camera `besideMoon` gives for it), not from the last draw, so a turn just made is already counted
       const moon = ride.target as BodyId;
+      const camera = besideMoon({ ...this.#besideInput(moon), zoom: model.view.zoom, yaw: model.view.yaw, tilt: model.view.tilt });
       const here = this.#site(moon).at;
-      const eye = model.camera.position;
-      const away: Vec3 = [eye[0] - here[0], eye[1] - here[1], eye[2] - here[2]];
+      const away: Vec3 = [camera.position[0] - here[0], camera.position[1] - here[1], camera.position[2] - here[2]];
       return length(away) < 1e-12 ? null : facingPoint(moon, away, model.time);
     }
     return subCameraPoint(model.focus, model.view, model.centre, model.anchor ?? model.time, model.time);
@@ -707,10 +708,8 @@ export class WakuseiSpace extends HTMLElement {
     if (ride !== null) {
       // beside a moon: the pair of the ride's yaw and tilt that stands the camera nearest the side of the moon the point is on (the view keeps the camera beyond the moon, so some sides are only approached)
       const moon = ride.target as BodyId;
-      const host = (hostOf(moon) ?? "earth") as BodyId;
-      const m = this.#site(moon), h = this.#site(host);
-      const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
-      const found = besideFace({ moon: m.at, moonRadius: m.radius, host: h.at, hostRadius: h.radius, sun: this.#site("sun").at, north: orientation(host, model.time).pole, aspect, zoom: from.zoom }, moon, point, model.time);
+      const { moon: at, moonRadius, host, hostRadius, sun, north, aspect } = this.#besideInput(moon);
+      const found = besideFace({ moon: at, moonRadius, host, hostRadius, sun, north, aspect, zoom: from.zoom }, moon, point, model.time);
       to = { yaw: from.yaw + ((((found.yaw - from.yaw + 180) % 360) + 360) % 360) - 180, tilt: found.tilt };
     } else to = faceView(model.focus, point, model.centre, model.anchor, model.time, from.yaw);
     const apply = (yaw: number, tilt: number, final: boolean): void => {
@@ -733,6 +732,14 @@ export class WakuseiSpace extends HTMLElement {
     };
     requestAnimationFrame(step);
     return true;
+  }
+
+  /** What `besideMoon` is given for a moon, without the view's zoom, yaw and tilt: the places and sizes the scene draws with, worked out the same way. */
+  #besideInput(moon: BodyId): Omit<Parameters<typeof besideMoon>[0], "zoom" | "yaw" | "tilt"> {
+    const host = (hostOf(moon) ?? "earth") as BodyId;
+    const m = this.#site(moon), h = this.#site(host);
+    const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
+    return { moon: m.at, moonRadius: m.radius, host: h.at, hostRadius: h.radius, sun: this.#site("sun").at, north: orientation(host, this.#model.time).pole, aspect };
   }
 
   #readEarthPlaces(): readonly EarthPlace[] {
