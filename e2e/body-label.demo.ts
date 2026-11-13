@@ -211,6 +211,8 @@ async function letterContrast(page: Page, id: string, plain: string, named: stri
 test("the name reads on every body at strength 0.5: dark letters on Venus, Saturn, Uranus and Europa, pale on Mars, the Moon, the Earth and Neptune; a forced tone wins", async ({ page }) => {
   test.setTimeout(480_000);
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&look=realistic&scale=true&light=lit");
+  // the letters are measured against the same view without them: the names of the features, written on by default, are left off so that only the body's own name changes the picture
+  await page.locator(SPACE).evaluate((el) => el.setAttribute("surface-names", "off"));
   const base = { look: "painted", strength: 0.5, repeat: "once", facing: true, latitude: 30 };
   const looks = async (): Promise<string | undefined> => ((await statsOf(page)) as unknown as { bodyLabels: { focus: { look?: string } | null } }).bodyLabels.focus?.look;
   const measured: string[] = [];
