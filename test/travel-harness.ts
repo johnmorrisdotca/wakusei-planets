@@ -1,6 +1,7 @@
 // The walk of a camera move without a browser, shared by the unit tests and by scripts/travel-table.ts: the bodies are where the package's own models put them on one date, the first and last views are the
 // ones the space view frames, and a move is sampled at 240 moments. `walk` checks the owner's rules and reports every fault with the stage it is in; `survey` (below) walks one pair from the ten sides at the
 // three picture shapes and two scales and counts the faults by kind.
+import { createHash } from "node:crypto";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../src/facts.ts";
 import { moonOffset, orientation } from "../src/scene/orient.ts";
 import { besideMoon, frameAt, hostOf, moonDistance, placeBodies, radiusIn, TRAVEL_CLEARANCE, travelArrival, travelPlan, travelPose, type ScaleMode, type SpaceDwarf, type SpacePlanet, type TravelBody, type TravelInput, type TravelKind, type TravelSample, type TravelView } from "../src/space/index.ts";
@@ -297,4 +298,37 @@ export function surveyTable(pairs: readonly (readonly [BodyId, BodyId])[], sides
     }
   }
   return lines;
+}
+
+// ---- the baseline ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+/** A digest of every sample of a walk (the camera, the stage and where the two bodies are in the picture, to nine decimals): two walks are the same, sample for sample, when their digests are. */
+export function digestOf(w: Walk): string {
+  const hash = createHash("sha256");
+  const r = (n: number): string => (Math.round(n * 1e9) / 1e9).toString();
+  for (const s of w.samples) hash.update([s.stage, ...s.position.map(r), ...s.forward.map(r), ...s.up.map(r), r(s.fov), r(s.leaving.x), r(s.leaving.y), r(s.destination.x), r(s.destination.y), s.around ? `${r(s.around.x)},${r(s.around.y)}` : "-"].join(" ") + "\n");
+  return hash.digest("hex").slice(0, 16);
+}
+
+/** The moves the baseline holds: every pair of the planner's tests at three shapes and two scales as the space view frames them, and the plain views from the ten sides of the pairs below. */
+export const BASELINE_PAIRS: readonly (readonly [BodyId, BodyId])[] = [
+  ["mercury", "sun"], ["earth", "mars"], ["mars", "jupiter"], ["jupiter", "saturn"], ["neptune", "mercury"], ["earth", "moon"], ["moon", "earth"], ["callisto", "europa"], ["io", "ganymede"],
+  ["titan", "enceladus"], ["moon", "titan"], ["oberon", "miranda"], ["pluto", "charon"], ["saturn", "titan"], ["sun", "earth"], ["phobos", "deimos"], ["triton", "proteus"],
+];
+export const BASELINE_PLAIN: readonly (readonly [BodyId, BodyId])[] = [
+  ["mercury", "sun"], ["earth", "mars"], ["mars", "jupiter"], ["jupiter", "saturn"], ["neptune", "mercury"], ["sun", "earth"],
+  ["callisto", "europa"], ["io", "ganymede"], ["titan", "enceladus"], ["oberon", "miranda"], ["phobos", "deimos"], ["triton", "proteus"],
+];
+export interface BaselineEntry {
+  digest: string;
+  /** The empty pictures the move had when the baseline was taken. */
+  empty: number;
+}
+/** Every baseline move by name: `default a>b scale shape` and `plain a>b scale shape side`. */
+export function baselineMoves(): [string, () => Move][] {
+  const moves: [string, () => Move][] = [];
+  for (const [a, b] of BASELINE_PAIRS) for (const mode of SCALES) for (const shape of SHAPES) moves.push([`default ${a}>${b} ${mode} ${shape.name}`, () => moveOf(a, b, mode, shape.aspect)]);
+  for (const [a, b] of BASELINE_PLAIN) for (const mode of SCALES) for (const shape of SHAPES) SIDES.forEach((side, i) => moves.push([`plain ${a}>${b} ${mode} ${shape.name} ${i}`, () => moveOf(a, b, mode, shape.aspect, undefined, side)]));
+  return moves;
 }
