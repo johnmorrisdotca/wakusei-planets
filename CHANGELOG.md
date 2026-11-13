@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-- **Names of the great features are written on a body** (MODULES-1231). When the body looked at is big enough, `surface-names` (on unless `off`) writes its most important named features on the surface: fame first, then size (`placeRank`). They face the camera, fade at the limb, and stay apart so they do not crowd. A number is how many. A press sends `wakusei-place`. Nothing is drawn for a name.
+## [0.44.0] - 2026-11-13
+
+- **Names of the great features are written on a body** (MODULES-1231). When the body looked at is big enough, `surface-names` (on unless `off`) writes its most important named features on the surface: fame first, then size (`placeRank`). They face the camera, fade at the limb, and stay apart so they do not crowd: a name is not written over a dot of the places asked for, a craft or another body's dot, another body's name, or another feature name, and gives way when it would be. A number is how many. A press sends `wakusei-place`. Nothing is drawn for a name.
 
 ## [0.43.0] - 2026-11-13
 
