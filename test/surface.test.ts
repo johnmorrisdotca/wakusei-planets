@@ -432,6 +432,10 @@ test("the rover speeds up at a steady rate to its top speed, 12 km/h, and stops 
   assert.ok(Math.abs(top.speed - ROVER.maxSpeed) < 0.01 && ROVER.maxSpeed * 3.6 > 11 && ROVER.maxSpeed * 3.6 < 13, `${top.speed}`);
   const stopped = run(top, { throttle: 0, steer: 0 }, 12);
   assert.equal(stopped.speed, 0);
+  // on a gentle slope too, it stays where it is once it has stopped
+  const parked = run(run(startDrive(0, 0, 0, 0), { throttle: 0, steer: 0 }, 1, (_e, n) => 0.1 * n), { throttle: 0, steer: 0 }, 20, (_e, n) => 0.1 * n);
+  assert.equal(parked.speed, 0);
+  assert.ok(Math.abs(parked.north) < 0.01);
   const back = run(startDrive(0, 0, 0, 0), { throttle: -1, steer: 0 }, 6);
   assert.ok(back.north < -3 && back.speed >= -ROVER.maxReverse - 1e-9, "backing is slower and goes the other way");
 });

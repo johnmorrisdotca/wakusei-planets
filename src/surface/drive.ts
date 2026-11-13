@@ -171,7 +171,8 @@ export function driveStep(state: DriveState, input: DriveInput, dt: number, grou
   if (Math.abs(throttle) < 0.02) next.speed -= Math.sign(next.speed) * Math.min(Math.abs(next.speed), 0.35 * d); // a little rolling resistance
   next.speed -= ROVER.gravity * Math.sin(state.pitch) * d;
   if ((state.pitch > ROVER.maxSlope && next.speed > 0) || (state.pitch < -ROVER.maxSlope && next.speed < 0)) next.speed = 0; // uphill past 25 degrees: it does not go
-  if (Math.abs(next.speed) < 1e-3 && Math.abs(throttle) < 0.02) next.speed = 0;
+  // the brake holds it once it has nearly stopped, on any slope it could climb: a rover left alone stays where it is
+  if (Math.abs(throttle) < 0.02 && Math.abs(next.speed) < 0.08 && Math.abs(state.pitch) < ROVER.maxSlope) next.speed = 0;
   // the heading: four wheels steer, so the turn is tight; the move
   const yaw = (next.speed * 2 * Math.tan(next.steer)) / ROVER.wheelbase;
   next.heading = (((state.heading + yaw * d * (180 / Math.PI)) % 360) + 360) % 360;
