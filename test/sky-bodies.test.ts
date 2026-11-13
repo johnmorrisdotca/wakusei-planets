@@ -223,3 +223,14 @@ test("the Moon's phase fields agree with its illuminated fraction and the sides 
     assert.ok(Math.abs(Math.cos((moon.phaseAngleDeg * Math.PI) / 180) - (2 * moon.illuminatedFraction - 1)) < 1e-9);
   }
 });
+
+test("every body says whether its figures are accurate, and Pluto is not outside its fitted table", () => {
+  for (const date of DATES) assert.ok(skyBodies(date).every((body) => body.accurate === true), new Date(date).toISOString());
+  // Pluto's table covers 1800 to 2199: before and after it the package falls back on an approximate orbit that is off by degrees, and the call says so, with the rest of the list still accurate
+  for (const year of [1760, 1799, 2200, 2240]) {
+    const list = skyBodies(Date.UTC(year, 5, 1));
+    assert.equal(list.find((body) => body.id === "pluto")!.accurate, false, `pluto ${year}`);
+    assert.ok(list.filter((body) => body.id !== "pluto").every((body) => body.accurate), `the rest ${year}`);
+  }
+  for (const year of [1800, 1850, 2150, 2199]) assert.equal(skyBody("pluto", Date.UTC(year, 5, 1)).accurate, true, `pluto ${year}`);
+});

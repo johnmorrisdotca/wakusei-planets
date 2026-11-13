@@ -26,6 +26,7 @@ console.log(`Mars: magnitude ${mars.magnitude.toFixed(1)}, ${mars.elongationDeg.
 | Field | What it is |
 | --- | --- |
 | `id`, `name.en`, `name.ja`, `kind` | The body, its names and `star`, `moon`, `planet` or `dwarf`. |
+| `accurate` | `true` where the figures hold to the accuracy below, for every body. Pluto outside the years its table is fitted for (1800 to 2199) is still returned, with `accurate: false`: its place then comes from an approximate orbit that can be wrong by degrees. |
 | `equatorialDate` | The apparent place of the moment: right ascension and declination in degrees, true equator and equinox of date, aberration and nutation in. |
 | `equatorialJ2000` | The same direction without aberration, in the J2000 equatorial frame, in degrees: what a chart drawn on J2000 reads. |
 | `distanceAu`, `distanceKm` | The distance from the Earth's centre. |

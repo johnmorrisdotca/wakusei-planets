@@ -26,6 +26,7 @@ console.log(`Mars: magnitude ${mars.magnitude.toFixed(1)}, ${mars.elongationDeg.
 | 項目 | 意味 |
 | --- | --- |
 | `id`、`name.en`、`name.ja`、`kind` | 天体、その名前、`star`、`moon`、`planet`、`dwarf` のいずれか。 |
+| `accurate` | 値が下の精度に収まっていれば `true`。すべての天体にあります。冥王星は、表を当てはめた年 (1800〜2199年) の外でも返しますが `accurate: false` になり、その位置は数度ずれることもある近似の軌道から来ます。 |
 | `equatorialDate` | その瞬間の見かけの位置。赤経・赤緯 (度)、その日の真の赤道と分点、光行差と章動を含みます。 |
 | `equatorialJ2000` | 光行差を含まない同じ方向を、J2000 の赤道座標で (度)。J2000 で描く星図が読むものです。 |
 | `distanceAu`、`distanceKm` | 地球の中心からの距離。 |

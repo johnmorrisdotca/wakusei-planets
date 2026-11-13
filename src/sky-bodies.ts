@@ -2,7 +2,7 @@
 // for a place, azimuth and altitude. Pure: no DOM, no clock read, no three.js; the moment is passed in. It is the package's own positions packaged: the Sun and the Moon from the sky engine (`/suncalc`'s), the planets from VSOP87B
 // (Pluto from its table) with light time and the annual aberration, the same turn from the ecliptic of J2000 to the true equator of date, and the observer's parallax and sidereal time of the engine.
 import { julianCenturies } from "./clock.ts";
-import { heliocentric, moonGeocentric, poleOf } from "./ephemeris.ts";
+import { heliocentric, heliocentricModel, moonGeocentric, poleOf } from "./ephemeris.ts";
 import { BODIES } from "./facts.ts";
 import { horizontalOf, moonEquatorial, moonPhase, refraction, sunEquatorial, type Equatorial } from "./sky/engine.ts";
 import { eclipticJ2000ToTrueEquatorialOfDate } from "./sky/frames.ts";
@@ -90,6 +90,11 @@ export interface SkyBody {
   id: SkyBodyId;
   name: { en: string; ja: string };
   kind: "star" | "moon" | "planet" | "dwarf";
+  /**
+   * Whether the figures hold to the stated accuracy: `true` for every body inside the range the call accepts, except Pluto outside its fitted table (1800 to 2199), where its place comes from an approximate
+   * orbit that is wrong by degrees: it is returned, with `accurate: false`, so one body does not break the list.
+   */
+  accurate: boolean;
   equatorialDate: { rightAscensionDeg: number; declinationDeg: number };
   equatorialJ2000: { rightAscensionDeg: number; declinationDeg: number };
   distanceAu: number;
@@ -180,7 +185,7 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
   const base = { id, name: { en: facts.name.en, ja: facts.name.ja } };
   let equatorial: Equatorial;
   let j2000: Vec;
-  let body: Omit<SkyBody, "horizontal" | "aboveHorizon" | "id" | "name">;
+  let body: Omit<SkyBody, "horizontal" | "aboveHorizon" | "id" | "name" | "accurate">;
   const earth = earthPosition(ms) as Vec;
   const sunGeo = unit([-earth[0], -earth[1], -earth[2]]);
   const T = julianCenturies(ms);
@@ -244,7 +249,9 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
       illuminatedFraction: (1 + cosPhase) / 2,
     };
   }
-  const out: SkyBody = { ...base, ...body } as SkyBody;
+  // Pluto is from a table fitted for 1800 to 2199; outside it the package falls back on an approximate orbit that is off by degrees
+  const accurate = id !== "pluto" || heliocentricModel("pluto", ms).theory === "chebyshev";
+  const out: SkyBody = { ...base, ...body, accurate } as SkyBody;
   if (id !== "sun") {
     out.elongationDeg = Math.acos(Math.max(-1, Math.min(1, dot(geoDirection, sunGeo)))) * DEG;
     // east of the Sun: its ecliptic longitude is ahead, by less than half a turn
@@ -285,6 +292,8 @@ export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer)
  * Where the Sun, the Moon and the planets (and Pluto) are in the sky at a moment: right ascension and declination of date and of J2000, distance, apparent magnitude, angular diameter, phase and elongation from the Sun,
  * and, when a place is given, azimuth and altitude (the Moon's parallax in). Pure: the moment is passed in, nothing reads a clock. The list is plain data in the order `SKY_BODY_IDS`: a star chart takes it as data the page
  * passes in, it does not import this package. Rise, set and transit are in `/suncalc`.
+ *
+ * Every body has `accurate`: true where the figures hold to the accuracy below; Pluto outside the years its table is fitted for (1800 to 2199) is returned with `accurate: false`, because its place there is from an approximate orbit that can be wrong by degrees.
  *
  * Accuracy, as the tests prove it against JPL Horizons on three dates (2024-03-20, 2026-06-21, 2030-12-01) and two places: the Sun, the planets and Pluto are within 0.1 arcminute in right ascension and declination, of date and of J2000;
  * the Moon within 0.05 arcminute of date and 0.3 of J2000; the distance-derived diameters within 0.1 per cent; the illuminated fraction within 0.02 per cent points and the elongation within 0.02 degrees; azimuth and altitude within
