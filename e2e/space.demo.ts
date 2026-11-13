@@ -392,7 +392,8 @@ test("switching glides and ends, then (the moons let go) nothing is drawn", asyn
   expect((await rideOf(page)).ride.gliding).toBe(true);
   // the move's own end, not a time: it takes as long as the picture changes
   await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 90_000 }).toBe(false);
-  await untilQuiet(page);
+  // after the move's last draw a frame can still be queued (a sharper picture arriving), and on a loaded runner drawing in software it lands late: CI saw one after 1.5 seconds of quiet (51 draw calls, one frame), so rest is four seconds without a draw
+  await untilQuiet(page, 4000);
   const before = await readCounts(page);
   await page.waitForTimeout(2500);
   const after = await readCounts(page);
