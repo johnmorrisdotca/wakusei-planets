@@ -117,7 +117,7 @@ test("names are few on a small Moon: none below 70 px, at most a twentieth of th
 });
 
 test("the names a reader knows come first: on the Moon the four great seas, then Tycho and Copernicus; on Mars Olympus Mons, Valles Marineris, Hellas, the Tharsis volcanoes and Gale", () => {
-  const top = (list: typeof PLACES_MOON, count: number) => list.filter((place) => place.kind === "feature").sort((a, b) => placeRank(a) - placeRank(b)).slice(0, count).map((place) => place.name.en);
+  const top = (list: readonly Parameters<typeof placeRank>[0][], count: number) => list.filter((place) => place.kind === "feature").sort((a, b) => placeRank(a) - placeRank(b)).slice(0, count).map((place) => place.name.en);
   assert.deepEqual(top(PLACES_MOON, 6), ["Mare Imbrium", "Mare Tranquillitatis", "Oceanus Procellarum", "Mare Serenitatis", "Tycho", "Copernicus"]);
   assert.deepEqual(top(PLACES_MARS, 7), ["Olympus Mons", "Valles Marineris", "Hellas Planitia", "Arsia Mons", "Ascraeus Mons", "Pavonis Mons", "Gale"]);
   // six names on a phone's Moon (133 px) are not six seas: Tycho and Copernicus are among them
