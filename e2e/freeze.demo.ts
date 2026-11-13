@@ -5,6 +5,7 @@ import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } f
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { addRocks } from "./door-fixture.ts";
 import { routeTiles } from "./tiles-fixture.ts";
+import { advance, holdClock, takeClock } from "./clock.ts";
 import { drawn } from "./space-ui.ts";
 
 const URL = "/wakusei-planets/";
@@ -326,23 +327,33 @@ test("changes to the portrait give back what they took: adding and removing bodi
 });
 
 test("a moving drag of a body draws at most thirty frames a second", async ({ page }) => {
+  // the page's clock is the test's (see clock.ts): the drag is 120 pointer moves, one to a frame of 16 ms, so it takes 1.92 s of the page's time however fast the machine is, and what is counted is frames asked for in that time
+  await takeClock(page);
+  // the counter again, after the clock: it wraps the clock's frames, which the first copy (the file's beforeEach) was replaced before
+  await page.addInitScript(COUNT_SCRIPT);
   await page.goto(`${PORTRAIT}${portraitScene("~layout:manual~labels:0")}`);
   await liveView(page);
   await page.locator('[data-testid="item-earth"]').click();
+  await holdClock(page);
+  await advance(page, 500);
   const box = (await page.locator("#view").boundingBox())!;
   const before = await readCounts(page);
   await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
-  const started = Date.now();
   await page.mouse.down();
-  for (let i = 0; i < 120; i += 1) await page.mouse.move(box.x + box.width * 0.5 + i, box.y + box.height * 0.5 + (i % 7));
+  for (let i = 0; i < 120; i += 1) {
+    await page.mouse.move(box.x + box.width * 0.5 + i, box.y + box.height * 0.5 + (i % 7));
+    await advance(page, 16);
+  }
   await page.mouse.up();
-  const seconds = (Date.now() - started) / 1000;
-  await settle(page, 500);
+  const seconds = (120 * 16) / 1000;
+  await advance(page, 500);
   const after = await readCounts(page);
-  expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(Math.ceil(seconds * 31) + 4);
-  // at rest at most one frame is still asked for; on a loaded runner the software GPU can hold the last frames of the drag for a moment (CI run 42775802160 saw 2 just after the 500 ms settle), so wait for it rather than read it once
+  expect(after.rafRequests - before.rafRequests, "frames asked for during the drag").toBeLessThanOrEqual(Math.ceil(seconds * 31) + 4);
+  expect(after.rafRequests - before.rafRequests, "and the counter saw them (a count of nothing proves nothing)").toBeGreaterThan(10);
+  // at rest at most one frame is still asked for: the page's time goes on in steps until the last frames of the drag are drawn
   await expect
     .poll(async () => {
+      await advance(page, 100);
       const now = await readCounts(page);
       return now.rafRequests - now.rafCallbacks;
     }, { timeout: 10_000, message: "frames still asked for at rest" })
