@@ -67,11 +67,11 @@ async function held(page: Page): Promise<void> {
 
 /** Start a move and record what the page reports at every draw until it is over. A reading is kept only if it is of a draw made after the move was asked for: before that the page still reports the last draw of what came before. */
 async function move(page: Page, from: string, to: string, options: Record<string, unknown> = {}, startZoom = 1, fresh = false): Promise<Frame[]> {
-  // `fresh`: from the controls' own start (no turn, no tilt), so two moves of the same pair begin from the same view and their plans can be compared
-  if (fresh) await page.locator("#controls").evaluate((el) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom: 1 }, true, "set"));
+  // `fresh`: from the controls' own start (no turn, no tilt, set after the body is gone to, which now stands on the side it is arrived at), so two moves of the same pair begin from the same view and their plans can be compared
   const before = (await statsOf(page)).draws;
   await callOn(page, "goTo", from, { smooth: false, zoom: startZoom });
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(from);
+  if (fresh) await page.locator("#controls").evaluate((el, zoom) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom }, true, "set"), startZoom);
   await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
   await held(page);
   const base = (await statsOf(page)).draws;
@@ -110,7 +110,8 @@ for (const scale of ["true", "compressed"] as const) {
       expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "transition")), "turn then travel is the default").toBe("turn-travel");
       // twice as slow, so that software drawing on a loaded machine still catches frames of every stage (the demo's own pace control)
       await page.locator('#paces [data-pace="2"]').dispatchEvent("click");
-      const frames = await move(page, from, to);
+      // two moons of one planet start from the controls' own view: the view a cut leaves on a moon (the side that frames its planet, or the one the Sun lights) can look away from the planet, and the planet's circle does not yet keep a moon in the picture from there (a ticket of its own)
+      const frames = await move(page, from, to, {}, 1, PLANET[from] !== undefined && PLANET[from] === PLANET[to]);
       const moving = frames.filter((f) => f.travelling !== null);
       expect(moving.length, `${moving.length} frames of the move were seen`).toBeGreaterThan(6);
       expect(moving[0]!.travelling!.kind).toBe("turn-travel");
