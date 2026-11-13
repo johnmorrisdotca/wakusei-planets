@@ -206,6 +206,8 @@ export interface SpaceModel {
   speed: number;
   /** The body the camera looks at, and (in `zoom`) fills the view with at 1x: any body the package knows that the view can place (the eleven of `SPACE_BODIES` and the moons of the planets). */
   focus: BodyId;
+  /** The body kept in the picture beside the one arrived at, or null. Its name is not dropped for a clash. */
+  companion: string | null;
   light: SpaceLight;
   /** How the painter draws the bodies (`realistic` or `painted`). */
   look: string;
@@ -335,6 +337,7 @@ export const newSpaceModel = (): SpaceModel => ({
   stepMs: 1000,
   speed: 1,
   focus: "earth",
+  companion: null,
   light: "sun",
   look: "realistic",
   drawn: null,

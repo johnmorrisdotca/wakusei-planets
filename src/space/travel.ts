@@ -793,12 +793,122 @@ export function travelPose(input: TravelInput, t: number, plan?: TravelPlan): Tr
 }
 
 /**
- * A framed view of a whole body to arrive at, from the side the move comes from, so the approach is straight and nothing has to be turned back: the camera stands on the line towards `from`, moved round
- * towards the Sun where that side would show less than about three fifths of the body lit (never more than 75 degrees off the Sun's direction), at `fit` radii away (4.1, and as much again as a tall picture is
- * taller than wide), looking at the body with `north` up.
+ * One body that might keep an arrival from being an empty black picture: where it is, and which rule it belongs to.
+ * `1` is the body's own moon, or its planet when the body is a moon. `2` is the body the camera came from, or the nearest planet in that direction. `3` is the Sun.
  *
- * @param input - The body's place and radius, where the move comes from, the Sun's place (left out for the Sun itself), the picture's shape, and optionally `fov`, `fit` and `north`.
- * @returns The view, and `lit`, the share of the disc that is lit from there (1 when no Sun is given).
+ * @example
+ * ```ts
+ * import type { ArrivalCompanion } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const moon: ArrivalCompanion = { id: "io", at: [10, 0, 0], rank: 1 };
+ * console.log(moon.rank);
+ * ```
+ */
+export interface ArrivalCompanion {
+  /** A name the page can put on the marker. Left out, the side is still chosen. */
+  id?: string;
+  at: Vec3;
+  rank: 1 | 2 | 3;
+}
+
+/**
+ * The side of a body to stand on so a companion is in the picture, and the body stays at least half lit.
+ * Companions are tried in rank order (1, then 2, then 3). The first rank that fits wins; within a rank the side nearest the approach is kept.
+ * A side more than 90 degrees from the Sun is refused, so a lit globe is never traded for a black one. With no companion that fits, the side is the
+ * approach, swung toward the Sun when it would show less than about three fifths of the body lit (never more than 75 degrees off the Sun).
+ *
+ * @param input - The body, where the move comes from, the Sun, and the companions in rank order.
+ * @returns A unit side from the body toward the camera, how much of the disc is lit, and the companion's id (null when none was framed).
+ *
+ * @example
+ * ```ts
+ * import { arrivalSide } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const side = arrivalSide({ body: [0, 0, 0], radius: 1, from: [0, 0, 20], sun: [0, 0, 100], companions: [{ id: "io", at: [8, 1, 0], rank: 1 }] });
+ * console.log(side.companion, side.lit >= 0.5);
+ * ```
+ */
+export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; companions?: readonly ArrivalCompanion[]; fov?: number; aspect?: number; fit?: number }): { side: Vec3; lit: number; companion: string | null } {
+  let approach = sub(input.from, input.body);
+  approach = length(approach) < 1e-9 ? ([0, 0, 1] as Vec3) : unit(approach);
+  const sunFar = input.sun ? sub(input.sun, input.body) : null;
+  const sunDir = sunFar && length(sunFar) > 1e-9 ? unit(sunFar) : null;
+  const litOf = (side: Vec3): number => (sunDir ? (1 + Math.cos(Math.min(Math.PI, angleOf(side, sunDir)))) / 2 : 1);
+  const swing = (side: Vec3): Vec3 => {
+    if (!sunDir) return side;
+    const off = angleOf(side, sunDir);
+    const most = 75 * RAD;
+    return off > most ? arc(side, sunDir, (off - most) / off) : side;
+  };
+  const distance = Math.max(1e-6, input.radius) * (input.fit ?? 4.1) * Math.max(1, 1 / Math.max(1e-3, input.aspect ?? 1));
+  const fov = ((input.fov ?? 35) / 2) * RAD;
+  const tv = Math.tan(fov);
+  const aspect = Math.max(1e-3, input.aspect ?? 1);
+  const frames = (side: Vec3, at: Vec3): boolean => {
+    const forward = scale(side, -1);
+    const north = sub([0, 1, 0], scale(forward, forward[1]));
+    const up = length(north) < 1e-6 ? squareTo(forward) : unit(north);
+    const camera = add(input.body, scale(side, distance));
+    const v = sub(at, camera);
+    const z = dot(v, forward);
+    if (!(z > 0)) return false;
+    if (Math.abs(dot(v, cross(forward, up))) > 0.92 * tv * aspect * z) return false;
+    if (Math.abs(dot(v, up)) > 0.92 * tv * z) return false;
+    const limb = Math.atan(input.radius / distance);
+    return angleOf(forward, unit(v)) > limb * 1.15;
+  };
+  const found: { side: Vec3; rank: number; near: number; id: string | null }[] = [];
+  const half = Math.PI / 2 + 1e-4;
+  const companions = input.companions ?? [];
+  const consider = (side: Vec3): void => {
+    const u = length(side) < 1e-9 ? approach : unit(side);
+    if (sunDir && angleOf(u, sunDir) > half) return;
+    let rank = 99;
+    let id: string | null = null;
+    for (const companion of companions) {
+      if (companion.rank < rank && frames(u, companion.at)) {
+        rank = companion.rank;
+        id = companion.id ?? null;
+      }
+    }
+    if (rank === 99) return;
+    const near = angleOf(u, approach);
+    const top = found[0];
+    if (top === undefined || rank < top.rank || (rank === top.rank && near < top.near - 1e-6)) found[0] = { side: u, rank, near, id };
+  };
+  consider(approach);
+  for (const companion of companions) {
+    const away = sub(input.body, companion.at);
+    if (length(away) < 1e-6) continue;
+    const u = unit(away);
+    const perp = Math.abs(u[1]) < 0.9 ? unit(cross(u, [0, 1, 0])) : unit(cross(u, [1, 0, 0]));
+    const perp2 = unit(cross(u, perp));
+    for (const deg of [8, 14, 22, 32, 48, 70]) {
+      const e = deg * RAD;
+      for (const axis of [perp, perp2]) {
+        consider(add(scale(u, Math.cos(e)), scale(axis, Math.sin(e))));
+        consider(add(scale(u, Math.cos(e)), scale(axis, -Math.sin(e))));
+      }
+    }
+  }
+  for (let lat = -75; lat <= 75; lat += 15) {
+    for (let lon = 0; lon < 360; lon += 15) {
+      const c = Math.cos(lat * RAD);
+      consider([c * Math.cos(lon * RAD), Math.sin(lat * RAD), c * Math.sin(lon * RAD)]);
+    }
+  }
+  const picked = found[0];
+  const side = picked?.side ?? swing(approach);
+  return { side, lit: litOf(side), companion: picked?.id ?? null };
+}
+
+/**
+ * A framed view of a whole body to arrive at, from the side the move comes from, so the approach is straight and nothing has to be turned back: the camera stands on the line towards `from`, moved round
+ * towards the Sun where that side would show less than about three fifths of the body lit (never more than 75 degrees off the Sun's direction), and further round, still at least half lit, when that puts a
+ * companion in the picture (`arrivalSide`). It stands at `fit` radii away (4.1, and as much again as a tall picture is taller than wide), looking at the body with `north` up.
+ *
+ * @param input - The body's place and radius, where the move comes from, the Sun's place (left out for the Sun itself), the picture's shape, the companions to keep in the picture, and optionally `fov`, `fit` and `north`.
+ * @returns The view, `lit` (the share of the disc that is lit from there, 1 when no Sun is given), and `companion` (the id framed beside it, or null).
  *
  * @example
  * ```ts
@@ -808,20 +918,12 @@ export function travelPose(input: TravelInput, t: number, plan?: TravelPlan): Tr
  * console.log(view.position.map((n) => n.toFixed(1)).join(", "), view.lit.toFixed(2));
  * ```
  */
-export function travelArrival(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; aspect: number; fov?: number; fit?: number; north?: Vec3 }): TravelView & { lit: number } {
-  let side = sub(input.from, input.body);
-  side = length(side) < 1e-12 ? ([0, 0, 1] as Vec3) : unit(side);
-  let lit = 1;
-  if (input.sun && length(sub(input.sun, input.body)) > 1e-12) {
-    const sun = unit(sub(input.sun, input.body));
-    const off = angleOf(side, sun);
-    const most = 75 * RAD;
-    if (off > most) side = arc(side, sun, (off - most) / off);
-    lit = (1 + Math.cos(Math.min(off, most))) / 2;
-  }
+export function travelArrival(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; aspect: number; fov?: number; fit?: number; north?: Vec3; companions?: readonly ArrivalCompanion[] }): TravelView & { lit: number; companion: string | null } {
+  const picked = arrivalSide(input);
+  const side = picked.side;
   const distance = input.radius * (input.fit ?? 4.1) * Math.max(1, 1 / Math.max(1e-3, input.aspect));
   const forward = scale(side, -1);
   const north = input.north ?? ([0, 1, 0] as Vec3);
   const across = sub(north, scale(forward, dot(north, forward)));
-  return { position: add(input.body, scale(side, distance)), forward, up: length(across) < 1e-6 ? squareTo(forward) : unit(across), fov: input.fov ?? 35, lit };
+  return { position: add(input.body, scale(side, distance)), forward, up: length(across) < 1e-6 ? squareTo(forward) : unit(across), fov: input.fov ?? 35, lit: picked.lit, companion: picked.companion };
 }

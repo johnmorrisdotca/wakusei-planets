@@ -33,7 +33,8 @@ import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.t
 import { placeMarks, pointUnder, readPlaceLayers, spotView, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
-import { cross, dot, type Vec3 } from "../vec.ts";
+import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
+import type { ArrivalCompanion } from "./travel.ts";
 import { createSpaceItem, FIT_DISTANCE, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
@@ -436,7 +437,7 @@ export class WakuseiSpace extends HTMLElement {
     this.addEventListener("pointerleave", this.#leave);
     // before the shared hands (which hear it after this): a plain wheel in an immersive view zooms
     this.addEventListener("wheel", this.#wheel, { capture: true, passive: false });
-    this.#hands = carryControls(this, { limits: CARRIED_LIMITS, onChange: (view, info) => this.setView(view, info.final) });
+    this.#hands = carryControls(this, { limits: CARRIED_LIMITS, onChange: (view, info) => this.setView(view, info.final, info.reason) });
     this.#markHeard = onPlacesLoader(() => {
       this.#markList = undefined;
       this.#markSurface();
@@ -1146,7 +1147,7 @@ export class WakuseiSpace extends HTMLElement {
    * @param view - The controls' yaw and tilt in degrees and zoom.
    * @param final - False for the frames of a turn that is still going on (Auto-turn, a drag); true when it has settled.
    */
-  setView(view: { yaw: number; tilt: number; zoom: number; roll?: number; panX?: number; panY?: number }, final = true): void {
+  setView(view: { yaw: number; tilt: number; zoom: number; roll?: number; panX?: number; panY?: number }, final = true, reason?: string): void {
     const now = this.#model.view;
     if (this.#model.region !== null && view.zoom !== 1) {
       // at a stage out from the Sun a zoom gesture is a step: out to the next stage, in to the one before (or the Sun); one gesture, one step, and the controls go back to holding zoom 1 (the element's own
@@ -1163,6 +1164,16 @@ export class WakuseiSpace extends HTMLElement {
     }
     const [roll, panX, panY] = [view.roll ?? 0, view.panX ?? 0, view.panY ?? 0];
     if (view.yaw === now.yaw && view.tilt === now.tilt && view.zoom === now.zoom && roll === now.roll && panX === now.panX && panY === now.panY) return;
+    // a double click jumps the zoom to 1 or to 2: stand so a companion is in the picture. A drag, a wheel step or the side just chosen does not.
+    if (!this.#siding && reason === "zoom" && (view.zoom === 1 || view.zoom === 2) && Math.abs(view.zoom - now.zoom) > 0.4 && this.#model.pose.valid) {
+      const side = this.#faceApproach(this.#model.focus);
+      if (side) {
+        this.#siding = true;
+        this.#hands?.controller.set({ ...side, zoom: view.zoom, roll, panX: 0, panY: 0 }, true, "set");
+        this.#siding = false;
+        return;
+      }
+    }
     this.#model.view = { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY };
     this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY } }));
     const drawn = this.#model.drawnView;
@@ -1218,6 +1229,7 @@ export class WakuseiSpace extends HTMLElement {
     if (!id) return false;
     const model = this.#model;
     const leaving = this.#leaving();
+    this.#arrivedFrom = leaving;
     const kind = this.#moveKind(options, id);
     if (model.ride !== null) this.ride(null, { smooth: false });
     model.transition = this.#startMove(kind, leaving, id, options.duration);
@@ -1227,7 +1239,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
     // the side the camera comes from, as the controls' yaw and tilt: the element's own hands are set to it here, and a bar bound to the element (which holds the view's state) hears it in the event with the zoom
-    const side = model.transition !== null ? this.#faceApproach(id) : null;
+    const side = this.#faceApproach(id);
     if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set(side ? { ...side, zoom } : { zoom }, true, "jump");
     this.#schedule();
     this.#gate?.request();
@@ -1289,16 +1301,51 @@ export class WakuseiSpace extends HTMLElement {
     return { at: [centre[0] + real[0] * k, centre[1] + real[1] * k, centre[2] + real[2] * k], radius: Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusIn(host, mode)) };
   }
 
+  #siding = false;
+  /** The body the camera was at when the latest arrival was chosen, so that body can stay in the picture. */
+  #arrivedFrom: BodyId | null = null;
+
+  /** Moons or the planet first, then the body left or the planet nearest that way, then the Sun. */
+  #companions(id: BodyId): ArrivalCompanion[] {
+    const out: ArrivalCompanion[] = [];
+    const seen = new Set<string>();
+    const add = (body: BodyId, rank: 1 | 2 | 3): void => {
+      if (body === id || seen.has(body)) return;
+      seen.add(body);
+      out.push({ id: body, at: this.#site(body).at, rank });
+    };
+    const host = hostOf(id);
+    if (host !== undefined) add(host, 1);
+    for (const moon of (MOONS_OF as Record<string, readonly BodyId[]>)[id] ?? []) add(moon, 1);
+    if (this.#arrivedFrom !== null) add(this.#arrivedFrom, 2);
+    const here = this.#site(id).at;
+    const from = sub(this.#model.camera.position, here);
+    const approach = length(from) < 1e-9 ? ([0, 0, 1] as Vec3) : unit(from);
+    let nearest: { id: BodyId; score: number } | null = null;
+    for (const planet of ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"] as const) {
+      if (planet === id) continue;
+      const away = sub(this.#site(planet).at, here);
+      if (length(away) < 1e-9) continue;
+      const score = dot(unit(away), approach);
+      if (score > 0.15 && (nearest === null || score > nearest.score)) nearest = { id: planet, score };
+    }
+    if (nearest !== null) add(nearest.id, 2);
+    if (id !== "sun") add("sun", 3);
+    return out;
+  }
+
   /**
-   * The controls' yaw and tilt that look at a body from the side the camera comes from (moved round towards the Sun where that side would show it mostly dark), so the move in is straight and nothing is turned
-   * back on arrival; null when the camera has not drawn yet.
+   * The controls' yaw and tilt that look at a body from the side the camera comes from, swung so a companion is in the picture and the body stays at least half lit; null when the camera has not drawn yet.
+   * The reader's own later turn is not touched: this runs for an arrival and for a double click, not for a drag.
    */
   #faceApproach(id: BodyId): { yaw: number; tilt: number } | null {
     const model = this.#model;
     if (!model.pose.valid) return null;
     const body = this.#site(id);
     const sun = id === "sun" ? undefined : this.#site("sun").at;
-    const wanted = travelArrival({ body: body.at, radius: body.radius, from: model.camera.position, sun, aspect: 16 / 9 });
+    const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
+    const wanted = travelArrival({ body: body.at, radius: body.radius, from: model.camera.position, sun, aspect, companions: this.#companions(id) });
+    model.companion = wanted.companion;
     const side: [number, number, number] = [wanted.position[0] - body.at[0], wanted.position[1] - body.at[1], wanted.position[2] - body.at[2]];
     const anchor = model.anchor ?? model.time;
     // the scene aims from the ground direction of (lon - yaw, lat - tilt) at the anchor moment: search the pair that lies along the wanted side, coarse then fine
@@ -1726,6 +1773,8 @@ export class WakuseiSpace extends HTMLElement {
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
     orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
+    /** The body the last arrival kept in the picture beside the one gone to, or null. */
+    companion: string | null;
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -1752,6 +1801,7 @@ export class WakuseiSpace extends HTMLElement {
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
       orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
+      companion: this.#model.companion,
     };
   }
 
@@ -1848,6 +1898,8 @@ export class WakuseiSpace extends HTMLElement {
     }
     // no two names overlap: a moon gives way to its planet and a planet to the Sun
     const shown = chooseLabels(wanted);
+    const companion = this.#model.companion;
+    if (companion !== null && spots.has(companion)) shown.add(companion);
     this.#nameBoxes = wanted.filter((one) => shown.has(one.id));
     for (const id of ids) {
       const label = this.#pool.get(id);
