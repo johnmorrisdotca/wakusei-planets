@@ -1252,7 +1252,10 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
     // the side the camera comes from, as the controls' yaw and tilt: the element's own hands are set to it here, and a bar bound to the element (which holds the view's state) hears it in the event with the zoom
-    const side = this.#faceApproach(id);
+    // a straight move (`direct`, `look-back`) keeps its destination in the picture all the way, and is not turned to a companion's side: that could take the destination out of the picture. A turning move may be, and its plan
+    // works round the planet in a way that never leaves the picture empty (`travelPlan`).
+    const swing = kind === "cut" || kind === "turn-travel";
+    const side = this.#faceApproach(id, swing);
     if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set(side ? { ...side, zoom } : { zoom }, true, "jump");
     this.#schedule();
     this.#gate?.request();
@@ -1351,13 +1354,13 @@ export class WakuseiSpace extends HTMLElement {
    * The controls' yaw and tilt that look at a body from the side the camera comes from, swung so a companion is in the picture and the body stays at least half lit; null when the camera has not drawn yet.
    * The reader's own later turn is not touched: this runs for an arrival and for a double click, not for a drag.
    */
-  #faceApproach(id: BodyId): { yaw: number; tilt: number } | null {
+  #faceApproach(id: BodyId, swing = true): { yaw: number; tilt: number } | null {
     const model = this.#model;
     if (!model.pose.valid) return null;
     const body = this.#site(id);
     const sun = id === "sun" ? undefined : this.#site("sun").at;
     const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
-    const wanted = travelArrival({ body: body.at, radius: body.radius, from: model.camera.position, sun, aspect, companions: this.#companions(id) });
+    const wanted = travelArrival({ body: body.at, radius: body.radius, from: model.camera.position, sun, aspect, companions: swing ? this.#companions(id) : [] });
     model.companion = wanted.companion;
     const side: [number, number, number] = [wanted.position[0] - body.at[0], wanted.position[1] - body.at[1], wanted.position[2] - body.at[2]];
     const anchor = model.anchor ?? model.time;
