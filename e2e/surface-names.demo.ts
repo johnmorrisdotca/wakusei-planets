@@ -167,8 +167,11 @@ test.describe("Venus painted with its names on", () => {
 
   test("the arrow keys turn the view", async ({ page }) => {
     const { yaw } = await open(page);
-    const before = await yaw();
+    // a click on the view's corner gives it the keys (focus() alone does not reach it until the page has been touched)
+    const box = (await page.locator("#view").boundingBox())!;
+    await page.mouse.click(box.x + 6, box.y + 6);
     await page.locator("#view").focus();
+    const before = await yaw();
     for (let i = 0; i < 3; i += 1) await page.keyboard.press("ArrowRight");
     await expect.poll(async () => Math.abs((await yaw()) - before), { timeout: 10_000, message: "the view's yaw turned by the arrow key" }).toBeGreaterThan(1);
   });
