@@ -245,7 +245,17 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
   return out;
 }
 
-/** A box on the screen, by its centre and half sizes in pixels, that a written name keeps clear of: another dot, a craft's dot, another name. `id` is the place it belongs to, which a name of that place may cover. */
+/**
+ * A box on the screen, by its centre and half sizes in pixels, that a written name keeps clear of: another dot, a craft's dot, another name. `id` is the place it belongs to, which a name of that place may cover.
+ *
+ * @example
+ * ```ts
+ * import type { Obstacle } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * const craftDot: Obstacle = { x: 400, y: 300, halfWidth: 8, halfHeight: 8 };
+ * console.log(craftDot.halfWidth * 2);
+ * ```
+ */
 export interface Obstacle {
   x: number;
   y: number;
