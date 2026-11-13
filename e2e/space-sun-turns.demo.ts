@@ -16,9 +16,9 @@ interface View {
   zoom: number;
   roll: number;
 }
-/** The view as the shared controls hold it now: what `goTo` left, to come back to exactly. */
+/** The view as the page's bar holds it now: what `goTo` left, to come back to exactly. A move now stands on the side the camera came from (so a companion is in the picture), and with a bar bound to the element the bar is what holds that view, not the element's own hands. */
 const viewNow = (page: Page): Promise<View> =>
-  page.locator(SPACE).evaluate((el) => {
+  page.locator("#controls").evaluate((el) => {
     const state = (Reflect.get(el, "controller") as { state: View }).state;
     return { yaw: state.yaw, tilt: state.tilt, zoom: state.zoom, roll: state.roll ?? 0 };
   });
