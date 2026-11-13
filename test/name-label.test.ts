@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as THREE from "three";
 import { BODIES } from "../src/index.ts";
-import { nameLabelKey, nameLabelText, readNameLabel } from "../src/scene/name-label.ts";
+import { nameLabelKey, nameLabelLook, nameLabelText, nameTone, readNameLabel } from "../src/scene/name-label.ts";
 import { createPainter } from "../src/scene/painter.ts";
 
 /** An element as `readNameLabel` reads one: its attributes in a map. */
@@ -61,4 +61,30 @@ test("the painter takes a label, says what it would write, and lets it go: in No
   assert.equal(sun.label?.text, "SUN");
   sun.dispose();
   mars.dispose();
+});
+
+test("the tone of the letters comes from the body's own colour: dark on Venus, Saturn, Uranus, the Sun and the ice moons, pale on Mars, the Moon, the Earth and Neptune (MODULES-983)", () => {
+  for (const id of ["venus", "saturn", "uranus", "sun", "io", "europa", "enceladus", "tethys", "dione", "rhea"] as const) assert.equal(nameTone(BODIES[id].colour), "dark", id);
+  for (const id of ["mars", "moon", "earth", "neptune", "jupiter", "pluto", "ganymede", "callisto", "mercury", "ceres"] as const) assert.equal(nameTone(BODIES[id].colour), "light", id);
+  // dark letters are the burned look and pale ones the painted look; the outline has one tone; a forced tone wins over the body's
+  assert.equal(nameLabelLook({ look: "painted" }, BODIES.uranus.colour), "burned");
+  assert.equal(nameLabelLook({ look: "etched" }, BODIES.uranus.colour), "burned");
+  assert.equal(nameLabelLook({ look: "painted" }, BODIES.mars.colour), "painted");
+  assert.equal(nameLabelLook({ look: "burned" }, BODIES.mars.colour), "painted");
+  assert.equal(nameLabelLook({ look: "burned" }, BODIES.uranus.colour), "burned");
+  assert.equal(nameLabelLook({ look: "outline" }, BODIES.uranus.colour), "outline");
+  assert.equal(nameLabelLook({ look: "painted", tone: "light" }, BODIES.uranus.colour), "painted");
+  assert.equal(nameLabelLook({ look: "painted", tone: "dark" }, BODIES.mars.colour), "burned");
+  assert.equal(nameLabelLook({ look: "painted", tone: "auto" }, BODIES.venus.colour), "burned");
+  // with no colour to go by, auto leaves the look as it is
+  assert.equal(nameLabelLook({ look: "painted" }), "painted");
+});
+
+test("body-label-tone is read as auto, light or dark, and anything else is left out; the key changes with it", () => {
+  assert.deepEqual(readNameLabel(elementWith({ "body-label": "painted", "body-label-tone": "dark" })), { look: "painted", tone: "dark" });
+  assert.deepEqual(readNameLabel(elementWith({ "body-label": "painted", "body-label-tone": "light" })), { look: "painted", tone: "light" });
+  assert.deepEqual(readNameLabel(elementWith({ "body-label": "painted", "body-label-tone": "auto" })), { look: "painted", tone: "auto" });
+  assert.deepEqual(readNameLabel(elementWith({ "body-label": "painted", "body-label-tone": "grey" })), { look: "painted" });
+  assert.equal(nameLabelKey("EARTH", { look: "painted", tone: "auto" }), nameLabelKey("EARTH", { look: "painted" }));
+  assert.notEqual(nameLabelKey("EARTH", { look: "painted", tone: "dark" }), nameLabelKey("EARTH", { look: "painted" }));
 });

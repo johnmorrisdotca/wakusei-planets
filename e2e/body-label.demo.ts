@@ -136,8 +136,8 @@ test("the body page: a name on Saturn through the row, kept in the address, and 
   const main = page.locator("#main");
   await main.hover();
   await expect(main).toHaveAttribute("data-state", "live", { timeout: 90_000 });
-  const stats = () => main.evaluate((el) => (Reflect.get(el, "stats") as { label: { shown: boolean; text: string; turn: number } | null }).label);
-  await expect.poll(stats, { timeout: 60_000 }).toEqual({ shown: true, text: "SATURN", turn: 0 });
+  const stats = () => main.evaluate((el) => (Reflect.get(el, "stats") as { label: { shown: boolean; text: string; turn: number; look: string } | null }).label);
+  await expect.poll(stats, { timeout: 60_000 }).toEqual({ shown: true, text: "SATURN", turn: 0, look: "burned" }); // etched asked for, dark letters because Saturn is light (MODULES-983)
   expect(await main.evaluate((el) => Reflect.get(el, "bodyLabel"))).toEqual({ look: "etched", latitude: 55 });
   keep("body-saturn-etched-north", (await main.screenshot()).toString("base64"));
   await page.getByRole("group", { name: "Name on the body" }).getByRole("button", { name: "Off", exact: true }).dispatchEvent("click");
@@ -173,4 +173,72 @@ test("while the Earth carries its drawn name its floating name and dot fade out;
   expect(await carried()).toBe(false);
   await page.locator(SPACE).evaluate((el) => el.removeAttribute("labels-always"));
   await expect.poll(carried, { timeout: 30_000 }).toBe(true);
+});
+
+/** How strongly the letters stand out inside a body's disc: the mean of the top 2 percent of the brightness changes (0 to 1) between the picture with the name and the picture without it. */
+async function letterContrast(page: Page, id: string, plain: string, named: string): Promise<number> {
+  const place = await page.locator(SPACE).evaluate((el, body) => (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(body), id);
+  expect(place, `${id} is drawn`).not.toBeNull();
+  return page.evaluate(
+    async ({ pa, pb, p }) => {
+      const read = async (data: string): Promise<{ data: Uint8ClampedArray; width: number; height: number }> => {
+        const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+        const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const context = canvas.getContext("2d")!;
+        context.drawImage(bitmap, 0, 0);
+        return { data: context.getImageData(0, 0, bitmap.width, bitmap.height).data, width: bitmap.width, height: bitmap.height };
+      };
+      const [x0, x1] = [await read(pa), await read(pb)];
+      const ratio = x0.width / (document.querySelector("wakusei-space")?.clientWidth ?? x0.width);
+      const luma = (d: Uint8ClampedArray, i: number): number => (0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!) / 255;
+      const changes: number[] = [];
+      for (let y = Math.max(0, Math.floor((p.y - p.r * 0.8) * ratio)); y < Math.min(x0.height, (p.y + p.r * 0.8) * ratio); y += 1) {
+        for (let x = Math.max(0, Math.floor((p.x - p.r * 0.8) * ratio)); x < Math.min(x0.width, (p.x + p.r * 0.8) * ratio); x += 1) {
+          if (Math.hypot(x - p.x * ratio, y - p.y * ratio) > p.r * ratio * 0.8) continue;
+          const i = (y * x0.width + x) * 4;
+          changes.push(Math.abs(luma(x0.data, i) - luma(x1.data, i)));
+        }
+      }
+      changes.sort((a, b) => b - a);
+      const top = changes.slice(0, Math.max(1, Math.floor(changes.length * 0.02)));
+      return top.reduce((sum, v) => sum + v, 0) / top.length;
+    },
+    { pa: plain, pb: named, p: place! },
+  );
+}
+
+// MODULES-983: the name reads on every body. Dark letters on the light bodies (Venus, Saturn, Uranus, Europa), pale ones on the dark; `tone` forces one. Strength 0.5, the name facing the reader, 30 degrees north.
+test("the name reads on every body at strength 0.5: dark letters on Venus, Saturn, Uranus and Europa, pale on Mars, the Moon, the Earth and Neptune; a forced tone wins", async ({ page }) => {
+  test.setTimeout(480_000);
+  await openSpace(page, "t=2026-11-02T14:00Z&play=off&look=realistic&scale=true&light=lit");
+  const base = { look: "painted", strength: 0.5, repeat: "once", facing: true, latitude: 30 };
+  const looks = async (): Promise<string | undefined> => ((await statsOf(page)) as unknown as { bodyLabels: { focus: { look?: string } | null } }).bodyLabels.focus?.look;
+  const measured: string[] = [];
+  const low: string[] = [];
+  for (const [id, tone] of [["uranus", "dark"], ["venus", "dark"], ["saturn", "dark"], ["europa", "dark"], ["mars", "light"], ["moon", "light"], ["earth", "light"], ["neptune", "light"]] as const) {
+    await setOn(page, "bodyLabel", null);
+    await drawnShared(page, () => callOn(page, "goTo", id, { smooth: false }));
+    await page.waitForTimeout(600);
+    const plain = await shot(page);
+    const named = async (extra: object): Promise<string> => {
+      await drawn(page, () => setOn(page, "bodyLabel", { ...base, ...extra }), (now) => now.focus?.shown === true);
+      await page.waitForTimeout(400);
+      return shot(page);
+    };
+    const auto = await named({});
+    keep(`tone-${id}-auto`, auto);
+    expect(await looks(), `${id}: the letters by default`).toBe(tone === "dark" ? "burned" : "painted");
+    const pale = await named({ tone: "light" });
+    expect(await looks(), `${id}: forced pale`).toBe("painted");
+    const dark = await named({ tone: "dark" });
+    expect(await looks(), `${id}: forced dark`).toBe("burned");
+    const [byDefault, forcedPale, forcedDark] = [await letterContrast(page, id, plain, auto), await letterContrast(page, id, plain, pale), await letterContrast(page, id, plain, dark)];
+    measured.push(`${id} ${byDefault.toFixed(3)} (pale ${forcedPale.toFixed(3)}, dark ${forcedDark.toFixed(3)})`);
+    if (byDefault < 0.14) low.push(`${id}: ${byDefault.toFixed(3)}`);
+    // the tone chosen reads at least as strongly as the other one on every body, and clearly more on the light ones
+    expect(byDefault, `${id} by default is as strong as the better of the two (${measured.at(-1)})`).toBeGreaterThanOrEqual(Math.max(forcedPale, forcedDark) * 0.95);
+    if (tone === "dark") expect(byDefault, `${id}: dark letters are clearly stronger than pale (${measured.at(-1)})`).toBeGreaterThan(forcedPale * 1.15);
+  }
+  // before (origin/main, one pale look for every body): Uranus 0.106; after: 0.147, and every other body 0.17 or more
+  expect(low, measured.join("; ")).toEqual([]);
 });

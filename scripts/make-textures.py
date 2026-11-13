@@ -313,6 +313,35 @@ def tint(img, dark, light, contrast):
     return np.asarray(dark, dtype=np.float32) * (1 - g) + np.asarray(light, dtype=np.float32) * g
 
 
+def fill_unseen_plain(img, darker=0.85, soft=0.08):
+    """The south of a map that was never imaged (the black rows of New Horizons' mosaic, the polar night), made a plain tone with no edge to it. The tone is the mapped
+    ground's own average (each row weighted by the width of its circle of latitude, so the poles do not count for more than they are), `darker` times it, so the part
+    never seen reads as not yet mapped and not as a fault. Where the picture ends, which is ragged, the mapped detail does not stop: it fades into the tone over
+    `soft` of the height, along an edge made smooth by taking the least of the rows nearby, so none of the black reaches the picture."""
+    h, w, _ = img.shape
+    lum = img.mean(axis=2)
+    # the first row, below the middle, from which 12 rows are black: dark terrain is not the end of the map
+    black = (lum < 0.04).astype(np.int32)
+    run = np.stack([black[r : r + 12].sum(axis=0) for r in range(h - 12)])
+    edge = np.array([next((r for r in range(h // 2, h - 12) if run[r, c] == 12), h - 12) for c in range(w)])
+    # a column or two that is dark early (a thin dark line, one crater) is not the end of the map: the median of 31 columns drops it, and the least of the columns nearby keeps the black out
+    pad = np.pad(edge, 15, mode="wrap")
+    edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 31), axis=1)
+    half = w // 64
+    pad = np.pad(edge, half, mode="wrap")
+    low = np.lib.stride_tricks.sliding_window_view(pad, 2 * half + 1).min(axis=1)
+    pad = np.pad(low, half, mode="wrap")
+    edge = np.convolve(pad, np.ones(2 * half + 1) / (2 * half + 1), mode="valid")[:w]
+    rows = np.arange(h, dtype=np.float32)[:, None]
+    real = rows < edge[None, :]
+    weight = (np.cos(np.radians(90 - (np.arange(h) + 0.5) / h * 180))[:, None] * real)[..., None]
+    tone = (img * weight).sum(axis=(0, 1)) / weight.sum() * darker
+    span = h * soft
+    t = np.clip((rows - (edge[None, :] - span)) / span, 0, 1)
+    t = (t * t * (3 - 2 * t))[..., None]
+    return img * (1 - t) + tone[None, None, :] * t
+
+
 def make(body):
     img = fetch(body)
     if body == "mercury":
@@ -326,18 +355,7 @@ def make(body):
         pass
     elif body == "pluto":
         img = roll(img, 0.5)
-        # the south is in the polar night New Horizons never saw: it fades from the last real row into a dark brown
-        h, w, _ = img.shape
-        lum = img.mean(axis=2)
-        edge = np.array([next((r for r in range(int(h * 0.5), h) if lum[r, c] < 0.04), h - 1) for c in range(w)])
-        cut = int(np.percentile(edge, 15)) - 24
-        blur = np.asarray(Image.fromarray((img * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(22)), dtype=np.float32) / 255.0
-        last = blur[cut - 60 : cut - 10].mean(axis=(0, 1))
-        fill = np.array([0.17, 0.115, 0.10], dtype=np.float32)
-        rows = np.arange(h, dtype=np.float32)[:, None, None]
-        t = np.clip((rows - cut) / (h * 0.16), 0, 1)
-        t = t * t * (3 - 2 * t)
-        img = np.where(rows >= cut, last[None, None] * (1 - t) + fill * t, img)
+        img = fill_unseen_plain(img)
     elif body == "saturn":
         cx, cy, r = disc_of(img, 0.09)
         r = ((img.mean(axis=2) > 0.09).sum(axis=1) > img.shape[1] * 0.02).nonzero()[0]

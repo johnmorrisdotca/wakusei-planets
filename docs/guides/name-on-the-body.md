@@ -28,8 +28,13 @@ The names are the family's standard, the same on both elements and on chikyu-ear
 | `body-label-facing` | present: the name keeps facing you while the body turns under it |
 | `body-label-font` | a CSS font family your page has loaded, instead of Michroma |
 | `body-label-fallback-font` | the family for letters the font has none of, such as Japanese (`"Noto Sans JP"`) |
+| `body-label-tone` | the tone of the letters: `auto` (the default: dark letters on a light body, pale ones on a dark body), `light` or `dark` forces one |
 
-The property `bodyLabel` takes the same as one object (`space.bodyLabel = { look: "painted", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: "Michroma", fallbackFont: "" }`), and `null` for none; set, it takes the place of the attributes (`readNameLabel(el)` from `/painter` is what the element reads them with).
+The property `bodyLabel` takes the same as one object (`space.bodyLabel = { look: "painted", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: "Michroma", fallbackFont: "", tone: "auto" }`), and `null` for none; set, it takes the place of the attributes (`readNameLabel(el)` from `/painter` is what the element reads them with).
+
+## Letters that read on every body
+
+Pale letters vanish on a pale body (Uranus, Venus, Saturn, the Sun, the ice moons) and dark ones on a dark body, so by default the letters take the tone that stands out: `body-label-tone="auto"` looks at the body's own mean colour (`BODIES[id].colour`) and uses dark letters when its relative luminance is above 0.5 and pale ones when it is below. Dark letters go on Venus, Saturn, Uranus, the Sun, Io, Europa, Enceladus, Tethys, Dione, Rhea, Triton, Hydra, Eris and Haumea; pale letters on Mars, the Moon, the Earth, Mercury, Jupiter, Neptune, Pluto, Ganymede, Callisto, Titan and the rest. The strength means the same everywhere: 0.5 is as far from the surface on Uranus as on Mars. Dark letters are the `burned` look and pale ones the `painted` look, so `painted` and `etched` go dark and `burned` goes pale where the body asks; `outline` has one tone and keeps it. A page that wants one tone on every body sets `body-label-tone="light"` or `"dark"` (the property `tone` in `bodyLabel`). `nameTone(colour)` and `nameLabelLook(options, colour)` from `/painter` are the same rule on plain values, and `stats.label.look` and `stats.bodyLabels.focus.look` say which look is drawn.
 
 ## The text
 

@@ -21,7 +21,7 @@ import { ringStrip } from "./rings.ts";
 import { createNameLabel, nameLabelText, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 
 export { moonOffset, orientation };
-export { nameLabelText, readNameLabel, setBodyLabelFontUrl, type NameLabelOptions } from "./name-label.ts";
+export { nameLabelLook, nameLabelText, nameTone, readNameLabel, setBodyLabelFontUrl, type NameLabelOptions, type NameLabelTone } from "./name-label.ts";
 export { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit, type PictureCredit } from "../picture-credits.ts";
 
 // The parts of three.js the painter uses: the ones the bodies use, and `Group`.
@@ -165,7 +165,7 @@ export interface Painting {
   /** Write the body's name on its globe, change how, or take it off (`null`). The name is drawn when the font is in, and `context.invalidate` is called then. */
   setLabel(label: PaintLabel | null): void;
   /** The name on the globe now: whether one is drawn (made and big enough on the screen at the last `update`), the text, and the group's turn about the pole in radians (for `facing`). */
-  readonly label: { shown: boolean; text: string; turn: number } | null;
+  readonly label: { shown: boolean; text: string; turn: number; look: string } | null;
   dispose(): void;
 }
 
@@ -556,7 +556,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let labelText = "";
   let labelShown = false;
   // what `label` reports: one object, written at each draw (it is read for every body at every frame)
-  const labelReport = { shown: false, text: "", turn: 0 };
+  const labelReport = { shown: false, text: "", turn: 0, look: "" };
   const setLabel = (next: PaintLabel | null): void => {
     if (next === null || next === undefined || gone) {
       if (label !== undefined) {
@@ -572,10 +572,12 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     labelText = text ?? nameLabelText(facts.name, lang ?? "en");
     labelReport.text = labelText;
     if (label === undefined) {
-      label = createNameLabel(T, labelText, options, look.emissive === true, redraw);
+      label = createNameLabel(T, labelText, options, look.emissive === true, redraw, facts.colour);
+      labelReport.look = label.look;
       mesh.add(label.object);
     } else {
       label.set(labelText, options);
+      labelReport.look = label.look;
       redraw();
     }
   };

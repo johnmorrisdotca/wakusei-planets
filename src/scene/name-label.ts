@@ -37,16 +37,35 @@ export interface NameLabelOptions {
   size?: BodyLabelSize;
   /** No label while the body is drawn smaller than this many CSS pixels in radius. Default 24. */
   minRadiusPx?: number;
+  /**
+   * The tone of the letters, so the name reads on every body: `auto` (the default) takes dark letters on a light body and pale letters on a dark one, from the body's own colour (`nameTone`); `light` and
+   * `dark` force one. Dark letters are the `burned` look, pale ones the `painted` look; `outline` has one tone only and keeps it.
+   */
+  tone?: NameLabelTone;
 }
 
+/**
+ * The tone of a name's letters: `auto` (from the body's colour), `light` or `dark`.
+ *
+ * @example
+ * ```ts
+ * import type { NameLabelTone } from "@johnmorrisdotca/wakusei-planets/painter";
+ *
+ * const tone: NameLabelTone = "dark";
+ * console.log(tone);
+ * ```
+ */
+export type NameLabelTone = "auto" | "light" | "dark";
+
 /** The family's standard attribute names, as `readNameLabel` reads them. */
-export const NAME_LABEL_ATTRIBUTES = ["body-label", "body-label-strength", "body-label-repeat", "body-label-latitude", "body-label-facing", "body-label-font", "body-label-fallback-font"] as const;
+export const NAME_LABEL_ATTRIBUTES = ["body-label", "body-label-strength", "body-label-repeat", "body-label-latitude", "body-label-facing", "body-label-font", "body-label-fallback-font", "body-label-tone"] as const;
 
 const LOOKS: readonly BodyLabelLook[] = ["painted", "etched", "outline", "burned"];
 const REPEATS: readonly BodyLabelRepeat[] = ["once", "both", "around"];
+const TONES: readonly NameLabelTone[] = ["auto", "light", "dark"];
 
 /**
- * The label the family's attributes ask for (`body-label="painted"` and the six beside it), or `null` when `body-label` is absent or not a look.
+ * The label the family's attributes ask for (`body-label="painted"` and the seven beside it), or `null` when `body-label` is absent or not a look.
  *
  * @param el - Anything with `getAttribute` and `hasAttribute`: the element.
  * @returns The options, or `null` for no label.
@@ -75,7 +94,60 @@ export function readNameLabel(el: { getAttribute(name: string): string | null; h
   if (font !== null && font.trim() !== "") out.font = font.trim();
   const fallback = el.getAttribute("body-label-fallback-font");
   if (fallback !== null && fallback.trim() !== "") out.fallbackFont = fallback.trim();
+  const tone = el.getAttribute("body-label-tone");
+  if (tone !== null && (TONES as readonly string[]).includes(tone)) out.tone = tone as NameLabelTone;
   return out;
+}
+
+/** The relative luminance (0 to 1, as WCAG defines it) of a `#rrggbb` colour. */
+const luminanceOf = (hex: string): number => {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+};
+
+/**
+ * The tone of letters that read on a body of this colour: `dark` when the body is light, `light` when it is dark. The two letters are the family's pale `#f4efe2` and dark `#1c140c`; laid over a surface at any
+ * strength, the pale ones stand out more on a surface darker than about half way between them and the dark ones on a lighter one, which is a relative luminance of 0.5 in the body's mean colour (`BODIES[id].colour`):
+ * Venus, Saturn, Uranus, the Sun, Io and the ice moons get dark letters, and Mars, the Moon, the Earth and Neptune pale ones.
+ *
+ * @param colour - The body's mean colour, `#rrggbb`.
+ * @returns `dark` or `light`.
+ *
+ * @example
+ * ```ts
+ * import { BODIES } from "@johnmorrisdotca/wakusei-planets";
+ * import { nameTone } from "@johnmorrisdotca/wakusei-planets/painter";
+ *
+ * console.log(nameTone(BODIES.uranus.colour), nameTone(BODIES.mars.colour));
+ * ```
+ */
+export function nameTone(colour: string): "light" | "dark" {
+  return luminanceOf(colour) > 0.5 ? "dark" : "light";
+}
+
+/**
+ * The look a name is drawn in once its tone is settled: `painted` and `etched` (pale letters) become `burned` (dark ones) where the tone is dark, and `burned` becomes `painted` where it is light; `outline`
+ * has only one tone and is left alone. The tone is the label's own `tone`, or, for `auto` and for none, the body's (`nameTone`).
+ *
+ * @param options - The label's look and tone.
+ * @param colour - The body's mean colour, `#rrggbb`; left out, `auto` is `light`.
+ * @returns The look to draw.
+ *
+ * @example
+ * ```ts
+ * import { nameLabelLook } from "@johnmorrisdotca/wakusei-planets/painter";
+ *
+ * console.log(nameLabelLook({ look: "painted" }, "#a9e0e5"), nameLabelLook({ look: "painted", tone: "light" }, "#a9e0e5"));
+ * ```
+ */
+export function nameLabelLook(options: Pick<NameLabelOptions, "look" | "tone">, colour?: string): BodyLabelLook {
+  const tone = options.tone === undefined || options.tone === "auto" ? (colour === undefined ? "light" : nameTone(colour)) : options.tone;
+  if (options.look === "outline") return "outline";
+  if (tone === "dark") return "burned";
+  return options.look === "burned" ? "painted" : options.look;
 }
 
 /**
@@ -101,10 +173,10 @@ export function nameLabelText(name: { en: string; ja: string }, lang: "en" | "ja
 export function nameLabelKey(text: string, options: NameLabelOptions | null | undefined): string {
   if (!options) return "";
   const o = { ...DEFAULTS, ...options };
-  return `${text}|${o.look}|${o.strength}|${o.repeat}|${o.latitude}|${o.facing}|${o.font}|${o.fallbackFont}|${o.size}|${o.minRadiusPx}`;
+  return `${text}|${o.look}|${o.tone}|${o.strength}|${o.repeat}|${o.latitude}|${o.facing}|${o.font}|${o.fallbackFont}|${o.size}|${o.minRadiusPx}`;
 }
 
-const DEFAULTS: Required<Omit<NameLabelOptions, "look">> = { strength: 0.5, repeat: "once", latitude: 0, facing: false, font: BODY_LABEL_FONT, fallbackFont: "", size: "medium", minRadiusPx: 24 };
+const DEFAULTS: Required<Omit<NameLabelOptions, "look">> = { tone: "auto", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: BODY_LABEL_FONT, fallbackFont: "", size: "medium", minRadiusPx: 24 };
 
 /** The parts of three.js the label needs beyond the bodies': a page that hands over a subset without them gets no label, and a warning once. */
 export type LabelParts = Pick<typeof THREE, "CanvasTexture" | "SRGBColorSpace" | "NormalBlending">;
@@ -173,6 +245,8 @@ function litThree(T: ThreeParts & LabelParts, emissive: boolean): BodyLabelThree
 export interface NameLabel {
   /** Add it to the body's turning mesh (a radius-1 sphere whose +z is longitude 0). */
   readonly object: THREE.Group;
+  /** The look the name is drawn in now, its tone settled: `painted` (pale letters), `etched`, `outline` or `burned` (dark ones). */
+  readonly look: BodyLabelLook;
   /** True once the name is drawn in its font: the host draws its view again when `onReady` is called. */
   readonly ready: boolean;
   /** Before each draw: the camera (for `facing`; left out, the name faces +z), the body's radius on the screen in CSS pixels, and the direction to the light in the scene's axes. Returns true when it hid, showed or turned the name. */
@@ -215,15 +289,22 @@ const ensureFont = (font: string): Promise<unknown> => (font === BODY_LABEL_FONT
  * @param options - The look and the rest.
  * @param emissive - The body glows (the Sun): the name is lit fully, from no direction.
  * @param onReady - Called when the name is drawn, and again when a new font is in.
+ * @param colour - The body's mean colour, `#rrggbb`: with `tone: "auto"` the letters are dark on a light body and pale on a dark one. Left out, they are the look's own.
  */
-export function createNameLabel(T: ThreeParts, text: string, options: NameLabelOptions, emissive: boolean, onReady: () => void): NameLabel {
+export function createNameLabel(T: ThreeParts, text: string, options: NameLabelOptions, emissive: boolean, onReady: () => void, colour?: string): NameLabel {
   const group = new T.Group();
   group.name = "name-label";
   // the shared label's frame has longitude 0 along +x and east towards -z; the bodies' has longitude 0 along +z and east along +x: a quarter turn about the pole maps one onto the other
   group.rotation.y = -Math.PI / 2;
   let label: BodyLabel | undefined;
   let materials: THREE.ShaderMaterial[] = [];
-  let wanted = { text, options: { ...DEFAULTS, ...withoutUndefined(options) } };
+  // what the shared label is told: the look with its tone settled (`nameLabelLook`), and no tone of its own
+  const shared = (o: NameLabelOptions): Required<Omit<NameLabelOptions, "tone">> => {
+    const rest: Partial<Required<NameLabelOptions>> = { ...DEFAULTS, ...withoutUndefined(o) };
+    delete rest.tone;
+    return { ...(rest as Required<Omit<NameLabelOptions, "tone">>), look: nameLabelLook(o, colour) };
+  };
+  let wanted = { text, options: shared(options) };
   let disposed = false;
   let ready = false;
   const light = new T.Vector3(0, 0, 1);
@@ -254,6 +335,9 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
     get ready() {
       return ready;
     },
+    get look() {
+      return wanted.options.look;
+    },
     update(camera, radiusPx, toLight) {
       if (label === undefined) return false;
       light.set(toLight[0], toLight[1], toLight[2]);
@@ -265,7 +349,7 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
       return label.update((camera ?? FAR_EYE) as never, radiusPx);
     },
     set(nextText, next) {
-      wanted = { text: nextText, options: { ...DEFAULTS, ...withoutUndefined(next) } };
+      wanted = { text: nextText, options: shared(next) };
       if (label === undefined) return;
       const fontChanged = wanted.options.font !== label.options.font;
       label.set({ text: wanted.text, ...wanted.options });

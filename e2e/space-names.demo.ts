@@ -35,3 +35,28 @@ test("a moon gives way to its planet and a planet to the Sun: at the inner zoom 
   expect(shown).not.toContain("moon");
   expect(shown).toContain("sun");
 });
+
+// MODULES-1144: a floating name at the view's edge is cut off. A name whose body is in the view keeps its whole box in the view: it goes to the other side of the dot, or is held inside.
+test("a floating name whose body is in the view is never cut off by the view's edge", async ({ page }) => {
+  const outside: string[] = [];
+  for (const size of [{ width: 1280, height: 900 }, { width: 700, height: 700 }, { width: 420, height: 760 }]) {
+    await page.setViewportSize(size);
+    await openSpace(page, "t=2026-11-02T14:00Z&scale=true");
+    for (const button of ["Inner planets", "Whole solar system"]) {
+      await goTo(page, button);
+      const read = await page.locator("wakusei-space").evaluate((el) => {
+        const frame = el.getBoundingClientRect();
+        const space = el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null };
+        return [...el.shadowRoot!.querySelectorAll<HTMLElement>(".sp-label:not([hidden]):not([data-carried])")]
+          .map((n) => {
+            const r = n.getBoundingClientRect();
+            const dot = space.placeOf(n.dataset["body"]!);
+            return { id: n.dataset["body"]!, dotIn: dot !== null && dot.x >= 0 && dot.x <= frame.width && dot.y >= 0 && dot.y <= frame.height, left: r.left - frame.left, right: r.right - frame.left, top: r.top - frame.top, bottom: r.bottom - frame.top, width: frame.width, height: frame.height };
+          })
+          .filter((n) => n.dotIn);
+      });
+      for (const n of read) if (n.left < -0.5 || n.right > n.width + 0.5 || n.top < -0.5 || n.bottom > n.height + 0.5) outside.push(`${size.width}x${size.height} ${button}: ${n.id} spans ${n.left.toFixed(0)}..${n.right.toFixed(0)} of ${n.width.toFixed(0)}`);
+    }
+  }
+  expect(outside).toEqual([]);
+});
