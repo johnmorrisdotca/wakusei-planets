@@ -21,8 +21,8 @@ type Surface = HTMLElement & {
   time: number;
 };
 
-const open = async (page: Page, attributes = "shadows=off detail=off"): Promise<void> => {
-  await routeSurface(page);
+const open = async (page: Page, attributes = "shadows=off detail=off", routed = false): Promise<void> => {
+  if (!routed) await routeSurface(page);
   await page.setViewportSize({ width: 360, height: 300 });
   await page.goto("/wakusei-planets/surface.html");
   // the demo page's own element is replaced by one with the attributes this test wants, so the test does not depend on the page's choices
@@ -144,11 +144,13 @@ test("the first view is enough to stand on: the view is live while the far level
   // the far level's tiles are held until the test lets them go
   let release!: () => void;
   const held = new Promise<void>((resolve) => (release = resolve));
+  // (the later route is asked first; it lets the request through to the made-up site's own when released)
+  await routeSurface(page);
   await page.route("**/tiles/moon/apollo-17/terrain/far/**", async (route) => {
     await held;
     await route.fallback();
   });
-  await open(page);
+  await open(page, "shadows=off detail=off", true);
   expect(await view(page).getAttribute("data-loading"), "the far level is not in").toBe("more");
   // the view at rest first (its draws have stopped), so a draw after this is the far level's
   let held4 = "";

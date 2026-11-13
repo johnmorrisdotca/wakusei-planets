@@ -91,6 +91,8 @@ test.describe("with reduced motion the descent is a cut", () => {
   });
 });
 
+test.describe("with motion", () => {
+test.use({ reducedMotion: "no-preference" });
 test("the descent with motion: the orbit view turns over the site and comes in, then the ground fades in (the events come in order and landed is last)", async ({ page }) => {
   test.setTimeout(300_000);
   await open(page);
@@ -102,4 +104,5 @@ test("the descent with motion: the orbit view turns over the site and comes in, 
   });
   expect(smooth).toEqual({ moved: false, opacity: "1", landed: "apollo-17" });
   expect(await log(page)).toEqual(["wakusei-landing:apollo-17", "wakusei-landed:apollo-17"]);
+});
 });
