@@ -65,7 +65,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -108,6 +108,11 @@ export class WakuseiSurface extends HTMLElement {
     else if (state === "lost") this.#set("lost");
     else if (this.#view?.live) this.#set("live");
   };
+
+  /** Whether the first view of the ground is in (the heights are fetched and the view could draw at once): true while on `standby` too, which is how a page makes ready without taking the renderer. */
+  get loaded(): boolean {
+    return this.#terrain !== undefined;
+  }
 
   /** The state now. */
   get state(): SurfaceState {
@@ -209,6 +214,10 @@ export class WakuseiSurface extends HTMLElement {
 
   attributeChangedCallback(name: string): void {
     if (!this.isConnected) return;
+    if (name === "standby") {
+      if (!this.hasAttribute("standby")) void this.#start();
+      return;
+    }
     if (name === "site" || name === "body" || name === "tiles") {
       this.#terrain = undefined;
       this.#loading = undefined;
@@ -277,6 +286,8 @@ export class WakuseiSurface extends HTMLElement {
       await this.#loading;
     }
     if (this.#terrain === undefined) return;
+    // on standby the ground is loaded and nothing more: the renderer is another view's until the attribute goes
+    if (this.hasAttribute("standby")) return;
     if (!this.#placed) {
       // a step or two from the landing point, out of any made crater
       const stand = this.getAttribute("detail") === "off" ? { x: 0, y: 0 } : standingPlace(0, 0);

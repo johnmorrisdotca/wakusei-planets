@@ -1102,6 +1102,18 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /**
+   * Take the renderer back and draw: the page has one renderer and one view has it at a time, so after another view (the standing view that `land` of `/surface/land` puts over this one) has had it, this view is blank
+   * until it is given back. Resolves true when this view is live again.
+   *
+   * @returns Whether the view is live.
+   */
+  async resume(): Promise<boolean> {
+    const live = (await this.#view?.focus()) ?? false;
+    if (live) this.#gate?.request();
+    return live;
+  }
+
+  /**
    * Where each body is for the picture at the last draw: in view or not, and for one out of view the edge of the picture it lies beyond, the point on that edge, the way to it, and whether it is behind the camera. It
    * covers the Sun, the planets, the dwarf planets and the minor bodies, the moons of the body looked at and any other moon drawn; not the body the camera rides on. `wakusei-sight` fires with the same list whenever a
    * body comes into view or leaves it, changes edge, or moves 8 CSS pixels along its edge, at most four times a second with a last one when the view settles, and never at rest: a page draws its own tabs at the edges

@@ -606,6 +606,7 @@
     "tiles:mars": ".cache/venv/bin/python -I scripts/make-body-tiles.py sharp --bodies mars",
     "test:tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py selftest",
     "terrain": ".cache/venv/bin/python -I scripts/make-moon-terrain.py build",
+    "terrain:fetch": ".cache/venv/bin/python -I scripts/make-moon-terrain.py fetch",
     "test:terrain": ".cache/venv/bin/python -I scripts/make-moon-terrain.py selftest",
     "orbiters:refresh": "python3 -I scripts/make-orbiter-data.py --brief --cache \"$HOME/.cache/wakusei-planets/horizons-orbiters\"",
     "family:readme": "node scripts/family-readme.mjs",

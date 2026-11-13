@@ -37,16 +37,24 @@ test.describe("with reduced motion the descent is a cut", () => {
     expect(await log(page)).toEqual(["wakusei-landing:apollo-17", "wakusei-landed:apollo-17"]);
     const down = await page.locator("#orbit").evaluate((el) => {
       const orbit = el as Orbit;
-      return { landed: orbit.landed, body: orbit.body, opacity: orbit.standing?.style.opacity, state: orbit.standing?.getAttribute("data-state") };
+      return { landed: orbit.landed, body: orbit.body, visibility: orbit.standing?.style.visibility, standby: orbit.standing?.hasAttribute("standby"), veils: el.shadowRoot!.querySelectorAll("[data-landing-veil]").length, state: orbit.standing?.getAttribute("data-state") };
     });
-    expect(down).toEqual({ landed: "apollo-17", body: "moon", opacity: "1", state: "live" });
+    expect(down).toEqual({ landed: "apollo-17", body: "moon", visibility: "visible", standby: false, veils: 1, state: "live" });
     expect(await page.locator("#looks button").first().isDisabled(), "the choices are on").toBe(false);
     expect(await page.locator("#leave").isVisible()).toBe(true);
     await page.locator("#leave").click();
     await expect.poll(() => log(page), { timeout: 60_000 }).toContain("wakusei-left:apollo-17");
     expect(await log(page)).toEqual(["wakusei-landing:apollo-17", "wakusei-landed:apollo-17", "wakusei-left:apollo-17"]);
-    const up = await page.locator("#orbit").evaluate((el) => ({ landed: (el as Orbit).landed, standing: (el as Orbit).standing === null, count: el.shadowRoot!.querySelectorAll("wakusei-surface").length }));
-    expect(up).toEqual({ landed: null, standing: true, count: 0 });
+    // the orbit view is alive again: it draws when it is moved (read and moved in the same call)
+    const alive = await page.locator("#orbit").evaluate(async (el) => {
+      const orbit = el as Orbit & { stats: { draws: number }; controller: { set(view: object, final: boolean, reason: string): void } };
+      const before = orbit.stats.draws;
+      orbit.controller.set({ zoom: 1.4 }, true, "test");
+      const end = performance.now() + 60_000;
+      while (orbit.stats.draws === before && performance.now() < end) await new Promise((resolve) => requestAnimationFrame(resolve));
+      return { drew: orbit.stats.draws > before, landed: orbit.landed, standing: orbit.standing === null, count: el.shadowRoot!.querySelectorAll("wakusei-surface").length, veils: el.shadowRoot!.querySelectorAll("[data-landing-veil]").length };
+    });
+    expect(alive).toEqual({ drew: true, landed: null, standing: true, count: 0, veils: 0 });
     expect(await page.locator("#land").isVisible()).toBe(true);
   });
 
@@ -100,9 +108,9 @@ test("the descent with motion: the orbit view turns over the site and comes in, 
     const orbit = el as Orbit;
     const moved = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const surface = await orbit.land("apollo-17", { tiles: "tiles/" });
-    return { moved, opacity: surface.style.opacity, landed: orbit.landed };
+    return { moved, visibility: surface.style.visibility, landed: orbit.landed };
   });
-  expect(smooth).toEqual({ moved: false, opacity: "1", landed: "apollo-17" });
+  expect(smooth).toEqual({ moved: false, visibility: "visible", landed: "apollo-17" });
   expect(await log(page)).toEqual(["wakusei-landing:apollo-17", "wakusei-landed:apollo-17"]);
 });
 });

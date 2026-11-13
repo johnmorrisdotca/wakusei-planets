@@ -2,10 +2,11 @@
 """Cut the Moon's measured heights at a landing site into a pyramid of 256 px height tiles (see NOTICE.md and docs/guides/surface.md).
 
     python3 -I scripts/make-moon-terrain.py build [--sources DIR] [--out DIR] [--site apollo-17]
+    python3 -I scripts/make-moon-terrain.py fetch [--sources DIR]
     python3 -I scripts/make-moon-terrain.py selftest
 
 Needs Python 3, Pillow and numpy (python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy, then run the venv's python with -I).
-`build` reads the source files from DIR (default ~/Projects/backups/wakusei-planets/2026-11-13-moon-terrain-sources: the files are never in the checkout) and writes
+`fetch` downloads the sources into DIR (nothing for a file that is already there with the right SHA-256), `build` reads the source files from DIR (default ~/Projects/backups/wakusei-planets/2026-11-13-moon-terrain-sources: the files are never in the checkout) and writes
 OUT/moon/<site>/terrain/<level>/<column>/<row>.webp and OUT/moon/<site>/manifest.json (default OUT: .cache/moon-terrain-out). The tiles are never committed and never in the
 npm package: the Pages workflow builds them and serves them beside the demo, next to the body tiles.
 
@@ -538,6 +539,133 @@ def build(args):
     print(f"done: {total / 1e6:.1f} MB of tiles in {out}", flush=True)
 
 
+# --- the sources: where they are and what they must be (NOTICE.md), fetched once, politely ----------------------------------------------------------------------------------------------
+LROC = "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001"
+LDEM = "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_64.img"
+# the whole files: name, address, size, SHA-256 of the file as read on 2026-11-13
+WHOLE_SOURCES = [
+    ("NAC_DTM_APOLLO17.TIF", f"{LROC}/DATA/SDP/NAC_DTM/APOLLO17/NAC_DTM_APOLLO17.TIF", 463397471, "3f7b5bb5a5c2ca62a0227e9e9444cf354048d038fe624a49a08d9e13d473392e"),
+    ("NAC_ROI_APOLLO17LOC_E205N0306_5M.TIF", f"{LROC}/EXTRAS/BROWSE/NAC_ROI/APOLLO17LOC/NAC_ROI_APOLLO17LOC_E205N0306_5M.TIF", 108949491, "6b68ac8e83672175d27c0a3c79477d99599e0fc01bd741c2ec115b08c44825a2"),
+]
+# the window of the global map: rows 2880 to 5760 (latitude 45 to 0 at 64 pixels a degree from 90 north) and columns 0 to 4480 (longitude 0 to 70 east) of 23,040 x 11,520 samples of 2 bytes, by byte ranges
+WINDOW = {"name": "ldem_64_window_lat0-45_lon0-70.u16le", "url": LDEM, "row0": 2880, "rows": 2880, "cols": 4480, "line_bytes": 46080, "sha256": "cd213268cbfcf2055c21e67e2e4ef4ac8968369436fa5a07c04ce26b3bd3c833"}
+USER_AGENT = "wakusei-planets-data-build/1.0 (public-domain NASA data, once per cache)"
+
+
+def sha256_of(path):
+    import hashlib
+
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def get(url, start=None, end=None, tries=5):
+    """One request, with `Range` where asked, retried with a growing wait on a refusal or a dropped connection (503, 429, a reset). Returns the open response."""
+    import time
+    import urllib.error
+    import urllib.request
+
+    last = None
+    for attempt in range(tries):
+        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+        if start is not None:
+            request.add_header("Range", f"bytes={start}-{'' if end is None else end}")
+        try:
+            response = urllib.request.urlopen(request, timeout=60)
+            if start is not None and response.status != 206:
+                raise RuntimeError(f"{url} did not honour a byte range (status {response.status})")
+            return response
+        except urllib.error.HTTPError as error:
+            last = error
+            if error.code not in (429, 500, 502, 503, 504):
+                break
+        except (urllib.error.URLError, OSError, TimeoutError) as error:
+            last = error
+        time.sleep(2 ** attempt)
+    raise RuntimeError(f"could not fetch {url}: {last}")
+
+
+def check_hash(path, expected, name):
+    got = sha256_of(path)
+    if got != expected:
+        raise SystemExit(
+            f"{name} is not the file NOTICE.md describes.\n  expected SHA-256 {expected}\n  got      SHA-256 {got}\n"
+            "The source has changed or the download is damaged. Nothing was built from it. If the archive really changed, read what changed and the terms again, then update the hash here and in NOTICE.md."
+        )
+
+
+def fetch_whole(folder, name, url, size, sha):
+    path = os.path.join(folder, name)
+    if os.path.exists(path) and os.path.getsize(path) == size and sha256_of(path) == sha:
+        print(f"  {name}: already here, SHA-256 right", flush=True)
+        return
+    part = path + ".part"
+    have = os.path.getsize(part) if os.path.exists(part) else 0
+    print(f"  {name}: {size / 1e6:.0f} MB from {url.split('/')[2]} (from byte {have}) ...", flush=True)
+    for attempt in range(5):
+        have = os.path.getsize(part) if os.path.exists(part) else 0
+        if have >= size:
+            break
+        try:
+            response = get(url, start=have, end=None) if have else get(url)
+            with open(part, "ab" if have else "wb") as out:
+                for block in iter(lambda: response.read(1 << 20), b""):
+                    out.write(block)
+        except (RuntimeError, OSError) as error:
+            print(f"    interrupted ({error}); trying again", flush=True)
+            import time
+
+            time.sleep(2 ** attempt)
+    if not os.path.exists(part) or os.path.getsize(part) != size:
+        raise SystemExit(f"{name}: got {os.path.getsize(part) if os.path.exists(part) else 0} of {size} bytes")
+    check_hash(part, sha, name)
+    os.replace(part, path)
+
+
+def fetch_window(folder):
+    """The window of the global map, row by row (each row is a byte range of its own: about 9 KB of the 46 KB line), four at a time, each retried."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    w = WINDOW
+    path = os.path.join(folder, w["name"])
+    size = w["rows"] * w["cols"] * 2
+    if os.path.exists(path) and os.path.getsize(path) == size and sha256_of(path) == w["sha256"]:
+        print(f"  {w['name']}: already here, SHA-256 right", flush=True)
+        return
+    print(f"  {w['name']}: {size / 1e6:.1f} MB by {w['rows']} byte ranges from {w['url'].split('/')[2]} ...", flush=True)
+    rows = [b""] * w["rows"]
+
+    def one(i):
+        start = (w["row0"] + i) * w["line_bytes"]
+        data = get(w["url"], start=start, end=start + w["cols"] * 2 - 1).read()
+        if len(data) != w["cols"] * 2:
+            raise RuntimeError(f"row {i}: {len(data)} bytes")
+        rows[i] = data
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for k, _ in enumerate(pool.map(one, range(w["rows"]))):
+            if k % 720 == 719:
+                print(f"    {k + 1} of {w['rows']} rows", flush=True)
+    part = path + ".part"
+    with open(part, "wb") as out:
+        out.write(b"".join(rows))
+    check_hash(part, w["sha256"], w["name"])
+    os.replace(part, path)
+
+
+def fetch(args):
+    folder = os.path.expanduser(args.sources)
+    os.makedirs(folder, exist_ok=True)
+    print(f"the sources, into {folder}", flush=True)
+    for name, url, size, sha in WHOLE_SOURCES:
+        fetch_whole(folder, name, url, size, sha)
+    fetch_window(folder)
+    print("the sources are here and their SHA-256 are right", flush=True)
+
+
 def selftest(_args):
     """A made-up site with a hill and a hole: the levels are complete, the tiles read back to a fraction of a metre, and the plane maps back to the right longitude."""
     rng = np.random.default_rng(7)
@@ -613,6 +741,9 @@ if __name__ == "__main__":
     b.add_argument("--no-ground", action="store_true", help="skip the ground picture")
     b.add_argument("--far-window", default=None, help="skip the coarse map and use a flat far ground (a try-out)")
     b.set_defaults(fn=build)
+    f = sub.add_parser("fetch")
+    f.add_argument("--sources", default=DEFAULT_SOURCES)
+    f.set_defaults(fn=fetch)
     s = sub.add_parser("selftest")
     s.set_defaults(fn=selftest)
     args = parser.parse_args()

@@ -66,12 +66,30 @@ import "@johnmorrisdotca/wakusei-planets/surface/land";
 
 const space = document.querySelector("wakusei-space")!;
 space.addEventListener("wakusei-landed", (event) => console.log("down at", (event as CustomEvent).detail.site));
-await space.land("apollo-17", { tiles: "https://johnmorrisdotca.github.io/wakusei-planets/tiles/" });
+await space.land("apollo-17");
 console.log(space.landed); // "apollo-17"
 await space.leave();
 ```
 
-The camera goes to the Moon if it is not there, turns over the site and comes in to the Moon's closest zoom; the standing view is made and its first 4.2 MB fetched meanwhile, and it fades in over the picture when both are ready (a person who asked for reduced motion gets a cut). `wakusei-landing` is sent when it starts and `wakusei-landed`, with the site, when the person is standing; `leave()` (or the Escape key on the ground) fades it out, lifts the camera back to the whole Moon and sends `wakusei-left`. `land` resolves the `<wakusei-surface>` element, so its `time` and `heading` can be set at once, and rejects when there is no such site, the device cannot draw 3D, the ground does not come in (`timeout`, 20 seconds by default) or `leave` was called first. A second `land` at the same site returns the same view.
+The camera goes to the Moon if it is not there, turns over the site and comes in to the Moon's closest zoom. Meanwhile the standing view is made on standby: its ground (the first 4.2 MB) is fetched, and it takes nothing from the page's renderer. The page has one renderer and one view has it at a time, so when the ground is in, the orbit view goes down into black (the black of the lunar sky) as the standing view takes the renderer, and the ground fades up out of it. A person who asked for reduced motion gets a cut. `wakusei-landing` is sent when it starts and `wakusei-landed`, with the site in `detail.site`, when the person is standing. `leave()` (or the Escape key on the ground) goes dark, gives the renderer back to the orbit view (`resume()` on the space element), rises to the whole Moon, comes up out of the dark and sends `wakusei-left`. `land` resolves the `<wakusei-surface>` element, and rejects when there is no such site, the device cannot draw 3D, the ground does not come in (`timeout`, 20 seconds by default) or `leave` was called first; the orbit view is then as it was. A second `land` at the same site returns the same view, at another site it calls the first off.
+
+## From a space view
+
+For a page whose `<wakusei-space>` is already there (the clock driven by the page, other views beside it), five lines are all it needs:
+
+```ts no-run
+import "@johnmorrisdotca/wakusei-planets/surface/land"; // once: adds land(), leave(), landed and standing to <wakusei-space>
+const space = document.querySelector("wakusei-space")!;
+document.querySelector("#land")!.addEventListener("click", () => space.land("apollo-17").catch(() => alert("The ground did not come in."))); // the ground comes from the Pages tiles by default
+document.querySelector("#leave")!.addEventListener("click", () => space.leave());
+for (const type of ["wakusei-landed", "wakusei-left"]) space.addEventListener(type, () => console.log(type, space.landed));
+```
+
+- **The moment.** The ground shows the orbit view's own moment, read once when `land` is called (`space.time`), so the Sun and the Earth over the ground are the ones the view showed. It does not follow the clock after that: `land` starts no clock, timer or loop of its own, only the frames of the descent and the fades, and nothing at rest. `{ time: "landing" }` shows the landing's moment instead (the Sun 13 degrees up); any other moment can be given as an ISO date or milliseconds. Where it is night at the site at that moment the ground is dark, as it is.
+- **Where it is mounted and who sizes it.** The `<wakusei-surface>` element is put inside the space element's own shadow root, covering it (`position: absolute; inset: 0`), so the space element's box is its box: the page sizes the space element and nothing else, and needs to mount nothing. `space.standing` returns it, for a page that sets its `heading`, `pitch` or `time`, or listens to it.
+- **How `leave` removes it.** `leave()` removes the element and its veil from the shadow root and gives the renderer back to the space view; nothing is left in the page, and `landed` is `null`.
+- **The renderer is one.** While the person stands, any other live view on the page (the Earth beside the space view) is on its still, since the page has one renderer. The page's own controls over the space view should be hidden meanwhile, as the ground is over them.
+- **The tiles.** The default is `https://johnmorrisdotca.github.io/wakusei-planets/tiles/`, with the first file at `moon/apollo-17/manifest.json` under it (`{ tiles: "..." }` for any other place).
 
 ## What the package exports
 

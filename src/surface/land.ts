@@ -1,6 +1,6 @@
 // The descent: from `<wakusei-space>`'s view of the Moon to standing at a site, in one move. `import "@johnmorrisdotca/wakusei-planets/surface/land"` for its effect adds `land(site)`, `leave()` and `landed` to
 // `<wakusei-space>` (the way `earth-places` adds its places): a page that never imports it carries none of the standing view, and the space element is unchanged. Only what the space element already offers is
-// used: `goTo`, `goToPlace` (the package's own places are given to the views if the page has not given any), `stats` and its shadow root. The standing view is made and loaded while the camera comes in, and fades in over it when both are ready.
+// used: `goTo`, `goToPlace` (the package's own places are given to the views if the page has not given any), `stats` and its shadow root. The standing view is made and its ground loaded on standby while the camera comes in; the page has one renderer and one view has it at a time, so the orbit view goes dark (the black of the lunar sky) as the standing view takes the renderer, and fades up into the ground.
 import type { WakuseiSpace } from "../space/element.ts";
 import { siteById, type SurfaceSite } from "./site.ts";
 
@@ -18,7 +18,7 @@ import { siteById, type SurfaceSite } from "./site.ts";
 export interface LandOptions {
   /** Where the height tiles are served from (the standing view's `tiles` attribute); its own default when left out. */
   tiles?: string;
-  /** The moment on the ground: an ISO date and time or milliseconds since 1970; the site's own (the landing) when left out. */
+  /** The moment on the ground: an ISO date and time, milliseconds since 1970, or `"landing"` for the site's own moment (the landing itself). Left out, it is the orbit view's own moment at the time of the call, so the ground's Sun and Earth are the ones the view above it shows; the standing view then keeps that moment (it runs no clock of its own). */
   time?: number | string;
   /** Where to look first: the site's own look when left out. */
   look?: { heading?: number; pitch?: number; fov?: number };
@@ -33,6 +33,8 @@ interface Landing {
   site: SurfaceSite;
   /** The standing view while it is made, and after. */
   surface: HTMLElement;
+  /** The black that the one view goes into and the other comes out of. */
+  veil: HTMLElement;
   /** True once it is fully faded in: the person is standing. */
   down: boolean;
   /** Cancelled by `leave`. */
@@ -143,20 +145,26 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
   surface.setAttribute("site", site.id);
   surface.setAttribute("lang", space.getAttribute("lang") === "ja" ? "ja" : "en");
   if (options.tiles !== undefined) surface.setAttribute("tiles", options.tiles);
-  if (options.time !== undefined) surface.setAttribute("time", String(options.time));
+  surface.setAttribute("time", String(options.time === "landing" ? site.time : (options.time ?? space.time)));
   const look = options.look ?? {};
   if (look.heading !== undefined) surface.setAttribute("heading", String(look.heading));
   if (look.pitch !== undefined) surface.setAttribute("pitch", String(look.pitch));
   if (look.fov !== undefined) surface.setAttribute("fov", String(look.fov));
   surface.setAttribute("data-landing", "");
-  surface.style.cssText = `position:absolute;inset:0;width:100%;height:100%;opacity:0;z-index:5;transition:opacity ${smooth ? FADE_MS : 0}ms ease;touch-action:none`;
-  const landing: Landing = { site, surface, down: false, cancelled: false };
+  // on standby: the ground is fetched while the camera comes in, and the renderer stays the orbit view's until the veil is down
+  surface.setAttribute("standby", "");
+  surface.style.cssText = "position:absolute;inset:0;width:100%;height:100%;z-index:5;touch-action:none;visibility:hidden";
+  const veil = document.createElement("div");
+  veil.setAttribute("data-landing-veil", "");
+  veil.style.cssText = `position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:6;transition:opacity ${smooth ? FADE_MS : 0}ms ease`;
+  const landing: Landing = { site, surface, veil, down: false, cancelled: false };
   landings.set(space, landing);
-  root.append(surface);
+  root.append(surface, veil);
   note(space, "wakusei-landing", site);
   const fail = (message: string): never => {
     if (landings.get(space) === landing) landings.delete(space);
     surface.remove();
+    veil.remove();
     throw new Error(message);
   };
   try {
@@ -178,18 +186,34 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
     if (place === undefined) fail(`the orbit view has no place ${site.place}`);
     if (smooth) await sleep(GLIDE_MS, landing);
     if (smooth) await waitWhile(landing, () => space.stats.pictures.pending > 0, 3000);
-    // the ground: live, or the reason it cannot be
+    // the ground is in (on standby), or why it cannot be
+    const loaded = await waitWhile(landing, () => !(surface as HTMLElement & { loaded?: boolean }).loaded && surface.getAttribute("data-state") !== "unavailable", options.timeout ?? 20_000);
+    if (landing.cancelled) throw new Error("the landing was called off");
+    if (!loaded) fail("the ground did not come in time");
+    if (surface.getAttribute("data-state") === "unavailable") fail("this device cannot draw the ground");
+    // the veil comes down over the orbit view, the standing view takes the renderer behind it, and the veil goes up on the ground
+    veil.style.opacity = "1";
+    if (smooth) await sleep(FADE_MS, landing);
+    if (landing.cancelled) throw new Error("the landing was called off");
+    surface.style.visibility = "visible";
+    surface.removeAttribute("standby");
     const live = await waitWhile(landing, () => surface.getAttribute("data-state") !== "live" && surface.getAttribute("data-state") !== "unavailable", options.timeout ?? 20_000);
     if (landing.cancelled) throw new Error("the landing was called off");
-    if (!live) fail("the ground did not come in time");
-    if (surface.getAttribute("data-state") === "unavailable") fail("this device cannot draw the ground");
-    surface.style.opacity = "1";
+    if (!live || surface.getAttribute("data-state") === "unavailable") {
+      // the orbit view gets the renderer back before the error
+      surface.remove();
+      await space.resume();
+      veil.style.opacity = "0";
+      fail(live ? "this device cannot draw the ground" : "the ground did not come in time");
+    }
+    veil.style.opacity = "0";
     if (smooth) await sleep(FADE_MS, landing);
     if (landing.cancelled) throw new Error("the landing was called off");
   } catch (error) {
     if (landings.get(space) === landing && !landing.cancelled) {
       landings.delete(space);
       surface.remove();
+      veil.remove();
     }
     throw error;
   }
@@ -227,13 +251,22 @@ export async function leave(space: WakuseiSpace, options: { smooth?: boolean } =
   landing.wake?.();
   landings.delete(space);
   const smooth = options.smooth !== false && !reduced();
-  const { surface, site } = landing;
-  surface.style.opacity = "0";
-  if (smooth) await new Promise<void>((resolve) => setTimeout(resolve, FADE_MS));
+  const { surface, veil, site } = landing;
+  // the ground goes dark, the orbit view takes the renderer back behind the veil and rises to the whole Moon, and the veil goes up on it
+  veil.style.transition = `opacity ${smooth ? FADE_MS : 0}ms ease`;
+  veil.style.opacity = "1";
+  if (smooth && wasDown) await new Promise<void>((resolve) => setTimeout(resolve, FADE_MS));
   surface.remove();
-  if (!wasDown) return;
-  void space.goToPlace(site.place, { body: "moon", smooth, zoom: 1 });
-  note(space, "wakusei-left", site);
+  if (wasDown) {
+    await space.resume();
+    await space.goToPlace(site.place, { body: "moon", smooth: false, zoom: 1 });
+  } else {
+    await space.resume();
+  }
+  veil.style.opacity = "0";
+  if (smooth) await new Promise<void>((resolve) => setTimeout(resolve, FADE_MS));
+  veil.remove();
+  if (wasDown) note(space, "wakusei-left", site);
 }
 
 declare module "../space/element.ts" {

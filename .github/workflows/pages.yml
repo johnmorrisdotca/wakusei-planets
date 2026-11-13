@@ -1,5 +1,6 @@
 # Publishes the demo to GitHub Pages on every push to main. Nothing here costs
-# anything on a public repository.
+# anything on a public repository. The site is built in one job (which a branch can run by hand with
+# workflow_dispatch, to try a change to the build) and published by another that only main may run.
 name: Pages
 on:
   push:
@@ -13,11 +14,8 @@ concurrency:
   group: pages
   cancel-in-progress: true
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -39,6 +37,16 @@ jobs:
       - name: Sharper Moon and Mars tiles (off until the repository variable WAKUSEI_SHARP_TILES is 1; the sources are not downloaded otherwise)
         if: vars.WAKUSEI_SHARP_TILES == '1' && steps.tiles.outputs.cache-hit != 'true'
         run: sudo apt-get install -y gdal-bin && WAKUSEI_SHARP_TILES=1 pnpm tiles:moon && WAKUSEI_SHARP_TILES=1 pnpm tiles:mars
+      - name: The Moon's ground tiles for <wakusei-surface>, made from three public-domain NASA files (kept between runs while the script is the same; when the cache hits nothing is downloaded). The files are fetched in ranges with retries and their SHA-256 are checked; a file that is not the one NOTICE.md names stops the build. pnpm site copies the tiles to site/tiles/moon
+        uses: actions/cache@v6
+        id: moon
+        with:
+          path: .cache/moon-terrain-out
+          key: moon-terrain-${{ hashFiles('scripts/make-moon-terrain.py') }}
+      - if: steps.moon.outputs.cache-hit != 'true'
+        run: |
+          .cache/venv/bin/python -I scripts/make-moon-terrain.py fetch --sources .cache/moon-terrain-sources
+          .cache/venv/bin/python -I scripts/make-moon-terrain.py build --sources .cache/moon-terrain-sources
       - run: pnpm site
       - run: pnpm docs:site
       - uses: ./.github/actions/playwright
@@ -50,5 +58,14 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+  deploy:
+    # only main publishes (the github-pages environment allows nothing else); a branch run stops after the build
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5

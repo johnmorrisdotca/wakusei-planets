@@ -66,12 +66,30 @@ import "@johnmorrisdotca/wakusei-planets/surface/land";
 
 const space = document.querySelector("wakusei-space")!;
 space.addEventListener("wakusei-landed", (event) => console.log("着陸：", (event as CustomEvent).detail.site));
-await space.land("apollo-17", { tiles: "https://johnmorrisdotca.github.io/wakusei-planets/tiles/" });
+await space.land("apollo-17");
 console.log(space.landed); // "apollo-17"
 await space.leave();
 ```
 
-カメラは、月にいなければ月へ行き、地点の上空へ回り込んで、月でいちばん近いズームまで寄ります。その間に月面に立つ表示を作り、最初の4.2MBを取得して、両方がそろうと、月の画面の上に表示がフェードインします（動きを減らす設定にしている人には、フェードなしですぐに切り替わります）。始まるときに `wakusei-landing` を、立てたときに、`detail.site` に地点を入れた `wakusei-landed` を送ります。`leave()`（地面では Esc キーでも）は表示をフェードアウトさせ、カメラを月全体が見える位置まで戻して、`wakusei-left` を送ります。`land` が返す Promise は `<wakusei-surface>` 要素で解決されるので、`time` や `heading` をすぐに設定できます。その名前の地点がない、端末が3Dを描けない、地面のデータが時間内に届かない（`timeout`、既定は20秒）、または先に `leave` が呼ばれたときは、`land` は拒否されます。同じ地点にもう一度 `land` すると、同じ表示が返ります。
+カメラは、月にいなければ月へ行き、地点の上空へ回り込んで、月でいちばん近いズームまで寄ります。その間に、月面に立つ表示は待機状態で作られます。地面（最初の4.2MB）を取得するだけで、ページのレンダラーは使いません。ページにレンダラーは1つで、同時に持てる表示も1つなので、地面が届くと、軌道の表示は黒（月の空の黒）へ暗転し、その間に月面の表示がレンダラーを受け取って、地面が暗闇から浮かび上がります。動きを減らす設定の人には、切り替えだけです。始まるときに `wakusei-landing` を、立てたときに、`detail.site` に地点を入れた `wakusei-landed` を送ります。`leave()`（地面では Esc キーでも）は暗転し、レンダラーを軌道の表示に返し（宇宙の要素の `resume()`）、月全体まで上がって、暗闇から戻り、`wakusei-left` を送ります。`land` が返す Promise は `<wakusei-surface>` 要素で解決されます。その名前の地点がない、端末が3Dを描けない、地面のデータが時間内に届かない（`timeout`、既定は20秒）、または先に `leave` が呼ばれたときは、`land` は拒否され、軌道の表示は元のままです。同じ地点にもう一度 `land` すると、同じ表示が返ります。別の地点に `land` すると、最初のものは取り消されます。
+
+## 宇宙の表示から
+
+`<wakusei-space>` がすでにあるページ（時計はページが動かし、隣に別の表示がある場合）に必要なのは、次の5行だけです。
+
+```ts no-run
+import "@johnmorrisdotca/wakusei-planets/surface/land"; // 1回だけ。<wakusei-space> に land()、leave()、landed、standing が加わります
+const space = document.querySelector("wakusei-space")!;
+document.querySelector("#land")!.addEventListener("click", () => space.land("apollo-17").catch(() => alert("The ground did not come in."))); // 地面は、既定では Pages のタイルから取ります
+document.querySelector("#leave")!.addEventListener("click", () => space.leave());
+for (const type of ["wakusei-landed", "wakusei-left"]) space.addEventListener(type, () => console.log(type, space.landed));
+```
+
+- **時刻。** 地面には、`land` を呼んだ時点の軌道の表示の時刻（`space.time`）が1回だけ読み込まれるので、地面の上の太陽と地球は、上の表示で見えていたものと同じです。その後は時計に従いません。`land` は、降下とフェードのフレームのほかには、時計もタイマーもループも自分では動かさず、止まっているときは何もしません。`{ time: "landing" }` にすると、着陸の瞬間（太陽の高度13度）を表示します。ほかの時刻は ISO の日時かミリ秒で渡せます。その時刻に地点が夜なら、地面は暗くなります。
+- **どこに置かれ、誰が大きさを決めるか。** `<wakusei-surface>` 要素は、宇宙の要素自身のシャドウルートの中に、全体を覆うように置かれます（`position: absolute; inset: 0`）。つまり宇宙の要素の枠がそのまま地面の枠で、ページが大きさを決めるのは宇宙の要素だけです。ページが置く必要のあるものはありません。`space.standing` で取り出せるので、`heading`、`pitch`、`time` を設定したり、イベントを聞いたりできます。
+- **`leave` が取り除く方法。** `leave()` は、要素とその暗転用の幕をシャドウルートから取り除き、レンダラーを宇宙の表示に返します。ページには何も残らず、`landed` は `null` になります。
+- **レンダラーは1つ。** 人が立っている間、ページのほかの動く表示（宇宙の表示の隣の地球）は、レンダラーが1つしかないため、静止画に戻ります。地面がその上にあるので、宇宙の表示の上のページ側の操作は、その間は隠しておくのがよいでしょう。
+- **タイル。** 既定は `https://johnmorrisdotca.github.io/wakusei-planets/tiles/` で、その下の最初のファイルは `moon/apollo-17/manifest.json` です（別の場所は `{ tiles: "..." }` で指定します）。
 
 ## パッケージが出すもの
 
