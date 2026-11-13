@@ -44,7 +44,6 @@ test("a name never covers a landing dot or another name, and a press at the cent
   const space = page.locator("wakusei-space");
   await expect(space).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   await space.evaluate((el) => (el as unknown as { goTo(id: string, options: { smooth: boolean }): void }).goTo("moon", { smooth: false }));
-  await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Apollo 11 lunar module", { smooth: false, zoom: 1 }));
   const boxes = () =>
     space.evaluate((el) => {
       const rect = (node: Element) => {
@@ -54,14 +53,19 @@ test("a name never covers a landing dot or another name, and a press at the cent
       const all = [...(el.shadowRoot?.querySelectorAll(".wk-place") ?? [])];
       return { names: all.filter((n) => n.hasAttribute("data-name")).map(rect), dots: all.filter((n) => !n.hasAttribute("data-name")).map(rect), labels: [...(el.shadowRoot?.querySelectorAll(".sp-label:not([hidden])") ?? [])].map(rect) };
     });
-  await expect.poll(async () => ((await boxes()).names.length > 2 && (await boxes()).dots.some((d) => d.id === "moon/apollo-11-lunar-module")), { timeout: 60_000 }).toBe(true);
-  const { names, dots, labels } = await boxes();
   const overlap = (a: { left: number; top: number; right: number; bottom: number }, b: { left: number; top: number; right: number; bottom: number }) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
-  for (const name of names) {
-    for (const dot of dots) expect(overlap(name, dot), `the name ${name.text} is over a dot (${dot.id})`).toBe(false);
-    for (const label of labels) expect(overlap(name, label), `the name ${name.text} is over the label ${label.text}`).toBe(false);
-    for (const other of names) if (other !== name) expect(overlap(name, other), `the name ${name.text} is over the name ${other.text}`).toBe(false);
+  // at fit and closer in, where more dots and more names are written
+  for (const zoom of [1, 2, 3]) {
+    await space.evaluate((el, z) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Apollo 11 lunar module", { smooth: false, zoom: z }), zoom);
+    await expect.poll(async () => ((await boxes()).names.length > 0 && (await boxes()).dots.some((d) => d.id === "moon/apollo-11-lunar-module")), { timeout: 60_000 }).toBe(true);
+    const { names, dots, labels } = await boxes();
+    for (const name of names) {
+      for (const dot of dots) expect(overlap(name, dot), `zoom ${zoom}: the name ${name.text} is over a dot (${dot.id})`).toBe(false);
+      for (const label of labels) expect(overlap(name, label), `zoom ${zoom}: the name ${name.text} is over the label ${label.text}`).toBe(false);
+      for (const other of names) if (other !== name) expect(overlap(name, other), `zoom ${zoom}: the name ${name.text} is over the name ${other.text}`).toBe(false);
+    }
   }
+  const { dots } = await boxes();
   // a real press at the middle of the dot goes to the dot, not to a name written over it
   const eagle = dots.find((dot) => dot.id === "moon/apollo-11-lunar-module")!;
   await space.evaluate((el) => {
