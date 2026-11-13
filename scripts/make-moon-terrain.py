@@ -6,7 +6,7 @@
 
 Needs Python 3, Pillow and numpy (python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy, then run the venv's python with -I).
 `build` reads the source files from DIR (default ~/Projects/backups/wakusei-planets/2026-11-13-moon-terrain-sources: the files are never in the checkout) and writes
-OUT/moon/<site>/terrain/<level>/<column>/<row>.png and OUT/moon/<site>/manifest.json (default OUT: .cache/moon-terrain-out). The tiles are never committed and never in the
+OUT/moon/<site>/terrain/<level>/<column>/<row>.webp and OUT/moon/<site>/manifest.json (default OUT: .cache/moon-terrain-out). The tiles are never committed and never in the
 npm package: the Pages workflow builds them and serves them beside the demo, next to the body tiles.
 
 The sources (NOTICE.md says where each comes from and what it asks for):
@@ -15,7 +15,7 @@ The sources (NOTICE.md says where each comes from and what it asks for):
 
 The site's own plane: x to the east, y to the north, in metres from the landing point, on the tangent plane (a sphere's drop is the viewer's to add: d * d / 2R). A level is a square of
 SIZE x SIZE samples cut into 256 sample tiles; its heights are stored as 16 bits, high byte in red and low byte in green, over the manifest's `height.min` and `height.range`, so a
-height is exact to range / 65535 m (0.122 m for the 8,000 m of the sites made so far). A browser cannot read a 16 bit PNG whole, which is why the two bytes are two colours.
+height is exact to range / 65535 m (0.122 m for the 8,000 m of the sites made so far). A browser cannot read a 16 bit picture whole, which is why the two bytes are two colours.
 Where the model has no data (its edge) the coarse map's heights fill the gap, so every level is complete. Each level is made from its finer neighbour by the mean of 2 x 2 samples, and
 the coarse level (`far`) is the global map resampled onto the plane, bilinear.
 """
@@ -233,8 +233,15 @@ def decode(rgb, lo=HEIGHT_MIN, span=HEIGHT_RANGE):
     return v.astype(np.float64) / 65535.0 * span + lo
 
 
+def save_exact(image, path):
+    """Save an RGB picture as lossless WebP (a third smaller than PNG here) and read it back to prove it is bit for bit the same."""
+    image.save(path, "WEBP", lossless=True, quality=100, method=4)
+    with Image.open(path) as back:
+        assert np.array_equal(np.asarray(back.convert("RGB")), np.asarray(image.convert("RGB"))), f"{path} is not exact"
+
+
 def write_level(out_dir, level_id, grid, lo=HEIGHT_MIN, span=HEIGHT_RANGE):
-    """Cut `grid` (tiles x TILE square) into PNG tiles. Returns the bytes written."""
+    """Cut `grid` (tiles x TILE square) into lossless WebP tiles. Returns the bytes written."""
     total = 0
     n = grid.shape[0] // TILE
     for col in range(n):
@@ -242,8 +249,8 @@ def write_level(out_dir, level_id, grid, lo=HEIGHT_MIN, span=HEIGHT_RANGE):
         os.makedirs(folder, exist_ok=True)
         for row in range(n):
             tile = grid[row * TILE : (row + 1) * TILE, col * TILE : (col + 1) * TILE]
-            path = os.path.join(folder, f"{row}.png")
-            Image.fromarray(encode(tile, lo, span), "RGB").save(path, optimize=True)
+            path = os.path.join(folder, f"{row}.webp")
+            save_exact(Image.fromarray(encode(tile, lo, span), "RGB"), path)
             total += os.path.getsize(path)
     return total
 
@@ -396,10 +403,10 @@ def build_horizon(levels, site, ground, out):
         for slab in range(slabs):
             for channel in range(3):
                 image[:, slab * HORIZON_CELLS : (slab + 1) * HORIZON_CELLS, channel] = code[slab * 3 + channel]
-        path = os.path.join(out, "horizon", f"{level_id}.png")
-        Image.fromarray(image, "RGB").save(path, optimize=True)
+        path = os.path.join(out, "horizon", f"{level_id}.webp")
+        save_exact(Image.fromarray(image, "RGB"), path)
         total += os.path.getsize(path)
-        info.append({"id": level_id, "file": f"horizon/{level_id}.png", "bytes": os.path.getsize(path)})
+        info.append({"id": level_id, "file": f"horizon/{level_id}.webp", "bytes": os.path.getsize(path)})
         print(f"  horizon {level_id}: {HORIZON_CELLS} x {HORIZON_CELLS} cells of {cell:g} m, {HORIZON_SECTORS} directions, {os.path.getsize(path) / 1e6:.1f} MB", flush=True)
     return {"cells": HORIZON_CELLS, "sectors": HORIZON_SECTORS, "from": HORIZON_FROM, "to": HORIZON_TO, "levels": info, "bytes": total}
 
@@ -516,6 +523,7 @@ def build(args):
         "lon": site["lon"],
         "radius": R_MOON,
         "tile": TILE,
+        "format": "webp",
         "height": {"min": HEIGHT_MIN, "range": HEIGHT_RANGE},
         "ground": ground_height,
         "levels": info,
@@ -541,6 +549,13 @@ def selftest(_args):
     # the codec
     h = rng.uniform(-3999, 3999, (64, 64))
     assert np.abs(decode(encode(h)) - h).max() <= HEIGHT_RANGE / 65535.0, "16 bits in two colours"
+    # the tiles' file format is exact: a tile and a horizon-shaped picture come back from lossless WebP bit for bit
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as tmp:
+        for k, grid in enumerate((h, rng.uniform(-3999, 3999, (TILE, TILE)))):
+            save_exact(Image.fromarray(encode(grid), "RGB"), os.path.join(tmp, f"{k}.webp"))
+        save_exact(Image.fromarray(rng.integers(0, 256, (64, 192, 3), dtype=np.uint8), "RGB"), os.path.join(tmp, "z.webp"))
     # the block mean
     a = np.array([[1, 2], [3, np.nan]], dtype=np.float32)
     assert mean2(a)[0, 0] == 2.0 and np.isnan(mean2(np.full((2, 2), np.nan, dtype=np.float32))[0, 0])

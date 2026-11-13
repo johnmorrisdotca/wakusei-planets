@@ -89,6 +89,9 @@ export class WakuseiSurface extends HTMLElement {
   #walkTimer: ReturnType<typeof setTimeout> | undefined;
   #walkAt = 0;
   #progress: TerrainProgress | undefined;
+  /** What has changed in the terrain since the card was last sent it, and the timer that sends it (the tiles come in dozens, the card is sent them at most every 300 ms). */
+  #pending = new Set<string>();
+  #flush: ReturnType<typeof setTimeout> | undefined;
   #placed = false;
   /** Whether the view is being moved now (a drag, a step, a zoom): drawn at the quality of motion, and once more at the quality of rest when it stops. */
   #moving = false;
@@ -192,6 +195,8 @@ export class WakuseiSurface extends HTMLElement {
   disconnectedCallback(): void {
     this.#io?.disconnect();
     this.#abort?.abort();
+    clearTimeout(this.#flush);
+    this.#flush = undefined;
     this.#gate?.cancel();
     clearTimeout(this.#walkTimer);
     for (const [type, fn] of [["pointerdown", this.#onPointerDown], ["pointermove", this.#onPointerMove], ["pointerup", this.#onPointerUp], ["pointercancel", this.#onPointerUp], ["wheel", this.#onWheel], ["keydown", this.#onKeyDown], ["keyup", this.#onKeyUp], ["blur", this.#onBlur]] as const) this.removeEventListener(type, fn as EventListener);
@@ -207,6 +212,8 @@ export class WakuseiSurface extends HTMLElement {
     if (name === "site" || name === "body" || name === "tiles") {
       this.#terrain = undefined;
       this.#loading = undefined;
+      this.#pending.clear();
+      this.removeAttribute("data-loading");
       this.#view?.dispose();
       this.#view = undefined;
       this.#readAttributes();
@@ -307,12 +314,38 @@ export class WakuseiSurface extends HTMLElement {
         signal: this.#abort.signal,
         onProgress: (progress) => {
           this.#progress = progress;
-          this.#statusEl.textContent = `${this.#lang() === "ja" ? "地形を読み込んでいます" : "Loading the ground"} ${Math.round((100 * progress.done) / progress.total)} %`;
+          if (this.#state === "loading") this.#statusEl.textContent = `${this.#lang() === "ja" ? "地形を読み込んでいます" : "Loading the ground"} ${Math.round((100 * Math.min(progress.done, progress.first)) / progress.first)} %`;
+        },
+        onChange: (id) => {
+          this.#pending.add(id);
+          this.#flush ??= setTimeout(() => this.#sendChanges(), 300);
         },
       });
+      // the first view is in and the ground is whole; the rest comes in place, nearest first
+      this.setAttribute("data-loading", "more");
+      const terrain = this.#terrain;
+      terrain.complete.then(
+        () => {
+          if (this.#terrain === terrain) this.setAttribute("data-loading", "done");
+        },
+        (error: unknown) => {
+          if (this.#terrain === terrain && (error as Error).name !== "AbortError") this.setAttribute("data-loading", "failed");
+        },
+      );
     } catch (error) {
       if ((error as Error).name !== "AbortError") this.#set("unavailable", this.#lang() === "ja" ? "この場所の地形がありません" : "No ground for this site yet");
     }
+  }
+
+  /** Send the card what has changed in the terrain and draw it. */
+  #sendChanges(): void {
+    this.#flush = undefined;
+    const ids = [...this.#pending];
+    this.#pending.clear();
+    const scene = this.#view?.scene as SurfaceScene | undefined;
+    if (scene === undefined || ids.length === 0) return;
+    scene.refresh(ids);
+    this.#changed();
   }
 
   #noteText(): string {

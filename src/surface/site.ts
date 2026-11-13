@@ -21,6 +21,8 @@ export interface SurfaceSite {
   /** Planetocentric degrees. */
   lat: number;
   lon: number;
+  /** The site's place in the Moon's list of places (`/places`), which the orbit view turns to when it lands here. */
+  place: string;
   /** A moment with a low Sun and long shadows, milliseconds since 1970: the landing itself. */
   time: number;
   /** Where to look first: toward the biggest mountain near. */
@@ -45,6 +47,7 @@ export const SURFACE_SITES: readonly SurfaceSite[] = [
     name: { en: "Apollo 17, Taurus-Littrow", ja: "アポロ17号、タウルス・リットロー" },
     lat: 20.1911,
     lon: 30.7723,
+    place: "moon/apollo-17-lunar-module",
     time: Date.UTC(1972, 11, 11, 19, 54),
     look: { azimuth: 232, pitch: 13, fov: 74 },
   },

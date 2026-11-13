@@ -33,6 +33,8 @@ export interface SurfaceState {
 /** The scene the shared renderer draws, with the one call that moves it. */
 export interface SurfaceScene extends Scene3D {
   apply(state: SurfaceState): void;
+  /** Send what changed to the card: the names of the levels (`h5`), picture levels (`a5`) and horizon maps (`horizon:h5`) whose bytes have changed since. The rocks are made again on the next `apply`. */
+  refresh(ids: Iterable<string>): void;
   /** The rocks made round the eyes now. */
   readonly rocks: number;
   /** How long the last measured draw took, in milliseconds, the card finished (asked for with `measure` in the state: a pixel is read back to wait for the card), or `undefined` before one. */
@@ -364,6 +366,13 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           }
         },
         apply: place,
+        refresh(ids) {
+          const wanted = new Set(ids);
+          options.levels.forEach((level, i) => wanted.has(level.id) && (textures[i]!.needsUpdate = true));
+          (options.pictures ?? []).forEach((level, i) => wanted.has(level.id) && (pictures[i]!.needsUpdate = true));
+          (options.horizons ?? []).forEach((h, i) => wanted.has(`horizon:${h.id}`) && (horizons[i]!.needsUpdate = true));
+          rockKey = "";
+        },
         resize(width, height) {
           aspect = width / Math.max(1, height);
           pixelHeight = Math.max(1, height);

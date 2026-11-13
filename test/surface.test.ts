@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
 import { craterIn, craterProfile, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
-import { decodeHeight, drop, emptyLevel, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
+import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
+import { loadPlan } from "../src/surface/load.ts";
 import { rockMesh, ROCK_VERTICES } from "../src/surface/rocks.ts";
 import { moonSky, localFrame } from "../src/surface/sky.ts";
 import { SURFACE_SITES, siteById } from "../src/surface/site.ts";
@@ -256,4 +257,84 @@ test("a person stands within thirty metres of the landing point, on ground the m
   const here = madeGround(place.x, place.y, 0.35);
   assert.ok(Math.hypot(here.gx, here.gy) < 0.06, "level under the feet");
   assert.deepEqual(standingPlace(0, 0), place, "the same place every time");
+});
+
+const real = (): TerrainManifest => {
+  const level = (id: string, res: number, tiles = 8) => ({ id, res, tiles, half: (256 * tiles * res) / 2 });
+  return {
+    body: "moon", site: "apollo-17", tile: 256, height: { min: -4000, range: 8000 },
+    levels: [level("h5", 5), level("h20", 20), level("h80", 80), level("far", 480, 4)],
+    picture: { levels: [level("a5", 5), level("a20", 20), level("a80", 80)] },
+    horizon: { cells: 512, sectors: 18, from: -10, to: 60, levels: [{ id: "h5", file: "horizon/h5.webp" }, { id: "h20", file: "horizon/h20.webp" }, { id: "h80", file: "horizon/h80.webp" }] },
+  } as unknown as TerrainManifest;
+};
+
+test("the first view is the coarse level whole, the finest level's middle sixteen tiles, the pictures of the two and the finest horizon map; the far level comes last", () => {
+  const plan = loadPlan(real());
+  const first = plan.filter((job) => job.first);
+  const count = (kind: string, index: number, list = first) => list.filter((job) => job.kind === kind && job.index === index).length;
+  assert.equal(count("height", 2), 64, "h80 whole");
+  assert.equal(count("height", 0), 16, "h5 middle");
+  assert.equal(count("height", 1) + count("height", 3), 0);
+  assert.equal(count("picture", 2), 64);
+  assert.equal(count("picture", 0), 16);
+  assert.equal(count("horizon", 0), 1);
+  assert.equal(first.length, 64 + 16 + 64 + 16 + 1);
+  // the middle sixteen of eight are columns and rows 2 to 5, round the site
+  assert.ok(first.filter((job) => job.kind === "height" && job.index === 0).every((job) => job.column >= 2 && job.column <= 5 && job.row >= 2 && job.row <= 5));
+  // nothing twice, and everything once: 3 x 64 height + 16 far + 3 x 64 picture + 3 horizon
+  assert.equal(new Set(plan.map((job) => `${job.kind}:${job.index}:${job.column}:${job.row}`)).size, plan.length);
+  assert.equal(plan.length, 3 * 64 + 16 + 3 * 64 + 3);
+  // the first view's files are all ahead of the rest, the far level is last
+  const firstEnd = plan.findLastIndex((job) => job.first);
+  assert.equal(firstEnd, first.length - 1);
+  assert.ok(plan.slice(-16).every((job) => job.kind === "height" && job.index === 3), "far last");
+  // the rest goes outward: the h5 tiles' distances from the site never fall
+  const side = 256 * 5;
+  const d = plan.filter((job) => job.kind === "height" && job.index === 0 && !job.first).map((job) => Math.hypot((job.column + 0.5) * side - 5120, (job.row + 0.5) * side - 5120));
+  assert.ok(d.every((v, i) => i === 0 || v >= d[i - 1]! - 1e-9), "nearest first");
+});
+
+test("a level with none of its tiles is filled from the coarser one in its own encoding, and a tile that is real is left alone", () => {
+  const tile = 4;
+  const coarse = emptyLevel({ id: "h20", res: 20, tiles: 2, half: 80 }, tile);
+  const encoding = { min: -4000, range: 8000 };
+  // a slope: height 100 m per sample column, from the west
+  for (let y = 0; y < coarse.size; y += 1) {
+    for (let x = 0; x < coarse.size; x += 1) {
+      const code = Math.round(((x * 100 - encoding.min) / encoding.range) * 65535);
+      const i = (y * coarse.size + x) * 4;
+      coarse.data[i] = code >> 8;
+      coarse.data[i + 1] = code & 255;
+    }
+  }
+  const fine = emptyLevel({ id: "h5", res: 5, tiles: 2, half: 20 }, tile);
+  // the finer level is the middle quarter of the coarse one, so its eight samples cover 40 m: the same slope there, 5 m a sample, 25 m of height each
+  const fineEncoding = { min: -2000, range: 4000 };
+  const realTile = new Uint8Array(tile * tile * 4).fill(7);
+  placeTile(fine, tile, 0, 0, realTile);
+  fillFromCoarser(fine, coarse, tile, (column, row) => column === 0 && row === 0, { from: encoding, to: fineEncoding });
+  assert.equal(fine.data[0], 7, "the real tile is untouched");
+  const at = (x: number, y: number): number => {
+    const i = (y * fine.size + x) * 4;
+    assert.equal(fine.data[i + 3], 255, "filled samples are marked present");
+    return decodeHeight(fine.data[i]!, fine.data[i + 1]!, fineEncoding);
+  };
+  // the fine sample x sits at (x + 0.5) * 5 - 20 m east, which is coarse sample (that + 80) / 20 - 0.5, which is a height of 100 per sample
+  for (const x of [4, 5, 7]) {
+    const east = (x + 0.5) * 5 - 20;
+    const expect = ((east + 80) / 20 - 0.5) * 100;
+    assert.ok(Math.abs(at(x, 6) - expect) < 0.2, `x ${x}: ${at(x, 6)} against ${expect}`);
+  }
+  // a picture fills from the grey, copied to all three colours
+  const pic = emptyLevel({ id: "a20", res: 20, tiles: 2, half: 80 }, tile);
+  for (let i = 0; i < pic.size * pic.size; i += 1) pic.data.fill(100, i * 4, i * 4 + 3);
+  const finer = emptyLevel({ id: "a5", res: 5, tiles: 2, half: 20 }, tile);
+  fillFromCoarser(finer, pic, tile, () => false, "grey");
+  assert.deepEqual([...finer.data.subarray(0, 4)], [100, 100, 100, 255]);
+});
+
+test("a tile's address is .webp where the manifest says so and .png where it says nothing", () => {
+  assert.match(tileAddress("t/", { body: "moon", site: "s", format: "webp" }, "h5", 1, 2), /terrain\/h5\/1\/2\.webp$/);
+  assert.match(tileAddress("t/", { body: "moon", site: "s" }, "h5", 1, 2), /\.png$/);
 });

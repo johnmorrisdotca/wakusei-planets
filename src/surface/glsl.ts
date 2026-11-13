@@ -185,11 +185,11 @@ vec2 roughness(vec2 p, float footprint) {
   vec2 g = vec2(0.0);
   for (int k = 0; k < 2; k += 1) {
     float s = k == 0 ? 0.07 : 0.3;
-    float amp = k == 0 ? 0.5 : 0.45;
+    float amp = k == 0 ? 0.3 : 0.28;
     float fade = smoothstep(footprint * 2.0, footprint * 7.0, s);
     if (fade <= 0.0) continue;
     float d = s * 0.25;
-    vec2 q = (k == 0 ? p : vec2(p.x * 0.857 - p.y * 0.515, p.x * 0.515 + p.y * 0.857)) / s;
+    vec2 q = (k == 0 ? vec2(p.x * 0.629 + p.y * 0.777, p.y * 0.629 - p.x * 0.777) : vec2(p.x * 0.857 - p.y * 0.515, p.x * 0.515 + p.y * 0.857)) / s;
     float dx = vnoise(q + vec2(0.25, 0.0)) - vnoise(q - vec2(0.25, 0.0));
     float dy = vnoise(q + vec2(0.0, 0.25)) - vnoise(q - vec2(0.0, 0.25));
     g += fade * amp * vec2(dx, dy) / (0.5 * s) * 0.012;
@@ -253,7 +253,7 @@ float lit(vec3 P, float dist0) {
   float slope = uSun.y / max(length(uSun.xz), 1e-4);
   if (uHzOn > 0.5 && horizonAt(P.xz) - 0.3 > uSunDegrees) return 0.0;
   // the ground at the point from the heights themselves, not the mesh's slope between its corners, which can be a long way off on a far mountain
-  P.y = max(P.y, groundY(P.xz, dist0, true, 2.5 * dist0 * uPixel));
+  P.y = groundY(P.xz, dist0, true, 2.5 * dist0 * uPixel);
   float t = 0.5 * spacing(P.xz, dist0) + 0.25;
   if (uDetail > 0.5) t = min(t, 0.2 + 0.02 * dist0);
   // a pixel's own start along the ray: the edge of a rim's shadow is a line of steps, and a line of steps is jagged; with a start of its own each pixel it becomes a fine grain instead

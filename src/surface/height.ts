@@ -61,6 +61,8 @@ export interface TerrainManifest {
   picture?: { levels: readonly HeightLevelInfo[]; credit: string; sun: { azimuth: number; elevation: number; correlation: number } } | null;
   /** The measured ground's shadows, baked: for each of the first three levels a picture of `cells` x `cells` cells by `sectors / 3` slabs side by side, three directions to a slab (red, green, blue), the elevation angle of the horizon in each, 8 bits over `from` to `to` degrees. */
   horizon?: { cells: number; sectors: number; from: number; to: number; levels: readonly { id: string; file: string }[] } | null;
+  /** The tiles' file type: `png` where it is left out (the made-up sites of the tests), `webp` (lossless, bit for bit the same heights in a third less) for the real ones. */
+  format?: "png" | "webp";
   /** The credit the page says beside the picture. */
   credit: string;
   /** How well the heights are known, in words, for the line the page shows. */
@@ -84,7 +86,7 @@ export interface HeightLevel extends HeightLevelInfo {
 }
 
 /**
- * The address of a tile: `<base><site>/terrain/<level>/<column>/<row>.png`, with `base` ending in a slash and the site's body in front (`moon/apollo-17`).
+ * The address of a tile: `<base><site>/terrain/<level>/<column>/<row>.webp` (`.png` where the manifest has no `format`), with `base` ending in a slash and the site's body in front (`moon/apollo-17`).
  *
  * @param base - The folder the tiles are served from.
  * @param manifest - The site's manifest.
@@ -101,11 +103,25 @@ export interface HeightLevel extends HeightLevelInfo {
  * console.log(tileAddress("tiles/", manifest, "h5", 3, 4));
  * ```
  */
-export function tileAddress(base: string, manifest: Pick<TerrainManifest, "body" | "site">, level: string, column: number, row: number): string {
-  return `${base.endsWith("/") ? base : `${base}/`}${manifest.body}/${manifest.site}/terrain/${level}/${column}/${row}.png`;
+export function tileAddress(base: string, manifest: Pick<TerrainManifest, "body" | "site" | "format">, level: string, column: number, row: number): string {
+  return `${base.endsWith("/") ? base : `${base}/`}${manifest.body}/${manifest.site}/terrain/${level}/${column}/${row}.${manifest.format ?? "png"}`;
 }
 
-/** An empty level, ready to be filled tile by tile: every height the lowest the encoding holds until a tile says otherwise. */
+/**
+ * An empty level, ready to be filled tile by tile: every height the lowest the encoding holds until a tile says otherwise.
+ *
+ * @param info - The level as the manifest says it.
+ * @param tile - Samples across a tile.
+ * @returns The level with its bytes all zero.
+ *
+ * @example
+ * ```ts
+ * import { emptyLevel } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const level = emptyLevel({ id: "h5", res: 5, tiles: 2, half: 20 }, 4);
+ * console.log(`${level.size} x ${level.size} samples, ${level.data.length} bytes`);
+ * ```
+ */
 export function emptyLevel(info: HeightLevelInfo, tile: number): HeightLevel {
   const size = info.tiles * tile;
   return { ...info, size, data: new Uint8Array(size * size * 4) };
@@ -224,3 +240,87 @@ export function groundAt(levels: readonly HeightLevel[], height: TerrainManifest
  * ```
  */
 export const drop = (distance: number, radius: number): number => (distance * distance) / (2 * radius);
+
+/**
+ * Fill the tiles of a level that have not arrived yet from a coarser level, so the ground is whole at once and gets finer as the real tiles come: heights are resampled (bilinear) from the coarser
+ * level's samples and written in this level's own encoding; a picture is resampled from its grey. The tiles named by `skip` (those that have arrived) are left alone.
+ *
+ * @param level - The finer level, filled in place.
+ * @param coarse - A coarser level, centred on the same site and holding every point of `level`.
+ * @param tile - Samples across a tile.
+ * @param skip - True for a tile that is already real: its column and row.
+ * @param encoding - For heights, the encodings (the manifest's height or a level's own) of the coarse level and of this one; for a picture, `"grey"`.
+ *
+ * @example
+ * ```ts
+ * import { emptyLevel, fillFromCoarser } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const encoding = { min: 0, range: 1000 };
+ * const coarse = emptyLevel({ id: "h20", res: 20, tiles: 1, half: 40 }, 4);
+ * for (let i = 0; i < 16; i += 1) coarse.data[i * 4] = 128; // every sample about half way up the range
+ * const fine = emptyLevel({ id: "h5", res: 5, tiles: 1, half: 10 }, 4);
+ * fillFromCoarser(fine, coarse, 4, () => false, { from: encoding, to: encoding });
+ * console.log(fine.data[0], fine.data[3]);
+ * ```
+ */
+export function fillFromCoarser(
+  level: HeightLevel,
+  coarse: HeightLevel,
+  tile: number,
+  skip: (column: number, row: number) => boolean,
+  encoding: { from: { min: number; range: number }; to: { min: number; range: number } } | "grey",
+): void {
+  const n = coarse.size;
+  const colCell = new Int32Array(level.size);
+  const colFrac = new Float32Array(level.size);
+  const rowCell = new Int32Array(level.size);
+  const rowFrac = new Float32Array(level.size);
+  for (let i = 0; i < level.size; i += 1) {
+    const x = (i + 0.5) * level.res - level.half;
+    const fx = Math.min(Math.max((x + coarse.half) / coarse.res - 0.5, 0), n - 1.001);
+    colCell[i] = Math.floor(fx);
+    colFrac[i] = fx - colCell[i]!;
+    const fy = Math.min(Math.max((coarse.half - (level.half - (i + 0.5) * level.res)) / coarse.res - 0.5, 0), n - 1.001);
+    rowCell[i] = Math.floor(fy);
+    rowFrac[i] = fy - rowCell[i]!;
+  }
+  const grey = encoding === "grey";
+  const fromMin = grey ? 0 : encoding.from.min;
+  const fromSpan = grey ? 0 : encoding.from.range / 65535;
+  const toMin = grey ? 0 : encoding.to.min;
+  const toScale = grey ? 0 : 65535 / encoding.to.range;
+  const src = coarse.data;
+  const value = (ix: number, iy: number): number => {
+    const i = (iy * n + ix) * 4;
+    return grey ? src[i]! : fromMin + (src[i]! * 256 + src[i + 1]!) * fromSpan;
+  };
+  for (let row = 0; row < level.tiles; row += 1) {
+    for (let column = 0; column < level.tiles; column += 1) {
+      if (skip(column, row)) continue;
+      for (let y = row * tile; y < (row + 1) * tile; y += 1) {
+        const y0 = rowCell[y]!;
+        const ty = rowFrac[y]!;
+        for (let x = column * tile; x < (column + 1) * tile; x += 1) {
+          const x0 = colCell[x]!;
+          const tx = colFrac[x]!;
+          const top = value(x0, y0) * (1 - tx) + value(x0 + 1, y0) * tx;
+          const bottom = value(x0, y0 + 1) * (1 - tx) + value(x0 + 1, y0 + 1) * tx;
+          const v = top * (1 - ty) + bottom * ty;
+          const o = (y * level.size + x) * 4;
+          if (grey) {
+            const g = Math.round(v);
+            level.data[o] = g;
+            level.data[o + 1] = g;
+            level.data[o + 2] = g;
+          } else {
+            const code = Math.min(65535, Math.max(0, Math.round((v - toMin) * toScale)));
+            level.data[o] = code >> 8;
+            level.data[o + 1] = code & 255;
+            level.data[o + 2] = 0;
+          }
+          level.data[o + 3] = 255;
+        }
+      }
+    }
+  }
+}

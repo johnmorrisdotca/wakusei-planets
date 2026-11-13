@@ -146,3 +146,6 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .moon-list h2 { margin: 0; }
 /* The space page's orbiter row: a body's name stays with its craft when the row wraps. */
 .orbiter-pair { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+/* The Moon page: the orbit view is wide, and the standing view comes over it. */
+.surface-stage wakusei-space { width: 100%; aspect-ratio: 16 / 9; }
+.landing-row { margin-top: 10px; gap: 10px; }
