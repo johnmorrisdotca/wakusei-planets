@@ -75,13 +75,14 @@ async function move(page: Page, from: string, to: string, options: Record<string
   await held(page);
   const base = (await statsOf(page)).draws;
   await page.evaluate(installReader);
-  await callOn(page, "goTo", to, options);
   // watched on the page, at every animation frame, until the move is over: a reading is kept for each new draw. The test's own round trips are slower than the draws on a loaded machine and would see only a few of them
   const frames = (await page.locator(SPACE).evaluate(
-    async (el, [a, b, c, first]) => {
+    async (el, [a, b, c, first, goal, asked]) => {
       const frameOf = Reflect.get(window, "__frameOf") as (el: Element, args: [string, string, string | null]) => { draws: number; gliding: boolean };
       const seen: { draws: number; gliding: boolean }[] = [];
       let lastDraw = first as number;
+      // the move is asked for in this same call, where the recording starts: a move short of a few seconds can be over, on a busy machine, before a second call begins to watch it
+      (Reflect.get(el, "goTo") as (id: string, options: unknown) => void).call(el, goal as string, asked);
       const started = performance.now();
       for (;;) {
         await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -94,7 +95,7 @@ async function move(page: Page, from: string, to: string, options: Record<string
         if (performance.now() - started > 60_000) throw new Error("the move never ended");
       }
     },
-    [...bodiesOf(from, to), base] as [string, string, string | null, number],
+    [...bodiesOf(from, to), base, to, options] as [string, string, string | null, number, string, Record<string, unknown>],
   )) as Frame[];
   return frames;
 }
@@ -188,12 +189,9 @@ test("direct goes straight (a line path), a page can set one move's length, and 
 test("auto is direct when the destination is on the screen as the move starts, and turn then travel when it is not", async ({ page }) => {
   test.setTimeout(240_000);
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed");
-  // from the whole system every planet is on the screen
-  await callOn(page, "goTo", "sun", { smooth: false, zoom: 0.02 });
-  await held(page);
-  await callOn(page, "goTo", "jupiter", { transition: "auto" });
-  await expect.poll(async () => ((await statsOf(page)) as unknown as { travelling: Travelling | null }).travelling?.kind ?? null, { timeout: 30_000 }).toBe("direct");
-  await expect.poll(async () => ((await statsOf(page)) as unknown as { ride: { gliding: boolean } }).ride.gliding, { timeout: 60_000 }).toBe(false);
+  // from the whole system every planet is on the screen. The kind of move lasts as long as the move, and on a busy machine the move can be over before a poll sees it: every draw of it is recorded in the page (`move`), and what is asserted is the record
+  const toJupiter = await move(page, "sun", "jupiter", { transition: "auto" }, 0.02);
+  expect(toJupiter.find((f) => f.travelling !== null)?.travelling?.kind, "a move to a body on the screen is direct").toBe("direct");
   // from Jupiter filling the view, Mars is not
   const frames = await move(page, "jupiter", "mars", { transition: "auto" });
   expect(frames.find((f) => f.travelling !== null)!.travelling!.kind).toBe("turn-travel");
