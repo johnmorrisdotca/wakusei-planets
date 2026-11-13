@@ -3,6 +3,8 @@
 // Nothing is drawn while paused. The box is never written while the reader is typing in it, and a reader who prefers reduced motion gets Play left off.
 import { COUNT_SCRIPT, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
+import { advance, holdClock, takeClock } from "./clock.ts";
+import "./load.ts";
 
 test.use({ reducedMotion: "no-preference" });
 
@@ -35,6 +37,8 @@ test.describe("the space page", () => {
   });
 
   test("at 86400x for two seconds the date box reads a later day, and the element tells the page a few times a second at most", async ({ page }) => {
+    // the page's clock is the test's (clock.ts): two seconds are two seconds of it however slowly this machine draws, and the events are timed on it
+    await takeClock(page);
     await page.addInitScript(() => {
       const log: { at: number; running: boolean }[] = [];
       Reflect.set(window, "__timechange", log);
@@ -42,11 +46,12 @@ test.describe("the space page", () => {
     });
     await openSpace(page, `t=${START}&play=on&speed=86400`);
     await expect(play(page)).toHaveAttribute("aria-pressed", "true");
-    // Time is the page's clock, not the frames drawn (MODULES-797): in two seconds of real time the element's own moment moves on two days, within 1 percent, however slowly this machine draws.
+    await holdClock(page);
+    // Time is the page's clock, not the frames drawn (MODULES-797): in two seconds of the page's time the element's own moment moves on two days, within 1 percent, however slowly this machine draws.
     // It is read from the element and timed with the page's clock at both reads, so a slow draw between them cannot spoil it.
     const clock = () => page.evaluate(() => ({ time: (document.querySelector("wakusei-space") as unknown as { time: number }).time, at: performance.now() }));
     const from = await clock();
-    await page.waitForTimeout(2200);
+    await advance(page, 2200);
     const to = await clock();
     const seconds = (to.at - from.at) / 1000;
     expect((to.time - from.time) / DAY / seconds, `the clock moved ${((to.time - from.time) / DAY).toFixed(3)} days in ${seconds.toFixed(2)} s`).toBeGreaterThan(0.99);
@@ -54,7 +59,10 @@ test.describe("the space page", () => {
     expect(to.time - from.time, "at least one day in 2.2 s").toBeGreaterThanOrEqual(DAY);
     // the box follows the clock: it is written from the element's events (a few a second), so it is never more than the moment of the last event behind. A long draw can hold an event back,
     // so it is the catching up that is waited for, not the clock of the test: the box reaches the moment the element had at the second read.
-    await expect.poll(async () => await boxMs(page), { timeout: 15_000, message: "the box reaches the moment the clock had" }).toBeGreaterThanOrEqual(to.time - 60_000);
+    await expect.poll(async () => {
+      await advance(page, 100);
+      return await boxMs(page);
+    }, { timeout: 15_000, message: "the box reaches the moment the clock had" }).toBeGreaterThanOrEqual(to.time - 60_000);
     expect(await boxMs(page), "and is a later day than it started").toBeGreaterThanOrEqual(from.time + DAY);
     const log = (await page.evaluate(() => Reflect.get(window, "__timechange"))) as { at: number; running: boolean }[];
     const running = log.filter((e) => e.running);
@@ -62,7 +70,7 @@ test.describe("the space page", () => {
     for (let i = 1; i < running.length; i += 1) expect(running[i]!.at - running[i - 1]!.at, "no more than four a second").toBeGreaterThanOrEqual(240);
     // it holds: told once, at once
     await play(page).click();
-    await page.waitForTimeout(300);
+    await advance(page, 300);
     const held = ((await page.evaluate(() => Reflect.get(window, "__timechange"))) as { at: number; running: boolean }[]).filter((e) => !e.running);
     expect(held.length, "told once when it holds").toBe(1);
   });
