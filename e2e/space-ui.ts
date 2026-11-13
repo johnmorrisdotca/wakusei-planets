@@ -33,7 +33,8 @@ export async function quiet(page: Page, timeout = 60_000): Promise<void> {
       async () => {
         const now = (await readCounts(page)).draws;
         // the pictures that are still being fetched will each draw a frame when they arrive: not at rest until none is pending
-        const pending = Number(((await statsOf(page)) as unknown as { pictures?: { pending: number } }).pictures?.pending ?? 0);
+        // (a page with no space view, such as the body page the freeze tests use, has none to ask)
+        const pending = await page.evaluate(() => Number(((document.querySelector("wakusei-space") as unknown as { stats?: { pictures?: { pending: number } } } | null)?.stats?.pictures?.pending) ?? 0));
         held = now === last && pending === 0 ? held + 1 : 0;
         last = now;
         return held;
