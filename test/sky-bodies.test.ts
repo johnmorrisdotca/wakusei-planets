@@ -4,7 +4,7 @@
 //  - Azi and Elev (a-app): airless apparent azimuth and elevation for the site; the site's RA and DEC (a-appar) for the Moon's parallax.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { SKY_BODY_IDS, skyBodies, skyBody, type SkyBodyId } from "../src/sky-bodies.ts";
+import { SKY_BODY_IDS, SKY_RANGE, skyBodies, skyBody, type SkyBodyId } from "../src/sky-bodies.ts";
 
 const DATES = [Date.UTC(2024, 2, 20, 12), Date.UTC(2026, 5, 21, 12), Date.UTC(2030, 11, 1, 0)];
 interface Row {
@@ -233,4 +233,19 @@ test("every body says whether its figures are accurate, and Pluto is not outside
     assert.ok(list.filter((body) => body.id !== "pluto").every((body) => body.accurate), `the rest ${year}`);
   }
   for (const year of [1800, 1850, 2150, 2199]) assert.equal(skyBody("pluto", Date.UTC(year, 5, 1)).accurate, true, `pluto ${year}`);
+});
+
+test("a moment outside 1750 to 2250 throws a RangeError that names the range, and the ends are inside or out as stated", () => {
+  // Date.UTC reads the years 0 to 99 as 1900 to 1999, so the date is made from the year itself
+  const june = (year: number): number => new Date(0).setUTCFullYear(year, 5, 1);
+  const years = [-4000, 0, 1000, 1749, 2250, 2500, 3000, 9000];
+  for (const year of years) {
+    for (const call of [() => skyBodies(june(year)), () => skyBody("mars", june(year)), () => skyBodies(new Date(june(year)), { latitude: 0, longitude: 0 })]) assert.throws(call, (error: unknown) => error instanceof RangeError && /1750/.test(error.message) && /2250/.test(error.message), `year ${year}`);
+  }
+  assert.throws(() => skyBodies(8.64e15), RangeError);
+  assert.throws(() => skyBodies(-8.64e15), RangeError);
+  assert.doesNotThrow(() => skyBodies(SKY_RANGE.from));
+  assert.doesNotThrow(() => skyBodies(SKY_RANGE.to - 1));
+  assert.throws(() => skyBodies(SKY_RANGE.to), RangeError);
+  assert.throws(() => skyBodies(SKY_RANGE.from - 1), RangeError);
 });

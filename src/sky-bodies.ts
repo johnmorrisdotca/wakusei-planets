@@ -31,6 +31,26 @@ const unit = (v: Vec): Vec => {
 const wrap360 = (a: number): number => ((a % 360) + 360) % 360;
 
 /**
+ * The moments the calls accept, in milliseconds since 1970: from 1750-01-01 to 2250-01-01 UTC, the years the package's own checks hold the planet series (VSOP87B) and the rest to (the accuracy guide: the series
+ * "is good for the years 1750 to 2250 and slowly gets worse beyond"). A moment outside them throws a `RangeError` naming the range, so a number out of range is never returned as if it were good.
+ *
+ * @example
+ * ```ts
+ * import { SKY_RANGE } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
+ *
+ * console.log(new Date(SKY_RANGE.from).getUTCFullYear(), new Date(SKY_RANGE.to).getUTCFullYear());
+ * ```
+ */
+export const SKY_RANGE = { from: Date.UTC(1750, 0, 1), to: Date.UTC(2250, 0, 1) } as const;
+
+/** The moment in milliseconds, held to {@link SKY_RANGE}. */
+function inRange(when: Date | number): number {
+  const ms = moment(when);
+  if (ms < SKY_RANGE.from || ms >= SKY_RANGE.to) throw new RangeError("the sky is worked out for the years 1750 to 2250 only (from 1750-01-01 to 2250-01-01 UTC), the years the planet series is held to");
+  return ms;
+}
+
+/**
  * The names of the bodies `skyBodies` gives, in its order.
  *
  * @example
@@ -285,7 +305,7 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
  */
 export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer): SkyBody {
   if (!(SKY_BODY_IDS as readonly string[]).includes(id)) throw new RangeError(`unknown body: ${String(id)}`);
-  return bodyAt(id, moment(when), observer);
+  return bodyAt(id, inRange(when), observer);
 }
 
 /**
@@ -295,7 +315,7 @@ export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer)
  *
  * Every body has `accurate`: true where the figures hold to the accuracy below; Pluto outside the years its table is fitted for (1800 to 2199) is returned with `accurate: false`, because its place there is from an approximate orbit that can be wrong by degrees.
  *
- * Accuracy, as the tests prove it against JPL Horizons on three dates (2024-03-20, 2026-06-21, 2030-12-01) and two places: the Sun, the planets and Pluto are within 0.1 arcminute in right ascension and declination, of date and of J2000;
+ * Accuracy, as the tests prove it, CHECKED against JPL Horizons on three dates, 2024-03-20, 2026-06-21 and 2030-12-01 (2024 to 2030 only), and two places; the series are held to it for the years 1750 to 2250 by the package's own checks, and a moment outside those years throws a `RangeError` ({@link SKY_RANGE}). Within them: the Sun, the planets and Pluto are within 0.1 arcminute in right ascension and declination, of date and of J2000;
  * the Moon within 0.05 arcminute of date and 0.3 of J2000; the distance-derived diameters within 0.1 per cent; the illuminated fraction within 0.02 per cent points and the elongation within 0.02 degrees; azimuth and altitude within
  * 0.1 arcminute, the Moon's parallax in. Magnitudes: within 0.02 for the Sun, Mercury, Venus, Jupiter and Saturn, 0.03 for Uranus and Neptune, 0.06 for the Moon, 0.1 for Mars (its surface markings are not modelled) and 0.5 for Pluto
  * (a fixed absolute magnitude, no more). Angles are degrees, distances astronomical units, sizes arcseconds.
@@ -313,6 +333,6 @@ export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer)
  * ```
  */
 export function skyBodies(when: Date | number, observer?: Observer): SkyBody[] {
-  const ms = moment(when);
+  const ms = inRange(when);
   return SKY_BODY_IDS.map((id) => bodyAt(id, ms, observer));
 }
