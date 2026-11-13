@@ -33,6 +33,12 @@ export interface SightInput {
   r: number;
   dx: number;
   dy: number;
+  /** Degrees between the camera's forward direction and the body, 0 to 180, when the caller knows it. */
+  offAxis?: number;
+  /** How far the body is from the camera, in the view's units (Earth radii), when the caller knows it. */
+  distance?: number;
+  /** The same distance in kilometres in the true scale, `null` in the compressed one. */
+  distanceKm?: number | null;
 }
 
 /**

@@ -20,7 +20,7 @@ import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
 import type { SightInput } from "./sight.ts";
 import { spinAxis } from "./spin.ts";
-import { createTrack, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { createTrack, EARTH_RADIUS_KM, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { createPaintOverlay } from "./paint-overlay.ts";
 import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
@@ -52,6 +52,8 @@ const MOON_RING_KEEP_MS = 5 * 86_400_000;
 type OrbitBody = (typeof ORBIT_BODIES)[number];
 /** How many radii across the picture of a body is at zoom 1 when it has more than its globe: Saturn's rings (to 2.27 radii) are inside the view, not cut by it. */
 const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.3 };
+/** How much of the picture's shorter side a body's disc is framed across at zoom 1, in the body's radii: 1, and more for a ringed body. */
+export const framedOf = (id: string): number => FRAMED[id as SpaceBody] ?? 1;
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
 const MOON_MIN_PX = 2.2;
@@ -1523,13 +1525,17 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const sight = (id: string, at: Vec3, r: number): void => {
               projected.set(at[0], at[1], at[2]).applyMatrix4(camera.matrixWorldInverse);
               const [cx, cy, front] = [projected.x, projected.y, projected.z < 0];
+              // how far off the line of sight, and how far, in the camera's own axes (it looks down -z)
+              const away = Math.hypot(projected.x, projected.y, projected.z);
+              const offAxis = away === 0 ? 0 : (Math.acos(Math.max(-1, Math.min(1, -projected.z / away))) * 180) / Math.PI;
               projected.applyMatrix4(camera.projectionMatrix);
-              sights[id] = { front, x: front ? ((projected.x + 1) / 2) * size.width : 0, y: front ? ((1 - projected.y) / 2) * size.height : 0, r: front ? r : 0, dx: cx, dy: -cy };
+              sights[id] = { front, x: front ? ((projected.x + 1) / 2) * size.width : 0, y: front ? ((1 - projected.y) / 2) * size.height : 0, r: front ? r : 0, dx: cx, dy: -cy, offAxis, distance: away, distanceKm: mode === "true" ? away * EARTH_RADIUS_KM : null };
             };
             for (const id of SPACE_BODIES) if (id !== hiddenBody && !(rideFrom && id === rideFrom.around)) sight(id, pos[id], px[id]);
             const moons = new Set<string>([...((MOONS_OF as Record<string, readonly MoonId[]>)[hostOf(model.focus) ?? model.focus] ?? []), ...Object.keys(moonPlaces)]);
             for (const id of moons) if (id !== hiddenMoon && !(SPACE_BODIES as readonly string[]).includes(id)) sight(id, absoluteSite(id as MoonId), moonPlaces[id]?.r ?? 0);
             for (const craft of craftAts) sight(craft.id, craft.at, craft.px);
+            for (const [id, { at, px: dotPx }] of Object.entries(orbiterPlaces)) sight(id, at, dotPx);
             projected.set(0, 0, -1).applyMatrix4(camera.projectionMatrix);
             deps.onSight(sights, { width: size.width, height: size.height, axis: { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height } });
           }
