@@ -2,7 +2,7 @@
 // moves or more than once a frame, on WebGL contexts or graphics memory (buffers, vertex arrays, textures, programs) that grow with each change, on a canvas past its pixel budget on a
 // 5K screen, on a frame drawn out of sight, and on a moving picture drawn faster than thirty times a second.
 import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } from "@johnmorrisdotca/kazoku-ui/testing";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { addRocks } from "./door-fixture.ts";
 import { routeTiles } from "./tiles-fixture.ts";
 import { drawn } from "./space-ui.ts";
@@ -41,6 +41,13 @@ const converged = async (page: Page, round: () => Promise<void>, seen: number[] 
     before = gpuObjects(counts);
   }
   throw new Error("the graphics objects alive were still growing after eight rounds");
+};
+/** The element taken out of the page gives back everything it made, whatever the rounds before it did: no buffer, vertex array or program is left, and the textures and framebuffers left are the renderer's own (4 and 3 in every run on 0.43.0, 8 as a whole). Unlike the count at rest, which a body's picture, program and vertex arrays move up and down by about fifty objects from one round to the next, this number is the same every time, so an object made in each round and never given back (one a round is enough, over eight rounds) is left here and fails. Last in a test: the view is gone after it. */
+const givenBackOnRemoval = async (page: Page, view: Locator = sky(page), left: { Buffer: number; Texture: number; VertexArray: number; Program: number; total: number } = { Buffer: 0, Texture: 4, VertexArray: 0, Program: 0, total: 8 }): Promise<void> => {
+  await view.evaluate((el) => el.remove());
+  const gone = await settledCounts(page);
+  for (const kind of ["Buffer", "Texture", "VertexArray", "Program"] as const) expect(gone.created[kind] - gone.deleted[kind], `${kind} left`).toBeLessThanOrEqual(left[kind]);
+  expect(gpuObjects(gone), "graphics objects left").toBeLessThanOrEqual(left.total);
 };
 /** Jobs the shared renderer has drawn so far, as its own scheduler counts them. Since kazoku-ui 0.27 it asks for an animation frame every refresh and draws at most 30 a second, so `rafRequests` is no longer the number drawn. */
 const jobsDrawn = (page: Page): Promise<number> =>
@@ -484,6 +491,7 @@ test("the space view at a day a second: at most thirty frames a second, one fram
 });
 
 test("changes to the space view give back what they took: the zooms, the scales, the looks, the light, the clock and a removed element leave contexts and graphics memory flat", async ({ page }) => {
+  // at least eight rounds of the changes below (about 15 to 25 seconds each in the CI image) and a wait for each to settle: more than the 180 seconds a test is given
   test.setTimeout(420_000);
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z`);
   await liveSky(page);
@@ -525,9 +533,10 @@ test("changes to the space view give back what they took: the zooms, the scales,
       )
       .toBe(0);
   };
-  // What is alive at rest moves between a low and a high count from one round to the next, with nothing growing: a body's picture, its program and its vertex arrays (eleven bodies' worth, 146 against 197 in all) are
-  // there at the end of one round and not at the end of another, on this branch and on the one before it. So the first round that does not exceed the one before is no baseline (it may be a low one), and
-  // the rounds are many enough for the high count to have been seen. A leak grows round after round, past every count seen before it
+  // What is alive at rest moves up and down from one round to the next with nothing growing: each body's picture, program and vertex arrays are there at the end of one round and not at the end of another, so the
+  // reading is anything from 145 to 201 (readings in the CI image, on this branch and on the one before it; they are spread all the way between, not two levels a fixed bundle apart). The first round that does not
+  // exceed the one before is therefore no baseline: the last count is held to the highest of eight or more rounds, which catches a count that climbs past everything seen. A slow leak hides in that spread, so the
+  // objects an element made are also counted after it is taken out of the page, where the number does not move (see `givenBackOnRemoval`)
   const seen: number[] = [];
   await converged(page, round, seen);
   while (seen.length < 8) {
@@ -539,13 +548,7 @@ test("changes to the space view give back what they took: the zooms, the scales,
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last), `${seen.join(", ")}, then ${gpuObjects(last)}`).toBeLessThanOrEqual(Math.max(...seen) + 4);
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
-  await sky(page).evaluate((el) => el.remove());
-  await settle(page, 3500);
-  const gone = await readCounts(page);
-  for (const kind of ["Buffer", "VertexArray", "Program"] as const) expect(gone.created[kind] - gone.deleted[kind], `${kind} left`).toBe(0);
-  // what is left after the element goes is the same however many rounds ran (4 textures and 3 framebuffers the renderer keeps); a texture made in each round and never given back is one more here for every round
-  expect(gone.created.Texture - gone.deleted.Texture, "Texture left").toBeLessThanOrEqual(4);
-  expect(gpuObjects(gone)).toBeLessThanOrEqual(8);
+  await givenBackOnRemoval(page);
 });
 
 test("every other known moon as dots: one draw, nothing drawn at rest, and turning them off and on gives back what they took", async ({ page }) => {
@@ -571,6 +574,7 @@ test("every other known moon as dots: one draw, nothing drawn at rest, and turni
   const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 2);
+  await givenBackOnRemoval(page);
 });
 
 /** The "Name on the body" row's choices, one after another: every look, how many, where, facing and off, so each texture is drawn again and the old one let go. Each waits on the draw it causes. */
@@ -604,6 +608,7 @@ test("a body with its name on it draws nothing at rest, and every change of the 
   const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 4);
+  await givenBackOnRemoval(page, main(page), { Buffer: 4, Texture: 5, VertexArray: 1, Program: 1, total: 14 });
 });
 
 test("the space view with names on the bodies draws nothing at rest, and every change of the name, and a move to another body, gives back what it took", async ({ page }) => {
@@ -630,6 +635,7 @@ test("the space view with names on the bodies draws nothing at rest, and every c
   const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 4);
+  await givenBackOnRemoval(page);
 });
 
 test("the space view with names on the Moon draws nothing at rest and adds no graphics object per name", async ({ page }) => {
@@ -676,6 +682,7 @@ test("the space view with Starman shown draws nothing at rest, and switching the
   const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 4);
+  await givenBackOnRemoval(page);
 });
 
 test("the space view with every deep-space craft draws nothing at rest, and switching them gives back what they took", async ({ page }) => {
@@ -704,6 +711,7 @@ test("the space view with every deep-space craft draws nothing at rest, and swit
   const last = await settledCounts(page);
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 4);
+  await givenBackOnRemoval(page);
 });
 
 test("the space view with the orbiters shown draws nothing at rest, and switching them on and off gives back what it took", async ({ page }) => {
@@ -740,6 +748,7 @@ test("the space view with the orbiters shown draws nothing at rest, and switchin
   const again = await readCounts(page);
   await settle(page, 3000);
   expect((await readCounts(page)).draws - again.draws, "nothing drawn at rest after the rounds").toBe(0);
+  await givenBackOnRemoval(page);
 });
 
 test("riding along draws at most thirty frames a second at a day a second, nothing at rest, and nothing out of sight", async ({ page }) => {
@@ -791,6 +800,7 @@ test("the orbiters round Mars with a craft picked, its line and its ground track
   const rest0 = await readCounts(page);
   await settle(page, 3000);
   expect((await readCounts(page)).draws - rest0.draws).toBe(0);
+  await givenBackOnRemoval(page);
 });
 
 test("painting an orbiter's track on the Moon uploads nothing at rest, one picture a frame while time runs, and switching paint and craft gives back what it took", async ({ page }) => {
@@ -863,6 +873,7 @@ test("painting an orbiter's track on the Moon uploads nothing at rest, one pictu
   await settle(page, 2500);
   const cleared = await settledCounts(page);
   expect(gpuObjects(cleared)).toBeLessThan(gpuObjects(last));
+  await givenBackOnRemoval(page);
 });
 
 test("the space view's canvas stays within 6 million pixels and 4096 a side on a 5K screen at a pixel ratio of 2", async ({ browser }) => {
