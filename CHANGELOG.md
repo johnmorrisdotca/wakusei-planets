@@ -2,7 +2,11 @@
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-11-13
+
 - **What a page can ask of the view's sight** (MODULES-1220). Every entry of `sight()` and `wakusei-sight` now says `offAxis` (degrees between the camera's forward direction and the body, 0 to 180), `distance` (from the camera, in Earth radii) and `distanceKm` (in kilometres in the true scale, `null` in the compressed one), so a page can rank its edge markers by nearness; `angle` is unchanged. `turnTo(id, { smooth, margin })` turns the camera where it stands until a body is in the picture, by the least turn, and says whether it did: in the picture means the body's middle is inside the picture less `margin` of each side (0.15 of the width for the left and right and of the height for the top and bottom by default, 0 to 0.45); a body already so, the body looked at, an unknown id and a ride answer `false` and draw nothing. The camera does not move (the body becomes the one looked at, from where the camera stands). An orbiter is an entry of `sight()` with `kind: "orbiter"` and the id `orbiter` takes (`lro`, `mro`), and a press on its name sends `wakusei-orbiter-click` with `{ id, name }` as well as `wakusei-body-click`, which is unchanged. Guide: the space-view guide and its Japanese twin.
+
+- **Rates are read on the page's own clock** (test only, no change to the package): the tests of how fast things run (draws a second, game days a second, the ride's rate, the drag's frames, the date box) now install the page's clock, hold it and step it themselves (`e2e/clock.ts`), so a count is a count of the simulated seconds and does not depend on the speed of the machine; the soak runs one minute by default (`SOAK_MINUTES`) and its limit is not raised. Five repeats under CPU throttle 4 pass for each, and each has a fault that fails it, except the freeze drag test, whose new form is unproven (the fault tried did not reach it).
 
 ## [0.49.0] - 2026-11-13
 
