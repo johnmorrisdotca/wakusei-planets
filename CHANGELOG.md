@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.44.2] - 2026-11-13
+
+- **The best-known names come first** (MODULES-1231). Six names on a phone's Moon were six seas. Each body now has a hand-ranked head ahead of the rule of fame and size (`placeRank`): on the Moon the four great seas, Tycho and Copernicus; on Mars Olympus Mons, Valles Marineris, Hellas, the Tharsis volcanoes (Arsia, Ascraeus, Pavonis) and Gale. The cap and the placement are as in 0.44.1.
+
 ## [0.44.1] - 2026-11-13
 
 - **Few names on a small body** (MODULES-1231). On a phone the Moon at 49 px of radius had five names laid across it, wider than the disc. A name is now written only from 70 px of radius (`MARK_RULES.nameFromPx`), comes in over the next 20 px, at most one to every 20 px of radius, and never wider than the disc.
