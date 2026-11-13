@@ -9,7 +9,7 @@ test.beforeEach(({ page }, testInfo) => {
 
 declare global {
   interface Window {
-    __craft: { frames: number; mutations: number };
+    __craft: { frames: number; craft: number; mutations: number };
   }
 }
 
@@ -17,11 +17,13 @@ declare global {
 async function openHeld(page: Page): Promise<void> {
   await page.clock.install();
   await page.addInitScript(() => {
-    const seen = { frames: 0, mutations: 0 };
+    const seen = { frames: 0, craft: 0, mutations: 0 };
     window.__craft = seen;
     const ask = window.requestAnimationFrame.bind(window);
     window.requestAnimationFrame = (callback) => {
       seen.frames += 1;
+      // the craft page's own loop asks from craft.js; the family frame's help labels (a script in the page) ask once for a batch of changes
+      if (/craft\.(js|ts)/.test(new Error().stack ?? "")) seen.craft += 1;
       return ask(callback);
     };
     document.addEventListener("DOMContentLoaded", () => new MutationObserver((list) => (seen.mutations += list.length)).observe(document, { subtree: true, childList: true, attributes: true, characterData: true }));
@@ -35,7 +37,7 @@ const advance = async (page: Page, ms: number): Promise<void> => {
   for (let spent = 0; spent < ms; spent += 16) await page.clock.runFor(16);
 };
 const seen = (page: Page) => page.evaluate(() => ({ ...window.__craft }));
-const reset = (page: Page) => page.evaluate(() => void Object.assign(window.__craft, { frames: 0, mutations: 0 }));
+const reset = (page: Page) => page.evaluate(() => void Object.assign(window.__craft, { frames: 0, craft: 0, mutations: 0 }));
 
 test("playing, a frame is asked for each page frame and the page changes with each; paused, nothing is asked for or changed in two seconds", async ({ page }) => {
   await openHeld(page);
@@ -44,9 +46,9 @@ test("playing, a frame is asked for each page frame and the page changes with ea
   await reset(page);
   await advance(page, 1000);
   const playing = await seen(page);
-  // the page's own loop asks for one a page frame (62 here), and the shared frame code of the family's controls may ask for some of its own: never twice a frame
-  expect(playing.frames, "a frame asked for each of the 62 page frames").toBeGreaterThan(50);
-  expect(playing.frames).toBeLessThan(2 * 62 + 4);
+  // the craft page's own loop asks for one a page frame (62 here), never more; the family frame's help labels ask once for each batch of changes the page makes, and are counted apart
+  expect(playing.craft, "the craft loop asks for a frame each of the 62 page frames").toBeGreaterThan(55);
+  expect(playing.craft, "and never twice in a frame").toBeLessThanOrEqual(63);
   expect(playing.mutations, "and the page changed with them").toBeGreaterThan(50);
   // pause: the frame in flight ends, and then nothing
   await page.locator("#play").click();
@@ -54,11 +56,11 @@ test("playing, a frame is asked for each page frame and the page changes with ea
   await advance(page, 100);
   await reset(page);
   await advance(page, 2000);
-  expect(await seen(page), "nothing asked for and nothing changed while paused").toEqual({ frames: 0, mutations: 0 });
+  expect(await seen(page), "nothing asked for and nothing changed while paused").toEqual({ frames: 0, craft: 0, mutations: 0 });
   // play again: it starts again from the button
   await page.locator("#play").click();
   await advance(page, 500);
-  expect((await seen(page)).frames, "playing again asks for frames again").toBeGreaterThan(20);
+  expect((await seen(page)).craft, "playing again asks for frames again").toBeGreaterThan(20);
 });
 
 test("a hidden tab asks for no frames, and the page plays again when it is seen", async ({ page }) => {
@@ -72,10 +74,10 @@ test("a hidden tab asks for no frames, and the page plays again when it is seen"
   await advance(page, 100);
   await reset(page);
   await advance(page, 2000);
-  expect(await seen(page), "nothing asked for or changed while the tab is hidden").toEqual({ frames: 0, mutations: 0 });
+  expect(await seen(page), "nothing asked for or changed while the tab is hidden").toEqual({ frames: 0, craft: 0, mutations: 0 });
   await hide(false);
   await advance(page, 500);
-  expect((await seen(page)).frames, "seen again, it plays").toBeGreaterThan(20);
+  expect((await seen(page)).craft, "seen again, it plays").toBeGreaterThan(20);
 });
 
 test("on a phone the page does not run past the screen: no sideways scroll, the picker, the chart and the events inside it, the buttons at least 40 px tall", async ({ page }, testInfo) => {
