@@ -3,7 +3,7 @@
 // scales and for several pairs, Mercury to the Sun among them. Chromium, drawing in software; every reading is what the page reports at each draw.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { callOn, openSpace, SPACE, statsOf } from "./space-ui.ts";
+import { callCounted, openSpace, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -68,8 +68,7 @@ async function held(page: Page): Promise<void> {
 /** Start a move and record what the page reports at every draw until it is over. A reading is kept only if it is of a draw made after the move was asked for: before that the page still reports the last draw of what came before. */
 async function move(page: Page, from: string, to: string, options: Record<string, unknown> = {}, startZoom = 1, fresh = false): Promise<Frame[]> {
   // `fresh`: from the controls' own start (no turn, no tilt, set after the body is gone to, which now stands on the side it is arrived at), so two moves of the same pair begin from the same view and their plans can be compared
-  const before = (await statsOf(page)).draws;
-  await callOn(page, "goTo", from, { smooth: false, zoom: startZoom });
+  const before = await callCounted(page, "goTo", from, { smooth: false, zoom: startZoom });
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(from);
   if (fresh) await page.locator("#controls").evaluate((el, zoom) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom }, true, "set"), startZoom);
   await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);

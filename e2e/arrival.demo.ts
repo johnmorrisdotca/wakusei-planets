@@ -31,15 +31,25 @@ test("a move to Mercury keeps a companion, and a move to Jupiter keeps a moon", 
   }, ids);
 
   const draws = () => space.evaluate((el) => (el as unknown as { stats: { draws: number } }).stats.draws);
-  const beforeMercury = await draws();
-  await space.evaluate((el) => (el as unknown as { goTo: (id: string) => void }).goTo("mercury"));
+  // the count is taken in the same call as the move: a draw between the two would be taken for the move's
+  const beforeMercury = await space.evaluate((el) => {
+    const view = el as unknown as { goTo: (id: string) => void; stats: { draws: number } };
+    const draws = view.stats.draws;
+    view.goTo("mercury");
+    return draws;
+  });
   await expect.poll(draws).toBeGreaterThan(beforeMercury);
   await expect.poll(() => arrived(["earth", "venus", "sun"])).toMatchObject({ body: "mercury", wanted: true, inside: true, named: true });
 
   await space.evaluate((el) => (el as unknown as { goTo: (id: string) => void }).goTo("earth"));
   await expect.poll(() => space.evaluate((el) => (el as unknown as { body: string }).body)).toBe("earth");
-  const beforeJupiter = await draws();
-  await space.evaluate((el) => (el as unknown as { goTo: (id: string) => void }).goTo("jupiter"));
+  // the count is taken in the same call as the move: a draw between the two would be taken for the move's
+  const beforeJupiter = await space.evaluate((el) => {
+    const view = el as unknown as { goTo: (id: string) => void; stats: { draws: number } };
+    const draws = view.stats.draws;
+    view.goTo("jupiter");
+    return draws;
+  });
   await expect.poll(draws).toBeGreaterThan(beforeJupiter);
   await expect.poll(() => arrived(["io", "europa", "ganymede", "callisto"])).toMatchObject({ body: "jupiter", wanted: true, inside: true, named: true });
 });

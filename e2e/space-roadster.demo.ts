@@ -1,10 +1,9 @@
 // Starman in the space view (MODULES-974): off by default and its table not fetched; on, the car is drawn where the table puts it, in the same mapping as the planets, with its name in the page's
 // language, and nothing outside its record. Chromium, drawing in software; every wait is on what the page reports.
-import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { eclipticToScene, frameAt, placeAround, placeBodies } from "../src/space/index.ts";
 import { roadsterPositionAu } from "../src/roadster.ts";
-import { callOn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
+import { callOn, drawnAtRest, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -19,12 +18,6 @@ interface Car {
 }
 const car = async (page: Page): Promise<Car> => ((await statsOf(page)) as unknown as { roadster: Car }).roadster;
 const nameOf = (page: Page) => page.locator(SPACE).locator('.sp-label[data-body="roadster"]');
-
-async function drawn(page: Page, act: () => Promise<unknown>): Promise<void> {
-  const before = (await readCounts(page)).draws;
-  await act();
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
-}
 
 test("off by default and its table not fetched; on, the car is where the table puts it, in both scales, named in the page's language, and gone outside its record", async ({ page }) => {
   test.setTimeout(240_000);
@@ -50,7 +43,7 @@ test("off by default and its table not fetched; on, the car is where the table p
   await expect(nameOf(page)).toHaveText("Starman");
   await expect(nameOf(page)).toBeVisible();
   // the squeezed scale: the same mapping as the planets
-  await drawn(page, () => setOn(page, "scale", "compressed"));
+  await drawnAtRest(page, () => setOn(page, "scale", "compressed"));
   const squeezed = (await car(page)).position!;
   const expectedSqueezed = placeAround("compressed", placeBodies("compressed", frameAt(when)).sun, eclipticToScene(roadsterPositionAu(when)));
   for (let i = 0; i < 3; i += 1) expect(Math.abs(squeezed[i]! - expectedSqueezed[i]!)).toBeLessThan(1e-3);
@@ -58,13 +51,13 @@ test("off by default and its table not fetched; on, the car is where the table p
   await page.locator(SPACE).evaluate((el) => el.setAttribute("lang", "ja"));
   await expect(nameOf(page)).toHaveText("スターマン");
   // before the launch there is no car
-  await drawn(page, () => setOn(page, "time", Date.UTC(2017, 0, 1)));
+  await drawnAtRest(page, () => setOn(page, "time", Date.UTC(2017, 0, 1)));
   await expect.poll(async () => (await car(page)).shown, { timeout: 30_000 }).toBe(false);
   await expect(nameOf(page)).toBeHidden();
   // and off again
-  await drawn(page, () => setOn(page, "time", when));
+  await drawnAtRest(page, () => setOn(page, "time", when));
   await expect.poll(async () => (await car(page)).shown, { timeout: 30_000 }).toBe(true);
-  await drawn(page, () => setOn(page, "roadster", false));
+  await drawnAtRest(page, () => setOn(page, "roadster", false));
   expect((await car(page)).shown).toBe(false);
   await expect(nameOf(page)).toBeHidden();
   // a press on its name says so and moves the view nowhere

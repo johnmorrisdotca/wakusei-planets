@@ -56,6 +56,23 @@ export const setOn = (page: Page, key: string, value: unknown) => page.locator(S
 /** Call a method of the element with arguments. */
 export const callOn = (page: Page, method: string, ...args: unknown[]) => page.locator(SPACE).evaluate((el, [m, a]) => (Reflect.get(el, m as string) as (...x: unknown[]) => unknown).apply(el, a as unknown[]), [method, args] as const);
 
+/** Set a property of the element and say how many draws had been made, in the one call (see `clickCounted`). */
+export const setCounted = (page: Page, key: string, value: unknown): Promise<number> =>
+  page.locator(SPACE).evaluate((el, [k, v]) => {
+    const before = Number((Reflect.get(el, "stats") as { draws: number }).draws);
+    Reflect.set(el, k as string, v);
+    return before;
+  }, [key, value] as const);
+/** Call a method of the element and say how many draws had been made, in the one call (see `clickCounted`). */
+export const callCounted = (page: Page, method: string, ...args: unknown[]): Promise<number> =>
+  page.locator(SPACE).evaluate((el, [m, a]) => {
+    const before = Number((Reflect.get(el, "stats") as { draws: number }).draws);
+    (Reflect.get(el, m as string) as (...x: unknown[]) => unknown).apply(el, a as unknown[]);
+    return before;
+  }, [method, args] as const);
+/** Wait until a draw has come after `before` (a count taken in the same call as the change, by `setCounted`, `callCounted` or `clickCounted`). */
+export const drawnAfter = (page: Page, before: number, what = "the change") => expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000, message: `a draw came after ${what}` }).toBeGreaterThan(before);
+
 /** Open the space page and wait for its first picture. */
 export async function openSpace(page: Page, query = `t=${NOV2}`): Promise<void> {
   await page.addInitScript(COUNT_SCRIPT);
@@ -104,6 +121,15 @@ export async function drawn(page: Page, act: () => Promise<unknown>, until?: (st
   await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
   if (until) await expect.poll(async () => until(await statsOf(page)), { timeout: 60_000 }).toBe(true);
   await quiet(page);
+}
+
+/**
+ * `drawn` for a view at rest: it waits for the draws to hold still first, so that nothing still arriving (a picture, a tile) can land between the count and the change and be taken for the change's draw. Not for a view
+ * whose clock runs, which never holds still.
+ */
+export async function drawnAtRest(page: Page, act: () => Promise<unknown>, until?: (stats: Stats) => boolean): Promise<void> {
+  await quiet(page);
+  await drawn(page, act, until);
 }
 
 /** A picture of the view, as a base64 PNG. */
