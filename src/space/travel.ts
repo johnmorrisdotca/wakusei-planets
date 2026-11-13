@@ -667,7 +667,7 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
           return missed;
         };
         let best: { turn: Turn; missed: number } = { turn, missed: Number.POSITIVE_INFINITY };
-        for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
+        for (let lift = 0; lift <= 6.61 && best.missed > 0; lift += 0.3) {
           const missed = missing({ ...turn, lift });
           if (missed < best.missed) best = { turn: { ...turn, lift }, missed };
         }
@@ -675,9 +675,9 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
           // the body left is near the camera and the planet far off, so the circle of the planet carries the camera away from the body left at once: begin by turning about the body left instead
           const u = unit(toCamera(facingOf(input.start), sub(input.leaving.from, input.start.position)));
           const d = Math.max(1e-12, length(sub(input.leaving.from, input.start.position)));
-          for (const far of [1, 2, 4, 8, 16]) {
+          for (const far of [1, 2, 4, 8, 16, 32, 64]) {
             for (const q of [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]) {
-              for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
+              for (let lift = 0; lift <= 6.61 && best.missed > 0; lift += 0.3) {
                 const candidate: Turn = { ...turn, lift, hold: { body: input.leaving, u, d, q, far } };
                 const missed = missing(candidate);
                 if (missed < best.missed) best = { turn: candidate, missed };
