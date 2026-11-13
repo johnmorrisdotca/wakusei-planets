@@ -50,6 +50,12 @@ SITES = {
         "dtm_x0": -4276880.0,
         "dtm_y0": 645990.0,
         "dtm_res": 5.0,
+        # the ground picture: a low-Sun mosaic of the narrow angle camera, 5 m a pixel, 8 bits; its projection is equirectangular about latitude 20 and longitude 30.2
+        "ortho": "NAC_ROI_APOLLO17LOC_E205N0306_5M.TIF",
+        "ortho_center_lon": 30.2,
+        "ortho_x0": -8020.0,
+        "ortho_y0": 657200.0,
+        "ortho_res": 5.0,
         "far": "ldem_64_window_lat0-45_lon0-70.u16le",
         "far_lat_top": 45.0,
         "far_lon_west": 0.0,
@@ -58,6 +64,7 @@ SITES = {
         "levels": [("h5", 5.0, 8), ("h20", 20.0, 8), ("h80", 80.0, 8)],
         "far_level": ("far", 480.0, 4),
         "heights_credit": "NASA/GSFC/Arizona State University (LROC), LOLA Team (NASA/GSFC)",
+        "ground_credit": "NASA/GSFC/Arizona State University (LROC)",
         "accuracy": "about 1 m vertical, about 10 m horizontal, to LOLA's own uncertainty (Henriksen et al. 2017); one point every 5 m",
     },
 }
@@ -84,6 +91,80 @@ def read_dtm(path, site):
     out = np.array(data, dtype=np.float32)
     out[out < -1e30] = np.nan
     return out
+
+
+def read_tiff_rows(path, dtype, crop=None):
+    """An uncompressed single band strip TIFF of one row a strip as an array (rows north to south): the whole image, or `crop` = (row0, row1, col0, col1)."""
+    with open(path, "rb") as f:
+        head = f.read(8)
+        assert head[:2] == b"II" and struct.unpack("<H", head[2:4])[0] == 42
+        (ifd,) = struct.unpack("<I", head[4:8])
+        f.seek(ifd)
+        (n,) = struct.unpack("<H", f.read(2))
+        tags = {}
+        for _ in range(n):
+            tag, typ, cnt, val = struct.unpack("<HHII", f.read(12))
+            tags[tag] = (typ, cnt, val)
+        width, height = tags[256][2], tags[257][2]
+        f.seek(tags[273][2])
+        offsets = np.frombuffer(f.read(4 * tags[273][1]), dtype="<u4").astype(np.int64)
+    itemsize = np.dtype(dtype).itemsize
+    assert np.all(np.diff(offsets) == width * itemsize), "rows follow each other"
+    data = np.memmap(path, dtype=dtype, mode="r", offset=int(offsets[0]), shape=(height, width))
+    if crop is not None:
+        r0, r1, c0, c1 = crop
+        return np.array(data[r0:r1, c0:c1])
+    return np.array(data)
+
+
+def shade_of(height, res, azimuth, elevation):
+    """Lommel-Seeliger shading of a height grid (rows north to south, `res` metres a sample) for a Sun at `azimuth` (degrees clockwise from north) and `elevation`, seen from straight above: mu0 / (mu0 + mu), 0 where the slope faces away."""
+    dz_drow, dz_dcol = np.gradient(height.astype(np.float64), res)
+    nx, ny, nz = -dz_dcol, dz_drow, np.ones_like(dz_dcol)  # east, north (rows go south), up
+    norm = np.sqrt(nx * nx + ny * ny + nz * nz)
+    a, e = math.radians(azimuth), math.radians(elevation)
+    mu0 = (nx * math.sin(a) * math.cos(e) + ny * math.cos(a) * math.cos(e) + nz * math.sin(e)) / norm
+    mu = nz / norm
+    return np.where(mu0 > 0, mu0 / (mu0 + mu), 0.0)
+
+
+def fit_sun(height, image, res, stride=9):
+    """The Sun a mosaic was lit by, fitted to the heights it covers: the azimuth and elevation whose shading of the heights correlates best with the picture (a grid, then a finer one)."""
+    h = height[::stride, ::stride]
+    im = image[::stride, ::stride].astype(np.float64)
+    ok = np.isfinite(h) & (im > 4)
+    hh = np.where(np.isfinite(h), h, np.nanmean(h))
+    best = (-2.0, 0.0, 0.0)
+
+    def score(az, el):
+        sh = shade_of(hh, res * stride, az, el)
+        a, b = sh[ok], im[ok]
+        return float(np.corrcoef(a, b)[0, 1]) if a.std() > 0 and b.std() > 0 else -1.0
+
+    for az in range(0, 360, 10):
+        for el in range(4, 50, 6):
+            c = score(az, el)
+            if c > best[0]:
+                best = (c, float(az), float(el))
+    c0, az0, el0 = best
+    for az in np.arange(az0 - 10, az0 + 10.1, 2.0):
+        for el in np.arange(max(1.0, el0 - 6), el0 + 6.1, 1.0):
+            c = score(float(az), float(el))
+            if c > best[0]:
+                best = (c, float(az) % 360, float(el))
+    return best
+
+
+def albedo_of(height, image, res, azimuth, elevation):
+    """The ground's own brightness: the picture divided by the shading of the heights it was lit by (and a small constant, so that a flat patch of a low Sun's picture is not divided by nearly nothing), 0 to 1 with its middle at 0.5. Where the picture is far darker than the shading says (a shadow the heights cast on the picture) it is the middle."""
+    sh = shade_of(height, res, azimuth, elevation)
+    im = image.astype(np.float64)
+    ratio = im / (sh + 0.06)
+    valid = im > 3
+    mid = float(np.median(ratio[valid]))
+    ratio = np.where(valid, ratio, mid)
+    ratio = np.where(ratio < 0.45 * mid, mid, ratio)
+    return np.clip(ratio / (2.0 * mid), 0.0, 1.0).astype(np.float32)
 
 
 def site_xy(lat, lon, site):
@@ -243,6 +324,75 @@ def far_sampler(site, path):
     return sample
 
 
+def build_ground(args, site, dtm, out):
+    """The ground picture: the mosaic with the shading of the heights divided out, as 8 bit tiles on the same grids as the first three height levels. Returns what goes in the manifest."""
+    src = os.path.expanduser(args.sources)
+    print("reading the ground picture ...", flush=True)
+    ortho = read_tiff_rows(os.path.join(src, site["ortho"]), "u1")
+    x_site, y_site = site_xy(site["lat"], site["lon"], site)
+    res = site["dtm_res"]
+    # the site's pixel in the height model, and a square of 8192 x 8192 samples round it (20 km each way), where the two pictures are put on one grid
+    col_s = (x_site - site["dtm_x0"]) / res - 0.5
+    row_s = (site["dtm_y0"] - y_site) / res - 0.5
+    half = 4096
+    c0, r0 = int(round(col_s)) - half, int(round(row_s)) - half
+    crop = dtm[r0 : r0 + 2 * half, c0 : c0 + 2 * half]
+    cols = c0 + np.arange(2 * half)
+    rows = r0 + np.arange(2 * half)
+    # the model's pixel centre to the mosaic's pixel: the same projection about another longitude, so only a shift across
+    shift = R_MOON * math.cos(math.radians(site["dtm_center_lat"])) * math.radians(site["dtm_center_lon"] - site["ortho_center_lon"])
+    ocol = ((site["dtm_x0"] + (cols + 0.5) * res) + shift - site["ortho_x0"]) / site["ortho_res"] - 0.5
+    orow = (site["ortho_y0"] - (site["dtm_y0"] - (rows + 0.5) * res)) / site["ortho_res"] - 0.5
+    cc, rr = np.meshgrid(ocol, orow)
+    inside = (cc >= 0) & (cc <= ortho.shape[1] - 1.001) & (rr >= 0) & (rr <= ortho.shape[0] - 1.001)
+    image = bilinear(ortho.astype(np.float32), np.where(inside, rr, 0), np.where(inside, cc, 0))
+    image[~inside] = 0
+    del cc, rr
+    filled = np.where(np.isfinite(crop), crop, np.nanmean(crop))
+    print("fitting the Sun the picture was lit by ...", flush=True)
+    score, az, el = fit_sun(np.where(np.isfinite(crop), crop, np.nan), image, res)
+    print(f"  azimuth {az:.0f}, elevation {el:.0f} degrees, correlation {score:.2f}", flush=True)
+    albedo = albedo_of(filled, image, res, az, el)
+    albedo[image < 3] = 0.5
+    # the levels: block means of the 5 m grid, sampled at the site-centred points; the middle grey outside the square
+    info = []
+    total = 0
+    mid_c = col_s - c0
+    mid_r = row_s - r0
+    block = albedo
+    done = 0
+    for level_id, level_res, tiles in site["levels"]:
+        k = int(round(level_res / res))
+        while done < int(round(math.log2(k))):
+            block = mean2(block)
+            done += 1
+        bres = res * k
+        size = tiles * TILE
+        half_m = size * level_res / 2
+        xs = (np.arange(size) + 0.5) * level_res - half_m
+        ys = half_m - (np.arange(size) + 0.5) * level_res
+        col = mid_c * res / bres + xs / bres - 0.5 + 0.0
+        row = mid_r * res / bres - ys / bres - 0.5
+        cc, rr = np.meshgrid(col, row)
+        inside = (cc >= 0) & (cc <= block.shape[1] - 1.001) & (rr >= 0) & (rr <= block.shape[0] - 1.001)
+        grid = bilinear(block, np.where(inside, rr, 0), np.where(inside, cc, 0))
+        grid[~inside] = 0.5
+        written = 0
+        name = "a" + level_id[1:]
+        for column in range(tiles):
+            folder = os.path.join(out, "ground", name, str(column))
+            os.makedirs(folder, exist_ok=True)
+            for rw in range(tiles):
+                tile = grid[rw * TILE : (rw + 1) * TILE, column * TILE : (column + 1) * TILE]
+                path = os.path.join(folder, f"{rw}.webp")
+                Image.fromarray(np.clip(np.rint(tile * 255.0), 0, 255).astype(np.uint8), "L").save(path, "WEBP", quality=80, method=6)
+                written += os.path.getsize(path)
+        total += written
+        info.append({"id": name, "res": level_res, "tiles": tiles, "half": half_m, "bytes": written})
+        print(f"  {name}: {tiles} x {tiles} tiles, {level_res:g} m, {written / 1e6:.1f} MB", flush=True)
+    return {"levels": info, "bytes": total, "credit": site["ground_credit"], "sun": {"azimuth": az, "elevation": el, "correlation": round(score, 3)}}
+
+
 def build(args):
     site = SITES[args.site]
     src = os.path.expanduser(args.sources)
@@ -268,6 +418,7 @@ def build(args):
         total += written
         info.append({"id": level_id, "res": spec[1], "tiles": spec[2], "half": spec[2] * TILE * spec[1] / 2, "bytes": written, "min": float(grid.min()), "max": float(grid.max())})
         print(f"  {level_id}: {spec[2]} x {spec[2]} tiles of {TILE}, {spec[1]:g} m, {written / 1e6:.1f} MB, heights {grid.min():.0f} to {grid.max():.0f} m", flush=True)
+    ground = build_ground(args, site, dtm, out) if not args.no_ground else None
     centre = levels[site["levels"][0][0]]
     mid = centre.shape[0] // 2
     manifest = {
@@ -282,9 +433,10 @@ def build(args):
         "height": {"min": HEIGHT_MIN, "range": HEIGHT_RANGE},
         "ground": float(centre[mid - 1 : mid + 1, mid - 1 : mid + 1].mean()),
         "levels": info,
+        "picture": ground,
         "credit": site["heights_credit"],
         "accuracy": site["accuracy"],
-        "bytes": total,
+        "bytes": total + (ground["bytes"] if ground else 0),
     }
     with open(os.path.join(out, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=1)
@@ -320,6 +472,18 @@ def selftest(_args):
     centre = levels["h5"][128, 128]
     assert -910 < centre < -890, centre  # the hill's top, 100 m over -1000
     assert abs(levels["h5"][2, 128] - (-950.0)) < 1e-3, "the hole is filled from the coarse map"
+    # the Sun fit: a hill lit from the south-west at 25 degrees is found again from its shading
+    yy, xx = np.mgrid[0:200, 0:200]
+    hill = (80.0 * np.exp(-(((xx - 100) ** 2 + (yy - 100) ** 2) / 1800.0)) + 8.0 * np.sin(xx / 6.0) * np.cos(yy / 9.0)).astype(np.float32)
+    lit = shade_of(hill, 5.0, 225.0, 25.0) * 200.0 + 5.0
+    score, az, el = fit_sun(hill, lit, 5.0, stride=1)
+    assert abs(((az - 225.0 + 180) % 360) - 180) <= 6 and abs(el - 25.0) <= 6 and score > 0.95, (score, az, el)
+    # and divided out again: the albedo of a hill with a bright patch has the patch, not the hill
+    patch = lit.copy()
+    patch[40:60, 40:60] *= 1.5
+    alb = albedo_of(hill, patch, 5.0, 225.0, 25.0)
+    assert alb[50, 50] > 1.3 * alb[150, 150], "the patch stays brighter"
+    assert abs(float(alb[100, 100]) - float(alb[150, 150])) < 0.25, "the hill's own shading is gone"
     print("selftest ok")
 
 
@@ -330,6 +494,7 @@ if __name__ == "__main__":
     b.add_argument("--sources", default=DEFAULT_SOURCES)
     b.add_argument("--out", default=os.path.join(ROOT, ".cache", "moon-terrain-out"))
     b.add_argument("--site", default="apollo-17", choices=sorted(SITES))
+    b.add_argument("--no-ground", action="store_true", help="skip the ground picture")
     b.add_argument("--far-window", default=None, help="skip the coarse map and use a flat far ground (a try-out)")
     b.set_defaults(fn=build)
     s = sub.add_parser("selftest")

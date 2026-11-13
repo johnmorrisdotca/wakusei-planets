@@ -3,9 +3,11 @@
 // shaders take a view and projection matrix, so a page that hands over a subset of three.js does not have to add a perspective camera).
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { ThreeParts } from "../scene/body.ts";
-import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX } from "./glsl.ts";
+import { rocksAround } from "./detail.ts";
+import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX } from "./glsl.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
 import type { MoonSky } from "./sky.ts";
+import { rockMesh } from "./rocks.ts";
 import { cameraAxes, viewProjection, type Look } from "./view.ts";
 
 /** Everything that changes how the view looks. The element fills one in and hands it over; the scene holds no clock of its own. */
@@ -20,11 +22,15 @@ export interface SurfaceState {
   albedo?: number;
   /** Whether the ground shadows itself (default true; false is a try-out, a lit slope with no shadow). */
   shadows?: boolean;
+  /** Whether the made detail (craters, roughness) is there (default true). */
+  detail?: boolean;
 }
 
 /** The scene the shared renderer draws, with the one call that moves it. */
 export interface SurfaceScene extends Scene3D {
   apply(state: SurfaceState): void;
+  /** The rocks made round the eyes now. */
+  readonly rocks: number;
   /** The mesh's size, for a test or a status line. */
   readonly mesh: { rings: number; rays: number; triangles: number };
 }
@@ -32,6 +38,10 @@ export interface SurfaceScene extends Scene3D {
 export interface SurfaceItemOptions {
   /** The pyramid's levels, finest first, filled with their heights. */
   levels: readonly HeightLevel[];
+  /** The ground picture's levels, where the site has them. */
+  pictures?: readonly HeightLevel[];
+  /** The ground's height at a point, metres east and north of the site, for the rocks to stand on: the measured heights, the made craters, the Moon's curve taken off. */
+  groundY?(east: number, north: number): number;
   manifest: TerrainManifest;
   /** A key that changes whenever the picture would: the renderer keeps one still for each key. */
   key: string;
@@ -39,7 +49,7 @@ export interface SurfaceItemOptions {
 
 const RINGS = 480;
 const RAYS = 600;
-const R_MIN = 0.5;
+const R_MIN = 0.1;
 const R_MAX = 300_000;
 /** The distances out to which each level is read, finest first (the coarsest reads to the end): a level's own samples are about this far from being finer than a pixel. */
 const BANDS = [4_000, 16_000, 60_000, Infinity] as const;
@@ -108,6 +118,23 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           (texture) => texture.dispose(),
         ),
       );
+      const pictures = (options.pictures ?? []).map((level) =>
+        context.assets.acquire(
+          `surface:${manifest.site}:picture:${level.id}`,
+          () => {
+            const texture = new T.DataTexture(level.data, level.size, level.size, T.RGBAFormat);
+            texture.minFilter = 1008; // LinearMipmapLinearFilter: a picture seen from far is averaged, not sparkling
+            texture.magFilter = T.LinearFilter;
+            texture.wrapS = T.ClampToEdgeWrapping;
+            texture.wrapT = T.ClampToEdgeWrapping;
+            texture.generateMipmaps = true;
+            texture.flipY = false;
+            texture.needsUpdate = true;
+            return texture;
+          },
+          (texture) => texture.dispose(),
+        ),
+      );
       const level = (i: number): { value: [number, number, number, number] } => {
         const l = options.levels[i]!;
         return { value: [l.half, l.res, l.size, BANDS[i] ?? Infinity] };
@@ -125,7 +152,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uExposure: { value: 4.5 },
         uAlbedo: { value: 0.14 },
         uMaxY: { value: maxY },
-        uEarthshine: { value: 0 },
+        uEarthshine: { value: 0.05 },
         uShadows: { value: 1 },
         uHmin: { value: manifest.height.min },
         uHrange: { value: manifest.height.range },
@@ -135,6 +162,12 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uH1: { value: textures[1] ?? textures[0] },
         uH2: { value: textures[2] ?? textures[0] },
         uH3: { value: textures[3] ?? textures[0] },
+        uA0: { value: pictures[0] ?? textures[0] },
+        uA1: { value: pictures[1] ?? textures[0] },
+        uA2: { value: pictures[2] ?? textures[0] },
+        uPicture: { value: pictures.length >= 3 ? 1 : 0 },
+        uPixel: { value: 0.0024 },
+        uDetail: { value: 1 },
         uL0: level(0),
         uL1: level(1),
         uL2: level(2),
@@ -171,11 +204,58 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       const earth = disc(1, Math.tan((1.9 * Math.PI) / 360));
       const scene = new T.Scene();
       scene.add(sun.mesh, earth.mesh, ground);
+      // the rocks and their shadows, made again when the eyes have walked a while or the Sun has moved
+      const rockMaterial = new T.ShaderMaterial({ vertexShader: ROCK_VERTEX, fragmentShader: ROCK_FRAGMENT, uniforms });
+      const shadowMaterial = new T.ShaderMaterial({ vertexShader: SHADOW_VERTEX, fragmentShader: SHADOW_FRAGMENT, uniforms: { uVP: uniforms.uVP }, transparent: true, depthWrite: false });
+      shadowMaterial.polygonOffset = true;
+      shadowMaterial.polygonOffsetFactor = -2;
+      shadowMaterial.polygonOffsetUnits = -2;
+      let rockGeometry: InstanceType<ThreeParts["BufferGeometry"]> | undefined;
+      let shadowGeometry: InstanceType<ThreeParts["BufferGeometry"]> | undefined;
+      let rockMeshObject: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let shadowMeshObject: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let rockKey = "";
+      let rockCount = 0;
+      const makeRocks = (state: SurfaceState): void => {
+        const ground = options.groundY;
+        if (ground === undefined || state.detail === false) return;
+        const pixel = uniforms.uPixel.value as number;
+        const key = `${Math.round(state.eye.east / 8)}|${Math.round(state.eye.north / 8)}|${state.sky.sun.azimuth.toFixed(0)}|${state.sky.sun.altitude.toFixed(0)}|${pixel.toFixed(4)}`;
+        if (key === rockKey) return;
+        rockKey = key;
+        const rocks = rocksAround(state.eye.east, state.eye.north, 55, pixel);
+        const mesh = rockMesh(rocks, ground, { azimuth: state.sky.sun.azimuth, altitude: state.sky.sun.altitude });
+        rockCount = mesh.count;
+        rockGeometry?.dispose();
+        shadowGeometry?.dispose();
+        rockGeometry = new T.BufferGeometry();
+        rockGeometry.setAttribute("position", new T.BufferAttribute(mesh.position, 3));
+        rockGeometry.setAttribute("normal", new T.BufferAttribute(mesh.normal, 3));
+        rockGeometry.setAttribute("tone", new T.BufferAttribute(mesh.tone, 1));
+        shadowGeometry = new T.BufferGeometry();
+        shadowGeometry.setAttribute("position", new T.BufferAttribute(mesh.shadowPosition, 3));
+        shadowGeometry.setAttribute("uv", new T.BufferAttribute(mesh.shadowUv, 2));
+        shadowGeometry.setIndex(new T.BufferAttribute(mesh.shadowIndex, 1));
+        if (rockMeshObject === undefined) {
+          rockMeshObject = new T.Mesh(rockGeometry as never, rockMaterial);
+          rockMeshObject.frustumCulled = false;
+          rockMeshObject.renderOrder = 1;
+          shadowMeshObject = new T.Mesh(shadowGeometry as never, shadowMaterial);
+          shadowMeshObject.frustumCulled = false;
+          shadowMeshObject.renderOrder = 2;
+          scene.add(rockMeshObject, shadowMeshObject);
+        } else {
+          rockMeshObject.geometry = rockGeometry as never;
+          shadowMeshObject!.geometry = shadowGeometry as never;
+        }
+      };
       let aspect = context.width / Math.max(1, context.height);
+      let pixelHeight = Math.max(1, context.height);
       let last: SurfaceState | undefined;
       const place = (state: SurfaceState): void => {
         last = state;
         const { eye, look, sky } = state;
+        makeRocks(state);
         const world = new T.Vector3(eye.east, eye.up, -eye.north);
         const vp = viewProjection([world.x, world.y, world.z], look, aspect);
         (uniforms.uVP.value as Float32Array).set(vp);
@@ -190,6 +270,8 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uniforms.uExposure.value = state.exposure ?? 4.5;
         uniforms.uAlbedo.value = state.albedo ?? 0.14;
         uniforms.uShadows.value = state.shadows === false ? 0 : 1;
+        uniforms.uDetail.value = state.detail === false ? 0 : 1;
+        uniforms.uPixel.value = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelHeight;
         const axes = cameraAxes(look);
         const toEnu = (v: readonly [number, number, number]): [number, number, number] => [v[0], -v[2], v[1]];
         const sunWorld: [number, number, number] = [sky.sun.enu[0], sky.sun.enu[2], -sky.sun.enu[1]];
@@ -216,15 +298,23 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         scene,
         camera: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1),
         mesh: { rings: RINGS, rays: RAYS, triangles },
+        get rocks() {
+          return rockCount;
+        },
         apply: place,
         resize(width, height) {
           aspect = width / Math.max(1, height);
+          pixelHeight = Math.max(1, height);
           if (last !== undefined) place(last);
         },
         dispose() {
           geometry.dispose();
           square.dispose();
           groundMaterial.dispose();
+          rockGeometry?.dispose();
+          shadowGeometry?.dispose();
+          rockMaterial.dispose();
+          shadowMaterial.dispose();
           sun.material.dispose();
           earth.material.dispose();
         },

@@ -10,6 +10,10 @@ uniform sampler2D uH0;
 uniform sampler2D uH1;
 uniform sampler2D uH2;
 uniform sampler2D uH3;
+uniform sampler2D uA0; // the ground picture on the first three levels, 0 to 1 with the middle at 0.5
+uniform sampler2D uA1;
+uniform sampler2D uA2;
+uniform float uPicture; // 1 where the picture is there
 uniform vec4 uL0; // half width, metres a sample, samples across, the distance out to which this level is used
 uniform vec4 uL1;
 uniform vec4 uL2;
@@ -51,12 +55,116 @@ float terrainY(vec2 p, float dist, bool fine) {
   return h - uGround - dot(p, p) / (2.0 * uRadius);
 }
 
+// the ground's own brightness at a point, from the picture of the level that serves it, 1 where it is the middle
+float albedoAt(vec2 p, float dist) {
+  if (uPicture < 0.5) return 1.0;
+  vec4 l;
+  if (holds(p, uL0, dist)) { l = uL0; return 2.0 * texture2D(uA0, vec2((p.x + l.x) / (l.y * l.z), (l.x - p.y) / (l.y * l.z))).r; }
+  if (holds(p, uL1, dist)) { l = uL1; return 2.0 * texture2D(uA1, vec2((p.x + l.x) / (l.y * l.z), (l.x - p.y) / (l.y * l.z))).r; }
+  if (holds(p, uL2, dist)) { l = uL2; return 2.0 * texture2D(uA2, vec2((p.x + l.x) / (l.y * l.z), (l.x - p.y) / (l.y * l.z))).r; }
+  return 1.0;
+}
+
 // the spacing of the level that serves a point, for the step of a slope
 float spacing(vec2 p, float dist) {
   if (holds(p, uL0, dist)) return uL0.y;
   if (holds(p, uL1, dist)) return uL1.y;
   if (holds(p, uL2, dist)) return uL2.y;
   return uL3.y;
+}
+`;
+
+
+/** The made detail, in GLSL: the same formulas as `detail.ts` (craters on a seeded grid, by octave), and a fine roughness for the normals. */
+export const DETAIL = /* glsl */ `
+uniform float uPixel; // the angle one pixel takes, radians
+uniform float uDetail; // 1 for the made detail, 0 for none
+
+uvec2 pcg2d(uvec2 v) {
+  v = v * 1664525u + 1013904223u;
+  v.x += v.y * 1664525u;
+  v.y += v.x * 1664525u;
+  v = v ^ (v >> 16u);
+  v.x += v.y * 1664525u;
+  v.y += v.x * 1664525u;
+  v = v ^ (v >> 16u);
+  return v;
+}
+float u24(uint h) { return float(h >> 8u) * (1.0 / 16777216.0); }
+
+// the made ground at a point: x the height in metres, yz the slope east and north, from every crater of every octave whose nominal diameter is over \`fromD\`
+vec3 madeGround(vec2 p, float fromD) {
+  vec3 sum = vec3(0.0);
+  for (int octave = 5; octave >= 0; octave -= 1) {
+    float nominal = 0.5 * exp2(float(octave));
+    float fade = clamp(nominal / fromD - 1.0, 0.0, 1.0);
+    if (fade <= 0.0) break;
+    float cell = 3.0 * nominal;
+    ivec2 base = ivec2(floor(p / cell));
+    vec2 fr = p / cell - vec2(base);
+    float occ = 0.36 * exp2(-0.5 * float(octave));
+    for (int j = -1; j <= 1; j += 1) {
+      for (int i = -1; i <= 1; i += 1) {
+        // a crater is kept to the middle of its cell, so a neighbour's reaches this cell only within a fifth of the edge
+        if ((i == -1 && fr.x > 0.2) || (i == 1 && fr.x < 0.8) || (j == -1 && fr.y > 0.2) || (j == 1 && fr.y < 0.8)) continue;
+        ivec2 c = base + ivec2(i, j);
+        uvec2 ab = pcg2d(uvec2(uint(c.x), uint(c.y + octave * 7919)));
+        if (u24(ab.x) >= occ) continue;
+        uvec2 cd = pcg2d(uvec2(uint(c.x + 104729), uint(c.y + octave * 7919 + 15485863)));
+        float diameter = nominal * (1.0 + (octave == 5 ? 0.25 : 1.0) * u24(cd.y));
+        float age = float(ab.x & 255u) / 255.0;
+        age = age * age;
+        float radius = 0.5 * diameter;
+        float depth = 0.2 * diameter * (1.0 - 0.7 * age);
+        float rim = 0.045 * diameter * (1.0 - age);
+        float rimWidth = 0.22 + 0.3 * age;
+        vec2 centre = vec2(float(c.x) + 0.25 + 0.5 * u24(ab.y), float(c.y) + 0.25 + 0.5 * u24(cd.x)) * cell;
+        vec2 d = p - centre;
+        float r = length(d);
+        float x = r / radius;
+        float h = 0.0;
+        float dh = 0.0;
+        if (x < 1.0) { h = -depth * (1.0 - x * x); dh = 2.0 * depth * x; }
+        float e = (x - 1.0) / rimWidth;
+        float ex = exp(-e * e);
+        h += rim * ex;
+        dh += -2.0 * rim * e * ex / rimWidth;
+        if (x > 1.0) { float t = 1.0 / x; h += 0.25 * rim * t * t * t; dh += -0.75 * rim * t * t * t * t; }
+        float k = r > 1e-6 ? dh / (radius * r) : 0.0;
+        sum += fade * vec3(h, k * d.x, k * d.y);
+      }
+    }
+  }
+  return sum;
+}
+
+float vnoise(vec2 p) {
+  vec2 i = floor(p);
+  vec2 f = p - i;
+  vec2 w = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  uvec2 c = uvec2(ivec2(i));
+  float a = u24(pcg2d(c).x);
+  float b = u24(pcg2d(c + uvec2(1u, 0u)).x);
+  float cc = u24(pcg2d(c + uvec2(0u, 1u)).x);
+  float d = u24(pcg2d(c + uvec2(1u, 1u)).x);
+  return mix(mix(a, b, w.x), mix(cc, d, w.x), w.y);
+}
+
+// a fine roughness of the dust: two scales, as a slope (east, north), faded out where a pixel covers more than a few of its grains
+vec2 roughness(vec2 p, float footprint) {
+  vec2 g = vec2(0.0);
+  for (int k = 0; k < 2; k += 1) {
+    float s = k == 0 ? 0.07 : 0.3;
+    float amp = k == 0 ? 0.5 : 0.45;
+    float fade = smoothstep(footprint * 2.0, footprint * 7.0, s);
+    if (fade <= 0.0) continue;
+    float d = s * 0.25;
+    vec2 q = (k == 0 ? p : vec2(p.x * 0.857 - p.y * 0.515, p.x * 0.515 + p.y * 0.857)) / s;
+    float dx = vnoise(q + vec2(0.25, 0.0)) - vnoise(q - vec2(0.25, 0.0));
+    float dy = vnoise(q + vec2(0.0, 0.25)) - vnoise(q - vec2(0.0, 0.25));
+    g += fade * amp * vec2(dx, dy) / (0.5 * s) * 0.012;
+  }
+  return g;
 }
 `;
 
@@ -72,66 +180,153 @@ uniform float uSpan; // half the angle drawn across the view, radians
 uniform float uRMin;
 uniform float uRMax;
 ${HEIGHTS}
+${DETAIL}
 varying vec3 vP;
 void main() {
   float r = uRMin * pow(uRMax / uRMin, position.x);
   float a = uYaw + position.y * uSpan;
   vec2 p = uEyeEN + r * vec2(sin(a), cos(a));
   float y = terrainY(p, r, true);
+  // the made craters, those the mesh can hold here: bigger than a few of its steps
+  if (uDetail > 0.5 && r < 3000.0) y += madeGround(p, max(2.5 * r * uPixel, 0.06 * r)).x;
   vP = vec3(p.x, y, p.y);
   gl_Position = uVP * vec4(p.x, y, -p.y, 1.0);
 }
 `;
 
-/** The ground's light. `uSun` is the Sun's direction (east, up, north), `uEye` the eyes (east, up, north). */
-export const GROUND_FRAGMENT = /* glsl */ `
-precision highp float;
-precision highp sampler2D;
+/** What the ground, the rocks and their shadows all need to be lit: the Sun, the eyes, the heights and the made detail, the ground's height with the craters on it, and a point's light (a hard shadow by a march toward the Sun). */
+export const LIGHT = /* glsl */ `
 uniform vec3 uSun;
 uniform vec3 uEye;
 uniform vec2 uEyeEN;
 uniform float uExposure;
 uniform float uAlbedo;
 uniform float uMaxY; // the highest ground over the site's, for the end of a shadow's march
-uniform float uEarthshine; // the Earth's light on the shade, a small share of a lit slope
+uniform float uEarthshine; // the light of the sunlit ground round the shade, a small share of a lit slope's
 uniform float uShadows; // 1 for the ground to shadow itself (the default), 0 for none (a try-out)
 ${HEIGHTS}
-varying vec3 vP;
+${DETAIL}
 
-float lit(vec3 P) {
+// the ground's height at a point: the measured heights and, near the eyes, the made craters (kept to the ones a pixel here can show)
+float groundY(vec2 p, float dist, bool fine, float fromD) {
+  float y = terrainY(p, dist, fine);
+  if (uDetail > 0.5 && fromD < 24.0) y += madeGround(p, fromD).x;
+  return y;
+}
+
+// 1 where the Sun reaches a point, 0 where the ground, craters and all, is in its way: a march from the point toward the Sun over the same heights
+float lit(vec3 P, float dist0) {
   vec2 dir = normalize(uSun.xz);
   float slope = uSun.y / max(length(uSun.xz), 1e-4);
   // the ground at the point from the heights themselves, not the mesh's slope between its corners, which can be a long way off on a far mountain
-  P.y = terrainY(P.xz, distance(P.xz, uEyeEN), true);
-  float t = 0.5 * spacing(P.xz, distance(P.xz, uEyeEN)) + 1.0;
-  for (int i = 0; i < 200; i += 1) {
+  P.y = max(P.y, groundY(P.xz, dist0, true, 2.5 * dist0 * uPixel));
+  float t = 0.5 * spacing(P.xz, dist0) + 0.25;
+  if (uDetail > 0.5) t = min(t, 0.2 + 0.02 * dist0);
+  // a pixel's own start along the ray: the edge of a rim's shadow is a line of steps, and a line of steps is jagged; with a start of its own each pixel it becomes a fine grain instead
+  float jitter = fract(sin(dot(P.xz, vec2(12.9898, 78.233))) * 43758.5453);
+  for (int i = 0; i < 260; i += 1) {
     vec2 q = P.xz + dir * t;
     float y = P.y + slope * t;
     float dist = max(t, distance(q, uEyeEN));
     float res = spacing(q, dist);
-    // near the point four samples are read (the point's own height is one of the same kind); far, one, and the ground may stand a share of a step over the ray before it counts
-    float h = terrainY(q, dist, t < 60.0);
-    if (h > y + 0.15 * res + 0.002 * t) return 0.0;
+    float h = groundY(q, dist, t < 600.0, t < 36.0 ? max(0.2 * t, 2.5 * dist * uPixel) : 99.0);
+    float bias = (t < 40.0 ? 0.01 : 0.3 * res) + 0.002 * t;
+    if (h > y + bias) return 0.0;
     if (y > uMaxY || t > 80000.0) break;
-    t = t * 1.06 + 0.5;
+    float step = t < 30.0 ? t * 0.03 + 0.03 : t * 0.06 + 0.5;
+    t += step * (0.65 + 0.7 * jitter);
   }
   return 1.0;
 }
+`;
+
+/** The ground's light. */
+export const GROUND_FRAGMENT = /* glsl */ `
+precision highp float;
+precision highp sampler2D;
+${LIGHT}
+varying vec3 vP;
 
 void main() {
   float dist = distance(vP.xz, uEyeEN);
+  float fromD = 2.5 * dist * uPixel;
   float e = max(spacing(vP.xz, dist), dist * 0.001);
   float hE = terrainY(vP.xz + vec2(e, 0.0), dist, true);
   float hW = terrainY(vP.xz - vec2(e, 0.0), dist, true);
   float hN = terrainY(vP.xz + vec2(0.0, e), dist, true);
   float hS = terrainY(vP.xz - vec2(0.0, e), dist, true);
-  vec3 n = normalize(vec3(-(hE - hW) / (2.0 * e), 1.0, -(hN - hS) / (2.0 * e)));
+  vec2 slope = vec2((hE - hW) / (2.0 * e), (hN - hS) / (2.0 * e));
+  if (uDetail > 0.5) {
+    if (fromD < 24.0) slope += madeGround(vP.xz, fromD).yz;
+    slope += roughness(vP.xz, dist * uPixel);
+  }
+  vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
   float mu0 = dot(n, uSun);
   float mu = max(dot(n, normalize(uEye - vP)), 0.03);
   float shine = 0.0;
-  if (mu0 > 0.0 && uSun.y > -0.01) shine = (uShadows > 0.5 ? lit(vP) : 1.0) * 2.0 * mu0 / (mu0 + mu);
-  float light = uAlbedo * (shine + uEarthshine * max(n.y, 0.0)) * uExposure;
+  if (mu0 > 0.0 && uSun.y > -0.01) shine = (uShadows > 0.5 ? lit(vP, dist) : 1.0) * 2.0 * mu0 / (mu0 + mu);
+  float light = uAlbedo * albedoAt(vP.xz, dist) * (shine + uEarthshine * max(n.y, 0.0)) * uExposure;
   gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);
+}
+`;
+
+/** The rocks: pieces of ground standing on it. Their corners come from the page already in the site's plane (east, up, north). */
+export const ROCK_VERTEX = /* glsl */ `
+precision highp float;
+// position, normal and uv are declared by three.js
+attribute float tone;
+uniform mat4 uVP;
+varying vec3 vP;
+varying vec3 vN;
+varying float vTone;
+void main() {
+  vP = position;
+  vN = normal;
+  vTone = tone;
+  gl_Position = uVP * vec4(position.x, position.y, -position.z, 1.0);
+}
+`;
+
+export const ROCK_FRAGMENT = /* glsl */ `
+precision highp float;
+precision highp sampler2D;
+${LIGHT}
+varying vec3 vP;
+varying vec3 vN;
+varying float vTone;
+void main() {
+  vec3 n = normalize(vN);
+  float mu0 = dot(n, uSun);
+  float mu = max(dot(n, normalize(uEye - vP)), 0.03);
+  float dist = distance(vP.xz, uEyeEN);
+  float shine = 0.0;
+  if (mu0 > 0.0 && uSun.y > -0.01) shine = (uShadows > 0.5 ? lit(vP + n * 0.02, dist) : 1.0) * 2.0 * mu0 / (mu0 + mu);
+  float light = uAlbedo * 0.85 * vTone * (shine + 0.12 * (n.y * 0.5 + 0.5)) * uExposure; // the shade of a stone is lit by the ground round it
+  gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);
+}
+`;
+
+/** A rock's shadow on the ground: a quad laid along the way the Sun's light goes, a soft dark shape, drawn over the ground. */
+export const SHADOW_VERTEX = /* glsl */ `
+precision highp float;
+uniform mat4 uVP;
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = uVP * vec4(position.x, position.y, -position.z, 1.0);
+}
+`;
+
+export const SHADOW_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+void main() {
+  float u = vUv.x;
+  float across = smoothstep(1.0, 0.5, abs(vUv.y));
+  float along = smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.78, 1.0, u));
+  float a = across * along * 0.85;
+  if (a < 0.01) discard;
+  gl_FragColor = vec4(0.0, 0.0, 0.0, a);
 }
 `;
 

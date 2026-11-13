@@ -6,6 +6,7 @@ import { createGate, frameCap, type Gate } from "../gate.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared.ts";
 import { TILES_BASE } from "../scene/textures.ts";
+import { madeGround, standingPlace } from "./detail.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
 import { createSurfaceItem, type SurfaceScene } from "./scene.ts";
@@ -64,7 +65,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["shadows", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body"];
+  static observedAttributes = ["shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -88,6 +89,7 @@ export class WakuseiSurface extends HTMLElement {
   #walkTimer: ReturnType<typeof setTimeout> | undefined;
   #walkAt = 0;
   #progress: TerrainProgress | undefined;
+  #placed = false;
   #pointers = new Map<number, { x: number; y: number }>();
   #pinch = 0;
   #draws = 0;
@@ -253,13 +255,19 @@ export class WakuseiSurface extends HTMLElement {
       await this.#loading;
     }
     if (this.#terrain === undefined) return;
+    if (!this.#placed) {
+      // a step or two from the landing point, out of any made crater
+      const stand = this.getAttribute("detail") === "off" ? { x: 0, y: 0 } : standingPlace(0, 0);
+      this.#at = { east: stand.x, north: stand.y };
+      this.#placed = true;
+    }
     if (this.#view === undefined) {
       if (this.#renderer === undefined) {
         const taken = takeRenderer(this.#onContext);
         this.#renderer = taken.renderer;
         this.#release = taken.release;
       }
-      const item = createSurfaceItem({ levels: this.#terrain.levels, manifest: this.#terrain.manifest, key: `surface:${site.id}` });
+      const item = createSurfaceItem({ levels: this.#terrain.levels, pictures: this.#terrain.pictures, manifest: this.#terrain.manifest, groundY: (east, north) => this.#groundAt(east, north), key: `surface:${site.id}` });
       this.#view = this.#renderer.view(this.#stage, item, { still: null });
     }
     const ok = await this.#view.focus();
@@ -295,14 +303,22 @@ export class WakuseiSurface extends HTMLElement {
   #noteText(): string {
     const m = this.#terrain?.manifest;
     if (m === undefined) return "";
-    return this.#lang() === "ja" ? `高さの実測: ${m.accuracy}。${m.credit}` : `Heights measured: ${m.accuracy}. ${m.credit}`;
+    const made = this.getAttribute("detail") === "off" ? "" : this.#lang() === "ja" ? "5 m より細かい地形（小さなクレーター、砂塵、岩）は計算で作ったもので、実測ではありません。" : "Detail finer than the 5 m grid (small craters, dust, rocks) is made, not measured.";
+    const picture = m.picture === null || m.picture === undefined ? "" : ` ${m.picture.credit}.`;
+    return this.#lang() === "ja" ? `高さの実測: ${m.accuracy}。${m.credit}。${made}` : `Heights measured: ${m.accuracy}. ${m.credit}.${picture} ${made}`;
   }
 
-  /** The eyes' height over the site's origin: the ground under them, the Moon's curve and a person's height. */
-  #eyeUp(): number {
+  /** The ground's height at a point over the site's: the measured heights, the made craters on them (if the page has them on) and the Moon's curve taken off. */
+  #groundAt(east: number, north: number): number {
     const t = this.#terrain!;
-    const h = groundAt(t.levels, t.manifest.height, this.#at.east, this.#at.north) ?? t.manifest.ground;
-    return h - t.manifest.ground - drop(Math.hypot(this.#at.east, this.#at.north), t.manifest.radius) + EYE_HEIGHT;
+    const h = groundAt(t.levels, t.manifest.height, east, north) ?? t.manifest.ground;
+    const made = this.getAttribute("detail") === "off" ? 0 : madeGround(east, north, 0.35).h;
+    return h - t.manifest.ground - drop(Math.hypot(east, north), t.manifest.radius) + made;
+  }
+
+  /** The eyes' height over the site's origin: the ground under them (the made craters too: the feet follow them) and a person's height. */
+  #eyeUp(): number {
+    return this.#groundAt(this.#at.east, this.#at.north) + EYE_HEIGHT;
   }
 
   #changed(): void {
@@ -315,7 +331,7 @@ export class WakuseiSurface extends HTMLElement {
     const site = this.#site();
     if (site === undefined) return;
     this.#sky = moonSky(site.lat, site.lon, this.#time);
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", exposure: num(this.getAttribute("exposure"), 1.6) });
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6) });
     this.#view!.invalidate();
     this.#draws += 1;
   }

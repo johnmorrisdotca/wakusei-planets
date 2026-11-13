@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <section class="fam-felt surface-stage" aria-labelledby="stage-h">
+        <h2 id="stage-h" class="fam-sr" data-say="sf_stage">Standing on the Moon</h2>
+        <wakusei-surface id="surface" site="apollo-17" tiles="tiles/" data-testid="surface"></wakusei-surface>
+        <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
+        <p class="fam-fine stage-name" data-say="sf_hint">Drag to look around. W, A, S and D walk; + and - zoom. The ground is measured; the small craters, dust and rocks are made.</p>
+      </section>
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <span class="fam-label" data-say="sf_look">Look toward</span>
+            <div class="group fam-seg" id="looks" role="group" aria-label="Look toward" data-say-label="sf_look">
+              <button type="button" data-look="massif" aria-pressed="true" data-say="sf_massif">The South Massif and the Earth</button>
+              <button type="button" data-look="sun" aria-pressed="false" data-say="sf_sun">The Sun</button>
+              <button type="button" data-look="feet" aria-pressed="false" data-say="sf_feet">Down at my feet</button>
+            </div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="sf_time">The Sun</span>
+            <div class="group fam-seg" id="times" role="group" aria-label="The Sun" data-say-label="sf_time">
+              <button type="button" data-days="0" aria-pressed="true" data-say="sf_low">Low (the landing)</button>
+              <button type="button" data-days="3" aria-pressed="false" data-say="sf_mid">Higher (3 days later)</button>
+              <button type="button" data-days="6" aria-pressed="false" data-say="sf_high">High (6 days later)</button>
+            </div>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="sf_detail">Detail</span>
+            <div class="group fam-seg" id="details" role="group" aria-label="Detail" data-say-label="sf_detail">
+              <button type="button" data-detail="on" aria-pressed="true" data-say="sf_made">Measured and made</button>
+              <button type="button" data-detail="off" aria-pressed="false" data-say="sf_measured">Measured only</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="fam-fine credits"><span data-say="sf_credits">The heights are the narrow angle camera's and the laser altimeter's of NASA's Lunar Reconnaissance Orbiter, from the Planetary Data System (public domain): NASA/GSFC/Arizona State University and the LOLA Team. Everything smaller than the 5 m grid is made by this package, not measured.</span></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts surface.js-->
+  </body>
+</html>

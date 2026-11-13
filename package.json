@@ -596,6 +596,8 @@
     "prepublishOnly": "pnpm check",
     "tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py build",
     "test:tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py selftest",
+    "terrain": ".cache/venv/bin/python -I scripts/make-moon-terrain.py build",
+    "test:terrain": ".cache/venv/bin/python -I scripts/make-moon-terrain.py selftest",
     "orbiters:refresh": "python3 -I scripts/make-orbiter-data.py --brief --cache \"$HOME/.cache/wakusei-planets/horizons-orbiters\"",
     "family:readme": "node scripts/family-readme.mjs",
     "readme:images": "node scripts/readme-images.mjs",

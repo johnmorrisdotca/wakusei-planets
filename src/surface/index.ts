@@ -5,3 +5,5 @@ export { EYE_HEIGHT, FOV_LIMITS, WALK_SPEED, clampLook, forward, stepOver, viewP
 export { decodeHeight, drop, groundAt, sampleLevel, tileAddress, type HeightLevel, type HeightLevelInfo, type TerrainManifest } from "./height.ts";
 export { loadTerrain, type LoadOptions, type Terrain, type TerrainProgress } from "./load.ts";
 export { WakuseiSurface, type SurfaceState } from "./element.ts";
+export { craterIn, craterProfile, madeGround, rimBoost, rocksAround, standingPlace, type Crater, type Rock } from "./detail.ts";
+export { rockMesh, type RockMesh } from "./rocks.ts";

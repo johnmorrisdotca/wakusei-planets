@@ -483,6 +483,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Close zoom and map tiles](docs/guides/close-zoom.md) | How far each body zooms and why, the finer map tiles for a close zoom (made from public-domain maps, served beside the demo, never in the package), the generic detail, what it costs |
 | [Outside data, the data door](docs/guides/data-door.md) | Hand the package your own maps of a body or small bodies with their licence and credit, switch them off, and show whose data is on the screen |
 | [Riding along](docs/guides/ride-along.md) | The camera on a moon, a planet or any moving point, looking at what it goes round |
+| [Standing on the Moon](docs/guides/surface.md) | A person at the Apollo 17 landing site: the measured ground, the Sun and the Earth where they are, hard shadows, and detail that is made and says so |
 | [Accuracy](docs/guides/accuracy.md) | How far each body is from JPL Horizons |
 | [In your own three.js scene](docs/guides/in-your-own-scene.md) | `painter.make` |
 | [Time](docs/guides/time.md) | Julian dates, calendars, time scales, sidereal time, Mars time |

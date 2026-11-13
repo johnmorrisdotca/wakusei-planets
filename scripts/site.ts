@@ -4,14 +4,14 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
-import { renderCraft, renderEmbed, renderIndex, renderKids, renderLineup, renderPlan, renderPortrait, renderSpace, renderSpaceFull, renderStar } from "./page.ts";
+import { renderCraft, renderEmbed, renderIndex, renderKids, renderLineup, renderPlan, renderPortrait, renderSpace, renderSpaceFull, renderStar, renderSurface } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
 
 await rm(at("site/"), { recursive: true, force: true });
 await mkdir(at("site/"), { recursive: true });
 await build({
-  entryPoints: [at("demo/demo.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts")],
+  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts")],
   bundle: true,
   splitting: true,
   format: "esm",
@@ -31,6 +31,8 @@ if (existsSync(at("textures"))) await cp(at("textures"), at("site/textures"), { 
 await cp(at("node_modules/@johnmorrisdotca/kazoku-ui/dist/body-label/fonts"), at("site/fonts"), { recursive: true });
 // The finer map tiles, if they have been made (`pnpm tiles`): served beside the textures at tiles/. They are in no package and no repository; the Pages workflow makes them.
 if (existsSync(at(".cache/body-tiles-out/manifest.json"))) await cp(at(".cache/body-tiles-out"), at("site/tiles"), { recursive: true });
+// The Moon's ground tiles (`pnpm terrain`), served beside them at tiles/moon/: in no package and no repository either.
+if (existsSync(at(".cache/moon-terrain-out/moon"))) await cp(at(".cache/moon-terrain-out/moon"), at("site/tiles/moon"), { recursive: true });
 // The family's card in the demo's <head> (og:image, twitter:image, the icon), and the three pictures published beside it.
 const ALT = "Wakusei Planets: Mars, the Earth, Saturn with its rings, Jupiter and Neptune, shaded in 3D, side by side.";
 const pkg = JSON.parse(readFileSync(at("package.json"), "utf8"));
@@ -45,5 +47,6 @@ await writeFile(at("site/star.html"), renderStar(), "utf8");
 await writeFile(at("site/craft.html"), renderCraft(), "utf8");
 await writeFile(at("site/lineup.html"), renderLineup(), "utf8");
 await writeFile(at("site/plan.html"), renderPlan(), "utf8");
+await writeFile(at("site/surface.html"), renderSurface(), "utf8");
 await cp(at("demo/builder.html"), at("site/builder.html"));
 console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");

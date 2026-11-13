@@ -16,6 +16,8 @@ export interface Terrain {
   manifest: TerrainManifest;
   /** The levels, finest first. */
   levels: HeightLevel[];
+  /** The ground picture's levels (grey in red, green and blue), where the site has a picture. */
+  pictures: HeightLevel[];
   /** Bytes fetched in all. */
   bytes: number;
 }
@@ -63,8 +65,10 @@ export async function loadTerrain(base: string, body: string, site: string, opti
   if (!manifestResponse.ok) throw new Error(`no terrain for ${body}/${site} at ${folder} (${manifestResponse.status})`);
   const manifest = (await manifestResponse.json()) as TerrainManifest;
   const levels = manifest.levels.map((info) => emptyLevel(info, manifest.tile));
-  const jobs: { level: HeightLevel; column: number; row: number }[] = [];
-  for (const level of levels) for (let row = 0; row < level.tiles; row += 1) for (let column = 0; column < level.tiles; column += 1) jobs.push({ level, column, row });
+  const pictures = (manifest.picture?.levels ?? []).map((info) => emptyLevel(info, manifest.tile));
+  const jobs: { level: HeightLevel; column: number; row: number; picture: boolean }[] = [];
+  for (const level of levels) for (let row = 0; row < level.tiles; row += 1) for (let column = 0; column < level.tiles; column += 1) jobs.push({ level, column, row, picture: false });
+  for (const level of pictures) for (let row = 0; row < level.tiles; row += 1) for (let column = 0; column < level.tiles; column += 1) jobs.push({ level, column, row, picture: true });
   let done = 0;
   let bytes = 0;
   let next = 0;
@@ -72,7 +76,8 @@ export async function loadTerrain(base: string, body: string, site: string, opti
     for (;;) {
       const job = jobs[next++];
       if (job === undefined) return;
-      const response = await get(tileAddress(folder, manifest, job.level.id, job.column, job.row), { signal: options.signal });
+      const address = job.picture ? `${folder}${manifest.body}/${manifest.site}/ground/${job.level.id}/${job.column}/${job.row}.webp` : tileAddress(folder, manifest, job.level.id, job.column, job.row);
+      const response = await get(address, { signal: options.signal });
       if (!response.ok) throw new Error(`tile ${job.level.id}/${job.column}/${job.row}: ${response.status}`);
       const blob = await response.blob();
       bytes += blob.size;
@@ -82,5 +87,5 @@ export async function loadTerrain(base: string, body: string, site: string, opti
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, options.concurrency ?? 6) }, worker));
-  return { manifest, levels, bytes };
+  return { manifest, levels, pictures, bytes };
 }

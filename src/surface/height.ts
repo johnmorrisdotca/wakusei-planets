@@ -31,6 +31,8 @@ export interface TerrainManifest {
   /** The height of the ground at the site, in metres. */
   ground: number;
   levels: readonly HeightLevelInfo[];
+  /** The ground picture, where the site has one: levels on the same grids as the first of the height levels, its credit and the Sun the mosaic was lit by (fitted to the heights; divided out). */
+  picture?: { levels: readonly HeightLevelInfo[]; credit: string; sun: { azimuth: number; elevation: number; correlation: number } } | null;
   /** The credit the page says beside the picture. */
   credit: string;
   /** How well the heights are known, in words, for the line the page shows. */
