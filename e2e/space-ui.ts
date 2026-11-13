@@ -40,10 +40,10 @@ export async function quiet(page: Page, timeout = 60_000): Promise<void> {
     )
     .toBeGreaterThanOrEqual(4);
 }
-/** Dispatch a click on a button and say how many draws had been made, in the one call: no draw can land between the count and the click and be taken for the click's. */
+/** Dispatch a click on a button and say how many draws the space view had made (its own count, `stats.draws`, the one `drawnAfter` waits on), in the one call: no draw can land between the count and the click and be taken for the click's. */
 export const clickCounted = (button: Locator): Promise<number> =>
   button.evaluate((el) => {
-    const before = (window as unknown as { __kazokuCount: { draws: number } }).__kazokuCount.draws;
+    const before = Number((Reflect.get(document.querySelector("wakusei-space")!, "stats") as { draws: number }).draws);
     el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, composed: true }));
     return before;
   });
@@ -82,7 +82,7 @@ export async function openSpace(page: Page, query = `t=${NOV2}`): Promise<void> 
 /** Press a "Go to" button of the page, then wait until the frame that shows it has drawn. */
 export async function goTo(page: Page, name: string): Promise<void> {
   const before = await clickCounted(page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }));
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
+  await drawnAfter(page, before, `the press on ${name}`);
   await quiet(page);
 }
 
