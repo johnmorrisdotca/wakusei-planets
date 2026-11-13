@@ -25,7 +25,7 @@ import { createPaintOverlay } from "./paint-overlay.ts";
 import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
-import { moonDistance, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
+import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
 import { travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
 
@@ -206,6 +206,10 @@ export interface SpaceModel {
   speed: number;
   /** The body the camera looks at, and (in `zoom`) fills the view with at 1x: any body the package knows that the view can place (the eleven of `SPACE_BODIES` and the moons of the planets). */
   focus: BodyId;
+  /** How many times larger than life the squeezed view draws moons. Ignored at true distances. 2 by default. */
+  moonSize: number;
+  /** The factor actually used for the system in the middle, and whether a limit cut the one asked for. */
+  moonDrawn: { factor: number; clamped: boolean };
   light: SpaceLight;
   /** How the painter draws the bodies (`realistic` or `painted`). */
   look: string;
@@ -335,6 +339,8 @@ export const newSpaceModel = (): SpaceModel => ({
   stepMs: 1000,
   speed: 1,
   focus: "earth",
+  moonSize: 2,
+  moonDrawn: { factor: 1, clamped: false },
   light: "sun",
   look: "realistic",
   drawn: null,
@@ -1300,6 +1306,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const planet = slotOf(id).drawing;
             if (!planet) continue;
             const sites = ((MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? []).map((moon) => ({ name: moon as string, offset: moonOffset(moon, model.time), radius: BODIES[moon].radiusKm / BODIES[id].radiusKm }));
+            const sized = moonSizeFactor(mode, id, model.moonSize, sites.map((site) => ({ radius: site.radius, orbit: moonDistance(mode, id, Math.hypot(site.offset[0], site.offset[1], site.offset[2])) })));
+            if (id === model.focus || hostOf(model.focus) === id) model.moonDrawn = { factor: sized.factor, clamped: sized.clamped };
             // the moons are shown once the planet is a few pixels across, or the system round it is wide enough on the screen to tell its moons from the planet, or one of its moons is the body looked at
             let spread = 1;
             for (const site of sites) spread = Math.max(spread, moonDistance(mode, id, Math.hypot(site.offset[0], site.offset[1], site.offset[2])));
@@ -1322,7 +1330,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const drawing = held.slot.drawing;
               if (!drawing) continue;
               const away = Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z);
-              const drawn = Math.max(site.radius * radius, (away * half * MOON_MIN_PX) / (size.height / 2));
+              const floor = (away * half * MOON_MIN_PX) / (size.height / 2);
+              const wanted = Math.max(site.radius * radius, floor) * sized.factor;
+              const cap = 0.25 * radius;
+              const drawn = Math.min(wanted, cap);
+              if (drawn + 1e-4 < wanted && (id === model.focus || hostOf(model.focus) === id)) model.moonDrawn = { factor: sized.factor, clamped: true };
               drawing.object.visible = true;
               drawing.object.position.set(at[0], at[1], at[2]);
               drawing.object.scale.setScalar(drawn);

@@ -22,7 +22,7 @@ import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
 import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "./frame.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
-import { moonDistance, placeBodies, radiusIn, type ScaleMode } from "./scale.ts";
+import { moonDistance, placeBodies, radiusIn, readMoonSize, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
 import { groundDirection } from "./aim.ts";
 import { besideMoon } from "./beside.ts";
@@ -278,7 +278,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -347,6 +347,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#clock = createGameClock(readTime(this.getAttribute("time")), this.#readSpeed());
     this.#model.time = this.#clock.time;
     this.#model.mode = this.getAttribute("scale") === "compressed" ? "compressed" : "true";
+    this.#model.moonSize = readMoonSize(this.getAttribute("moon-size") ?? 2);
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#labelsAlways = this.hasAttribute("labels-always") && this.getAttribute("labels-always") !== "off";
     this.#covered = this.getAttribute("covered") === "arrow" ? "arrow" : "name";
@@ -487,6 +488,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "time") this.time = readTime(value);
     else if (name === "speed") this.speed = this.#readSpeed();
     else if (name === "scale") this.scale = value === "compressed" ? "compressed" : "true";
+    else if (name === "moon-size") this.moonSize = readMoonSize(value);
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "labels-always") this.labelsAlways = value !== null && value !== "off";
     else if (name === "covered") this.covered = value === "arrow" ? "arrow" : "name";
@@ -794,6 +796,17 @@ export class WakuseiSpace extends HTMLElement {
     // a flight through a belt is at true distances: the squeezed scale does not map a camera that moves among the bodies
     if (value !== "true" && this.#flight !== null) this.leaveBelt();
     this.#nameScale();
+    this.#gate?.request();
+  }
+
+  /**
+   * How many times larger than life to draw moons in the squeezed scale (`moon-size`; 2 by default, from 1 to 8). 1 is the real size. Ignored at true distances. A moon is never drawn larger than a quarter of its planet, into the planet or its rings, or across to the next moon's orbit: every moon of one planet is reduced by the same factor, so they keep their order of size, and `stats.moonSize` says the factor used.
+   */
+  get moonSize(): number {
+    return this.#model.moonSize;
+  }
+  set moonSize(value: number) {
+    this.#model.moonSize = readMoonSize(value);
     this.#gate?.request();
   }
 
@@ -1724,6 +1737,8 @@ export class WakuseiSpace extends HTMLElement {
     bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number; look: string } | null };
     /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
+    /** How large the squeezed view drew the moons of the system in the middle: the factor asked for, the one used, and whether a limit cut it. At true distances `factor` is 1. */
+    moonSize: { asked: number; factor: number; clamped: boolean };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
     orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
   } {
@@ -1752,6 +1767,7 @@ export class WakuseiSpace extends HTMLElement {
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
       orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
+      moonSize: { asked: this.#model.moonSize, factor: this.#model.moonDrawn.factor, clamped: this.#model.moonDrawn.clamped },
     };
   }
 
