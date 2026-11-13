@@ -5,7 +5,7 @@ order: 18
 description: "ファルコン・ヘビー初号機で打ち上げられたテスラ・ロードスターの、2018年から2036年初めまでの任意の日の位置と、距離・速さ・軌道・見どころの日時を、JPL Horizons の状態ベクトルの表 (約20 kB) から求めます。"
 ---
 
-`/roadster` は、スターマンが乗ったテスラ・ロードスターが、ある日にどこにいるか、そのときの数値は何か、に答えます。2018年2月6日、スペースXがファルコン・ヘビー初号機で太陽のまわりの軌道に打ち上げた車です。軌道は、JPL Horizons (対象番号 `-143205`) の状態ベクトル (位置と速度) の表を、位置と速度の3次エルミート補間でつないだものです。DOM も three.js も使わず、どこでも動き、読み込みの手順も要りません。表 (gzip で約20 kB) はこの入口だけが持ち、`/roadster` を読み込まないページには入りません。
+`/roadster` は、スターマンが乗ったテスラ・ロードスターが、ある日にどこにいるか、そのときの数値は何か、に答えます。2018年2月6日、スペースXがファルコン・ヘビー初号機で太陽のまわりの軌道に打ち上げた車です。軌道は、JPL Horizons (対象番号 `-143205`) の状態ベクトル (位置と速度) の表を、位置と速度の3次エルミート補間でつないだものです。DOM も three.js も使わず、どこでも動き、読み込みの手順も要りません。表 (gzip で約20 kB) はこの入口だけが持ち、`/roadster` を読み込まないページには入りません。同じ車は `/spacecraft` の `roadster` でもあり、`findSpacecraft("tesla")` と `findSpacecraft("スターマン")` で見つかります。そちらでは 20 kB の表は `loadSpacecraft("roadster")` のときにだけ読み込まれ、`spacecraftPosition("roadster", date)` は `roadsterPosition(date)` と同じです。
 
 ```ts
 import { ROADSTER, roadsterPosition, roadsterStats } from "@johnmorrisdotca/wakusei-planets/roadster";

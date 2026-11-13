@@ -2,10 +2,10 @@
 title: 有名な探査機
 section: how-to
 order: 17
-description: パイオニア10号からウェッブ望遠鏡まで、探査機18機。情報、航海の出来事、任意の日の位置を、JPL Horizons に合わせて用意しました。探査機ごとに別の表で、gzip で 2〜127 kB です。
+description: パイオニア10号からウェッブ望遠鏡まで、そしてスターマン（テスラ・ロードスター）。探査機19機。情報、航海の出来事、任意の日の位置を、JPL Horizons に合わせて用意しました。探査機ごとに別の表です。
 ---
 
-`/spacecraft` は、探査機18機について2つのことに答えます。ある日にどこにいるか、そして航海で何があったか、です。対象はボイジャー1号と2号、ニュー・ホライズンズ、パイオニア10号と11号、カッシーニ、ガリレオ、ジュノー、パーカー・ソーラー・プローブ、ジェイムズ・ウェッブ宇宙望遠鏡、そして深宇宙の8機 (ベピコロンボ、プシケ、エウロパ・クリッパー、ルーシー、ジュース、はやぶさ2、オシリス・エイペックス、ソーラー・オービター) です。それぞれの軌道は、JPL Horizons が持つ記録の全期間 (打ち上げの約1時間後から、ミッションの終わりまで。まだ飛んでいる探査機は Horizons の予測の終わりまで) に合わせた表です。DOM も three.js も使わず、どこでも動きます。探査機の表は、たずねたときにだけ読み込まれます。[探査機のページ](https://johnmorrisdotca.github.io/wakusei-planets/craft.html)は、1機の軌道とその日の位置、情報と航海を描きます。ページを開くと日付が進み、表示する時刻は読む人の現地時間です。
+`/spacecraft` は、探査機19機について2つのことに答えます。ある日にどこにいるか、そして航海で何があったか、です。対象はボイジャー1号と2号、ニュー・ホライズンズ、パイオニア10号と11号、カッシーニ、ガリレオ、ジュノー、パーカー・ソーラー・プローブ、ジェイムズ・ウェッブ宇宙望遠鏡、深宇宙の8機 (ベピコロンボ、プシケ、エウロパ・クリッパー、ルーシー、ジュース、はやぶさ2、オシリス・エイペックス、ソーラー・オービター)、そしてテスラ・ロードスターのスターマン (`roadster`) です。ロードスターの軌道は `/roadster` がもともと持つもので、20 kB の表は `loadSpacecraft("roadster")` のときに読み込まれます。`findSpacecraft("tesla")` や `findSpacecraft("スターマン")` で見つかります。それぞれの軌道は、JPL Horizons が持つ記録の全期間 (打ち上げの約1時間後から、ミッションの終わりまで。まだ飛んでいる探査機は Horizons の予測の終わりまで) に合わせた表です。DOM も three.js も使わず、どこでも動きます。探査機の表は、たずねたときにだけ読み込まれます。[探査機のページ](https://johnmorrisdotca.github.io/wakusei-planets/craft.html)は、1機の軌道とその日の位置、情報と航海を描きます。ページを開くと日付が進み、表示する時刻は読む人の現地時間です。
 
 ```ts
 import { loadSpacecraft, SPACECRAFT, spacecraftLightTime, spacecraftPosition, spacecraftSpeed, spacecraftSunDistance } from "@johnmorrisdotca/wakusei-planets/spacecraft";
@@ -58,7 +58,8 @@ console.log("x, y, z in au:", spacecraftPosition("voyager1", day).map((km) => (k
 | 関数 | 返すもの |
 |---|---|
 | `SPACECRAFT` と `SPACECRAFT_IDS` | 各探査機の情報: 英語と日本語の名前、打ち上げの日・場所・ロケット、機関、ミッションの終わり、状態、NASA のミッションページ、Horizons の番号、記録の範囲、航海の出来事 |
-| `loadSpacecraft(...ids)` | 表を読み込みます (何も渡さなければ18機すべて)。最初に1回呼び、終わるのを待ちます |
+| `loadSpacecraft(...ids)` | 表を読み込みます (何も渡さなければ19機すべて)。最初に1回呼び、終わるのを待ちます |
+| `findSpacecraft(text)` | id、名前、別名のどれかが文字を含む探査機。大文字小文字と全角半角は区別しません |
 | `spacecraftPosition(id, when)` | 太陽からの x, y, z (km)。J2000 黄道座標系で、`heliocentric` と同じ軸です (`heliocentric` は天文単位) |
 | `spacecraftVelocity(id, when)` と `spacecraftSpeed(id, when)` | 太陽に対する速度 (km/s) と、その大きさ |
 | `spacecraftSunDistance(id, when)` と `spacecraftEarthDistance(id, when)` | 太陽の中心と地球の中心からの距離 (km) |

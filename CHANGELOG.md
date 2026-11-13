@@ -2,13 +2,15 @@
 
 ## [Unreleased]
 
+- **The Roadster joins the spacecraft list** (MODULES-1208). `roadster` is the nineteenth entry of `SPACECRAFT`: Starman / スターマン, other names Tesla Roadster, Starman and Tesla, kind `other`, Horizons `-143205`, the Falcon Heavy launch from Kennedy Space Center 39A. `findSpacecraft` matches an id, either name or an other name, with case and letter width folded. `spacecraftPosition`, `spacecraftSpeed`, `spacecraftSunDistance`, `spacecraftLightTime` and `spacecraftStats` answer for it from the Roadster's own path, and the 20 kB table loads only with `loadSpacecraft("roadster")`. `/roadster` is unchanged. The craft page's picker shows it.
+
 ## [0.42.0] - 2026-11-13
 
 - **An arrival keeps a companion in the picture** (MODULES-1026). `arrivalSide` (and `travelArrival`, which uses it) stands on the side where the frame is not empty black: the body's own moons, or its planet when it is a moon; else the body the camera came from, or the nearest planet in that direction; else the Sun, only while at least half the body stays lit. A side that would turn the globe black is refused. `goTo` and a double click (the zoom jump to 1 or to 2) set the controls to that side; a drag afterwards is left as the reader set it. `stats.companion` names the body kept beside it, and that name is not dropped when names would otherwise clash. The swing is not applied to a straight move (`direct`, `look-back`), which keeps its destination in the picture the whole way.
 
 - **Moons are larger than life in the squeezed view** (MODULES-989). `moon-size` on `<wakusei-space>` (and `space.moonSize`) is 2 by default: moons are drawn that many times their real radius, only while `scale` is `compressed`. 1 is today's size; 4 and 8 go further. True distances ignore it. Every moon of one planet takes the same factor, so they keep their real order of size. The factor is cut when a moon would be larger than a quarter of its planet, would touch the planet or its rings, or would reach the next moon's orbit, and `stats.moonSize` reports the factor used and `clamped`. Picking, the name on the body and the hidden-body rule use that drawn size. `moonSizeFactor` from `/space` is the same rule on plain numbers. A moon looked at, or gone to, is framed at the size it is drawn, so it still fits the view.
 
-- **A page for the spacecraft** (MODULES-875). `craft.html` picks one of the eighteen craft, draws its path and where it is on a date, and lists the facts and the voyage. The craft's table loads only when it is chosen. The date plays when the page opens, and every time shown is the reader's own. English and Japanese.
+- **A page for the spacecraft** (MODULES-875). `craft.html` picks one of the nineteen craft, draws its path and where it is on a date, and lists the facts and the voyage. The craft's table loads only when it is chosen. The date plays when the page opens, and every time shown is the reader's own. English and Japanese.
 
 ## [0.41.0] - 2026-11-13
 

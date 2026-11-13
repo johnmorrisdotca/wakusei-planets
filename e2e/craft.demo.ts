@@ -18,6 +18,10 @@ test("a craft's place changes with the date, and Japanese words show", async ({ 
   await page.locator("#when").dispatchEvent("input");
   await expect.poll(() => where.textContent()).not.toBe(first);
 
+  await page.getByRole("button", { name: "Starman" }).click();
+  await expect(where).toContainText("Starman");
+  await expect(where).toContainText("au");
+
   await page.goto("/wakusei-planets/craft.html?lang=ja");
   await expect(page.locator("#facts")).toContainText("ボイジャー", { timeout: 30_000 });
   await expect(page.locator("[data-say='cr_events']")).toHaveText("航海");
