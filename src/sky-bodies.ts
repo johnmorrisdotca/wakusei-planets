@@ -50,6 +50,15 @@ function inRange(when: Date | number): number {
   return ms;
 }
 
+/** The place held to what it means: a latitude from -90 to 90 and a longitude and a height that are numbers, else a `RangeError` (a bad place never comes back as NaN fields). */
+function checkObserver(observer: Observer | undefined): void {
+  if (observer === undefined) return;
+  if (observer === null || typeof observer !== "object") throw new RangeError("the observer must be { latitude, longitude, heightM? }");
+  if (!Number.isFinite(observer.latitude) || observer.latitude < -90 || observer.latitude > 90) throw new RangeError(`the latitude must be a number from -90 to 90 degrees, got ${String(observer.latitude)}`);
+  if (!Number.isFinite(observer.longitude)) throw new RangeError(`the longitude must be a finite number of degrees, got ${String(observer.longitude)}`);
+  if (observer.heightM !== undefined && !Number.isFinite(observer.heightM)) throw new RangeError(`the height must be a finite number of metres, got ${String(observer.heightM)}`);
+}
+
 /**
  * The names of the bodies `skyBodies` gives, in its order.
  *
@@ -305,6 +314,7 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
  */
 export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer): SkyBody {
   if (!(SKY_BODY_IDS as readonly string[]).includes(id)) throw new RangeError(`unknown body: ${String(id)}`);
+  checkObserver(observer);
   return bodyAt(id, inRange(when), observer);
 }
 
@@ -321,7 +331,7 @@ export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer)
  * (a fixed absolute magnitude, no more). Angles are degrees, distances astronomical units, sizes arcseconds.
  *
  * @param when - The moment: a `Date` or milliseconds since 1970 (UTC).
- * @param observer - The place: `latitude` degrees north, `longitude` degrees east, `heightM` metres (optional).
+ * @param observer - The place: `latitude` degrees north (from -90 to 90), `longitude` degrees east (any finite number), `heightM` metres (optional, finite); anything else throws a `RangeError`.
  * @returns The ten bodies, the Sun first.
  *
  * @example
@@ -333,6 +343,7 @@ export function skyBody(id: SkyBodyId, when: Date | number, observer?: Observer)
  * ```
  */
 export function skyBodies(when: Date | number, observer?: Observer): SkyBody[] {
+  checkObserver(observer);
   const ms = inRange(when);
   return SKY_BODY_IDS.map((id) => bodyAt(id, ms, observer));
 }

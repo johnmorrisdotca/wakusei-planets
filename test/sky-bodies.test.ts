@@ -249,3 +249,27 @@ test("a moment outside 1750 to 2250 throws a RangeError that names the range, an
   assert.throws(() => skyBodies(SKY_RANGE.to), RangeError);
   assert.throws(() => skyBodies(SKY_RANGE.from - 1), RangeError);
 });
+
+test("a place that is not a place throws a RangeError, in both calls, and the longitude wraps", () => {
+  const when = DATES[1]!;
+  const bad: unknown[] = [
+    { latitude: 91, longitude: 0 },
+    { latitude: -90.0001, longitude: 0 },
+    { latitude: Number.NaN, longitude: 0 },
+    { latitude: 10, longitude: Number.NaN },
+    { latitude: 10, longitude: Number.POSITIVE_INFINITY },
+    { latitude: 10, longitude: 20, heightM: Number.NaN },
+    { latitude: 10, longitude: 20, heightM: Number.POSITIVE_INFINITY },
+    { latitude: "10", longitude: 20 },
+    null,
+  ];
+  for (const place of bad) {
+    assert.throws(() => skyBodies(when, place as never), RangeError, JSON.stringify(place));
+    assert.throws(() => skyBody("moon", when, place as never), RangeError, JSON.stringify(place));
+  }
+  assert.doesNotThrow(() => skyBodies(when, { latitude: 90, longitude: 0 }));
+  assert.doesNotThrow(() => skyBodies(when, { latitude: -90, longitude: 400, heightM: -50 }));
+  const a = skyBody("moon", when, { latitude: 35.69, longitude: 139.69 }).horizontal!;
+  const b = skyBody("moon", when, { latitude: 35.69, longitude: 139.69 + 360 }).horizontal!;
+  assert.ok(Math.abs(a.altitudeDeg - b.altitudeDeg) < 1e-9 && Math.abs(a.azimuthDeg - b.azimuthDeg) < 1e-9, "a turn of longitude changes nothing");
+});
