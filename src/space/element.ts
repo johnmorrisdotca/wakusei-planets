@@ -8,7 +8,7 @@ import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
-import { sightChanged, sightOf, type Sight, type SightEdge, type SightInput } from "./sight.ts";
+import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { chooseLabels, nameSpot, type LabelBox } from "./labels.ts";
 import { coverArrows } from "./covered.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
@@ -36,7 +36,7 @@ import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } f
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
-import { createSpaceItem, FIT_DISTANCE, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { createSpaceItem, FIT_DISTANCE, framedOf, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
@@ -104,15 +104,21 @@ export interface BodyHover extends BodyInfo {
  * ```ts no-run
  * import type { BodySight } from "@johnmorrisdotca/wakusei-planets/space/element";
  *
- * const mars: BodySight = { id: "mars", kind: "planet", inView: false, behind: false, edge: "right", x: 640, y: 210, along: 210, angle: 84 };
+ * const mars: BodySight = { id: "mars", kind: "planet", inView: false, behind: false, edge: "right", x: 640, y: 210, along: 210, angle: 84, offAxis: 31, distance: 52_000, distanceKm: 3.3e8 };
  * console.log(mars.inView ? "in view" : `beyond the ${mars.edge} edge`);
  * ```
  */
 export interface BodySight extends Sight {
-  /** A body's id, or a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`. */
+  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`. */
   id: string;
-  kind: SpaceKind | "spacecraft";
+  kind: SpaceKind | "spacecraft" | "orbiter";
   host?: BodyId;
+  /** Degrees between the camera's forward direction and the body, 0 (straight ahead) to 180 (straight behind). */
+  offAxis: number;
+  /** How far the body is from the camera, in the view's units: Earth radii. In the compressed scale these are the drawn distances, not the real ones. */
+  distance: number;
+  /** The distance in kilometres, in the true scale; `null` in the compressed one, where the drawn distances are not real. */
+  distanceKm: number | null;
 }
 
 /**
@@ -1437,6 +1443,73 @@ export class WakuseiSpace extends HTMLElement {
     return true;
   }
 
+  /**
+   * Turn the camera where it stands until a body is in the picture, by the least turn: no move of the camera's place, only the way it looks. A body is in the picture when its middle is inside the picture less `margin` of
+   * each side (the left and right margins are `margin` of the width, the top and bottom `margin` of the height; 0.15 by default, 0 to 0.45). One already so is left alone and the answer is `false`, as it is for an id the
+   * view does not know, the body already looked at, and a view that is riding. The body becomes the one looked at: the camera stays at its place and looks at it, from as far
+   * as it stands (the zoom is worked out from that distance, inside the controls' limits; a body so far that the zoom's limit would move the camera is not turned to). It glides the way a move does, or at once with
+   * `smooth: false` or for a reader who prefers reduced motion; nothing is drawn at rest and one draw more at most ends it.
+   *
+   * @param target - The body's id.
+   * @param options - `smooth` (true by default) and `margin`.
+   * @returns Whether the view turned.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * console.log(space.turnTo("mars", { smooth: false }));
+   * ```
+   */
+  turnTo(target: BodyId | string, options: { smooth?: boolean; margin?: number } = {}): boolean {
+    const id = readBody(target);
+    const model = this.#model;
+    if (!id || model.ride !== null || !model.pose.valid || id === model.focus) return false;
+    const margin = Number.isFinite(options.margin) ? Math.min(0.45, Math.max(0, options.margin as number)) : 0.15;
+    const site = this.#site(id);
+    const p = model.pose.p;
+    const [qx, qy, qz, qw] = model.pose.q;
+    // the body in the camera's axes (it looks down -z): rotate by the inverse of the camera's turn
+    const v: Vec3 = [site.at[0] - p[0], site.at[1] - p[1], site.at[2] - p[2]];
+    // v' = v + w t + q x t, with t = 2 (-q x v): the vector turned by the conjugate
+    const tx = 2 * (-(qy * v[2] - qz * v[1])), ty = 2 * (-(qz * v[0] - qx * v[2])), tz = 2 * (-(qx * v[1] - qy * v[0]));
+    const c: Vec3 = [v[0] + qw * tx + (-qy * tz - -qz * ty), v[1] + qw * ty + (-qz * tx - -qx * tz), v[2] + qw * tz + (-qx * ty - -qy * tx)];
+    const tall = Math.tan((model.pose.fov * Math.PI) / 360);
+    const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 1;
+    if (c[2] < 0) {
+      const nx = c[0] / (-c[2] * tall * aspect), ny = c[1] / (-c[2] * tall);
+      if (withinMargin(nx, ny, margin)) return false;
+    }
+    // the camera's place as seen from the body: the controls' yaw and tilt and the zoom that put the camera there, looking at it
+    const away = Math.hypot(v[0], v[1], v[2]);
+    if (away === 0) return false;
+    const aim: Vec3 = [-v[0] / away, -v[1] / away, -v[2] / away];
+    const across = site.radius * framedOf(id) * Math.max(1, (this.clientHeight || 1) / Math.max(1, this.clientWidth || 1));
+    const zoom = (FIT_DISTANCE * across) / away;
+    if (!(zoom >= CARRIED_LIMITS.zoomMin && zoom <= CARRIED_LIMITS.zoomMax) || away < 1.05 * site.radius) return false;
+    model.anchor ??= model.time;
+    const earth = orientation("earth", model.anchor);
+    const lat = Math.asin(Math.max(-1, Math.min(1, dot(aim, earth.pole)))) / RAD;
+    const lon = Math.atan2(dot(aim, cross(earth.pole, earth.meridian)), dot(aim, earth.meridian)) / RAD;
+    const from = { ...model.view };
+    const yaw = from.yaw + ((((model.centre.lon - lon - from.yaw + 180) % 360) + 360) % 360) - 180;
+    const tilt = model.centre.lat - lat;
+    const reduced = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const leaving = this.#leaving();
+    this.#arrivedFrom = leaving;
+    model.transition = options.smooth === false || reduced ? null : this.#startMove("direct", leaving, id);
+    model.region = null;
+    this.#showRegion();
+    this.#selected = id;
+    model.focus = id;
+    if (this.#hands !== undefined && !this.hasAttribute("data-kazoku-bar")) this.#hands.controller.set({ yaw, tilt, zoom }, true, "jump");
+    else this.setView({ yaw, tilt, zoom, roll: from.roll, panX: from.panX, panY: from.panY }, true);
+    this.#schedule();
+    this.#gate?.request();
+    return true;
+  }
+
   /** The body the camera is at now: the target of the ride, or the body looked at. */
   #leaving(): BodyId {
     const ride = this.#model.ride;
@@ -2224,8 +2297,9 @@ export class WakuseiSpace extends HTMLElement {
     const now: Record<string, BodySight> = {};
     for (const [id, input] of Object.entries(bodies)) {
       const body = id as BodyId;
-      const craft = this.#model.craftIds.includes(id) || id === "roadster";
-      const one: BodySight = { id, kind: craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis) };
+      const orbiter = this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id);
+      const craft = orbiter || this.#model.craftIds.includes(id) || id === "roadster";
+      const one: BodySight = { id, kind: orbiter ? "orbiter" : craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis), offAxis: input.offAxis ?? 0, distance: input.distance ?? 0, distanceKm: input.distanceKm ?? null };
       const host = craft ? undefined : hostOf(body);
       if (host !== undefined) one.host = host;
       now[id] = one;
@@ -2402,6 +2476,8 @@ export class WakuseiSpace extends HTMLElement {
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
     if ((id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id))) {
       this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
+      // an orbiter is told in an event of its own as well (`{ id, name }`, the id `orbiter` takes), the one above unchanged
+      if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) this.dispatchEvent(new CustomEvent("wakusei-orbiter-click", { detail: { id, name: this.#nameOf(id) }, bubbles: true, composed: true }));
       return;
     }
     this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
