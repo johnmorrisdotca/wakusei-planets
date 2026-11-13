@@ -50,7 +50,7 @@ export const renderSpaceFull = (): string =>
 
 /** The spacecraft page. */
 export const renderCraft = (): string =>
-  render("craft.html", "Wakusei Planets 惑星: spacecraft", "Eighteen spacecraft, from Pioneer 10 to Solar Orbiter: the path and the place on a date, the facts and the voyage, in English and Japanese. Each craft's table loads only when it is chosen.");
+  render("craft.html", "Wakusei Planets 惑星: spacecraft", "Nineteen spacecraft, from Pioneer 10 to Solar Orbiter, and Starman in the Tesla Roadster: the path and the place on a date, the facts and the voyage, in English and Japanese. Each craft's table loads only when it is chosen.");
 
 /** The star page. */
 export const renderStar = (): string =>

@@ -2,10 +2,10 @@
 title: Famous spacecraft
 section: how-to
 order: 17
-description: "Eighteen spacecraft, from Pioneer 10 to Solar Orbiter: facts, the events of the voyage, and where each one is on any date, fitted to JPL Horizons. Each craft is a table of its own, 2 to 127 kB gzipped."
+description: "Nineteen spacecraft, from Pioneer 10 to Solar Orbiter, and Starman in the Tesla Roadster: facts, the events of the voyage, and where each one is on any date, fitted to JPL Horizons. Each craft is a table of its own."
 ---
 
-`/spacecraft` answers two questions about eighteen craft: where is it on a date, and what happened on its voyage? The craft are Voyager 1 and 2, New Horizons, Pioneer 10 and 11, Cassini, Galileo, Juno, Parker Solar Probe and the James Webb Space Telescope, and eight from deep space (BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX, Solar Orbiter). Each one's path is a table fitted to JPL Horizons over the whole of Horizons' own record of it, from about an hour after launch to the end of the mission (or, for a craft still flying, to the end of Horizons' predicted path). It runs anywhere, with no DOM and no three.js, and a craft's table loads only when you ask for it. The [spacecraft page](https://johnmorrisdotca.github.io/wakusei-planets/craft.html) draws one craft's path and its place on a date, with the facts and the voyage. The date plays when the page opens, and the time shown is the reader's own.
+`/spacecraft` answers two questions about nineteen craft: where is it on a date, and what happened on its voyage? The craft are Voyager 1 and 2, New Horizons, Pioneer 10 and 11, Cassini, Galileo, Juno, Parker Solar Probe and the James Webb Space Telescope, eight from deep space (BepiColombo, Psyche, Europa Clipper, Lucy, JUICE, Hayabusa2, OSIRIS-APEX, Solar Orbiter), and Starman in the Tesla Roadster (`roadster`). The Roadster's path is the one `/roadster` already has; `loadSpacecraft("roadster")` is what loads its 20 kB table, and `findSpacecraft("tesla")` or `findSpacecraft("スターマン")` finds it. Each one's path is a table fitted to JPL Horizons over the whole of Horizons' own record of it, from about an hour after launch to the end of the mission (or, for a craft still flying, to the end of Horizons' predicted path). It runs anywhere, with no DOM and no three.js, and a craft's table loads only when you ask for it. The [spacecraft page](https://johnmorrisdotca.github.io/wakusei-planets/craft.html) draws one craft's path and its place on a date, with the facts and the voyage. The date plays when the page opens, and the time shown is the reader's own.
 
 ```ts
 import { loadSpacecraft, SPACECRAFT, spacecraftLightTime, spacecraftPosition, spacecraftSpeed, spacecraftSunDistance } from "@johnmorrisdotca/wakusei-planets/spacecraft";
@@ -58,7 +58,8 @@ Each table is within 1,000 km of Horizons' own samples near a planet and within 
 | Function | Gives |
 |---|---|
 | `SPACECRAFT` and `SPACECRAFT_IDS` | the facts of each craft: name in English and Japanese, launch date and site and vehicle, agency, end of mission, status, NASA's mission page, Horizons' number, the record and the voyage's events |
-| `loadSpacecraft(...ids)` | loads the tables (all eighteen when you pass none); call it once and wait |
+| `loadSpacecraft(...ids)` | loads the tables (all nineteen when you pass none); call it once and wait |
+| `findSpacecraft(text)` | the craft whose id, name or other name contains the text, with case and letter width folded |
 | `spacecraftPosition(id, when)` | x, y, z in kilometres from the Sun, in the J2000 ecliptic frame (the axes of `heliocentric`, which is in astronomical units) |
 | `spacecraftVelocity(id, when)` and `spacecraftSpeed(id, when)` | the velocity in km/s relative to the Sun, and its length |
 | `spacecraftSunDistance(id, when)` and `spacecraftEarthDistance(id, when)` | the distance in kilometres from the Sun's centre and from the Earth's centre |

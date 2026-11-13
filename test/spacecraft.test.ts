@@ -45,6 +45,7 @@ await loadSpacecraft();
 
 test("positions and speeds match Horizons at times that were not in the fit", () => {
   for (const id of SPACECRAFT_IDS) {
+    if (id === "roadster") continue;
     const rows = fixture.craft[id];
     assert.ok(rows.length >= 8, `${id} has fixture rows`);
     for (const [jd, x, y, z, vx, vy, vz] of rows as [number, number, number, number, number, number, number][]) {
@@ -62,6 +63,7 @@ test("positions and speeds match Horizons at times that were not in the fit", ()
 test("every flyby, orbit insertion and the page's date agree with the closest approach of the fitted path to the body", () => {
   let checked = 0;
   for (const id of SPACECRAFT_IDS) {
+    if (id === "roadster") continue;
     const near = fixture.flybys.filter((f) => f.craft === id);
     for (const event of SPACECRAFT[id].events) {
       if (event.kind !== "flyby" && event.kind !== "orbit-insertion") continue;
@@ -117,11 +119,18 @@ test("distances from the Sun and the Earth are what the craft's story says", () 
 test("the facts hold together", () => {
   for (const id of SPACECRAFT_IDS) {
     const craft = SPACECRAFT[id];
+    if (id === "roadster") {
+      assert.equal(craft.kind, "other");
+      assert.equal(craft.events[0]!.kind, "launch");
+      assert.ok(craft.record.end > craft.record.start);
+      assert.ok(craft.events.some((event) => event.kind === "flyby"));
+      continue;
+    }
     const table = craftTable(id)!;
     const [first, last] = craftSpan(table);
     assert.equal(craft.id, id);
     assert.ok(craft.name.en.length > 0 && /[぀-ヿ]/.test(craft.name.ja), `${id} has an English and a Japanese name`);
-    assert.match(craft.url, /^https:\/\/(science\.nasa\.gov\/mission|www\.esa\.int\/Science_Exploration\/Space_Science|www\.hayabusa2\.jaxa\.jp)\//);
+    assert.match(craft.url, /^https:\/\/(science\.nasa\.gov\/mission|www\.esa\.int\/Science_Exploration\/Space_Science|www\.hayabusa2\.jaxa\.jp|ssd\.jpl\.nasa\.gov)\//);
     const startUtc = first - ttMinusUtc(first) * 1000;
     const endUtc = last - ttMinusUtc(last) * 1000;
     assert.ok(Math.abs(craft.record.start - startUtc) < 5000 && Math.abs(craft.record.end - endUtc) < 5000, `${id}'s record in the facts is the table's span`);
@@ -141,15 +150,17 @@ test("the facts hold together", () => {
 });
 
 test("each table fits its size budget (gzipped)", () => {
-  const budgets: Record<SpacecraftId, number> = { voyager1: 4, voyager2: 5.5, newhorizons: 3, pioneer10: 3.5, pioneer11: 4.5, cassini: 140, galileo: 28, juno: 85, parker: 30, webb: 4, bepicolombo: 112, psyche: 4, europaclipper: 40, lucy: 5.5, juice: 5.5, hayabusa2: 8, osirisapex: 9, solarorbiter: 13 };
+  const budgets: Partial<Record<SpacecraftId, number>> = { voyager1: 4, voyager2: 5.5, newhorizons: 3, pioneer10: 3.5, pioneer11: 4.5, cassini: 140, galileo: 28, juno: 85, parker: 30, webb: 4, bepicolombo: 112, psyche: 4, europaclipper: 40, lucy: 5.5, juice: 5.5, hayabusa2: 8, osirisapex: 9, solarorbiter: 13 };
   for (const id of SPACECRAFT_IDS) {
+    if (id === "roadster") continue;
     const kilobytes = gzipSync(readFileSync(new URL(`../src/craft/${id}.ts`, import.meta.url))).length / 1024;
-    assert.ok(kilobytes <= budgets[id], `${id} is ${kilobytes.toFixed(1)} kB gzipped, over its ${budgets[id]} kB budget`);
+    assert.ok(kilobytes <= budgets[id]!, `${id} is ${kilobytes.toFixed(1)} kB gzipped, over its ${budgets[id]} kB budget`);
   }
 });
 
 test("the error each table reports is inside the limit it was fitted to", () => {
   for (const id of SPACECRAFT_IDS) {
+    if (id === "roadster") continue;
     const worst = spacecraftErrorKm(id);
     assert.ok(worst > 0 && worst < 60_000, `${id}: ${worst} km`);
   }

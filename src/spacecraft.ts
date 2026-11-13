@@ -3,7 +3,7 @@
 import { craftSpan, craftState, craftTable } from "./data/craft.ts";
 import { toTerrestrialTime } from "./clock.ts";
 import { heliocentric } from "./ephemeris.ts";
-import { SPACECRAFT, SPACECRAFT_IDS, type SpacecraftId } from "./spacecraft-facts.ts";
+import { SPACECRAFT, SPACECRAFT_IDS, type SpacecraftEvent, type SpacecraftId } from "./spacecraft-facts.ts";
 import { length, scale, sub, type Vec3 } from "./vec.ts";
 import { moment, type When } from "./when.ts";
 
@@ -13,6 +13,14 @@ export type { When } from "./when.ts";
 const AU_KM = 149_597_870.7;
 /** The speed of light in kilometres a second. */
 const LIGHT_KM_PER_SECOND = 299_792.458;
+
+/** The Roadster module, kept once `loadSpacecraft("roadster")` has imported it. Importing it is what brings in the 20 kB table. */
+let roadsterMod: typeof import("./roadster.ts") | undefined;
+
+const roadsterReady = (): typeof import("./roadster.ts") => {
+  if (roadsterMod === undefined) throw new Error(`the path of Starman is not loaded: await loadSpacecraft("roadster") first`);
+  return roadsterMod;
+};
 
 const LOADERS: Readonly<Record<SpacecraftId, () => Promise<unknown>>> = {
   voyager1: () => import("./craft/voyager1.ts"),
@@ -33,6 +41,18 @@ const LOADERS: Readonly<Record<SpacecraftId, () => Promise<unknown>>> = {
   hayabusa2: () => import("./craft/hayabusa2.ts"),
   osirisapex: () => import("./craft/osirisapex.ts"),
   solarorbiter: () => import("./craft/solarorbiter.ts"),
+  roadster: async () => {
+    roadsterMod = await import("./roadster.ts");
+    const craft = SPACECRAFT.roadster;
+    craft.record.start = roadsterMod.ROADSTER.record.start;
+    craft.record.end = roadsterMod.ROADSTER.record.end;
+    const events: SpacecraftEvent[] = roadsterMod.roadsterEvents().map((event) => {
+      const body = event.kind === "earth-approach" ? "earth" : event.kind === "mars-approach" ? "mars" : undefined;
+      const kind = event.kind === "earth-approach" || event.kind === "mars-approach" ? "flyby" : event.kind;
+      return { kind, date: event.date, precision: "minute", name: event.name, ...(body === undefined ? {} : { body }), ...(event.distanceKm === undefined ? {} : { distanceKm: event.distanceKm }) };
+    });
+    (craft as unknown as { events: SpacecraftEvent[] }).events = events;
+  },
 };
 
 function facts(id: SpacecraftId): (typeof SPACECRAFT)[SpacecraftId] {
@@ -45,7 +65,7 @@ function facts(id: SpacecraftId): (typeof SPACECRAFT)[SpacecraftId] {
  * Load the fitted paths of some spacecraft (or all of them), each a table of its own that nothing else imports: about 6 kB gzipped for the Voyagers, the Pioneers, New Horizons and JWST, and more for the craft that orbited a planet or fly past many.
  * Call it once before the other functions; it is safe to call again.
  *
- * @param ids - The craft to load; none means all eighteen.
+ * @param ids - The craft to load; none means all nineteen.
  * @returns A promise that settles when every table is registered.
  *
  * @example
@@ -94,6 +114,7 @@ function onPath(id: SpacecraftId, when: When): { tt: number; table: NonNullable<
  * ```
  */
 export function spacecraftPosition(id: SpacecraftId, when: When): Vec3 {
+  if (id === "roadster") return roadsterReady().roadsterPosition(when);
   const { tt, table } = onPath(id, when);
   return craftState(table, tt)!.position;
 }
@@ -114,6 +135,7 @@ export function spacecraftPosition(id: SpacecraftId, when: When): Vec3 {
  * ```
  */
 export function spacecraftVelocity(id: SpacecraftId, when: When): Vec3 {
+  if (id === "roadster") return roadsterReady().roadsterVelocity(when);
   const { tt, table } = onPath(id, when);
   return craftState(table, tt)!.velocity;
 }
@@ -210,6 +232,7 @@ export function spacecraftLightTime(id: SpacecraftId, when: When): number {
  * ```
  */
 export function spacecraftErrorKm(id: SpacecraftId): number {
+  if (id === "roadster") return roadsterReady().ROADSTER_ACCURACY.interpolationKm;
   const table = craftTable(id);
   if (table === undefined) throw new Error(`the path of ${facts(id).name.en} is not loaded: await loadSpacecraft(${JSON.stringify(id)}) first`);
   return table.worst;
@@ -297,4 +320,29 @@ export function spacecraftStats(id: SpacecraftId, when: When): SpacecraftStats {
     speed: { sun: length(velocity), earth: length(sub(velocity, earthVelocity)) },
     daysSinceLaunch: (ms - facts(id).launch.date) / 86_400_000,
   };
+}
+
+/** Fold case and full-width letters so a search for `tesla` matches `Tesla` and `スターマン` matches `ｽﾀｰﾏﾝ`. */
+const fold = (text: string): string => text.normalize("NFKC").toLowerCase();
+
+/**
+ * The craft a search matches: the id, either name, or an `otherNames` entry, with case and letter width folded. `voyager` matches both Voyagers. An empty string matches nothing.
+ *
+ * @param text - What was typed.
+ * @returns The matching ids, in the order of `SPACECRAFT_IDS`.
+ *
+ * @example
+ * ```ts
+ * import { findSpacecraft } from "@johnmorrisdotca/wakusei-planets/spacecraft";
+ *
+ * console.log(findSpacecraft("tesla").join(","), findSpacecraft("スターマン").join(","));
+ * ```
+ */
+export function findSpacecraft(text: string): SpacecraftId[] {
+  const needle = fold(text.trim());
+  if (needle.length === 0) return [];
+  return SPACECRAFT_IDS.filter((id) => {
+    const craft = SPACECRAFT[id];
+    return [id, craft.name.en, craft.name.ja, ...(craft.otherNames ?? [])].some((part) => fold(part).includes(needle));
+  });
 }

@@ -6,7 +6,7 @@
 import type { PlanetId } from "./facts.ts";
 
 /**
- * The eighteen craft: `voyager1`, `voyager2`, `newhorizons`, `pioneer10`, `pioneer11`, `cassini`, `galileo`, `juno`, `parker`, `webb`, `bepicolombo`, `psyche`, `europaclipper`, `lucy`, `juice`, `hayabusa2`, `osirisapex` and `solarorbiter`.
+ * The nineteen craft: `voyager1`, `voyager2`, `newhorizons`, `pioneer10`, `pioneer11`, `cassini`, `galileo`, `juno`, `parker`, `webb`, `bepicolombo`, `psyche`, `europaclipper`, `lucy`, `juice`, `hayabusa2`, `osirisapex`, `solarorbiter` and `roadster` (Starman, the Tesla Roadster).
  *
  * @example
  * ```ts
@@ -15,7 +15,7 @@ import type { PlanetId } from "./facts.ts";
  * console.log(SPACECRAFT_IDS.join(", "));
  * ```
  */
-export const SPACECRAFT_IDS = ["voyager1", "voyager2", "newhorizons", "pioneer10", "pioneer11", "cassini", "galileo", "juno", "parker", "webb", "bepicolombo", "psyche", "europaclipper", "lucy", "juice", "hayabusa2", "osirisapex", "solarorbiter"] as const;
+export const SPACECRAFT_IDS = ["voyager1", "voyager2", "newhorizons", "pioneer10", "pioneer11", "cassini", "galileo", "juno", "parker", "webb", "bepicolombo", "psyche", "europaclipper", "lucy", "juice", "hayabusa2", "osirisapex", "solarorbiter", "roadster"] as const;
 
 /**
  * The name of a craft: `voyager1`, `cassini`, `webb`...
@@ -42,8 +42,8 @@ export type SpacecraftId = (typeof SPACECRAFT_IDS)[number];
  * ```
  */
 export interface SpacecraftEvent {
-  /** What happened: the launch, a flyby, going into orbit round a planet, getting to the place the craft works from, or the end of the mission. */
-  kind: "launch" | "flyby" | "orbit-insertion" | "arrival" | "end";
+  /** What happened: the launch, a flyby, going into orbit round a planet, getting to the place the craft works from, the end of the mission, or (the Roadster) a perihelion or an aphelion. */
+  kind: "launch" | "flyby" | "orbit-insertion" | "arrival" | "end" | "perihelion" | "aphelion";
   /** The moment, in milliseconds since 1970 (UTC). Where `precision` is "day", only the date is known: this is that day's noon. */
   date: number;
   /** "minute" where the page gives a time, "day" where it gives only a date. */
@@ -71,6 +71,12 @@ export interface SpacecraftFacts {
   id: SpacecraftId;
   /** The craft's name in English and Japanese. */
   name: { en: string; ja: string };
+  /** Other names a search should find. Left off when the craft has none. */
+  otherNames?: readonly string[];
+  /**
+   * What sort of craft it is. Left off for a probe. `observatory` is a telescope that stays put (the James Webb Space Telescope). `other` is the Roadster: a car, not a probe.
+   */
+  kind?: "probe" | "observatory" | "other";
   /** The agency or agencies. */
   agency: string;
   /** The launch: when, from where and on what. */
@@ -97,7 +103,7 @@ const ev = (kind: SpacecraftEvent["kind"], date: number, precision: SpacecraftEv
 const flyby = (date: number, precision: SpacecraftEvent["precision"], en: string, ja: string, body?: PlanetId, distanceKm?: number): SpacecraftEvent => ev("flyby", date, precision, en, ja, { ...(body === undefined ? {} : { body }), ...(distanceKm === undefined ? {} : { distanceKm }) });
 
 /**
- * The eighteen craft and their facts, keyed by id.
+ * The nineteen craft and their facts, keyed by id.
  *
  * @example
  * ```ts
@@ -281,6 +287,7 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
   },
   webb: {
     id: "webb",
+    kind: "observatory",
     name: { en: "James Webb Space Telescope", ja: "ジェイムズ・ウェッブ宇宙望遠鏡" },
     agency: "NASA, ESA, CSA",
     launch: { date: T(2021, 11, 25, 12, 20), precision: "minute", site: { en: "Kourou, French Guiana (ELA-3)", ja: "クールー (フランス領ギアナ) ELA-3" }, vehicle: "Ariane 5" },
@@ -449,5 +456,21 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       flyby(noon(2026, 12, 24), "day", "Fifth Venus flyby", "5回目の金星フライバイ", "venus"),
       flyby(noon(2030, 9, 3), "day", "Sixth Venus flyby", "6回目の金星フライバイ", "venus"),
     ],
+  },
+  roadster: {
+    id: "roadster",
+    name: { en: "Starman", ja: "スターマン" },
+    otherNames: ["Tesla Roadster", "Starman", "Tesla"],
+    kind: "other",
+    agency: "SpaceX",
+    launch: { date: T(2018, 1, 6, 20, 45), precision: "minute", site: { en: "Kennedy Space Center, Launch Complex 39A", ja: "ケネディ宇宙センター 39A発射施設" }, vehicle: "Falcon Heavy" },
+    end: undefined,
+    status: "active",
+    url: "https://ssd.jpl.nasa.gov/api/horizons.api",
+    horizons: "-143205",
+    // filled from ROADSTER.record when the path is loaded, so this file does not carry the 20 kB table
+    record: { start: 0, end: 0 },
+    joins: [],
+    events: [ev("launch", T(2018, 1, 6, 20, 45), "minute", "Launch", "打ち上げ")],
   },
 };
