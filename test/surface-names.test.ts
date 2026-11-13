@@ -54,19 +54,18 @@ test("a name never lies over a dot that stays, nor over another name, and moves 
   const names = (list: typeof plain) => list.filter((mark) => mark.label === true);
   // a dot set right on the first name's spot: the name moves off it or is dropped, never lies over it
   const first = names(plain)[0]!;
-  const dot = { x: first.x + (first.shiftX ?? 0), y: first.y + (first.shiftY ?? 0), halfWidth: 12, halfHeight: 12 };
+  const dot = { x: first.x, y: first.y, halfWidth: 12, halfHeight: 12 };
   const after = names(marksToShow(PLACES_MOON, [], v, 1737.4, readSurfaceNames(null), [dot]));
   const again = after.find((mark) => mark.place.id === first.place.id);
-  const at = (mark: { x: number; y: number; shiftX?: number; shiftY?: number }) => ({ x: mark.x + (mark.shiftX ?? 0), y: mark.y + (mark.shiftY ?? 0) });
-  if (again !== undefined) assert.ok(Math.abs(at(again).x - dot.x) >= 12 + 3 || Math.abs(at(again).y - dot.y) >= 12 + 9, "moved clear of the dot");
-  for (const mark of after) assert.ok(!(Math.abs(at(mark).x - dot.x) < 12 + 3 && Math.abs(at(mark).y - dot.y) < 12 + 9), `${mark.place.id} is over the dot`);
+  if (again !== undefined) assert.ok(Math.abs(again.x - dot.x) >= 12 + 3 || Math.abs(again.y - dot.y) >= 12 + 9, "moved clear of the dot");
+  for (const mark of after) assert.ok(!(Math.abs(mark.x - dot.x) < 12 + 3 && Math.abs(mark.y - dot.y) < 12 + 9), `${mark.place.id} is over the dot`);
   // no two names overlap
   for (const a of names(plain)) {
     for (const b of names(plain)) {
       if (a === b) continue;
       const wa = Math.ceil(a.place.name.en.length * 3.7) + 5;
       const wb = Math.ceil(b.place.name.en.length * 3.7) + 5;
-      assert.ok(Math.abs(at(a).x - at(b).x) >= wa + wb || Math.abs(at(a).y - at(b).y) >= 18, `${a.place.id} and ${b.place.id} overlap`);
+      assert.ok(Math.abs(a.x - b.x) >= wa + wb || Math.abs(a.y - b.y) >= 18, `${a.place.id} and ${b.place.id} overlap`);
     }
   }
   // a dot the page drew in the layers asked for is an obstacle too: a landing dot is never under a name
@@ -74,7 +73,7 @@ test("a name never lies over a dot that stays, nor over another name, and moves 
   for (const landing of withDots.filter((mark) => mark.label !== true)) {
     for (const name of withDots.filter((mark) => mark.label === true)) {
       const w = Math.ceil(name.place.name.en.length * 3.7) + 5;
-      assert.ok(!(Math.abs(at(name).x - landing.x) < w + 12 && Math.abs(at(name).y - landing.y) < 9 + 12), `${name.place.id} is over the dot of ${landing.place.id}`);
+      assert.ok(!(Math.abs(name.x - landing.x) < w + 12 && Math.abs(name.y - landing.y) < 9 + 12), `${name.place.id} is over the dot of ${landing.place.id}`);
     }
   }
 });

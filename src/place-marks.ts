@@ -148,9 +148,6 @@ export interface PlaceMark {
   fade?: number;
   /** The name is written, not only a dot. */
   label?: boolean;
-  /** How far a written name was moved from its place to keep off a dot or another name, in pixels. `x` and `y` stay where the place is. */
-  shiftX?: number;
-  shiftY?: number;
   /** A name only: no layer the page asked for calls for this place, so it is not one of the places shown (`placesShown`). */
   nameOnly?: boolean;
 }
@@ -220,7 +217,6 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
     if (at === null || at.x < 0 || at.y < 0 || at.x > view.width || at.y > view.height) continue;
     const x = at.x;
     const y = at.y;
-    let shift = { x: 0, y: 0 };
     if (options?.label === true) {
       const lang = options.lang ?? "en";
       const mine = { ...nameBox(place.name[lang]), id: place.id };
@@ -228,22 +224,14 @@ export function placeMarks(places: readonly Place[], layers: readonly PlaceLayer
         const box: Obstacle = { x: px, y: py, ...mine };
         if (px - mine.halfWidth < 0 || px + mine.halfWidth > view.width || py - mine.halfHeight < 0 || py + mine.halfHeight > view.height) return true;
         if ((options.avoid ?? []).some((one) => one.id !== place.id && touches(box, one))) return true;
-        return out.some((mark) => mark.label === true && touches(box, { x: mark.x + (mark.shiftX ?? 0), y: mark.y + (mark.shiftY ?? 0), ...nameBox(mark.place.name[lang]) }));
+        return out.some((mark) => mark.label === true && touches(box, { x: mark.x, y: mark.y, ...nameBox(mark.place.name[lang]) }));
       };
-      // a name that cannot sit on its feature moves a little to a side, then gives way
-      let spot: { x: number; y: number } | undefined;
-      for (const [dx, dy] of [[0, 0], [0, -14], [0, 14], [-24, 0], [24, 0], [0, -26], [0, 26]] as const) {
-        if (!clash(x + dx, y + dy)) {
-          spot = { x: x + dx, y: y + dy };
-          break;
-        }
-      }
-      if (spot === undefined) continue;
-      shift = { x: spot.x - x, y: spot.y - y };
+      // a name stays on its feature, where the place is: if it would cover a dot or another name it gives way
+      if (clash(x, y)) continue;
     }
     if (x < 0 || y < 0 || x > view.width || y > view.height) continue;
     if (options?.label !== true && out.some((mark) => Math.hypot(mark.x - x, mark.y - y) < gap)) continue;
-    out.push({ place, layer: layerOf(place.kind), x, y, ...(options?.label === true ? { label: true, shiftX: shift.x, shiftY: shift.y, fade: Math.min(1, (face - 0.12) / 0.4) } : {}) });
+    out.push({ place, layer: layerOf(place.kind), x, y, ...(options?.label === true ? { label: true, fade: Math.min(1, (face - 0.12) / 0.4) } : {}) });
   }
   return out;
 }
