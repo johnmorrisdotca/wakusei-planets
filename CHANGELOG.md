@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **A move between two moons keeps a body in the picture** (MODULES-1228). The circle of their planet could swing the camera so that neither moon nor the planet was in the frame for part of the move. The turn now holds the moon it leaves until the planet or the moon it goes to has come in. The picture is empty only when all three are out.
+- **A move between two moons keeps a body in the picture** (MODULES-1228). The circle of their planet could swing the camera so that neither moon nor the planet was in the frame for part of the move. The turn now holds the moon it leaves until the planet or the moon it goes to has come in. On a narrow picture, where one of them is only just outside, the camera slides without turning so that body comes in. The look is not turned to do it, and it never turns back by more than it did. The picture is empty only when all three are out.
 
 ## [0.42.0] - 2026-11-13
 

@@ -458,7 +458,37 @@ function clearOf(route: Route, position: Vec3, t: number): Vec3 {
 function along(route: Route, t: number): { position: Vec3; o: Facing; fov: number; stage: "turn" | "travel" | "arrive" } {
   const inTurn = route.turn !== null && t < route.share;
   const at = inTurn ? turnAt(route.turn!, ease(t / route.share), t) : legAt(route.leg, ease(route.share >= 1 ? 1 : (t - route.share) / (1 - route.share)), t);
-  return { position: clearOf(route, at.position, t), o: at.o, fov: at.fov, stage: inTurn ? "turn" : t < route.arrive ? "travel" : "arrive" };
+  const cleared = clearOf(route, at.position, t);
+  return { position: keepIn(route, cleared, at.o, at.fov, t), o: at.o, fov: at.fov, stage: inTurn ? "turn" : t < route.arrive ? "travel" : "arrive" };
+}
+
+/** A family move's picture is never empty. When the moon left, the moon gone to and the planet are all just outside a narrow picture, slide the camera, without turning, so the nearest of them sits inside. The look is unchanged, so a turn that was one way stays one way. */
+function keepIn(route: Route, position: Vec3, o: Facing, fov: number, t: number): Vec3 {
+  const input = route.input;
+  const kind = input.kind ?? "turn-travel";
+  if (input.around === undefined || (kind !== "turn-travel" && kind !== "auto")) return position;
+  const frame = frameOf(fov, route.frameAspect);
+  const sight = (body: TravelBody): Vec3 => toCamera(o, sub(placeOf(body, t), position));
+  const shown = (v: Vec3): boolean => v[2] > 0 && Math.abs(v[0]) <= Math.abs(v[2]) * frame.th && Math.abs(v[1]) <= Math.abs(v[2]) * frame.tv;
+  const views = [sight(input.destination), sight(input.around), sight(input.leaving)];
+  if (views.some(shown)) return position;
+  let pick: Vec3 | undefined;
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const v of views) {
+    if (v[2] <= 0) continue;
+    const off = Math.max(Math.abs(v[0]) / (v[2] * frame.th), Math.abs(v[1]) / (v[2] * frame.tv));
+    if (off < nearest) {
+      nearest = off;
+      pick = v;
+    }
+  }
+  if (pick === undefined || nearest > 1.6) return position;
+  const z = pick[2];
+  const x = pick[0] / (z * frame.th);
+  const y = pick[1] / (z * frame.tv);
+  const tx = Math.max(-0.92, Math.min(0.92, x));
+  const ty = Math.max(-0.92, Math.min(0.92, y));
+  return add(position, toScene(o, [pick[0] - tx * z * frame.th, pick[1] - ty * z * frame.tv, 0]));
 }
 
 function sightOf(body: TravelBody, t: number, position: Vec3, o: Facing, frame: Frame): TravelSight {
@@ -744,11 +774,6 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
           if (got.moons === 0 && got.all === 0) break;
         }
         if (best.moons === 0 && best.all === 0) break;
-      }
-      if (best.all > 0) {
-        const aboutLeft = standAt(input, share, false);
-        const got = gapsOf(aboutLeft.turn, aboutLeft.leg);
-        if (got.all < best.all) best = { turn: aboutLeft.turn, leg: aboutLeft.leg, ...got };
       }
       if (best.all < plain.all || (best.all === 0 && best.moons < plain.moons)) {
         turn = best.turn;
