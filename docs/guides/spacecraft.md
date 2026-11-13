@@ -59,7 +59,7 @@ Each table is within 1,000 km of Horizons' own samples near a planet and within 
 |---|---|
 | `SPACECRAFT` and `SPACECRAFT_IDS` | the facts of each craft: name in English and Japanese, launch date and site and vehicle, agency, end of mission, status, NASA's mission page, Horizons' number, the record and the voyage's events |
 | `loadSpacecraft(...ids)` | loads the tables (all nineteen when you pass none); call it once and wait |
-| `findSpacecraft(text)` | the craft whose id, name or other name contains the text, with case and letter width folded |
+| `findSpacecraft(text)` | the craft whose id, name or other name contains the text, with case, letter width, spaces and punctuation folded |
 | `spacecraftPosition(id, when)` | x, y, z in kilometres from the Sun, in the J2000 ecliptic frame (the axes of `heliocentric`, which is in astronomical units) |
 | `spacecraftVelocity(id, when)` and `spacecraftSpeed(id, when)` | the velocity in km/s relative to the Sun, and its length |
 | `spacecraftSunDistance(id, when)` and `spacecraftEarthDistance(id, when)` | the distance in kilometres from the Sun's centre and from the Earth's centre |

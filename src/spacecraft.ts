@@ -322,11 +322,11 @@ export function spacecraftStats(id: SpacecraftId, when: When): SpacecraftStats {
   };
 }
 
-/** Fold case and full-width letters so a search for `tesla` matches `Tesla` and `スターマン` matches `ｽﾀｰﾏﾝ`. */
-const fold = (text: string): string => text.normalize("NFKC").toLowerCase();
+/** Fold case, full-width letters, spaces and punctuation so `tesla` matches `Tesla`, `ｽﾀｰﾏﾝ` matches `スターマン` and `europa-clipper` matches `Europa Clipper`. */
+const fold = (text: string): string => text.normalize("NFKC").toLowerCase().replace(/[\s\p{P}\p{S}]/gu, "");
 
 /**
- * The craft a search matches: the id, either name, or an `otherNames` entry, with case and letter width folded. `voyager` matches both Voyagers. An empty string matches nothing.
+ * The craft a search matches: the id, either name, or an `otherNames` entry, with case, letter width, spaces and punctuation folded. `voyager` matches both Voyagers. An empty string matches nothing.
  *
  * @param text - What was typed.
  * @returns The matching ids, in the order of `SPACECRAFT_IDS`.

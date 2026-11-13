@@ -59,7 +59,7 @@ console.log("x, y, z in au:", spacecraftPosition("voyager1", day).map((km) => (k
 |---|---|
 | `SPACECRAFT` と `SPACECRAFT_IDS` | 各探査機の情報: 英語と日本語の名前、打ち上げの日・場所・ロケット、機関、ミッションの終わり、状態、NASA のミッションページ、Horizons の番号、記録の範囲、航海の出来事 |
 | `loadSpacecraft(...ids)` | 表を読み込みます (何も渡さなければ19機すべて)。最初に1回呼び、終わるのを待ちます |
-| `findSpacecraft(text)` | id、名前、別名のどれかが文字を含む探査機。大文字小文字と全角半角は区別しません |
+| `findSpacecraft(text)` | id、名前、別名のどれかが文字を含む探査機。大文字小文字、全角半角、空白、句読点は区別しません |
 | `spacecraftPosition(id, when)` | 太陽からの x, y, z (km)。J2000 黄道座標系で、`heliocentric` と同じ軸です (`heliocentric` は天文単位) |
 | `spacecraftVelocity(id, when)` と `spacecraftSpeed(id, when)` | 太陽に対する速度 (km/s) と、その大きさ |
 | `spacecraftSunDistance(id, when)` と `spacecraftEarthDistance(id, when)` | 太陽の中心と地球の中心からの距離 (km) |
