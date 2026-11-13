@@ -14,7 +14,8 @@ const STYLE = `.wk-places{position:absolute;inset:0;pointer-events:none;overflow
 .wk-place-tip{position:absolute;left:0;top:0;max-width:min(260px,80%);padding:3px 7px;border-radius:5px;background:rgba(10,14,22,.86);color:#fff;font:12px/1.35 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;visibility:hidden}
 .wk-place-tip small{display:block;font-size:11px;opacity:.8}
 .wk-place[data-name]{width:auto;height:auto;margin:0;padding:0 3px;color:#fff;font:600 12px/1.2 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:auto}
-.wk-place[data-name]::before{display:none}`;
+.wk-place[data-name]::before{display:none}
+.wk-place-tip[data-on]{visibility:visible}`;
 
 const KIND_WORD: Record<Place["kind"], { en: string; ja: string }> = {
   crewed: { en: "crewed landing", ja: "有人着陸" },
@@ -227,7 +228,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
         held.delete(id);
         hideTip(id);
       }
-      shown = marks.map((mark) => ({ id: mark.place.id, layer: mark.layer, x: mark.x, y: mark.y }));
+      shown = marks.filter((mark) => mark.nameOnly !== true).map((mark) => ({ id: mark.place.id, layer: mark.layer, x: mark.x, y: mark.y }));
       placeTip();
     },
     clear() {

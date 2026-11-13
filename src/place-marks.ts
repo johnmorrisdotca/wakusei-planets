@@ -148,6 +148,8 @@ export interface PlaceMark {
   fade?: number;
   /** The name is written, not only a dot. */
   label?: boolean;
+  /** A name only: no layer the page asked for calls for this place, so it is not one of the places shown (`placesShown`). */
+  nameOnly?: boolean;
 }
 
 /**
@@ -326,7 +328,8 @@ export function marksToShow(places: readonly Place[], layers: readonly PlaceLaye
   const avoid: Obstacle[] = [...keepClear, ...asked.map((mark) => ({ x: mark.x, y: mark.y, halfWidth: 12, halfHeight: 12, id: mark.place.id }))];
   const named = names.on ? placeMarks(places, ["feature"], view, radiusKm, { ...(names.limit === null ? {} : { limit: names.limit }), gapPx: 48, label: true, avoid, lang }) : [];
   const ids = new Set(named.map((mark) => mark.place.id));
-  return [...named, ...asked.filter((mark) => !ids.has(mark.place.id))];
+  const wanted = new Set(asked.map((mark) => mark.place.id));
+  return [...named.map((mark) => (wanted.has(mark.place.id) || layers.includes("feature") ? mark : { ...mark, nameOnly: true })), ...asked.filter((mark) => !ids.has(mark.place.id))];
 }
 
 /**
