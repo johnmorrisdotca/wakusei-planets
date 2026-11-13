@@ -12,3 +12,4 @@ export { starLineSvg } from "./star-line.ts";
 export { LINEUP_SETS, LINEUP_STARS, lineupBodies, type LineupBody, type LineupSet, type RadiusBasis, type RadiusRow } from "./lineup/data.ts";
 export { LINEUP_LAYOUTS, lineupFocus, lineupProject, lineupView, lineupZoomFor, lineupZoomOf, placeLineup, type LineupDot, type LineupLayout, type LineupPlace, type LineupView } from "./lineup/layout.ts";
 export { lineupKm, lineupLabels, lineupLabelsSvg, lineupText, type LineupLabel, type LineupLang, type LineupText } from "./lineup/labels.ts";
+export { tilePoint } from "./scene/tiles.ts";

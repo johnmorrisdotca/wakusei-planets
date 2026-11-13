@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Sharper Moon and Mars maps, switched off until asked** (MODULES-1264). `pnpm tiles:moon` and `pnpm tiles:mars` cut level 4 (32768 pixels across) from the LROC WAC 100 m mosaic and the Viking MDIM 2.1 mosaic at 232 m. The Pages build runs them only when the repository variable `WAKUSEI_SHARP_TILES` is `1`, and does not download those files otherwise. `tilePoint` names the tile pixel of a longitude and latitude.
+
 ## [0.44.0] - 2026-11-13
 
 - **Names of the great features are written on a body** (MODULES-1231). When the body looked at is big enough, `surface-names` (on unless `off`) writes its most important named features on the surface: fame first, then size (`placeRank`). They face the camera, fade at the limb, and stay apart so they do not crowd: a name is not written over a dot of the places asked for, a craft or another body's dot, another body's name, or another feature name, and gives way when it would be. A number is how many. A press sends `wakusei-place`. Nothing is drawn for a name.

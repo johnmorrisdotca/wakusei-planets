@@ -2,6 +2,7 @@
 """Cut the big public-domain maps of the bodies into a tile pyramid of 512 px WebP tiles (see NOTICE.md and docs/guides/close-zoom.md).
 
     python3 -I scripts/make-body-tiles.py build [--cache DIR] [--out DIR] [--bodies mars,moon]
+    python3 -I scripts/make-body-tiles.py sharp [--bodies moon,mars]
     python3 -I scripts/make-body-tiles.py selftest
 
 Needs Python 3, Pillow and numpy (python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy, then run the venv's python with -I).
@@ -11,7 +12,7 @@ the Pages workflow builds them and serves them beside the demo, where `tiles/` i
 
 Every map is 2:1 equirectangular (longitude -180 to 180 across, 0 in the middle and east to the right, latitude 90 down to -90), the same as textures/<body>-2048.webp.
 Level L is 2048 * 2^L pixels wide, in 2^(L+2) columns and 2^(L+1) rows of 512 px tiles, so level 1 is 4096 across (8 x 4 tiles) and level 3 is 16384 (32 x 16 tiles). Level 0 is
-the package's own 2048 picture and is not cut. A body's top level is the largest one its source can fill without enlarging it.
+the package's own 2048 picture and is not cut. Level 4 (32768 across) for the Moon and Mars is the `sharp` command. It does not download its sources unless `WAKUSEI_SHARP_TILES=1`. A body's top level is the largest one its source can fill without enlarging it.
 
 The picture of a tile is the package's own 2048 picture, enlarged, with the source's fine detail added to it: the source is put on the same sphere the same way the 2048 picture
 was (the same roll, strip projection and desaturation), and what it has beyond the 2048 picture is added to the enlarged picture, where the source really holds data (not the black
@@ -19,7 +20,9 @@ of a pole nobody imaged, nor the poles a strip does not reach). So colour, grade
 Each level is made from the whole source in one go, never tile by tile, so neighbouring tiles agree along their shared edge and longitude 180 has no seam.
 """
 import argparse
+import contextlib
 import hashlib
+import io
 import json
 import math
 import os
@@ -442,15 +445,146 @@ def selftest():
     print("selftest ok")
 
 
+# Finer public-domain mosaics than the maps the ordinary build uses. They are not downloaded unless WAKUSEI_SHARP_TILES=1
+# (the Pages workflow sets that only when the repository variable of the same name is 1). A file whose SHA-256 is not the one here is never cut.
+# Read 2026-11-13. The Moon mosaic's access constraint on the USGS product page is "public domain". The Mars mosaic's is "Public domain".
+SHARP = {
+    "moon": {
+        "url": "https://planetarymaps.usgs.gov/mosaic/Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif",
+        "sha256": "87159ead1888ae31bb647e957ec60943022b707ec804cb5353a304575936fd55",
+        "file": "Lunar_LRO_LROC-WAC_Mosaic_global_100m_June2013.tif",
+        "credit": "NASA / GSFC / Arizona State University (LROC WAC global morphology mosaic, 100 m a pixel, June 2013), USGS Astrogeology",
+        "width": 109164,
+        "height": 54582,
+        "bands": 1,
+        "level": 4,
+        "quality": 78,
+    },
+    "mars": {
+        "url": "https://planetarymaps.usgs.gov/mosaic/Mars_Viking_MDIM21_ClrMosaic_global_232m.tif",
+        "sha256": "554f1170998b4cd00359defa48600307e52c49f921c282d842361ad45082aa31",
+        "file": "Mars_Viking_MDIM21_ClrMosaic_global_232m.tif",
+        "credit": "NASA / JPL / USGS (Viking MDIM 2.1 colour mosaic, 232 m a pixel, planetocentric, east of Airy-0)",
+        "width": 92160,
+        "height": 46080,
+        "bands": 3,
+        "level": 4,
+        "quality": 78,
+    },
+}
+
+
+def sharp(cache, out, names):
+    """Cut level 4 (32768 pixels across) for the Moon and Mars from the big mosaics. Does not download unless WAKUSEI_SHARP_TILES=1."""
+    if os.environ.get("WAKUSEI_SHARP_TILES") != "1":
+        print("WAKUSEI_SHARP_TILES is not 1: the Moon and Mars sources are not downloaded")
+        return
+    unknown = [n for n in names if n not in SHARP]
+    if unknown:
+        sys.exit(f"no sharp mosaic for: {', '.join(unknown)} (moon, mars)")
+    if shutil.which("gdal_translate") is None:
+        sys.exit("gdal_translate is not on PATH (the big mosaic is scaled down with it, so it is never loaded whole)")
+    os.makedirs(cache, exist_ok=True)
+    os.makedirs(out, exist_ok=True)
+    manifest_path = os.path.join(out, "manifest.json")
+    bodies = {}
+    if os.path.exists(manifest_path):
+        bodies = json.load(open(manifest_path, encoding="utf8")).get("bodies", {})
+    textures = os.path.join(ROOT, "textures")
+    for name in names:
+        source = SHARP[name]
+        path = os.path.join(cache, source["file"])
+        if not os.path.exists(path):
+            print(f"downloading {source['file']}", flush=True)
+            with urllib.request.urlopen(urllib.request.Request(source["url"], headers=UA), timeout=900) as response, open(path, "wb") as file:
+                shutil.copyfileobj(response, file)
+        digest = sha256_of(path)
+        if source["sha256"] == "":
+            raise SystemExit(f"{name}: sha256 {digest} (pin it in SHARP before the tiles are cut)")
+        if digest != source["sha256"]:
+            raise SystemExit(f"{path}: sha256 {digest} is not the expected {source['sha256']}")
+        level = source["level"]
+        width = BASE * 2**level
+        height = width // 2
+        if width > source["width"]:
+            raise SystemExit(f"{name}: level {level} ({width} across) would enlarge a source {source['width']} across")
+        raw = os.path.join(cache, f"{name}-{width}.raw")
+        if not os.path.exists(raw):
+            print(f"{name}: scaling to {width} x {height}", flush=True)
+            interleave = ["-co", "INTERLEAVE=BIP"] if source["bands"] == 3 else []
+            subprocess_check(["gdal_translate", "-q", "-outsize", str(width), str(height), "-ot", "Byte", "-of", "ENVI", *interleave, path, raw])
+        base = np.asarray(Image.open(os.path.join(textures, f"{name}-{BASE}.webp")).convert("RGB"), dtype=np.float32) / 255.0
+        shape = (height, width, 3) if source["bands"] == 3 else (height, width)
+        src = np.memmap(raw, dtype=np.uint8, mode="r", shape=shape)
+        entry = cut_sharp_strips(name, src, base, out, level, source["quality"])
+        print(f"{name} level {level}: {width} x {height}, {entry['tiles']} tiles, {entry['bytes'] / 1048576:.2f} MB", flush=True)
+        previous = bodies.get(name, {"levels": [], "tiles": 0, "bytes": 0})
+        levels = [one for one in previous.get("levels", []) if one.get("level") != level]
+        levels.append(entry)
+        levels.sort(key=lambda one: one["level"])
+        bodies[name] = {
+            **previous,
+            "levels": levels,
+            "tiles": sum(one["tiles"] for one in levels),
+            "bytes": sum(one["bytes"] for one in levels),
+            "sharp": {"file": source["file"], "url": source["url"], "sha256": digest, "credit": source["credit"], "width": source["width"], "height": source["height"]},
+        }
+    write_manifest(out, bodies)
+
+
+def subprocess_check(argv):
+    import subprocess
+    result = subprocess.run(argv)
+    if result.returncode != 0:
+        raise SystemExit(f"{' '.join(argv)} failed ({result.returncode})")
+
+
+def cut_sharp_strips(name, src, base, out, level, quality):
+    """Write one level from a memory-mapped picture, a strip at a time, so the whole map is never in memory. The colour is the 2048 picture's; the fine detail is the source's."""
+    height, width = src.shape[0], src.shape[1]
+    columns, rows = width // TILE, height // TILE
+    total = 0
+    grey = src.ndim == 2
+    for row in range(rows):
+        y0, y1 = row * TILE, (row + 1) * TILE
+        strip = np.asarray(src[y0:y1], dtype=np.float32) / 255.0
+        if grey:
+            strip = np.repeat(strip[..., None], 3, axis=2)
+        b0 = int(y0 * base.shape[0] / height)
+        b1 = max(b0 + 1, int(y1 * base.shape[0] / height))
+        band = np.asarray(Image.fromarray((base[b0:b1] * 255).astype(np.uint8)).resize((width, TILE), Image.BICUBIC), dtype=np.float32) / 255.0
+        low = np.asarray(Image.fromarray((strip * 255).astype(np.uint8)).filter(ImageFilter.BoxBlur(8)), dtype=np.float32) / 255.0
+        picture = np.clip(band + (strip - low), 0, 1)
+        image = Image.fromarray((picture * 255 + 0.5).astype(np.uint8))
+        for column in range(columns):
+            folder = os.path.join(out, name, str(level), str(column))
+            os.makedirs(folder, exist_ok=True)
+            path = os.path.join(folder, f"{row}.webp")
+            image.crop((column * TILE, 0, (column + 1) * TILE, TILE)).save(path, "WEBP", quality=quality, method=5)
+            total += os.path.getsize(path)
+    return {"level": level, "width": width, "height": height, "columns": columns, "rows": rows, "tiles": columns * rows, "bytes": total}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["build", "selftest"])
+    parser.add_argument("command", choices=["build", "selftest", "sharp"])
     parser.add_argument("--cache", default=os.path.join(ROOT, ".cache", "body-tiles"))
     parser.add_argument("--out", default=os.path.join(ROOT, ".cache", "body-tiles-out"))
     parser.add_argument("--bodies", default=",".join(SOURCES))
     args = parser.parse_args()
     if args.command == "selftest":
         selftest()
+        saved = os.environ.pop("WAKUSEI_SHARP_TILES", None)
+        gate = io.StringIO()
+        with contextlib.redirect_stdout(gate):
+            sharp(os.devnull, os.devnull, ["moon", "mars"])
+        if saved is not None:
+            os.environ["WAKUSEI_SHARP_TILES"] = saved
+        if "not downloaded" not in gate.getvalue():
+            raise SystemExit("the sharp cut ran with WAKUSEI_SHARP_TILES off")
+        return
+    elif args.command == "sharp":
+        sharp(args.cache, args.out, [n for n in args.bodies.split(",") if n])
     else:
         names = [n for n in args.bodies.split(",") if n]
         unknown = [n for n in names if n not in SOURCES]

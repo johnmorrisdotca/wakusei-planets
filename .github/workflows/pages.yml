@@ -33,9 +33,12 @@ jobs:
         id: tiles
         with:
           path: .cache/body-tiles-out
-          key: body-tiles-${{ hashFiles('scripts/make-body-tiles.py', 'textures/*-2048.webp') }}
+          key: body-tiles-${{ hashFiles('scripts/make-body-tiles.py', 'textures/*-2048.webp') }}-${{ vars.WAKUSEI_SHARP_TILES }}
       - if: steps.tiles.outputs.cache-hit != 'true'
         run: pnpm tiles
+      - name: Sharper Moon and Mars tiles (off until the repository variable WAKUSEI_SHARP_TILES is 1; the sources are not downloaded otherwise)
+        if: vars.WAKUSEI_SHARP_TILES == '1' && steps.tiles.outputs.cache-hit != 'true'
+        run: sudo apt-get install -y gdal-bin && WAKUSEI_SHARP_TILES=1 pnpm tiles:moon && WAKUSEI_SHARP_TILES=1 pnpm tiles:mars
       - run: pnpm site
       - run: pnpm docs:site
       - uses: ./.github/actions/playwright
