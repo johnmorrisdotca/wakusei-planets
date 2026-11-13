@@ -121,3 +121,47 @@ test("a drag that starts on a name turns the body, and a tap on a name picks the
   await page.mouse.up();
   await expect.poll(() => main.evaluate((el) => (el as unknown as { _picked?: string })._picked ?? "")).toMatch(/^mars\//);
 });
+
+// With the names on (the default), the turns still work on a body that has names: measured by the view's own state, not by pixels.
+test.describe("Venus painted with its names on", () => {
+  const open = async (page: import("@playwright/test").Page) => {
+    await page.goto("/wakusei-planets/?body=venus&look=painted");
+    const main = page.locator("#main");
+    await main.hover();
+    await expect(main).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+    await page.locator("#controls").evaluate((el) => (el as unknown as { pause(): void }).pause());
+    expect(await main.getAttribute("surface-names"), "the names are on by default").toBeNull();
+    const names = () => main.evaluate((el) => [...(el.shadowRoot?.querySelectorAll("[data-name]") ?? [])].map((node) => {
+      const r = node.getBoundingClientRect();
+      return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 };
+    }));
+    await expect.poll(async () => (await names()).length, { timeout: 60_000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(1500);
+    const yaw = () => page.locator("#controls").evaluate((el) => Number((Reflect.get(el, "state") as { yaw: number }).yaw));
+    return { main, names, yaw };
+  };
+
+  test("a drag that starts on a name turns the view", async ({ page }) => {
+    const { main, names, yaw } = await open(page);
+    const box = (await main.boundingBox())!;
+    const mid = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    const start = [...(await names())].sort((a, b) => Math.hypot(a.x - mid.x, a.y - mid.y) - Math.hypot(b.x - mid.x, b.y - mid.y))[0]!;
+    const before = await yaw();
+    await page.mouse.move(start.x, start.y);
+    await page.mouse.down();
+    await page.mouse.move(start.x + 40, start.y, { steps: 5 });
+    await page.mouse.move(start.x + 90, start.y, { steps: 5 });
+    await page.mouse.up();
+    await page.waitForTimeout(500);
+    expect(Math.abs((await yaw()) - before), "the view's yaw turned by the drag").toBeGreaterThan(1);
+  });
+
+  test("the arrow keys turn the view", async ({ page }) => {
+    const { yaw } = await open(page);
+    const before = await yaw();
+    await page.locator("#view").focus();
+    for (let i = 0; i < 3; i += 1) await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(500);
+    expect(Math.abs((await yaw()) - before), "the view's yaw turned by the arrow key").toBeGreaterThan(1);
+  });
+});
