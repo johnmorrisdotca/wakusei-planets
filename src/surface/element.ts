@@ -55,11 +55,14 @@ const TEMPLATE = `<style>
 #callouts { margin: 0; padding: 0; list-style: none; }
 #callouts li { opacity: 0.75; }
 #callouts li:last-child { opacity: 1; font-weight: 600; }
+#marker { position: absolute; left: 0; top: 0; width: 24px; height: 24px; margin: -12px 0 0 -12px; box-sizing: border-box; border: 1.5px solid rgba(255, 255, 255, 0.9); border-radius: 50%; box-shadow: 0 0 3px #000; pointer-events: none; will-change: transform; }
+#markerText { position: absolute; left: 0; top: 0; margin: 0; font: 600 11px/1.2 system-ui, sans-serif; color: #fff; text-shadow: 0 0 3px #000, 0 0 3px #000; white-space: nowrap; pointer-events: none; will-change: transform; }
+#marker[hidden], #markerText[hidden] { display: none; }
 #curve { position: absolute; left: 0; right: 0; bottom: 50px; margin: 0; font-size: 11px; color: #c8ccd4; }
 #stick { position: absolute; left: 18px; bottom: 44px; width: 104px; height: 104px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); touch-action: none; }
 #stick[hidden] { display: none; }
 #knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); pointer-events: none; }
-</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="labels"></div><div id="landing" hidden><p id="clock"></p><ul id="callouts"></ul><p id="curve"></p></div><p id="about" role="status" hidden></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
+</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="labels"></div><div id="landing" hidden><span id="marker" hidden></span><span id="markerText" hidden></span><p id="clock"></p><ul id="callouts"></ul><p id="curve"></p></div><p id="about" role="status" hidden></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
 
 const num = (value: string | null, fallback: number): number => {
   const n = value === null || value.trim() === "" ? NaN : Number(value);
@@ -660,11 +663,13 @@ export class WakuseiSurface extends HTMLElement {
   set landingTime(value: number) {
     const l = this.#landing;
     if (l === undefined) return;
+    const old = l.t;
     l.t = Math.min(LANDING.duration, Math.max(0, value));
-    // a seek forward announces the latest moment it passes (the picture lists the last three)
-    this.#dust = new DustField(900, 17);
+    // a seek forward announces the latest moment it passes (the picture lists the last three); a step of a second or less carries the dust on, a jump or a step back starts it afresh
+    const delta = l.t - old;
+    if (delta < 0 || delta > 1) this.#dust = new DustField(20000, 17);
     this.#landingAt = performance.now();
-    this.#landingFrame(0, true);
+    this.#landingFrame(delta > 0 && delta <= 1 ? delta : 0, true);
   }
 
   /** How fast the descent runs: 1 is the real time of it (12 minutes 5 seconds); 2, 4 and 8 are quicker. */
@@ -735,7 +740,7 @@ export class WakuseiSurface extends HTMLElement {
     }
     this.#landing = { t: camera === "ground" ? 540 : LANDING.viewStart, playing: true, rate: 1, camera, from, passed: 0, second: -1 };
     this.#landing.passed = calloutsBy(this.#landing.t).length;
-    this.#dust = new DustField(900, 17);
+    this.#dust = new DustField(20000, 17);
     this.#camOffset = { azimuth: 0, pitch: 0 };
     for (const el of this.#labelEls.values()) el.hidden = true;
     this.choose(undefined);
@@ -759,14 +764,16 @@ export class WakuseiSurface extends HTMLElement {
     this.#time = LANDING.ignition + l.t * 1000;
     // the dust of the blast: from the altitude the Commander first saw it (60 to 70 ft), outward along the ground from under the engine, faster the nearer the ground
     if (seconds > 0 && pose.altitude < 21.3 && l.t < LANDING.duration) {
-      const strength = Math.sqrt(1 - pose.altitude / 21.3) * pose.throttle;
-      const grains = strength * 260 * seconds;
+      // the report's dust is a low sheet driven outward along the ground, thickest in the last metres: most grains leave nearly flat and fast, a few higher
+      const strength = Math.pow(1 - pose.altitude / 21.3, 0.7) * pose.throttle;
+      const grains = strength * 12000 * seconds;
       for (let k = 0; k < grains + Math.random() * 0.999; k += 1) {
         const a = Math.random() * Math.PI * 2;
-        const r0 = 1.5 + Math.random() * 2;
-        const v = 5 + Math.random() * 20;
+        const r0 = 1.5 + Math.random() * 3;
+        const v = 6 + Math.random() * 26;
+        const lift = Math.random() < 0.85 ? 0.35 + Math.random() * 0.9 : 1.2 + Math.random() * 3;
         const [e, n] = [lx + Math.sin(a) * r0, ly + Math.cos(a) * r0];
-        this.#dust.emit([e, ground(e, n) + 0.15, n], [Math.sin(a) * v, 0.5 + Math.random() * 2.5, Math.cos(a) * v], 3.5);
+        this.#dust.emit([e, ground(e, n) + 0.3, n], [Math.sin(a) * v, lift, Math.cos(a) * v], 4);
       }
     }
     if (seconds > 0) this.#dust.step(seconds, ground);
@@ -784,6 +791,34 @@ export class WakuseiSurface extends HTMLElement {
       const pitch = (Math.atan2(lz + pose.altitude + 3.4 - this.#landingEyeUp, horizontal) * 180) / Math.PI;
       this.#look = clampLook({ azimuth: azimuth + this.#camOffset.azimuth, pitch: pitch + this.#camOffset.pitch, fov: this.#look.fov });
     }
+    // the marker: while the stage is smaller than about 6 pixels in the ground camera a ring and its height mark where it is, fading out as it grows
+    const ring = this.#root.getElementById("marker") as HTMLElement;
+    const ringText = this.#root.getElementById("markerText") as HTMLElement;
+    let showRing = false;
+    if (l.camera === "ground") {
+      const box = this.getBoundingClientRect();
+      const [w, h] = [box.width, box.height];
+      const vp = viewProjection([this.#at.east, this.#landingEyeUp, -this.#at.north], this.#look, w / Math.max(1, h));
+      const [x, y, z] = [lx, lz + pose.altitude + 3.4, -ly];
+      const cw = vp[3]! * x + vp[7]! * y + vp[11]! * z + vp[15]!;
+      const px = cw > 0 ? (7 * h) / 2 / (cw * Math.tan((this.#look.fov * Math.PI) / 360)) : 0;
+      const fade = Math.min(1, Math.max(0, (9 - px) / 5));
+      if (cw > 0 && fade > 0) {
+        const nx = (vp[0]! * x + vp[4]! * y + vp[8]! * z + vp[12]!) / cw;
+        const ny = (vp[1]! * x + vp[5]! * y + vp[9]! * z + vp[13]!) / cw;
+        if (Math.abs(nx) < 1 && Math.abs(ny) < 1) {
+          showRing = true;
+          const [sx, sy] = [((nx + 1) / 2) * w, ((1 - ny) / 2) * h];
+          ring.style.transform = `translate(${sx}px, ${sy}px)`;
+          ring.style.opacity = String(fade);
+          ringText.textContent = `${Math.round(pose.altitude).toLocaleString(this.#lang() === "ja" ? "ja-JP" : "en-US")} m`;
+          ringText.style.transform = `translate(${sx + 16}px, ${sy - 7}px)`;
+          ringText.style.opacity = String(fade);
+        }
+      }
+    }
+    ring.hidden = !showRing;
+    ringText.hidden = !showRing;
     // the words: the clock and what the lunar module is doing, and the reported moments as they pass
     const clock = clockText(l.t);
     const ja = this.#lang() === "ja";

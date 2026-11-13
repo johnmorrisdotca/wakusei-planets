@@ -541,7 +541,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       // the dust: one small square for each grain in the pool, in the corners of a fixed set of triangles
       let dustMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
       let dustMaterial: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
-      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.022 } };
+      const dustUniforms = { uVP: uniforms.uVP, uRight: { value: new T.Vector3(1, 0, 0) }, uUp: { value: new T.Vector3(0, 1, 0) }, uSize: { value: 0.022 }, uEyeWorld: { value: new T.Vector3() }, uMinAngle: { value: 0 } };
       const makeDust = (state: SurfaceState): void => {
         const grains = state.dust;
         if (grains === undefined) {
@@ -574,7 +574,9 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const axes = cameraAxes(state.look);
         dustUniforms.uRight.value.set(axes.right[0], axes.right[1], axes.right[2]);
         dustUniforms.uUp.value.set(axes.up[0], axes.up[1], axes.up[2]);
-        dustUniforms.uSize.value = state.lander === undefined ? 0.022 : 0.07; // a blast's grains are thrown wider and bigger than a wheel's
+        dustUniforms.uSize.value = state.lander === undefined ? 0.022 : 0.09;
+        dustUniforms.uEyeWorld.value.set(state.eye.east, state.eye.up, -state.eye.north);
+        dustUniforms.uMinAngle.value = state.lander === undefined ? 0 : 2.6 * fullPixel; // seen from far off a grain still shows as about two pixels // a blast's grains are thrown wider and bigger than a wheel's
         dustMesh.visible = true;
       };
       // the lunar module coming down: its parts placed at each draw (a few thousand corners), its shadow on the ground far below it, and its plume

@@ -479,10 +479,14 @@ uniform mat4 uVP;
 uniform vec3 uRight;
 uniform vec3 uUp;
 uniform float uSize;
+uniform vec3 uEyeWorld;
+uniform float uMinAngle; // the least a grain shows as, in radians (a blast seen from far off)
 varying vec2 vUv;
 void main() {
   vUv = uv * 2.0 - 1.0;
-  vec3 w = vec3(position.x, position.y, -position.z) + (uRight * vUv.x + uUp * vUv.y) * uSize;
+  vec3 c = vec3(position.x, position.y, -position.z);
+  float size = max(uSize, distance(c, uEyeWorld) * uMinAngle);
+  vec3 w = c + (uRight * vUv.x + uUp * vUv.y) * size;
   gl_Position = uVP * vec4(w, 1.0);
 }
 `;
@@ -493,7 +497,7 @@ varying vec2 vUv;
 void main() {
   float r = length(vUv);
   if (r > 1.0) discard;
-  gl_FragColor = vec4(vec3(0.6), 0.55 * (1.0 - r * r));
+  gl_FragColor = vec4(vec3(0.62), 0.32 * (1.0 - r * r));
 }
 `;
 

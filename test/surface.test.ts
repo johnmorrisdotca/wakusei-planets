@@ -587,6 +587,7 @@ test("the events come in order, the report's times are the table's, and the alti
   assert.equal(at("low-gate").t, 10 * 60 + 58);
   assert.equal(at("throttle").t, 7 * 60 + 26);
   assert.equal(at("touchdown").t, 12 * 60 + 5);
+  assert.ok(Math.abs(landingAt(at("high-gate").t).altitude - 7_500 * 0.3048) < 1, "the high gate is where the report puts the pitchover, about 7,500 ft");
   assert.equal(at("dust").reported, false);
   assert.ok(Math.abs(landingAt(at("dust").t).altitude - 70 * 0.3048) < 1.5, "dust at 60 to 70 ft");
   assert.ok(Math.abs(landingAt(at("manual").t).altitude - 300 * 0.3048) < 3, "manual takeover just under 300 ft");
