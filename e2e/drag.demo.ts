@@ -19,6 +19,8 @@ const WINDOW: [number, number, number, number] = [0.42, 0.58, 0.42, 0.58];
 /** `upright`: the body's axis is set straight up for the check, as a drag turns it about its own axis, so a body whose axis leans on the page (Mars, 25 degrees) moves along a slanted path. */
 async function open(page: Page, body: string, look: string, upright = false): Promise<void> {
   await page.goto(`${URL}?body=${body}&look=${look}`);
+  // what is measured is the surface under the pointer: the written names of its features, on by default, move and fade with it and are left off here
+  await page.locator("#main").evaluate((el) => el.setAttribute("surface-names", "off"));
   if (upright) await page.locator("#main").evaluate((el) => el.setAttribute("tilt", "0"));
   const main = page.locator("#main");
   if (look !== "line") {
