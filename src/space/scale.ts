@@ -224,6 +224,53 @@ export function moonDistance(mode: ScaleMode, host: SpacePlanet | SpaceDwarf, di
   return Math.min(distance, near + (far - near) * Math.sqrt(distance / reach));
 }
 
+/** The squeezed view draws moons this many times their real size, unless a moon would pass a limit. 1 is today's size. True distances ignore it. */
+export const MOON_SIZE_DEFAULT = 2;
+
+/**
+ * How many times larger than life to draw a planet's moons in the squeezed view. Every moon gets the same factor, so they keep their real order of size. The factor is the one asked for, or less when that would draw a moon bigger than a quarter of its planet, into the planet or its rings, or across to the next moon's orbit. True scale always returns 1 and is not clamped.
+ *
+ * @param mode - The scale. `true` ignores `size`.
+ * @param host - The planet the moons go round.
+ * @param size - The factor asked for (1, 2, 4, 8, or any number from 1 to 8).
+ * @param moons - Each moon's radius and orbital distance, both in radii of the planet. The distance is the one `moonDistance` draws.
+ * @returns The factor to use, and whether it is less than the one asked for.
+ *
+ * @example
+ * ```ts
+ * import { moonSizeFactor } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(moonSizeFactor("true", "jupiter", 4, [{ radius: 0.04, orbit: 6 }]).factor);
+ * ```
+ */
+export function moonSizeFactor(mode: ScaleMode, host: SpacePlanet | SpaceDwarf, size: number, moons: readonly { radius: number; orbit: number }[]): { factor: number; clamped: boolean } {
+  if (mode !== "compressed") return { factor: 1, clamped: false };
+  const asked = Math.min(8, Math.max(1, Number.isFinite(size) ? size : MOON_SIZE_DEFAULT));
+  const bands = BODIES[host].rings ?? [];
+  const ringOuter = bands.length === 0 ? 0 : Math.max(...bands.map((band) => band.to)) / BODIES[host].radiusKm;
+  let factor = asked;
+  for (const moon of moons) {
+    if (!(moon.radius > 0)) continue;
+    let cap = 0.25;
+    cap = Math.min(cap, Math.max(moon.radius, moon.orbit - 1.05));
+    if (ringOuter > 0 && moon.orbit > ringOuter + 0.05) cap = Math.min(cap, Math.max(moon.radius, moon.orbit - ringOuter - 0.05));
+    for (const other of moons) {
+      if (other === moon) continue;
+      cap = Math.min(cap, Math.max(moon.radius, Math.abs(moon.orbit - other.orbit) * 0.9));
+    }
+    factor = Math.min(factor, cap / moon.radius);
+  }
+  factor = Math.max(1, factor);
+  return { factor, clamped: factor + 1e-6 < asked };
+}
+
+/** Read a `moon-size` attribute or property: a number from 1 to 8, or 2 when it is missing or not a number. */
+export function readMoonSize(value: string | number | null | undefined): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return MOON_SIZE_DEFAULT;
+  return Math.min(8, Math.max(1, n));
+}
+
 /** The nearest a moon is drawn to its planet in a compressed view, in the planet's radii: outside the globe, and outside its rings with a little room, so the moon never sits in the ring plane. */
 function nearestOf(host: SpacePlanet | SpaceDwarf): number {
   const facts = BODIES[host];

@@ -38,6 +38,7 @@ const pick = <T extends string>(value: string | null, allowed: readonly T[], fal
 const DEFAULT_SPEED = 3600;
 const state = {
   scale: pick(address.get("scale"), ["compressed", "true"], "true"),
+  moonSize: pick(address.get("moonsize"), ["1", "2", "4", "8"], "2"),
   look: pick(address.get("look"), ["realistic", "painted"], "realistic"),
   light: pick(address.get("light"), ["sun", "lit"], "sun"),
   orbits: address.get("orbits") !== "0",
@@ -89,6 +90,7 @@ let appliedRide: string | undefined;
 
 function render(): void {
   space.scale = state.scale;
+  space.moonSize = Number(state.moonSize);
   space.look = state.look;
   space.light = state.light;
   space.orbits = state.orbits;
@@ -111,6 +113,7 @@ function render(): void {
   // the speed is set after the date, so a clock that holds tells the page the date it was set to
   space.speed = state.play ? state.speed : 0;
   for (const b of $$("#scales [data-scale]")) pressed(b, b.dataset["scale"] === state.scale);
+  for (const b of $$("#moon-sizes [data-moon-size]")) pressed(b, b.dataset["moonSize"] === state.moonSize);
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
   for (const b of $$("#lights [data-light]")) pressed(b, b.dataset["light"] === state.light);
   for (const b of $$("#gotos [data-goto]")) pressed(b, b.dataset["goto"] === state.goto);
@@ -159,6 +162,7 @@ function render(): void {
   if (!state.play && document.activeElement !== when) when.value = localValue(state.time === "now" ? space.time : Date.parse(state.time));
   scaleNote.textContent = say(state.scale === "true" ? "sp_note_true" : "sp_note_compressed");
   address.set("scale", state.scale === "true" ? null : state.scale);
+  address.set("moonsize", state.moonSize === "2" ? null : state.moonSize);
   address.set("look", state.look === "realistic" ? null : state.look);
   address.set("light", state.light === "sun" ? null : state.light);
   address.set("orbits", state.orbits ? null : "0");
@@ -190,6 +194,7 @@ function goTo(preset: SpacePreset): void {
 }
 
 for (const b of $$("#scales [data-scale]")) b.addEventListener("click", () => ((state.scale = b.dataset["scale"] as typeof state.scale), render()));
+for (const b of $$("#moon-sizes [data-moon-size]")) b.addEventListener("click", () => ((state.moonSize = b.dataset["moonSize"] as typeof state.moonSize), render()));
 for (const b of $$("#looks [data-look]")) b.addEventListener("click", () => ((state.look = b.dataset["look"] as typeof state.look), render()));
 for (const b of $$("#lights [data-light]")) b.addEventListener("click", () => ((state.light = b.dataset["light"] as typeof state.light), render()));
 for (const b of $$("#gotos [data-goto]")) b.addEventListener("click", () => goTo(b.dataset["goto"] as SpacePreset));
