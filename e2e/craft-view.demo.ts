@@ -35,11 +35,14 @@ test("deep-space craft are drawn, Voyager 1 is beyond the Earth's view, a press 
     const button = el.shadowRoot?.querySelector('.sp-label[data-body="voyager1"]') as HTMLButtonElement | null;
     return button !== null && !button.hidden;
   })).toBe(true);
+  const view = () => space.evaluate((el) => JSON.stringify({ state: (el as unknown as { controller: { state: unknown } }).controller.state, body: (el as unknown as { body: string }).body }));
+  const viewBefore = await view();
   const clicked = space.evaluate((el) => new Promise((resolve) => {
     el.addEventListener("wakusei-body-click", (event) => resolve((event as CustomEvent<{ kind: string; id: string }>).detail), { once: true });
     (el.shadowRoot?.querySelector('.sp-label[data-body="voyager1"]') as HTMLButtonElement).click();
   }));
   await expect.poll(() => clicked).toMatchObject({ id: "voyager1", kind: "spacecraft" });
+  expect(await view(), "a pick does not move the camera").toBe(viewBefore);
 
   await space.evaluate((el) => {
     (el as unknown as { time: number }).time = Date.UTC(1980, 0, 1);
@@ -48,4 +51,27 @@ test("deep-space craft are drawn, Voyager 1 is beyond the Earth's view, a press 
     const stats = (el as unknown as { stats: { spacecraft: { drawn: string[]; status: Record<string, string> } } }).stats.spacecraft;
     return { drawn: stats.drawn.slice().sort(), juno: stats.status.juno, voyager: stats.drawn.includes("voyager1") };
   })).toEqual({ drawn: ["pioneer10", "pioneer11", "voyager1", "voyager2"], juno: "outside", voyager: true });
+});
+
+test("a craft's name can be focused without a fault, and the Roadster is not drawn twice when its own switch is on", async ({ page }) => {
+  const faults: string[] = [];
+  page.on("pageerror", (error) => faults.push(error.message));
+  await page.goto(`${PAGE}&starman=1`);
+  const space = page.locator("wakusei-space");
+  await expect(space).toHaveAttribute("data-state", "live", { timeout: 120_000 });
+  await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { spacecraft: { count: number } } }).stats.spacecraft.count), { timeout: 60_000 }).toBeGreaterThan(4);
+  const drawn = await space.evaluate((el) => (el as unknown as { stats: { spacecraft: { drawn: string[]; status: Record<string, string> } } }).stats.spacecraft);
+  expect(drawn.drawn).not.toContain("roadster");
+  expect(drawn.status["roadster"]).toBeUndefined();
+  await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { roadster: { shown: boolean } } }).stats.roadster.shown)).toBe(true);
+
+  const focused = space.evaluate((el) => new Promise((resolve) => {
+    el.addEventListener("wakusei-body-focus", (event) => resolve((event as CustomEvent<{ kind: string; id: string }>).detail), { once: true });
+    const names = el.shadowRoot?.querySelectorAll<HTMLButtonElement>(".sp-label[data-body]") ?? [];
+    const one = Array.from(names).find((button) => button.dataset["body"] === "voyager2" || button.dataset["body"] === "pioneer10" || button.dataset["body"] === "voyager1");
+    one?.dispatchEvent(new FocusEvent("focusin", { bubbles: true, composed: true }));
+    if (one === undefined) resolve(null);
+  }));
+  expect(await focused).toMatchObject({ kind: "spacecraft" });
+  expect(faults).toEqual([]);
 });

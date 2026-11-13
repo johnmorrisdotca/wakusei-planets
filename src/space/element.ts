@@ -2279,7 +2279,9 @@ export class WakuseiSpace extends HTMLElement {
   #labelFocus = (event: Event): void => {
     const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
     if (!id) return;
-    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    // a craft's name is no body: focus tells the page its id and name, as a press does
+    const craft = (id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id));
+    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: craft ? { id, name: this.#nameOf(id), kind: "spacecraft" } : this.bodyInfo(id), bubbles: true, composed: true }));
     this.#hover(id, "focus");
   };
 

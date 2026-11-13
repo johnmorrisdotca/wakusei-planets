@@ -1180,6 +1180,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           if (craftPoints !== null) {
             let n = 0;
             for (const craft of craftList) {
+              // the Roadster has its own drawing when `roadster` is on: it is not drawn twice
+              if (craft.id === "roadster" && model.roadster) continue;
               if (craft.au === null) {
                 craftStatus[craft.id] = "outside";
                 continue;
