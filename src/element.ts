@@ -28,7 +28,7 @@ import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type Th
 import { NAME_LABEL_ATTRIBUTES, nameLabelKey, nameLabelText, readNameLabel, type NameLabelOptions } from "./scene/name-label.ts";
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
-import { turn as turnVec, type Vec3 } from "./vec.ts";
+import { cross, RAD, turn as turnVec, type Vec3 } from "./vec.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "./places.ts";
 import { marksToShow, readPlaceLayers, readSurfaceNames, turnToPlace, type PlaceLayer } from "./place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "./scene/place-layer.ts";
@@ -316,6 +316,46 @@ export class WakuseiBody extends HTMLElement {
   }
 
   /**
+   * Which point of the body is in the middle of the picture, as a longitude (east) and latitude (north) in the body's own fixed frame: what the camera looks straight down on, with the view's turn, tilt
+   * and roll and the pose of the date (or the portrait) counted in. `faceTo` is the other way round. `undefined` for a star.
+   *
+   * @returns The point, or `undefined`.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiBody } from "@johnmorrisdotca/wakusei-planets/element";
+   *
+   * const body = document.querySelector<WakuseiBody>("wakusei-body")!;
+   * console.log(body.subCameraPoint());
+   * ```
+   */
+  subCameraPoint(): { lon: number; lat: number } | undefined {
+    if (this.hasAttribute("star")) return undefined;
+    const { pose } = this.#sceneOf(this.#frameNow());
+    const east = cross(pose.pole, pose.meridian);
+    return { lon: Math.atan2(east[2], pose.meridian[2]) / RAD, lat: Math.asin(Math.max(-1, Math.min(1, pose.pole[2]))) / RAD };
+  }
+
+  /**
+   * Turn the body so a point of it (east longitude, north latitude, degrees) is in the middle of the disc: the turn `goToPlace` makes, for a point instead of a named place (at once for a still, for a reader who
+   * prefers reduced motion, or with `smooth: false`); the zoom stays.
+   *
+   * @param point - The longitude and latitude to bring to the middle.
+   * @param options - `smooth` (true by default).
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiBody } from "@johnmorrisdotca/wakusei-planets/element";
+   *
+   * document.querySelector<WakuseiBody>("wakusei-body")!.faceTo({ lon: 139.7, lat: 35.7 }, { smooth: false });
+   * ```
+   */
+  faceTo(point: { lon: number; lat: number }, options: { smooth?: boolean } = {}): void {
+    if (this.hasAttribute("star") || !Number.isFinite(point.lon) || !Number.isFinite(point.lat)) return;
+    this.#turnTo(point.lat, point.lon, options.smooth);
+  }
+
+  /**
    * Turn the body so a place is in the middle of the disc, at a pace you can follow while the picture is live (at once for a still, for a reader who prefers reduced motion, or with `smooth: false`); the zoom stays. The place is an id (`moon/apollo-11-lunar-module`),
    * or an English or Japanese name. A body that turns by itself carries the place on from there (`turn="0"` keeps it). Resolves the place, or `undefined` when the body has no place by that name.
    *
@@ -327,8 +367,14 @@ export class WakuseiBody extends HTMLElement {
     const list = await this.#loadPlaces();
     const place = list === undefined ? undefined : findPlace(list, text);
     if (place === undefined) return undefined;
+    this.#turnTo(place.lat, place.lon, options.smooth);
+    return place;
+  }
+
+  /** Turn the body so a point of it (latitude, east longitude, degrees) is in the middle of the disc: the glide of `goToPlace` and `faceTo`. */
+  #turnTo(lat: number, lon: number, smooth: boolean | undefined): void {
     const frame = this.#frameNow();
-    const aim = turnToPlace(frame.pose.pole, frame.pose.meridian, place.lat, place.lon);
+    const aim = turnToPlace(frame.pose.pole, frame.pose.meridian, lat, lon);
     const to = { yaw: aim.yaw, tilt: this.#pitchDelta - aim.tilt };
     const from = { yaw: this.#yaw, tilt: this.#tilt };
     // the shorter way round
@@ -340,9 +386,9 @@ export class WakuseiBody extends HTMLElement {
     };
     const glide = (this.#placeGlide += 1);
     // a still (not live) is made again for every change of view: it goes there at once
-    if (options.smooth === false || this.#reduce || this.#view?.live !== true || typeof requestAnimationFrame !== "function") {
+    if (smooth === false || this.#reduce || this.#view?.live !== true || typeof requestAnimationFrame !== "function") {
       apply(to.yaw, to.tilt, true);
-      return place;
+      return;
     }
     const start = performance.now();
     const step = (): void => {
@@ -353,7 +399,6 @@ export class WakuseiBody extends HTMLElement {
       if (k < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-    return place;
   }
 
   /** The body's list of places, loaded the first time it is asked for; `undefined` for a body that has none. */
