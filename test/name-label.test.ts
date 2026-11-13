@@ -68,9 +68,13 @@ test("the tone of the letters comes from the body's own colour: dark on Venus, S
   for (const id of ["mars", "moon", "earth", "neptune", "jupiter", "pluto", "ganymede", "callisto", "mercury", "ceres"] as const) assert.equal(nameTone(BODIES[id].colour), "light", id);
   // dark letters are the burned look and pale ones the painted look; the outline has one tone; a forced tone wins over the body's
   assert.equal(nameLabelLook({ look: "painted" }, BODIES.uranus.colour), "burned");
-  assert.equal(nameLabelLook({ look: "etched" }, BODIES.uranus.colour), "burned");
+  // auto changes only `painted`: a look the page names is drawn as asked
+  assert.equal(nameLabelLook({ look: "etched" }, BODIES.uranus.colour), "etched");
   assert.equal(nameLabelLook({ look: "painted" }, BODIES.mars.colour), "painted");
-  assert.equal(nameLabelLook({ look: "burned" }, BODIES.mars.colour), "painted");
+  assert.equal(nameLabelLook({ look: "burned" }, BODIES.mars.colour), "burned");
+  assert.equal(nameLabelLook({ look: "painted", tone: "auto" }, BODIES.mars.colour), "painted");
+  assert.equal(nameLabelLook({ look: "burned", tone: "light" }, BODIES.mars.colour), "painted");
+  assert.equal(nameLabelLook({ look: "etched", tone: "dark" }, BODIES.mars.colour), "burned");
   assert.equal(nameLabelLook({ look: "burned" }, BODIES.uranus.colour), "burned");
   assert.equal(nameLabelLook({ look: "outline" }, BODIES.uranus.colour), "outline");
   assert.equal(nameLabelLook({ look: "painted", tone: "light" }, BODIES.uranus.colour), "painted");

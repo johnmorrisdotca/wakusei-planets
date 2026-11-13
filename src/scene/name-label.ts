@@ -39,7 +39,7 @@ export interface NameLabelOptions {
   minRadiusPx?: number;
   /**
    * The tone of the letters, so the name reads on every body: `auto` (the default) takes dark letters on a light body and pale letters on a dark one, from the body's own colour (`nameTone`); `light` and
-   * `dark` force one. Dark letters are the `burned` look, pale ones the `painted` look; `outline` has one tone only and keeps it.
+   * `dark` force one. Dark letters are the `burned` look, pale ones the `painted` look. `auto` changes only a `painted` look; the look a page names (`etched`, `outline`, `burned`) is drawn as asked.
    */
   tone?: NameLabelTone;
 }
@@ -129,25 +129,25 @@ export function nameTone(colour: string): "light" | "dark" {
 }
 
 /**
- * The look a name is drawn in once its tone is settled: `painted` and `etched` (pale letters) become `burned` (dark ones) where the tone is dark, and `burned` becomes `painted` where it is light; `outline`
- * has only one tone and is left alone. The tone is the label's own `tone`, or, for `auto` and for none, the body's (`nameTone`).
+ * The look a name is drawn in once its tone is settled. A tone the page forces (`light` or `dark`) wins: `dark` makes `painted` and `etched` the dark `burned` look, and `light` makes `burned` the pale `painted` look. With `auto` (or no
+ * tone) only a `painted` look is changed, to `burned` on a light body (`nameTone`); `etched`, `burned` and `outline` are drawn as the page asked. `outline` has one tone and is never changed.
  *
  * @param options - The label's look and tone.
- * @param colour - The body's mean colour, `#rrggbb`; left out, `auto` is `light`.
+ * @param colour - The body's mean colour, `#rrggbb`; left out, `auto` leaves the look as it is.
  * @returns The look to draw.
  *
  * @example
  * ```ts
  * import { nameLabelLook } from "@johnmorrisdotca/wakusei-planets/painter";
  *
- * console.log(nameLabelLook({ look: "painted" }, "#a9e0e5"), nameLabelLook({ look: "painted", tone: "light" }, "#a9e0e5"));
+ * console.log(nameLabelLook({ look: "painted" }, "#a9e0e5"), nameLabelLook({ look: "painted", tone: "light" }, "#a9e0e5"), nameLabelLook({ look: "etched" }, "#a9e0e5"));
  * ```
  */
 export function nameLabelLook(options: Pick<NameLabelOptions, "look" | "tone">, colour?: string): BodyLabelLook {
-  const tone = options.tone === undefined || options.tone === "auto" ? (colour === undefined ? "light" : nameTone(colour)) : options.tone;
   if (options.look === "outline") return "outline";
-  if (tone === "dark") return "burned";
-  return options.look === "burned" ? "painted" : options.look;
+  if (options.tone === "dark") return "burned";
+  if (options.tone === "light") return options.look === "burned" ? "painted" : options.look;
+  return options.look === "painted" && colour !== undefined && nameTone(colour) === "dark" ? "burned" : options.look;
 }
 
 /**
