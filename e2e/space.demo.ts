@@ -25,12 +25,13 @@ interface SpaceStats {
 const statsOf = (page: Page): Promise<SpaceStats> => page.locator(SPACE).evaluate((el) => Reflect.get(el, "stats") as SpaceStats);
 const settle = (page: Page, ms = 600) => page.waitForTimeout(ms);
 /**
+ * `moons: false` is for a view whose clock runs and which is out of sight: it holds the moons it last drew, and lets them go only when it draws, so the held count does not come to the moons' for good. A view at rest keeps the default.
  * Wait until every surface picture has arrived (`stats.pictures.pending` is 0) and then until no GL draw call lands for `quietMs`. A sharper picture draws one frame when it arrives, so the quiet window starts after the fetch, not after a fixed time. A view that never stops drawing never gets here and fails.
  */
-async function untilQuiet(page: Page, quietMs = 1500): Promise<void> {
+async function untilQuiet(page: Page, quietMs = 1500, { moons = true }: { moons?: boolean } = {}): Promise<void> {
   await expect.poll(async () => {
     const stats = (await statsOf(page)) as SpaceStats & { pictures: { pending: number }; bodies: { held: number; moons: number } };
-    return stats.pictures.pending === 0 && stats.bodies.held === stats.bodies.moons;
+    return stats.pictures.pending === 0 && (!moons || stats.bodies.held === stats.bodies.moons);
   }, { timeout: 30_000 }).toBe(true);
   let last = (await readCounts(page)).draws;
   let since = Date.now();
@@ -40,7 +41,7 @@ async function untilQuiet(page: Page, quietMs = 1500): Promise<void> {
     await page.waitForTimeout(100);
     const stats = (await statsOf(page)) as SpaceStats & { pictures: { pending: number }; bodies: { held: number; moons: number } };
     const now = (await readCounts(page)).draws;
-    if (now !== last || stats.pictures.pending !== 0 || stats.bodies.held !== stats.bodies.moons) {
+    if (now !== last || stats.pictures.pending !== 0 || (moons && stats.bodies.held !== stats.bodies.moons)) {
       last = now;
       since = Date.now();
     }
@@ -186,7 +187,7 @@ test("out of sight or hidden, a game clock running at a day a second draws nothi
     window.scrollTo(0, 5000);
   });
   // the view has stopped drawing (the gate sees it leave the screen when the browser says so, which on a busy runner is not within a fixed time)
-  await untilQuiet(page);
+  await untilQuiet(page, 1500, { moons: false });
   const before = await readCounts(page);
   await page.waitForTimeout(2500);
   const after = await readCounts(page);
@@ -421,7 +422,7 @@ test("riding at a day a second: at most 30 draws a second, and nothing when scro
     document.body.prepend(spacer);
     window.scrollTo(0, 5000);
   });
-  await untilQuiet(page);
+  await untilQuiet(page, 1500, { moons: false });
   const hidden = await readCounts(page);
   await page.waitForTimeout(2500);
   const still = await readCounts(page);
