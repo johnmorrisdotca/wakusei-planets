@@ -1,18 +1,19 @@
 // The minor bodies on the body page: their own row of tiles, the choice in the address, a line drawing of each (no WebGL), Halley's long shape, and Vesta drawn from Dawn's map. Chromium for the 3D.
 import { expect, test } from "@playwright/test";
+import "./load.ts";
 
 const URL = "/wakusei-planets/";
 
 test("the body page has a row of small bodies, each a click away, and the address keeps the choice", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=mars`);
-  await page.locator('[data-testid="group-minor"]').first().click();
+  await page.locator('[data-testid="group-minor"]:visible').click();
   await expect(page.locator("#tiles .tile")).toHaveCount(5);
   await page.locator('#tiles .tile[data-body="halley"]').click();
   await expect(page.locator("#main")).toHaveAttribute("body", "halley");
   await expect(page).toHaveURL(/body=halley/);
   await expect(page.locator("#caption")).toContainText("Halley");
   await page.goto(`${URL}?look=line&body=pholus`);
-  await expect(page.locator('[data-testid="group-minor"]').first()).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-testid="group-minor"]:visible')).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator("#main svg")).toBeVisible();
 });
 

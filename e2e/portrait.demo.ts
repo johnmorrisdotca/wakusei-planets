@@ -1,6 +1,7 @@
 // The portrait builder: real pointer drags, the wheel, real key presses and the saved pictures. The 3D tests run in Chromium in software (WebKit has no software switch); the line look needs no WebGL
 // and runs everywhere. Heavy things (the number of draws, graphics memory) are in freeze.demo.ts.
 import { expect, test, type Page } from "@playwright/test";
+import "./load.ts";
 import { dragBy, groundShift } from "./ground.ts";
 
 const PAGE = "/wakusei-planets/portrait.html";
@@ -280,7 +281,7 @@ test("the page has every control in the page's own style, in both languages, and
     expect(small, `${tab}: every button is a finger wide`).toEqual([]);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
-  await page.locator("kazoku-language-picker button", { hasText: "日本語" }).first().click().catch(() => undefined);
+  await page.locator("kazoku-language-picker button", { hasText: "日本語" }).click();
   expect(await page.locator("#sel-name").textContent()).toBeTruthy();
   expect(problems).toEqual([]);
 });

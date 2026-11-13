@@ -1,6 +1,7 @@
 // The bodies the page shows, looked at in a real browser (Chromium, drawn in software): the Earth is a picture like the others in every look, in the big view and in the row; no tile is a flat square or a
 // dot; "To scale" is a lineup whose sizes are true to each other; every moon has a tile and opens; the body cannot be dragged out of the view and Fit brings it back.
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import "./load.ts";
 import { BODIES, DWARF_IDS, MOONS_OF } from "../src/index.ts";
 
 const URL = "/wakusei-planets/";
@@ -95,13 +96,13 @@ test("pick a planet and its moons come up on the next row: every moon has a tile
   await page.goto(`${URL}?look=line&body=sun`);
   await expect(page.locator("#moon-row")).toBeHidden();
   for (const [planet, moons] of Object.entries(MOONS_OF)) {
-    await page.locator(`[data-testid="group-${(DWARF_IDS as readonly string[]).includes(planet) ? "dwarfs" : "planets"}"]`).first().click();
+    await page.locator(`[data-testid="group-${(DWARF_IDS as readonly string[]).includes(planet) ? "dwarfs" : "planets"}"]:visible`).click();
     await page.locator(`#tiles .tile[data-body="${planet}"]`).click();
     await expect(page.locator("#moon-row")).toBeVisible();
     await expect(page.locator("#moon-row .tile")).toHaveCount(moons.length);
     for (const moon of moons) await expect(page.locator(`#moon-row .tile[data-body="${moon}"]`), `${planet}: ${moon}`).toBeAttached();
   }
-  await page.locator('[data-testid="group-planets"]').first().click();
+  await page.locator('[data-testid="group-planets"]:visible').click();
   await page.locator('#tiles .tile[data-body="mercury"]').click();
   await expect(page.locator("#moon-row")).toBeHidden();
   await page.locator('#tiles .tile[data-body="jupiter"]').click();
@@ -222,7 +223,7 @@ test("the body cannot be dragged out of the view, and Centre brings it back to t
   expect(at.x, "some of the body is still in the view").toBeLessThan(box.x + box.width);
   expect(at.y + at.height, "some of the body is still in the view").toBeGreaterThan(box.y);
   expect(at.y, "some of the body is still in the view").toBeLessThan(box.y + box.height);
-  await page.getByRole("button", { name: /centre|中央/i }).first().click();
+  await page.getByRole("button", { name: /centre|中央/i }).click();
   await expect.poll(async () => await state(), { timeout: 5000 }).toMatchObject({ panX: 0, panY: 0, yaw: 0, tilt: 0 });
 });
 
