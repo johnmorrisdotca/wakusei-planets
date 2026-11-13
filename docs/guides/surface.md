@@ -23,7 +23,7 @@ A drag turns the view. The keys W, A, S and D (or the arrows) walk at a walking 
 
 On a touch screen one finger on the view looks, two fingers pinch to zoom, and a walking stick at the bottom left (shown where the main pointer is a finger, `stick="on"` or `"off"` to choose) walks: push it up to go forward, sideways to sidestep, and the harder the push the faster, up to the walking pace; the finger on the stick never turns the view. A touch screen has no keys, so the stick is the whole of walking there, and nothing is drawn when it is let go.
 
-Attributes: `site`, `time` (an ISO date and time, milliseconds since 1970 or `now`; the landing itself when left out), `heading` (degrees clockwise from north), `pitch`, `fov`, `tiles` (where the height tiles are served from), `lang`, `quality` (`auto`, the default, or `full`, `medium` or `fast`: see What it costs), `scale` (`auto`, the default, or a number from 0.25 to 1: the share of the picture's width and height the ground is drawn at, see What it costs), `stick`, and `shadows="off"`, `detail="off"` and `exposure` for trying things.
+Attributes: `site`, `time` (an ISO date and time, milliseconds since 1970 or `now`; the landing itself when left out), `heading` (degrees clockwise from north), `pitch`, `fov`, `tiles` (where the height tiles are served from), `lang`, `quality` (`auto`, the default, or `full`, `medium` or `fast`: see What it costs), `scale` (`auto`, the default, or a number from 0.25 to 1: the share of the picture's width and height the ground is drawn at, see What it costs), `stick`, `objects` (`off` leaves the things at the site out), and `shadows="off"`, `detail="off"` and `exposure` for trying things.
 
 ## Where the ground comes from
 
@@ -45,6 +45,10 @@ console.log(`the Sun ${sky.sun.altitude.toFixed(0)} degrees up, the Earth ${sky.
 ```
 
 Shadows are hard and come in two parts. The measured ground's shadows are baked: the script walks the heights once and keeps, for every point of the 5, 20 and 80 m levels, how high the horizon stands in each of eighteen directions (a horizon map, a picture of the same size, 4.4 MB for the site). The shader reads the horizon in the Sun's direction and compares it with the Sun's height, so a mountain's shadow costs one read. Only what is made is marched, a short walk of a fixed number of steps toward the Sun over the heights and the nearby made craters, so a crater's rim and a stone throw crisp shadows near the feet.
+
+## Things at the site
+
+At Apollo 17 the things that were left there stand at their published places: the descent stage of the lunar module, the flag, the ALSEP central station, the electrical-properties transmitter and the rover, with the rover's nine traverses as a faint pair of tracks along the published line. The positions are coordinates from the map of Haase and others (2019), in NOTICE.md; each thing has a small button (Lunar module, Rover, Flag, ALSEP, Transmitter) that goes to it, a few metres off and looking at it, and says in a line what it is and that **it was placed by this package**: the shapes are plain drawings made here (an octagonal body on four legs, a floor on four wheels, a pole), not scans, the rover stands where its last traverse ends with a heading read from the line (its own published parking place was not available), and the track marks are made along a published path. The made craters and rocks keep away from them, so no crater cuts a leg, and their shadows are cast by the Sun of the moment. `choose(id)` does the same as a press, `objects` lists them, `wakusei-surface-object` says which was chosen, and `objects="off"` leaves them out.
 
 ## What is made, not measured
 

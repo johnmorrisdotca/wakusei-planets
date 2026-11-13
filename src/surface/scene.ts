@@ -4,7 +4,8 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { ThreeParts } from "../scene/body.ts";
 import { rocksAround } from "./detail.ts";
-import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX } from "./glsl.ts";
+import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX } from "./glsl.ts";
+import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
 import type { MoonSky } from "./sky.ts";
 import { rockMesh } from "./rocks.ts";
@@ -28,6 +29,8 @@ export interface SurfaceState {
   quality?: "full" | "medium" | "fast";
   /** The share of the canvas's width and height the ground is drawn at, 1 (the default) to 0.25: below 1 it is drawn to a smaller target and stretched, which is what a draw while the view moves does on a machine that is slow. It needs `WebGLRenderTarget` in the three.js module (a page's own cut-down module may not have it; the draw is then at full size). */
   scale?: number;
+  /** Whether the things at the site (the lander, the rover, the flag, the station) and the rover's tracks are drawn (default true; the made ground keeps away from them while they are). */
+  objects?: boolean;
   /** Time the next draw to the end of the graphics queue (it waits for the card, so it is for a few draws, not every one). */
   measure?: boolean;
 }
@@ -55,6 +58,9 @@ export interface SurfaceItemOptions {
   /** The ground's height at a point, metres east and north of the site, for the rocks to stand on: the measured heights, the made craters, the Moon's curve taken off. */
   groundY?(east: number, north: number): number;
   manifest: TerrainManifest;
+  /** The things at the site, at their published places, and the rover's traverses as lines (east, north, east, north, ...). */
+  objects?: readonly SiteObject[];
+  traverse?: readonly (readonly number[])[];
   /** A key that changes whenever the picture would: the renderer keeps one still for each key. */
   key: string;
 }
@@ -204,6 +210,8 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uHzSun: { value: new T.Vector3(0, 1, 0) },
         uHzRange: { value: new T.Vector2(hz?.from ?? -10, hz?.to ?? 60) },
         uSunDegrees: { value: 13 },
+        uKeep: { value: Array.from({ length: 6 }, (_, i) => { const o = (options.objects ?? [])[i]; const k = o === undefined ? undefined : KEEP_OUT[o.kind]; return [o?.east ?? 0, o?.north ?? 0, k?.inner ?? 1, k?.outer ?? 2]; }).flat() },
+        uKeepCount: { value: Math.min(6, options.objects?.length ?? 0) },
         uNear: { value: new T.Vector3(56, 80, 36) },
         uPixel: { value: 0.0024 },
         uDetail: { value: 1 },
@@ -288,6 +296,110 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           shadowMeshObject!.geometry = shadowGeometry as never;
         }
       };
+      // the things at the site: their parts as one mesh (the rocks' shader and light), their shadows (the rocks' shadow material) and the rover's traverse as a strip along the line. The parts are built where the ground
+      // is (from the callback), so they are made again when the ground has changed or the Sun has moved.
+      const objectMaterial = rockMaterial;
+      let objectMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let objectShadowMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let objectKey = "";
+      const makeObjects = (state: SurfaceState): void => {
+        const list = options.objects ?? [];
+        const ground = options.groundY;
+        const on = state.objects !== false && list.length > 0 && ground !== undefined;
+        if (objectMesh !== undefined) objectMesh.visible = on;
+        if (objectShadowMesh !== undefined) objectShadowMesh.visible = on;
+        if (trackMesh !== undefined) trackMesh.visible = on;
+        if (!on || ground === undefined) return;
+        const key = `${state.sky.sun.azimuth.toFixed(1)}|${state.sky.sun.altitude.toFixed(1)}|${objectVersion}`;
+        if (key === objectKey) return;
+        objectKey = key;
+        const position: number[] = [];
+        const normal: number[] = [];
+        const tone: number[] = [];
+        const shadow: number[] = [];
+        for (const object of list) {
+          const base = ground(object.east, object.north);
+          const parts: Part[] = objectParts(object, base);
+          for (const part of parts) {
+            position.push(...part.position);
+            normal.push(...part.normal);
+            for (let i = 0; i < part.position.length / 3; i += 1) tone.push(part.tone);
+          }
+          shadow.push(...partShadows(parts, base, state.sky.sun.azimuth, state.sky.sun.altitude));
+        }
+        const geometry = new T.BufferGeometry();
+        geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(position), 3));
+        geometry.setAttribute("normal", new T.BufferAttribute(new Float32Array(normal), 3));
+        geometry.setAttribute("tone", new T.BufferAttribute(new Float32Array(tone), 1));
+        const shadowGeometry = new T.BufferGeometry();
+        shadowGeometry.setAttribute("position", new T.BufferAttribute(new Float32Array(shadow), 3));
+        shadowGeometry.setAttribute("uv", new T.BufferAttribute(new Float32Array((shadow.length / 3) * 2).fill(0.5).map((v, i) => (i % 2 === 1 ? 0 : v)), 2));
+        if (objectMesh === undefined) {
+          objectMesh = new T.Mesh(geometry as never, objectMaterial);
+          objectMesh.frustumCulled = false;
+          objectMesh.renderOrder = 1;
+          objectShadowMesh = new T.Mesh(shadowGeometry as never, shadowMaterial);
+          objectShadowMesh.frustumCulled = false;
+          objectShadowMesh.renderOrder = 2;
+          scene.add(objectMesh, objectShadowMesh);
+        } else {
+          objectMesh.geometry.dispose();
+          objectShadowMesh!.geometry.dispose();
+          objectMesh.geometry = geometry as never;
+          objectShadowMesh!.geometry = shadowGeometry as never;
+        }
+        objectMesh.visible = true;
+        objectShadowMesh!.visible = true;
+      };
+      let objectVersion = 0;
+      // the traverse: a strip 2.8 m wide along each line, points about 2 m apart, with its distance along and its side as the texture coordinates
+      let trackMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
+      let trackMaterial: InstanceType<ThreeParts["ShaderMaterial"]> | undefined;
+      let trackGeometry: InstanceType<ThreeParts["BufferGeometry"]> | undefined;
+      if (options.traverse !== undefined && options.traverse.length > 0) {
+        const positions: number[] = [];
+        const uvs: number[] = [];
+        const indices: number[] = [];
+        let along = 0;
+        for (const line of options.traverse) {
+          // densified: a point at least every 2 m
+          const pts: [number, number][] = [];
+          for (let i = 0; i + 1 < line.length / 2; i += 1) {
+            const [x0, y0, x1, y1] = [line[2 * i]!, line[2 * i + 1]!, line[2 * i + 2]!, line[2 * i + 3]!];
+            const steps = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 2));
+            for (let k = 0; k < steps; k += 1) pts.push([x0 + ((x1 - x0) * k) / steps, y0 + ((y1 - y0) * k) / steps]);
+          }
+          pts.push([line[line.length - 2]!, line[line.length - 1]!]);
+          const first = positions.length / 3;
+          for (let i = 0; i < pts.length; i += 1) {
+            const a = pts[Math.max(0, i - 1)]!;
+            const b = pts[Math.min(pts.length - 1, i + 1)]!;
+            const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+            const [nx, ny] = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
+            if (i > 0) along += Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]);
+            for (const side of [-1, 1]) {
+              positions.push(pts[i]![0] + nx * 1.4 * side, pts[i]![1] + ny * 1.4 * side, 0);
+              uvs.push(along, side);
+            }
+            if (i > 0) {
+              const v = first + 2 * i;
+              indices.push(v - 2, v - 1, v, v - 1, v + 1, v);
+            }
+          }
+        }
+        trackGeometry = new T.BufferGeometry();
+        trackGeometry.setAttribute("position", new T.BufferAttribute(new Float32Array(positions), 3));
+        trackGeometry.setAttribute("uv", new T.BufferAttribute(new Float32Array(uvs), 2));
+        trackGeometry.setIndex(new T.BufferAttribute(new Uint32Array(indices), 1));
+        trackMaterial = new T.ShaderMaterial({ vertexShader: TRACK_VERTEX, fragmentShader: TRACK_FRAGMENT, uniforms, transparent: true, depthWrite: false, side: 2 });
+        trackMaterial.polygonOffset = true;
+        trackMaterial.polygonOffsetFactor = -3;
+        trackMaterial.polygonOffsetUnits = -3;
+        trackMesh = new T.Mesh(trackGeometry as never, trackMaterial);
+        trackMesh.frustumCulled = false;
+        trackMesh.renderOrder = 0.5;
+        scene.add(trackMesh);
+      }
       let measuring = false;
       let drawMs: number | undefined;
       let aspect = context.width / Math.max(1, context.height);
@@ -300,6 +412,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const { eye, look, sky } = state;
         fullPixel = (2 * Math.tan((look.fov * Math.PI) / 360)) / pixelHeight;
         makeRocks(state);
+        makeObjects(state);
         measuring = state.measure === true;
         const world = new T.Vector3(eye.east, eye.up, -eye.north);
         const vp = viewProjection([world.x, world.y, world.z], look, aspect);
@@ -406,6 +519,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           (options.pictures ?? []).forEach((level, i) => wanted.has(level.id) && (pictures[i]!.needsUpdate = true));
           (options.horizons ?? []).forEach((h, i) => wanted.has(`horizon:${h.id}`) && (horizons[i]!.needsUpdate = true));
           rockKey = "";
+          objectVersion += 1;
         },
         resize(width, height) {
           aspect = width / Math.max(1, height);
@@ -423,6 +537,10 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           sun.material.dispose();
           earth.material.dispose();
           target?.dispose();
+          objectMesh?.geometry.dispose();
+          objectShadowMesh?.geometry.dispose();
+          trackGeometry?.dispose();
+          trackMaterial?.dispose();
           blitMaterial.dispose();
         },
       };

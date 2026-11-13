@@ -4,7 +4,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
-import { craterIn, craterProfile, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
+import { keepAway, objectParts, objectsOf, partShadows, traverseOf } from "../src/surface/objects.ts";
+import { craterIn, craterProfile, setKeepOut, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
 import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
 import { loadPlan } from "../src/surface/load.ts";
 import { rockMesh, ROCK_VERTICES } from "../src/surface/rocks.ts";
@@ -337,4 +338,80 @@ test("a level with none of its tiles is filled from the coarser one in its own e
 test("a tile's address is .webp where the manifest says so and .png where it says nothing", () => {
   assert.match(tileAddress("t/", { body: "moon", site: "s", format: "webp" }, "h5", 1, 2), /terrain\/h5\/1\/2\.webp$/);
   assert.match(tileAddress("t/", { body: "moon", site: "s" }, "h5", 1, 2), /\.png$/);
+});
+
+test("the things at Apollo 17 are at their published places: the lunar module by the site point, the flag a few metres off it, the ALSEP about two hundred metres west, and none elsewhere", () => {
+  const things = objectsOf("apollo-17");
+  assert.deepEqual(things.map((o) => o.id).sort(), ["alsep", "flag", "lm", "rover", "sep"]);
+  const at = (id: string) => things.find((o) => o.id === id)!;
+  const dist = (a: string, b: string) => Math.hypot(at(a).east - at(b).east, at(a).north - at(b).north);
+  assert.ok(Math.hypot(at("lm").east, at("lm").north) < 25, "the lunar module is within 25 m of the site point");
+  assert.ok(dist("lm", "flag") > 15 && dist("lm", "flag") < 40, `the flag is a few tens of metres from the lunar module: ${dist("lm", "flag")}`);
+  assert.ok(dist("lm", "alsep") > 190 && dist("lm", "alsep") < 215, `the ALSEP is about 200 m from the lunar module: ${dist("lm", "alsep")}`);
+  assert.ok(at("alsep").east < at("lm").east - 150, "and to its west");
+  assert.ok(at("sep").east > at("lm").east + 80, "the transmitter is to its east");
+  // the published latitudes and longitudes agree with the plane's metres (the tangent plane of the tiles: a sphere of 1737.4 km)
+  const lm = at("lm");
+  assert.ok(Math.abs(20.1911 + (lm.north / 1_737_400) * (180 / Math.PI) - lm.lat!) < 2e-4);
+  assert.deepEqual(objectsOf("nowhere"), []);
+});
+
+test("the rover's traverse is nine lines of about a thousand points in all, within eight kilometres of the site, that join end to end", () => {
+  const lines = traverseOf("apollo-17");
+  assert.equal(lines.length, 9);
+  assert.ok(lines.reduce((n, line) => n + line.length / 2, 0) > 1000);
+  for (const line of lines) for (let i = 0; i < line.length; i += 2) assert.ok(Math.hypot(line[i]!, line[i + 1]!) < 8000, "within eight kilometres");
+  const end = (line: readonly number[]) => [line[line.length - 2]!, line[line.length - 1]!];
+  const start = (line: readonly number[]) => [line[0]!, line[1]!];
+  assert.ok(Math.hypot(end(lines[7]!)[0]! - start(lines[8]!)[0]!, end(lines[7]!)[1]! - start(lines[8]!)[1]!) < 2, "the last traverse starts where the one before ends");
+  const rover = objectsOf("apollo-17").find((o) => o.id === "rover")!;
+  const last = end(lines[8]!);
+  assert.ok(Math.hypot(rover.east - last[0]!, rover.north - last[1]!) < 0.1, "the rover is where the last line ends");
+});
+
+test("the made ground keeps away from the things: nothing is made at the lunar module and all of it from fifteen metres off; rocks keep out too", () => {
+  const objects = objectsOf("apollo-17");
+  const lm = objects.find((o) => o.id === "lm")!;
+  assert.equal(keepAway(lm.east, lm.north, objects), 0);
+  assert.equal(keepAway(lm.east + 15, lm.north, objects), 1);
+  const mid = keepAway(lm.east + 12, lm.north, objects);
+  assert.ok(mid > 0 && mid < 1, `between: ${mid}`);
+  setKeepOut(objects);
+  try {
+    assert.deepEqual(madeGround(lm.east + 1, lm.north, 0.35), { h: 0, gx: 0, gy: 0 });
+    assert.ok(rocksAround(lm.east, lm.north, 12, 0.0024).every((r) => Math.hypot(r.x - lm.east, r.y - lm.north) > 5), "no rock under the legs");
+  } finally {
+    setKeepOut([]);
+  }
+  assert.notDeepEqual(madeGround(lm.east + 1, lm.north, 0.35), { h: 0, gx: 0, gy: 0 }, "with no list the ground is made as before");
+});
+
+test("the shapes stand on the ground at the sizes they should be, and their shadows fall away from the Sun", () => {
+  const objects = objectsOf("apollo-17");
+  const lander = objectParts(objects.find((o) => o.id === "lm")!, 10);
+  let top = -Infinity;
+  let bottom = Infinity;
+  let spread = 0;
+  for (const part of lander) {
+    for (let i = 0; i < part.position.length; i += 3) {
+      top = Math.max(top, part.position[i + 1]!);
+      bottom = Math.min(bottom, part.position[i + 1]!);
+      spread = Math.max(spread, Math.hypot(part.position[i]! - objects[0]!.east, part.position[i + 2]! - objects[0]!.north));
+    }
+    for (let i = 0; i < part.normal.length; i += 3) assert.ok(Math.abs(Math.hypot(part.normal[i]!, part.normal[i + 1]!, part.normal[i + 2]!) - 1) < 1e-6, "unit normals");
+  }
+  assert.ok(Math.abs(bottom - 10) < 1e-6, "it stands on the ground");
+  assert.ok(top - 10 > 3 && top - 10 < 3.5, `the deck is about 3.2 m up: ${top - 10}`);
+  assert.ok(spread > 4.4 && spread < 5.2, `the pads are about 4.7 m out: ${spread}`);
+  const rover = objectParts(objects.find((o) => o.id === "rover")!, 0);
+  let rt = 0;
+  for (const part of rover) for (let i = 1; i < part.position.length; i += 3) rt = Math.max(rt, part.position[i]!);
+  assert.ok(rt > 1.5 && rt < 2.2, `the rover with its mast is about 1.9 m: ${rt}`);
+  // a 2.4 m flag pole with the Sun 13 degrees up in the east throws a shadow of about 10 m to the west
+  const flag = objects.find((o) => o.id === "flag")!;
+  const shadow = partShadows(objectParts(flag, 0), 0, 90, 13);
+  let west = Infinity;
+  for (let i = 0; i < shadow.length; i += 3) west = Math.min(west, shadow[i]!);
+  assert.ok(flag.east - west > 8 && flag.east - west < 14, `the shadow reaches ${flag.east - west} m west`);
+  assert.equal(partShadows(objectParts(flag, 0), 0, 90, 0.2).length, 0, "no shadow when the Sun is down");
 });

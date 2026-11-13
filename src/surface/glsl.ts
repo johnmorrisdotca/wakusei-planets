@@ -121,6 +121,19 @@ uvec2 pcg2d(uvec2 v) {
 }
 float u24(uint h) { return float(h >> 8u) * (1.0 / 16777216.0); }
 
+uniform vec4 uKeep[6]; // the objects the made ground keeps away from: east, north, the distance inside which nothing is made, the distance outside which it all is
+uniform float uKeepCount;
+float keepMask(vec2 p) {
+  float keep = 1.0;
+  for (int i = 0; i < 6; i += 1) {
+    if (float(i) >= uKeepCount) break;
+    vec4 k = uKeep[i];
+    float t = clamp((distance(p, k.xy) - k.z) / (k.w - k.z), 0.0, 1.0);
+    keep = min(keep, t * t * (3.0 - 2.0 * t));
+  }
+  return keep;
+}
+
 // the made ground at a point: x the height in metres, yz the slope east and north, from every crater of every octave whose nominal diameter is over \`fromD\`
 vec3 madeGround(vec2 p, float fromD) {
   vec3 sum = vec3(0.0);
@@ -165,7 +178,7 @@ vec3 madeGround(vec2 p, float fromD) {
       }
     }
   }
-  return sum;
+  return sum * keepMask(p);
 }
 
 float vnoise(vec2 p) {
@@ -411,5 +424,45 @@ void main() {
   vec3 colour = c * (0.04 + 0.96 * max(d, 0.0)) * day * limb;
   colour += c * 0.012; // the night side's own faint light
   gl_FragColor = vec4(pow(clamp(colour, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);
+}
+`;
+
+/** The rover's traverse as a faint pair of tracks on the ground: a strip along the published line, its heights read from the same pyramid and made craters as the ground, drawn a hair over it. */
+export const TRACK_VERTEX = /* glsl */ `
+precision highp float;
+precision highp sampler2D;
+uniform mat4 uVP;
+uniform vec2 uEyeEN;
+${HEIGHTS}
+${DETAIL}
+varying vec2 vUv;
+varying float vDist;
+void main() {
+  vec2 p = position.xy;
+  float dist = distance(p, uEyeEN);
+  vUv = uv;
+  vDist = dist;
+  if (dist > 600.0) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  float y = terrainY(p, dist, true);
+  if (uDetail > 0.5) y += madeGround(p, max(2.5 * dist * uPixel, 0.06 * dist)).x;
+  y += 0.03 + 0.0007 * dist;
+  gl_Position = uVP * vec4(p.x, y, -p.y, 1.0);
+}
+`;
+
+export const TRACK_FRAGMENT = /* glsl */ `
+precision highp float;
+varying vec2 vUv;
+varying float vDist;
+void main() {
+  // two bands, a wheel's width each, a gauge apart, broken a little along the way, fading out with the distance: faint on purpose
+  float band = smoothstep(0.11, 0.0, abs(abs(vUv.y) - 0.64));
+  float broken = 0.65 + 0.35 * fract(sin(floor(vUv.x * 3.0) * 12.9898) * 43758.5453);
+  float a = band * broken * 0.14 * (1.0 - smoothstep(250.0, 600.0, vDist));
+  if (a < 0.004) discard;
+  gl_FragColor = vec4(0.0, 0.0, 0.0, a);
 }
 `;

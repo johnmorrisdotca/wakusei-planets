@@ -19,6 +19,8 @@ type Surface = HTMLElement & {
   sky: { sun: { altitude: number }; earth: { altitude: number } };
   stats: { state: string; draws: number; quality: string; scale: number; scaled: number; tiles?: { done: number; total: number; first: number }; renderer?: { draws: number; contexts: number; canvas: { width: number; height: number; pixels: number } } };
   time: number;
+  objects: readonly { id: string; east: number; north: number }[];
+  choose(id: string | undefined): boolean;
 };
 
 const open = async (page: Page, attributes = "shadows=off detail=off", routed = false): Promise<void> => {
@@ -211,4 +213,36 @@ test("a machine that is slow draws the ground smaller while it moves and at full
   }
   expect(await read(page, (el) => el.stats.scaled), "some of the moving draws were at a half").toBeGreaterThanOrEqual(1);
   await expect.poll(() => read(page, (el) => el.stats.scale), { timeout: 120_000, intervals: [400] }).toBe(1);
+});
+
+test("the things at the site have a button each: a press goes to it, says what it is and that it was placed by this package, and a second press puts the line away; objects=off shows none", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off");
+  // the events are recorded in the page from here on
+  await page.evaluate(() => {
+    const log: string[] = [];
+    Reflect.set(window, "__objects", log);
+    document.querySelector("#test-surface")!.addEventListener("wakusei-surface-object", (event) => log.push((event as CustomEvent).detail.id));
+  });
+  const ids = await read(page, (el) => el.objects.map((o) => o.id).sort());
+  expect(ids).toEqual(["alsep", "flag", "lm", "rover", "sep"]);
+  const button = view(page).getByRole("button", { name: "Lunar module" });
+  await expect(button).toBeVisible({ timeout: 120_000 }); // the first look is toward the south-west, where it stands
+  await button.click();
+  const after = await read(page, (el) => {
+    const lm = el.objects.find((o) => o.id === "lm")!;
+    return { gap: Math.hypot(el.position.east - lm.east, el.position.north - lm.north), about: el.shadowRoot!.getElementById("about")!.textContent ?? "", shown: !el.shadowRoot!.getElementById("about")!.hidden, events: [...(Reflect.get(window, "__objects") as string[])] };
+  });
+  expect(after.gap, "the eyes stand a few metres off it").toBeGreaterThan(13);
+  expect(after.gap).toBeLessThan(15);
+  expect(after.shown).toBe(true);
+  expect(after.about).toContain("Lunar module");
+  expect(after.about).toContain("Placed by this package");
+  expect(after.events).toEqual(["lm"]);
+  await button.click();
+  expect(await read(page, (el) => el.shadowRoot!.getElementById("about")!.hidden), "pressed again: put away").toBe(true);
+  await page.evaluate(() => document.querySelector("#test-surface")!.remove());
+  await open(page, "shadows=off detail=off objects=off");
+  expect(await read(page, (el) => el.objects.length)).toBe(0);
+  expect(await view(page).evaluate((el) => el.shadowRoot!.querySelectorAll(".label").length)).toBe(0);
 });

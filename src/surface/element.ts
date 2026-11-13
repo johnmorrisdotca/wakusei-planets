@@ -6,13 +6,14 @@ import { createGate, frameCap, type Gate } from "../gate.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared.ts";
 import { TILES_BASE } from "../scene/textures.ts";
-import { madeGround, standingPlace } from "./detail.ts";
+import { madeGround, setKeepOut, standingPlace } from "./detail.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
 import { createSurfaceItem, type SurfaceScene } from "./scene.ts";
+import { objectsOf, traverseOf, type SiteObject } from "./objects.ts";
 import { moonSky, type MoonSky } from "./sky.ts";
 import { siteById } from "./site.ts";
-import { clampLook, EYE_HEIGHT, stepOver, WALK_SPEED, type Look } from "./view.ts";
+import { clampLook, EYE_HEIGHT, stepOver, viewProjection, WALK_SPEED, type Look } from "./view.ts";
 
 export { setThreeLoader };
 
@@ -38,10 +39,17 @@ const TEMPLATE = `<style>
 #note { position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; font: 400 11px/1.35 system-ui, sans-serif; color: #c8ccd4; text-shadow: 0 1px 2px #000; pointer-events: none; }
 #status { position: absolute; inset: 0; display: grid; place-items: center; font: 500 13px system-ui, sans-serif; color: #c8ccd4; pointer-events: none; }
 #status[hidden] { display: none; }
+#labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.label { position: absolute; left: 0; top: 0; margin: 0; padding: 3px 8px; border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 12px; background: rgba(0, 0, 0, 0.55); color: #e8ecf2; font: 500 11px/1.3 system-ui, sans-serif; white-space: nowrap; pointer-events: auto; cursor: pointer; will-change: transform; touch-action: manipulation; }
+.label:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.label[hidden] { display: none; }
+.label[aria-pressed="true"] { background: rgba(255, 255, 255, 0.85); color: #10141c; }
+#about { position: absolute; left: 8px; right: 8px; top: 8px; margin: 0; padding: 6px 10px; border-radius: 8px; background: rgba(0, 0, 0, 0.62); color: #e8ecf2; font: 400 12px/1.4 system-ui, sans-serif; pointer-events: none; max-width: 32em; }
+#about[hidden] { display: none; }
 #stick { position: absolute; left: 18px; bottom: 44px; width: 104px; height: 104px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); touch-action: none; }
 #stick[hidden] { display: none; }
 #knob { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255, 255, 255, 0.55); pointer-events: none; }
-</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
+</style><div id="stage"></div><p id="note"></p><p id="status" role="status"></p><div id="labels"></div><p id="about" role="status" hidden></p><div id="stick" part="stick" role="group" aria-label="Walk" hidden><div id="knob"></div></div>`;
 
 const num = (value: string | null, fallback: number): number => {
   const n = value === null || value.trim() === "" ? NaN : Number(value);
@@ -68,7 +76,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -111,6 +119,10 @@ export class WakuseiSurface extends HTMLElement {
   #scaled = 0;
   /** The walking stick's push, east and north, each -1 to 1, and the finger that holds it. */
   #push = { x: 0, y: 0 };
+  /** The things at the site and the buttons that name them, and the one chosen. */
+  #objects: readonly SiteObject[] = [];
+  #labelEls = new Map<string, HTMLButtonElement>();
+  #chosen: string | undefined;
   #stickPointer = -1;
   #pointers = new Map<number, { x: number; y: number }>();
   #pinch = 0;
@@ -240,7 +252,7 @@ export class WakuseiSurface extends HTMLElement {
       if (!this.hasAttribute("standby")) void this.#start();
       return;
     }
-    if (name === "site" || name === "body" || name === "tiles") {
+    if (name === "site" || name === "body" || name === "tiles" || name === "objects") {
       this.#terrain = undefined;
       this.#loading = undefined;
       this.#pending.clear();
@@ -310,6 +322,9 @@ export class WakuseiSurface extends HTMLElement {
     if (this.#terrain === undefined) return;
     // on standby the ground is loaded and nothing more: the renderer is another view's until the attribute goes
     if (this.hasAttribute("standby")) return;
+    // the things at the site (and the made ground keeping away from them) are known before the place the eyes start from is chosen
+    this.#objects = this.getAttribute("objects") === "off" ? [] : objectsOf(site.id);
+    setKeepOut(this.#objects);
     if (!this.#placed) {
       // a step or two from the landing point, out of any made crater
       const stand = this.getAttribute("detail") === "off" ? { x: 0, y: 0 } : standingPlace(0, 0);
@@ -322,7 +337,8 @@ export class WakuseiSurface extends HTMLElement {
         this.#renderer = taken.renderer;
         this.#release = taken.release;
       }
-      const item = createSurfaceItem({ levels: this.#terrain.levels, pictures: this.#terrain.pictures, horizons: this.#terrain.horizons, manifest: this.#terrain.manifest, groundY: (east, north) => this.#groundAt(east, north), key: `surface:${site.id}` });
+      this.#makeLabels();
+      const item = createSurfaceItem({ objects: this.#objects, traverse: this.#objects.length > 0 ? traverseOf(site.id) : [], levels: this.#terrain.levels, pictures: this.#terrain.pictures, horizons: this.#terrain.horizons, manifest: this.#terrain.manifest, groundY: (east, north) => this.#groundAt(east, north), key: `surface:${site.id}` });
       this.#view = this.#renderer.view(this.#stage, item, { still: null });
     }
     const ok = await this.#view.focus();
@@ -385,8 +401,9 @@ export class WakuseiSurface extends HTMLElement {
     const m = this.#terrain?.manifest;
     if (m === undefined) return "";
     const made = this.getAttribute("detail") === "off" ? "" : this.#lang() === "ja" ? "5 m より細かい地形（小さなクレーター、砂塵、岩）は計算で作ったもので、実測ではありません。" : "Detail finer than the 5 m grid (small craters, dust, rocks) is made, not measured.";
+    const things = this.#objects.length === 0 ? "" : this.#lang() === "ja" ? " 地面の物は、公表された座標の位置にこのパッケージが置いたもので、形は簡単な絵です。" : " The things on the ground are placed by this package at published positions, as plain drawings.";
     const picture = m.picture === null || m.picture === undefined ? "" : ` ${m.picture.credit}.`;
-    return this.#lang() === "ja" ? `高さの実測: ${m.accuracy}。${m.credit}。${made}` : `Heights measured: ${m.accuracy}. ${m.credit}.${picture} ${made}`;
+    return this.#lang() === "ja" ? `高さの実測: ${m.accuracy}。${m.credit}。${made}${things}` : `Heights measured: ${m.accuracy}. ${m.credit}.${picture} ${made}${things}`;
   }
 
   /** The ground's height at a point over the site's: the measured heights, the made craters on them (if the page has them on) and the Moon's curve taken off. */
@@ -446,9 +463,106 @@ export class WakuseiSurface extends HTMLElement {
     const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
     if (measure && !this.#moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, measure: measure || this.getAttribute("measure") !== null });
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
+    this.#placeLabels();
+  }
+
+  // --- the things at the site: a small button on each, which goes to it and says what it is ----------------------------------------------------------------------------------------------------
+
+  /** The things at the site, at their published places (none where the site has none or `objects="off"`). */
+  get objects(): readonly SiteObject[] {
+    return this.#objects;
+  }
+
+  /** The words on a thing's button and in the line that says what it is. */
+  #objectWords(o: SiteObject): { short: string; about: string } {
+    const ja = this.#lang() === "ja";
+    const short: Record<SiteObject["kind"], [string, string]> = { lander: ["Lunar module", "月着陸船"], rover: ["Rover", "月面車"], flag: ["Flag", "旗"], station: ["ALSEP", "ALSEP"], instrument: ["Transmitter", "送信機"] };
+    const placed = ja
+      ? "このパッケージが、公表された座標（Haase ほか 2019）の位置に置きました。形はこちらで描いた簡単なもので、スキャンではありません。"
+      : "Placed by this package at its published position (Haase et al. 2019). The shape is a plain one drawn here, not a scan.";
+    const rover = ja ? "月面車は、最後の走行の記録の終点に置いています。向きと形はこちらで決めたものです。" : "The rover stands where the record of its last traverse ends; its heading and shape are ours.";
+    return { short: short[o.kind][ja ? 1 : 0], about: `${o.name[ja ? "ja" : "en"]}. ${o.kind === "rover" ? rover : placed}` };
+  }
+
+  #makeLabels(): void {
+    const box = this.#root.getElementById("labels")!;
+    box.replaceChildren();
+    this.#labelEls.clear();
+    for (const o of this.#objects) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "label";
+      button.hidden = true;
+      button.setAttribute("aria-pressed", "false");
+      button.textContent = this.#objectWords(o).short;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        this.choose(o.id);
+      });
+      // a press on the button is not a drag of the view
+      button.addEventListener("pointerdown", (event) => event.stopPropagation());
+      box.append(button);
+      this.#labelEls.set(o.id, button);
+    }
+  }
+
+  /** Put each button on its thing in the picture, or hide it behind the viewer, off the picture or too far to tell. Done at each draw: nothing moves by itself. */
+  #placeLabels(): void {
+    if (this.#labelEls.size === 0) return;
+    const box = this.getBoundingClientRect();
+    const [w, h] = [box.width, box.height];
+    const vp = viewProjection([this.#at.east, this.#eyeUp(), -this.#at.north], this.#look, w / Math.max(1, h));
+    for (const o of this.#objects) {
+      const el = this.#labelEls.get(o.id)!;
+      const up = this.#groundAt(o.east, o.north) + (o.kind === "lander" ? 3.4 : o.kind === "flag" ? 2.6 : o.kind === "rover" ? 2.0 : 0.9);
+      const [x, y, z] = [o.east, up, -o.north];
+      const cw = vp[3]! * x + vp[7]! * y + vp[11]! * z + vp[15]!;
+      const nx = (vp[0]! * x + vp[4]! * y + vp[8]! * z + vp[12]!) / cw;
+      const ny = (vp[1]! * x + vp[5]! * y + vp[9]! * z + vp[13]!) / cw;
+      const distance = Math.hypot(o.east - this.#at.east, o.north - this.#at.north);
+      const shown = cw > 0 && Math.abs(nx) < 1 && Math.abs(ny) < 1 && distance < 400 && distance > 1.5;
+      el.hidden = !shown;
+      if (shown) el.style.transform = `translate(${((nx + 1) / 2) * w - el.offsetWidth / 2}px, ${((1 - ny) / 2) * h - el.offsetHeight - 4}px)`;
+    }
+  }
+
+  /**
+   * Choose a thing at the site: the eyes go to a few metres from it, looking at it, its button is pressed and a line says what it is and that it was placed by this package. `wakusei-surface-object` is sent
+   * with its id. Choosing the same one again, or `undefined`, puts the line away.
+   *
+   * @param id - A thing's id (`lm`, `rover`, `flag`, `alsep`, `sep`), or `undefined` for none.
+   * @returns Whether there is such a thing here.
+   */
+  choose(id: string | undefined): boolean {
+    const about = this.#root.getElementById("about")!;
+    const o = id === undefined ? undefined : this.#objects.find((x) => x.id === id);
+    if (id !== undefined && o === undefined) return false;
+    if (o === undefined || this.#chosen === id) {
+      this.#chosen = undefined;
+      about.hidden = true;
+      for (const el of this.#labelEls.values()) el.setAttribute("aria-pressed", "false");
+      this.#changed(false);
+      return true;
+    }
+    this.#chosen = id;
+    for (const [key, el] of this.#labelEls) el.setAttribute("aria-pressed", String(key === id));
+    about.textContent = this.#objectWords(o).about;
+    about.hidden = false;
+    // stand a few metres off, on the side the eyes are on, and look at it
+    const near: Record<SiteObject["kind"], number> = { lander: 14, rover: 7, flag: 5, station: 8, instrument: 6 };
+    const [dx, dy] = [this.#at.east - o.east, this.#at.north - o.north];
+    const length = Math.hypot(dx, dy) || 1;
+    const stand = near[o.kind];
+    const [east, north] = length < 1 ? [o.east - stand, o.north] : [o.east + (dx / length) * stand, o.north + (dy / length) * stand];
+    this.#at = { east, north };
+    const azimuth = ((Math.atan2(o.east - east, o.north - north) * 180) / Math.PI + 360) % 360;
+    this.#look = clampLook({ azimuth, pitch: o.kind === "lander" ? 8 : 5, fov: this.#look.fov });
+    this.dispatchEvent(new CustomEvent("wakusei-surface-object", { detail: { id: o.id, name: o.name }, bubbles: true, composed: true }));
+    this.#changed();
+    return true;
   }
 
   // --- the walking stick: for a touch screen, where there are no keys. One finger on the view looks, two fingers pinch to zoom, and the finger on the stick walks ----------------------------------------

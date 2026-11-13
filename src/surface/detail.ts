@@ -2,6 +2,30 @@
 // age), laid on a seeded grid of cells, so the same place is always the same. It is MADE, not measured, and the page says so. The shader (glsl.ts) holds the same formulas; this is the same
 // maths in JS, for the feet (the eyes follow the made ground too), for the rocks (placed on the ground and denser by fresh rims) and for the tests that hold the two together.
 // Every random number is an integer hash (PCG, 32 bit) cut to 24 bits, so the two agree exactly.
+import { keepAway, type SiteObject } from "./objects.ts";
+
+/** The objects the made ground keeps away from: set for the site being stood on (`setKeepOut`), none until then. */
+let keepObjects: readonly SiteObject[] = [];
+
+/**
+ * Say which objects the made craters and rocks keep away from (the ones `objectsOf` gives for the site), or none. The shader holds the same list.
+ *
+ * @param objects - The objects.
+ *
+ * @example
+ * ```ts
+ * import { madeGround, objectsOf, setKeepOut } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const [lander] = objectsOf("apollo-17");
+ * setKeepOut(objectsOf("apollo-17"));
+ * console.log(madeGround(lander!.east, lander!.north, 0.35).h);
+ * setKeepOut([]);
+ * ```
+ */
+export function setKeepOut(objects: readonly SiteObject[]): void {
+  keepObjects = objects;
+}
+
 
 /** The smallest crater's nominal diameter in metres: each octave doubles it, up to `OCTAVES` octaves (0.5, 1, 2, 4, 8, 16). A crater in an octave is between 1 and 2 times its nominal diameter. */
 export const D0 = 0.5;
@@ -182,7 +206,8 @@ export function madeGround(x: number, y: number, fromDiameter: number): { h: num
       }
     }
   }
-  return { h, gx, gy };
+  const keep = keepAway(x, y, keepObjects);
+  return { h: h * keep, gx: gx * keep, gy: gy * keep };
 }
 
 /**
@@ -286,6 +311,7 @@ export function rocksAround(cx: number, cy: number, radius: number, pixel: numbe
           // fewer where the rims are not near: two fifths of what is dealt on the plain, all of it by a young rim
           const boost = rimBoost(x, y);
           if (unit24(pcg2d(c, d)[0]) > 0.3 * boost) continue;
+          if (keepAway(x, y, keepObjects) < 0.5) continue;
           const [e, f] = pcg2d(c ^ 0x9e3779b9, d + 17);
           out.push({ x, y, size, shape: e % 3, turn: unit24(f) * Math.PI * 2, tone: 0.75 + 0.5 * unit24(e >>> 3), flat: 0.45 + 0.4 * unit24(f >>> 5) });
         }
