@@ -6,6 +6,8 @@
 
 - **A cutaway of the interior** (MODULES-1246). `cutaway` on a body (off unless set) opens a quarter of the globe toward the camera, turning with the body, and draws the layers as flat-coloured shells. The legend names each layer, its depth from the surface and what it is made of. `interiorOf` returns the layers. Only the Earth and Mars have figures, read from NASA pages on 2026-11-13; a body without them stays whole.
 
+- **A view at rest waits until its pictures have arrived** (MODULES-1209). `stats.pictures.pending` is how many surface pictures are still being fetched. A sharper picture draws one frame when it arrives, so a test of a still view waits for this to be 0 and then for the draw count to stay still, instead of a longer quiet timer.
+
 ## [0.44.2] - 2026-11-13
 
 - **The best-known names come first** (MODULES-1231). Six names on a phone's Moon were six seas. Each body now has a hand-ranked head ahead of the rule of fame and size (`placeRank`): on the Moon the four great seas, Tycho and Copernicus; on Mars Olympus Mons, Valles Marineris, Hellas, the Tharsis volcanoes (Arsia, Ascraeus, Pavonis) and Gale. The cap and the placement are as in 0.44.1.
