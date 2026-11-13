@@ -2,11 +2,12 @@
 // (`besideMoon` for a moon, a whole-body view otherwise), and every move is sampled at 240 moments in both scales and three picture shapes. The rules are the owner's: never an empty picture, the destination
 // in view and growing from the end of the turn, one turn that is never undone, nothing passed close, and a bounded pace. Set TRAVEL_TABLE=1 to print the numbers for every pair.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../src/facts.ts";
 import { moonOffset, orientation } from "../src/scene/orient.ts";
 import { besideMoon, frameAt, hostOf, moonDistance, placeBodies, radiusIn, regionOrbits, regionView, SUN_REGIONS, TRAVEL_CLEARANCE, travelArrival, travelPlan, travelPose, type ScaleMode, type SpaceDwarf, type SpacePlanet, type TravelBody, type TravelInput, type TravelKind, type TravelSample, type TravelView } from "../src/space/index.ts";
-import { cross, dot, length, RAD, sub, unit, type Vec3 } from "../src/vec.ts";
+import { cross, dot, length, RAD, sub, turn, unit, type Vec3 } from "../src/vec.ts";
 
 const SCALES: readonly ScaleMode[] = ["compressed", "true"];
 const SHAPES: readonly { name: string; aspect: number }[] = [{ name: "wide", aspect: 16 / 9 }, { name: "square", aspect: 1 }, { name: "tall", aspect: 9 / 19.5 }];
@@ -267,9 +268,29 @@ for (const [a, b] of [["callisto", "europa"], ["io", "ganymede"], ["titan", "enc
         for (const side of SIDES) {
           const w = walk(moveOf(a, b, mode, shape.aspect, undefined, side), { bent: BENT[`${a} to ${b}`] });
           row(`${a} to ${b} (plain)`, mode, shape.name, w);
-          assert.deepEqual(w.faults.filter((text) => /neither body|turned away|turned \d|look direction turned/.test(text)), [], `${a} to ${b}, ${mode}, ${shape.name}, from ${side.join(",")}`);
+          // every fault counts but one: the destination drifting off its place in the travel stage (titan to enceladus, also on 0.43.0), which has a ticket of its own
+          assert.deepEqual(w.faults.filter((text) => !/moved away from its place/.test(text)), [], `${a} to ${b}, ${mode}, ${shape.name}, from ${side.join(",")}`);
         }
       }
+    });
+  }
+}
+
+// The saved callisto to europa inputs of the report (travel-empty-inputs.jsonl: arriving on the side that frames Jupiter; travel-empty-inputs2.jsonl: arriving on the side it comes from), each from the view it was saved with and from arbitrary starting views: the same camera place looked
+// away by a few degrees, and the camera looked down and across. The whole walk holds for each: no empty picture, and no jump, no clearance fault, no look turned back.
+const SAVED = ["travel-empty-inputs.jsonl", "travel-empty-inputs2.jsonl"].map((file) => JSON.parse(readFileSync(new URL(`./${file}`, import.meta.url), "utf8").split("\n")[0]!) as TravelInput);
+const ARBITRARY: { name: string; start: (v: TravelView) => TravelView }[] = [
+  { name: "as saved", start: (v) => v },
+  { name: "looking 12 degrees to the side", start: (v) => ({ ...v, forward: turn(v.forward, v.up, 12) }) },
+  { name: "looking 10 degrees down, 10 to the other side", start: (v) => ({ ...v, forward: turn(turn(v.forward, v.up, -10), unit(cross(v.forward, v.up)), 10) }) },
+];
+for (const [n, saved] of SAVED.entries()) {
+  for (const view of ARBITRARY) {
+    test(`callisto to europa, saved input ${n + 1}, ${view.name}: a body is in the picture throughout, and the move does not jump`, () => {
+      const input: TravelInput = { ...saved, start: view.start(saved.start) };
+      const bodies = [{ id: "callisto" as BodyId, body: input.leaving }, { id: "europa" as BodyId, body: input.destination }, ...(input.around === undefined ? [] : [{ id: "jupiter" as BodyId, body: input.around }])];
+      const w = walk({ input, bodies });
+      assert.deepEqual(w.faults, []);
     });
   }
 }
