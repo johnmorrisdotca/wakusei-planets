@@ -494,6 +494,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Starman and the Tesla Roadster](docs/guides/roadster.md) | where the car launched on the first Falcon Heavy is on any date from 2018 to the start of 2036, its distances, speeds, orbit and key moments |
 | [Comets](docs/guides/comets.md) | 34 well-known comets with orbits from JPL: where each is on any date, its distances, orbit line, last and next perihelion, meteor showers, and a door to add a new comet |
 | [Places on the Moon, Mars and 31 more bodies](docs/guides/places.md) | every landing, rover, crash, impact and atmospheric-entry site and the named features of 33 bodies, with positions, dates and sources, the famous ones marked, and the Sun's point, the terminator and the local solar time on any body |
+| [Which face of a body the view looks at](docs/guides/which-face.md) | `subCameraPoint()` and `faceTo()` on the space view and on a body's picture: the longitude and latitude under the camera, and a turn to a point, for a card picture that follows the view |
 | [Data files](docs/guides/data-files.md) | CSV and Parquet tables of the bodies, orbits and spacecraft, for Python, R and Rust |
 | [Serve it yourself](docs/guides/serve-it-yourself.md) | A small Node server over the package, that you host |
 | [The Sun and Moon from a place](docs/guides/suncalc.md) | Position, sunrise and sunset, Moon rise, set and phase; a drop-in for suncalc |
