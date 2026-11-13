@@ -181,7 +181,8 @@ test("out of sight or hidden, a game clock running at a day a second draws nothi
     document.body.prepend(spacer);
     window.scrollTo(0, 5000);
   });
-  await page.waitForTimeout(1200);
+  // the view has stopped drawing (the gate sees it leave the screen when the browser says so, which on a busy runner is not within a fixed time)
+  await untilQuiet(page);
   const before = await readCounts(page);
   await page.waitForTimeout(2500);
   const after = await readCounts(page);
@@ -268,9 +269,12 @@ test("taking the element away frees what it held", async ({ page }) => {
   await jump(page, "Moon");
   await settle(page, 800);
   await page.locator(SPACE).evaluate((el) => el.remove());
-  await page.waitForTimeout(3500);
+  // what it held is let go when the element's own clean-up has run, which is not a fixed time away on a busy runner
+  await expect.poll(async () => {
+    const c = await readCounts(page);
+    return (["Buffer", "VertexArray", "Program"] as const).map((kind) => c.created[kind] - c.deleted[kind]);
+  }, { timeout: 30_000, message: "buffers, vertex arrays and programs are let go" }).toEqual([0, 0, 0]);
   const gone = await readCounts(page);
-  for (const kind of ["Buffer", "VertexArray", "Program"] as const) expect(gone.created[kind] - gone.deleted[kind], `${kind} left`).toBe(0);
   expect(gpuObjects(gone), "only the few textures and targets three.js keeps for itself").toBeLessThanOrEqual(8);
 });
 
@@ -343,15 +347,29 @@ test("riding a point of your own: it is 400 km up, and goes round at its own rat
     };
     (el as unknown as { ride(t: unknown, o: unknown): void }).ride({ at }, { smooth: false });
   });
+  // The camera is where the last draw left it, but `stats.time` is the clock now, so a pair read while the clock runs is out by however long the draw is behind (a second or more on a busy
+  // runner: 4 degrees a second at this speed). Hold the clock, ask for a draw at the held moment, and read the camera and its moment from the same state.
+  const held = async (): Promise<RideStats> => {
+    await setOn(page, "speed", 0);
+    const moment = (await rideOf(page)).time;
+    const before = (await rideOf(page)).draws;
+    await setOn(page, "time", moment);
+    await expect.poll(async () => (await rideOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
+    const s = await rideOf(page);
+    expect(s.time).toBe(moment);
+    return s;
+  };
   await setOn(page, "speed", 60);
   await settle(page, 600);
-  const s0 = await rideOf(page);
+  const s0 = await held();
   expect(away(s0)).toBeCloseTo(1.0627, 2);
+  await setOn(page, "speed", 60);
   await page.waitForTimeout(4000);
-  const s1 = await rideOf(page);
+  const s1 = await held();
   const turned = (Math.acos(Math.min(1, (s0.camera.position[0] * s1.camera.position[0] + s0.camera.position[1] * s1.camera.position[1] + s0.camera.position[2] * s1.camera.position[2]) / (away(s0) * away(s1)))) * 180) / Math.PI;
   const expected = ((s1.time - s0.time) / 1000) * Math.sqrt(398_600.4418 / 6778.137 ** 3) * (180 / Math.PI);
-  expect(Math.abs(turned - expected)).toBeLessThan(3);
+  expect(expected, "the clock ran between the two readings").toBeGreaterThan(5);
+  expect(Math.abs(turned - expected), `turned ${turned}, expected ${expected}`).toBeLessThan(0.1);
 });
 
 test("a point that cannot be placed: the ride is lost, the ordinary camera is used and the page is told once", async ({ page }) => {
@@ -374,7 +392,7 @@ test("switching glides and ends, then (the moons let go) nothing is drawn", asyn
   expect((await rideOf(page)).ride.gliding).toBe(true);
   // the move's own end, not a time: it takes as long as the picture changes
   await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 90_000 }).toBe(false);
-  await settle(page, 5000);
+  await untilQuiet(page);
   const before = await readCounts(page);
   await page.waitForTimeout(2500);
   const after = await readCounts(page);
@@ -398,7 +416,7 @@ test("riding at a day a second: at most 30 draws a second, and nothing when scro
     document.body.prepend(spacer);
     window.scrollTo(0, 5000);
   });
-  await page.waitForTimeout(1200);
+  await untilQuiet(page);
   const hidden = await readCounts(page);
   await page.waitForTimeout(2500);
   const still = await readCounts(page);
