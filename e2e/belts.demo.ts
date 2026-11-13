@@ -2,6 +2,8 @@
 // the main belt with the line that says how empty it is, and the Oort cloud's labelled shell.
 import { COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
+import "./load.ts";
+import { quietElement } from "./quiet.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(async ({ page }, testInfo) => {
@@ -23,7 +25,7 @@ const noteOf = (page: Page) => sky(page).evaluate((el) => {
 async function open(page: Page, query = ""): Promise<void> {
   await page.goto(`${PAGE}?t=2026-11-02T14:00Z&scale=compressed&play=off${query}`);
   await expect(sky(page)).toHaveAttribute("data-state", "live", { timeout: 120_000 });
-  await page.waitForTimeout(1200);
+  await quietElement(page, "wakusei-space");
 }
 
 test("the belts are drawn by default, one instanced draw for each of the seven, credited as the package's own and held by data=own", async ({ page }) => {
@@ -63,8 +65,9 @@ test("at rest the belts are not drawn again, and the whole solar system shows th
     controller.set({ zoom: (el as unknown as { zoomFor(p: string): number }).zoomFor("solar-system") }, true, "jump");
   });
   // the pictures of the bodies that came into view finish loading, each with one more draw; then it is at rest
-  await page.waitForTimeout(7000);
+  await quietElement(page, "wakusei-space");
   const before = await sky(page).evaluate((el) => (Reflect.get(el, "stats") as { draws: number }).draws);
+  // only to say that nothing happens: the draws were held still above, and this is a stretch in which none may come
   await page.waitForTimeout(2500);
   const after = await sky(page).evaluate((el) => (Reflect.get(el, "stats") as { draws: number }).draws);
   expect(after - before, "nothing is drawn at rest").toBe(0);
@@ -85,7 +88,7 @@ test("a flight into the main belt: the camera rides a point round the Sun, true 
   expect(note.text).toMatch(/almost all empty/);
   expect(note.text).toMatch(/1,300 drawn are only the brightest/);
   // the picture is not black: dots round the camera
-  await page.waitForTimeout(1500);
+  await quietElement(page, "wakusei-space");
   const lit = await sky(page).screenshot().then((png) => png.length);
   expect(lit).toBeGreaterThan(2000);
   await sky(page).evaluate((el) => el.setAttribute("lang", "ja"));

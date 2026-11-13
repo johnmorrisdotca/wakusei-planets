@@ -27,7 +27,6 @@ test("Nix, Hydra, Miranda and Proteus in true distances: no black rings or speck
   const shares: string[] = [];
   for (const id of ["nix", "hydra", "miranda", "proteus"]) {
     await drawn(page, () => callOn(page, "goTo", id, { smooth: false }));
-    await page.waitForTimeout(1200);
     const picture = await page.locator(SPACE).screenshot();
     keep(id, picture);
     const share = await page.evaluate(
