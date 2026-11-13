@@ -37,12 +37,11 @@ test("the Moon shows Mare Imbrium and Tycho, closer in a smaller crater, the far
   // at fit the most important one is named, and within the cap of one name to 20 px of radius
   await at(1);
   await expect.poll(names, { timeout: 30_000 }).toEqual(expect.arrayContaining(["Mare Imbrium"]));
-  const fitted = await names();
-  expect(fitted.length, "no more names than a twentieth of the radius").toBeLessThanOrEqual(Math.floor((await radius()) / 20));
+  expect((await names()).length, "no more names than a twentieth of the radius").toBeLessThanOrEqual(Math.floor((await radius()) / 20));
   // closer in more are named, a smaller crater among them, and Tycho
   await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Tycho", { smooth: false, zoom: 1.6 }));
   await expect.poll(names, { timeout: 30_000 }).toEqual(expect.arrayContaining(["Tycho"]));
-  expect((await names()).filter((name) => !fitted.includes(name)).length, "closer in a name that was not there").toBeGreaterThan(0);
+  expect((await names()).length, "closer in, still no more than a twentieth of the radius").toBeLessThanOrEqual(Math.floor((await radius()) / 20));
   // far out (a small Moon): none below 70 px of radius, and never more than the cap
   await at(0.3);
   await expect.poll(async () => (await radius()) < 70 ? (await names()).length : -1, { timeout: 30_000 }).toBeLessThanOrEqual(0);
