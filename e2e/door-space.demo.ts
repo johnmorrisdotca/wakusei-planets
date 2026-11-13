@@ -3,6 +3,8 @@
 import { COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
 import { addRocks } from "./door-fixture.ts";
+import "./load.ts";
+import { quietElement } from "./quiet.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(async ({ page }, testInfo) => {
@@ -23,7 +25,7 @@ async function open(page: Page, query = ""): Promise<void> {
   await page.goto(`${PAGE}?t=2026-11-02T14:00Z&scale=compressed&play=off&belts=0${query}`);
   await expect(sky(page)).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   await expect.poll(async () => (await creditsOf(page)).length, { timeout: 60_000 }).toBeGreaterThan(0);
-  await page.waitForTimeout(1500);
+  await quietElement(page, "wakusei-space");
 }
 
 /** The picture of the view as a list of pixel values, to count what changed. */

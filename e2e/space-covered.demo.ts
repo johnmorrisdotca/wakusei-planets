@@ -1,8 +1,7 @@
 // A body behind another : with `covered="arrow"` its name and ring are not drawn over the nearer body's disc; one quiet arrow sits outside the disc's edge instead, named for the surest
 // hidden body, and a press on it goes there. Off (the default) the names are drawn over the disc as before. Chromium, drawing in software; every wait is on what the page reports.
-import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { callOn, openSpace, SPACE } from "./space-ui.ts";
+import { callOn, clickCounted, drawnAfter, drawnAtRest, openSpace, SPACE } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -27,29 +26,11 @@ const visibleNames = (page: Page): Promise<string[]> => page.locator(SPACE).eval
 const arrowsOf = (page: Page): Promise<{ cover: string; body: string; text: string; hidden: boolean }[]> =>
   page.locator(SPACE).evaluate((el) => [...el.shadowRoot!.querySelectorAll<HTMLElement>(".sp-arrow")].map((n) => ({ cover: n.dataset["cover"]!, body: n.dataset["body"]!, text: n.textContent ?? "", hidden: n.hidden })));
 
-async function drawn(page: Page, act: () => Promise<unknown>): Promise<void> {
-  const before = (await readCounts(page)).draws;
-  await act();
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
-  let held = -1;
-  await expect
-    .poll(
-      async () => {
-        const now = (await readCounts(page)).draws;
-        const same = now === held;
-        held = now;
-        return same;
-      },
-      { timeout: 30_000, intervals: [300] },
-    )
-    .toBe(true);
-}
-
 /** From beside the Moon the Earth is a big disc: turn the view until some body is behind it, and say which. */
 async function behindTheEarth(page: Page): Promise<string[]> {
   // the view as it opened first (a setView to the same view draws nothing), then turned round in steps
   for (const yaw of [null, 60, 120, 180, 240, 300]) {
-    if (yaw !== null) await drawn(page, () => callOn(page, "setView", { yaw, tilt: 0, zoom: 1 }));
+    if (yaw !== null) await drawnAtRest(page, () => callOn(page, "setView", { yaw, tilt: 0, zoom: 1 }));
     const places = await placesOf(page);
     const behind = Object.entries(places).filter(([, at]) => at?.behind === "earth").map(([id]) => id);
     if (behind.length > 0) return behind;
@@ -86,9 +67,8 @@ test("off by default: a body behind the Earth keeps its name over the disc; with
   expect(near, "the arrow's tip is at the Earth's edge").toBeGreaterThan(earth.r - 2);
   expect(near).toBeLessThan(earth.r + 30);
   // a press on the arrow goes to the body it names
-  const before = (await readCounts(page)).draws;
-  await page.locator(SPACE).locator('.sp-arrow[data-cover="earth"]').dispatchEvent("click");
-  await expect.poll(async () => (await readCounts(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
+  const before = await clickCounted(page.locator(SPACE).locator('.sp-arrow[data-cover="earth"]'));
+  await drawnAfter(page, before, "the press on the arrow");
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(earthArrow!.body);
 });
 
@@ -99,7 +79,7 @@ test("labels=\"off\" hides the arrows with the names", async ({ page }) => {
   const behind = await behindTheEarth(page);
   expect(behind.length).toBeGreaterThan(0);
   await expect.poll(async () => (await arrowsOf(page)).filter((a) => !a.hidden).length, { timeout: 30_000 }).toBeGreaterThan(0);
-  await drawn(page, () => page.locator(SPACE).evaluate((el) => Reflect.set(el, "labels", false)));
+  await drawnAtRest(page, () => page.locator(SPACE).evaluate((el) => Reflect.set(el, "labels", false)));
   expect((await arrowsOf(page)).filter((a) => !a.hidden)).toEqual([]);
   expect(await visibleNames(page)).toEqual([]);
 });

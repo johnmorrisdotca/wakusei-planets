@@ -1,7 +1,7 @@
 // The space view in a real browser (Chromium, drawing in software): the right things in the right places, and the budget every live 3D view keeps.
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
-import { setLight } from "./space-ui.ts";
+import { setCounted, setLight } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -54,7 +54,7 @@ async function open(page: Page, query = `t=${NOV2}`): Promise<void> {
   // these tests were written against the compressed scale, which was the page's default; the true scale, now the default, is tested in space-scale.demo.ts
   await page.goto(`/wakusei-planets/space.html?${query}${/(^|&)scale=/.test(query) ? "" : "&scale=compressed"}`);
   await page.locator(`${SPACE}[data-state=live]`).waitFor({ timeout: 90_000 });
-  await expect.poll(async () => (await statsOf(page)).draws).toBeGreaterThan(0);
+  await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000, message: "the first draw" }).toBeGreaterThan(0);
   await settle(page);
 }
 
@@ -287,7 +287,6 @@ test("a lost context is recovered", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await open(page);
-  const draws = (await statsOf(page)).draws;
   await page.locator(SPACE).evaluate((el) => {
     const ext = (el.shadowRoot!.querySelector("canvas")!.getContext("webgl2") as WebGL2RenderingContext).getExtension("WEBGL_lose_context")!;
     Reflect.set(window, "__lose", ext);
@@ -296,7 +295,8 @@ test("a lost context is recovered", async ({ page }) => {
   await expect(page.locator(SPACE)).toHaveAttribute("data-state", "lost");
   await page.evaluate(() => (Reflect.get(window, "__lose") as { restoreContext(): void }).restoreContext());
   await expect(page.locator(SPACE)).toHaveAttribute("data-state", "live");
-  await setOn(page, "scale", "true");
+  // the count is taken in the same call as the change: the draws the restored context makes are not the change's
+  const draws = await setCounted(page, "scale", "true");
   await expect.poll(async () => (await statsOf(page)).draws).toBeGreaterThan(draws);
   expect(errors).toEqual([]);
 });
@@ -357,8 +357,7 @@ test("riding a point of your own: it is 400 km up, and goes round at its own rat
   const held = async (): Promise<RideStats> => {
     await setOn(page, "speed", 0);
     const moment = (await rideOf(page)).time;
-    const before = (await rideOf(page)).draws;
-    await setOn(page, "time", moment);
+    const before = await setCounted(page, "time", moment);
     await expect.poll(async () => (await rideOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
     const s = await rideOf(page);
     expect(s.time).toBe(moment);

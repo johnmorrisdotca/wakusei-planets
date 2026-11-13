@@ -14,11 +14,13 @@ const speedOf = (page: Page): Promise<number> => page.locator(SPACE).evaluate((e
 async function drawsOverThirtyFrames(page: Page): Promise<number> {
   await expect.poll(async () => (await statsOf(page) as unknown as { ride: { gliding: boolean } }).ride.gliding, { timeout: 90_000 }).toBe(false);
   await expect.poll(async () => (await statsOf(page) as unknown as { travelling: unknown }).travelling, { timeout: 30_000 }).toBeNull();
-  const before = (await statsOf(page)).draws;
-  await page.evaluate(async () => {
+  // counted in the one call, so no draw lands between the first count and the first frame
+  return page.locator(SPACE).evaluate(async (el) => {
+    const stats = (): number => Number((Reflect.get(el, "stats") as { draws: number }).draws);
+    const before = stats();
     for (let frame = 0; frame < 30; frame += 1) await new Promise((resolve) => requestAnimationFrame(resolve));
+    return stats() - before;
   });
-  return (await statsOf(page)).draws - before;
 }
 
 test("a ride that started the clock stops it again on Off, and the view then draws nothing", async ({ page }) => {
