@@ -1,6 +1,8 @@
 // The space view in a real browser (Chromium, drawing in software): the right things in the right places, and the budget every live 3D view keeps.
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
+import { advance, holdClock, takeClock } from "./clock.ts";
+import "./load.ts";
 import { setCounted, setLight } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
@@ -58,6 +60,13 @@ async function open(page: Page, query = `t=${NOV2}`): Promise<void> {
   await settle(page);
 }
 
+/** `open`, with the page's clock held afterwards: time moves only when the test advances it (see clock.ts). */
+async function openClocked(page: Page, query = `t=${NOV2}`): Promise<void> {
+  await takeClock(page);
+  await open(page, query);
+  await holdClock(page);
+}
+
 // a click that does not scroll the page: a view scrolled out of sight is rightly not drawn
 const jump = (page: Page, name: string) => page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
 const names = (page: Page): Promise<(string | null)[]> => page.locator(SPACE).evaluate((el) => [...el.shadowRoot!.querySelectorAll(".sp-label:not([hidden])")].map((n) => n.textContent));
@@ -111,38 +120,40 @@ test("the names can be in Japanese and a page's own words", async ({ page }) => 
 });
 
 test("paused, nothing is drawn and no frame is asked for; at real time, at most one draw in 6 seconds", async ({ page }) => {
+  await takeClock(page);
   await open(page);
-  // the Earth's finer map comes after the first picture, and draws one frame when it arrives: wait for it, then for the view to be quiet
-  await page.waitForFunction(() => performance.getEntriesByType("resource").some((e) => /earth-1024/.test(e.name) && (e as PerformanceResourceTiming).responseEnd > 0), undefined, { polling: 100, timeout: 60_000 });
+  // the Earth's finer map comes after the first picture, and draws one frame when it arrives: the view is quiet when no picture is pending and the draws have held still; only then is the clock held
   await untilQuiet(page);
+  await holdClock(page);
   const before = await readCounts(page);
-  await page.waitForTimeout(4000);
+  // four seconds of the page's own time pass, every timer and frame in them run: nothing is drawn and no frame is asked for
+  await advance(page, 4000);
   const after = await readCounts(page);
   expect(after.draws).toBe(before.draws);
   expect(after.rafRequests).toBe(before.rafRequests);
   await setOn(page, "speed", 1);
-  await settle(page, 500);
+  await advance(page, 500);
   const real = await statsOf(page);
-  await page.waitForTimeout(6000);
+  await advance(page, 6000);
   const later = await statsOf(page);
   expect(later.draws - real.draws).toBeLessThanOrEqual(1);
 });
 
 test("a day a second: time runs at that rate, at most 30 draws a second, an ephemeris lookup about once a second", async ({ page }) => {
-  await open(page);
+  await openClocked(page);
   await setOn(page, "speed", 86400);
-  await settle(page, 500);
+  await advance(page, 500);
   const s0 = await statsOf(page);
-  const t0 = Date.now();
-  await page.waitForTimeout(5000);
+  // five seconds of the page's own time: the rate is per second of that time, however fast or slow the machine draws
+  await advance(page, 5000);
   const s1 = await statsOf(page);
-  const seconds = (Date.now() - t0) / 1000;
+  const seconds = 5;
   const perSecond = (s1.time - s0.time) / 86_400_000 / seconds;
   const draws = (s1.draws - s0.draws) / seconds;
   const lookups = (s1.lookups - s0.lookups) / seconds;
   console.log(`1 day a second: ${perSecond.toFixed(2)} days a second, ${draws.toFixed(1)} draws a second, ${lookups.toFixed(2)} lookups a second`);
-  expect(perSecond).toBeGreaterThan(0.8);
-  expect(perSecond).toBeLessThan(1.25);
+  expect(perSecond).toBeGreaterThan(0.99);
+  expect(perSecond).toBeLessThan(1.01);
   expect(draws).toBeLessThanOrEqual(31);
   expect(lookups).toBeLessThanOrEqual(2.6);
 });
@@ -170,12 +181,14 @@ test("time is the page's clock: the moment read at any time, and across a ride t
 });
 
 test("time runs backwards", async ({ page }) => {
-  await open(page);
+  await openClocked(page);
   await setOn(page, "speed", -86400);
   const s0 = await statsOf(page);
-  await page.waitForTimeout(2500);
+  await advance(page, 2500);
   const s1 = await statsOf(page);
-  expect(s1.time).toBeLessThan(s0.time - 86_400_000);
+  // two and a half seconds at a day a second, backwards
+  expect((s1.time - s0.time) / 86_400_000).toBeLessThan(-2.4);
+  expect((s1.time - s0.time) / 86_400_000).toBeGreaterThan(-2.6);
 });
 
 test("out of sight or hidden, a game clock running at a day a second draws nothing", async ({ page }) => {
@@ -342,7 +355,7 @@ test("riding a moon: the camera is at the moon's real place round its planet", a
 });
 
 test("riding a point of your own: it is 400 km up, and goes round at its own rate, in about 90 minutes", async ({ page }) => {
-  await open(page);
+  await openClocked(page);
   await page.locator(SPACE).evaluate((el) => {
     const radius = 6378.137 + 400;
     const rate = Math.sqrt(398_600.4418 / radius ** 3);
@@ -358,17 +371,22 @@ test("riding a point of your own: it is 400 km up, and goes round at its own rat
     await setOn(page, "speed", 0);
     const moment = (await rideOf(page)).time;
     const before = await setCounted(page, "time", moment);
-    await expect.poll(async () => (await rideOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
+    // the page's clock is held: a draw is asked for and comes when the test lets a little of its time pass
+    await expect.poll(async () => {
+      await advance(page, 50);
+      return (await rideOf(page)).draws;
+    }, { timeout: 60_000 }).toBeGreaterThan(before);
     const s = await rideOf(page);
     expect(s.time).toBe(moment);
     return s;
   };
   await setOn(page, "speed", 60);
-  await settle(page, 600);
+  await advance(page, 600);
   const s0 = await held();
   expect(away(s0)).toBeCloseTo(1.0627, 2);
   await setOn(page, "speed", 60);
-  await page.waitForTimeout(4000);
+  // four seconds of the page's own time at a speed of 60: 240 seconds of the ride
+  await advance(page, 4000);
   const s1 = await held();
   const turned = (Math.acos(Math.min(1, (s0.camera.position[0] * s1.camera.position[0] + s0.camera.position[1] * s1.camera.position[1] + s0.camera.position[2] * s1.camera.position[2]) / (away(s0) * away(s1)))) * 180) / Math.PI;
   const expected = ((s1.time - s0.time) / 1000) * Math.sqrt(398_600.4418 / 6778.137 ** 3) * (180 / Math.PI);
