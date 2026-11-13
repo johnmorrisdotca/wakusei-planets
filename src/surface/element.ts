@@ -661,7 +661,7 @@ export class WakuseiSurface extends HTMLElement {
     const l = this.#landing;
     if (l === undefined) return;
     l.t = Math.min(LANDING.duration, Math.max(0, value));
-    l.passed = calloutsBy(l.t).length;
+    // a seek forward announces the latest moment it passes (the picture lists the last three)
     this.#dust = new DustField(900, 17);
     this.#landingAt = performance.now();
     this.#landingFrame(0, true);
