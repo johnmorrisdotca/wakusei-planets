@@ -26,3 +26,20 @@ for (const [name, url, id] of PAGES) {
     await expect.poll(async () => Math.abs((await yaw()) - before), { timeout: 10_000, message: "the arrow keys turned the view" }).toBeGreaterThan(1);
   });
 }
+
+// An element a page adds with no tabindex of its own is a Tab stop all the same, so a page that forgets the attribute does not lock the keyboard out.
+for (const tag of ["wakusei-body", "wakusei-space"]) {
+  test(`a bare <${tag}> is a Tab stop and has a name`, async ({ page }) => {
+    await page.goto("/wakusei-planets/embed.html");
+    const stop = await page.evaluate(async (name) => {
+      const el = document.createElement(name);
+      el.id = "bare";
+      if (name === "wakusei-body") el.setAttribute("look", "line");
+      document.body.append(el);
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      return { tabIndex: (el as HTMLElement).tabIndex, label: el.getAttribute("aria-label") ?? "", role: el.getAttribute("role") ?? "" };
+    }, tag);
+    expect(stop.tabIndex, "a Tab stop").toBe(0);
+    expect(stop.label.length + (stop.role === "img" ? 1 : 0), "it has a name or a role").toBeGreaterThan(0);
+  });
+}
