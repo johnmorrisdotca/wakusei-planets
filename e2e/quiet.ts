@@ -2,7 +2,7 @@
 // runner. Everything that arrives late (a texture, a tile, a table) shows as a draw, so a count that holds still means it has all come. A view whose clock runs never holds still: hold the clock first.
 import { expect, type Page } from "@playwright/test";
 
-export async function quietElement(page: Page, selector: string): Promise<void> {
+export async function quietElement(page: Page, selector: string, timeout = 60_000): Promise<void> {
   let held = 0;
   let last = -1;
   await expect
@@ -13,7 +13,7 @@ export async function quietElement(page: Page, selector: string): Promise<void> 
         last = now;
         return held;
       },
-      { timeout: 60_000, intervals: [250], message: `${selector} held still` },
+      { timeout, intervals: [250], message: `${selector} held still` },
     )
     .toBeGreaterThanOrEqual(4);
 }

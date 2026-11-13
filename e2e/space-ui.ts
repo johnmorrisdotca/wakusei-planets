@@ -25,7 +25,7 @@ export const settle = (page: Page, ms = 600) => page.waitForTimeout(ms);
  * Waits until the draws have held still for four reads in a row, 250 ms apart (a frame on a slow runner takes longer than one quiet read), in place of a fixed sleep for the view to settle. Nothing arriving late
  * (a picture, a tile, a table) shows as a draw, so the count holding still means it has all come.
  */
-export async function quiet(page: Page): Promise<void> {
+export async function quiet(page: Page, timeout = 60_000): Promise<void> {
   let held = 0;
   let last = -1;
   await expect
@@ -36,7 +36,7 @@ export async function quiet(page: Page): Promise<void> {
         last = now;
         return held;
       },
-      { timeout: 60_000, intervals: [250], message: "the draws held still" },
+      { timeout, intervals: [250], message: "the draws held still" },
     )
     .toBeGreaterThanOrEqual(4);
 }
