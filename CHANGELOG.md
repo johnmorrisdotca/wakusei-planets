@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-11-13
+
+- **Browser tests that pass on a busy machine** (test only). A sweep of the e2e specs for the races TEST-RULES lists: the draw count is taken in the same call as the change (`callCounted`, `setCounted`, `clickCounted`) in place of a read in one call and the change in the next; settles are the draws holding still with no picture pending (`quiet`, `quietElement`) in place of fixed sleeps; the soak warm-up goes to every body and step; the picker group buttons are the picker's own, not `.first()`; the body page's shaded looks are pinned to a date. `CPU_THROTTLE=4` (e2e/load.ts) runs any spec that imports it at a quarter of the speed.
+
 ## [0.45.0] - 2026-11-13
 
 - **Sharper Moon and Mars maps, switched off until asked** (MODULES-1264). `pnpm tiles:moon` and `pnpm tiles:mars` cut level 4 (32768 pixels across) from the LROC WAC 100 m mosaic and the Viking MDIM 2.1 mosaic at 232 m. The Pages build runs them only when the repository variable `WAKUSEI_SHARP_TILES` is `1`, and does not download those files otherwise. `tilePoint` names the tile pixel of a longitude and latitude.
