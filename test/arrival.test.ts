@@ -71,7 +71,8 @@ test("a night-side approach stays at least half lit, and the Sun is not bought b
   });
   assert.ok(side.lit >= 0.5, String(side.lit));
   assert.ok(angleOf(side.side, unit(SUN)) <= Math.PI / 2 + 1e-4);
-  if (side.companion === "mars") assert.ok(sees(side.side, night, 1));
+  assert.equal(side.companion, "mars");
+  assert.ok(sees(side.side, night, 1));
   const sun = arrivalSide({
     body: BODY,
     radius: 1,
@@ -82,5 +83,7 @@ test("a night-side approach stays at least half lit, and the Sun is not bought b
   });
   assert.ok(sun.lit >= 0.5, String(sun.lit));
   assert.ok(angleOf(sun.side, unit(SUN)) <= Math.PI / 2 + 1e-4);
-  if (sun.companion === "sun") assert.ok(sees(sun.side, SUN));
+  // the Sun is only ever the last choice and, with the body half lit or more, it cannot be in the picture (it would have to be behind the body): so the side is the approach and no companion is named
+  assert.equal(sun.companion, null);
+  assert.ok(angleOf(sun.side, unit(FROM)) < 1e-6, "the side stays the approach");
 });
