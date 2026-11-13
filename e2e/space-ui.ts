@@ -1,12 +1,7 @@
 // The space page's controls as a person uses them, and the readings the space tests share: a click that does not scroll the page (a view scrolled out of sight is rightly not drawn).
 import { COUNT_SCRIPT, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
-import { expect, test, type Locator, type Page } from "@playwright/test";
-import { underLoad } from "./under-load.ts";
-
-// every space spec that uses these helpers can be tried on a busy machine: CPU_THROTTLE=4 runs its Chromium at a quarter of the speed (e2e/under-load.ts)
-test.beforeEach(async ({ page, browserName }) => {
-  await underLoad(page, browserName);
-});
+import { expect, type Locator, type Page } from "@playwright/test";
+import "./load.ts";
 
 export const setLight = (page: Page, name: "The Sun's" | "Always lit") => page.getByRole("group", { name: "Light" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
 
