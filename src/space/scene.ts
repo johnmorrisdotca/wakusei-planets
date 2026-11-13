@@ -249,7 +249,7 @@ export interface SpaceModel {
   label: PaintLabel | null;
   labelVersion: number;
   /** The names on the globes at the last draw: how many are drawn (made, their font in, and big enough on the screen), and the one on the body looked at, or null. */
-  labelsDrawn: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
+  labelsDrawn: { count: number; focus: { shown: boolean; text: string; turn: number; look: string } | null };
   /** How long an arrowhead drawn at the last draw is on the screen, in CSS pixels (measured from its own points), or 0 when none was drawn. */
   arrowPx: number;
   /** What the help arrow drew at the last draw, or null: the body, the axis it spins about (right-hand rule), the north pole, and the axis the drawn arc itself turns about (measured from its points). */

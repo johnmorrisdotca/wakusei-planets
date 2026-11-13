@@ -65,7 +65,7 @@ export interface BodyScene extends Scene3D {
   /** The window of finer map on the body, or `undefined` for a body with none (a glowing one, or one with no painted map). */
   readonly detail: DetailStats | undefined;
   /** The name on the globe now: whether it is drawn (made, its font in, and the body big enough), its text, and its turn about the pole in radians (for `facing`); `null` for none. */
-  readonly label: { shown: boolean; text: string; turn: number } | null;
+  readonly label: { shown: boolean; text: string; turn: number; look: string } | null;
 }
 
 export interface BodyItemOptions {
@@ -452,7 +452,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           return;
         }
         if (label === undefined) {
-          label = createNameLabel(T, state.label.text, state.label, look.emissive === true, () => options.redraw());
+          label = createNameLabel(T, state.label.text, state.label, look.emissive === true, () => options.redraw(), facts.colour);
           mesh.add(label.object);
         } else {
           label.set(state.label.text, state.label);
@@ -535,7 +535,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         },
         get label() {
           const inner = label?.object.children[0] as THREE.Object3D | undefined;
-          return label === undefined || latest.label === undefined || latest.label === null ? null : { shown: label.ready && inner !== undefined && inner.visible, text: latest.label.text, turn: inner?.rotation.y ?? 0 };
+          return label === undefined || latest.label === undefined || latest.label === null ? null : { shown: label.ready && inner !== undefined && inner.visible, text: latest.label.text, turn: inner?.rotation.y ?? 0, look: label.look };
         },
         resize(w: number, h: number) {
           viewWidth = w;

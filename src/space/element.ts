@@ -1721,7 +1721,7 @@ export class WakuseiSpace extends HTMLElement {
     /** What help mode drew at the last draw, or null: the body, the axis it spins about, its north pole, and the axis the drawn arrow itself turns about. */
     help: { body: string; axis: [number, number, number]; pole: [number, number, number]; retrograde: boolean; arcTurn: [number, number, number] } | null;
     /** The names on the globes at the last draw: how many are drawn (made, their font in, and the body big enough on the screen), and the one on the body looked at (its text and its turn about the pole in radians), or null. */
-    bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number } | null };
+    bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number; look: string } | null };
     /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */

@@ -28,8 +28,13 @@ description: 天体の名前をその球面に書きます。映画のタイト�
 | `body-label-facing` | つけると、名前の下で天体が回っても、名前は見る人のほうを向いたままです |
 | `body-label-font` | Michroma の代わりに使う、ページが読み込み済みの CSS フォントファミリー |
 | `body-label-fallback-font` | そのフォントにない文字 (日本語など) に使うファミリー (`"Noto Sans JP"`) |
+| `body-label-tone` | 文字の色合い。`auto` (既定。明るい天体には暗い文字、暗い天体には淡い文字)、`light` と `dark` はどちらかに固定します |
 
-プロパティ `bodyLabel` は同じ内容を一つのオブジェクトで受け取ります (`space.bodyLabel = { look: "painted", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: "Michroma", fallbackFont: "" }`)。`null` なら名前なし。設定すると属性より優先されます (要素が属性を読むのに使うのは `/painter` の `readNameLabel(el)` です)。
+プロパティ `bodyLabel` は同じ内容を一つのオブジェクトで受け取ります (`space.bodyLabel = { look: "painted", strength: 0.5, repeat: "once", latitude: 0, facing: false, font: "Michroma", fallbackFont: "", tone: "auto" }`)。`null` なら名前なし。設定すると属性より優先されます (要素が属性を読むのに使うのは `/painter` の `readNameLabel(el)` です)。
+
+## どの天体でも読める文字
+
+淡い天体 (天王星、金星、土星、太陽、氷の衛星) では淡い文字が消え、暗い天体では暗い文字が消えます。そこで既定では、目立つほうの色合いの文字になります。`body-label-tone="auto"` は天体の平均色 (`BODIES[id].colour`) を見て、相対輝度が 0.5 より高ければ暗い文字、低ければ淡い文字にします。暗い文字になるのは、金星、土星、天王星、太陽、イオ、エウロパ、エンケラドス、テティス、ディオネ、レア、トリトン、ヒドラ、エリス、ハウメアで、火星、月、地球、水星、木星、海王星、冥王星、ガニメデ、カリスト、タイタンなどは淡い文字になります。強さはどの天体でも同じ意味で、0.5 なら天王星でも火星でも表面との差は同じです。暗い文字は `burned`、淡い文字は `painted` の見た目なので、天体が求めれば `painted` と `etched` は暗くなり、`burned` は淡くなります。`outline` は色合いが一つだけなのでそのままです。どの天体でも同じ色合いにしたいページは、`body-label-tone="light"` か `"dark"` (`bodyLabel` のプロパティ `tone`) を指定します。`/painter` の `nameTone(colour)` と `nameLabelLook(options, colour)` は、同じ決まりをふつうの値に当てはめるものです。いま描かれている見た目は `stats.label.look` と `stats.bodyLabels.focus.look` で分かります。
 
 ## 文字
 
