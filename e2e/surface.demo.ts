@@ -40,8 +40,20 @@ const open = async (page: Page, attributes = "shadows=off detail=off"): Promise<
     document.querySelector("main")!.prepend(el);
   }, attributes);
   await expect(page.locator("#test-surface")).toHaveAttribute("data-state", "live", { timeout: 120_000 });
-  // the first draw is at the quality of motion and one at the quality of rest follows it a moment after: the view is at rest when the quality has settled and a draw has been made at it
-  await expect.poll(() => read(page, (el) => `${el.stats.quality}:${el.stats.renderer?.draws ?? 0}`), { timeout: 120_000, intervals: [300] }).toMatch(/^full:[2-9]/);
+  // at rest: the draws have stopped (the first, at the quality of motion, and the one a moment after it at the quality of rest, which a machine that is slow steps down), the same on three reads
+  let held = "";
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = await read(page, (el) => `${el.stats.quality}:${el.stats.renderer?.draws ?? 0}`);
+        same = now === held && !now.endsWith(":0") ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { timeout: 180_000, intervals: [400] },
+    )
+    .toBeGreaterThanOrEqual(3);
 };
 const view = (page: Page) => page.locator("#test-surface");
 const read = <T>(page: Page, fn: (el: Surface) => T): Promise<T> => view(page).evaluate(fn as never) as Promise<T>;

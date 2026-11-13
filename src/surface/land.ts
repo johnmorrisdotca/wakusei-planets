@@ -130,18 +130,15 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
   const site = siteById(siteId);
   if (site === undefined) throw new Error(`no site called ${siteId}`);
   const before = landings.get(space);
-  if (before !== undefined && before.site.id === site.id && !before.cancelled) {
-    if (before.down) return before.surface;
-  } else if (before !== undefined) {
+  if (before !== undefined) {
+    if (before.site.id === site.id && before.down) return before.surface;
+    // another site, or one still coming down: that landing is called off first
     await leave(space);
   }
   const root = space.shadowRoot;
   if (root === null) throw new Error("the orbit view is not connected");
-  await import("./element.ts");
-  // the orbit view turns to a site by its place in the Moon's list: where the page has given the views no lists, the package's own are given
-  const { placesLoader, setPlacesLoader } = await import("../scene/place-layer.ts");
-  if (placesLoader() === undefined) setPlacesLoader((await import("../places.ts")).loadPlaces);
   const smooth = options.smooth !== false && !reduced();
+  // the standing view goes in at once (it is made when its element is known, a moment after), so that `leave` can call the landing off from the first moment
   const surface = document.createElement("wakusei-surface");
   surface.setAttribute("site", site.id);
   surface.setAttribute("lang", space.getAttribute("lang") === "ja" ? "ja" : "en");
@@ -163,6 +160,11 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
     throw new Error(message);
   };
   try {
+    await import("./element.ts");
+    // the orbit view turns to a site by its place in the Moon's list: where the page has given the views no lists, the package's own are given
+    const { placesLoader, setPlacesLoader } = await import("../scene/place-layer.ts");
+    if (placesLoader() === undefined) setPlacesLoader((await import("../places.ts")).loadPlaces);
+    if (landing.cancelled) throw new Error("the landing was called off");
     // the camera: to the Moon, then over the site and in to the closest zoom, while the standing view loads behind
     if (space.body !== "moon") {
       space.goTo("moon", { smooth });
