@@ -25,18 +25,23 @@ interface SpaceStats {
 const statsOf = (page: Page): Promise<SpaceStats> => page.locator(SPACE).evaluate((el) => Reflect.get(el, "stats") as SpaceStats);
 const settle = (page: Page, ms = 600) => page.waitForTimeout(ms);
 /**
- * Wait until the view has stopped drawing: no GL draw call for `quietMs`. A fresh view draws as its pictures arrive (the Earth's 512 then 1024 pixel map, each one frame), and how soon they come
- * depends on the machine, so a test of "nothing is drawn" starts from the moment the load is over, not from a fixed time after it began. A view that never stops drawing never gets here and fails.
+ * `moons: false` is for a view whose clock runs and which is out of sight: it holds the moons it last drew, and lets them go only when it draws, so the held count does not come to the moons' for good. A view at rest keeps the default.
+ * Wait until every surface picture has arrived (`stats.pictures.pending` is 0) and then until no GL draw call lands for `quietMs`. A sharper picture draws one frame when it arrives, so the quiet window starts after the fetch, not after a fixed time. A view that never stops drawing never gets here and fails.
  */
-async function untilQuiet(page: Page, quietMs = 1500): Promise<void> {
+async function untilQuiet(page: Page, quietMs = 1500, { moons = true }: { moons?: boolean } = {}): Promise<void> {
+  await expect.poll(async () => {
+    const stats = (await statsOf(page)) as SpaceStats & { pictures: { pending: number }; bodies: { held: number; moons: number } };
+    return stats.pictures.pending === 0 && (!moons || stats.bodies.held === stats.bodies.moons);
+  }, { timeout: 30_000 }).toBe(true);
   let last = (await readCounts(page)).draws;
   let since = Date.now();
   const stop = Date.now() + 30_000;
   while (Date.now() - since < quietMs) {
     if (Date.now() > stop) throw new Error(`the view was still drawing after 30 s (${last} draw calls)`);
     await page.waitForTimeout(100);
+    const stats = (await statsOf(page)) as SpaceStats & { pictures: { pending: number }; bodies: { held: number; moons: number } };
     const now = (await readCounts(page)).draws;
-    if (now !== last) {
+    if (now !== last || stats.pictures.pending !== 0 || (moons && stats.bodies.held !== stats.bodies.moons)) {
       last = now;
       since = Date.now();
     }
@@ -182,7 +187,7 @@ test("out of sight or hidden, a game clock running at a day a second draws nothi
     window.scrollTo(0, 5000);
   });
   // the view has stopped drawing (the gate sees it leave the screen when the browser says so, which on a busy runner is not within a fixed time)
-  await untilQuiet(page);
+  await untilQuiet(page, 1500, { moons: false });
   const before = await readCounts(page);
   await page.waitForTimeout(2500);
   const after = await readCounts(page);
@@ -392,8 +397,8 @@ test("switching glides and ends, then (the moons let go) nothing is drawn", asyn
   expect((await rideOf(page)).ride.gliding).toBe(true);
   // the move's own end, not a time: it takes as long as the picture changes
   await expect.poll(async () => (await rideOf(page)).ride.gliding, { timeout: 90_000 }).toBe(false);
-  // after the move's last draw a frame can still be queued (a sharper picture arriving), and on a loaded runner drawing in software it lands late: CI saw one after 1.5 seconds of quiet (51 draw calls, one frame), so rest is four seconds without a draw
-  await untilQuiet(page, 4000);
+  // the pictures have arrived (`stats.pictures.pending` is 0) and the draw count has been still for 1.5 seconds
+  await untilQuiet(page);
   const before = await readCounts(page);
   await page.waitForTimeout(2500);
   const after = await readCounts(page);
@@ -417,7 +422,7 @@ test("riding at a day a second: at most 30 draws a second, and nothing when scro
     document.body.prepend(spacer);
     window.scrollTo(0, 5000);
   });
-  await untilQuiet(page);
+  await untilQuiet(page, 1500, { moons: false });
   const hidden = await readCounts(page);
   await page.waitForTimeout(2500);
   const still = await readCounts(page);

@@ -1,6 +1,6 @@
 {
   "name": "@johnmorrisdotca/wakusei-planets",
-  "version": "0.44.2",
+  "version": "0.45.0",
   "description": "Wakusei Planets 惑星 — The Sun, planets and moons for the web: each as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation as data, and positions of the moons for any date and time. SVG for the lines, three.js (optional) for the rest.",
   "keywords": [
     "planets",
@@ -595,6 +595,8 @@
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && node scripts/check-package.ts",
     "prepublishOnly": "pnpm check",
     "tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py build",
+    "tiles:moon": ".cache/venv/bin/python -I scripts/make-body-tiles.py sharp --bodies moon",
+    "tiles:mars": ".cache/venv/bin/python -I scripts/make-body-tiles.py sharp --bodies mars",
     "test:tiles": ".cache/venv/bin/python -I scripts/make-body-tiles.py selftest",
     "terrain": ".cache/venv/bin/python -I scripts/make-moon-terrain.py build",
     "test:terrain": ".cache/venv/bin/python -I scripts/make-moon-terrain.py selftest",

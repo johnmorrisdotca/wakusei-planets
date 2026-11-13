@@ -11,7 +11,7 @@ import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceK
 import { sightChanged, sightOf, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { chooseLabels, nameSpot, type LabelBox } from "./labels.ts";
 import { coverArrows } from "./covered.ts";
-import { createPainter, type WakuseiPainter } from "../scene/painter.ts";
+import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
 import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
 import type { Credit, DataSource } from "../data-door.ts";
 import { createDoorHost, type DoorHost } from "../door/host.ts";
@@ -1861,6 +1861,8 @@ export class WakuseiSpace extends HTMLElement {
     moonSize: { asked: number; factor: number; clamped: boolean };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
     orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
+    /** Surface pictures still being fetched. A rest test waits for 0, then for the draw count to stay still: a sharper picture draws one more frame when it arrives. */
+    pictures: { pending: number };
     /** The body the last arrival kept in the picture beside the one gone to, or null. */
     companion: string | null;
   } {
@@ -1892,6 +1894,7 @@ export class WakuseiSpace extends HTMLElement {
       spacecraft: { count: this.#model.craftDrawn.count, status: { ...this.#model.craftDrawn.status }, drawn: [...this.#model.craftDrawn.drawn] },
       companion: this.#model.companion,
       moonSize: { asked: this.#model.moonSize, factor: this.#model.moonDrawn.factor, clamped: this.#model.moonDrawn.clamped },
+      pictures: { pending: picturesPending() },
     };
   }
 

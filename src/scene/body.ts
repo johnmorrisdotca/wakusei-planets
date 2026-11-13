@@ -14,6 +14,7 @@ import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import type { TileLevel } from "./tiles.ts";
 import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
+import { interiorOf } from "../interior.ts";
 import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, type NameLabel, type NameLabelOptions } from "./name-label.ts";
@@ -92,6 +93,10 @@ export interface BodyItemOptions {
   report?(note: { painted: boolean; width: number; failed?: boolean }): void;
   /** Finer map tiles for a close zoom (see `scene/detail.ts`): where they are (`undefined` for none), the pixel ratio, whether this device may use them, and what to do when the tile set's levels for the body are known. */
   tiles?: { source(body: string): BodyMapSource | undefined; book: SourceBook; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
+  /** Draw the interior cutaway instead of the whole globe. Off when left out. A body with no sourced interior is drawn whole. */
+  cutaway?: boolean;
+  /** How many interior shells this scene built. `0` when the cutaway is off or the body has no sourced interior. */
+  onShells?(count: number): void;
 }
 
 /** The shader material of a body: its surface code with the look's lighting and glow uniforms. A star made from numbers is drawn with it too (the size line-up). */
@@ -167,6 +172,34 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const mesh = new T.Mesh(geometry, shader);
       mesh.frustumCulled = false;
       scene.add(mesh);
+      // the cutaway: a quarter of the globe left open toward the camera. Its own group, not a child of the hidden globe, so the shells are drawn. The same basis as the globe, so the opening turns with the body.
+      const shells: { geometry: { dispose(): void }; material: { dispose(): void } }[] = [];
+      let cut: InstanceType<ThreeParts["Group"]> | undefined;
+      if (options.cutaway === true) {
+        const interior = interiorOf(options.id);
+        if (interior !== undefined) {
+          mesh.visible = false;
+          cut = new T.Group();
+          scene.add(cut);
+          for (const layer of interior.layers) {
+            const radius = layer.outerKm / interior.radiusKm;
+            const shellGeometry = new T.SphereGeometry(radius, 48, 24, Math.PI / 4, Math.PI * 1.5);
+            const channel = (start: number) => Number.parseInt(layer.colour.slice(start, start + 2), 16) / 255;
+            const material = new T.ShaderMaterial({
+              side: T.DoubleSide,
+              depthWrite: true,
+              uniforms: { uColour: { value: new T.Vector3(channel(1), channel(3), channel(5)) } },
+              vertexShader: "void main(){ gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+              fragmentShader: "uniform vec3 uColour; void main(){ gl_FragColor = vec4(uColour, 1.0); }",
+            });
+            const shell = new T.Mesh(shellGeometry, material);
+            shell.frustumCulled = false;
+            cut.add(shell);
+            shells.push({ geometry: shellGeometry, material });
+          }
+        }
+      }
+      options.onShells?.(shells.length);
 
       // rings: a picture of them when the look has one (painted), else the table's strip
       const table = ringStrip(facts, 1024);
@@ -335,6 +368,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const scaleY = ax ? ax[2] / mean : 1 - facts.flattening;
         const scaleZ = ax ? ax[0] / mean : 1;
         setBasis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
+        if (cut !== undefined) setBasis(cut, east, pole, meridian, scaleX, scaleY, scaleZ);
         if (ringHalves !== undefined) {
           const [near, far] = ringHalves;
           // The camera sits on +Z. The ring's near direction is +Z laid onto the ring plane, and that half is drawn over the disc.
@@ -558,6 +592,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           label = undefined;
           for (const o of orbitLines.values()) o.line.geometry.dispose();
           orbitMaterial.dispose();
+          for (const shell of shells) {
+            shell.geometry.dispose();
+            shell.material.dispose();
+          }
           scene.clear();
         },
       };

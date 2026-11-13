@@ -371,6 +371,7 @@ const atRest = async (page: Page): Promise<void> => {
   const reading = () => skyStats(page) as unknown as Promise<Reading>;
   await expect.poll(async () => (await reading()).ride.gliding, { timeout: 90_000, message: "the camera never stopped gliding" }).toBe(false);
   await expect.poll(async () => (await reading()).travelling, { timeout: 30_000, message: "the travel never ended" }).toBeNull();
+  await expect.poll(async () => ((await skyStats(page)) as unknown as { pictures: { pending: number } }).pictures.pending, { timeout: 30_000, message: "a picture was still on its way" }).toBe(0);
   await expect.poll(async () => { const { bodies } = await reading(); return bodies.held - bodies.moons; }, { timeout: 30_000, message: "moons out of sight were never let go" }).toBe(0);
 };
 const goTo = (page: Page, name: string) => page.getByRole("group", { name: "Go to" }).getByRole("button", { name, exact: true }).dispatchEvent("click");
@@ -545,8 +546,9 @@ test("changes to the space view give back what they took: the zooms, the scales,
   }
   await settle(page, 2500);
   const last = await settledCounts(page);
+  const held = (["Buffer", "Texture", "VertexArray", "Program", "Framebuffer", "Renderbuffer"] as const).map((kind) => `${kind} ${last.created[kind] - last.deleted[kind]}`).join(", ");
   expect(last.contexts).toBe(1);
-  expect(gpuObjects(last), `${seen.join(", ")}, then ${gpuObjects(last)}`).toBeLessThanOrEqual(Math.max(...seen) + 4);
+  expect(gpuObjects(last), `${seen.join(", ")}, then ${gpuObjects(last)}; still held: ${held}`).toBeLessThanOrEqual(Math.max(...seen) + 4);
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
   await givenBackOnRemoval(page);
 });
@@ -1173,4 +1175,29 @@ test("the space view at a day a second with the belts: at most thirty frames a s
   expect(f1.draws - f0.draws).toBeGreaterThan(0);
   expect(f1.draws - f0.draws).toBeLessThanOrEqual(4 * 31);
   expect((await readCounts(page)).contexts).toBe(1);
+});
+
+test("a cutaway builds its shells and gives them back when it is turned off", async ({ page }) => {
+  try {
+    const client = await page.context().newCDPSession(page);
+    await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  } catch {
+    // the freeze project is Chromium; a session that cannot throttle still runs the give-back
+  }
+  await page.goto(`${URL}?body=earth`);
+  await main(page).hover();
+  await live(page);
+  await expect(main(page)).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
+  const before = await settledCounts(page);
+  await main(page).evaluate((el) => el.setAttribute("cutaway", ""));
+  await expect(main(page)).toHaveAttribute("data-shells", "4", { timeout: 60_000 });
+  await expect.poll(() => main(page).evaluate((el) => el.shadowRoot?.querySelectorAll("#cutaway [data-layer]").length ?? 0)).toBe(4);
+  const open = await settledCounts(page);
+  expect(gpuObjects(open), "the shells are graphics objects").toBeGreaterThan(gpuObjects(before));
+  await main(page).evaluate((el) => el.removeAttribute("cutaway"));
+  await expect(main(page)).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
+  await expect.poll(() => main(page).evaluate((el) => (el.shadowRoot?.querySelector("#cutaway") as HTMLElement | null)?.hidden ?? true)).toBe(true);
+  const after = await settledCounts(page);
+  expect(gpuObjects(after), "turning the cutaway off gives the shells back").toBeLessThanOrEqual(gpuObjects(before) + 4);
+  expect((await readCounts(page)).contexts).toBeLessThanOrEqual(1);
 });
