@@ -45,6 +45,8 @@ const state = {
   names: address.get("names") !== "0",
   /** Starman and the Roadster, drawn on their orbit (their path is fetched the first time). */
   starman: address.get("starman") === "1",
+  /** The deep-space craft of /spacecraft, drawn when the address says `craft=all`. */
+  craft: address.get("craft") === "all",
   /** The spacecraft in orbit round the Moon and Mars (their paths are fetched the first time). */
   orbiters: address.get("orbiters") === "1",
   /** Paint the ground track of the chosen orbiter (LRO at the Moon, MRO at Mars when none is chosen) for a day, a week or a month. */
@@ -96,6 +98,7 @@ function render(): void {
   space.orbits = state.orbits;
   space.labels = state.names;
   space.roadster = state.starman;
+  space.spacecraft = state.craft ? "all" : false;
   space.orbiters = state.orbiters;
   const mars = space.body === "mars" || space.body === "phobos" || space.body === "deimos";
   space.paint = state.paint ? { id: state.orbiter || (mars ? "mro" : "lro"), length: state.paintLength } : null;
@@ -146,6 +149,7 @@ function render(): void {
   pressed(document.querySelector<HTMLElement>("#orbits")!, state.orbits);
   pressed(document.querySelector<HTMLElement>("#names")!, state.names);
   pressed(document.querySelector<HTMLElement>("#starman")!, state.starman);
+  pressed(document.querySelector<HTMLElement>("#craft")!, state.craft);
   pressed(document.querySelector<HTMLElement>("#orbiters")!, state.orbiters);
   pressed(document.querySelector<HTMLElement>("#paint")!, state.paint);
   for (const b of $$("#paint-lengths [data-paint-length]")) pressed(b, b.dataset["paintLength"] === state.paintLength);
@@ -168,6 +172,7 @@ function render(): void {
   address.set("orbits", state.orbits ? null : "0");
   address.set("names", state.names ? null : "0");
   address.set("starman", state.starman ? "1" : null);
+  address.set("craft", state.craft ? "all" : null);
   address.set("orbiters", state.orbiters ? "1" : null);
   address.set("paint", state.paint ? "1" : null);
   address.set("paintlength", state.paintLength === "1d" ? null : state.paintLength);
@@ -230,6 +235,7 @@ for (const b of $$("#ride-looks [data-ride-look]")) b.addEventListener("click", 
 document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbits = !state.orbits), render()));
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
 document.querySelector("#starman")!.addEventListener("click", () => ((state.starman = !state.starman), render()));
+document.querySelector("#craft")!.addEventListener("click", () => ((state.craft = !state.craft), render()));
 document.querySelector("#paint")!.addEventListener("click", () => ((state.paint = !state.paint), (state.orbiters = state.orbiters || state.paint), render()));
 document.querySelector("#paint-clear")!.addEventListener("click", () => ((state.paint = false), space.clearPaint(), render()));
 for (const b of $$("#paint-lengths [data-paint-length]")) b.addEventListener("click", () => ((state.paintLength = b.dataset["paintLength"] as typeof state.paintLength), render()));

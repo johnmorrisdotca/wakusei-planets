@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The space view draws the deep-space craft** (MODULES-1207). `spacecraft` on `<wakusei-space>` (and `space.spacecraft`) is off by default. `"all"` or `true` draws every craft whose record covers the date, as one points object with a name each; a space-separated list draws those. A craft outside its record is not drawn and `stats.spacecraft.status[id]` is `"outside"`. Each table loads the first time that craft is shown. `sight()` and `wakusei-sight` give each drawn craft `{ id, kind: "spacecraft" }` using the craft's own id. A press sends `wakusei-body-click` with that kind and does not go to the craft. No path line.
+
 - **The Roadster joins the spacecraft list** (MODULES-1208). `roadster` is the nineteenth entry of `SPACECRAFT`: Starman / スターマン, other names Tesla Roadster, Starman and Tesla, kind `other`, Horizons `-143205`, the Falcon Heavy launch from Kennedy Space Center 39A. `findSpacecraft` matches an id, either name or an other name, with case and letter width folded. `spacecraftPosition`, `spacecraftSpeed`, `spacecraftSunDistance`, `spacecraftLightTime` and `spacecraftStats` answer for it from the Roadster's own path, and the 20 kB table loads only with `loadSpacecraft("roadster")`. `/roadster` is unchanged. The craft page's picker shows it.
 
 ## [0.42.0] - 2026-11-13

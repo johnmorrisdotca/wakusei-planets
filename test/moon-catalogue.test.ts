@@ -229,7 +229,7 @@ test("the rows are a chunk of their own: no other entry point carries them, and 
     assert.ok(!text!.text.includes(mark), `${entry} does not carry the moon catalogue`);
   }
   const split = await bundle(`import "./src/space/element.ts";`, true);
-  const entry = split.find((file) => !/\/chunk-/.test(file.path))!;
+  const entry = split.find((file) => file.path.endsWith("/stdin.js"))!;
   assert.ok(!entry.text.includes(mark), "the space element's own chunk does not hold the rows");
   assert.equal(split.filter((file) => file.text.includes(mark)).length, 1, "the rows are one chunk, fetched by all-moons");
   const raw = readFileSync(new URL("../src/data/moon-catalogue.ts", import.meta.url));

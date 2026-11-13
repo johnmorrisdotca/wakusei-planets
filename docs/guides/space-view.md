@@ -82,7 +82,7 @@ The view offers every body the package knows, 52 of them: the Sun, the eight pla
 
 The demo's picker is three clicks in a row: a kind (the Sun and planets, dwarf planets, small bodies, moons), for a moon the planet it goes round, then the body, with a search by name (English or Japanese) beside them and a "With its moons" button for a planet that has some. `space.bodyList()` is the data for any picker of your own.
 
-`roadster` (and `space.roadster`) draws Starman and the Tesla Roadster as a small marked body on its orbit line with its name, from the launch in 2018 to the end of 2035, loading its path only when it is first shown: [Starman and the Tesla Roadster](roadster.md).
+`roadster` (and `space.roadster`) draws Starman and the Tesla Roadster as a small marked body on its orbit line with its name, from the launch in 2018 to the end of 2035, loading its path only when it is first shown: [Starman and the Tesla Roadster](roadster.md). `spacecraft` (and `space.spacecraft`) is off by default. `"all"` or `true` draws every deep-space craft whose record covers the date, as one set of dots with their names; a space-separated list draws those. A craft outside its record is not drawn, and `stats.spacecraft.status[id]` is `"outside"`. Each table loads the first time that craft is shown. `sight()` gives each drawn craft an entry with `kind: "spacecraft"` and the craft's own id. A press sends `wakusei-body-click` with that kind and does not move the camera.
 
 `orbiters` (and `space.orbiters`) draws the spacecraft in orbit round the Moon and Mars as dots on their orbit lines with their names, once the body is big enough on the screen, loading their paths only when first shown: [The orbiters of the Moon and Mars](orbiters.md).
 

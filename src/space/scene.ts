@@ -251,6 +251,14 @@ export interface SpaceModel {
   roadsterPath: RoadsterPath | null;
   /** What the Roadster drew at the last draw: whether it was drawn (shown, its path in, and the moment within the record), its place in Earth radii from the Earth's centre, and its radius on the screen. */
   roadsterDrawn: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
+  /** Places of the deep-space craft for this frame, or null when they are off. `au` is null when the date is outside that craft's record. */
+  /** Off, every craft, or the ids asked for. */
+  craftShow: null | "all" | readonly string[];
+  craftIds: readonly string[];
+  craftNames: ((id: string, lang: "en" | "ja") => string) | null;
+  craftPlaces: ((ms: number) => { id: string; au: [number, number, number] | null }[]) | null;
+  /** What the last draw did with those craft. */
+  craftDrawn: { count: number; status: Record<string, "drawn" | "outside">; drawn: string[] };
   /** The name written on each body's globe, or null for none; `labelVersion` goes up whenever it (or the language) changes, so each body is told once. */
   label: PaintLabel | null;
   labelVersion: number;
@@ -366,6 +374,11 @@ export const newSpaceModel = (): SpaceModel => ({
   roadster: false,
   roadsterPath: null,
   roadsterDrawn: { shown: false, position: null, radiusPx: 0 },
+  craftShow: null,
+  craftIds: [],
+  craftNames: null,
+  craftPlaces: null,
+  craftDrawn: { count: 0, status: {}, drawn: [] },
   label: null,
   labelVersion: 0,
   labelsDrawn: { count: 0, focus: null },
@@ -631,6 +644,20 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       roadsterLine.visible = false;
       roadsterLine.frustumCulled = false;
       scene.add(roadsterLine);
+      const CRAFT_DOTS = 19;
+      const craftPositions = new Float32Array(CRAFT_DOTS * 3);
+      const craftGeometry = new three.BufferGeometry();
+      const craftAttribute = new three.BufferAttribute(craftPositions, 3);
+      craftGeometry.setAttribute("position", craftAttribute);
+      craftGeometry.setDrawRange(0, 0);
+      const CraftPoints = three as unknown as { Points?: new (g: THREE.BufferGeometry, m: THREE.Material) => THREE.Points; PointsMaterial?: new (p: object) => THREE.Material };
+      const craftMaterial = typeof CraftPoints.PointsMaterial === "function" ? new CraftPoints.PointsMaterial({ color: 0x9fd0ff, size: 4, sizeAttenuation: false, depthWrite: false }) : null;
+      const craftPoints = craftMaterial !== null && typeof CraftPoints.Points === "function" ? new CraftPoints.Points(craftGeometry, craftMaterial) : null;
+      if (craftPoints !== null) {
+        craftPoints.frustumCulled = false;
+        craftPoints.visible = false;
+        scene.add(craftPoints);
+      }
       const roadsterOrbit = { samples: [] as Vec3[], epoch: Number.NaN };
       // the orbiters: a dot and a line each, made the first time the craft is drawn, kept for the view's life
       interface OrbiterDrawing {
@@ -1145,6 +1172,36 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             roadsterMesh.visible = false;
             roadsterLine.visible = false;
           }
+          // the deep-space craft: one points draw, a dot each, no path line. A date outside a craft's record draws nothing for it.
+          const craftAts: { id: string; at: Vec3; px: number }[] = [];
+          const craftStatus: Record<string, "drawn" | "outside"> = {};
+          const craftDrawn: string[] = [];
+          const craftList = model.craftPlaces?.(model.time) ?? [];
+          if (craftPoints !== null) {
+            let n = 0;
+            for (const craft of craftList) {
+              if (craft.au === null) {
+                craftStatus[craft.id] = "outside";
+                continue;
+              }
+              if (n >= CRAFT_DOTS) break;
+              const at = placeAround(mode, sunPos, eclipticToScene(craft.au));
+              craftPositions[n * 3] = at[0];
+              craftPositions[n * 3 + 1] = at[1];
+              craftPositions[n * 3 + 2] = at[2];
+              const away = Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z);
+              const drawn = (away * half * 4) / (size.height / 2);
+              const dotPx = away <= drawn ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(Math.max(away * away - drawn * drawn, 1e-12)))) / half;
+              craftAts.push({ id: craft.id, at, px: dotPx });
+              craftStatus[craft.id] = "drawn";
+              craftDrawn.push(craft.id);
+              n += 1;
+            }
+            craftAttribute.needsUpdate = true;
+            craftGeometry.setDrawRange(0, n);
+            craftPoints.visible = n > 0;
+            model.craftDrawn = { count: n, status: craftStatus, drawn: craftDrawn };
+          } else model.craftDrawn = { count: 0, status: craftStatus, drawn: [] };
           // the orbiters round the Moon and Mars: each a dot at the table's place, scaled with its body's drawn radius, on its orbit line, once its body is big enough on the screen; a modelled path is drawn dim
           const orbiterSet = model.orbiters ? model.orbiterSet : null;
           const orbiterPlaces: Record<string, { at: Vec3; px: number }> = {};
@@ -1431,6 +1488,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               places["roadster"] = spot ? { x: spot.x, y: spot.y, r: roadsterPx } : null;
               if (spot) moonDistances["roadster"] = Math.hypot(roadsterAt[0] - camera.position.x, roadsterAt[1] - camera.position.y, roadsterAt[2] - camera.position.z);
             }
+            for (const craft of craftAts) {
+              const spot = labelFor(craft.at);
+              places[craft.id] = spot ? { x: spot.x, y: spot.y, r: craft.px } : null;
+              if (spot) moonDistances[craft.id] = Math.hypot(craft.at[0] - camera.position.x, craft.at[1] - camera.position.y, craft.at[2] - camera.position.z);
+            }
             // a body behind another: its place is inside a nearer body's disc
             const entries: CoverEntry[] = [];
             for (const [id, at] of Object.entries(places)) {
@@ -1465,6 +1527,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             for (const id of SPACE_BODIES) if (id !== hiddenBody && !(rideFrom && id === rideFrom.around)) sight(id, pos[id], px[id]);
             const moons = new Set<string>([...((MOONS_OF as Record<string, readonly MoonId[]>)[hostOf(model.focus) ?? model.focus] ?? []), ...Object.keys(moonPlaces)]);
             for (const id of moons) if (id !== hiddenMoon && !(SPACE_BODIES as readonly string[]).includes(id)) sight(id, absoluteSite(id as MoonId), moonPlaces[id]?.r ?? 0);
+            for (const craft of craftAts) sight(craft.id, craft.at, craft.px);
             projected.set(0, 0, -1).applyMatrix4(camera.projectionMatrix);
             deps.onSight(sights, { width: size.width, height: size.height, axis: { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height } });
           }
@@ -1497,6 +1560,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           roadsterGeometry.dispose();
           roadsterMaterial.dispose();
+          craftGeometry.dispose();
+          craftMaterial?.dispose();
           for (const drawing of orbiterDrawings.values()) {
             drawing.material.dispose();
             drawing.line.geometry.dispose();
