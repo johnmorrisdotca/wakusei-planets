@@ -11,6 +11,7 @@ import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId 
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
+import { interiorLegend } from "./interior.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
 import { detailOf, lookOf, starLookOf } from "./scene/look.ts";
@@ -97,8 +98,12 @@ const LINE_LIMITS = { zoomMin: 0.1, zoomMax: 50, tiltMax: 90 } as const;
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 320px); max-width: 100%; aspect-ratio: 1 / 1; position: relative; contain: layout style; }
 #stage { position: absolute; inset: 0; }
+#cutaway { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 6px 8px; list-style: none; background: color-mix(in srgb, Canvas 88%, transparent); color: CanvasText; font: 12px/1.35 system-ui, sans-serif; }
+#cutaway[hidden] { display: none; }
+#cutaway li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 8px; align-items: baseline; }
+#cutaway [data-swatch] { width: 12px; height: 12px; }
 #stage svg { display: block; width: 100%; height: 100%; }
-</style><div id="stage"></div>`;
+</style><div id="stage"></div><ol id="cutaway" hidden></ol>`;
 
 /**
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
@@ -111,6 +116,7 @@ const TEMPLATE = `<style>
  * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
+ * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera, turning with the body, and lists the interior layers. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
  * `places` marks the places on the body in the shaded looks, by layer (`landing`, `crash`, `planned`, `feature`; the lists come from `setPlacesLoader`), with `wakusei-place` on a click and `goToPlace` to turn one to the middle: see the guide "Places on the Moon, Mars and 31 more bodies".
  * `body-label` writes the body's name on its globe in the shaded looks (`painted`, `etched`, `outline` or `burned`; absent for none), with `body-label-strength`, `-repeat`, `-latitude`, `-facing`, `-font`, `-fallback-font` and `-tone` (`auto`, `light` or `dark` letters: auto takes dark ones for a `painted` look on a light body) beside it, and the `bodyLabel` property takes the same as an object: see the guide "A name on the body".
  * A dated picture (a `time`, or `moons`) has a clock: `rate` is the simulated seconds for each real second, and `rate="0"` holds it, drawing nothing. While it runs (`rate` not 0), `wakusei-timechange` carries
@@ -129,7 +135,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "cutaway", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -840,8 +846,61 @@ export class WakuseiBody extends HTMLElement {
     });
   }
 
+  /** The picture's identity: a new one disposes the view and builds it again, so a cutaway gives its shells back when it is turned off. */
+  #signature(): string {
+    return `${this.#star()?.key ?? this.body}|${this.look}|${this.#cutawayOn() ? "cut" : "whole"}`;
+  }
+
+  #cutawayOn(): boolean {
+    const value = this.getAttribute("cutaway");
+    return value !== null && value !== "off" && value !== "0";
+  }
+
+  /** The legend. It is HTML, so it costs no graphics object, and it lists only the layers `interiorLegend` has. */
+  #syncLegend(): void {
+    const list = this.shadowRoot?.querySelector("#cutaway");
+    if (!(list instanceof HTMLOListElement)) return;
+    if (!this.#cutawayOn()) {
+      list.hidden = true;
+      list.replaceChildren();
+      return;
+    }
+    list.hidden = false;
+    list.replaceChildren();
+    const lang = this.getAttribute("lang") === "ja" ? "ja" : "en";
+    const rows = interiorLegend(this.body, lang);
+    if (rows === undefined) {
+      const item = document.createElement("li");
+      item.dataset.empty = "";
+      item.textContent = lang === "ja" ? "この天体の内部は、このパッケージには出典つきの数値がありません。" : "This body has no sourced interior in this package.";
+      list.append(item);
+      return;
+    }
+    for (const row of rows) {
+      const item = document.createElement("li");
+      item.dataset.layer = row.id;
+      const swatch = document.createElement("span");
+      swatch.dataset.swatch = "";
+      swatch.style.background = row.colour;
+      const text = document.createElement("span");
+      const name = document.createElement("b");
+      name.dataset.name = "";
+      name.textContent = row.name;
+      const depth = document.createElement("span");
+      depth.dataset.depth = "";
+      depth.textContent = row.depth;
+      const made = document.createElement("span");
+      made.dataset.made = "";
+      made.textContent = row.madeOf;
+      text.append(name, " ", depth, " ", made);
+      item.append(swatch, text);
+      list.append(item);
+    }
+  }
+
   async #refresh(): Promise<void> {
     if (!this.isConnected) return;
+    this.#syncLegend();
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
     if (this.hasAttribute("star") && this.#star() === undefined) {
@@ -867,7 +926,7 @@ export class WakuseiBody extends HTMLElement {
       if (undelegated) this.#resume();
       return;
     }
-    const sig = `${this.#star()?.key ?? this.body}|${this.look}`;
+    const sig = this.#signature();
     if (this.#view !== undefined && this.#viewSig !== sig) {
       if (this.#view.live) this.#wantLive = true;
       this.#disposeView();
@@ -964,7 +1023,7 @@ export class WakuseiBody extends HTMLElement {
     const state = this.#sceneOf(frame);
     this.#sceneState = state;
     this.#viewKey = this.#key(state);
-    this.#viewSig = `${this.#star()?.key ?? this.body}|${this.look}`;
+    this.#viewSig = this.#signature();
     this.#stilled = false;
     this.#stage.innerHTML = "";
     const star = this.#star();
@@ -972,6 +1031,10 @@ export class WakuseiBody extends HTMLElement {
       id: this.body,
       ...(star === undefined ? {} : { shaded: star.look, facts: star.facts, assetKey: `star:${star.key}` }),
       look: this.look === "illustrated" ? "realistic" : "painted",
+      cutaway: this.#cutawayOn(),
+      onShells: (count) => {
+        this.dataset.shells = String(count);
+      },
       key: this.#viewKey,
       state: () => this.#sceneState ?? state,
       ...texturePaths(this),

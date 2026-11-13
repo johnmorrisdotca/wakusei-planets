@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A cutaway of the interior** (MODULES-1246). `cutaway` on a body (off unless set) opens a quarter of the globe toward the camera, turning with the body, and draws the layers as flat-coloured shells. The legend names each layer, its depth from the surface and what it is made of. `interiorOf` returns the layers. Only the Earth and Mars have figures, read from NASA pages on 2026-11-13; a body without them stays whole.
+
 ## [0.44.0] - 2026-11-13
 
 - **Names of the great features are written on a body** (MODULES-1231). When the body looked at is big enough, `surface-names` (on unless `off`) writes its most important named features on the surface: fame first, then size (`placeRank`). They face the camera, fade at the limb, and stay apart so they do not crowd: a name is not written over a dot of the places asked for, a craft or another body's dot, another body's name, or another feature name, and gives way when it would be. A number is how many. A press sends `wakusei-place`. Nothing is drawn for a name.

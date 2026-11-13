@@ -1174,3 +1174,28 @@ test("the space view at a day a second with the belts: at most thirty frames a s
   expect(f1.draws - f0.draws).toBeLessThanOrEqual(4 * 31);
   expect((await readCounts(page)).contexts).toBe(1);
 });
+
+test("a cutaway builds its shells and gives them back when it is turned off", async ({ page }) => {
+  try {
+    const client = await page.context().newCDPSession(page);
+    await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  } catch {
+    // the freeze project is Chromium; a session that cannot throttle still runs the give-back
+  }
+  await page.goto(`${URL}?body=earth`);
+  await main(page).hover();
+  await live(page);
+  await expect(main(page)).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
+  const before = await settledCounts(page);
+  await main(page).evaluate((el) => el.setAttribute("cutaway", ""));
+  await expect(main(page)).toHaveAttribute("data-shells", "4", { timeout: 60_000 });
+  await expect.poll(() => main(page).evaluate((el) => el.shadowRoot?.querySelectorAll("#cutaway [data-layer]").length ?? 0)).toBe(4);
+  const open = await settledCounts(page);
+  expect(gpuObjects(open), "the shells are graphics objects").toBeGreaterThan(gpuObjects(before));
+  await main(page).evaluate((el) => el.removeAttribute("cutaway"));
+  await expect(main(page)).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
+  await expect.poll(() => main(page).evaluate((el) => (el.shadowRoot?.querySelector("#cutaway") as HTMLElement | null)?.hidden ?? true)).toBe(true);
+  const after = await settledCounts(page);
+  expect(gpuObjects(after), "turning the cutaway off gives the shells back").toBeLessThanOrEqual(gpuObjects(before) + 4);
+  expect((await readCounts(page)).contexts).toBeLessThanOrEqual(1);
+});
