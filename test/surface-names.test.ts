@@ -115,3 +115,15 @@ test("names are few on a small Moon: none below 70 px, at most a twentieth of th
   const full = marksToShow(PLACES_MOON, [], make(200), 1737.4, readSurfaceNames(null)).filter((mark) => mark.label === true);
   assert.ok(full.length > 5 && full.some((mark) => (mark.fade ?? 0) > 0.9), "at 200 px they are written at full strength");
 });
+
+test("the names a reader knows come first: on the Moon the four great seas, then Tycho and Copernicus; on Mars Olympus Mons, Valles Marineris, Hellas, the Tharsis volcanoes and Gale", () => {
+  const top = (list: typeof PLACES_MOON, count: number) => list.filter((place) => place.kind === "feature").sort((a, b) => placeRank(a) - placeRank(b)).slice(0, count).map((place) => place.name.en);
+  assert.deepEqual(top(PLACES_MOON, 6), ["Mare Imbrium", "Mare Tranquillitatis", "Oceanus Procellarum", "Mare Serenitatis", "Tycho", "Copernicus"]);
+  assert.deepEqual(top(PLACES_MARS, 7), ["Olympus Mons", "Valles Marineris", "Hellas Planitia", "Arsia Mons", "Ascraeus Mons", "Pavonis Mons", "Gale"]);
+  // six names on a phone's Moon (133 px) are not six seas: Tycho and Copernicus are among them
+  const size = 133 * 2 + 40;
+  const view: SurfaceView = { centre: [0, 0, 0], radius: 1, pole: [0, 1, 0], meridian: [0, 0, 1], scale: [1, 1, 1], toward: [0, 0, 1], project: (p) => ({ x: size / 2 + p[0] * 133, y: size / 2 - p[1] * 133 }), width: size, height: size, radiusPx: 133 };
+  const written = marksToShow(PLACES_MOON, [], view, 1737.4, readSurfaceNames(null)).map((mark) => mark.place.name.en);
+  assert.equal(written.length, 6);
+  assert.ok(written.includes("Tycho") && written.includes("Copernicus"), `Tycho and Copernicus among ${written.join(", ")}`);
+});

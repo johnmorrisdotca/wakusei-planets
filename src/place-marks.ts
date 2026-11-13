@@ -276,7 +276,7 @@ const nameBox = (text: string): { halfWidth: number; halfHeight: number } => ({ 
 const touches = (a: Obstacle, b: Obstacle): boolean => Math.abs(a.x - b.x) < a.halfWidth + b.halfWidth && Math.abs(a.y - b.y) < a.halfHeight + b.halfHeight;
 
 /**
- * How important a place is for a name on the surface. Lower is more important. Fame comes first: a famous place ranks ahead of every place that is not. Within each group a larger feature ranks ahead of a smaller one (its diameter in kilometres is taken off the rank). A place with no size ranks last in its group.
+ * How important a place is for a name on the surface. Lower is more important. A body's hand-ranked head comes first (on the Moon the four great seas, Tycho and Copernicus; on Mars Olympus Mons, Valles Marineris, Hellas, the Tharsis volcanoes and Gale). Then fame: a famous place ranks ahead of every place that is not. Within each group a larger feature ranks ahead of a smaller one (its diameter in kilometres is taken off the rank). A place with no size ranks last in its group.
  *
  * @param place - One place.
  * @returns The rank.
@@ -292,9 +292,19 @@ const touches = (a: Obstacle, b: Obstacle): boolean => Math.abs(a.x - b.x) < a.h
  * ```
  */
 export function placeRank(place: Place): number {
+  // a hand-ranked head for a body: the places every reader knows come first, in this order (the largest seas with the two best-known craters on the Moon; the great volcanoes and canyon on Mars)
+  const head = NAME_HEAD[place.id.slice(0, place.id.indexOf("/"))];
+  const at = head === undefined ? -1 : head.indexOf(place.id);
+  if (at >= 0) return -2_000_000 + at;
   const size = Math.min(1_000_000, place.feature?.diameterKm ?? 0);
   return (place.famous === true ? 0 : 1_000_000) - size;
 }
+
+/** The first names of a body, in order, ahead of the rule of fame and size: what a reader would name first. */
+const NAME_HEAD: Readonly<Record<string, readonly string[]>> = {
+  moon: ["moon/mare-imbrium", "moon/mare-tranquillitatis", "moon/oceanus-procellarum", "moon/mare-serenitatis", "moon/tycho", "moon/copernicus"],
+  mars: ["mars/olympus-mons", "mars/valles-marineris", "mars/hellas-planitia", "mars/arsia-mons", "mars/ascraeus-mons", "mars/pavonis-mons", "mars/gale"],
+};
 
 /**
  * Read the `surface-names` attribute. Omitted, empty or `on` is on, with the view's own cap. `off` or `0` is off. A positive whole number is on and is the most names to show.

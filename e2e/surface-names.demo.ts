@@ -34,9 +34,9 @@ test("the Moon shows Mare Imbrium and Tycho, closer in a smaller crater, the far
   await expect.poll(async () => (await names()).length, { timeout: 60_000 }).toBeGreaterThan(2);
   const radius = () => space.evaluate((el) => (el as unknown as { placeOf(id: string): { r: number } | null }).placeOf("moon")?.r ?? 0);
   const at = (zoom: number) => space.evaluate((el, z) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Sinus Medii", { smooth: false, zoom: z }), zoom);
-  // at fit the most important one is named, and within the cap of one name to 20 px of radius
+  // at fit, on a phone too, a great sea and the best-known crater are named, within the cap of one name to 20 px of radius
   await at(1);
-  await expect.poll(names, { timeout: 30_000 }).toEqual(expect.arrayContaining(["Mare Imbrium"]));
+  await expect.poll(names, { timeout: 30_000 }).toEqual(expect.arrayContaining(["Mare Imbrium", "Tycho"]));
   expect((await names()).length, "no more names than a twentieth of the radius").toBeLessThanOrEqual(Math.floor((await radius()) / 20));
   // closer in more are named, a smaller crater among them, and Tycho
   await space.evaluate((el) => (el as unknown as { goToPlace(name: string, options: { smooth: boolean; zoom: number }): Promise<unknown> }).goToPlace("Tycho", { smooth: false, zoom: 1.6 }));
