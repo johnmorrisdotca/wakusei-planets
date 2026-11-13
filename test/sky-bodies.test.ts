@@ -19,6 +19,8 @@ interface Row {
   east: boolean;
 }
 /** JPL Horizons, geocentric (500@399), read 2026-11-13. */
+/** Venus near its inferior conjunction (2025-03-23), where it is 1.0 to 1.2 per cent lit: the phase angle is beyond 163.7 degrees, the part of the magnitude formula the three dates above never reach. */
+const VENUS_NEAR_CONJUNCTION = [Date.UTC(2025, 2, 21), Date.UTC(2025, 2, 23), Date.UTC(2025, 2, 25)];
 const HORIZONS: Row[] = [
   { id: "sun", date: DATES[0], j2000: [0.03378, 0.01445], ofDate: [0.33767, 0.14651], magnitude: -26.751, illuminationPercent: 100, diameterArcsec: 1926.235, elongation: 0.0, east: true },
   { id: "sun", date: DATES[1], j2000: [89.75639, 23.4356], ofDate: [90.15565, 23.43785], magnitude: -26.707, illuminationPercent: 100, diameterArcsec: 1887.873, elongation: 0.0, east: true },
@@ -29,6 +31,9 @@ const HORIZONS: Row[] = [
   { id: "mercury", date: DATES[0], j2000: [15.6671, 8.35993], ofDate: [15.97621, 8.48784], magnitude: -0.67, illuminationPercent: 61.05022, diameterArcsec: 6.614774, elongation: 17.6723, east: true },
   { id: "mercury", date: DATES[1], j2000: [115.16179, 21.31577], ofDate: [115.55002, 21.2551], magnitude: 0.925, illuminationPercent: 27.83543, diameterArcsec: 9.211737, elongation: 23.5582, east: true },
   { id: "mercury", date: DATES[2], j2000: [269.44491, -25.48942], ofDate: [269.92175, -25.48936], magnitude: -0.181, illuminationPercent: 50.80286, diameterArcsec: 7.274884, elongation: 21.1997, east: true },
+  { id: "venus", date: VENUS_NEAR_CONJUNCTION[0]!, j2000: [359.87797, 9.23988], ofDate: [0.1955, 9.37811], magnitude: -4.214, illuminationPercent: 1.22249, diameterArcsec: 59.38712, elongation: 9.1393, east: false },
+  { id: "venus", date: VENUS_NEAR_CONJUNCTION[1]!, j2000: [358.7697, 8.64334], ofDate: [359.08696, 8.78149], magnitude: -4.22, illuminationPercent: 1.03603, diameterArcsec: 59.46989, elongation: 8.4151, east: false },
+  { id: "venus", date: VENUS_NEAR_CONJUNCTION[2]!, j2000: [357.6911, 7.99138], ofDate: [358.00817, 8.12941], magnitude: -4.213, illuminationPercent: 1.14056, diameterArcsec: 59.30145, elongation: 8.8272, east: false },
   { id: "venus", date: DATES[0], j2000: [342.30885, -8.90714], ofDate: [342.61959, -8.78185], magnitude: -3.878, illuminationPercent: 94.31984, diameterArcsec: 10.54407, elongation: 19.779, east: false },
   { id: "venus", date: DATES[1], j2000: [131.94836, 19.92615], ofDate: [132.32533, 19.82957], magnitude: -4.025, illuminationPercent: 72.658, diameterArcsec: 14.98349, elongation: 39.2298, east: true },
   { id: "venus", date: DATES[2], j2000: [257.73665, -23.37306], ofDate: [258.20408, -23.40775], magnitude: -3.904, illuminationPercent: 98.48861, diameterArcsec: 9.961978, elongation: 10.3701, east: true },
@@ -106,36 +111,38 @@ function separationArcmin(a: [number, number], b: [number, number]): number {
   const c = Math.sin(a[1] * r) * Math.sin(b[1] * r) + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.cos((a[0] - b[0]) * r);
   return Math.acos(Math.max(-1, Math.min(1, c))) * (180 / Math.PI) * 60;
 }
-const table: string[] = [];
-const worst: Record<string, { j2000: number; ofDate: number; magnitude: number; diameter: number; elongation: number; illumination: number }> = {};
-for (const row of HORIZONS) {
-  const body = skyBody(row.id, row.date);
-  const w = (worst[row.id] ??= { j2000: 0, ofDate: 0, magnitude: 0, diameter: 0, elongation: 0, illumination: 0 });
-  w.j2000 = Math.max(w.j2000, separationArcmin([body.equatorialJ2000.rightAscensionDeg, body.equatorialJ2000.declinationDeg], row.j2000));
-  w.ofDate = Math.max(w.ofDate, separationArcmin([body.equatorialDate.rightAscensionDeg, body.equatorialDate.declinationDeg], row.ofDate));
-  w.magnitude = Math.max(w.magnitude, Math.abs(body.magnitude - row.magnitude));
-  w.diameter = Math.max(w.diameter, Math.abs(body.angularDiameterArcsec / row.diameterArcsec - 1));
-  w.illumination = Math.max(w.illumination, Math.abs(body.illuminatedFraction * 100 - row.illuminationPercent));
-  if (row.id !== "sun") w.elongation = Math.max(w.elongation, Math.abs(body.elongationDeg! - row.elongation));
-}
-if (process.env["SKY_TABLE"]) {
-  for (const [id, w] of Object.entries(worst)) table.push(`${id.padEnd(8)} J2000 ${w.j2000.toFixed(3)}' date ${w.ofDate.toFixed(3)}' mag ${w.magnitude.toFixed(3)} diameter ${(w.diameter * 100).toFixed(2)}% elongation ${w.elongation.toFixed(3)} deg illumination ${w.illumination.toFixed(3)}%`);
-  console.log(table.join("\n"));
+/** How far each figure of each body is from Horizons' (the worst of the rows given). Worked out inside the tests that use it, never when the file is read. */
+function measure(rows: readonly Row[]): Record<string, { j2000: number; ofDate: number; magnitude: number; diameter: number; elongation: number; illumination: number }> {
+  const worst: Record<string, { j2000: number; ofDate: number; magnitude: number; diameter: number; elongation: number; illumination: number }> = {};
+  for (const row of rows) {
+    const body = skyBody(row.id, row.date);
+    const w = (worst[row.id] ??= { j2000: 0, ofDate: 0, magnitude: 0, diameter: 0, elongation: 0, illumination: 0 });
+    w.j2000 = Math.max(w.j2000, separationArcmin([body.equatorialJ2000.rightAscensionDeg, body.equatorialJ2000.declinationDeg], row.j2000));
+    w.ofDate = Math.max(w.ofDate, separationArcmin([body.equatorialDate.rightAscensionDeg, body.equatorialDate.declinationDeg], row.ofDate));
+    w.magnitude = Math.max(w.magnitude, Math.abs(body.magnitude - row.magnitude));
+    w.diameter = Math.max(w.diameter, Math.abs(body.angularDiameterArcsec / row.diameterArcsec - 1));
+    w.illumination = Math.max(w.illumination, Math.abs(body.illuminatedFraction * 100 - row.illuminationPercent));
+    if (row.id !== "sun") w.elongation = Math.max(w.elongation, Math.abs(body.elongationDeg! - row.elongation));
+  }
+  return worst;
 }
 
-/** Azimuth and altitude errors, in arcminutes of angle on the sky. */
-const horizontalErrors: Record<string, number> = {};
-for (const site of SITES) {
-  for (const [id, index, azimuth, elevation] of site.azel) {
-    const body = skyBody(id, DATES[index]!, { latitude: site.latitude, longitude: site.longitude, heightM: site.heightM });
-    const h = body.horizontal!;
-    const dAz = ((((h.azimuthDeg - azimuth + 180) % 360) + 360) % 360) - 180;
-    const across = Math.abs(dAz) * Math.cos((elevation * Math.PI) / 180) * 60;
-    const up = Math.abs(h.altitudeDeg - elevation) * 60;
-    horizontalErrors[`${id} ${site.name.split(" ")[0]}`] = Math.max(horizontalErrors[`${id} ${site.name.split(" ")[0]}`] ?? 0, across, up);
+/** Azimuth and altitude errors against Horizons, in arcminutes of angle on the sky, by body and site. */
+function measureHorizontal(): Record<string, number> {
+  const errors: Record<string, number> = {};
+  for (const site of SITES) {
+    for (const [id, index, azimuth, elevation] of site.azel) {
+      const body = skyBody(id, DATES[index]!, { latitude: site.latitude, longitude: site.longitude, heightM: site.heightM });
+      const h = body.horizontal!;
+      const dAz = ((((h.azimuthDeg - azimuth + 180) % 360) + 360) % 360) - 180;
+      const across = Math.abs(dAz) * Math.cos((elevation * Math.PI) / 180) * 60;
+      const up = Math.abs(h.altitudeDeg - elevation) * 60;
+      const key = `${id} ${site.name.split(" ")[0]}`;
+      errors[key] = Math.max(errors[key] ?? 0, across, up);
+    }
   }
+  return errors;
 }
-if (process.env["SKY_TABLE"]) console.log("HORIZONTAL " + JSON.stringify(Object.fromEntries(Object.entries(horizontalErrors).map(([k, v]) => [k, Number(v.toFixed(3))]))));
 
 /** What the figures above prove, per body: the most each differs from JPL Horizons on the three dates (the TSDoc of `skyBodies` and the guide say the same numbers). */
 const TOLERANCE: Record<SkyBodyId, { position: number; positionJ2000: number; magnitude: number }> = {
@@ -153,6 +160,8 @@ const TOLERANCE: Record<SkyBodyId, { position: number; positionJ2000: number; ma
 const FIELDS = { diameter: 0.001, illuminationPoints: 0.02, elongationDeg: 0.02, horizontalArcmin: 0.1 };
 
 test("every body's place, magnitude, size, phase and elongation are within the stated distance of JPL Horizons on three dates", () => {
+  const worst = measure(HORIZONS);
+  if (process.env["SKY_TABLE"]) console.log(Object.entries(worst).map(([id, w]) => `${id.padEnd(8)} J2000 ${w.j2000.toFixed(3)}' date ${w.ofDate.toFixed(3)}' mag ${w.magnitude.toFixed(3)} diameter ${(w.diameter * 100).toFixed(2)}% elongation ${w.elongation.toFixed(3)} deg illumination ${w.illumination.toFixed(3)}%`).join("\n"));
   for (const id of SKY_BODY_IDS) {
     const w = worst[id]!;
     const t = TOLERANCE[id];
@@ -175,7 +184,9 @@ test("east or west of the Sun is Horizons' trailing or leading, for every body a
 });
 
 test("a place's azimuth and altitude are within a tenth of an arcminute of Horizons, the Moon's parallax in", () => {
-  for (const [name, error] of Object.entries(horizontalErrors)) assert.ok(error <= FIELDS.horizontalArcmin, `${name} ${error.toFixed(3)} arcmin`);
+  const errors = measureHorizontal();
+  if (process.env["SKY_TABLE"]) console.log("HORIZONTAL " + JSON.stringify(errors));
+  for (const [name, error] of Object.entries(errors)) assert.ok(error <= FIELDS.horizontalArcmin, `${name} ${error.toFixed(3)} arcmin`);
   // the parallax is the point of the Moon's rows: from the Earth's centre it is about a degree higher or lower than from the place
   const place = { latitude: 35.69, longitude: 139.69, heightM: 40 };
   const moon = skyBody("moon", DATES[1]!, place);
@@ -272,4 +283,28 @@ test("a place that is not a place throws a RangeError, in both calls, and the lo
   const a = skyBody("moon", when, { latitude: 35.69, longitude: 139.69 }).horizontal!;
   const b = skyBody("moon", when, { latitude: 35.69, longitude: 139.69 + 360 }).horizontal!;
   assert.ok(Math.abs(a.altitudeDeg - b.altitudeDeg) < 1e-9 && Math.abs(a.azimuthDeg - b.azimuthDeg) < 1e-9, "a turn of longitude changes nothing");
+});
+
+test("the apparent altitude is Horizons' airless elevation lifted by the standard refraction (Saemundsson's formula, 10 degrees C and 1010 hPa), at the altitudes where it matters", async () => {
+  // refraction in degrees at fixed altitudes, worked out from 1.02 / tan(h + 10.3 / (h + 5.11)) arcminutes (h in degrees, held at -1 below it, and faded to nothing from -1 to -2)
+  const { refraction } = await import("../src/sky/engine.ts");
+  const KNOWN: [number, number][] = [[5, 0.16124], [0, 0.48303], [-1, 0.64658], [-1.5, 0.32329], [-2.5, 0]];
+  for (const [altitude, degrees] of KNOWN) assert.ok(Math.abs(refraction(altitude) - degrees) < 1e-4, `refraction at ${altitude} degrees: ${refraction(altitude)} against ${degrees}`);
+  // and through the call: Horizons' airless elevations (read as above) and the refraction at each, by place, body and date
+  const CASES: { site: Site; id: SkyBodyId; index: number; elevation: number; lift: number }[] = [
+    { site: SITES[0]!, id: "jupiter", index: 0, elevation: 4.688272, lift: 0.16914 },
+    { site: SITES[1]!, id: "venus", index: 0, elevation: 13.8905, lift: 0.06605 },
+    { site: SITES[0]!, id: "moon", index: 1, elevation: 27.272551, lift: 0.03253 },
+    { site: SITES[0]!, id: "moon", index: 0, elevation: 75.916431, lift: 0.00422 },
+    { site: SITES[0]!, id: "jupiter", index: 1, elevation: -2.229961, lift: 0 },
+    { site: SITES[1]!, id: "venus", index: 1, elevation: -4.111388, lift: 0 },
+  ];
+  for (const { site, id, index, elevation, lift } of CASES) {
+    const h = skyBody(id, DATES[index]!, { latitude: site.latitude, longitude: site.longitude, heightM: site.heightM }).horizontal!;
+    assert.ok(Math.abs(h.altitudeDeg - elevation) < 0.002, `${id} airless elevation ${h.altitudeDeg} against Horizons' ${elevation}`);
+    assert.ok(Math.abs(h.apparentAltitudeDeg - (elevation + lift)) < 0.002, `${id} apparent altitude ${h.apparentAltitudeDeg} against ${elevation + lift}`);
+    assert.ok(Math.abs(h.apparentAltitudeDeg - h.altitudeDeg - lift) < 0.002, `${id} lifted by ${h.apparentAltitudeDeg - h.altitudeDeg}, not ${lift}`);
+  }
+  // Jupiter is 4.7 degrees up over Tokyo on the first date: above the horizon
+  assert.equal(skyBody("jupiter", DATES[0]!, { latitude: SITES[0]!.latitude, longitude: SITES[0]!.longitude }).aboveHorizon, true);
 });

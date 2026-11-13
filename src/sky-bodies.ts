@@ -184,12 +184,11 @@ function planetMagnitude(id: SkyBodyId, i: number, r: number, delta: number, hel
     case "venus":
       return i <= 163.7 ? distance - 4.384 - 1.044e-3 * i + 3.687e-4 * i ** 2 - 2.814e-6 * i ** 3 + 8.938e-9 * i ** 4 : distance + 236.05828 - 2.81914 * i + 8.39034e-3 * i ** 2;
     case "mars":
-      return i <= 50 ? distance - 1.601 + 0.02267 * i - 0.0001302 * i ** 2 : distance - 0.367 - 0.02573 * i + 0.0003445 * i ** 2;
-    case "jupiter": {
-      if (i <= 12) return distance - 9.395 - 3.7e-4 * i + 6.16e-4 * i ** 2;
-      const a = i / 180;
-      return distance - 9.428 - 2.5 * Math.log10(1 - 1.507 * a - 0.363 * a ** 2 - 0.062 * a ** 3 + 2.809 * a ** 4 - 1.876 * a ** 5);
-    }
+      // the paper's second formula (beyond 50 degrees) is not here: the Earth never sees Mars more than about 47 degrees from full
+      return distance - 1.601 + 0.02267 * i - 0.0001302 * i ** 2;
+    case "jupiter":
+      // the paper's formula for the first 12 degrees; the Earth never sees Jupiter past 12 degrees of phase, so the formula for beyond is not here
+      return distance - 9.395 - 3.7e-4 * i + 6.16e-4 * i ** 2;
     case "saturn": {
       // the globe and its rings, as the Almanac gives it (Mallama 2012, the paper's Eq. 10): the rings brighten it with how open they are to the Earth and to the Sun; the angle never passes 6.5 degrees from the Earth
       const earthLatitude = latitudeToward("saturn", helio, earth);
@@ -293,9 +292,9 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
   const out: SkyBody = { ...base, ...body, accurate } as SkyBody;
   if (id !== "sun") {
     out.elongationDeg = Math.acos(Math.max(-1, Math.min(1, dot(geoDirection, sunGeo)))) * DEG;
-    // east of the Sun: its ecliptic longitude is ahead, by less than half a turn
-    const ahead = wrap360(Math.atan2(geoDirection[1], geoDirection[0]) * DEG - Math.atan2(sunGeo[1], sunGeo[0]) * DEG);
-    out.east = ahead < 180;
+    // the evening side: its right ascension is ahead of the Sun's by less than half a turn, so it crosses the meridian and sets after the Sun (JPL Horizons' "trailing", /T). Close to the Sun, where a planet
+    // has a large ecliptic latitude (Venus near its inferior conjunction), this is the side in the sky and not the side in ecliptic longitude.
+    out.east = wrap360(equatorial.rightAscension - sunEquatorial(ms).rightAscension) < 180;
   }
   if (observer !== undefined) {
     const h = horizontalOf(equatorial, ms, observer);
