@@ -20,6 +20,8 @@
 //   - a move within one planet's family (two moons, or the planet and a moon) whose first and last views (the whole body from the side the camera comes from) leave no turn about the planet or the body left that keeps one of them in the picture: the turn
 //     is made by an AIM POINT instead (see `Aim`), the camera backing off from the moon left, looking at a point that goes from it to the destination, until both are in the picture together, and coming in; it takes
 //     the same share of the move and ends in the same place, so the way on is the same, and it is used only when it leaves fewer empty pictures and keeps to the pace limits (`PACE_*`);
+//   - a move within a planet's family whose straight way on would pass close to the planet (the camera slides over the planet's clearance and the destination swings across the picture): the way on is made again as a
+//     swing from a stand that clears the planet, the nearest one, or one beyond the destination on the far side from the planet, and the way with the fewest faults that has none of any kind more than the first is taken;
 //   - the two views almost the same: no turn stage, a short move;
 //   - a view of a region (a set of orbits round a body): a straight pull back or push in with no turn of its own.
 import { add, cross, dot, length, RAD, scale, sub, unit, type Vec3 } from "../vec.ts";
@@ -408,6 +410,8 @@ interface Aim {
   facings: Facing[];
 }
 const AIM_STEPS = 96;
+/** How far beyond the destination the far-side stands are, in the distance from the planet to the destination. */
+const FAR_SIDE = [0.5, 1, 2, 4, 8];
 /** How far the aim point has gone from the moon left to the destination at `p` of the turn: still on the moon left until 0.15, a smooth step to the destination by 0.85, and on the destination after. */
 const aimPan = (p: number): number => smooth((p - 0.15) / 0.7);
 /** The direction from the aim point to the camera, as the aim goes `w` of the way from the moon left to the destination. */
@@ -544,7 +548,7 @@ function sightOf(body: TravelBody, t: number, position: Vec3, o: Facing, frame: 
 }
 
 /** The pivot's stand at the end of the turn, for a moment `tm` of the move. */
-function standAt(input: TravelInput, tm: number, family: boolean): { turn: Turn; leg: Leg } {
+function standAt(input: TravelInput, tm: number, family: boolean, variant = 0): { turn: Turn; leg: Leg } {
   const o0 = facingOf(input.start);
   const o1 = facingOf(input.end);
   const clearance = input.clearance ?? TRAVEL_CLEARANCE;
@@ -592,7 +596,13 @@ function standAt(input: TravelInput, tm: number, family: boolean): { turn: Turn;
       break search;
     }
   }
-  if (straight === null && family) straight = fallback;
+  // a stand that is nearest to a good one is taken for two bodies of a family; with `far`, only if the straight way from it to the last view clears the planet, and if not the way on is made as a swing (below), from
+  // a stand where the way to the destination clears it
+  if (straight === null && family && fallback !== null) {
+    const stand = sub(v, toScene(o1, fallback));
+    if (variant === 0 || missOf(stand, last, v) >= Math.min(1.52 * (1 + clearance) * pivot.radius, 0.9 * length(fallback), 0.98 * length(apex))) straight = fallback;
+  }
+  if (variant >= 2) straight = null;
   if (straight !== null) {
     const dm = Math.max(1e-12, length(straight));
     const stand = sub(v, toScene(o1, straight));
@@ -626,15 +636,34 @@ function standAt(input: TravelInput, tm: number, family: boolean): { turn: Turn;
   }
   const first0 = intoFrame(toCamera(om, toScene(o0, u0)), frame0, 0.85);
   let chosen: { stand: Vec3; u: Vec3; d: number; miss: number } | null = null;
-  search: for (const far of tries) {
-    for (const spot of spots(first0, frame0, 0.85)) {
-      const stand = sub(v, scale(toScene(om, spot), far * d0));
-      const miss = missOf(stand, b, v);
-      const seen = within(toCamera(om, sub(b, stand)), frame0, 0.9);
-      if (seen && (chosen === null || miss > chosen.miss)) chosen = { stand, u: spot, d: far * d0, miss };
-      if (seen && miss >= Math.min(1.52 * (1 + clearance) * pivot.radius, 0.9 * far * d0)) {
-        chosen = { stand, u: spot, d: far * d0, miss };
-        break search;
+  if (variant >= 2) {
+    // the far side: the camera stands on the line back from the destination along a look direction of the turn, as far from it as the variant says, and the look direction that puts the planet furthest from that line
+    // is taken, so the way in to the destination never goes near the planet; the turn is along the arc as before, and the destination is in the middle of the picture at the stand
+    const dist = FAR_SIDE[variant - 2]! * Math.max(length(sub(b, v)), 1e-12);
+    let bestK = 0;
+    let bestMiss = -1;
+    for (let k = 0; k <= 50; k += 1) {
+      const o = swingAt(whole, k / 50);
+      const miss = missOf(sub(b, scale(o.f, dist)), b, v);
+      if (miss > bestMiss + 1e-12) {
+        bestMiss = miss;
+        bestK = k;
+      }
+    }
+    om = swingAt(whole, bestK / 50);
+    const stand = sub(b, scale(om.f, dist));
+    chosen = { stand, u: unit(toCamera(om, sub(v, stand))), d: Math.max(1e-12, length(sub(v, stand))), miss: bestMiss };
+  } else {
+    search: for (const far of tries) {
+      for (const spot of spots(first0, frame0, 0.85)) {
+        const stand = sub(v, scale(toScene(om, spot), far * d0));
+        const miss = missOf(stand, b, v);
+        const seen = within(toCamera(om, sub(b, stand)), frame0, 0.9);
+        if (seen && (chosen === null || miss > chosen.miss)) chosen = { stand, u: spot, d: far * d0, miss };
+        if (seen && miss >= Math.min(1.52 * (1 + clearance) * pivot.radius, 0.9 * far * d0)) {
+          chosen = { stand, u: spot, d: far * d0, miss };
+          break search;
+        }
       }
     }
   }
@@ -764,7 +793,7 @@ function aimFlaws(input: TravelInput, candidate: Turn, shells: Route["shells"], 
   return { edge, fair };
 }
 
-function routeBase(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
+function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const wanted = input.reduced ? "cut" : (input.kind ?? "turn-travel");
   const kind: Exclude<TravelKind, "auto"> = wanted === "auto" ? "turn-travel" : wanted;
   const clearance = input.clearance ?? TRAVEL_CLEARANCE;
@@ -793,7 +822,7 @@ function routeBase(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
     const d0 = length(sub(input.leaving.from, input.start.position));
     const facing = swingDegrees(swingOf(o0, facingOf(input.end))) < 1 && within(toCamera(o0, sub(input.destination.from, input.start.position)), frameOf(input.start.fov, input.aspect), 0.93);
     const open = missOf(input.start.position, input.end.position, input.leaving.from) >= Math.min(1.52 * (1 + clearance) * input.leaving.radius, 0.9 * d0);
-    let stand = facing && open ? { turn: { pivot: input.leaving, swing: swingOf(o0, o0), u0: [0, 0, 1] as Vec3, u1: [0, 0, 1] as Vec3, d0: 1, d1: 1, lift: 0, fov0: input.start.fov, fov1: input.start.fov }, leg: lineLeg(input, input.destination, undefined) } : standAt(input, 0.25, family);
+    let stand = facing && open ? { turn: { pivot: input.leaving, swing: swingOf(o0, o0), u0: [0, 0, 1] as Vec3, u1: [0, 0, 1] as Vec3, d0: 1, d1: 1, lift: 0, fov0: input.start.fov, fov1: input.start.fov }, leg: lineLeg(input, input.destination, undefined) } : standAt(input, 0.25, family, variant);
     // the stand is worked out for the moment the turn ends, which is the share of the move its own length gives: found by trying, until the two agree (the bodies move, so a stand for another moment would not meet the way on)
     let tm = 0.25;
     for (let pass = 0; pass < 8; pass += 1) {
@@ -801,7 +830,7 @@ function routeBase(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
       share = t0 === 0 ? 0 : t0 / (t0 + legMs(stand.leg, t0));
       if ((facing && open) || share === 0 || Math.abs(share - tm) < 0.002) break;
       tm = pass === 0 ? share : (tm + share) / 2;
-      stand = standAt(input, tm, family);
+      stand = standAt(input, tm, family, variant);
     }
     if (share > 0 && !(facing && open)) share = tm;
     turn = stand.turn;
@@ -861,7 +890,7 @@ function routeBase(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
         const next = t0 / (t0 + legMs(leg, t0));
         if (Math.abs(next - share) < 0.002 || round === 3) break;
         share = (share + next) / 2;
-        const again = standAt(input, share, family);
+        const again = standAt(input, share, family, variant);
         turn = again.turn;
         leg = again.leg;
       }
@@ -882,6 +911,59 @@ function routeBase(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
   return { route, plan: { kind, path, stages: { turn: share, travel: arrive - share, arrive: 1 - arrive }, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)), turn: least, settle: leg.type === "swing" ? swingDegrees(leg.swing) : 0, easing } };
 }
 
+/** The faults a walk of a move has that the way on is judged by: samples with neither body in the picture, with the destination out of it after the turn, where the destination moves away from its last place on the screen (and the most it does in a sample), and where it moves a third of the frame in one. */
+interface Faults {
+  empty: number;
+  lost: number;
+  drift: number;
+  driftWorst: number;
+  step: number;
+  /** Moments the look direction turns six degrees or more, turns away from the last view's, or the camera jumps a sixth of the way, and whether the whole turn is over 1.25 times the least plus 2 degrees. */
+  pace: number;
+}
+const FAULT_DRIFT = 0.02;
+const FAULT_STEP = 0.3;
+function faultsOf(route: Route): Faults {
+  const input = route.input;
+  const plan = { route } as unknown as TravelPlan;
+  const at = (t: number): TravelSample => travelPose(input, t, plan);
+  const last = at(1);
+  const faults: Faults = { empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0 };
+  const lastF = unit(input.end.forward);
+  let turned = 0;
+  let way = 0;
+  const positions: Vec3[] = [at(0).position];
+  let before = at(0);
+  const afterTurn = route.turn !== null ? Math.max(1, Math.ceil(route.share * 240 - 1e-9)) : 0;
+  for (let i = 1; i <= 240; i += 1) {
+    const s = at(i / 240);
+    if (!s.leaving.inside && !s.destination.inside) faults.empty += 1;
+    if (i >= afterTurn && !s.destination.inside) faults.lost += 1;
+    if (i > afterTurn) {
+      const off = Math.hypot(s.destination.x - last.destination.x, s.destination.y - last.destination.y);
+      const offBefore = Math.hypot(before.destination.x - last.destination.x, before.destination.y - last.destination.y);
+      if (before.destination.inside && off > offBefore + FAULT_DRIFT) {
+        faults.drift += 1;
+        faults.driftWorst = Math.max(faults.driftWorst, off - offBefore);
+      }
+    }
+    if (s.destination.inside && before.destination.inside && Math.hypot(s.destination.x - before.destination.x, s.destination.y - before.destination.y) >= FAULT_STEP) faults.step += 1;
+    const turn = angleOf(before.forward, s.forward) / RAD;
+    turned += turn;
+    if (turn >= 6 || angleOf(s.forward, lastF) - angleOf(before.forward, lastF) > 0.05 * RAD) faults.pace += 1;
+    way += length(sub(s.position, before.position));
+    positions.push(s.position);
+    before = s;
+  }
+  for (let i = 1; i < positions.length; i += 1) if (length(sub(positions[i]!, positions[i - 1]!)) > 0.06 * way) faults.pace += 1;
+  if (turned > 1.25 * (angleOf(unit(input.start.forward), lastF) / RAD) + 2) faults.pace += 1;
+  return faults;
+}
+/** `now` has no kind of fault more than `was` and fewer in all. */
+const total = (f: Faults): number => f.empty + f.lost + f.drift + f.step;
+const betterThan = (now: Faults, was: Faults): boolean =>
+  now.empty <= was.empty && now.lost <= was.lost && now.drift <= was.drift && now.step <= was.step && now.pace <= was.pace && now.driftWorst <= was.driftWorst + 1e-12 && total(now) < total(was);
+
 /** The samples of a walk of the move (a 240th of it apart) at which neither the moon left nor the destination is in the picture. */
 function emptyMoments(route: Route): number {
   const input = route.input;
@@ -896,13 +978,7 @@ function emptyMoments(route: Route): number {
   return empty;
 }
 
-/**
- * The route of a move. A move within one planet's family (the path `circle`) is first made as it always was. If a walk of it has a picture with neither the body left nor the destination in it, its turn is made again by an
- * aim point (see `Aim`): the turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample, and only the turn is new. The new turn is taken when
- * it leaves fewer such pictures and keeps to the pace limits. Every other move, and every such move whose walk has no empty picture, is the one it always was.
- */
-function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
-  const first = routeBase(input);
+function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPlan, "route"> }): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const route = first.route;
   if (route.turn === null || first.plan.path !== "circle" || route.cut || route.share <= 0) return first;
   const was = emptyMoments(route);
@@ -940,6 +1016,37 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
   const t0 = turnMs(best);
   const total = Math.max(t0 / share, first.plan.duration / Math.max(0.05, input.pace ?? 1));
   return { route: aimed, plan: { ...first.plan, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)) } };
+}
+/**
+ * The route of a move. A move within one planet's family (the path `circle`) is first made as it always was. If a walk of it has a picture with neither the body left nor the destination in it, its turn is made again by an
+ * aim point (see `Aim`): the turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample, and only the turn is new. The new turn is taken when
+ * it leaves fewer such pictures and keeps to the pace limits. Every other move, and every such move whose walk has no empty picture, is the one it always was.
+ */
+function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
+  const first = withAim(input, routeBase(input));
+  if (first.route.turn === null || first.plan.path !== "circle" || first.route.cut || first.route.share <= 0) return first;
+  const was = faultsOf(first.route);
+  if (total(was) === 0) return first;
+  // other ways of making the way on, each given the aim turn if it needs one: the nearest stand if its way clears the planet and a swing if not, and stands beyond the destination; the one with the fewest faults
+  // that has none of any kind more than the way it was made is taken
+  let best = first;
+  let least = was;
+  for (let variant = 1; variant <= 1 + FAR_SIDE.length; variant += 1) {
+    const raw = routeBase(input, variant);
+    if (raw.plan.path !== "circle" || raw.route.turn === null) continue;
+    // the aim turn cures only the empty pictures of the turn: a way made with more of any other fault than the way it was is not taken further
+    const rough = faultsOf(raw.route);
+    if (rough.lost > was.lost || rough.drift > was.drift || rough.step > was.step || rough.pace > was.pace || rough.driftWorst > was.driftWorst + 1e-12) continue;
+    const other = rough.empty > 0 ? withAim(input, raw) : raw;
+    if (other.route.turn === null) continue;
+    const faults = rough.empty > 0 ? faultsOf(other.route) : rough;
+    if (betterThan(faults, was) && (best === first || total(faults) < total(least) || (total(faults) === total(least) && faults.driftWorst < least.driftWorst))) {
+      best = other;
+      least = faults;
+    }
+    if (total(least) === 0) break;
+  }
+  return best;
 }
 
 /**
