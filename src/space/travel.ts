@@ -915,9 +915,12 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
   let cost = Number.POSITIVE_INFINITY;
   let best: Turn | null = null;
   const kinds = AIM_SLOW.flatMap((slow) => AIM_BEND.map((bend) => ({ slow, bend, spent: 0.5 * bend + 2 * Math.log(slow) }))).sort((a, b) => a.spent - b.spent);
+  const bases = new Map<number, Omit<Aim, "far">>();
   for (const { slow, bend, spent: lean } of kinds) {
     if (best !== null && lean >= cost) break;
-    const base = aimOf(input, swing, share, bend, slow);
+    // the look directions and ups are the same at every pace: they are worked out once for each lean
+    if (!bases.has(bend)) bases.set(bend, aimOf(input, swing, share, bend, 1));
+    const base = { ...bases.get(bend)!, slow };
     for (const far of AIM_FAR) {
       const spent = Math.log(far) + lean;
       if (best !== null && spent >= cost) break;

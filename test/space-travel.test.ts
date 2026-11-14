@@ -132,6 +132,7 @@ for (const [a, b] of [["callisto", "europa"], ["io", "ganymede"], ["titan", "enc
       }
       const others = Object.entries(counts).filter(([kind]) => kind !== "empty").map(([kind, n]) => `${kind} ${n}`).join(", ");
       console.log(`# plain ${a} to ${b}, ${mode}: ${counts.empty ?? 0} empty samples (${left} listed); not counted against it: ${others || "none"}`);
+      if ((counts.empty ?? 0) < left) console.log(`# NOTICE: ${a} to ${b}, ${mode}: ${left - (counts.empty ?? 0)} fewer empty samples than listed; lower the ceilings in PLAIN_EMPTY`);
     });
   }
 }
