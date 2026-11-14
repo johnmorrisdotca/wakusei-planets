@@ -347,3 +347,11 @@ export function baselineMoves(): [string, () => Move][] {
   for (const [a, b] of BASELINE_PLAIN) for (const mode of SCALES) for (const shape of SHAPES) SIDES.forEach((side, i) => moves.push([`plain ${a}>${b} ${mode} ${shape.name} ${i}`, () => moveOf(a, b, mode, shape.aspect, undefined, side)]));
   return moves;
 }
+
+/** The furthest from the middle of the picture the nearer of the two bodies gets during the turn (1 is the edge of the picture, infinity is neither in it at some moment). */
+export function turnEdge(w: Walk): number {
+  const off = (x: TravelSample["leaving"]): number => (x.inside ? Math.max(Math.abs(x.x), Math.abs(x.y)) : Number.POSITIVE_INFINITY);
+  let edge = 0;
+  for (const s of w.samples) if (s.stage === "turn") edge = Math.max(edge, Math.min(off(s.leaving), off(s.destination)));
+  return edge;
+}
