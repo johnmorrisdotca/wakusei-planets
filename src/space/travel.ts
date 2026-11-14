@@ -17,7 +17,7 @@
 //   - the destination directly behind the body being left, or the two in one direction: the pivot puts the body left to one side, backing up until the straight line to the destination clears it;
 //   - the destination is the Sun, or a planet that is a point until the last stretch (the true scale): its place on the screen is reported at every moment, so a marker can stand for it;
 //   - the camera starts inside a beside-a-moon view: the moon, or its planet for a move within the planet's family, is the pivot;
-//   - a move between two moons of one planet whose first and last views (the whole moon from the side the camera comes from) leave no turn about the planet or the moon that keeps one of them in the picture: the turn
+//   - a move within one planet's family (two moons, or the planet and a moon) whose first and last views (the whole body from the side the camera comes from) leave no turn about the planet or the body left that keeps one of them in the picture: the turn
 //     is made by an AIM POINT instead (see `Aim`), the camera backing off from the moon left, looking at a point that goes from it to the destination, until both are in the picture together, and coming in; it takes
 //     the same share of the move and ends in the same place, so the way on is the same, and it is used only when it leaves fewer empty pictures and keeps to the pace limits (`PACE_*`);
 //   - the two views almost the same: no turn stage, a short move;
@@ -385,7 +385,7 @@ interface Turn {
   aim?: Aim;
 }
 /**
- * The turn of a move between two moons of one planet when no turn about the planet keeps one of the two in the picture: the camera looks at an aim point that goes from the moon being left to the destination,
+ * The turn of a move within one planet's family when no turn about the planet keeps one of the two bodies in the picture: the camera looks at an aim point that goes from the moon being left to the destination,
  * and stands on the far side of it, `r` away along `n` (a direction that turns the shortest way from the one the move starts on to the one it ends on), backing off by `far` times in the middle so that the two
  * moons are in the picture together there and the look direction can pass from one to the other without leaving both. `facings` is the table of look directions and ups at 97 even steps of the turn: the
  * direction to the aim point, then the small turns that join it to the first and last views, with the roll carried along and the rest spread evenly.
@@ -408,14 +408,14 @@ interface Aim {
   facings: Facing[];
 }
 const AIM_STEPS = 96;
-/** The aim point stays on the moon left while the camera backs off (to 0.3 of the turn), goes to the destination while the camera stands far off (0.3 to 0.7), and stays on the destination while the camera comes in. */
+/** How far the aim point has gone from the moon left to the destination at `p` of the turn: still on the moon left until 0.15, a smooth step to the destination by 0.85, and on the destination after. */
 const aimPan = (p: number): number => smooth((p - 0.15) / 0.7);
 /** The direction from the aim point to the camera, as the aim goes `w` of the way from the moon left to the destination. */
 function aimSide(a: { n0: Vec3; n1: Vec3; lean: Vec3; bend: number }, w: number): Vec3 {
   const n = arc(a.n0, a.n1, w);
   return a.bend === 0 ? n : unit(add(n, scale(a.lean, a.bend * Math.sin(Math.PI * w) ** 2)));
 }
-/** The camera's distance from the aim point: from the first, up to `far` times the larger of the two ends by 0.4 of the turn, held, and down to the last from 0.6. */
+/** The camera's distance from the aim point at `p` of the turn: a smooth step up from the first distance to `far` times the larger of the two ends by 0.5, and a smooth step down to the last from 0.5 to 1. */
 function aimDistance(a: { r0: number; r1: number; far: number }, p: number): number {
   const top = Math.max(a.r0, a.r1) * a.far;
   return Math.exp(Math.log(a.r0) + (Math.log(top) - Math.log(a.r0)) * smooth(p / 0.5) + (Math.log(a.r1) - Math.log(top)) * smooth((p - 0.5) / 0.5));
@@ -897,7 +897,7 @@ function emptyMoments(route: Route): number {
 }
 
 /**
- * The route of a move. A move between two moons of one planet is first made as it always was. If a walk of it has a picture with neither the moon left nor the destination in it, its turn is made again by an
+ * The route of a move. A move within one planet's family (the path `circle`) is first made as it always was. If a walk of it has a picture with neither the body left nor the destination in it, its turn is made again by an
  * aim point (see `Aim`): the turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample, and only the turn is new. The new turn is taken when
  * it leaves fewer such pictures and keeps to the pace limits. Every other move, and every such move whose walk has no empty picture, is the one it always was.
  */
