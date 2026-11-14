@@ -2,6 +2,7 @@
 // where it stands until a body is in the picture, and an orbiter is an entry of its own with its own event. Chromium, drawing in software; the time is held by the page's `t` and every wait is on a draw.
 import { expect, test, type Page } from "@playwright/test";
 import { orbiterElements } from "../src/orbiters.ts";
+import "./load.ts";
 import { callCounted, callOn, drawnAfter, openSpace, quiet, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
@@ -109,6 +110,37 @@ test("a gliding turn ends with the body in the picture and the camera where it w
   expect(seen["venus"]!.inView).toBe(true);
   const now = (await cameraOf(page)).position;
   for (let i = 0; i < 3; i += 1) expect(now[i]!, `the camera's ${"xyz"[i]}`).toBeCloseTo(where[i]!, 2);
+});
+
+test("after turnTo the view's `body` is still the body the camera is at, and `lookingAt` names what it was turned to; a move or a new body clears it (MODULES-1352)", async ({ page }) => {
+  await openSpace(page, "t=2026-11-02T14:00Z&scale=true");
+  const read = (): Promise<{ body: string; lookingAt: string | null | undefined }> => page.locator(SPACE).evaluate((el) => ({ body: (el as unknown as { body: string }).body, lookingAt: (el as unknown as { lookingAt?: string | null }).lookingAt }));
+  const at = (await read()).body;
+  expect(at).toBe("earth");
+  expect((await read()).lookingAt, "nothing is turned to yet").toBeNull();
+  const before = await callCounted(page, "turnTo", "mars", { smooth: false });
+  await drawnAfter(page, before, "the turn");
+  await quiet(page);
+  expect(await read(), "the camera is still at the Earth and the view looks at Mars").toEqual({ body: "earth", lookingAt: "mars" });
+  // turned again: it is still the camera's body that `body` says, and what is looked at is the new one
+  const again = await callCounted(page, "turnTo", "venus", { smooth: false });
+  await drawnAfter(page, again, "the second turn");
+  await quiet(page);
+  expect(await read()).toEqual({ body: "earth", lookingAt: "venus" });
+  // a move brings the camera to a body: it is there, and nothing is turned to
+  await callOn(page, "goTo", "jupiter", { smooth: false });
+  await quiet(page);
+  expect(await read()).toEqual({ body: "jupiter", lookingAt: null });
+  // and so does setting the body
+  const turned = await callCounted(page, "turnTo", "saturn", { smooth: false });
+  await drawnAfter(page, turned, "the turn from Jupiter");
+  await quiet(page);
+  expect(await read()).toEqual({ body: "jupiter", lookingAt: "saturn" });
+  await page.locator(SPACE).evaluate((el) => {
+    (el as unknown as { body: string }).body = "mars";
+  });
+  await quiet(page);
+  expect(await read()).toEqual({ body: "mars", lookingAt: null });
 });
 
 test("an orbiter is an entry of its own, and a press on its name sends its own event as well as the body one", async ({ page }) => {

@@ -208,6 +208,8 @@ export interface SpaceModel {
   speed: number;
   /** The body the camera looks at, and (in `zoom`) fills the view with at 1x: any body the package knows that the view can place (the eleven of `SPACE_BODIES` and the moons of the planets). */
   focus: BodyId;
+  /** After `turnTo`: the body the camera is at (`at`: what `focus` was before the turn) and the one the view was turned to (`to`, which `focus` then is), or null. A move, a ride or a new body clears it. */
+  lookingAt: { at: BodyId; to: BodyId } | null;
   /** The body kept in the picture beside the one arrived at, or null. Its name is not dropped for a clash. */
   companion: string | null;
   /** How many times larger than life the squeezed view draws moons. Ignored at true distances. 2 by default. */
@@ -351,6 +353,7 @@ export const newSpaceModel = (): SpaceModel => ({
   stepMs: 1000,
   speed: 1,
   focus: "earth",
+  lookingAt: null,
   companion: null,
   moonSize: 2,
   moonDrawn: { factor: 1, clamped: false },

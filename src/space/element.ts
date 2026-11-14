@@ -1379,7 +1379,15 @@ export class WakuseiSpace extends HTMLElement {
 
   /** The body the camera looks at: any body the view places, by name in any case (`earth`, `sun`, `moon`, `mercury` to `neptune`, `pluto`, and the moons of the planets such as `titan`). At zoom 1 it fills the view; the yaw and tilt turn the camera round it. Setting it moves the camera there at once and keeps the zoom; `goTo` glides and brings the body into view. */
   get body(): BodyId {
-    return this.#model.focus;
+    const model = this.#model;
+    return model.lookingAt?.at ?? model.focus;
+  }
+  /**
+   * The body the view was turned to by `turnTo`, or null: `body` stays the body the camera is at (`turnTo` does not move the camera), and this says what is looked at instead. A move (`goTo`, `ride`, a hop, `enterBelt`) or
+   * a new `body` brings the camera to a body and clears it.
+   */
+  get lookingAt(): BodyId | null {
+    return this.#model.lookingAt?.to ?? null;
   }
   set body(name: BodyId | string) {
     const id = readBody(name);
@@ -1390,6 +1398,7 @@ export class WakuseiSpace extends HTMLElement {
   /** Move the camera to `id` (not yet drawn) and tell the page. */
   #centre(id: BodyId): void {
     const was = this.#model.focus;
+    this.#model.lookingAt = null;
     this.#model.focus = id;
     this.#gate?.request();
     if (was !== id) this.#announceHop();
@@ -1429,6 +1438,7 @@ export class WakuseiSpace extends HTMLElement {
     model.region = null;
     this.#showRegion();
     this.#selected = id;
+    this.#model.lookingAt = null;
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
     // the side the camera comes from, as the controls' yaw and tilt: the element's own hands are set to it here, and a bar bound to the element (which holds the view's state) hears it in the event with the zoom
@@ -1446,9 +1456,9 @@ export class WakuseiSpace extends HTMLElement {
   /**
    * Turn the camera where it stands until a body is in the picture, by the least turn: no move of the camera's place, only the way it looks. A body is in the picture when its middle is inside the picture less `margin` of
    * each side (the left and right margins are `margin` of the width, the top and bottom `margin` of the height; 0.15 by default, 0 to 0.45). One already so is left alone and the answer is `false`, as it is for an id the
-   * view does not know, the body already looked at, and a view that is riding. The body becomes the one looked at: the camera stays at its place and looks at it, from as far
+   * view does not know, the body already looked at, and a view that is riding (the camera is the ride's: end the ride first, with `ride(null)`; this includes the view beside a moon). The camera stays at its place and looks at the body, from as far
    * as it stands (the zoom is worked out from that distance, inside the controls' limits; a body so far that the zoom's limit would move the camera is not turned to). It glides the way a move does, or at once with
-   * `smooth: false` or for a reader who prefers reduced motion; nothing is drawn at rest and one draw more at most ends it.
+   * `smooth: false` or for a reader who prefers reduced motion; nothing is drawn at rest and one draw more at most ends it. `body` goes on saying the body the camera is at, and `lookingAt` names the body turned to.
    *
    * @param target - The body's id.
    * @param options - `smooth` (true by default) and `margin`.
@@ -1502,6 +1512,8 @@ export class WakuseiSpace extends HTMLElement {
     model.region = null;
     this.#showRegion();
     this.#selected = id;
+    // the camera stays at the body it was at: `body` says that one, and `lookingAt` the one turned to
+    model.lookingAt = { at: model.lookingAt?.at ?? model.focus, to: id };
     model.focus = id;
     if (this.#hands !== undefined && !this.hasAttribute("data-kazoku-bar")) this.#hands.controller.set({ yaw, tilt, zoom }, true, "jump");
     else this.setView({ yaw, tilt, zoom, roll: from.roll, panX: from.panX, panY: from.panY }, true);
@@ -1637,6 +1649,7 @@ export class WakuseiSpace extends HTMLElement {
     model.transition = this.#startMove(kind, model.region !== null ? "sun" : leaving, "sun", options.duration);
     model.region = region;
     this.#selected = "sun";
+    model.lookingAt = null;
     model.focus = "sun";
     // at a stage the controls hold zoom 1: a zoom gesture is taken as a step out or in, not as a zoom
     if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set({ zoom: 1 }, true, "jump");
@@ -1769,6 +1782,7 @@ export class WakuseiSpace extends HTMLElement {
     const model = this.#model;
     const leaving = this.#leaving();
     const wasRiding = model.ride !== null;
+    model.lookingAt = null;
     if (target === null) {
       model.ride = null;
       model.focus = this.#focusBeforeRide;
