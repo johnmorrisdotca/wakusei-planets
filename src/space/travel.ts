@@ -138,7 +138,7 @@ export interface TravelBody {
  * destination, the planet when both are of one planet's family, any other body to keep clear of, and the picture's width over its height.
  *
  * A move is planned once for the input it is given (a second call, or `travelPose` without a plan, uses the first plan), so an input is not to be changed after it has been planned: `travelPlan` and `travelPose`
- * freeze it (its top level; do not change the views or the bodies in it either), and a changed move is a new input.
+ * freeze it (its top level only: nested arrays and objects such as `start.position` are not frozen, and must not be changed either), and a changed move is a new input.
  *
  * @example
  * ```ts
