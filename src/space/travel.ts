@@ -80,7 +80,7 @@ export const TRAVEL_CLEARANCE = 1;
 /**
  * The time in milliseconds, counted from the start of the plan, that the space view lets the planner spend on the other ways of a move within a planet's family (`TravelInput.budget`); the first way, with its aim
  * turn, is always worked out. Measured on the author's Mac mini over the 360 surveyed plain-view moves of six pairs of moons (most need no other way): the first way alone takes a median of 4 ms, 90 percent under
- * 10 ms and at most 37 ms; with this budget a plan takes a median of 4.5 ms, 90 percent under 35 ms and at most about 76 ms, against the same median, 34 ms and about 105 ms with no budget. A phone is several times
+ * 10 ms and at most 37 ms; with this budget a plan takes a median of 4.5 ms (up to 9.5 under load), 90 percent under 36 to 45 ms and at most 75 to 105 ms in quiet runs (126 ms in one loaded run), against the same median, 34 ms and 105 to 119 ms with no budget. A phone is several times
  * slower, so there the planner stops sooner and keeps the best way found, and the same move can be planned differently on two devices (never with more faults than the first way). On this machine the budget costs
  * little in faults, and what it costs depends on the load: over the 360 walks, 61 to 69 drifting samples, 32 to 70 empty and 12 to 15 lost in six runs (three of them with two other copies running at once),
  * against 54, 27 and 12 with no budget and 605, 394 and 45 before the other ways; never more faults of any kind than the first way.
