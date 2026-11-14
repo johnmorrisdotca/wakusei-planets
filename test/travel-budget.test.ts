@@ -55,3 +55,19 @@ test("a plan made with a budget is the plan made without one when the time is no
     assert.equal(travelPlan(free.input).route, travelPlan(free.input).route, "the plan of one input is worked out once");
   }
 });
+
+test("an input is frozen when it is planned, so a plan cannot go stale: a changed move is a new input", () => {
+  const move = moveOf("callisto", "europa", "compressed", SHAPES[0]!.aspect);
+  const input = move.input;
+  const plan = travelPlan(input);
+  assert.ok(Object.isFrozen(input));
+  assert.throws(() => {
+    (input as { start: unknown }).start = move.input.end;
+  }, TypeError);
+  assert.throws(() => {
+    (input as { budget?: unknown }).budget = { now: () => 0, ms: 0 };
+  }, TypeError);
+  const other = { ...input, start: move.input.end };
+  assert.notEqual(travelPlan(other).route, plan.route, "a copy with another start is planned afresh");
+  assert.equal(travelPlan(input).route, plan.route);
+});

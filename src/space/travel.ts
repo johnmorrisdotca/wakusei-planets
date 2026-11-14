@@ -136,6 +136,9 @@ export interface TravelBody {
  * What `travelPose` and `travelPlan` are asked: the camera now (`start`) and the framed view to end in (`end`, worked out for the destination's place at the end of the move), the body being left and the
  * destination, the planet when both are of one planet's family, any other body to keep clear of, and the picture's width over its height.
  *
+ * A move is planned once for the input it is given (a second call, or `travelPose` without a plan, uses the first plan), so an input is not to be changed after it has been planned: `travelPlan` and `travelPose`
+ * freeze it (its top level; do not change the views or the bodies in it either), and a changed move is a new input.
+ *
  * @example
  * ```ts
  * import type { TravelInput } from "@johnmorrisdotca/wakusei-planets/space";
@@ -1124,6 +1127,8 @@ const WAYS = [1, 2, 4, 5, 3, 6];
 function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const kept = routes.get(input);
   if (kept !== undefined) return kept;
+  // a plan is kept for the input it was made for, so the input is frozen (its top level: a field set after planning would be a plan of something else; the views and bodies are not to be changed either)
+  Object.freeze(input);
   const made = routeMade(input);
   routes.set(input, made);
   return made;
