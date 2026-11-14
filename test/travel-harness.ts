@@ -106,6 +106,8 @@ const kindOf = (text: string): FaultKind => KINDS.find(([pattern]) => pattern.te
 
 export interface Walk {
   samples: TravelSample[];
+  /** What the plan says: the kind, the path, the shares of the move, its length in milliseconds, the least turn, the settle and the easing. */
+  plan: { kind: string; path: string; stages: { turn: number; travel: number; arrive: number }; duration: number; turn: number; settle: number; easing: { turn: string; distance: string } };
   duration: number;
   path: string;
   turnShare: number;
@@ -211,7 +213,7 @@ export function walk(move: Move, options: { shrink?: boolean; bent?: { back: num
   const close = (a: Vec3, b: Vec3, scale: number): boolean => length(sub(a, b)) <= 1e-9 * Math.max(1, scale);
   if (!close(samples[0]!.position, input.start.position, length(input.start.position)) || angle(samples[0]!.forward, input.start.forward) > 1e-6 || samples[0]!.fov !== input.start.fov) whole("the first sample is not the first view", "step")
   if (!close(last.position, input.end.position, length(input.end.position)) || angle(last.forward, input.end.forward) > 1e-6 || angle(last.up, input.end.up) > 1e-6 || last.fov !== input.end.fov) whole("the last sample is not the last view", "step")
-  return { samples, duration: plan.duration, path: plan.path, turnShare: plan.stages.turn, least, turned, back, settle: plan.settle, worstTurn, worstScreen, nearest, faults, events };
+  return { samples, plan: { kind: plan.kind, path: plan.path, stages: plan.stages, duration: plan.duration, turn: plan.turn, settle: plan.settle, easing: plan.easing }, duration: plan.duration, path: plan.path, turnShare: plan.stages.turn, least, turned, back, settle: plan.settle, worstTurn, worstScreen, nearest, faults, events };
 }
 
 /** Where the camera comes from, as a direction from the body left: along each axis and between them. */
@@ -304,10 +306,12 @@ export function surveyTable(pairs: readonly (readonly [BodyId, BodyId])[], sides
 // ---- the baseline ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-/** A digest of every sample of a walk (the camera, the stage and where the two bodies are in the picture, to nine decimals): two walks are the same, sample for sample, when their digests are. */
+/** A digest of the plan of a walk (the kind, the path, the shares, the length in milliseconds, the least turn, the settle, the easing) and of every sample of it (the camera, the stage and where the two bodies are in the picture, to nine decimals): two walks are the same, plan and sample for sample, when their digests are. */
 export function digestOf(w: Walk): string {
   const hash = createHash("sha256");
   const r = (n: number): string => (Math.round(n * 1e9) / 1e9).toString();
+  const { plan } = w;
+  hash.update(`${plan.kind} ${plan.path} ${r(plan.stages.turn)} ${r(plan.stages.travel)} ${r(plan.stages.arrive)} ${plan.duration} ${r(plan.turn)} ${r(plan.settle)} ${plan.easing.turn} ${plan.easing.distance}\n`);
   for (const s of w.samples) hash.update([s.stage, ...s.position.map(r), ...s.forward.map(r), ...s.up.map(r), r(s.fov), r(s.leaving.x), r(s.leaving.y), r(s.destination.x), r(s.destination.y), s.around ? `${r(s.around.x)},${r(s.around.y)}` : "-"].join(" ") + "\n");
   return hash.digest("hex").slice(0, 16);
 }
@@ -330,6 +334,16 @@ export interface BaselineEntry {
 export function baselineMoves(): [string, () => Move][] {
   const moves: [string, () => Move][] = [];
   for (const [a, b] of BASELINE_PAIRS) for (const mode of SCALES) for (const shape of SHAPES) moves.push([`default ${a}>${b} ${mode} ${shape.name}`, () => moveOf(a, b, mode, shape.aspect)]);
+  // the other kinds, a reader who asked for reduced motion and a changed pace, on three pairs at the shapes and scales
+  for (const [a, b] of [["earth", "mars"], ["mercury", "sun"], ["callisto", "europa"]] as const) {
+    for (const mode of SCALES) {
+      for (const shape of SHAPES) {
+        for (const kind of ["direct", "look-back", "cut"] as const) moves.push([`kind ${kind} ${a}>${b} ${mode} ${shape.name}`, () => moveOf(a, b, mode, shape.aspect, kind)]);
+        moves.push([`reduced ${a}>${b} ${mode} ${shape.name}`, () => { const m = moveOf(a, b, mode, shape.aspect); return { ...m, input: { ...m.input, reduced: true } }; }]);
+        moves.push([`pace 2 ${a}>${b} ${mode} ${shape.name}`, () => { const m = moveOf(a, b, mode, shape.aspect); return { ...m, input: { ...m.input, pace: 2 } }; }]);
+      }
+    }
+  }
   for (const [a, b] of BASELINE_PLAIN) for (const mode of SCALES) for (const shape of SHAPES) SIDES.forEach((side, i) => moves.push([`plain ${a}>${b} ${mode} ${shape.name} ${i}`, () => moveOf(a, b, mode, shape.aspect, undefined, side)]));
   return moves;
 }

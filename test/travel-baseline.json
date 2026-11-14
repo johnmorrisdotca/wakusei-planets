@@ -1,3290 +1,3650 @@
 {
  "default mercury>sun compressed wide": {
-  "digest": "2e88e2bcff29bdba",
+  "digest": "0cc73749bacd7197",
   "empty": 0
  },
  "default mercury>sun compressed square": {
-  "digest": "c07781d2fb0b8b84",
+  "digest": "36aa84bc8ec48fe1",
   "empty": 0
  },
  "default mercury>sun compressed tall": {
-  "digest": "f58d7061a2197608",
+  "digest": "03843f8f79cdd90a",
   "empty": 0
  },
  "default mercury>sun true wide": {
-  "digest": "deb63e628e93491d",
+  "digest": "d93e99f2ff58a2db",
   "empty": 0
  },
  "default mercury>sun true square": {
-  "digest": "3cbf7a224d4baa58",
+  "digest": "101229d9947a2598",
   "empty": 0
  },
  "default mercury>sun true tall": {
-  "digest": "aaf86c21efbff2f7",
+  "digest": "671fb3d76e13aacd",
   "empty": 0
  },
  "default earth>mars compressed wide": {
-  "digest": "9fb80e3094142456",
+  "digest": "313e5a25d6543486",
   "empty": 0
  },
  "default earth>mars compressed square": {
-  "digest": "0c44ccca87404ab3",
+  "digest": "0061b2bdfabd2203",
   "empty": 0
  },
  "default earth>mars compressed tall": {
-  "digest": "0d457a3fe7c53fde",
+  "digest": "cd1f72c4361af783",
   "empty": 0
  },
  "default earth>mars true wide": {
-  "digest": "219c0b200e05f372",
+  "digest": "1f7f8eec82a0dfa0",
   "empty": 0
  },
  "default earth>mars true square": {
-  "digest": "d899d1d50d2ad084",
+  "digest": "32e75be26ec8353c",
   "empty": 0
  },
  "default earth>mars true tall": {
-  "digest": "86034ff6392bf724",
+  "digest": "ae502eddbaf46c49",
   "empty": 0
  },
  "default mars>jupiter compressed wide": {
-  "digest": "c50c894e18701f51",
+  "digest": "ed6932232f2686d6",
   "empty": 0
  },
  "default mars>jupiter compressed square": {
-  "digest": "1934b8f0dd758df1",
+  "digest": "3a77bdac80256a7c",
   "empty": 0
  },
  "default mars>jupiter compressed tall": {
-  "digest": "68df643c86ef1c27",
+  "digest": "99f755a47a16f2e4",
   "empty": 0
  },
  "default mars>jupiter true wide": {
-  "digest": "8e8bbe4e23cd3ae7",
+  "digest": "fe8c97b3b9c6b855",
   "empty": 0
  },
  "default mars>jupiter true square": {
-  "digest": "4a73b2ac14cfb1db",
+  "digest": "b00523bf873f08b4",
   "empty": 0
  },
  "default mars>jupiter true tall": {
-  "digest": "9a0dc68d6df341ff",
+  "digest": "fde0c751a2518098",
   "empty": 0
  },
  "default jupiter>saturn compressed wide": {
-  "digest": "faa56f4f700dc6bc",
+  "digest": "ad7fc0a34213fb7e",
   "empty": 0
  },
  "default jupiter>saturn compressed square": {
-  "digest": "92badd69ca53e58f",
+  "digest": "4c7df73308063e6f",
   "empty": 0
  },
  "default jupiter>saturn compressed tall": {
-  "digest": "42461ad06b230243",
+  "digest": "129a9c948835a800",
   "empty": 0
  },
  "default jupiter>saturn true wide": {
-  "digest": "e9690e51c0287394",
+  "digest": "cd48dd1e32a26a87",
   "empty": 0
  },
  "default jupiter>saturn true square": {
-  "digest": "d53936c01235d181",
+  "digest": "7a037a8f7ebc08a4",
   "empty": 0
  },
  "default jupiter>saturn true tall": {
-  "digest": "2fa3e949002e9ad3",
+  "digest": "b5f19c1f26495af8",
   "empty": 0
  },
  "default neptune>mercury compressed wide": {
-  "digest": "79ed250f9ad69ca8",
+  "digest": "e0583b29b8c886c9",
   "empty": 0
  },
  "default neptune>mercury compressed square": {
-  "digest": "896234989491c071",
+  "digest": "5d93c786205680ad",
   "empty": 0
  },
  "default neptune>mercury compressed tall": {
-  "digest": "87501f4e41e3c783",
+  "digest": "ed53c9e9ebca64f6",
   "empty": 0
  },
  "default neptune>mercury true wide": {
-  "digest": "ed872a3c7ee6dc2c",
+  "digest": "3cb5877c90486252",
   "empty": 0
  },
  "default neptune>mercury true square": {
-  "digest": "c2308d5a99e16300",
+  "digest": "89ce94ad728bc890",
   "empty": 0
  },
  "default neptune>mercury true tall": {
-  "digest": "910b6945561f31ce",
+  "digest": "befd497e976bc6c4",
   "empty": 0
  },
  "default earth>moon compressed wide": {
-  "digest": "9197be07dda6a23e",
+  "digest": "18307e4e0f786bf7",
   "empty": 0
  },
  "default earth>moon compressed square": {
-  "digest": "517e41926bc257dc",
+  "digest": "175c9a0e0103575d",
   "empty": 0
  },
  "default earth>moon compressed tall": {
-  "digest": "e23c4d06002937dc",
+  "digest": "8a36f80f95d2fffa",
   "empty": 0
  },
  "default earth>moon true wide": {
-  "digest": "a524aeb4c583f7b2",
+  "digest": "20ba41aa5e521658",
   "empty": 0
  },
  "default earth>moon true square": {
-  "digest": "a404eb64d6eb7a3b",
+  "digest": "f8d51da6062255e2",
   "empty": 0
  },
  "default earth>moon true tall": {
-  "digest": "d2c7a6ab1bf5ef5b",
+  "digest": "4948ae9679fe6e70",
   "empty": 0
  },
  "default moon>earth compressed wide": {
-  "digest": "6e363b7f0777dd75",
+  "digest": "1948fbb9339c2346",
   "empty": 0
  },
  "default moon>earth compressed square": {
-  "digest": "5efbfac3b4e44fe2",
+  "digest": "d44c84574d8a4b98",
   "empty": 0
  },
  "default moon>earth compressed tall": {
-  "digest": "0da9ab048a3cc396",
+  "digest": "7a90596907a58af3",
   "empty": 0
  },
  "default moon>earth true wide": {
-  "digest": "54d5002138dd8b6c",
+  "digest": "49a8bdd798a8e2a7",
   "empty": 0
  },
  "default moon>earth true square": {
-  "digest": "1ec528a88033d5bd",
+  "digest": "832cef751d6dc1a1",
   "empty": 0
  },
  "default moon>earth true tall": {
-  "digest": "dbb67446afe244ac",
+  "digest": "7fbbd873782c4c5b",
   "empty": 0
  },
  "default callisto>europa compressed wide": {
-  "digest": "4912a79ae3eb3dd7",
+  "digest": "3cb83f6f9edf1c68",
   "empty": 0
  },
  "default callisto>europa compressed square": {
-  "digest": "a746315f445b6f0c",
+  "digest": "6a404756b26d86c7",
   "empty": 0
  },
  "default callisto>europa compressed tall": {
-  "digest": "d485e4bb7a8618eb",
+  "digest": "f0b65c5cc6d46f0b",
   "empty": 0
  },
  "default callisto>europa true wide": {
-  "digest": "954123189bf466ce",
+  "digest": "8f446b78fbc4f80c",
   "empty": 0
  },
  "default callisto>europa true square": {
-  "digest": "332ed4168db5b060",
+  "digest": "85009f477e066c3b",
   "empty": 0
  },
  "default callisto>europa true tall": {
-  "digest": "7b1140bf0157b789",
+  "digest": "0df8bff7c92435fd",
   "empty": 0
  },
  "default io>ganymede compressed wide": {
-  "digest": "dc93954816c0d072",
+  "digest": "f2e7d77b1c03333c",
   "empty": 0
  },
  "default io>ganymede compressed square": {
-  "digest": "5ce72b5f117e19ec",
+  "digest": "ed420f7c4f858646",
   "empty": 0
  },
  "default io>ganymede compressed tall": {
-  "digest": "d90b5588f2f94e46",
+  "digest": "af1744dbbd2ce3fe",
   "empty": 0
  },
  "default io>ganymede true wide": {
-  "digest": "c87849bde95999a0",
+  "digest": "c732cf6860b89c20",
   "empty": 0
  },
  "default io>ganymede true square": {
-  "digest": "cd21f6e8604bcea3",
+  "digest": "cda2ea745416f632",
   "empty": 0
  },
  "default io>ganymede true tall": {
-  "digest": "658e1ea5e72dd7f5",
+  "digest": "6cc2a2afff39947d",
   "empty": 0
  },
  "default titan>enceladus compressed wide": {
-  "digest": "786e7fd35c752875",
+  "digest": "3e82ed05d2e4b961",
   "empty": 0
  },
  "default titan>enceladus compressed square": {
-  "digest": "fb7230e6834b2383",
+  "digest": "6e66d10ed940d044",
   "empty": 0
  },
  "default titan>enceladus compressed tall": {
-  "digest": "e295f0350e332dc7",
+  "digest": "db860b4bab2b17f4",
   "empty": 0
  },
  "default titan>enceladus true wide": {
-  "digest": "243ee785fb4dc60a",
+  "digest": "d6f14b36c4da7523",
   "empty": 0
  },
  "default titan>enceladus true square": {
-  "digest": "efeacd3f1e4fa64c",
+  "digest": "0181206a37c5e50b",
   "empty": 0
  },
  "default titan>enceladus true tall": {
-  "digest": "7ca1bdc08a9fa244",
+  "digest": "f8dc9f488034551b",
   "empty": 0
  },
  "default moon>titan compressed wide": {
-  "digest": "35c93f673a368ae5",
+  "digest": "92e7d069bffb369f",
   "empty": 0
  },
  "default moon>titan compressed square": {
-  "digest": "f2195bd500cf7dbd",
+  "digest": "9fceca22bfef3191",
   "empty": 0
  },
  "default moon>titan compressed tall": {
-  "digest": "e1a99870b450187c",
+  "digest": "407719f1d4d51aba",
   "empty": 0
  },
  "default moon>titan true wide": {
-  "digest": "04dc40415dd0f102",
+  "digest": "6b15c980562204fc",
   "empty": 0
  },
  "default moon>titan true square": {
-  "digest": "351e0b7f6e512f84",
+  "digest": "233a4c555737f1ce",
   "empty": 0
  },
  "default moon>titan true tall": {
-  "digest": "485372e74284f0ff",
+  "digest": "9f6b7a27ee4614d8",
   "empty": 0
  },
  "default oberon>miranda compressed wide": {
-  "digest": "2938f0137cd7e4e6",
+  "digest": "ea613c18172772c1",
   "empty": 0
  },
  "default oberon>miranda compressed square": {
-  "digest": "834fff1af48b92d9",
+  "digest": "5505afa5eb74ddbf",
   "empty": 0
  },
  "default oberon>miranda compressed tall": {
-  "digest": "93d61ded4bbb9290",
+  "digest": "31bf27c9f29a3573",
   "empty": 0
  },
  "default oberon>miranda true wide": {
-  "digest": "7ac0146497e71275",
+  "digest": "6a594a53832fc7e0",
   "empty": 0
  },
  "default oberon>miranda true square": {
-  "digest": "2b1a9161e96e7771",
+  "digest": "22f8085d1ffad52f",
   "empty": 0
  },
  "default oberon>miranda true tall": {
-  "digest": "423594b8401e281d",
+  "digest": "904e8e1df40117a4",
   "empty": 0
  },
  "default pluto>charon compressed wide": {
-  "digest": "048d8d419509af97",
+  "digest": "19142d62e1be44b5",
   "empty": 0
  },
  "default pluto>charon compressed square": {
-  "digest": "d4f46ccdee83aed3",
+  "digest": "8cd323d89b7fcc1c",
   "empty": 0
  },
  "default pluto>charon compressed tall": {
-  "digest": "e3e23dacb5803bf4",
+  "digest": "fa2eefc5ee7e4d0f",
   "empty": 0
  },
  "default pluto>charon true wide": {
-  "digest": "ef5b82211cd31ae4",
+  "digest": "30505a385b926871",
   "empty": 0
  },
  "default pluto>charon true square": {
-  "digest": "ae3bb891893afacc",
+  "digest": "f039a905c058878f",
   "empty": 0
  },
  "default pluto>charon true tall": {
-  "digest": "ba31c9a558f092fa",
+  "digest": "b9539da9b9e8d2b9",
   "empty": 0
  },
  "default saturn>titan compressed wide": {
-  "digest": "b8ebd8be47f628d4",
+  "digest": "a5f68fcab4f1905b",
   "empty": 0
  },
  "default saturn>titan compressed square": {
-  "digest": "270cc9c6005195c4",
+  "digest": "35880044b97cf8dc",
   "empty": 0
  },
  "default saturn>titan compressed tall": {
-  "digest": "ac195213a659b29c",
+  "digest": "826cc57cd431ba04",
   "empty": 0
  },
  "default saturn>titan true wide": {
-  "digest": "30791c5d2af1a6ee",
+  "digest": "f467859a7b2621c7",
   "empty": 0
  },
  "default saturn>titan true square": {
-  "digest": "530bdb6bef21b307",
+  "digest": "5367173a2fac01d6",
   "empty": 0
  },
  "default saturn>titan true tall": {
-  "digest": "45dedcb35c8ff088",
+  "digest": "05df1124e43114ff",
   "empty": 0
  },
  "default sun>earth compressed wide": {
-  "digest": "780b42ea000f52db",
+  "digest": "414189f214a0f6ff",
   "empty": 0
  },
  "default sun>earth compressed square": {
-  "digest": "da0f614bc6d030cf",
+  "digest": "5e3c0c650ba66ebb",
   "empty": 0
  },
  "default sun>earth compressed tall": {
-  "digest": "5fa141e16f91a84b",
+  "digest": "3e94b480870539da",
   "empty": 0
  },
  "default sun>earth true wide": {
-  "digest": "379830dfcd413d75",
+  "digest": "2480b6ae2e2f2fb1",
   "empty": 0
  },
  "default sun>earth true square": {
-  "digest": "b68c9f1cb454b7d5",
+  "digest": "36c2f1d11a7de954",
   "empty": 0
  },
  "default sun>earth true tall": {
-  "digest": "e3d1dfe98b1571aa",
+  "digest": "e83bfce20a87daab",
   "empty": 0
  },
  "default phobos>deimos compressed wide": {
-  "digest": "0626492ff1dfcab9",
+  "digest": "d5f3baaeff4669e1",
   "empty": 0
  },
  "default phobos>deimos compressed square": {
-  "digest": "37277df871b3e74b",
+  "digest": "8c6b0a58cd2a1d96",
   "empty": 0
  },
  "default phobos>deimos compressed tall": {
-  "digest": "1661f2fcab51cb7b",
+  "digest": "2d330acc3734f885",
   "empty": 0
  },
  "default phobos>deimos true wide": {
-  "digest": "701b03f2b6f4f466",
+  "digest": "d3c42e8806048402",
   "empty": 0
  },
  "default phobos>deimos true square": {
-  "digest": "1d2eca08865baf71",
+  "digest": "8cc95ae58d6ad67f",
   "empty": 0
  },
  "default phobos>deimos true tall": {
-  "digest": "43edf798ee3cba2a",
+  "digest": "4859845400d150ac",
   "empty": 0
  },
  "default triton>proteus compressed wide": {
-  "digest": "aa7f248da27a3dea",
+  "digest": "a107b1164bc3eed2",
   "empty": 0
  },
  "default triton>proteus compressed square": {
-  "digest": "c0174d06e1a26d81",
+  "digest": "b397f2618eba3734",
   "empty": 0
  },
  "default triton>proteus compressed tall": {
-  "digest": "964c5aa26e098ad8",
+  "digest": "1b1b308113827cde",
   "empty": 0
  },
  "default triton>proteus true wide": {
-  "digest": "0c2de043fabbd924",
+  "digest": "f358047f78fd9b2d",
   "empty": 0
  },
  "default triton>proteus true square": {
-  "digest": "1e42d7139d1ae744",
+  "digest": "873280eea0a0d79c",
   "empty": 0
  },
  "default triton>proteus true tall": {
-  "digest": "c5c70ccc797ce004",
+  "digest": "9363cccc204ffe9c",
+  "empty": 0
+ },
+ "kind direct earth>mars compressed wide": {
+  "digest": "746e4dd6a825876a",
+  "empty": 93
+ },
+ "kind look-back earth>mars compressed wide": {
+  "digest": "af5c76b391c4dd75",
+  "empty": 34
+ },
+ "kind cut earth>mars compressed wide": {
+  "digest": "204e800db712126b",
+  "empty": 0
+ },
+ "reduced earth>mars compressed wide": {
+  "digest": "204e800db712126b",
+  "empty": 0
+ },
+ "pace 2 earth>mars compressed wide": {
+  "digest": "cd0d86c79f8e1357",
+  "empty": 0
+ },
+ "kind direct earth>mars compressed square": {
+  "digest": "a817ffe0dd1b435e",
+  "empty": 120
+ },
+ "kind look-back earth>mars compressed square": {
+  "digest": "68322cc58507f262",
+  "empty": 43
+ },
+ "kind cut earth>mars compressed square": {
+  "digest": "dc2845833f86668b",
+  "empty": 0
+ },
+ "reduced earth>mars compressed square": {
+  "digest": "dc2845833f86668b",
+  "empty": 0
+ },
+ "pace 2 earth>mars compressed square": {
+  "digest": "4c308355d90115dd",
+  "empty": 0
+ },
+ "kind direct earth>mars compressed tall": {
+  "digest": "ccef9c84885ba595",
+  "empty": 145
+ },
+ "kind look-back earth>mars compressed tall": {
+  "digest": "5d4aa8cc73fbcd4e",
+  "empty": 54
+ },
+ "kind cut earth>mars compressed tall": {
+  "digest": "5ad23e5ae0de62be",
+  "empty": 0
+ },
+ "reduced earth>mars compressed tall": {
+  "digest": "5ad23e5ae0de62be",
+  "empty": 0
+ },
+ "pace 2 earth>mars compressed tall": {
+  "digest": "3751e1bba0d0d64b",
+  "empty": 0
+ },
+ "kind direct earth>mars true wide": {
+  "digest": "b9d8cd5c1aa9329e",
+  "empty": 117
+ },
+ "kind look-back earth>mars true wide": {
+  "digest": "87aa00aebb3aa307",
+  "empty": 60
+ },
+ "kind cut earth>mars true wide": {
+  "digest": "2175a66ddc09709d",
+  "empty": 0
+ },
+ "reduced earth>mars true wide": {
+  "digest": "2175a66ddc09709d",
+  "empty": 0
+ },
+ "pace 2 earth>mars true wide": {
+  "digest": "7d569b5318e0b6c4",
+  "empty": 0
+ },
+ "kind direct earth>mars true square": {
+  "digest": "e3c21b5aed5fe451",
+  "empty": 137
+ },
+ "kind look-back earth>mars true square": {
+  "digest": "8c49a996bfa33d57",
+  "empty": 75
+ },
+ "kind cut earth>mars true square": {
+  "digest": "d48829070d4b32c8",
+  "empty": 0
+ },
+ "reduced earth>mars true square": {
+  "digest": "d48829070d4b32c8",
+  "empty": 0
+ },
+ "pace 2 earth>mars true square": {
+  "digest": "325cb63b2239f58a",
+  "empty": 0
+ },
+ "kind direct earth>mars true tall": {
+  "digest": "db078656a3c05e0d",
+  "empty": 157
+ },
+ "kind look-back earth>mars true tall": {
+  "digest": "120cf37f736bd0e1",
+  "empty": 90
+ },
+ "kind cut earth>mars true tall": {
+  "digest": "3c3c9e97abc5787f",
+  "empty": 0
+ },
+ "reduced earth>mars true tall": {
+  "digest": "3c3c9e97abc5787f",
+  "empty": 0
+ },
+ "pace 2 earth>mars true tall": {
+  "digest": "2682587886d0d676",
+  "empty": 0
+ },
+ "kind direct mercury>sun compressed wide": {
+  "digest": "69209e55759038fc",
+  "empty": 120
+ },
+ "kind look-back mercury>sun compressed wide": {
+  "digest": "41f1f017bf52c621",
+  "empty": 42
+ },
+ "kind cut mercury>sun compressed wide": {
+  "digest": "8d9304bc46dc1839",
+  "empty": 0
+ },
+ "reduced mercury>sun compressed wide": {
+  "digest": "8d9304bc46dc1839",
+  "empty": 0
+ },
+ "pace 2 mercury>sun compressed wide": {
+  "digest": "07d878129e7f20b5",
+  "empty": 0
+ },
+ "kind direct mercury>sun compressed square": {
+  "digest": "c9eb1da641c98af6",
+  "empty": 120
+ },
+ "kind look-back mercury>sun compressed square": {
+  "digest": "86c28aee4c3fb63b",
+  "empty": 42
+ },
+ "kind cut mercury>sun compressed square": {
+  "digest": "c507d10d1590e35f",
+  "empty": 0
+ },
+ "reduced mercury>sun compressed square": {
+  "digest": "c507d10d1590e35f",
+  "empty": 0
+ },
+ "pace 2 mercury>sun compressed square": {
+  "digest": "b940bd1d9b3438cc",
+  "empty": 0
+ },
+ "kind direct mercury>sun compressed tall": {
+  "digest": "e2c722c43a13dabf",
+  "empty": 63
+ },
+ "kind look-back mercury>sun compressed tall": {
+  "digest": "64ed9c39ada66cd3",
+  "empty": 0
+ },
+ "kind cut mercury>sun compressed tall": {
+  "digest": "cafd5554d27e5cea",
+  "empty": 0
+ },
+ "reduced mercury>sun compressed tall": {
+  "digest": "cafd5554d27e5cea",
+  "empty": 0
+ },
+ "pace 2 mercury>sun compressed tall": {
+  "digest": "198bbab4412eda87",
+  "empty": 0
+ },
+ "kind direct mercury>sun true wide": {
+  "digest": "552a0ca476564c0c",
+  "empty": 171
+ },
+ "kind look-back mercury>sun true wide": {
+  "digest": "00edc4c42d790d68",
+  "empty": 72
+ },
+ "kind cut mercury>sun true wide": {
+  "digest": "8eb01665da63e751",
+  "empty": 0
+ },
+ "reduced mercury>sun true wide": {
+  "digest": "8eb01665da63e751",
+  "empty": 0
+ },
+ "pace 2 mercury>sun true wide": {
+  "digest": "6acab3058b82cae0",
+  "empty": 0
+ },
+ "kind direct mercury>sun true square": {
+  "digest": "cf8836b41c5d26e7",
+  "empty": 174
+ },
+ "kind look-back mercury>sun true square": {
+  "digest": "1e3aa5fb3cc1caca",
+  "empty": 88
+ },
+ "kind cut mercury>sun true square": {
+  "digest": "3f77692b945acc1a",
+  "empty": 0
+ },
+ "reduced mercury>sun true square": {
+  "digest": "3f77692b945acc1a",
+  "empty": 0
+ },
+ "pace 2 mercury>sun true square": {
+  "digest": "83c8a71632703b16",
+  "empty": 0
+ },
+ "kind direct mercury>sun true tall": {
+  "digest": "c32d36918c3482dc",
+  "empty": 174
+ },
+ "kind look-back mercury>sun true tall": {
+  "digest": "d1d7221146585c09",
+  "empty": 104
+ },
+ "kind cut mercury>sun true tall": {
+  "digest": "b9302a6e4b739817",
+  "empty": 0
+ },
+ "reduced mercury>sun true tall": {
+  "digest": "b9302a6e4b739817",
+  "empty": 0
+ },
+ "pace 2 mercury>sun true tall": {
+  "digest": "64a5a7792655fd2c",
+  "empty": 0
+ },
+ "kind direct callisto>europa compressed wide": {
+  "digest": "123d86fea7c637ab",
+  "empty": 146
+ },
+ "kind look-back callisto>europa compressed wide": {
+  "digest": "d6dfce303f05ceb0",
+  "empty": 32
+ },
+ "kind cut callisto>europa compressed wide": {
+  "digest": "1e7378825b1435b0",
+  "empty": 0
+ },
+ "reduced callisto>europa compressed wide": {
+  "digest": "1e7378825b1435b0",
+  "empty": 0
+ },
+ "pace 2 callisto>europa compressed wide": {
+  "digest": "854a645509fc97d1",
+  "empty": 0
+ },
+ "kind direct callisto>europa compressed square": {
+  "digest": "67d690ee60248000",
+  "empty": 171
+ },
+ "kind look-back callisto>europa compressed square": {
+  "digest": "092fdeaecbba37c7",
+  "empty": 57
+ },
+ "kind cut callisto>europa compressed square": {
+  "digest": "989adf310c03f753",
+  "empty": 0
+ },
+ "reduced callisto>europa compressed square": {
+  "digest": "989adf310c03f753",
+  "empty": 0
+ },
+ "pace 2 callisto>europa compressed square": {
+  "digest": "a33fa6c3854da06c",
+  "empty": 0
+ },
+ "kind direct callisto>europa compressed tall": {
+  "digest": "8558b24e66d4db84",
+  "empty": 174
+ },
+ "kind look-back callisto>europa compressed tall": {
+  "digest": "e916b7a1235021fc",
+  "empty": 65
+ },
+ "kind cut callisto>europa compressed tall": {
+  "digest": "974bc35088e761f8",
+  "empty": 0
+ },
+ "reduced callisto>europa compressed tall": {
+  "digest": "974bc35088e761f8",
+  "empty": 0
+ },
+ "pace 2 callisto>europa compressed tall": {
+  "digest": "41e50d0dcf607026",
+  "empty": 0
+ },
+ "kind direct callisto>europa true wide": {
+  "digest": "6f6d1e8248a88558",
+  "empty": 109
+ },
+ "kind look-back callisto>europa true wide": {
+  "digest": "73a86c385154d762",
+  "empty": 50
+ },
+ "kind cut callisto>europa true wide": {
+  "digest": "38d2cbcac0b21b75",
+  "empty": 0
+ },
+ "reduced callisto>europa true wide": {
+  "digest": "38d2cbcac0b21b75",
+  "empty": 0
+ },
+ "pace 2 callisto>europa true wide": {
+  "digest": "166a64ed27bc010f",
+  "empty": 0
+ },
+ "kind direct callisto>europa true square": {
+  "digest": "7e6f9436bea18860",
+  "empty": 126
+ },
+ "kind look-back callisto>europa true square": {
+  "digest": "361de37dea4f499e",
+  "empty": 64
+ },
+ "kind cut callisto>europa true square": {
+  "digest": "75a4801e7f4b07e2",
+  "empty": 0
+ },
+ "reduced callisto>europa true square": {
+  "digest": "75a4801e7f4b07e2",
+  "empty": 0
+ },
+ "pace 2 callisto>europa true square": {
+  "digest": "13abd5d58433d395",
+  "empty": 0
+ },
+ "kind direct callisto>europa true tall": {
+  "digest": "6f1e95d9c557ce7a",
+  "empty": 130
+ },
+ "kind look-back callisto>europa true tall": {
+  "digest": "27cff139a1371014",
+  "empty": 69
+ },
+ "kind cut callisto>europa true tall": {
+  "digest": "69b72b432a6cda3c",
+  "empty": 0
+ },
+ "reduced callisto>europa true tall": {
+  "digest": "69b72b432a6cda3c",
+  "empty": 0
+ },
+ "pace 2 callisto>europa true tall": {
+  "digest": "2be0283eb17cd15f",
   "empty": 0
  },
  "plain mercury>sun compressed wide 0": {
-  "digest": "64b7431b2e1ffc15",
+  "digest": "9892946157851c99",
   "empty": 0
  },
  "plain mercury>sun compressed wide 1": {
-  "digest": "c812058f4eb36a05",
+  "digest": "0803acbef801e359",
   "empty": 0
  },
  "plain mercury>sun compressed wide 2": {
-  "digest": "06d5ae5a1c5ac5c1",
+  "digest": "622134303c00b0b2",
   "empty": 0
  },
  "plain mercury>sun compressed wide 3": {
-  "digest": "40702267cbc50ae8",
+  "digest": "cf6252946d673acf",
   "empty": 0
  },
  "plain mercury>sun compressed wide 4": {
-  "digest": "340b450178db48fe",
+  "digest": "3cd376a89581e626",
   "empty": 0
  },
  "plain mercury>sun compressed wide 5": {
-  "digest": "05d5aac291ff06de",
+  "digest": "bee433949a4851e6",
   "empty": 0
  },
  "plain mercury>sun compressed wide 6": {
-  "digest": "6b3e2fb070cb1dc5",
+  "digest": "e1c154172f8c3b79",
   "empty": 0
  },
  "plain mercury>sun compressed wide 7": {
-  "digest": "8f2cb9e6b3f7c37d",
+  "digest": "c78f8ae05eb0258d",
   "empty": 0
  },
  "plain mercury>sun compressed wide 8": {
-  "digest": "5279839ec6cf05c5",
+  "digest": "37d10bf3093a2c54",
   "empty": 0
  },
  "plain mercury>sun compressed wide 9": {
-  "digest": "c9118bddf92bd6e9",
+  "digest": "6b9567854d62d287",
   "empty": 0
  },
  "plain mercury>sun compressed square 0": {
-  "digest": "7991a85e84dab008",
+  "digest": "b6fcbdcbbfb2a60c",
   "empty": 0
  },
  "plain mercury>sun compressed square 1": {
-  "digest": "80d4af0648e1a38d",
+  "digest": "6f56b2c57f33b5c9",
   "empty": 0
  },
  "plain mercury>sun compressed square 2": {
-  "digest": "9a41152206c3bfbd",
+  "digest": "c6a5bfbdf3b1ce8b",
   "empty": 0
  },
  "plain mercury>sun compressed square 3": {
-  "digest": "6a2b212d203b2f45",
+  "digest": "10bcfbe97fd9c9dc",
   "empty": 0
  },
  "plain mercury>sun compressed square 4": {
-  "digest": "83751f109d7c91e9",
+  "digest": "388d7ba37942b39b",
   "empty": 0
  },
  "plain mercury>sun compressed square 5": {
-  "digest": "b177a6fce74df2a7",
+  "digest": "112848de3fb84108",
   "empty": 0
  },
  "plain mercury>sun compressed square 6": {
-  "digest": "82a5aa9f4fb01dba",
+  "digest": "3b5fa0ef2be0b0c9",
   "empty": 0
  },
  "plain mercury>sun compressed square 7": {
-  "digest": "f9d5b51b8f33a034",
+  "digest": "8d78629e4e1fa712",
   "empty": 0
  },
  "plain mercury>sun compressed square 8": {
-  "digest": "c7510608dd648b4e",
+  "digest": "97a7d153735f1e4b",
   "empty": 0
  },
  "plain mercury>sun compressed square 9": {
-  "digest": "d6c3a74d199130e5",
+  "digest": "137f35b452649950",
   "empty": 0
  },
  "plain mercury>sun compressed tall 0": {
-  "digest": "3b09a10109f9d825",
+  "digest": "f1b96b97417cd379",
   "empty": 0
  },
  "plain mercury>sun compressed tall 1": {
-  "digest": "a2ba329392cb0962",
+  "digest": "2b8bf370845c23d2",
   "empty": 0
  },
  "plain mercury>sun compressed tall 2": {
-  "digest": "6ef8702443969c97",
+  "digest": "094f71c653a2a3ce",
   "empty": 0
  },
  "plain mercury>sun compressed tall 3": {
-  "digest": "9642297d092ebbb9",
+  "digest": "46dbb475bc62c9e8",
   "empty": 0
  },
  "plain mercury>sun compressed tall 4": {
-  "digest": "91a29edbcc0db1be",
+  "digest": "55894b0851a76df7",
   "empty": 0
  },
  "plain mercury>sun compressed tall 5": {
-  "digest": "c6b6dd05d7d228ca",
+  "digest": "3ad5e1f775464685",
   "empty": 0
  },
  "plain mercury>sun compressed tall 6": {
-  "digest": "d26f062f08ab3a05",
+  "digest": "410ed87fd8bd55bd",
   "empty": 0
  },
  "plain mercury>sun compressed tall 7": {
-  "digest": "034f424c1840cf77",
+  "digest": "4e1642d87450cbf6",
   "empty": 0
  },
  "plain mercury>sun compressed tall 8": {
-  "digest": "6a85c6a909a6c879",
+  "digest": "fa67f5f1a6c7d4fd",
   "empty": 0
  },
  "plain mercury>sun compressed tall 9": {
-  "digest": "498987052a5240f1",
+  "digest": "55c8a2e622369c2a",
   "empty": 0
  },
  "plain mercury>sun true wide 0": {
-  "digest": "1818ab819589c8dd",
+  "digest": "56104707a6ff87a5",
   "empty": 0
  },
  "plain mercury>sun true wide 1": {
-  "digest": "fca92d108a0ee458",
+  "digest": "7e4d2256e9c12157",
   "empty": 0
  },
  "plain mercury>sun true wide 2": {
-  "digest": "c02d3a2f28a09114",
+  "digest": "b2377fac791e2aa9",
   "empty": 0
  },
  "plain mercury>sun true wide 3": {
-  "digest": "ad721a1a550ecb75",
+  "digest": "88a2292554e00d4d",
   "empty": 0
  },
  "plain mercury>sun true wide 4": {
-  "digest": "a102e65cd1750719",
+  "digest": "3e3b91c5b9f5054d",
   "empty": 0
  },
  "plain mercury>sun true wide 5": {
-  "digest": "fb94546fca4f3f33",
+  "digest": "d23246d70e1cde89",
   "empty": 0
  },
  "plain mercury>sun true wide 6": {
-  "digest": "5be3971d22226419",
+  "digest": "ec47efb21f7a0e15",
   "empty": 0
  },
  "plain mercury>sun true wide 7": {
-  "digest": "b2ce173e41aac007",
+  "digest": "82b0f713a36fe919",
   "empty": 0
  },
  "plain mercury>sun true wide 8": {
-  "digest": "eb8f7941ae86ecd4",
+  "digest": "d388bf3c1fbc82a5",
   "empty": 0
  },
  "plain mercury>sun true wide 9": {
-  "digest": "119baa8999f6b181",
+  "digest": "0ef3191c2b20e0bf",
   "empty": 0
  },
  "plain mercury>sun true square 0": {
-  "digest": "eaea608494582a88",
+  "digest": "066cedbb5927a8a2",
   "empty": 0
  },
  "plain mercury>sun true square 1": {
-  "digest": "9e3d247d5378cbc2",
+  "digest": "da1dda1a62167fc9",
   "empty": 0
  },
  "plain mercury>sun true square 2": {
-  "digest": "cdf80de7ebfa2fd9",
+  "digest": "8b1f0ecb910baf21",
   "empty": 0
  },
  "plain mercury>sun true square 3": {
-  "digest": "9e60ec308c8e2d70",
+  "digest": "02c841f4313b47a1",
   "empty": 0
  },
  "plain mercury>sun true square 4": {
-  "digest": "b91b639ef89c6428",
+  "digest": "3548fed484ce7330",
   "empty": 0
  },
  "plain mercury>sun true square 5": {
-  "digest": "4089207d36c1352b",
+  "digest": "273ca8d36dabd306",
   "empty": 0
  },
  "plain mercury>sun true square 6": {
-  "digest": "9aa1e0b7cb4926bc",
+  "digest": "18f41f1cfd00e3bc",
   "empty": 0
  },
  "plain mercury>sun true square 7": {
-  "digest": "b11d150a6a3f80c7",
+  "digest": "0fc368d9eaccccf2",
   "empty": 0
  },
  "plain mercury>sun true square 8": {
-  "digest": "0d95cb4d7d70d5f1",
+  "digest": "28f135576bc2da56",
   "empty": 0
  },
  "plain mercury>sun true square 9": {
-  "digest": "1450fcc5b8b5cea4",
+  "digest": "1d78ce466c2106be",
   "empty": 0
  },
  "plain mercury>sun true tall 0": {
-  "digest": "cc92dbe668670c16",
+  "digest": "9fe0283ffc2b5c1f",
   "empty": 0
  },
  "plain mercury>sun true tall 1": {
-  "digest": "2fceb694472e8c1e",
+  "digest": "9b30c713ef67a6ef",
   "empty": 0
  },
  "plain mercury>sun true tall 2": {
-  "digest": "467dc1736bb5c524",
+  "digest": "7cd30a5502a4a252",
   "empty": 0
  },
  "plain mercury>sun true tall 3": {
-  "digest": "f854532d7091c616",
+  "digest": "9ac4705e629fca6f",
   "empty": 0
  },
  "plain mercury>sun true tall 4": {
-  "digest": "5315cb71d614daa9",
+  "digest": "99259c68a0cca62c",
   "empty": 0
  },
  "plain mercury>sun true tall 5": {
-  "digest": "21710f2e6a88c270",
+  "digest": "b6cc7e2fb3ba10e0",
   "empty": 0
  },
  "plain mercury>sun true tall 6": {
-  "digest": "a10f0c4c599f4e2d",
+  "digest": "1c34d86ff4394c75",
   "empty": 0
  },
  "plain mercury>sun true tall 7": {
-  "digest": "c2ef58024374dbc9",
+  "digest": "9fd052989f32dded",
   "empty": 0
  },
  "plain mercury>sun true tall 8": {
-  "digest": "b4cc4c1f11b29647",
+  "digest": "79d6a7aa59d3d07e",
   "empty": 0
  },
  "plain mercury>sun true tall 9": {
-  "digest": "b602b8a12f15a918",
+  "digest": "237c969a1f34c334",
   "empty": 0
  },
  "plain earth>mars compressed wide 0": {
-  "digest": "dfd9d8975ccc8278",
+  "digest": "dff6ba6b952f07d2",
   "empty": 0
  },
  "plain earth>mars compressed wide 1": {
-  "digest": "eb3a588979204516",
+  "digest": "5bf891d7939901c0",
   "empty": 0
  },
  "plain earth>mars compressed wide 2": {
-  "digest": "7811ee73a8368dce",
+  "digest": "76dea9933d86fb82",
   "empty": 0
  },
  "plain earth>mars compressed wide 3": {
-  "digest": "39b1b9b08d2392cb",
+  "digest": "9551f7c1e952c270",
   "empty": 0
  },
  "plain earth>mars compressed wide 4": {
-  "digest": "96685ce61bf332b8",
+  "digest": "935d662fddcb0d99",
   "empty": 0
  },
  "plain earth>mars compressed wide 5": {
-  "digest": "e7228c51b860e86c",
+  "digest": "db52003f9da0dcaf",
   "empty": 0
  },
  "plain earth>mars compressed wide 6": {
-  "digest": "fdaddc37adb1e45e",
+  "digest": "56b8d6a6bbb03030",
   "empty": 0
  },
  "plain earth>mars compressed wide 7": {
-  "digest": "a05c33c2e51c457e",
+  "digest": "bfd2bdb73175195a",
   "empty": 0
  },
  "plain earth>mars compressed wide 8": {
-  "digest": "d852faee3802f846",
+  "digest": "b22ceb096030d43c",
   "empty": 0
  },
  "plain earth>mars compressed wide 9": {
-  "digest": "29ef0304f50d1ee8",
+  "digest": "4f4a4708ebdad69c",
   "empty": 0
  },
  "plain earth>mars compressed square 0": {
-  "digest": "046cb19e208c94e9",
+  "digest": "3fef4e90b805af11",
   "empty": 0
  },
  "plain earth>mars compressed square 1": {
-  "digest": "ee6f14a3cce643be",
+  "digest": "fc9d79ddebafcd82",
   "empty": 0
  },
  "plain earth>mars compressed square 2": {
-  "digest": "dcf0b776acbfd600",
+  "digest": "60251b0342ab61cf",
   "empty": 0
  },
  "plain earth>mars compressed square 3": {
-  "digest": "f91c2c71bbdc385c",
+  "digest": "a7a0cd8276e59ac1",
   "empty": 0
  },
  "plain earth>mars compressed square 4": {
-  "digest": "edd7f9150ea720ed",
+  "digest": "36176b968149ee16",
   "empty": 0
  },
  "plain earth>mars compressed square 5": {
-  "digest": "8077a1aa096a19af",
+  "digest": "515a144aa5f4ff16",
   "empty": 0
  },
  "plain earth>mars compressed square 6": {
-  "digest": "6f43b24e907fddf0",
+  "digest": "18ccef12e1d6cfbd",
   "empty": 0
  },
  "plain earth>mars compressed square 7": {
-  "digest": "504dfec46f007ec0",
+  "digest": "6126188653089a48",
   "empty": 0
  },
  "plain earth>mars compressed square 8": {
-  "digest": "4262484a75c60fcc",
+  "digest": "c00c222c1099883b",
   "empty": 0
  },
  "plain earth>mars compressed square 9": {
-  "digest": "c9b672f88cd3044e",
+  "digest": "4e515eccbffe9024",
   "empty": 0
  },
  "plain earth>mars compressed tall 0": {
-  "digest": "f9af7be8e8582086",
+  "digest": "77d8c6ce650fc748",
   "empty": 0
  },
  "plain earth>mars compressed tall 1": {
-  "digest": "e8032b585f3a0411",
+  "digest": "3ca3e28e1a0c2047",
   "empty": 0
  },
  "plain earth>mars compressed tall 2": {
-  "digest": "04bdb45edeb7689d",
+  "digest": "ed9197ceec005494",
   "empty": 0
  },
  "plain earth>mars compressed tall 3": {
-  "digest": "45696f1526e96fac",
+  "digest": "4490a645ce4e4f6d",
   "empty": 0
  },
  "plain earth>mars compressed tall 4": {
-  "digest": "fcfb1098497ec19c",
+  "digest": "13c22d45516dda2a",
   "empty": 0
  },
  "plain earth>mars compressed tall 5": {
-  "digest": "d02ca710ae132c4f",
+  "digest": "a143cc90bc03daf6",
   "empty": 0
  },
  "plain earth>mars compressed tall 6": {
-  "digest": "5bdaf33ca1c0cd45",
+  "digest": "37454d4625e22108",
   "empty": 0
  },
  "plain earth>mars compressed tall 7": {
-  "digest": "8cdf56a33ce3df90",
+  "digest": "dc4f2af30fab53f7",
   "empty": 0
  },
  "plain earth>mars compressed tall 8": {
-  "digest": "c1b072012a3daa14",
+  "digest": "d6667f554f68c443",
   "empty": 0
  },
  "plain earth>mars compressed tall 9": {
-  "digest": "a7548aa45e213e95",
+  "digest": "ba296513607fdea0",
   "empty": 0
  },
  "plain earth>mars true wide 0": {
-  "digest": "dedc26eed715a471",
+  "digest": "7dbe4737d89d4f2f",
   "empty": 0
  },
  "plain earth>mars true wide 1": {
-  "digest": "876d4c727017f8a9",
+  "digest": "654c9a1874e94e84",
   "empty": 0
  },
  "plain earth>mars true wide 2": {
-  "digest": "2a7bdfd314659d8c",
+  "digest": "e47811fe26e41fd2",
   "empty": 0
  },
  "plain earth>mars true wide 3": {
-  "digest": "67f0efe7557eed82",
+  "digest": "71674f945e95249e",
   "empty": 0
  },
  "plain earth>mars true wide 4": {
-  "digest": "0a1290016c820be8",
+  "digest": "626a26cd15a41817",
   "empty": 0
  },
  "plain earth>mars true wide 5": {
-  "digest": "3c86ea3883143198",
+  "digest": "574816aae192a52a",
   "empty": 0
  },
  "plain earth>mars true wide 6": {
-  "digest": "63101ab0d93394c9",
+  "digest": "4f554960a3b17ba5",
   "empty": 0
  },
  "plain earth>mars true wide 7": {
-  "digest": "c515dfd98483d3af",
+  "digest": "a769193943b0948b",
   "empty": 0
  },
  "plain earth>mars true wide 8": {
-  "digest": "7d3bc38b426d7c14",
+  "digest": "deebbaa430db6082",
   "empty": 0
  },
  "plain earth>mars true wide 9": {
-  "digest": "0d3b7cd8a81d3153",
+  "digest": "1ee819c0183365db",
   "empty": 0
  },
  "plain earth>mars true square 0": {
-  "digest": "fd673fd145ea511f",
+  "digest": "0c3f9bd5b037c046",
   "empty": 0
  },
  "plain earth>mars true square 1": {
-  "digest": "cfdc83a3a68ec157",
+  "digest": "3abe44109ab80d85",
   "empty": 0
  },
  "plain earth>mars true square 2": {
-  "digest": "c5446692e0cffc48",
+  "digest": "ce9602291af14bf4",
   "empty": 0
  },
  "plain earth>mars true square 3": {
-  "digest": "7fe07ef102c9b3fc",
+  "digest": "334c11091e923ee8",
   "empty": 0
  },
  "plain earth>mars true square 4": {
-  "digest": "6bb2655ed13064c3",
+  "digest": "4e41da177c49a2e1",
   "empty": 0
  },
  "plain earth>mars true square 5": {
-  "digest": "0f3897e5b46c9a6a",
+  "digest": "dc118037096ea55c",
   "empty": 0
  },
  "plain earth>mars true square 6": {
-  "digest": "3658e196fa32cc02",
+  "digest": "2f463a10a69e685a",
   "empty": 0
  },
  "plain earth>mars true square 7": {
-  "digest": "05052328964d0adf",
+  "digest": "8dd38d4836fdeec3",
   "empty": 0
  },
  "plain earth>mars true square 8": {
-  "digest": "9ad542e2500d3ad8",
+  "digest": "05897a1f2a787001",
   "empty": 0
  },
  "plain earth>mars true square 9": {
-  "digest": "c8f052ac7e958bdc",
+  "digest": "1cc85f977c519b51",
   "empty": 0
  },
  "plain earth>mars true tall 0": {
-  "digest": "28c0ef82f08028de",
+  "digest": "9e6f8415c033da66",
   "empty": 0
  },
  "plain earth>mars true tall 1": {
-  "digest": "3e8786ab5b3c193c",
+  "digest": "187213ab1bee4148",
   "empty": 0
  },
  "plain earth>mars true tall 2": {
-  "digest": "790981064ae13235",
+  "digest": "817e45200167b5d8",
   "empty": 0
  },
  "plain earth>mars true tall 3": {
-  "digest": "a6b9205e0b230b51",
+  "digest": "00c83ef48adf9a50",
   "empty": 0
  },
  "plain earth>mars true tall 4": {
-  "digest": "70069aed94ad9d7f",
+  "digest": "aa67a3ce583bf525",
   "empty": 0
  },
  "plain earth>mars true tall 5": {
-  "digest": "912180821651acd3",
+  "digest": "9790317598d48647",
   "empty": 0
  },
  "plain earth>mars true tall 6": {
-  "digest": "40afdc9b67c7f3e0",
+  "digest": "5cc4e3d5be88214a",
   "empty": 0
  },
  "plain earth>mars true tall 7": {
-  "digest": "d88180c755d90c81",
+  "digest": "0fd09cd9b0bebdd1",
   "empty": 0
  },
  "plain earth>mars true tall 8": {
-  "digest": "e2d4de5fa6e1f89f",
+  "digest": "af946cc82ea2f36b",
   "empty": 0
  },
  "plain earth>mars true tall 9": {
-  "digest": "57b8093721ae8922",
+  "digest": "f8f445e0ea41c29a",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 0": {
-  "digest": "0c0e14f6e323434f",
+  "digest": "65bdd5b59496d100",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 1": {
-  "digest": "c7049f385996bb1f",
+  "digest": "8bc7f96e303e2068",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 2": {
-  "digest": "9b5799613330b7ac",
+  "digest": "f12863fb9bc81729",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 3": {
-  "digest": "184c26f6ddeef5bd",
+  "digest": "ac7ce89f8385287b",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 4": {
-  "digest": "65b8a130d98e5bdc",
+  "digest": "2f83209afb95ff2d",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 5": {
-  "digest": "28572843386cbdee",
+  "digest": "e214fc5f21548368",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 6": {
-  "digest": "cdd00864593edcc6",
+  "digest": "cfd1382929c1659d",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 7": {
-  "digest": "a3baba0a5b22d433",
+  "digest": "656b996366538aec",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 8": {
-  "digest": "0e9aef61582fc2ac",
+  "digest": "6dfa4d84853b4a3a",
   "empty": 0
  },
  "plain mars>jupiter compressed wide 9": {
-  "digest": "5e9a002a10453f58",
+  "digest": "643dd11df0f36dd1",
   "empty": 0
  },
  "plain mars>jupiter compressed square 0": {
-  "digest": "8b976c1529a86e35",
+  "digest": "f71d48f38ef6f6a5",
   "empty": 0
  },
  "plain mars>jupiter compressed square 1": {
-  "digest": "92ff7d18be783210",
+  "digest": "313c191f84606e28",
   "empty": 0
  },
  "plain mars>jupiter compressed square 2": {
-  "digest": "a721771893b8f938",
+  "digest": "b0ca85a6bba6cc45",
   "empty": 0
  },
  "plain mars>jupiter compressed square 3": {
-  "digest": "46b64fb7c2fa6766",
+  "digest": "f584a0ff0423a03b",
   "empty": 0
  },
  "plain mars>jupiter compressed square 4": {
-  "digest": "6a032717472b20fa",
+  "digest": "a119e8e9f81f92af",
   "empty": 0
  },
  "plain mars>jupiter compressed square 5": {
-  "digest": "5d50275c8745e08f",
+  "digest": "52334b310730b166",
   "empty": 0
  },
  "plain mars>jupiter compressed square 6": {
-  "digest": "b732610170012fe4",
+  "digest": "cbaf0e67283f8001",
   "empty": 0
  },
  "plain mars>jupiter compressed square 7": {
-  "digest": "e90d33c4315227bc",
+  "digest": "34594b4da7d755cb",
   "empty": 0
  },
  "plain mars>jupiter compressed square 8": {
-  "digest": "f07870ac98abf012",
+  "digest": "6016bd4e8d221bb9",
   "empty": 0
  },
  "plain mars>jupiter compressed square 9": {
-  "digest": "a923a49a3bd4aaec",
+  "digest": "0cf519f225e670bd",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 0": {
-  "digest": "f7c22cc6eeb587f3",
+  "digest": "628bb6422cd0d364",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 1": {
-  "digest": "3082c2f9403a25b1",
+  "digest": "c58288e32323eedb",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 2": {
-  "digest": "af63a17673f58274",
+  "digest": "9d3599d18a0361b2",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 3": {
-  "digest": "b5da105d1cfc75ed",
+  "digest": "c456658ebf62858f",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 4": {
-  "digest": "984e14e7e8fccc68",
+  "digest": "e804fc98118e3163",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 5": {
-  "digest": "23a8c6e95888f3b9",
+  "digest": "67a4105d6ca59dc2",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 6": {
-  "digest": "feabc6d141c0a427",
+  "digest": "05cd03fdfce63bb4",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 7": {
-  "digest": "a4b906a671352e5e",
+  "digest": "176d690373b7fb90",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 8": {
-  "digest": "a909e5031fab04c5",
+  "digest": "3eefa52dfe47b865",
   "empty": 0
  },
  "plain mars>jupiter compressed tall 9": {
-  "digest": "33f3c680d1831573",
+  "digest": "dd6a04a3b1495aa1",
   "empty": 0
  },
  "plain mars>jupiter true wide 0": {
-  "digest": "01b516f257be7639",
+  "digest": "ce806bb803d5ec57",
   "empty": 0
  },
  "plain mars>jupiter true wide 1": {
-  "digest": "6e9412b7de64af33",
+  "digest": "c2c0d15beae9d9a9",
   "empty": 0
  },
  "plain mars>jupiter true wide 2": {
-  "digest": "ddf02c89bde3ed3a",
+  "digest": "3b64cf59c7828682",
   "empty": 0
  },
  "plain mars>jupiter true wide 3": {
-  "digest": "60c92e2dbbdadcce",
+  "digest": "dd1ffc75f461548e",
   "empty": 0
  },
  "plain mars>jupiter true wide 4": {
-  "digest": "02cfda5847c0fbba",
+  "digest": "5b19b610e5ca7371",
   "empty": 0
  },
  "plain mars>jupiter true wide 5": {
-  "digest": "10f017d5bf12823e",
+  "digest": "796274e5c0d01b40",
   "empty": 0
  },
  "plain mars>jupiter true wide 6": {
-  "digest": "9a634113ba6883e7",
+  "digest": "82b7d90b2f610c7e",
   "empty": 0
  },
  "plain mars>jupiter true wide 7": {
-  "digest": "416b7d69b8889ce5",
+  "digest": "cf89dfd473bf242a",
   "empty": 0
  },
  "plain mars>jupiter true wide 8": {
-  "digest": "78b551d1e0fc2c3f",
+  "digest": "f9caf4a0d9d0d6e0",
   "empty": 0
  },
  "plain mars>jupiter true wide 9": {
-  "digest": "d486cc8bad9565c5",
+  "digest": "1741f4ca186f90b9",
   "empty": 0
  },
  "plain mars>jupiter true square 0": {
-  "digest": "c2a270a2220a3cef",
+  "digest": "f52e6afcc128554c",
   "empty": 0
  },
  "plain mars>jupiter true square 1": {
-  "digest": "f8ba90f48188c2e1",
+  "digest": "669d9c179d0c329d",
   "empty": 0
  },
  "plain mars>jupiter true square 2": {
-  "digest": "e047cb9d470dc98d",
+  "digest": "f893b007e0358cc7",
   "empty": 0
  },
  "plain mars>jupiter true square 3": {
-  "digest": "78055a5cbc667aab",
+  "digest": "cb2c853372c0adaf",
   "empty": 0
  },
  "plain mars>jupiter true square 4": {
-  "digest": "2c49ea8e8658edff",
+  "digest": "2cef10bedcf830c2",
   "empty": 0
  },
  "plain mars>jupiter true square 5": {
-  "digest": "bb1a45b8fd3fa4c3",
+  "digest": "124651762daea9ce",
   "empty": 0
  },
  "plain mars>jupiter true square 6": {
-  "digest": "1188db1b45a6b655",
+  "digest": "6dfb24ea8b8128e7",
   "empty": 0
  },
  "plain mars>jupiter true square 7": {
-  "digest": "124d72ab36b0e63e",
+  "digest": "08fe83557bbf2782",
   "empty": 0
  },
  "plain mars>jupiter true square 8": {
-  "digest": "24073db5dee8a52d",
+  "digest": "ef5a50bfc18e0d71",
   "empty": 0
  },
  "plain mars>jupiter true square 9": {
-  "digest": "ccf23377ae823362",
+  "digest": "f28a69cac00918eb",
   "empty": 0
  },
  "plain mars>jupiter true tall 0": {
-  "digest": "e00a041f034479bb",
+  "digest": "e15a66f867d24f00",
   "empty": 0
  },
  "plain mars>jupiter true tall 1": {
-  "digest": "1d72aed3601786d9",
+  "digest": "726c95e014181312",
   "empty": 0
  },
  "plain mars>jupiter true tall 2": {
-  "digest": "f7eb7154b64e446b",
+  "digest": "5b9b069634caebef",
   "empty": 0
  },
  "plain mars>jupiter true tall 3": {
-  "digest": "37b6d873f4d57bd1",
+  "digest": "990e6ba827da6f0f",
   "empty": 0
  },
  "plain mars>jupiter true tall 4": {
-  "digest": "7e446488e423a789",
+  "digest": "25f1e82ee8ea6854",
   "empty": 0
  },
  "plain mars>jupiter true tall 5": {
-  "digest": "1e23871c7f4d1bfe",
+  "digest": "17a2294b401eb380",
   "empty": 0
  },
  "plain mars>jupiter true tall 6": {
-  "digest": "68c2d8358f3417f7",
+  "digest": "b82510f42fa6e365",
   "empty": 0
  },
  "plain mars>jupiter true tall 7": {
-  "digest": "d7fcc1c73a0326c7",
+  "digest": "bcef8a2a7a927ea8",
   "empty": 0
  },
  "plain mars>jupiter true tall 8": {
-  "digest": "a079239f96d12c84",
+  "digest": "3c843b86746ff8c8",
   "empty": 0
  },
  "plain mars>jupiter true tall 9": {
-  "digest": "a9bee77acd9d3849",
+  "digest": "3973d72a295693ed",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 0": {
-  "digest": "924c99a84e96cce5",
+  "digest": "984ee04ca7420dba",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 1": {
-  "digest": "40e95d602be35b73",
+  "digest": "f6eccbc1e6136307",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 2": {
-  "digest": "18756df564f72977",
+  "digest": "0a49ddb908e8f1d0",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 3": {
-  "digest": "59f4bfd771ef8ee2",
+  "digest": "8431d92a722e4856",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 4": {
-  "digest": "acc76aac4f01d099",
+  "digest": "34cc3f725d4ca654",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 5": {
-  "digest": "852b4446d314e7c2",
+  "digest": "531e428c13f4c26d",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 6": {
-  "digest": "3b98c79b4c88291b",
+  "digest": "b92a0e181fba1470",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 7": {
-  "digest": "7dcadb9fa21dc217",
+  "digest": "c9fa989ce13f51f4",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 8": {
-  "digest": "73a1bc63a1ef9397",
+  "digest": "c773e55650b0268f",
   "empty": 0
  },
  "plain jupiter>saturn compressed wide 9": {
-  "digest": "8663ba8cd4cd1f4e",
+  "digest": "df870b70ea560a69",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 0": {
-  "digest": "45bf38f10b86ec63",
+  "digest": "0f8899347edaf2bb",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 1": {
-  "digest": "31d69bf6d6838c9c",
+  "digest": "5c47d80eaa88be5f",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 2": {
-  "digest": "5193654eb3906fd8",
+  "digest": "c0d3a1502693cc2e",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 3": {
-  "digest": "791d79e80435183b",
+  "digest": "0db7d3bb0635b933",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 4": {
-  "digest": "210b4957791377a7",
+  "digest": "d11274bf31257b6a",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 5": {
-  "digest": "a89300d82fb16a52",
+  "digest": "301b09681795ab36",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 6": {
-  "digest": "46cc2cc49c870544",
+  "digest": "5311d496a0eb6e50",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 7": {
-  "digest": "355fa631ddd93f55",
+  "digest": "e6933eeb1b7fe5eb",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 8": {
-  "digest": "fa70c2f2dee29c3d",
+  "digest": "9ff867c44429ef6e",
   "empty": 0
  },
  "plain jupiter>saturn compressed square 9": {
-  "digest": "88b54bb02b2e5ca5",
+  "digest": "2291b32eed705ade",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 0": {
-  "digest": "549dbe28ce2ad00d",
+  "digest": "6520d79259a91c45",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 1": {
-  "digest": "a5da5cab6e21c4f8",
+  "digest": "47447543400cabb8",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 2": {
-  "digest": "080a93abd9153968",
+  "digest": "7c11e3548a96a0e9",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 3": {
-  "digest": "5773ffc2aa77d425",
+  "digest": "8544e16a52ac9f50",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 4": {
-  "digest": "1f90b518d3cc8001",
+  "digest": "deec2b784884b22e",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 5": {
-  "digest": "fe7e8fd26c7c1b33",
+  "digest": "1f0fbb37f050a46b",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 6": {
-  "digest": "1c193f7f73e57b05",
+  "digest": "4079fdd3a0087372",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 7": {
-  "digest": "503c90fc6d7df71c",
+  "digest": "4d5e8b2e07d31968",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 8": {
-  "digest": "bac468ec4d021034",
+  "digest": "e995b14f8400b312",
   "empty": 0
  },
  "plain jupiter>saturn compressed tall 9": {
-  "digest": "5056fdcfb13a5615",
+  "digest": "13ddd1f13a4fb788",
   "empty": 0
  },
  "plain jupiter>saturn true wide 0": {
-  "digest": "422feed323664791",
+  "digest": "4fd59bb10402850b",
   "empty": 0
  },
  "plain jupiter>saturn true wide 1": {
-  "digest": "e5741713f93d4bad",
+  "digest": "1cc431865d81e4fa",
   "empty": 0
  },
  "plain jupiter>saturn true wide 2": {
-  "digest": "5bf11cb5ae524c35",
+  "digest": "612673c86754d090",
   "empty": 0
  },
  "plain jupiter>saturn true wide 3": {
-  "digest": "1965761ad03c32ce",
+  "digest": "27e8f5e4f604c2ff",
   "empty": 0
  },
  "plain jupiter>saturn true wide 4": {
-  "digest": "7dfaf2fe49fcb7bd",
+  "digest": "5e3d8056e09cf3db",
   "empty": 0
  },
  "plain jupiter>saturn true wide 5": {
-  "digest": "15eee99e7b700797",
+  "digest": "6d7e8429ebab6c27",
   "empty": 0
  },
  "plain jupiter>saturn true wide 6": {
-  "digest": "fce08da472b85235",
+  "digest": "460c220aaa71d50f",
   "empty": 0
  },
  "plain jupiter>saturn true wide 7": {
-  "digest": "26f33cc9105c34e4",
+  "digest": "24a18bf55c69addb",
   "empty": 0
  },
  "plain jupiter>saturn true wide 8": {
-  "digest": "2a2958f76156deed",
+  "digest": "6fed01ffd51f9ebb",
   "empty": 0
  },
  "plain jupiter>saturn true wide 9": {
-  "digest": "04dafed8ea55eeb7",
+  "digest": "9580fe664aa451d4",
   "empty": 0
  },
  "plain jupiter>saturn true square 0": {
-  "digest": "c695f9b179fc43ab",
+  "digest": "9c45fcd65ba478d6",
   "empty": 0
  },
  "plain jupiter>saturn true square 1": {
-  "digest": "ba5144e520aa3dd9",
+  "digest": "3c3617362bf3c8a1",
   "empty": 0
  },
  "plain jupiter>saturn true square 2": {
-  "digest": "b1fa483e75d20303",
+  "digest": "a6409b9aa61e1c8a",
   "empty": 0
  },
  "plain jupiter>saturn true square 3": {
-  "digest": "c13c4f3bce6dff55",
+  "digest": "ee3129eff4712da8",
   "empty": 0
  },
  "plain jupiter>saturn true square 4": {
-  "digest": "0039beb61ad1e75b",
+  "digest": "af09ef41af89b06b",
   "empty": 0
  },
  "plain jupiter>saturn true square 5": {
-  "digest": "7b7e145df57d56d6",
+  "digest": "1ac52a6602fdb61d",
   "empty": 0
  },
  "plain jupiter>saturn true square 6": {
-  "digest": "90d1033aedba9df8",
+  "digest": "caf24ec0493905b4",
   "empty": 0
  },
  "plain jupiter>saturn true square 7": {
-  "digest": "a5f93411e047d9b0",
+  "digest": "5d1478661c1b7537",
   "empty": 0
  },
  "plain jupiter>saturn true square 8": {
-  "digest": "d721ff0b8efa13d7",
+  "digest": "109178ae53a3aa1e",
   "empty": 0
  },
  "plain jupiter>saturn true square 9": {
-  "digest": "1c7d98a345527561",
+  "digest": "f81e10db891f7fe0",
   "empty": 0
  },
  "plain jupiter>saturn true tall 0": {
-  "digest": "d58b8426734f6547",
+  "digest": "a20d261dde8f0e9d",
   "empty": 0
  },
  "plain jupiter>saturn true tall 1": {
-  "digest": "0b602acaba4a37cb",
+  "digest": "529fbd76448d5f37",
   "empty": 0
  },
  "plain jupiter>saturn true tall 2": {
-  "digest": "4410e98fc7379a75",
+  "digest": "3584fe4469463387",
   "empty": 0
  },
  "plain jupiter>saturn true tall 3": {
-  "digest": "7936c662e193a7fb",
+  "digest": "b73f8c1dfa653582",
   "empty": 0
  },
  "plain jupiter>saturn true tall 4": {
-  "digest": "9e17c6f87cd04733",
+  "digest": "474b3707d2a23f34",
   "empty": 0
  },
  "plain jupiter>saturn true tall 5": {
-  "digest": "2c74baab8afdb4fe",
+  "digest": "1122dec46d75be08",
   "empty": 0
  },
  "plain jupiter>saturn true tall 6": {
-  "digest": "e3a5f5fef557ed42",
+  "digest": "7581f14c734df4df",
   "empty": 0
  },
  "plain jupiter>saturn true tall 7": {
-  "digest": "7acc3df7dc248f79",
+  "digest": "bab12ceb660f0919",
   "empty": 0
  },
  "plain jupiter>saturn true tall 8": {
-  "digest": "93de6c9f8d856a8f",
+  "digest": "f9db9949fa0d6f47",
   "empty": 0
  },
  "plain jupiter>saturn true tall 9": {
-  "digest": "4c12bc2a8a4dbb53",
+  "digest": "da3a74c4a8140104",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 0": {
-  "digest": "747b537392e1a148",
+  "digest": "3c42f6ee03a26159",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 1": {
-  "digest": "30613bfa0f55c75d",
+  "digest": "265036171160e096",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 2": {
-  "digest": "7877d34b27952105",
+  "digest": "200b3b27e0dab49e",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 3": {
-  "digest": "f588811c9a056b40",
+  "digest": "6c529b40329cc142",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 4": {
-  "digest": "193dd2267caaabf3",
+  "digest": "8328c8b032eca558",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 5": {
-  "digest": "5ea0f36e9a43a333",
+  "digest": "0d6ec4a6456e8a93",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 6": {
-  "digest": "e713f26e33a0e6fb",
+  "digest": "3395120c868019ec",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 7": {
-  "digest": "05466c6d6bf3b13a",
+  "digest": "6e337d3cd9ac03a3",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 8": {
-  "digest": "75163de434482527",
+  "digest": "8996c566ad291192",
   "empty": 0
  },
  "plain neptune>mercury compressed wide 9": {
-  "digest": "845053bc2765f244",
+  "digest": "5a4dc19b76458961",
   "empty": 0
  },
  "plain neptune>mercury compressed square 0": {
-  "digest": "49aa59677a83151e",
+  "digest": "fad579e835e4f8c2",
   "empty": 0
  },
  "plain neptune>mercury compressed square 1": {
-  "digest": "d2bb46b1173523c8",
+  "digest": "27e01295e776abf1",
   "empty": 0
  },
  "plain neptune>mercury compressed square 2": {
-  "digest": "4d8a7c80feafb286",
+  "digest": "b6a43ddd2e1360cf",
   "empty": 0
  },
  "plain neptune>mercury compressed square 3": {
-  "digest": "d9a33132fdc93b89",
+  "digest": "8dada4a888b64905",
   "empty": 0
  },
  "plain neptune>mercury compressed square 4": {
-  "digest": "1efa8559acd530d8",
+  "digest": "f754d3a3d96b933e",
   "empty": 0
  },
  "plain neptune>mercury compressed square 5": {
-  "digest": "fc16691ccc1892c5",
+  "digest": "164cdf1f8a507235",
   "empty": 0
  },
  "plain neptune>mercury compressed square 6": {
-  "digest": "9da33bccc34202a8",
+  "digest": "cf484e1364d76621",
   "empty": 0
  },
  "plain neptune>mercury compressed square 7": {
-  "digest": "703ef08d78e7d73e",
+  "digest": "9fe237e6aab44c02",
   "empty": 0
  },
  "plain neptune>mercury compressed square 8": {
-  "digest": "d90d94ea598fe210",
+  "digest": "57e651d30e976912",
   "empty": 0
  },
  "plain neptune>mercury compressed square 9": {
-  "digest": "9a286433bc309d21",
+  "digest": "bc6be035f4b32269",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 0": {
-  "digest": "69b2df59cd3efbb7",
+  "digest": "d0e1bd56d389954f",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 1": {
-  "digest": "76fdd46ed559cc1f",
+  "digest": "6625d743461824a7",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 2": {
-  "digest": "7a6b98a3905d8f3a",
+  "digest": "7298050d5eb0ffbe",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 3": {
-  "digest": "65d7b36f2b9d7050",
+  "digest": "d62738bd577ea273",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 4": {
-  "digest": "c4ba213ae267d8b1",
+  "digest": "95d5f8c6a945b958",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 5": {
-  "digest": "4d1cae25225d7ace",
+  "digest": "2478b266cb4e9cb3",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 6": {
-  "digest": "9daf7fa3ad4e066c",
+  "digest": "82912498dbbed29b",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 7": {
-  "digest": "66c4721a941e3f2d",
+  "digest": "89511ffd69bd83ab",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 8": {
-  "digest": "14cd491b90ed9490",
+  "digest": "1e1d7cbcc0c11747",
   "empty": 0
  },
  "plain neptune>mercury compressed tall 9": {
-  "digest": "ae7989f6cd536017",
+  "digest": "2b92f22ed3e48365",
   "empty": 0
  },
  "plain neptune>mercury true wide 0": {
-  "digest": "3c469685b8e3209a",
+  "digest": "772a2fc62d9b22d7",
   "empty": 0
  },
  "plain neptune>mercury true wide 1": {
-  "digest": "237b4101acc7bc03",
+  "digest": "bc7a8f6be6b5df22",
   "empty": 0
  },
  "plain neptune>mercury true wide 2": {
-  "digest": "55130f2c89488e9f",
+  "digest": "65a874b55c8e796e",
   "empty": 0
  },
  "plain neptune>mercury true wide 3": {
-  "digest": "0f7b682cc70df7a1",
+  "digest": "6ea155a133678a2a",
   "empty": 0
  },
  "plain neptune>mercury true wide 4": {
-  "digest": "9708f19e35b38cec",
+  "digest": "adb0322540dada29",
   "empty": 0
  },
  "plain neptune>mercury true wide 5": {
-  "digest": "092557d86be4adf1",
+  "digest": "128ea70c445992de",
   "empty": 0
  },
  "plain neptune>mercury true wide 6": {
-  "digest": "cb7059a8ee514762",
+  "digest": "6fcc52b436c5df1c",
   "empty": 0
  },
  "plain neptune>mercury true wide 7": {
-  "digest": "83c059a103640627",
+  "digest": "edf8db5afe7d6632",
   "empty": 0
  },
  "plain neptune>mercury true wide 8": {
-  "digest": "b23d90abe71f950c",
+  "digest": "8042b6b91513a986",
   "empty": 0
  },
  "plain neptune>mercury true wide 9": {
-  "digest": "bb10c13037a02f1f",
+  "digest": "22823697399f2c51",
   "empty": 0
  },
  "plain neptune>mercury true square 0": {
-  "digest": "13fe985ef83bbc41",
+  "digest": "9c17f4cb655edeea",
   "empty": 0
  },
  "plain neptune>mercury true square 1": {
-  "digest": "18786d36cd5584f6",
+  "digest": "9f9aa9f927ab2db7",
   "empty": 0
  },
  "plain neptune>mercury true square 2": {
-  "digest": "145ae831c28692e7",
+  "digest": "f3abffae29f83eb0",
   "empty": 0
  },
  "plain neptune>mercury true square 3": {
-  "digest": "59a7ac28b4045b30",
+  "digest": "debf12f26c732a23",
   "empty": 0
  },
  "plain neptune>mercury true square 4": {
-  "digest": "888db156464d3c45",
+  "digest": "68bbd0c6aa421f2a",
   "empty": 0
  },
  "plain neptune>mercury true square 5": {
-  "digest": "7ed39d4b9e773a18",
+  "digest": "4f1078c98762b6ac",
   "empty": 0
  },
  "plain neptune>mercury true square 6": {
-  "digest": "92d920ea2ee551dd",
+  "digest": "82a7834e72d514f2",
   "empty": 0
  },
  "plain neptune>mercury true square 7": {
-  "digest": "df607d415af94f0f",
+  "digest": "5951cd207c46c7bd",
   "empty": 0
  },
  "plain neptune>mercury true square 8": {
-  "digest": "6468db00c7c44fb3",
+  "digest": "c1d429dfa4a2de31",
   "empty": 0
  },
  "plain neptune>mercury true square 9": {
-  "digest": "ee70b46b68180b66",
+  "digest": "a89601346435559b",
   "empty": 0
  },
  "plain neptune>mercury true tall 0": {
-  "digest": "e1c504ec96ef0f3f",
+  "digest": "209e5c71b2d67a6c",
   "empty": 0
  },
  "plain neptune>mercury true tall 1": {
-  "digest": "b2c72c9df3233ee2",
+  "digest": "d3e095ac3873c9d6",
   "empty": 0
  },
  "plain neptune>mercury true tall 2": {
-  "digest": "05dcabda71bdab68",
+  "digest": "417086bdf1339b1d",
   "empty": 0
  },
  "plain neptune>mercury true tall 3": {
-  "digest": "1f1fbd533ae749c5",
+  "digest": "6acc7a3158ae7283",
   "empty": 0
  },
  "plain neptune>mercury true tall 4": {
-  "digest": "4d4c6d864e33f386",
+  "digest": "511199ae92cceeab",
   "empty": 0
  },
  "plain neptune>mercury true tall 5": {
-  "digest": "674c143bb90d2b1c",
+  "digest": "ca915f1c08528cfa",
   "empty": 0
  },
  "plain neptune>mercury true tall 6": {
-  "digest": "b296e030557f3ac8",
+  "digest": "caa333a8dd5315c6",
   "empty": 0
  },
  "plain neptune>mercury true tall 7": {
-  "digest": "0cbfaf0336ad5f38",
+  "digest": "eab83560ca6f392b",
   "empty": 0
  },
  "plain neptune>mercury true tall 8": {
-  "digest": "b63711ea13d0ffcf",
+  "digest": "be84eecdeae47dbe",
   "empty": 0
  },
  "plain neptune>mercury true tall 9": {
-  "digest": "df21ebf545ac4636",
+  "digest": "a19294389af9de3c",
   "empty": 0
  },
  "plain sun>earth compressed wide 0": {
-  "digest": "675ff5ad2b743a58",
+  "digest": "960effabe6491d28",
   "empty": 0
  },
  "plain sun>earth compressed wide 1": {
-  "digest": "d483f95b79b57af0",
+  "digest": "53ded5b87797d07c",
   "empty": 0
  },
  "plain sun>earth compressed wide 2": {
-  "digest": "0507aaaf74e82af3",
+  "digest": "b7089efa0e5cbfbf",
   "empty": 0
  },
  "plain sun>earth compressed wide 3": {
-  "digest": "4b4f3bcd7a77fadc",
+  "digest": "13459a626d31a3c6",
   "empty": 0
  },
  "plain sun>earth compressed wide 4": {
-  "digest": "83a95a13a248580f",
+  "digest": "6098ee61ec8c59f7",
   "empty": 0
  },
  "plain sun>earth compressed wide 5": {
-  "digest": "af18afbb010c5c61",
+  "digest": "5d077543e27bcb93",
   "empty": 0
  },
  "plain sun>earth compressed wide 6": {
-  "digest": "5d3a848feb16de10",
+  "digest": "03febd3db47aa42c",
   "empty": 0
  },
  "plain sun>earth compressed wide 7": {
-  "digest": "2676bc0d7926a44a",
+  "digest": "d63daaae03876eea",
   "empty": 0
  },
  "plain sun>earth compressed wide 8": {
-  "digest": "463e5817c185b65b",
+  "digest": "287b208e756ed80b",
   "empty": 0
  },
  "plain sun>earth compressed wide 9": {
-  "digest": "e38e79429d367074",
+  "digest": "ce3c4c72497f3b87",
   "empty": 0
  },
  "plain sun>earth compressed square 0": {
-  "digest": "e5da74652cbcda9d",
+  "digest": "1bcd2859a53237b8",
   "empty": 0
  },
  "plain sun>earth compressed square 1": {
-  "digest": "3c7e4caf35fa86f2",
+  "digest": "11c6b0886c505ef4",
   "empty": 0
  },
  "plain sun>earth compressed square 2": {
-  "digest": "c16c54263cf56d5e",
+  "digest": "3a8c10bc8a2de680",
   "empty": 0
  },
  "plain sun>earth compressed square 3": {
-  "digest": "1123d535c5f394a1",
+  "digest": "77b41b0abb50cb38",
   "empty": 0
  },
  "plain sun>earth compressed square 4": {
-  "digest": "7b797964b5153987",
+  "digest": "d4fc42c87f25f547",
   "empty": 0
  },
  "plain sun>earth compressed square 5": {
-  "digest": "7730bfa8c20835f5",
+  "digest": "08833eec6be8b890",
   "empty": 0
  },
  "plain sun>earth compressed square 6": {
-  "digest": "79a105f8fb2b40d9",
+  "digest": "7002b2b901cd4747",
   "empty": 0
  },
  "plain sun>earth compressed square 7": {
-  "digest": "8dffaede8a997a7b",
+  "digest": "6e674ed87d333d39",
   "empty": 0
  },
  "plain sun>earth compressed square 8": {
-  "digest": "8c052bfb633d6a05",
+  "digest": "0213c3cae05b606c",
   "empty": 0
  },
  "plain sun>earth compressed square 9": {
-  "digest": "75803532f3462064",
+  "digest": "9682bd9cb2de0c1c",
   "empty": 0
  },
  "plain sun>earth compressed tall 0": {
-  "digest": "4eff951db815c33b",
+  "digest": "586863d1f295b2ba",
   "empty": 0
  },
  "plain sun>earth compressed tall 1": {
-  "digest": "ef8024bc14b4d6c0",
+  "digest": "044cd4693d6d7356",
   "empty": 0
  },
  "plain sun>earth compressed tall 2": {
-  "digest": "dcbfc1c454930dd7",
+  "digest": "97d616ff1d89a689",
   "empty": 0
  },
  "plain sun>earth compressed tall 3": {
-  "digest": "1c69bc8adc59d6df",
+  "digest": "7dcd274a63655e55",
   "empty": 0
  },
  "plain sun>earth compressed tall 4": {
-  "digest": "2cbd51f75140c423",
+  "digest": "7f4429907dabb15f",
   "empty": 0
  },
  "plain sun>earth compressed tall 5": {
-  "digest": "1423ff317b5f3bf5",
+  "digest": "66660236a6e85bbb",
   "empty": 0
  },
  "plain sun>earth compressed tall 6": {
-  "digest": "ae7202d216bb1260",
+  "digest": "c980c2d86f63b89b",
   "empty": 0
  },
  "plain sun>earth compressed tall 7": {
-  "digest": "725accae2bee2cfd",
+  "digest": "f3fe8c47b4b44d80",
   "empty": 0
  },
  "plain sun>earth compressed tall 8": {
-  "digest": "d1c29a10f879365d",
+  "digest": "a0c450fc299fa30e",
   "empty": 0
  },
  "plain sun>earth compressed tall 9": {
-  "digest": "5292f53a80329c1c",
+  "digest": "80860d818cd450de",
   "empty": 0
  },
  "plain sun>earth true wide 0": {
-  "digest": "9820b13eb0d296c8",
+  "digest": "8c0ed2d10d523055",
   "empty": 0
  },
  "plain sun>earth true wide 1": {
-  "digest": "8b8cc266d4dd3df1",
+  "digest": "7b8bb60cf1f02350",
   "empty": 0
  },
  "plain sun>earth true wide 2": {
-  "digest": "7a554d51437699f1",
+  "digest": "9b0d9bfde9ac5762",
   "empty": 0
  },
  "plain sun>earth true wide 3": {
-  "digest": "ce04cd03ce8d8410",
+  "digest": "bc6fdcd8b39cbefb",
   "empty": 0
  },
  "plain sun>earth true wide 4": {
-  "digest": "881b207a412aec3d",
+  "digest": "5dc4b3d4af26008e",
   "empty": 0
  },
  "plain sun>earth true wide 5": {
-  "digest": "c5a0a852a46b7a2e",
+  "digest": "700ede15a81c9d88",
   "empty": 0
  },
  "plain sun>earth true wide 6": {
-  "digest": "1617b99a4c928ee9",
+  "digest": "aa4e2615e4173ff9",
   "empty": 0
  },
  "plain sun>earth true wide 7": {
-  "digest": "866d2354780db31d",
+  "digest": "ec99a87991833cbb",
   "empty": 0
  },
  "plain sun>earth true wide 8": {
-  "digest": "3663d3a5d64d0887",
+  "digest": "6b4e07058823bb48",
   "empty": 0
  },
  "plain sun>earth true wide 9": {
-  "digest": "4fab15237b3b1aea",
+  "digest": "5044270ad0bdefdd",
   "empty": 0
  },
  "plain sun>earth true square 0": {
-  "digest": "d560d6bc61c1ee82",
+  "digest": "4f1601c5e1918b03",
   "empty": 0
  },
  "plain sun>earth true square 1": {
-  "digest": "a4c72a840ac4baa4",
+  "digest": "c4a63d5fdb154213",
   "empty": 0
  },
  "plain sun>earth true square 2": {
-  "digest": "00ae832caba2cbdc",
+  "digest": "95e9d2e8ade86398",
   "empty": 0
  },
  "plain sun>earth true square 3": {
-  "digest": "7f7670c8c58f4adf",
+  "digest": "5aa6a5f644b91911",
   "empty": 0
  },
  "plain sun>earth true square 4": {
-  "digest": "e66d4d8c6f9ed2bc",
+  "digest": "4695c67874861ab7",
   "empty": 0
  },
  "plain sun>earth true square 5": {
-  "digest": "f2d9a694a6ff895d",
+  "digest": "7cf508fab57f9094",
   "empty": 0
  },
  "plain sun>earth true square 6": {
-  "digest": "c30080d3812be1af",
+  "digest": "b26f342ff5b92fbb",
   "empty": 0
  },
  "plain sun>earth true square 7": {
-  "digest": "b5e4e79019cc30da",
+  "digest": "2496b0e2f6ae47b8",
   "empty": 0
  },
  "plain sun>earth true square 8": {
-  "digest": "8de2d3bb72f6c503",
+  "digest": "8adb98bfcfc7220f",
   "empty": 0
  },
  "plain sun>earth true square 9": {
-  "digest": "f3f164ee4a8976af",
+  "digest": "25487ca59fa4cd88",
   "empty": 0
  },
  "plain sun>earth true tall 0": {
-  "digest": "78ac4ada92e56221",
+  "digest": "6783ddf1cefc5b53",
   "empty": 0
  },
  "plain sun>earth true tall 1": {
-  "digest": "f9b6eaa81350b8c1",
+  "digest": "c8c1a954e4595164",
   "empty": 0
  },
  "plain sun>earth true tall 2": {
-  "digest": "f6d99136b46de8bd",
+  "digest": "a13097fd0669a757",
   "empty": 0
  },
  "plain sun>earth true tall 3": {
-  "digest": "b68a21d361de3640",
+  "digest": "4af62468f69870c6",
   "empty": 0
  },
  "plain sun>earth true tall 4": {
-  "digest": "5834a94d14583d9b",
+  "digest": "dadda567f6707f4a",
   "empty": 0
  },
  "plain sun>earth true tall 5": {
-  "digest": "0c1fe807fc8a9732",
+  "digest": "da0259131060f90b",
   "empty": 0
  },
  "plain sun>earth true tall 6": {
-  "digest": "1d3a640ebb4e896a",
+  "digest": "ab7c531c145f9f85",
   "empty": 0
  },
  "plain sun>earth true tall 7": {
-  "digest": "a4158bb41dccd3c2",
+  "digest": "c064037cdc7055d3",
   "empty": 0
  },
  "plain sun>earth true tall 8": {
-  "digest": "197eb2085f9d17dd",
+  "digest": "9c890e0237d59bb1",
   "empty": 0
  },
  "plain sun>earth true tall 9": {
-  "digest": "499c4ba20b090a30",
+  "digest": "3211fcb57a93a0d5",
   "empty": 0
  },
  "plain callisto>europa compressed wide 0": {
-  "digest": "3422c4fb30dfb2a4",
+  "digest": "2b8fc8b8ee98f471",
   "empty": 0
  },
  "plain callisto>europa compressed wide 1": {
-  "digest": "ac360d7eb902e2b3",
+  "digest": "8e35e7eec7696214",
   "empty": 42
  },
  "plain callisto>europa compressed wide 2": {
-  "digest": "13ba5a2011119d76",
+  "digest": "be9741467b89ad90",
   "empty": 0
  },
  "plain callisto>europa compressed wide 3": {
-  "digest": "c134630488277600",
+  "digest": "c1b02293274d7e29",
   "empty": 10
  },
  "plain callisto>europa compressed wide 4": {
-  "digest": "867a9a6e7d43326a",
+  "digest": "7d67068a9a95e444",
   "empty": 22
  },
  "plain callisto>europa compressed wide 5": {
-  "digest": "c741262212f2d515",
+  "digest": "99891d90615ae29c",
   "empty": 0
  },
  "plain callisto>europa compressed wide 6": {
-  "digest": "7b799176f79fbe96",
+  "digest": "798a695f30952da6",
   "empty": 0
  },
  "plain callisto>europa compressed wide 7": {
-  "digest": "1ea417c676b659f2",
+  "digest": "b6b9542364792b0c",
   "empty": 40
  },
  "plain callisto>europa compressed wide 8": {
-  "digest": "b6d17c8bc56002b5",
+  "digest": "621d1a437996e1af",
   "empty": 0
  },
  "plain callisto>europa compressed wide 9": {
-  "digest": "385a55c9c4e0138d",
+  "digest": "0fba1805aa79a7ad",
   "empty": 45
  },
  "plain callisto>europa compressed square 0": {
-  "digest": "fe3639dfe022c520",
+  "digest": "8ec8bfc51bbd8dfd",
   "empty": 0
  },
  "plain callisto>europa compressed square 1": {
-  "digest": "2f9a531b0832a611",
+  "digest": "572731f363b14af8",
   "empty": 65
  },
  "plain callisto>europa compressed square 2": {
-  "digest": "c3d17260fd2fd4ee",
+  "digest": "3fa1af1a8f215a93",
   "empty": 29
  },
  "plain callisto>europa compressed square 3": {
-  "digest": "d6db2cd56c7ae1e6",
+  "digest": "0f6a82d1996147df",
   "empty": 36
  },
  "plain callisto>europa compressed square 4": {
-  "digest": "2e5b9d312896060c",
+  "digest": "b34bffa63f39af7e",
   "empty": 44
  },
  "plain callisto>europa compressed square 5": {
-  "digest": "bb378990e6cf85dd",
+  "digest": "2b44780ba9e21eab",
   "empty": 0
  },
  "plain callisto>europa compressed square 6": {
-  "digest": "fc819b9716352d70",
+  "digest": "d5b7d1ae30def176",
   "empty": 0
  },
  "plain callisto>europa compressed square 7": {
-  "digest": "98ad722c50e1d901",
+  "digest": "0f936fabd89c5aae",
   "empty": 53
  },
  "plain callisto>europa compressed square 8": {
-  "digest": "61c39856a447e739",
+  "digest": "dda13334f3d34307",
   "empty": 0
  },
  "plain callisto>europa compressed square 9": {
-  "digest": "64d1821fba28036f",
+  "digest": "ebac795bb2872069",
   "empty": 64
  },
  "plain callisto>europa compressed tall 0": {
-  "digest": "a0e729f1dcc35e03",
+  "digest": "678fed34125029c2",
   "empty": 0
  },
  "plain callisto>europa compressed tall 1": {
-  "digest": "e9c1fca36e482aec",
+  "digest": "30077dd0259102cf",
   "empty": 81
  },
  "plain callisto>europa compressed tall 2": {
-  "digest": "941e745c90ecddc1",
+  "digest": "a2c6b71896082d51",
   "empty": 54
  },
  "plain callisto>europa compressed tall 3": {
-  "digest": "00640466b00ad547",
+  "digest": "e240c96f75b4dec1",
   "empty": 49
  },
  "plain callisto>europa compressed tall 4": {
-  "digest": "8c4d0cc050276859",
+  "digest": "8297af6d1a2a3252",
   "empty": 64
  },
  "plain callisto>europa compressed tall 5": {
-  "digest": "b13fb8e8f85a64a3",
+  "digest": "57e6ecf005ec5ce0",
   "empty": 0
  },
  "plain callisto>europa compressed tall 6": {
-  "digest": "97fa98187e22202e",
+  "digest": "da44552e089c63eb",
   "empty": 12
  },
  "plain callisto>europa compressed tall 7": {
-  "digest": "863a1176a42ad440",
+  "digest": "13e01307082acc46",
   "empty": 64
  },
  "plain callisto>europa compressed tall 8": {
-  "digest": "8f31d0d9a273da0c",
+  "digest": "ed830801982524b1",
   "empty": 14
  },
  "plain callisto>europa compressed tall 9": {
-  "digest": "243e5d3cd7085c93",
+  "digest": "3cb5c28464ff39cb",
   "empty": 78
  },
  "plain callisto>europa true wide 0": {
-  "digest": "fbbf56a565e703c5",
+  "digest": "0fa185e70b94eb20",
   "empty": 0
  },
  "plain callisto>europa true wide 1": {
-  "digest": "989f4e00ad62ee2e",
+  "digest": "5bdd9f08eb3b4bdd",
   "empty": 41
  },
  "plain callisto>europa true wide 2": {
-  "digest": "49fb22edef07a846",
+  "digest": "313f92a7589f71fa",
   "empty": 31
  },
  "plain callisto>europa true wide 3": {
-  "digest": "c8d2787026125f20",
+  "digest": "6c9b1f1a654bdef2",
   "empty": 46
  },
  "plain callisto>europa true wide 4": {
-  "digest": "540ed38724f83110",
+  "digest": "91dd8fbd253a91eb",
   "empty": 37
  },
  "plain callisto>europa true wide 5": {
-  "digest": "32393156b22a778f",
+  "digest": "a43a89004db148a4",
   "empty": 0
  },
  "plain callisto>europa true wide 6": {
-  "digest": "9f94d1b609b79087",
+  "digest": "51b61e916d93acab",
   "empty": 9
  },
  "plain callisto>europa true wide 7": {
-  "digest": "9e0a7818fba040e4",
+  "digest": "af8ca7f390c7479f",
   "empty": 51
  },
  "plain callisto>europa true wide 8": {
-  "digest": "ed2ea2eb0a4591c0",
+  "digest": "e12abdc8ef3a7eb6",
   "empty": 6
  },
  "plain callisto>europa true wide 9": {
-  "digest": "b8640ec7621ca73c",
+  "digest": "b085ab69b1d0cf97",
   "empty": 50
  },
  "plain callisto>europa true square 0": {
-  "digest": "bacc12d794683370",
+  "digest": "5cef6f3f3bbdc674",
   "empty": 0
  },
  "plain callisto>europa true square 1": {
-  "digest": "73bcf04a861905fe",
+  "digest": "5f0039cc3403a605",
   "empty": 64
  },
  "plain callisto>europa true square 2": {
-  "digest": "a79a7803f395d583",
+  "digest": "beb6220cc7642002",
   "empty": 36
  },
  "plain callisto>europa true square 3": {
-  "digest": "cabc96fb6e21d050",
+  "digest": "00ec9695cdcf6e0d",
   "empty": 50
  },
  "plain callisto>europa true square 4": {
-  "digest": "d8abcd80c10b7180",
+  "digest": "e9f79bdb9b20f696",
   "empty": 50
  },
  "plain callisto>europa true square 5": {
-  "digest": "028c89191cfc8baa",
+  "digest": "3b3adfdbdfc84816",
   "empty": 0
  },
  "plain callisto>europa true square 6": {
-  "digest": "56662c285db87473",
+  "digest": "61aed7de29b5037e",
   "empty": 10
  },
  "plain callisto>europa true square 7": {
-  "digest": "3b604ab92146f4a7",
+  "digest": "3b38b6dea78637dc",
   "empty": 62
  },
  "plain callisto>europa true square 8": {
-  "digest": "3d0f42654e4b687a",
+  "digest": "8920ad572c718958",
   "empty": 17
  },
  "plain callisto>europa true square 9": {
-  "digest": "70803ae0324078c5",
+  "digest": "180b04ca2d75a69d",
   "empty": 68
  },
  "plain callisto>europa true tall 0": {
-  "digest": "e2b3ff0a23ffa542",
+  "digest": "4ab731f90a80d1b0",
   "empty": 1
  },
  "plain callisto>europa true tall 1": {
-  "digest": "8a35a1bbca806ba7",
+  "digest": "c9c8ecf63a7703b2",
   "empty": 82
  },
  "plain callisto>europa true tall 2": {
-  "digest": "875c05ddc6d69705",
+  "digest": "3d2d5f7a8ce47a9a",
   "empty": 53
  },
  "plain callisto>europa true tall 3": {
-  "digest": "c271927814e289f4",
+  "digest": "276e6b68da6ec22c",
   "empty": 53
  },
  "plain callisto>europa true tall 4": {
-  "digest": "bd718455a6522bef",
+  "digest": "5ffd9220acaf9f7e",
   "empty": 67
  },
  "plain callisto>europa true tall 5": {
-  "digest": "b95eab3ebe9e74c1",
+  "digest": "2a9ec66184e61660",
   "empty": 0
  },
  "plain callisto>europa true tall 6": {
-  "digest": "e9f7adf16e801a31",
+  "digest": "5c3d2de49fa64691",
   "empty": 17
  },
  "plain callisto>europa true tall 7": {
-  "digest": "b42d1415139eada7",
+  "digest": "1d0be769fab4be5e",
   "empty": 72
  },
  "plain callisto>europa true tall 8": {
-  "digest": "eca074edef16bee0",
+  "digest": "fb6beb855c05d7d0",
   "empty": 17
  },
  "plain callisto>europa true tall 9": {
-  "digest": "197afa0dd309a537",
+  "digest": "300a95e0f028eb5e",
   "empty": 81
  },
  "plain io>ganymede compressed wide 0": {
-  "digest": "d255989252219491",
+  "digest": "2b0221730b184b1b",
   "empty": 64
  },
  "plain io>ganymede compressed wide 1": {
-  "digest": "a7028c25b12961d3",
+  "digest": "6492bd6e5d82266a",
   "empty": 0
  },
  "plain io>ganymede compressed wide 2": {
-  "digest": "db60060718881657",
+  "digest": "dd2240027b478a4d",
   "empty": 35
  },
  "plain io>ganymede compressed wide 3": {
-  "digest": "27d76c9cfe97b195",
+  "digest": "83b0cb3844ea57a3",
   "empty": 64
  },
  "plain io>ganymede compressed wide 4": {
-  "digest": "0f059bcefc7c0a3e",
+  "digest": "8b1aa7015b24e66f",
   "empty": 0
  },
  "plain io>ganymede compressed wide 5": {
-  "digest": "f31b21f9e2af5430",
+  "digest": "11e21e14601dac80",
   "empty": 87
  },
  "plain io>ganymede compressed wide 6": {
-  "digest": "b7f4740cc0dd0815",
+  "digest": "ccc1bd423b91e281",
   "empty": 45
  },
  "plain io>ganymede compressed wide 7": {
-  "digest": "fb3a4af71ed51ab5",
+  "digest": "3aa81f1c12df7656",
   "empty": 25
  },
  "plain io>ganymede compressed wide 8": {
-  "digest": "787c87accbeca843",
+  "digest": "bdf0f5ecdb1e6a57",
   "empty": 85
  },
  "plain io>ganymede compressed wide 9": {
-  "digest": "ccba8c214404b69c",
+  "digest": "ddb5f2c7dd3bbcd4",
   "empty": 0
  },
  "plain io>ganymede compressed square 0": {
-  "digest": "4e3c2458fc15de10",
+  "digest": "67f0ed493717015d",
   "empty": 64
  },
  "plain io>ganymede compressed square 1": {
-  "digest": "73dcb25e3373f175",
+  "digest": "9b8524766d3f0699",
   "empty": 0
  },
  "plain io>ganymede compressed square 2": {
-  "digest": "0feb9bdbf2d467bf",
+  "digest": "5ade2cb78e23116c",
   "empty": 54
  },
  "plain io>ganymede compressed square 3": {
-  "digest": "ef81734e9fad788b",
+  "digest": "e05f6cc9e5198e3f",
   "empty": 63
  },
  "plain io>ganymede compressed square 4": {
-  "digest": "c9a043d0395a7e97",
+  "digest": "28b78af82b6dcaeb",
   "empty": 0
  },
  "plain io>ganymede compressed square 5": {
-  "digest": "c12dcb036e11c7e7",
+  "digest": "f1cdcaf4e9b162d0",
   "empty": 84
  },
  "plain io>ganymede compressed square 6": {
-  "digest": "44e3e7dd8a0488c7",
+  "digest": "1d9218274c676024",
   "empty": 63
  },
  "plain io>ganymede compressed square 7": {
-  "digest": "82208fa897d26ce5",
+  "digest": "ecb33813e8475b1b",
   "empty": 32
  },
  "plain io>ganymede compressed square 8": {
-  "digest": "755aa02a67674855",
+  "digest": "c0e13e5fe4107326",
   "empty": 86
  },
  "plain io>ganymede compressed square 9": {
-  "digest": "e30d8a92de49273d",
+  "digest": "35ab30b850fdfeaf",
   "empty": 0
  },
  "plain io>ganymede compressed tall 0": {
-  "digest": "64047cb4fce3d5d9",
+  "digest": "ce96c6759a39f191",
   "empty": 69
  },
  "plain io>ganymede compressed tall 1": {
-  "digest": "0b7a2357e462cc36",
+  "digest": "74fc5305ee93efb8",
   "empty": 0
  },
  "plain io>ganymede compressed tall 2": {
-  "digest": "fe5b6654120052cd",
+  "digest": "c655b29a141372a7",
   "empty": 70
  },
  "plain io>ganymede compressed tall 3": {
-  "digest": "a5045c8a5f905459",
+  "digest": "d683d7ba3aef4a4d",
   "empty": 62
  },
  "plain io>ganymede compressed tall 4": {
-  "digest": "167668b12f813dd1",
+  "digest": "2b35ee4d810e140d",
   "empty": 0
  },
  "plain io>ganymede compressed tall 5": {
-  "digest": "2fe3591b5dbb0889",
+  "digest": "1efee44812f42fa7",
   "empty": 82
  },
  "plain io>ganymede compressed tall 6": {
-  "digest": "59d5e6aad4a93ad6",
+  "digest": "5a37bac1b71e1469",
   "empty": 78
  },
  "plain io>ganymede compressed tall 7": {
-  "digest": "8d7d41a245c8cf8d",
+  "digest": "6be245d312dce5fa",
   "empty": 11
  },
  "plain io>ganymede compressed tall 8": {
-  "digest": "2cfa03ab1a7e44a4",
+  "digest": "2f0b8bc3c1766ab6",
   "empty": 82
  },
  "plain io>ganymede compressed tall 9": {
-  "digest": "c9af557f853781c9",
+  "digest": "b428b02cdea039f4",
   "empty": 0
  },
  "plain io>ganymede true wide 0": {
-  "digest": "7135919462d19c65",
+  "digest": "47ab37f18ce508ba",
   "empty": 70
  },
  "plain io>ganymede true wide 1": {
-  "digest": "66a7b8034d976714",
+  "digest": "d2274eceaaa85788",
   "empty": 0
  },
  "plain io>ganymede true wide 2": {
-  "digest": "a71095640f38384f",
+  "digest": "44cdc329170bf9e8",
   "empty": 53
  },
  "plain io>ganymede true wide 3": {
-  "digest": "2610ca523aa8d8b0",
+  "digest": "3934512ec6d4aa05",
   "empty": 64
  },
  "plain io>ganymede true wide 4": {
-  "digest": "90471f84b557884d",
+  "digest": "447c8781d5e7baec",
   "empty": 0
  },
  "plain io>ganymede true wide 5": {
-  "digest": "a08f4f18795d6e1c",
+  "digest": "6a8caa16c5a2f117",
   "empty": 91
  },
  "plain io>ganymede true wide 6": {
-  "digest": "db83f276871f856c",
+  "digest": "1059bbaa700f0879",
   "empty": 44
  },
  "plain io>ganymede true wide 7": {
-  "digest": "5a2958cfe5fff648",
+  "digest": "867c1a9fdc63c1a6",
   "empty": 34
  },
  "plain io>ganymede true wide 8": {
-  "digest": "491f4ef746496738",
+  "digest": "1d95f4564968c0ec",
   "empty": 89
  },
  "plain io>ganymede true wide 9": {
-  "digest": "b118aa5e5cb9db08",
+  "digest": "29983561b7b23194",
   "empty": 0
  },
  "plain io>ganymede true square 0": {
-  "digest": "efb5c169227b351b",
+  "digest": "f9a0d26864251ae5",
   "empty": 62
  },
  "plain io>ganymede true square 1": {
-  "digest": "351ad2aff09bc7ae",
+  "digest": "a27b2322c583777e",
   "empty": 0
  },
  "plain io>ganymede true square 2": {
-  "digest": "65c7f05086e9e479",
+  "digest": "b6b19baf8e65b340",
   "empty": 49
  },
  "plain io>ganymede true square 3": {
-  "digest": "b0a513ee6bdf1a59",
+  "digest": "649099211518e987",
   "empty": 60
  },
  "plain io>ganymede true square 4": {
-  "digest": "3f668ff9d348ab3b",
+  "digest": "18c84b5fa3118af6",
   "empty": 0
  },
  "plain io>ganymede true square 5": {
-  "digest": "a36b51dadebd4c9f",
+  "digest": "0964592fa857c640",
   "empty": 88
  },
  "plain io>ganymede true square 6": {
-  "digest": "29fdd2c77948af76",
+  "digest": "4727fa4e70c8b180",
   "empty": 60
  },
  "plain io>ganymede true square 7": {
-  "digest": "11dc99523eb43cf9",
+  "digest": "03f38298e85c525e",
   "empty": 26
  },
  "plain io>ganymede true square 8": {
-  "digest": "57e3bdc49b97cc3c",
+  "digest": "544ee2d32b7b6211",
   "empty": 87
  },
  "plain io>ganymede true square 9": {
-  "digest": "6adcd7ecc6870e3d",
+  "digest": "2f3174f638467b96",
   "empty": 0
  },
  "plain io>ganymede true tall 0": {
-  "digest": "55a668cb19bbbd77",
+  "digest": "fe0724946a64c694",
   "empty": 70
  },
  "plain io>ganymede true tall 1": {
-  "digest": "f6d18fe1f9dcdfca",
+  "digest": "f9839490243ef0b6",
   "empty": 0
  },
  "plain io>ganymede true tall 2": {
-  "digest": "321867d16c64bde5",
+  "digest": "5b2a152b6b3dcb7c",
   "empty": 69
  },
  "plain io>ganymede true tall 3": {
-  "digest": "99c3c385cd20b06b",
+  "digest": "19663b29e2e26bf3",
   "empty": 58
  },
  "plain io>ganymede true tall 4": {
-  "digest": "9e1af603a2357378",
+  "digest": "fb4b686dc1724334",
   "empty": 11
  },
  "plain io>ganymede true tall 5": {
-  "digest": "d30da9c1913a21aa",
+  "digest": "d68324edbaad5d4c",
   "empty": 79
  },
  "plain io>ganymede true tall 6": {
-  "digest": "a7c3fb6d2fc05c58",
+  "digest": "30c25e9cdb1a346e",
   "empty": 78
  },
  "plain io>ganymede true tall 7": {
-  "digest": "439399f0fdad032c",
+  "digest": "3fb18c818a993715",
   "empty": 21
  },
  "plain io>ganymede true tall 8": {
-  "digest": "c0bcc37e9201678c",
+  "digest": "aa8edb2e12100e38",
   "empty": 79
  },
  "plain io>ganymede true tall 9": {
-  "digest": "541af9507137853b",
+  "digest": "cd8661f60a5a83e3",
   "empty": 11
  },
  "plain titan>enceladus compressed wide 0": {
-  "digest": "dfc04dbb12284f4a",
+  "digest": "7fc75ac19d4621e4",
   "empty": 0
  },
  "plain titan>enceladus compressed wide 1": {
-  "digest": "d32a7b42d59d4f03",
+  "digest": "8dbb66705237b35e",
   "empty": 0
  },
  "plain titan>enceladus compressed wide 2": {
-  "digest": "9fc182407d9e5ffc",
+  "digest": "f8e41140b9467e6f",
   "empty": 18
  },
  "plain titan>enceladus compressed wide 3": {
-  "digest": "99c24a5ad498ee4c",
+  "digest": "bd31a3dec748dfdd",
   "empty": 28
  },
  "plain titan>enceladus compressed wide 4": {
-  "digest": "9225993cc8d1733e",
+  "digest": "7d80eeb3e86542dd",
   "empty": 0
  },
  "plain titan>enceladus compressed wide 5": {
-  "digest": "bac005897798e4ae",
+  "digest": "edb4ba4685049959",
   "empty": 2
  },
  "plain titan>enceladus compressed wide 6": {
-  "digest": "772ff64fccee70a1",
+  "digest": "d2e7237fc9283d4d",
   "empty": 0
  },
  "plain titan>enceladus compressed wide 7": {
-  "digest": "c08fe549e0879ca5",
+  "digest": "4e349fb6faeddd11",
   "empty": 0
  },
  "plain titan>enceladus compressed wide 8": {
-  "digest": "31ff0267138bf6f0",
+  "digest": "1f57d1d21738cf29",
   "empty": 34
  },
  "plain titan>enceladus compressed wide 9": {
-  "digest": "4ffad551a8c39fbe",
+  "digest": "2797e2833f83cb2a",
   "empty": 0
  },
  "plain titan>enceladus compressed square 0": {
-  "digest": "88f56f519cf055d5",
+  "digest": "8ac44273daba6070",
   "empty": 0
  },
  "plain titan>enceladus compressed square 1": {
-  "digest": "abc8bad8cf7d54a4",
+  "digest": "2821adc181229910",
   "empty": 0
  },
  "plain titan>enceladus compressed square 2": {
-  "digest": "a0cf8581150a3c6b",
+  "digest": "e1834111451dee70",
   "empty": 18
  },
  "plain titan>enceladus compressed square 3": {
-  "digest": "c2a96f0fc35752e9",
+  "digest": "6a233385ef5f3f2d",
   "empty": 28
  },
  "plain titan>enceladus compressed square 4": {
-  "digest": "ee7aa6af7f657b6a",
+  "digest": "21ca0b1e0ddd4bd1",
   "empty": 0
  },
  "plain titan>enceladus compressed square 5": {
-  "digest": "8be88ae7adc79589",
+  "digest": "9ed31f4055c27365",
   "empty": 10
  },
  "plain titan>enceladus compressed square 6": {
-  "digest": "9feffa20593185b4",
+  "digest": "b8b1b375e2ab2481",
   "empty": 5
  },
  "plain titan>enceladus compressed square 7": {
-  "digest": "42f3454ba8c1ec50",
+  "digest": "9b833b38a4d10154",
   "empty": 0
  },
  "plain titan>enceladus compressed square 8": {
-  "digest": "12c0f4ed54665e07",
+  "digest": "82492a6566a07567",
   "empty": 44
  },
  "plain titan>enceladus compressed square 9": {
-  "digest": "500544c6720667c5",
+  "digest": "84f66617ca98f31f",
   "empty": 0
  },
  "plain titan>enceladus compressed tall 0": {
-  "digest": "c50a038ab9152d4c",
+  "digest": "909d5ea2c75a9ca5",
   "empty": 7
  },
  "plain titan>enceladus compressed tall 1": {
-  "digest": "31ce3fcb656e4bfa",
+  "digest": "7ff8e75df6cda0a7",
   "empty": 10
  },
  "plain titan>enceladus compressed tall 2": {
-  "digest": "2df43aaecdc38b99",
+  "digest": "1d3751ddf22104a2",
   "empty": 14
  },
  "plain titan>enceladus compressed tall 3": {
-  "digest": "66f5d1ffb037f34e",
+  "digest": "314736c27fb01e4d",
   "empty": 28
  },
  "plain titan>enceladus compressed tall 4": {
-  "digest": "b918be0d1f0ef5c1",
+  "digest": "994966548c8fdc82",
   "empty": 5
  },
  "plain titan>enceladus compressed tall 5": {
-  "digest": "385f40fbdd3e6e31",
+  "digest": "6182bfc52c1dd9fe",
   "empty": 31
  },
  "plain titan>enceladus compressed tall 6": {
-  "digest": "eeabad740d01b82f",
+  "digest": "dc82531e3408fde9",
   "empty": 3
  },
  "plain titan>enceladus compressed tall 7": {
-  "digest": "88d35f14e2c85739",
+  "digest": "3916c01c1ba832dc",
   "empty": 2
  },
  "plain titan>enceladus compressed tall 8": {
-  "digest": "c5af6967d66af426",
+  "digest": "ba867361f80fc3d0",
   "empty": 50
  },
  "plain titan>enceladus compressed tall 9": {
-  "digest": "85cc60c92d27446a",
+  "digest": "d8c2865189217d24",
   "empty": 2
  },
  "plain titan>enceladus true wide 0": {
-  "digest": "0cbb9e05c40ff0b1",
+  "digest": "aa5c2df2b163abfc",
   "empty": 0
  },
  "plain titan>enceladus true wide 1": {
-  "digest": "c91ea812e3f570fd",
+  "digest": "3f2631f1d71522c1",
   "empty": 14
  },
  "plain titan>enceladus true wide 2": {
-  "digest": "4f02f13350ef4f2f",
+  "digest": "0f9b4ef34b4f531a",
   "empty": 31
  },
  "plain titan>enceladus true wide 3": {
-  "digest": "c5e31c5fd9bf6bb7",
+  "digest": "6cd99cde19fd571c",
   "empty": 44
  },
  "plain titan>enceladus true wide 4": {
-  "digest": "6d0c2d7c54fc3191",
+  "digest": "5427eb783abaf262",
   "empty": 0
  },
  "plain titan>enceladus true wide 5": {
-  "digest": "9d25fcc3db7804f8",
+  "digest": "589639f9d9473bc6",
   "empty": 57
  },
  "plain titan>enceladus true wide 6": {
-  "digest": "b8fa014722e294e0",
+  "digest": "35e574323974a9eb",
   "empty": 29
  },
  "plain titan>enceladus true wide 7": {
-  "digest": "8d9c9851606dae9f",
+  "digest": "4a8ce0595498b94f",
   "empty": 3
  },
  "plain titan>enceladus true wide 8": {
-  "digest": "d8316bb2c9c723d0",
+  "digest": "163689449f1892c1",
   "empty": 64
  },
  "plain titan>enceladus true wide 9": {
-  "digest": "3d4002a0f42532ee",
+  "digest": "8c1a557b8e41a389",
   "empty": 11
  },
  "plain titan>enceladus true square 0": {
-  "digest": "1b2a85569e55b8d1",
+  "digest": "b218ba6d45b50304",
   "empty": 0
  },
  "plain titan>enceladus true square 1": {
-  "digest": "b7f943dcf3310162",
+  "digest": "3b04a90fffae0b4e",
   "empty": 0
  },
  "plain titan>enceladus true square 2": {
-  "digest": "8ad02560d6a1d10f",
+  "digest": "c45e815994d5912d",
   "empty": 28
  },
  "plain titan>enceladus true square 3": {
-  "digest": "cc69cda1abce25ca",
+  "digest": "78f141c51dd87225",
   "empty": 36
  },
  "plain titan>enceladus true square 4": {
-  "digest": "c994607de882e493",
+  "digest": "9b110fa2fdd86008",
   "empty": 0
  },
  "plain titan>enceladus true square 5": {
-  "digest": "c8b31d2e2c206f07",
+  "digest": "1f5e4fb884e646fe",
   "empty": 31
  },
  "plain titan>enceladus true square 6": {
-  "digest": "88308b7946220823",
+  "digest": "b0e7ccaba717ece2",
   "empty": 11
  },
  "plain titan>enceladus true square 7": {
-  "digest": "ddaa3516d5230dda",
+  "digest": "d2eb73985e4edd71",
   "empty": 0
  },
  "plain titan>enceladus true square 8": {
-  "digest": "391f121afb107fde",
+  "digest": "8e870b533d5359c9",
   "empty": 55
  },
  "plain titan>enceladus true square 9": {
-  "digest": "88a67643cb8aeb3f",
+  "digest": "9e863b122029bdc9",
   "empty": 0
  },
  "plain titan>enceladus true tall 0": {
-  "digest": "196568acf05e6f4e",
+  "digest": "b2abce2a55c33f84",
   "empty": 0
  },
  "plain titan>enceladus true tall 1": {
-  "digest": "fc82957efdde79cb",
+  "digest": "0b81abd240a7e855",
   "empty": 14
  },
  "plain titan>enceladus true tall 2": {
-  "digest": "794c73c4d3cf84b9",
+  "digest": "7c5495b52450160b",
   "empty": 40
  },
  "plain titan>enceladus true tall 3": {
-  "digest": "acf7c1e45c8ec299",
+  "digest": "cf7c47c6c8c2fa2c",
   "empty": 48
  },
  "plain titan>enceladus true tall 4": {
-  "digest": "6cfe486bf62eb020",
+  "digest": "73655502f22bf283",
   "empty": 0
  },
  "plain titan>enceladus true tall 5": {
-  "digest": "2ea7b961f358551e",
+  "digest": "e3b30dfc64f8dccb",
   "empty": 36
  },
  "plain titan>enceladus true tall 6": {
-  "digest": "4c500477bc77814d",
+  "digest": "7c7b5ebb63595028",
   "empty": 6
  },
  "plain titan>enceladus true tall 7": {
-  "digest": "dabf0f942c42252d",
+  "digest": "f581707f77fd17c9",
   "empty": 0
  },
  "plain titan>enceladus true tall 8": {
-  "digest": "00639c73be50ca21",
+  "digest": "ee693a51a3df128c",
   "empty": 67
  },
  "plain titan>enceladus true tall 9": {
-  "digest": "c220278c82707ddd",
+  "digest": "20129de7cddb6c11",
   "empty": 1
  },
  "plain oberon>miranda compressed wide 0": {
-  "digest": "d7ed9acfe212d5f8",
+  "digest": "0767fa8aed12f8ae",
   "empty": 22
  },
  "plain oberon>miranda compressed wide 1": {
-  "digest": "a831dcfc9ed595f2",
+  "digest": "ee31b2d9196aea4d",
   "empty": 70
  },
  "plain oberon>miranda compressed wide 2": {
-  "digest": "15a857ae0300b0de",
+  "digest": "5ceca973d929c6bd",
   "empty": 63
  },
  "plain oberon>miranda compressed wide 3": {
-  "digest": "ec9d1d91a8e3fec9",
+  "digest": "20fe626bdb967d4a",
   "empty": 0
  },
  "plain oberon>miranda compressed wide 4": {
-  "digest": "7a7c468e926449bd",
+  "digest": "53fc4dd414b7955d",
   "empty": 44
  },
  "plain oberon>miranda compressed wide 5": {
-  "digest": "72ac9d951eac72ca",
+  "digest": "f67e9179f37a7d24",
   "empty": 48
  },
  "plain oberon>miranda compressed wide 6": {
-  "digest": "0e7e774641ba31b6",
+  "digest": "73157e490e0c8e7d",
   "empty": 42
  },
  "plain oberon>miranda compressed wide 7": {
-  "digest": "03fffa6adf04d5cf",
+  "digest": "a4adafeb40c2a85e",
   "empty": 68
  },
  "plain oberon>miranda compressed wide 8": {
-  "digest": "5592b7fe3cec00b8",
+  "digest": "5831bd0a29722722",
   "empty": 0
  },
  "plain oberon>miranda compressed wide 9": {
-  "digest": "8683db63f079dea1",
+  "digest": "2e1744d7d1295b6e",
   "empty": 46
  },
  "plain oberon>miranda compressed square 0": {
-  "digest": "f9e1dc788beb40c5",
+  "digest": "40fc5e33a61e0e78",
   "empty": 24
  },
  "plain oberon>miranda compressed square 1": {
-  "digest": "58ef1cad354ae901",
+  "digest": "968dadbf0c97baf2",
   "empty": 72
  },
  "plain oberon>miranda compressed square 2": {
-  "digest": "a54e7cdb355969c6",
+  "digest": "f60c1ceaf6204759",
   "empty": 66
  },
  "plain oberon>miranda compressed square 3": {
-  "digest": "9ca1435a150c5536",
+  "digest": "d0a49d5d5df47026",
   "empty": 0
  },
  "plain oberon>miranda compressed square 4": {
-  "digest": "db2accbc88a064f7",
+  "digest": "4bfbaf011912fbe7",
   "empty": 49
  },
  "plain oberon>miranda compressed square 5": {
-  "digest": "edd89af691da8771",
+  "digest": "1b91da6b6d4765b0",
   "empty": 62
  },
  "plain oberon>miranda compressed square 6": {
-  "digest": "a2a42a8b87db2363",
+  "digest": "072ab7af153f1cbc",
   "empty": 47
  },
  "plain oberon>miranda compressed square 7": {
-  "digest": "9abcbce6c793c082",
+  "digest": "86dfa07cb7c85a0a",
   "empty": 71
  },
  "plain oberon>miranda compressed square 8": {
-  "digest": "c9c2b9fc48b61438",
+  "digest": "ee19ae3806b3fcaa",
   "empty": 0
  },
  "plain oberon>miranda compressed square 9": {
-  "digest": "3b67019cc78e5db5",
+  "digest": "4ca9200b32f2e1fb",
   "empty": 48
  },
  "plain oberon>miranda compressed tall 0": {
-  "digest": "4fa3d9b6031f9b50",
+  "digest": "a4bf80989855bd12",
   "empty": 31
  },
  "plain oberon>miranda compressed tall 1": {
-  "digest": "26e71c41fe8f7b5d",
+  "digest": "8187ffc88e1d9449",
   "empty": 74
  },
  "plain oberon>miranda compressed tall 2": {
-  "digest": "5a3418ba93dec14e",
+  "digest": "a107df7b0204ece9",
   "empty": 73
  },
  "plain oberon>miranda compressed tall 3": {
-  "digest": "6d19caabe6c66388",
+  "digest": "ba84b19747dced35",
   "empty": 0
  },
  "plain oberon>miranda compressed tall 4": {
-  "digest": "d86098085df2b02c",
+  "digest": "873a77d1068fc581",
   "empty": 57
  },
  "plain oberon>miranda compressed tall 5": {
-  "digest": "0bbf54508d3c828f",
+  "digest": "37debb63590c4700",
   "empty": 78
  },
  "plain oberon>miranda compressed tall 6": {
-  "digest": "045ab268adf0a354",
+  "digest": "b31d8519a274a548",
   "empty": 51
  },
  "plain oberon>miranda compressed tall 7": {
-  "digest": "e30636fdebc05c67",
+  "digest": "1ef7fa6523d7af0f",
   "empty": 73
  },
  "plain oberon>miranda compressed tall 8": {
-  "digest": "58da21efa340d7b5",
+  "digest": "ce8eda2513613268",
   "empty": 4
  },
  "plain oberon>miranda compressed tall 9": {
-  "digest": "e3cdee2147a5a73e",
+  "digest": "ef40f84a9357d793",
   "empty": 59
  },
  "plain oberon>miranda true wide 0": {
-  "digest": "5499a4c457ea8f36",
+  "digest": "f1224043614f7b2c",
   "empty": 21
  },
  "plain oberon>miranda true wide 1": {
-  "digest": "6546bad68d863ad8",
+  "digest": "1fcadb156f0acc83",
   "empty": 70
  },
  "plain oberon>miranda true wide 2": {
-  "digest": "ac0ab6f17a253ff9",
+  "digest": "eb87ef267ae51def",
   "empty": 63
  },
  "plain oberon>miranda true wide 3": {
-  "digest": "654b218ef785d3c8",
+  "digest": "dcb03c3d1144483a",
   "empty": 0
  },
  "plain oberon>miranda true wide 4": {
-  "digest": "c5ad2db459feaee1",
+  "digest": "a5c3877b05d29195",
   "empty": 47
  },
  "plain oberon>miranda true wide 5": {
-  "digest": "b429e55fba4d0509",
+  "digest": "64868aa897b67af7",
   "empty": 46
  },
  "plain oberon>miranda true wide 6": {
-  "digest": "c4431c632b33620b",
+  "digest": "58f70f42f6f50194",
   "empty": 45
  },
  "plain oberon>miranda true wide 7": {
-  "digest": "0249680c3d3ba574",
+  "digest": "cab7763eaa144f71",
   "empty": 70
  },
  "plain oberon>miranda true wide 8": {
-  "digest": "2e8c8c894d0c32bb",
+  "digest": "268310e2d8f40b69",
   "empty": 0
  },
  "plain oberon>miranda true wide 9": {
-  "digest": "4ca6a6105e93e38e",
+  "digest": "e75166c10b444c0c",
   "empty": 45
  },
  "plain oberon>miranda true square 0": {
-  "digest": "2b96e7c24e2e4685",
+  "digest": "cd059483ba4d007a",
   "empty": 24
  },
  "plain oberon>miranda true square 1": {
-  "digest": "4607ceb25bdc4ff5",
+  "digest": "9fd3fa03f14a7574",
   "empty": 73
  },
  "plain oberon>miranda true square 2": {
-  "digest": "da5bc01501160344",
+  "digest": "89631c0523ebdcec",
   "empty": 65
  },
  "plain oberon>miranda true square 3": {
-  "digest": "ed7ed61c33e1ece1",
+  "digest": "b40d89391cc5ee42",
   "empty": 0
  },
  "plain oberon>miranda true square 4": {
-  "digest": "8204d9dd22c24dac",
+  "digest": "6419ae5d429ea21d",
   "empty": 49
  },
  "plain oberon>miranda true square 5": {
-  "digest": "908519a44548749d",
+  "digest": "a5016c53424e575a",
   "empty": 58
  },
  "plain oberon>miranda true square 6": {
-  "digest": "0141ebb0786025d9",
+  "digest": "7f1b171c4eaa6abf",
   "empty": 50
  },
  "plain oberon>miranda true square 7": {
-  "digest": "f9e470823321223e",
+  "digest": "12dbe66ece17fcc0",
   "empty": 73
  },
  "plain oberon>miranda true square 8": {
-  "digest": "0384590a2ca25f61",
+  "digest": "e4ae44d3814dbbbb",
   "empty": 0
  },
  "plain oberon>miranda true square 9": {
-  "digest": "911a814d080e0011",
+  "digest": "f605d5247756e103",
   "empty": 51
  },
  "plain oberon>miranda true tall 0": {
-  "digest": "611f6dcef142c2ce",
+  "digest": "2662cb2c753c7c87",
   "empty": 34
  },
  "plain oberon>miranda true tall 1": {
-  "digest": "3661cd5e9710ee90",
+  "digest": "672db72a30af0e01",
   "empty": 76
  },
  "plain oberon>miranda true tall 2": {
-  "digest": "14cfc0b438da8850",
+  "digest": "2e068b027c334c7e",
   "empty": 76
  },
  "plain oberon>miranda true tall 3": {
-  "digest": "20c0ae3f39d70706",
+  "digest": "c4117d1062687e62",
   "empty": 0
  },
  "plain oberon>miranda true tall 4": {
-  "digest": "824ad7e7571ff365",
+  "digest": "b72da20fda0f42bb",
   "empty": 59
  },
  "plain oberon>miranda true tall 5": {
-  "digest": "423702fec47460ac",
+  "digest": "b71293dab56fe508",
   "empty": 72
  },
  "plain oberon>miranda true tall 6": {
-  "digest": "a6e0c3d687f133ca",
+  "digest": "a5ad6d9978698f30",
   "empty": 55
  },
  "plain oberon>miranda true tall 7": {
-  "digest": "77e190be68104395",
+  "digest": "a5b17f5ec6681b84",
   "empty": 76
  },
  "plain oberon>miranda true tall 8": {
-  "digest": "ed2b04c4fd4c2960",
+  "digest": "4530d807888fe7f2",
   "empty": 0
  },
  "plain oberon>miranda true tall 9": {
-  "digest": "24e0b41914fd775c",
+  "digest": "4994c056f1040d2f",
   "empty": 61
  },
  "plain phobos>deimos compressed wide 0": {
-  "digest": "3f5fe7f04dd8fbb4",
+  "digest": "d01f8bab13d9e263",
   "empty": 32
  },
  "plain phobos>deimos compressed wide 1": {
-  "digest": "aa3c8fcdbf918311",
+  "digest": "130e901dffeb134d",
   "empty": 51
  },
  "plain phobos>deimos compressed wide 2": {
-  "digest": "db717ab7cc9c2441",
+  "digest": "ffabd6c2f9b32e61",
   "empty": 51
  },
  "plain phobos>deimos compressed wide 3": {
-  "digest": "5a7e65942c18c295",
+  "digest": "9220a5f45e32e956",
   "empty": 19
  },
  "plain phobos>deimos compressed wide 4": {
-  "digest": "54a12398107a6040",
+  "digest": "9acec63e09917b02",
   "empty": 22
  },
  "plain phobos>deimos compressed wide 5": {
-  "digest": "6a7f24c8cd211620",
+  "digest": "9fa5c36312149db6",
   "empty": 16
  },
  "plain phobos>deimos compressed wide 6": {
-  "digest": "429a67d716ec2bad",
+  "digest": "a0648950b63b5b7c",
   "empty": 45
  },
  "plain phobos>deimos compressed wide 7": {
-  "digest": "86ba7fb03b97b853",
+  "digest": "8ada404b9371c254",
   "empty": 46
  },
  "plain phobos>deimos compressed wide 8": {
-  "digest": "784a443895b18e4b",
+  "digest": "91b0da0643f29355",
   "empty": 16
  },
  "plain phobos>deimos compressed wide 9": {
-  "digest": "27d94c13c685985e",
+  "digest": "3ddb8c709d33976b",
   "empty": 32
  },
  "plain phobos>deimos compressed square 0": {
-  "digest": "ed6a67a3b80fc141",
+  "digest": "b9df8e45de6a44ab",
   "empty": 47
  },
  "plain phobos>deimos compressed square 1": {
-  "digest": "32091a6eb1ee1b17",
+  "digest": "adce3ca4bfff7b8e",
   "empty": 40
  },
  "plain phobos>deimos compressed square 2": {
-  "digest": "64fb5a3629da22ca",
+  "digest": "8db06815e317feb1",
   "empty": 24
  },
  "plain phobos>deimos compressed square 3": {
-  "digest": "24f7e6d2ecd93dbe",
+  "digest": "08058059f5580fd3",
   "empty": 33
  },
  "plain phobos>deimos compressed square 4": {
-  "digest": "81459388f7f4ff58",
+  "digest": "5dc730a2f17a59cd",
   "empty": 8
  },
  "plain phobos>deimos compressed square 5": {
-  "digest": "602ee21b906bf1b3",
+  "digest": "dbda67275138f03e",
   "empty": 50
  },
  "plain phobos>deimos compressed square 6": {
-  "digest": "b9bef1ed29adcc18",
+  "digest": "f7d2bfcbf70fe311",
   "empty": 32
  },
  "plain phobos>deimos compressed square 7": {
-  "digest": "1fd4b66d9b110f59",
+  "digest": "7cc51805a1ae2f4b",
   "empty": 6
  },
  "plain phobos>deimos compressed square 8": {
-  "digest": "e748f69aba5c0c82",
+  "digest": "0b163b957a06bd86",
   "empty": 46
  },
  "plain phobos>deimos compressed square 9": {
-  "digest": "4e1b52748d858eb7",
+  "digest": "c6e39fde249afa32",
   "empty": 24
  },
  "plain phobos>deimos compressed tall 0": {
-  "digest": "a1b08b035a68f1da",
+  "digest": "214b1f4336d99cbd",
   "empty": 61
  },
  "plain phobos>deimos compressed tall 1": {
-  "digest": "5d1aca840c11916f",
+  "digest": "41bc1df441b8668c",
   "empty": 44
  },
  "plain phobos>deimos compressed tall 2": {
-  "digest": "3f5643ab63a7ad80",
+  "digest": "703e6f27edfb4d8f",
   "empty": 32
  },
  "plain phobos>deimos compressed tall 3": {
-  "digest": "f6ee9decfdf7da9d",
+  "digest": "bd8fd6a55c97e338",
   "empty": 68
  },
  "plain phobos>deimos compressed tall 4": {
-  "digest": "731be364a72d987d",
+  "digest": "aabe2aa16ca5c115",
   "empty": 15
  },
  "plain phobos>deimos compressed tall 5": {
-  "digest": "76a21ec352fb3424",
+  "digest": "d5d00607687b92e2",
   "empty": 66
  },
  "plain phobos>deimos compressed tall 6": {
-  "digest": "f7169373be18c836",
+  "digest": "43027c341f02c23e",
   "empty": 66
  },
  "plain phobos>deimos compressed tall 7": {
-  "digest": "ecbf228dd32eca81",
+  "digest": "95ffbbd7769edab6",
   "empty": 25
  },
  "plain phobos>deimos compressed tall 8": {
-  "digest": "b81bb51ab04f124f",
+  "digest": "4c0881e6ebee23b9",
   "empty": 63
  },
  "plain phobos>deimos compressed tall 9": {
-  "digest": "aacf1ecbac29fec6",
+  "digest": "a885b8ab44c8b7bb",
   "empty": 33
  },
  "plain phobos>deimos true wide 0": {
-  "digest": "21445584adea2908",
+  "digest": "9b793071c5117ad2",
   "empty": 0
  },
  "plain phobos>deimos true wide 1": {
-  "digest": "a9be6e5c3ecaf9ff",
+  "digest": "2c8a469a06c28bda",
   "empty": 42
  },
  "plain phobos>deimos true wide 2": {
-  "digest": "d14fd8072ff5325a",
+  "digest": "6984f2b21fc571e9",
   "empty": 65
  },
  "plain phobos>deimos true wide 3": {
-  "digest": "5a78340f1ec2872e",
+  "digest": "ed7b4acd962d46f7",
   "empty": 35
  },
  "plain phobos>deimos true wide 4": {
-  "digest": "061efe3789e95bef",
+  "digest": "284ee58e4d130822",
   "empty": 38
  },
  "plain phobos>deimos true wide 5": {
-  "digest": "fdc76c85ff18329e",
+  "digest": "76d71d991e2bf478",
   "empty": 0
  },
  "plain phobos>deimos true wide 6": {
-  "digest": "2bb9d7d88489ab8d",
+  "digest": "38383a4cac70dea2",
   "empty": 32
  },
  "plain phobos>deimos true wide 7": {
-  "digest": "0b209abb0df62583",
+  "digest": "09e45ff6bb78bc9b",
   "empty": 61
  },
  "plain phobos>deimos true wide 8": {
-  "digest": "dc9f2b8c7beb1835",
+  "digest": "f7f03a591d21e6e7",
   "empty": 0
  },
  "plain phobos>deimos true wide 9": {
-  "digest": "1a0841f333d00951",
+  "digest": "1abd9067898d1ac5",
   "empty": 30
  },
  "plain phobos>deimos true square 0": {
-  "digest": "09585090c08aec66",
+  "digest": "78a523769b43a7fb",
   "empty": 13
  },
  "plain phobos>deimos true square 1": {
-  "digest": "fb53c8f7e637a785",
+  "digest": "cd978245129b0d01",
   "empty": 47
  },
  "plain phobos>deimos true square 2": {
-  "digest": "cd9ae0b33143ba40",
+  "digest": "b7ee2604ceb76338",
   "empty": 77
  },
  "plain phobos>deimos true square 3": {
-  "digest": "9cf2c8e07206e982",
+  "digest": "23754781d89d2576",
   "empty": 48
  },
  "plain phobos>deimos true square 4": {
-  "digest": "dd708c06cd08f8c2",
+  "digest": "00350540ff14a9aa",
   "empty": 58
  },
  "plain phobos>deimos true square 5": {
-  "digest": "be597462a9fb6f01",
+  "digest": "b5fa228b94671626",
   "empty": 13
  },
  "plain phobos>deimos true square 6": {
-  "digest": "0422512f1d590205",
+  "digest": "114b4e1f2fee9106",
   "empty": 66
  },
  "plain phobos>deimos true square 7": {
-  "digest": "1d11219e9b7c8297",
+  "digest": "b52e8da17452da41",
   "empty": 87
  },
  "plain phobos>deimos true square 8": {
-  "digest": "47531572c502605b",
+  "digest": "22db4e6c8cd7c93f",
   "empty": 13
  },
  "plain phobos>deimos true square 9": {
-  "digest": "61ae1340df9885d0",
+  "digest": "dddc1cd7e05ab386",
   "empty": 37
  },
  "plain phobos>deimos true tall 0": {
-  "digest": "c905b3d9d05cdc71",
+  "digest": "daab94d17777731d",
   "empty": 26
  },
  "plain phobos>deimos true tall 1": {
-  "digest": "d1564872f3206d42",
+  "digest": "45babc77786abcd8",
   "empty": 57
  },
  "plain phobos>deimos true tall 2": {
-  "digest": "c9976581f7905709",
+  "digest": "4cf5147bb241efc4",
   "empty": 70
  },
  "plain phobos>deimos true tall 3": {
-  "digest": "ed7a24ce089f3ad7",
+  "digest": "c4730383fde6eea8",
   "empty": 53
  },
  "plain phobos>deimos true tall 4": {
-  "digest": "a7d359a29d9d609d",
+  "digest": "2d392aafb1e2f3da",
   "empty": 51
  },
  "plain phobos>deimos true tall 5": {
-  "digest": "4bc8addd3131e673",
+  "digest": "e386f6ee6d4f6dbc",
   "empty": 36
  },
  "plain phobos>deimos true tall 6": {
-  "digest": "31ddce38b89c859d",
+  "digest": "97c2b31a288ea6cf",
   "empty": 61
  },
  "plain phobos>deimos true tall 7": {
-  "digest": "5946726af86c89a0",
+  "digest": "16397f743e25a299",
   "empty": 76
  },
  "plain phobos>deimos true tall 8": {
-  "digest": "d9e4c7c73cd5c4ee",
+  "digest": "777e397d0897cbff",
   "empty": 33
  },
  "plain phobos>deimos true tall 9": {
-  "digest": "b0da954f5bcf8557",
+  "digest": "e856dbf477c66bf5",
   "empty": 43
  },
  "plain triton>proteus compressed wide 0": {
-  "digest": "50abb452e6dbc5f6",
+  "digest": "ac22144aa480a12b",
   "empty": 53
  },
  "plain triton>proteus compressed wide 1": {
-  "digest": "21e831644efc3219",
+  "digest": "241a0008aceac8a6",
   "empty": 53
  },
  "plain triton>proteus compressed wide 2": {
-  "digest": "ea0e1cd8d1d5ea9c",
+  "digest": "f5f0a48530d1f851",
   "empty": 66
  },
  "plain triton>proteus compressed wide 3": {
-  "digest": "665fd4efd5b0c5cc",
+  "digest": "d2bf7d134e148cdf",
   "empty": 12
  },
  "plain triton>proteus compressed wide 4": {
-  "digest": "4a705eaf2c3615d6",
+  "digest": "e8eefcb4671e3b0e",
   "empty": 54
  },
  "plain triton>proteus compressed wide 5": {
-  "digest": "5de92e16c3f15cb4",
+  "digest": "8b6207867fe01873",
   "empty": 0
  },
  "plain triton>proteus compressed wide 6": {
-  "digest": "187430666eeb367c",
+  "digest": "b35ee9048e87f642",
   "empty": 65
  },
  "plain triton>proteus compressed wide 7": {
-  "digest": "dcf0a6fefd36cd7c",
+  "digest": "c46fd1d8be4bb0d0",
   "empty": 44
  },
  "plain triton>proteus compressed wide 8": {
-  "digest": "53bd0ff5d2c8783d",
+  "digest": "f31bdeb600ceec05",
   "empty": 0
  },
  "plain triton>proteus compressed wide 9": {
-  "digest": "f26882fdff5a30cc",
+  "digest": "13d50e22ae2d0037",
   "empty": 49
  },
  "plain triton>proteus compressed square 0": {
-  "digest": "12c936dc3bd59164",
+  "digest": "5cd22db2e1ae9165",
   "empty": 60
  },
  "plain triton>proteus compressed square 1": {
-  "digest": "21d366fec1333993",
+  "digest": "b6131bea2863e12b",
   "empty": 54
  },
  "plain triton>proteus compressed square 2": {
-  "digest": "142a181b203df69d",
+  "digest": "e9058e120527d48a",
   "empty": 66
  },
  "plain triton>proteus compressed square 3": {
-  "digest": "b74daba7774b81b5",
+  "digest": "7810613e8b50484a",
   "empty": 18
  },
  "plain triton>proteus compressed square 4": {
-  "digest": "f8609103c9d1abc1",
+  "digest": "126b2114524c8730",
   "empty": 62
  },
  "plain triton>proteus compressed square 5": {
-  "digest": "e1d5f89f2f56a136",
+  "digest": "776c5c666c416a0c",
   "empty": 0
  },
  "plain triton>proteus compressed square 6": {
-  "digest": "f9b8aef2ffe0fe23",
+  "digest": "f3bac563ddcdf3aa",
   "empty": 67
  },
  "plain triton>proteus compressed square 7": {
-  "digest": "8777f95094c01f6b",
+  "digest": "484b3a5c8c61601b",
   "empty": 64
  },
  "plain triton>proteus compressed square 8": {
-  "digest": "7f6f926156906eed",
+  "digest": "18e9d218d12408f8",
   "empty": 0
  },
  "plain triton>proteus compressed square 9": {
-  "digest": "f0bb92605a96cd00",
+  "digest": "bc70e3c0e80470fa",
   "empty": 56
  },
  "plain triton>proteus compressed tall 0": {
-  "digest": "7aca4a17d0a7f873",
+  "digest": "51230383f931561e",
   "empty": 69
  },
  "plain triton>proteus compressed tall 1": {
-  "digest": "a5348f44652481fb",
+  "digest": "6f3430a843282e44",
   "empty": 50
  },
  "plain triton>proteus compressed tall 2": {
-  "digest": "73e54cdbdb219972",
+  "digest": "4d46e6b2ccbe738c",
   "empty": 62
  },
  "plain triton>proteus compressed tall 3": {
-  "digest": "e3d2e19960422640",
+  "digest": "b4313ea012d24766",
   "empty": 22
  },
  "plain triton>proteus compressed tall 4": {
-  "digest": "84e20382a83b3d80",
+  "digest": "1f21c70adec3727a",
   "empty": 70
  },
  "plain triton>proteus compressed tall 5": {
-  "digest": "feb42defb2d90a30",
+  "digest": "5bff696c3a826240",
   "empty": 16
  },
  "plain triton>proteus compressed tall 6": {
-  "digest": "6f07fd932cceec76",
+  "digest": "4a26764ee8bcddac",
   "empty": 66
  },
  "plain triton>proteus compressed tall 7": {
-  "digest": "c08945743f3bb1b2",
+  "digest": "8462b181eeb0cb25",
   "empty": 76
  },
  "plain triton>proteus compressed tall 8": {
-  "digest": "b3f7f098d39f0087",
+  "digest": "4af419f0738406dc",
   "empty": 0
  },
  "plain triton>proteus compressed tall 9": {
-  "digest": "ae569e89d0fd5c7b",
+  "digest": "f753a7dd235bbd0c",
   "empty": 58
  },
  "plain triton>proteus true wide 0": {
-  "digest": "d08288de22633e8f",
+  "digest": "e372f948f16a007a",
   "empty": 66
  },
  "plain triton>proteus true wide 1": {
-  "digest": "d02f4a6d6596ba4d",
+  "digest": "af49de7e4788f6ea",
   "empty": 53
  },
  "plain triton>proteus true wide 2": {
-  "digest": "b56de67f09e4f1dc",
+  "digest": "a4c723fa95da9069",
   "empty": 68
  },
  "plain triton>proteus true wide 3": {
-  "digest": "60cccb21c29a6c59",
+  "digest": "c0135e45f3c801d8",
   "empty": 36
  },
  "plain triton>proteus true wide 4": {
-  "digest": "d297e343dd3e0eb8",
+  "digest": "486c74050eccbfbf",
   "empty": 66
  },
  "plain triton>proteus true wide 5": {
-  "digest": "d0580ab1d5522fd0",
+  "digest": "d72e81da498dc250",
   "empty": 11
  },
  "plain triton>proteus true wide 6": {
-  "digest": "5e64f01b96b92aa3",
+  "digest": "8e2fb88bc408e2d8",
   "empty": 67
  },
  "plain triton>proteus true wide 7": {
-  "digest": "7d6a48c2be372171",
+  "digest": "8856010897cc1a4b",
   "empty": 50
  },
  "plain triton>proteus true wide 8": {
-  "digest": "f7bead4f3ef707df",
+  "digest": "a30691b61f1f240f",
   "empty": 1
  },
  "plain triton>proteus true wide 9": {
-  "digest": "6f72681affaa47c2",
+  "digest": "d539f724230055c0",
   "empty": 56
  },
  "plain triton>proteus true square 0": {
-  "digest": "0269dad02aceeb85",
+  "digest": "5b59510360f00b51",
   "empty": 66
  },
  "plain triton>proteus true square 1": {
-  "digest": "6f45fa05552b2506",
+  "digest": "58609467cc520890",
   "empty": 55
  },
  "plain triton>proteus true square 2": {
-  "digest": "d0c22a4f96b5a2c1",
+  "digest": "b2f1ed8b042f9f8a",
   "empty": 67
  },
  "plain triton>proteus true square 3": {
-  "digest": "2df23ef6873fe030",
+  "digest": "fa8e58bb7b805abd",
   "empty": 39
  },
  "plain triton>proteus true square 4": {
-  "digest": "9d476c537e688cb5",
+  "digest": "7926f75a1dfadc23",
   "empty": 66
  },
  "plain triton>proteus true square 5": {
-  "digest": "d599d0daf8b40b09",
+  "digest": "4ec51f23cfb88a3f",
   "empty": 11
  },
  "plain triton>proteus true square 6": {
-  "digest": "553f79d72aebad57",
+  "digest": "9143654009d6cada",
   "empty": 69
  },
  "plain triton>proteus true square 7": {
-  "digest": "a73352d4a3bb05df",
+  "digest": "3c8a5fb03a901d2f",
   "empty": 64
  },
  "plain triton>proteus true square 8": {
-  "digest": "3188db66148fc3bd",
+  "digest": "efa95745c20dd688",
   "empty": 4
  },
  "plain triton>proteus true square 9": {
-  "digest": "4882123e6228b262",
+  "digest": "f376bd695e55bdee",
   "empty": 62
  },
  "plain triton>proteus true tall 0": {
-  "digest": "185f03ce4149153d",
+  "digest": "501ebd4256b1e3be",
   "empty": 73
  },
  "plain triton>proteus true tall 1": {
-  "digest": "7bc66f7b459b8956",
+  "digest": "9e84f4cd48307f27",
   "empty": 53
  },
  "plain triton>proteus true tall 2": {
-  "digest": "4846d05dad050a37",
+  "digest": "f58e4187bfea198f",
   "empty": 65
  },
  "plain triton>proteus true tall 3": {
-  "digest": "d530a59e43aebaf8",
+  "digest": "6300f9d381ad97f8",
   "empty": 39
  },
  "plain triton>proteus true tall 4": {
-  "digest": "c43e5ef89d3d21ac",
+  "digest": "24af99ed0ee45a6b",
   "empty": 73
  },
  "plain triton>proteus true tall 5": {
-  "digest": "a441a026f72f9f8b",
+  "digest": "f8adaa5611125c4b",
   "empty": 15
  },
  "plain triton>proteus true tall 6": {
-  "digest": "bc87c4be48d21c62",
+  "digest": "cfbfde08e419ed4a",
   "empty": 71
  },
  "plain triton>proteus true tall 7": {
-  "digest": "a7f0158b9e638dfa",
+  "digest": "bea7ba111dd311f0",
   "empty": 76
  },
  "plain triton>proteus true tall 8": {
-  "digest": "ef317401817482d7",
+  "digest": "00aaf7f5107bb02e",
   "empty": 14
  },
  "plain triton>proteus true tall 9": {
-  "digest": "720acd7d1ae0f7c9",
+  "digest": "cedc09a9094661ca",
   "empty": 63
  }
 }
