@@ -53,9 +53,12 @@ export interface BeltInfo {
   known: number;
   /** How many of them this package carries: the brightest numbered ones. */
   sample: number;
+  /** The belt's nearest and furthest distance from the Sun, in au (the limits of its class in the Small-Body Database, or the cut this package made, see NOTICE.md; the scattered disc has no outer limit, and 2,700 is just above the furthest body carried). */
+  innerAu: number;
+  outerAu: number;
 }
 
-const info = (id: BeltId, en: string, ja: string, aboutEn: string, aboutJa: string, colour: string, known: number): BeltInfo => ({ id, name: { en, ja }, about: { en: aboutEn, ja: aboutJa }, colour, known, sample: BELT_SAMPLE[id] });
+const info = (id: BeltId, en: string, ja: string, aboutEn: string, aboutJa: string, colour: string, known: number, innerAu: number, outerAu: number): BeltInfo => ({ id, name: { en, ja }, about: { en: aboutEn, ja: aboutJa }, colour, known, sample: BELT_SAMPLE[id], innerAu, outerAu });
 
 /**
  * The seven belts, by name.
@@ -68,13 +71,13 @@ const info = (id: BeltId, en: string, ja: string, aboutEn: string, aboutJa: stri
  * ```
  */
 export const BELTS: Readonly<Record<BeltId, BeltInfo>> = {
-  main: info("main", "Main belt", "メインベルト", "between Mars and Jupiter, 2.1 to 3.3 au from the Sun", "火星と木星のあいだ、太陽から2.1〜3.3天文単位", "#d9d3c3", BELT_TOTALS.main),
-  hilda: info("hilda", "Hildas", "ヒルダ群", "locked to Jupiter, 3.9 to 4.1 au out, in a rounded triangle", "木星と共鳴する天体。太陽から3.9〜4.1天文単位で、丸い三角形をなす", "#ffb86b", BELT_TOTALS.hilda),
-  trojan: info("trojan", "Jupiter Trojans", "木星トロヤ群", "two swarms on Jupiter's orbit, 60 degrees ahead of it and 60 behind", "木星の軌道上で、木星の60度前と60度後ろにある2つの群れ", "#7fd4ff", BELT_TOTALS.trojan),
-  centaur: info("centaur", "Centaurs", "ケンタウルス族", "icy bodies on orbits that cross the giant planets, 5 to 30 au out", "巨大惑星の軌道と交わる氷の天体。太陽から5〜30天文単位", "#ff8fb1", BELT_TOTALS.centaur),
-  classical: info("classical", "Kuiper belt, classical", "カイパーベルト (古典的)", "on nearly round orbits 39 to 48 au out, beyond Neptune", "海王星の外、太陽から39〜48天文単位のほぼ円形の軌道", "#9ee493", BELT_TOTALS.classical),
-  resonant: info("resonant", "Kuiper belt, resonant", "カイパーベルト (共鳴)", "in step with Neptune (Pluto and the other plutinos are 3:2)", "海王星と共鳴する天体 (冥王星などのプルティノは3:2共鳴)", "#d6a8ff", BELT_TOTALS.resonant),
-  scattered: info("scattered", "Kuiper belt, scattered", "カイパーベルト (散乱円盤)", "on long, tilted orbits thrown outwards by Neptune", "海王星に外へはじき出された、細長くかたむいた軌道", "#ffe36b", BELT_TOTALS.scattered),
+  main: info("main", "Main belt", "メインベルト", "between Mars and Jupiter, 2.0 to 3.2 au from the Sun", "火星と木星のあいだ、太陽から2.0〜3.2天文単位", "#d9d3c3", BELT_TOTALS.main, 2.0, 3.2),
+  hilda: info("hilda", "Hildas", "ヒルダ群", "locked to Jupiter, 3.9 to 4.1 au out, in a rounded triangle", "木星と共鳴する天体。太陽から3.9〜4.1天文単位で、丸い三角形をなす", "#ffb86b", BELT_TOTALS.hilda, 3.9, 4.1),
+  trojan: info("trojan", "Jupiter Trojans", "木星トロヤ群", "two swarms on Jupiter's orbit, 60 degrees ahead of it and 60 behind, 4.6 to 5.5 au out", "木星の軌道上で、木星の60度前と60度後ろにある2つの群れ。太陽から4.6〜5.5天文単位", "#7fd4ff", BELT_TOTALS.trojan, 4.6, 5.5),
+  centaur: info("centaur", "Centaurs", "ケンタウルス族", "icy bodies on orbits that cross the giant planets, 5.5 to 30.1 au out", "巨大惑星の軌道と交わる氷の天体。太陽から5.5〜30.1天文単位", "#ff8fb1", BELT_TOTALS.centaur, 5.5, 30.1),
+  classical: info("classical", "Kuiper belt, classical", "カイパーベルト (古典的)", "on nearly round orbits 39.4 to 48.4 au out, beyond Neptune", "海王星の外、太陽から39.4〜48.4天文単位のほぼ円形の軌道", "#9ee493", BELT_TOTALS.classical, 39.4, 48.4),
+  resonant: info("resonant", "Kuiper belt, resonant", "カイパーベルト (共鳴)", "in step with Neptune (Pluto and the other plutinos are 3:2), 36 to 63 au out", "海王星と共鳴する天体 (冥王星などのプルティノは3:2共鳴)。太陽から36〜63天文単位", "#d6a8ff", BELT_TOTALS.resonant, 36, 63),
+  scattered: info("scattered", "Kuiper belt, scattered", "カイパーベルト (散乱円盤)", "on long, tilted orbits thrown outwards by Neptune, 30 to 2,700 au out", "海王星に外へはじき出された、細長くかたむいた軌道。太陽から30〜2,700天文単位", "#ffe36b", BELT_TOTALS.scattered, 30, 2700),
 };
 
 /**

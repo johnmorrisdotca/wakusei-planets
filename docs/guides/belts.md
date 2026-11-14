@@ -11,15 +11,15 @@ description: Seven belts of real small bodies (the main belt, the Hildas, the Ju
 
 | Belt | What it is | Known | Drawn |
 |---|---|---|---|
-| `main` | between Mars and Jupiter, 2.1 to 3.3 au from the Sun | 1,429,419 | 1,300 |
+| `main` | between Mars and Jupiter, 2.0 to 3.2 au from the Sun | 1,429,419 | 1,300 |
 | `hilda` | locked to Jupiter, 3.9 to 4.1 au out | 7,929 | 220 |
-| `trojan` | two swarms on Jupiter's orbit, 60 degrees ahead of it and 60 behind | 16,472 | 520 |
-| `centaur` | icy bodies on orbits that cross the giant planets | 1,087 | 200 |
-| `classical` | the Kuiper belt on nearly round orbits, 39 to 48 au | 3,000 | 300 |
-| `resonant` | in step with Neptune (Pluto and the plutinos are 3:2) | 2,306 | 500 |
-| `scattered` | long, tilted orbits thrown outwards by Neptune | 2,266 | 300 |
+| `trojan` | two swarms on Jupiter's orbit, 60 degrees ahead of it and 60 behind, 4.6 to 5.5 au out | 16,472 | 520 |
+| `centaur` | icy bodies on orbits that cross the giant planets, 5.5 to 30.1 au out | 1,087 | 200 |
+| `classical` | the Kuiper belt on nearly round orbits, 39.4 to 48.4 au | 3,000 | 300 |
+| `resonant` | in step with Neptune (Pluto and the plutinos are 3:2), 36 to 63 au out | 2,306 | 500 |
+| `scattered` | long, tilted orbits thrown outwards by Neptune, 30 to 2,700 au out | 2,266 | 300 |
 
-*Known* is what the database held on 2026-11-10 (1,580,096 asteroids in all, 895,910 of them numbered); *drawn* are the brightest numbered bodies of each belt, which is what a few thousand dots can honestly be. The Hildas and the three kinds of the Kuiper belt are cut by their orbits' elements (a true resonance is a matter of libration, which a number cannot say), and Ceres, Vesta, Pallas, Chiron, Pholus, Pluto and the other dwarf planets are bodies of their own, so they are not in a belt as well. The Oort cloud has no orbits to draw: in the squeezed scale the view draws its inner edge, about 2,000 au out, as a shell of three circles with a label.
+The distances are `BELTS[id].innerAu` and `outerAu`, in au: the limits of the class in the Small-Body Database for the main belt, the Jupiter Trojans and the Centaurs, and the cut this package made for the others (the scattered disc has no outer limit; 2,700 is just above the furthest body carried). *Known* is what the database held on 2026-11-10 (1,580,096 asteroids in all, 895,910 of them numbered); *drawn* are the brightest numbered bodies of each belt, which is what a few thousand dots can honestly be. The Hildas and the three kinds of the Kuiper belt are cut by their orbits' elements (a true resonance is a matter of libration, which a number cannot say), and Ceres, Vesta, Pallas, Chiron, Pholus, Pluto and the other dwarf planets are bodies of their own, so they are not in a belt as well. The Oort cloud has no orbits to draw: in the squeezed scale the view draws its inner edge, about 2,000 au out, as a shell of three circles with a label.
 
 ## In the view
 

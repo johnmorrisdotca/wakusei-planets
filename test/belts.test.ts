@@ -197,3 +197,29 @@ test("one instanced draw for each belt, in its own colour; a body with no belt i
   assert.equal(points.countOf(""), 1);
   points.dispose();
 });
+
+test("each belt carries its inner and outer distance in au as numbers, and its text, in both languages, and the guides say the same numbers", async () => {
+  const { readFileSync } = await import("node:fs");
+  const number = (text: string): number => Number(text.replace(/,/g, ""));
+  const guide = { en: readFileSync(new URL("../docs/guides/belts.md", import.meta.url), "utf8"), ja: readFileSync(new URL("../docs/guides/ja/belts.md", import.meta.url), "utf8") };
+  for (const id of BELT_IDS) {
+    const belt = BELTS[id];
+    assert.ok(Number.isFinite(belt.innerAu) && Number.isFinite(belt.outerAu) && belt.innerAu > 0 && belt.outerAu > belt.innerAu, id);
+    const en = /([\d.,]+) to ([\d.,]+) au/.exec(belt.about.en);
+    const ja = /([\d.,]+)〜([\d.,]+)天文単位/.exec(belt.about.ja);
+    assert.ok(en && ja, `${id}: the text gives the distances`);
+    assert.deepEqual([number(en[1]!), number(en[2]!)], [belt.innerAu, belt.outerAu], `${id}: the English text and the numbers agree`);
+    assert.deepEqual([number(ja[1]!), number(ja[2]!)], [belt.innerAu, belt.outerAu], `${id}: the Japanese text and the numbers agree`);
+    // the guides' tables have the same figures
+    for (const [language, text, pattern] of [["en", guide.en, /([\d.,]+) to ([\d.,]+) au/g], ["ja", guide.ja, /([\d.,]+)〜([\d.,]+)天文単位/g]] as const) {
+      const row = text.split("\n").find((line) => line.startsWith(`| \`${id}\` |`));
+      assert.ok(row, `${id}: a row in the ${language} guide`);
+      const found = [...row.matchAll(pattern)].map((m) => [number(m[1]!), number(m[2]!)]);
+      assert.deepEqual(found, [[belt.innerAu, belt.outerAu]], `${id}: the ${language} guide`);
+    }
+    // every body carried lies inside (the scattered disc has no outer limit: 2,700 is above the furthest carried)
+    for (const body of bodies.filter((b) => b.belt === id)) {
+      assert.ok(body.a >= belt.innerAu - 1e-9 && body.a <= belt.outerAu + 1e-9, `${id} ${body.name}: a ${body.a} is outside ${belt.innerAu} to ${belt.outerAu}`);
+    }
+  }
+});

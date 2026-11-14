@@ -11,7 +11,7 @@
  */
 export const BELT_EPOCH = 2461200.5;
 /**
- * What the database held on 2026-11-10: all asteroids, the numbered ones, and each group (the three kinds of the Kuiper belt are cut by their elements, see the script).
+ * What the database held on 2026-11-10: `all` counts every asteroid in the database, of every class (the near-Earth ones, the Mars-crossers and so on as well as the belts here, so it is more than the belts add up to), `numbered` the ones with a number, and each group below (the three kinds of the Kuiper belt are cut by their elements, see the script).
  *
  * @example
  * ```ts
