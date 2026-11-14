@@ -54,6 +54,21 @@ export type TravelKind = "turn-travel" | "direct" | "look-back" | "auto" | "cut"
 export const TRAVEL_CLEARANCE = 1;
 
 /**
+ * The time in milliseconds, counted from the start of the plan, that the space view lets the planner spend on the other ways of a move within a planet's family (`TravelInput.budget`); the first way, with its aim
+ * turn, is always worked out. Measured on the author's Mac mini over the 360 surveyed plain-view moves of six pairs of moons (most need no other way): a median of 14 ms, 90 percent under 52 ms and at most about
+ * 100 ms with this budget, against a median of 14 ms, 90 percent under 83 ms and at most 300 ms with none. A phone is several times slower, so there the planner stops sooner and keeps the best way found, and the same
+ * move can be planned differently on two devices (never with more faults than the first way).
+ *
+ * @example
+ * ```ts
+ * import { TRAVEL_BUDGET_MS } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(TRAVEL_BUDGET_MS);
+ * ```
+ */
+export const TRAVEL_BUDGET_MS = 40;
+
+/**
  * A camera: where it is, the unit vectors it looks along and has up in the picture, and its vertical field of view in degrees. The same four as `besideMoon` and `ridePose` give.
  *
  * @example
@@ -131,6 +146,12 @@ export interface TravelInput {
   pace?: number;
   /** How near the path may come to a body, in its radii above its surface: `TRAVEL_CLEARANCE` when left out. */
   clearance?: number;
+  /**
+   * A limit on the time the planner spends on a move within a planet's family: `now` gives the time in milliseconds (`performance.now`), and once `ms` have gone on the aim turn and the other ways the planner stops
+   * and keeps the best so far, which is never worse than the first way it made. The planner reads no clock itself: without `budget` it tries every way, and the same input always gives the
+   * same plan. With it, the plan can differ with the speed of the device (a slower one may stop sooner), though never to one with more faults than the first way. `TRAVEL_BUDGET_MS` is the value the space view passes.
+   */
+  budget?: { now: () => number; ms: number };
 }
 
 /**
@@ -772,6 +793,8 @@ function aimFlaws(input: TravelInput, candidate: Turn, shells: Route["shells"], 
     const d = sightOf(input.destination, t, position, at.o, frame);
     const off = (sight: TravelSight): number => (sight.inside ? Math.max(Math.abs(sight.x), Math.abs(sight.y)) : Number.POSITIVE_INFINITY);
     edge = Math.max(edge, Math.min(off(l), off(d)));
+    // a candidate is only wanted if the nearer moon stays inside `AIM_EDGE` and the pace is kept, so the walk stops at the first moment that is not
+    if (edge > AIM_EDGE) return { edge, fair: false };
     const now = { position, f: at.o.f, dest: d };
     if (before !== null) {
       const step = angleOf(before.f, at.o.f) / RAD;
@@ -780,6 +803,7 @@ function aimFlaws(input: TravelInput, candidate: Turn, shells: Route["shells"], 
       if (step > PACE_DEGREES) fair = false;
       if (before.dest.inside && d.inside && Math.hypot(d.x - before.dest.x, d.y - before.dest.y) > PACE_SCREEN) fair = false;
       if (angleOf(at.o.f, last) - angleOf(before.f, last) > PACE_UNTURN * RAD) fair = false;
+      if (!fair) return { edge, fair };
     }
     seen.push(now);
     before = now;
@@ -849,9 +873,10 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
       const frameAt = (fov: number): Frame => frameOf(fov, input.aspect);
       // the stand is for the moment the turn ends, so when the backed-off turn takes another share of the move the stand is worked out again for that moment, until the two agree
       for (let round = 0; round < 4; round += 1) {
-        const missing = (candidate: Turn): number => {
+        // `cap`: the count is only wanted if it is under the best so far, so it stops counting when it is not
+        const missing = (candidate: Turn, cap = Number.POSITIVE_INFINITY): number => {
           let missed = 0;
-          for (let i = 1; i < 64; i += 1) {
+          for (let i = 1; i < 64 && missed < cap; i += 1) {
             // the first moments are sampled finely: the body left is nearest then, and nearest to being lost
             for (const x of i === 1 ? [0.0005, 0.001, 0.002, 0.004, 0.008, 1 / 64] : [i / 64]) {
               const t = share * x;
@@ -868,7 +893,7 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
         };
         let best: { turn: Turn; missed: number } = { turn, missed: Number.POSITIVE_INFINITY };
         for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
-          const missed = missing({ ...turn, lift });
+          const missed = missing({ ...turn, lift }, best.missed);
           if (missed < best.missed) best = { turn: { ...turn, lift }, missed };
         }
         if (best.missed > 0) {
@@ -879,7 +904,7 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
             for (const q of [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]) {
               for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
                 const candidate: Turn = { ...turn, lift, hold: { body: input.leaving, u, d, q, far } };
-                const missed = missing(candidate);
+                const missed = missing(candidate, best.missed);
                 if (missed < best.missed) best = { turn: candidate, missed };
               }
             }
@@ -920,6 +945,8 @@ interface Faults {
   step: number;
   /** Moments the look direction turns six degrees or more, turns away from the last view's, or the camera jumps a sixth of the way, and whether the whole turn is over 1.25 times the least plus 2 degrees. */
   pace: number;
+  /** Samples with the planet circled out of the picture (not a fault: it breaks a tie). */
+  planet: number;
 }
 const FAULT_DRIFT = 0.02;
 const FAULT_STEP = 0.3;
@@ -928,7 +955,7 @@ function faultsOf(route: Route): Faults {
   const plan = { route } as unknown as TravelPlan;
   const at = (t: number): TravelSample => travelPose(input, t, plan);
   const last = at(1);
-  const faults: Faults = { empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0 };
+  const faults: Faults = { empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0, planet: 0 };
   const lastF = unit(input.end.forward);
   let turned = 0;
   let way = 0;
@@ -938,6 +965,7 @@ function faultsOf(route: Route): Faults {
   for (let i = 1; i <= 240; i += 1) {
     const s = at(i / 240);
     if (!s.leaving.inside && !s.destination.inside) faults.empty += 1;
+    if (s.around !== undefined && !s.around.inside) faults.planet += 1;
     if (i >= afterTurn && !s.destination.inside) faults.lost += 1;
     if (i > afterTurn) {
       const off = Math.hypot(s.destination.x - last.destination.x, s.destination.y - last.destination.y);
@@ -978,7 +1006,7 @@ function emptyMoments(route: Route): number {
   return empty;
 }
 
-function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPlan, "route"> }): { route: Route; plan: Omit<TravelPlan, "route"> } {
+function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPlan, "route"> }, stop?: () => boolean): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const route = first.route;
   if (route.turn === null || first.plan.path !== "circle" || route.cut || route.share <= 0) return first;
   const was = emptyMoments(route);
@@ -994,12 +1022,14 @@ function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPla
   const bases = new Map<number, Omit<Aim, "far">>();
   for (const { slow, bend, spent: lean } of kinds) {
     if (best !== null && lean >= cost) break;
+    if (stop?.() === true) break;
     // the look directions and ups are the same at every pace: they are worked out once for each lean
     if (!bases.has(bend)) bases.set(bend, aimOf(input, swing, share, bend, 1));
     const base = { ...bases.get(bend)!, slow };
     for (const far of AIM_FAR) {
       const spent = Math.log(far) + lean;
       if (best !== null && spent >= cost) break;
+      if (stop?.() === true) break;
       const candidate: Turn = { ...swing, aim: { ...base, far } };
       const flaws = flawsOf(candidate);
       if (flaws.edge <= AIM_EDGE && flaws.fair) {
@@ -1022,25 +1052,43 @@ function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPla
  * aim point (see `Aim`): the turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample, and only the turn is new. The new turn is taken when
  * it leaves fewer such pictures and keeps to the pace limits. Every other move, and every such move whose walk has no empty picture, is the one it always was.
  */
+const routes = new WeakMap<TravelInput, { route: Route; plan: Omit<TravelPlan, "route"> }>();
+/** The ways to try in turn, the likeliest to be taken first (by how often each was in the survey of 360 walks): the nearest stand and a swing, a stand beyond the destination at 2, 4 and then 1 and 8 times the planet's distance from it. */
+const WAYS = [1, 2, 4, 5, 3, 6];
 function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
+  const kept = routes.get(input);
+  if (kept !== undefined) return kept;
+  const made = routeMade(input);
+  routes.set(input, made);
+  return made;
+}
+function routeMade(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
+  // the time is counted from the start of the plan, and when it is up the other ways stop looking and the best so far is kept; the way a move is first made, with its aim turn, is always worked out, as it is the way
+  // before the other ways were tried and what they are measured against
+  const started = input.budget?.now();
+  const stop = input.budget === undefined || started === undefined ? undefined : (): boolean => input.budget!.now() - started >= input.budget!.ms;
   const first = withAim(input, routeBase(input));
   if (first.route.turn === null || first.plan.path !== "circle" || first.route.cut || first.route.share <= 0) return first;
   const was = faultsOf(first.route);
   if (total(was) === 0) return first;
   // other ways of making the way on, each given the aim turn if it needs one: the nearest stand if its way clears the planet and a swing if not, and stands beyond the destination; the one with the fewest faults
-  // that has none of any kind more than the way it was made is taken
+  // that has none of any kind more than the way it was made is taken, and of two with the same faults the one that keeps the planet in the picture longer; the first with no fault stops the search, and so does the
+  // budget, keeping the best so far
   let best = first;
   let least = was;
-  for (let variant = 1; variant <= 1 + FAR_SIDE.length; variant += 1) {
+  for (const variant of WAYS) {
+    if (stop?.() === true) break;
     const raw = routeBase(input, variant);
+    if (stop?.() === true) break;
     if (raw.plan.path !== "circle" || raw.route.turn === null) continue;
     // the aim turn cures only the empty pictures of the turn: a way made with more of any other fault than the way it was is not taken further
     const rough = faultsOf(raw.route);
     if (rough.lost > was.lost || rough.drift > was.drift || rough.step > was.step || rough.pace > was.pace || rough.driftWorst > was.driftWorst + 1e-12) continue;
-    const other = rough.empty > 0 ? withAim(input, raw) : raw;
+    const other = rough.empty > 0 ? withAim(input, raw, stop) : raw;
     if (other.route.turn === null) continue;
     const faults = rough.empty > 0 ? faultsOf(other.route) : rough;
-    if (betterThan(faults, was) && (best === first || total(faults) < total(least) || (total(faults) === total(least) && faults.driftWorst < least.driftWorst))) {
+    const wins = (a: Faults, b: Faults): boolean => total(a) < total(b) || (total(a) === total(b) && (a.driftWorst < b.driftWorst - 1e-12 || (a.driftWorst <= b.driftWorst + 1e-12 && a.planet < b.planet)));
+    if (betterThan(faults, was) && (best === first || wins(faults, least))) {
       best = other;
       least = faults;
     }

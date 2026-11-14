@@ -27,7 +27,7 @@ import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
-import { travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
+import { TRAVEL_BUDGET_MS, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -939,7 +939,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                 const end = { position: [camera.position.x + shift[0]!, camera.position.y + shift[1]!, camera.position.z + shift[2]!] as Vec3, forward: [ef.x, ef.y, ef.z] as Vec3, up: [eu.x, eu.y, eu.z] as Vec3, fov: fovNow };
                 // every body of the view is kept clear of, the two ends of the move and the planet circled aside
                 const others = (SPACE_BODIES as readonly BodyId[]).filter((id) => id !== glide.leaving && id !== glide.destination && id !== family).map((id) => bodyOf(id)!);
-                const input: TravelInput = { start, end, leaving, destination, others, aspect: size.width / Math.max(1, size.height), kind: glide.kind, pace: glide.pace };
+                const input: TravelInput = { start, end, leaving, destination, others, aspect: size.width / Math.max(1, size.height), kind: glide.kind, pace: glide.pace, budget: { now: () => performance.now(), ms: TRAVEL_BUDGET_MS } };
                 if (around !== null) input.around = bodyOf(around)!;
                 return { input, plan: travelPlan(input) };
               };
