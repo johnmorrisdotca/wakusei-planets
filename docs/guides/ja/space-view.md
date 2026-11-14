@@ -90,7 +90,22 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 `orbiters` (または `space.orbiters`) は、月と火星を周回する探査機を、軌道の線の上の点として名前つきで描きます。天体が画面で十分に大きくなってからで、経路は初めて表示するときだけ読み込みます。詳しくは[月と火星の周回機](orbiters.md)をどうぞ。
 
-`asteroids` (と `space.asteroids`。初期値はオフ) は、`/asteroids` の104個の天体を表示に置きます。それぞれ表示している日付の軌道上の点で、帯の点と同じ1回のインスタンス描画で描き、カメラに近い数個 (最大12個。実際の縮尺ではカメラから約1天文単位以内) に、ページの言語で名前をつけます。名前はボタンで、押すと `wakusei-body-click` (`{ id, name, kind: "small-body" }`) と `wakusei-asteroid-click` (`{ id, name }`) が送られ、ほかには何も起きません (小惑星へ行く動作は別の話で、ここでは行いません)。それぞれ `sight()` の項目で `kind: "small-body"` です (ベスタとパラスは、このパッケージ自身の天体と同じ `asteroid` のままです)。データはこのオプションを初めてオンにしたときに、専用のファイルから読み込みます。一度もオンにしないページはそれを取りに行きません。オフのあいだは、何も計算も描画もしません。位置は二体問題で、それぞれの元期の近くでよく合います (どれほどかは `/asteroids` の `ASTEROID_ACCURACY` にあります)。オンにして Chromium のソフトウェア描画で測ると (50回の描画、`stats.asteroids.ms`)、104個の位置を求めるのに1回の描画あたり中央値0.1ミリ秒、最大1.5ミリ秒でした (CPUを4分の1の速さに絞った状態)。静止しているあいだは何も描きません。`stats.asteroids` が、置いた数と名前をつけた数を返します。
+`asteroids` (と `space.asteroids`。初期値はオフ) は、`/asteroids` の104個の天体を表示に置きます。それぞれ表示している日付の軌道上の点で、帯の点と同じ1回のインスタンス描画で描き、カメラに近い数個 (最大12個。実際の縮尺ではカメラから約1天文単位以内) に、ページの言語で名前をつけます。名前はボタンで、押すと `wakusei-body-click` (`{ id, name, kind: "small-body" }`) と `wakusei-asteroid-click` (`{ id, name }`) が送られ、ほかには何も起きません (小惑星へ行く動作は別の話で、ここでは行いません)。それぞれ `sight()` の項目で `kind: "small-body"` です (ベスタとパラスは、このパッケージ自身の天体と同じ `asteroid` のままです)。データはこのオプションを初めてオンにしたときに、専用のファイルから読み込みます。一度もオンにしないページはそれを取りに行きません。オフのあいだは、何も計算も描画もしません。位置は二体問題で、それぞれの元期の近くでよく合います (どれほどかは `/asteroids` の `ASTEROID_ACCURACY` にあります)。オンにして Chromium のソフトウェア描画で測ると (50回の描画、`stats.asteroids.ms`)、104個の位置を求めるのに1回の描画あたり中央値0.50ミリ秒、最大5.80ミリ秒でした (CPUを4分の1の速さに絞った状態。2026-11-14に50回の描画で測定)。静止しているあいだは何も描きません。`stats.asteroids` が、置いた数と名前をつけた数を返します。属性でオンにします。
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The asteroids of the set, on 2 November 2026</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space time="2026-11-02T14:00Z" speed="0" scale="true" asteroids look="realistic" style="width: 420px"></wakusei-space>
+  </body>
+</html>
+```
 
 ## ほかの衛星をすべて点で
 

@@ -90,7 +90,22 @@ The demo's picker is three clicks in a row: a kind (the Sun and planets, dwarf p
 
 `orbiters` (and `space.orbiters`) draws the spacecraft in orbit round the Moon and Mars as dots on their orbit lines with their names, once the body is big enough on the screen, loading their paths only when first shown: [The orbiters of the Moon and Mars](orbiters.md).
 
-`asteroids` (and `space.asteroids`; off by default) places the 104 bodies of `/asteroids` in the view: each a point on its orbit on the date shown, drawn in the one instanced draw with the belts' points, with the nearest few (at most 12, within about an astronomical unit of the camera in the true scale) named in the page's language. A name is a button: a press sends `wakusei-body-click` with `{ id, name, kind: "small-body" }` and `wakusei-asteroid-click` with `{ id, name }`, and nothing else happens (going to an asteroid is a separate matter, not done here). Each is an entry of `sight()` with `kind: "small-body"` (Vesta and Pallas keep `asteroid`, the kind the package's own bodies have). The records are loaded when the option is first turned on, in a file of their own that a page that never turns it on does not fetch, and with it off nothing is worked out or drawn for them. The positions are two-body, good near each body's epoch (`ASTEROID_ACCURACY` of `/asteroids` says how good). Measured with the option on in Chromium drawing in software (50 draws, `stats.asteroids.ms`): placing the 104 bodies took a median of 0.1 ms a draw and at most 1.5 ms with the CPU throttled to a quarter of the speed, and nothing is drawn at rest. `stats.asteroids` says how many were placed and named.
+`asteroids` (and `space.asteroids`; off by default) places the 104 bodies of `/asteroids` in the view: each a point on its orbit on the date shown, drawn in the one instanced draw with the belts' points, with the nearest few (at most 12, within about an astronomical unit of the camera in the true scale) named in the page's language. A name is a button: a press sends `wakusei-body-click` with `{ id, name, kind: "small-body" }` and `wakusei-asteroid-click` with `{ id, name }`, and nothing else happens (going to an asteroid is a separate matter, not done here). Each is an entry of `sight()` with `kind: "small-body"` (Vesta and Pallas keep `asteroid`, the kind the package's own bodies have). The records are loaded when the option is first turned on, in a file of their own that a page that never turns it on does not fetch, and with it off nothing is worked out or drawn for them. The positions are two-body, good near each body's epoch (`ASTEROID_ACCURACY` of `/asteroids` says how good). Measured with the option on in Chromium drawing in software (50 draws, `stats.asteroids.ms`): placing the 104 bodies took a median of 0.50 ms a draw and at most 5.80 ms with the CPU throttled to a quarter of the speed (measured 2026-11-14, 50 draws), and nothing is drawn at rest. `stats.asteroids` says how many were placed and named. A page turns it on with the attribute:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The asteroids of the set, on 2 November 2026</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space time="2026-11-02T14:00Z" speed="0" scale="true" asteroids look="realistic" style="width: 420px"></wakusei-space>
+  </body>
+</html>
+```
 
 ## Every other known moon, as dots
 
