@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A move between two moons of one planet no longer passes through an empty picture** (MODULES-1228). Where the first and last views leave no turn about the planet that keeps either moon in the picture, the turn is made by an aim point: the camera backs off from the moon left, looking at a point that goes from it to the destination, until both are in the picture, turns, and comes in. The turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample; it is used only when it leaves fewer empty pictures and keeps to the pace limits, and every other move is unchanged. Walked from ten sides at three picture shapes and two scales, six pairs of moons (Callisto to Europa, Io to Ganymede, Titan to Enceladus, Oberon to Miranda, Phobos to Deimos, Triton to Proteus) had empty pictures on 288 of 360 walks (13,493 samples) before and 31 walks (394 samples) now: the walk (`scripts/travel-table.ts`) and the cases left are in `test/space-travel.test.ts`.
+
 ## [0.52.0] - 2026-11-13
 
 - **The craft page's Play moves only its marker** (MODULES-1339). `demo/craft.html` no longer redraws the whole chart on each Play step: it moves the marker and the line and leaves the rest alone, and `e2e/craft-freeze.demo.ts` counts the craft loop's frames apart from the page's others. Demo page only: the package is unchanged.

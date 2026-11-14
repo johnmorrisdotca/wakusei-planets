@@ -17,6 +17,9 @@
 //   - the destination directly behind the body being left, or the two in one direction: the pivot puts the body left to one side, backing up until the straight line to the destination clears it;
 //   - the destination is the Sun, or a planet that is a point until the last stretch (the true scale): its place on the screen is reported at every moment, so a marker can stand for it;
 //   - the camera starts inside a beside-a-moon view: the moon, or its planet for a move within the planet's family, is the pivot;
+//   - a move between two moons of one planet whose first and last views (the whole moon from the side the camera comes from) leave no turn about the planet or the moon that keeps one of them in the picture: the turn
+//     is made by an AIM POINT instead (see `Aim`), the camera backing off from the moon left, looking at a point that goes from it to the destination, until both are in the picture together, and coming in; it takes
+//     the same share of the move and ends in the same place, so the way on is the same, and it is used only when it leaves fewer empty pictures and keeps to the pace limits (`PACE_*`);
 //   - the two views almost the same: no turn stage, a short move;
 //   - a view of a region (a set of orbits round a body): a straight pull back or push in with no turn of its own.
 import { add, cross, dot, length, RAD, scale, sub, unit, type Vec3 } from "../vec.ts";
@@ -214,6 +217,17 @@ const ease = (x: number): number => {
   const t = clamp01(x);
   return t * t * t * (t * (t * 6 - 15) + 10);
 };
+/** The share of a turn that `ease` has taken to `p`. */
+const unease = (p: number): number => {
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 30; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (ease(mid) < p) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+};
 const smooth = (x: number): number => {
   const t = clamp01(x);
   return t * t * (3 - 2 * t);
@@ -367,7 +381,56 @@ interface Turn {
   fov1: number;
   /** Where the camera starts near the body left and the pivot is far off: the turn begins as a turn about that body (kept at `u`, `d` away, backing off to `far` times that) and gives way to the pivot's circle over the first `q` of the turn. */
   hold?: { body: TravelBody; u: Vec3; d: number; q: number; far: number };
+  /** Where the turn is made by an aim point (see `Aim`) and not by a swing about the pivot. */
+  aim?: Aim;
 }
+/**
+ * The turn of a move between two moons of one planet when no turn about the planet keeps one of the two in the picture: the camera looks at an aim point that goes from the moon being left to the destination,
+ * and stands on the far side of it, `r` away along `n` (a direction that turns the shortest way from the one the move starts on to the one it ends on), backing off by `far` times in the middle so that the two
+ * moons are in the picture together there and the look direction can pass from one to the other without leaving both. `facings` is the table of look directions and ups at 97 even steps of the turn: the
+ * direction to the aim point, then the small turns that join it to the first and last views, with the roll carried along and the rest spread evenly.
+ */
+interface Aim {
+  from: TravelBody;
+  to: TravelBody;
+  n0: Vec3;
+  n1: Vec3;
+  r0: number;
+  r1: number;
+  far: number;
+  /** The direction the camera leans out in the middle of the turn (away from the planet, square to the line between the two moons) and how far, in units of the distance: 0 is the plain turn from `n0` to `n1`. */
+  lean: Vec3;
+  bend: number;
+  /** How much slower than a plain turn the aim point's turn is made. */
+  slow: number;
+  /** The look direction's turn through the table, in degrees. */
+  degrees: number;
+  facings: Facing[];
+}
+const AIM_STEPS = 96;
+/** The aim point stays on the moon left while the camera backs off (to 0.3 of the turn), goes to the destination while the camera stands far off (0.3 to 0.7), and stays on the destination while the camera comes in. */
+const aimPan = (p: number): number => smooth((p - 0.15) / 0.7);
+/** The direction from the aim point to the camera, as the aim goes `w` of the way from the moon left to the destination. */
+function aimSide(a: { n0: Vec3; n1: Vec3; lean: Vec3; bend: number }, w: number): Vec3 {
+  const n = arc(a.n0, a.n1, w);
+  return a.bend === 0 ? n : unit(add(n, scale(a.lean, a.bend * Math.sin(Math.PI * w) ** 2)));
+}
+/** The camera's distance from the aim point: from the first, up to `far` times the larger of the two ends by 0.4 of the turn, held, and down to the last from 0.6. */
+function aimDistance(a: { r0: number; r1: number; far: number }, p: number): number {
+  const top = Math.max(a.r0, a.r1) * a.far;
+  return Math.exp(Math.log(a.r0) + (Math.log(top) - Math.log(a.r0)) * smooth(p / 0.5) + (Math.log(a.r1) - Math.log(top)) * smooth((p - 0.5) / 0.5));
+}
+/** The backing off to try, in turn, and how far from the middle of the picture the nearer moon may get (1 is the edge), and how many moments of the turn are looked at. */
+const AIM_FAR = Array.from({ length: 19 }, (_, k) => 1.5 ** k);
+const AIM_BEND = [0, 0.5, 1, 2, 4];
+const AIM_SLOW = [1, 1.4, 2, 3, 4.5];
+const AIM_EDGE = 0.95;
+const AIM_CHECKS = 240;
+/** The pace the aim point's turn keeps to, a little inside the limits the move is walked against: degrees the look direction turns in a 240th of the move, the share of the frame the destination moves in it, the degrees it may turn back, and the share of the way the camera goes in it. */
+const PACE_DEGREES = 5;
+const PACE_SCREEN = 0.25;
+const PACE_UNTURN = 0.04;
+const PACE_WAY = 0.045;
 /** The way on, from the camera's place relative to the body `about`: a straight `line`, or straight at the body and then round it (`swing`). */
 interface Leg {
   about: TravelBody;
@@ -404,7 +467,19 @@ interface Route {
 
 const LOOK_BACK_TURN = 0.4;
 
-function turnAt(turn: Turn, p: number, t: number): { position: Vec3; o: Facing; fov: number } {
+function turnAt(turn: Turn, p: number, t: number, share?: number): { position: Vec3; o: Facing; fov: number } {
+  if (turn.aim !== undefined) {
+    const a = turn.aim;
+    // the aim point's turn goes at its own pace, the share of the turn gone and not the eased share
+    const q = share ?? unease(p);
+    const x = q * AIM_STEPS;
+    const i = Math.min(AIM_STEPS - 1, Math.floor(x));
+    const f = unit(mix(a.facings[i]!.f, a.facings[i + 1]!.f, x - i));
+    const u = mix(a.facings[i]!.u, a.facings[i + 1]!.u, x - i);
+    const w = aimPan(q);
+    const aim = mix(placeOf(a.from, t), placeOf(a.to, t), w);
+    return { position: add(aim, scale(aimSide(a, w), aimDistance(a, q))), o: { f, u: unit(sub(u, scale(f, dot(u, f)))) }, fov: fovBetween(turn.fov0, turn.fov1, p) };
+  }
   const o = swingAt(turn.swing, p);
   // the lift is early: the camera backs off as it starts to turn, so the body left goes into the picture, not out of its side
   const w = Math.sqrt(p);
@@ -455,7 +530,7 @@ function clearOf(route: Route, position: Vec3, t: number): Vec3 {
 
 function along(route: Route, t: number): { position: Vec3; o: Facing; fov: number; stage: "turn" | "travel" | "arrive" } {
   const inTurn = route.turn !== null && t < route.share;
-  const at = inTurn ? turnAt(route.turn!, ease(t / route.share), t) : legAt(route.leg, ease(route.share >= 1 ? 1 : (t - route.share) / (1 - route.share)), t);
+  const at = inTurn ? turnAt(route.turn!, ease(t / route.share), t, clamp01(t / route.share)) : legAt(route.leg, ease(route.share >= 1 ? 1 : (t - route.share) / (1 - route.share)), t);
   return { position: clearOf(route, at.position, t), o: at.o, fov: at.fov, stage: inTurn ? "turn" : t < route.arrive ? "travel" : "arrive" };
 }
 
@@ -588,12 +663,108 @@ function lineLeg(input: TravelInput, about: TravelBody, watch: TravelBody | unde
 
 /** The way on is never hurried by a long turn: it takes at least 45 percent of the turn's time. */
 const legMs = (leg: Leg, turn: number = 0): number => Math.max(0.45 * turn, 900 + 320 * Math.max(Math.log1p(leg.l / (leg.ea + leg.eb)), Math.abs(Math.log(Math.max(1e-12, leg.d1) / Math.max(1e-12, leg.d0)))) + 16 * swingDegrees(leg.swing));
+/** The aim point's turn without its backing off: the look directions and ups, from the first view's to the last, for the stand `end` of a turn that was a swing about the planet. */
+function aimOf(input: TravelInput, turn: Turn, tm: number, bend: number, slow: number): Omit<Aim, "far"> {
+  const o0 = turn.swing.from;
+  const end = turnAt(turn, 1, tm);
+  const from = sub(input.start.position, input.leaving.from);
+  const to = sub(end.position, placeOf(input.destination, tm));
+  const r0 = Math.max(1e-12, length(from));
+  const r1 = Math.max(1e-12, length(to));
+  const n0 = length(from) < 1e-12 ? scale(o0.f, -1) : unit(from);
+  const n1 = length(to) < 1e-12 ? scale(end.o.f, -1) : unit(to);
+  // out from the planet, square to the line between the two moons, for the middle of the turn
+  const middle = sub(mix(placeOf(input.leaving, tm / 2), placeOf(input.destination, tm / 2), 0.5), placeOf(turn.pivot, tm / 2));
+  const line = unit(sub(placeOf(input.destination, tm / 2), placeOf(input.leaving, tm / 2)));
+  const square = sub(middle, scale(line, dot(middle, line)));
+  const lean = length(square) < 1e-9 * Math.max(1, length(middle)) ? squareTo(line) : unit(square);
+  // the small turns that join the direction to the aim point to the first and the last views
+  const first = angleOf(scale(n0, -1), o0.f);
+  const last = angleOf(scale(n1, -1), end.o.f);
+  const axis0 = length(cross(scale(n0, -1), o0.f)) < 1e-9 ? squareTo(o0.f) : unit(cross(scale(n0, -1), o0.f));
+  const axis1 = length(cross(scale(n1, -1), end.o.f)) < 1e-9 ? squareTo(end.o.f) : unit(cross(scale(n1, -1), end.o.f));
+  const ups: Vec3[] = [];
+  const looks: Vec3[] = [];
+  for (let k = 0; k <= AIM_STEPS; k += 1) {
+    const p = k / AIM_STEPS;
+    const g = aimPan(p);
+    looks.push(unit(spin(spin(scale(aimSide({ n0, n1, lean, bend }, g), -1), axis1, last * g), axis0, first * (1 - g))));
+  }
+  // the up carried along the looks by the least turn, and the roll that is left spread evenly
+  ups.push(o0.u);
+  for (let k = 1; k <= AIM_STEPS; k += 1) {
+    const a = looks[k - 1]!;
+    const b = looks[k]!;
+    const turned = angleOf(a, b);
+    const carried = turned < 1e-12 ? ups[k - 1]! : spin(ups[k - 1]!, unit(cross(a, b)), turned);
+    ups.push(unit(sub(carried, scale(b, dot(carried, b)))));
+  }
+  const final = ups[AIM_STEPS]!;
+  const roll = Math.atan2(dot(cross(final, end.o.u), looks[AIM_STEPS]!), dot(final, end.o.u));
+  const facings = looks.map((f, k): Facing => {
+    const rolled = spin(ups[k]!, f, roll * (k / AIM_STEPS));
+    return { f, u: unit(sub(rolled, scale(f, dot(rolled, f)))) };
+  });
+  let degrees = 0;
+  for (let k = 1; k <= AIM_STEPS; k += 1) degrees += angleOf(facings[k - 1]!.f, facings[k]!.f) / RAD;
+  return { from: input.leaving, to: input.destination, n0, n1, r0, r1, lean, bend, slow, degrees, facings };
+}
 const turnMs = (turn: Turn): number => {
+  if (turn.aim !== undefined) {
+    const a = turn.aim;
+    return Math.max(500, 24 * a.slow * a.degrees + 400 * (Math.log(Math.max(a.r0, a.r1) * a.far / a.r0) + Math.log(Math.max(a.r0, a.r1) * a.far / a.r1)) / 2);
+  }
   const ms = 16 * swingDegrees(turn.swing) + 8 * (angleOf(turn.u0, turn.u1) / RAD) + 400 * Math.abs(Math.log(turn.d1 / turn.d0)) + 600 * turn.lift;
   return ms < 40 ? 0 : Math.max(500, ms);
 };
 
-function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
+/**
+ * How a turn made by an aim point does when walked at the moments a walk of the move samples (a 240th of the move apart), with the turn taking `sc` of the move: the furthest from the middle of the picture
+ * the nearer of the two moons gets (1 is the edge, infinity is neither in the picture at some moment), and whether it keeps to the pace limits: the look direction turns less than `PACE_DEGREES` between two
+ * moments, the destination moves less than `PACE_SCREEN` of the frame, the look direction does not turn away from the last view's by more than `PACE_UNTURN` degrees, the camera goes less than `PACE_WAY` of the
+ * way, and the whole turn is under 1.2 times the least plus 1.5 degrees.
+ */
+function aimFlaws(input: TravelInput, candidate: Turn, shells: Route["shells"], leg: Leg, sc: number): { edge: number; fair: boolean } {
+  const last = unit(input.end.forward);
+  const least = angleOf(unit(input.start.forward), last) / RAD;
+  let edge = 0;
+  let fair = true;
+  let before: { position: Vec3; f: Vec3; dest: TravelSight } | null = null;
+  let way = 0;
+  let turned = 0;
+  const seen: { position: Vec3; f: Vec3; dest: TravelSight }[] = [];
+  for (let i = 0; i <= Math.floor(AIM_CHECKS * sc) + 1; i += 1) {
+    const x = Math.min(1, i / (AIM_CHECKS * sc));
+    const t = sc * x;
+    const at = turnAt(candidate, ease(x), t, x);
+    const position = clearOf({ shells, leg } as unknown as Route, at.position, t);
+    const frame = frameOf(at.fov, input.aspect);
+    const l = sightOf(input.leaving, t, position, at.o, frame);
+    const d = sightOf(input.destination, t, position, at.o, frame);
+    const off = (sight: TravelSight): number => (sight.inside ? Math.max(Math.abs(sight.x), Math.abs(sight.y)) : Number.POSITIVE_INFINITY);
+    edge = Math.max(edge, Math.min(off(l), off(d)));
+    const now = { position, f: at.o.f, dest: d };
+    if (before !== null) {
+      const step = angleOf(before.f, at.o.f) / RAD;
+      turned += step;
+      way += length(sub(position, before.position));
+      if (step > PACE_DEGREES) fair = false;
+      if (before.dest.inside && d.inside && Math.hypot(d.x - before.dest.x, d.y - before.dest.y) > PACE_SCREEN) fair = false;
+      if (angleOf(at.o.f, last) - angleOf(before.f, last) > PACE_UNTURN * RAD) fair = false;
+    }
+    seen.push(now);
+    before = now;
+    if (x >= 1) break;
+  }
+  if (before !== null) {
+    const rest = length(sub(input.end.position, before.position));
+    for (let k = 1; k < seen.length; k += 1) if (length(sub(seen[k]!.position, seen[k - 1]!.position)) > PACE_WAY * (way + rest)) fair = false;
+    if (turned + angleOf(before.f, last) / RAD > 1.2 * least + 1.5) fair = false;
+  }
+  return { edge, fair };
+}
+
+function routeBase(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const wanted = input.reduced ? "cut" : (input.kind ?? "turn-travel");
   const kind: Exclude<TravelKind, "auto"> = wanted === "auto" ? "turn-travel" : wanted;
   const clearance = input.clearance ?? TRAVEL_CLEARANCE;
@@ -709,6 +880,63 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
   const arrive = share + (1 - share) * Math.min(0.9, Math.max(0.6, hi));
   const route: Route = { ...base, cut: false, turn, share, arrive, leg };
   return { route, plan: { kind, path, stages: { turn: share, travel: arrive - share, arrive: 1 - arrive }, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)), turn: least, settle: leg.type === "swing" ? swingDegrees(leg.swing) : 0, easing } };
+}
+
+/** The samples of a walk of the move (a 240th of it apart) at which neither the moon left nor the destination is in the picture. */
+function emptyMoments(route: Route): number {
+  const input = route.input;
+  const frameFor = (fov: number): Frame => frameOf(fov, input.aspect);
+  let empty = 0;
+  for (let i = 1; i <= 240; i += 1) {
+    const t = i / 240;
+    const at = along(route, t);
+    const frame = frameFor(at.fov);
+    if (!sightOf(input.leaving, t, at.position, at.o, frame).inside && !sightOf(input.destination, t, at.position, at.o, frame).inside) empty += 1;
+  }
+  return empty;
+}
+
+/**
+ * The route of a move. A move between two moons of one planet is first made as it always was. If a walk of it has a picture with neither the moon left nor the destination in it, its turn is made again by an
+ * aim point (see `Aim`): the turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample, and only the turn is new. The new turn is taken when
+ * it leaves fewer such pictures and keeps to the pace limits. Every other move, and every such move whose walk has no empty picture, is the one it always was.
+ */
+function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "route"> } {
+  const first = routeBase(input);
+  const route = first.route;
+  if (route.turn === null || first.plan.path !== "circle" || route.cut || route.share <= 0) return first;
+  const was = emptyMoments(route);
+  if (was === 0) return first;
+  const share = route.share;
+  const swing = route.turn;
+  const flawsOf = (candidate: Turn): { edge: number; fair: boolean } => aimFlaws(input, candidate, route.shells, route.leg, share);
+  // each way of leaning out and each pace, with the least backing off that keeps the nearer moon inside 0.95 of the way to the edge and every pace of the walk inside its limit; of those the one
+  // that costs least (the log of the backing off, the lean and the slowing) is taken, and none if none will do
+  let cost = Number.POSITIVE_INFINITY;
+  let best: Turn | null = null;
+  const kinds = AIM_SLOW.flatMap((slow) => AIM_BEND.map((bend) => ({ slow, bend, spent: 0.5 * bend + 2 * Math.log(slow) }))).sort((a, b) => a.spent - b.spent);
+  for (const { slow, bend, spent: lean } of kinds) {
+    if (best !== null && lean >= cost) break;
+    const base = aimOf(input, swing, share, bend, slow);
+    for (const far of AIM_FAR) {
+      const spent = Math.log(far) + lean;
+      if (best !== null && spent >= cost) break;
+      const candidate: Turn = { ...swing, aim: { ...base, far } };
+      const flaws = flawsOf(candidate);
+      if (flaws.edge <= AIM_EDGE && flaws.fair) {
+        best = candidate;
+        cost = spent;
+        break;
+      }
+    }
+  }
+  if (best === null) return first;
+  const aimed: Route = { ...route, turn: best };
+  if (!flawsOf(best).fair || emptyMoments(aimed) >= was) return first;
+  // the same shares of the move, and a length that is not less than it was
+  const t0 = turnMs(best);
+  const total = Math.max(t0 / share, first.plan.duration / Math.max(0.05, input.pace ?? 1));
+  return { route: aimed, plan: { ...first.plan, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)) } };
 }
 
 /**
