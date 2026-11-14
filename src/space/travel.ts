@@ -82,7 +82,8 @@ export const TRAVEL_CLEARANCE = 1;
  * turn, is always worked out. Measured on the author's Mac mini over the 360 surveyed plain-view moves of six pairs of moons (most need no other way): the first way alone takes a median of 4 ms, 90 percent under
  * 10 ms and at most 37 ms; with this budget a plan takes a median of 4.5 ms, 90 percent under 35 ms and at most about 76 ms, against the same median, 34 ms and about 105 ms with no budget. A phone is several times
  * slower, so there the planner stops sooner and keeps the best way found, and the same move can be planned differently on two devices (never with more faults than the first way). On this machine the budget costs
- * almost nothing in faults (61 drifting samples, 28 empty and 12 lost over the 360 walks, against 54, 27 and 12 with no budget).
+ * little in faults, and what it costs depends on the load: over the 360 walks, 61 to 69 drifting samples, 32 to 70 empty and 12 to 15 lost in six runs (three of them with two other copies running at once),
+ * against 54, 27 and 12 with no budget and 605, 394 and 45 before the other ways; never more faults of any kind than the first way.
  *
  * @example
  * ```ts
