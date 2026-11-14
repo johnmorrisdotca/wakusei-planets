@@ -27,8 +27,8 @@ const clock = (step: number): (() => number) => {
   };
 };
 
-test("the value the space view passes is 40 ms", () => {
-  assert.equal(TRAVEL_BUDGET_MS, 40);
+test("the value the space view passes is 60 ms", () => {
+  assert.equal(TRAVEL_BUDGET_MS, 60);
 });
 
 test("with no time left the planner keeps the first way it made, and with a little it keeps the best so far, never worse than the first and never better than trying every way", () => {
