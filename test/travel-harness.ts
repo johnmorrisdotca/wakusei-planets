@@ -59,6 +59,12 @@ export function viewOf(id: BodyId, mode: ScaleMode, ms: number, aspect: number, 
   return travelArrival({ body: here.at, radius: here.radius, from, sun: id === "sun" ? undefined : sun, aspect });
 }
 
+/** The time budget given to the planner by every move made from here on: none, so that a walk is the same each time. Only the table of scripts/travel-table.ts sets one, to see what it costs. */
+let budgetOf: TravelInput["budget"];
+export const useBudget = (budget: TravelInput["budget"]): void => {
+  budgetOf = budget;
+};
+
 export interface Move {
   input: TravelInput;
   /** Every body the path is kept clear of, by name. */
@@ -83,7 +89,7 @@ export function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, ki
   const first = Array.isArray(plain) ? [site(a, mode, t0).at[0] + plain[0], site(a, mode, t0).at[1] + plain[1], site(a, mode, t0).at[2] + plain[2]] as Vec3 : sunSide;
   const start = viewOf(a, mode, t0, aspect, first, plain !== false);
   const end = viewOf(b, mode, t0 + span, aspect, start.position, plain !== false);
-  const input: TravelInput = { start, end, leaving: get(a), destination: get(b), around: shared === undefined ? undefined : get(shared), others: bodies.map((entry) => entry.body), aspect, kind };
+  const input: TravelInput = { start, end, leaving: get(a), destination: get(b), around: shared === undefined ? undefined : get(shared), others: bodies.map((entry) => entry.body), aspect, kind, ...(budgetOf === undefined ? {} : { budget: budgetOf }) };
   return { input, bodies };
 }
 
