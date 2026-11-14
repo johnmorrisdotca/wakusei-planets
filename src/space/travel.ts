@@ -24,7 +24,31 @@
 //     swing from a stand that clears the planet, the nearest one, or one beyond the destination on the far side from the planet, and the way with the fewest faults that has none of any kind more than the first is taken;
 //   - the two views almost the same: no turn stage, a short move;
 //   - a view of a region (a set of orbits round a body): a straight pull back or push in with no turn of its own.
-import { add, cross, dot, length, RAD, scale, sub, unit, type Vec3 } from "../vec.ts";
+import { add, cross, dot, RAD, scale, sub, type Vec3 } from "../vec.ts";
+
+// The planner measures a very large number of lengths. This is `Math.hypot(x, y, z)` worked out in the same steps as the engine does (scaled by the largest, compensated sum, square root), so it gives the same
+// numbers, without the cost of calling the built-in with a list of arguments.
+const length = (a: Vec3): number => {
+  const x = Math.abs(a[0]);
+  const y = Math.abs(a[1]);
+  const z = Math.abs(a[2]);
+  const max = x > y ? (x > z ? x : z) : y > z ? y : z;
+  if (max === 0) return 0;
+  let sum = 0;
+  let comp = 0;
+  for (let i = 0; i < 3; i += 1) {
+    const n = Math.abs(a[i]!) / max;
+    const summand = n * n - comp;
+    const preliminary = sum + summand;
+    comp = preliminary - sum - summand;
+    sum = preliminary;
+  }
+  return Math.sqrt(sum) * max;
+};
+const unit = (a: Vec3): Vec3 => {
+  const n = length(a);
+  return n === 0 ? [0, 0, 0] : [a[0] / n, a[1] / n, a[2] / n];
+};
 
 /**
  * How a move is made. The names and their order are the same as `Transition` in `glide.ts` (the list the space view's `transition` takes), so one value serves both: `turn-travel` (the default: turn or back
@@ -55,9 +79,10 @@ export const TRAVEL_CLEARANCE = 1;
 
 /**
  * The time in milliseconds, counted from the start of the plan, that the space view lets the planner spend on the other ways of a move within a planet's family (`TravelInput.budget`); the first way, with its aim
- * turn, is always worked out. Measured on the author's Mac mini over the 360 surveyed plain-view moves of six pairs of moons (most need no other way): a median of 14 ms, 90 percent under 52 ms and at most about
- * 100 ms with this budget, against a median of 14 ms, 90 percent under 83 ms and at most 300 ms with none. A phone is several times slower, so there the planner stops sooner and keeps the best way found, and the same
- * move can be planned differently on two devices (never with more faults than the first way).
+ * turn, is always worked out. Measured on the author's Mac mini over the 360 surveyed plain-view moves of six pairs of moons (most need no other way): the first way alone takes a median of 4 ms, 90 percent under
+ * 10 ms and at most 37 ms; with this budget a plan takes a median of 4.5 ms, 90 percent under 35 ms and at most about 76 ms, against the same median, 34 ms and about 105 ms with no budget. A phone is several times
+ * slower, so there the planner stops sooner and keeps the best way found, and the same move can be planned differently on two devices (never with more faults than the first way). On this machine the budget costs
+ * almost nothing in faults (61 drifting samples, 28 empty and 12 lost over the 360 walks, against 54, 27 and 12 with no budget).
  *
  * @example
  * ```ts
@@ -66,7 +91,7 @@ export const TRAVEL_CLEARANCE = 1;
  * console.log(TRAVEL_BUDGET_MS);
  * ```
  */
-export const TRAVEL_BUDGET_MS = 40;
+export const TRAVEL_BUDGET_MS = 60;
 
 /**
  * A camera: where it is, the unit vectors it looks along and has up in the picture, and its vertical field of view in degrees. The same four as `besideMoon` and `ridePose` give.
@@ -817,6 +842,60 @@ function aimFlaws(input: TravelInput, candidate: Turn, shells: Route["shells"], 
   return { edge, fair };
 }
 
+/**
+ * The count of moments of a turn, among 68 from its first moments (sampled finely: the body left is nearest then, and nearest to being lost) to its last, at which neither the body left nor the destination is
+ * inside 0.9 of the picture, as a function of the lift and the hold that are tried on the turn: what does not depend on them (the look direction, the field of view, the places of the bodies, the pivot's
+ * direction) is worked out once for the turn. Every hold tried on a turn has the same direction `u` and body, as the search gives it. It gives the numbers `turnAt` and `sightOf` give, and stops counting at `cap`; the moments that missed before are looked at first.
+ */
+function backOffKit(input: TravelInput, turn: Turn, share: number): (lift: number, hold: Turn["hold"], cap: number) => number {
+  const xs: number[] = [];
+  for (let i = 1; i < 64; i += 1) for (const x of i === 1 ? [0.0005, 0.001, 0.002, 0.004, 0.008, 1 / 64] : [i / 64]) xs.push(x);
+  const moments = xs.map((x) => {
+    const t = share * x;
+    const p = ease(x);
+    const o = swingAt(turn.swing, p);
+    return {
+      t, p, o,
+      w: Math.sqrt(p),
+      base: Math.log(turn.d0) + (Math.log(turn.d1) - Math.log(turn.d0)) * p,
+      dir: toScene(o, arc(turn.u0, turn.u1, p)),
+      pivot: placeOf(turn.pivot, t),
+      frame: frameOf(fovBetween(turn.fov0, turn.fov1, p), input.aspect),
+      holdDir: null as Vec3 | null,
+      holdAt: null as Vec3 | null,
+    };
+  });
+  // the moments that missed are moved to the front, so that a candidate that misses is found out early
+  const order = moments.map((_, i) => i);
+  const seen = (body: TravelBody, m: (typeof moments)[number], position: Vec3): boolean => {
+    const sight = sightOf(body, m.t, position, m.o, m.frame);
+    return sight.inside && Math.abs(sight.x) <= 0.9 && Math.abs(sight.y) <= 0.9;
+  };
+  return (lift, hold, cap) => {
+    let missed = 0;
+    for (let k = 0; k < order.length && missed < cap; k += 1) {
+      const m = moments[order[k]!]!;
+      const d = Math.exp(m.base + lift * 4 * m.w * (1 - m.w));
+      let position = sub(m.pivot, scale(m.dir, d));
+      if (hold !== undefined) {
+        m.holdDir ??= toScene(m.o, hold.u);
+        m.holdAt ??= placeOf(hold.body, m.t);
+        const near = sub(m.holdAt, scale(m.holdDir, hold.d * (1 + (hold.far - 1) * smooth(m.p / hold.q))));
+        position = mix(near, position, smooth(m.p / hold.q));
+      }
+      if (!seen(input.leaving, m, position) && !seen(input.destination, m, position)) {
+        missed += 1;
+        if (k > 0) {
+          const at = order[k]!;
+          order.splice(k, 1);
+          order.unshift(at);
+        }
+      }
+    }
+    return missed;
+  };
+}
+
 function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const wanted = input.reduced ? "cut" : (input.kind ?? "turn-travel");
   const kind: Exclude<TravelKind, "auto"> = wanted === "auto" ? "turn-travel" : wanted;
@@ -870,27 +949,11 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
       }
     } else if (family && turn.pivot !== input.leaving) {
       // the planet is held, not the moon left: back the turn off in its middle until one of the two bodies is in the picture at every moment of it
-      const frameAt = (fov: number): Frame => frameOf(fov, input.aspect);
       // the stand is for the moment the turn ends, so when the backed-off turn takes another share of the move the stand is worked out again for that moment, until the two agree
       for (let round = 0; round < 4; round += 1) {
         // `cap`: the count is only wanted if it is under the best so far, so it stops counting when it is not
-        const missing = (candidate: Turn, cap = Number.POSITIVE_INFINITY): number => {
-          let missed = 0;
-          for (let i = 1; i < 64 && missed < cap; i += 1) {
-            // the first moments are sampled finely: the body left is nearest then, and nearest to being lost
-            for (const x of i === 1 ? [0.0005, 0.001, 0.002, 0.004, 0.008, 1 / 64] : [i / 64]) {
-              const t = share * x;
-              const at = turnAt(candidate, ease(x), t);
-              const frame = frameAt(at.fov);
-              const seen = (body: TravelBody): boolean => {
-                const sight = sightOf(body, t, at.position, at.o, frame);
-                return sight.inside && Math.abs(sight.x) <= 0.9 && Math.abs(sight.y) <= 0.9;
-              };
-              if (!seen(input.leaving) && !seen(input.destination)) missed += 1;
-            }
-          }
-          return missed;
-        };
+        const kit = backOffKit(input, turn, share);
+        const missing = (candidate: Turn, cap = Number.POSITIVE_INFINITY): number => kit(candidate.lift, candidate.hold, cap);
         let best: { turn: Turn; missed: number } = { turn, missed: Number.POSITIVE_INFINITY };
         for (let lift = 0; lift <= 3.31 && best.missed > 0; lift += 0.3) {
           const missed = missing({ ...turn, lift }, best.missed);
