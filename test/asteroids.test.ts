@@ -6,6 +6,7 @@ import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
 import {
+  asteroidsSource,
   ASTEROID_ACCURACY,
   ASTEROID_KINDS,
   ASTEROIDS,
@@ -234,22 +235,47 @@ test("the door: a record as the data door's small body, and a body made from ele
   assert.throws(() => asteroidFromElements("k", { epochJd: Number.NaN, a: 3, e: 0.1, i: 0, node: 0, peri: 0, ma: 0 }), RangeError);
 });
 
-test("the table is a chunk of its own: no other entry point of the package carries it", async () => {
+test("the table is a chunk of its own: no other entry point of the package carries it in its own file, and only the space view reaches it, by a dynamic import", async () => {
   const root = new URL("..", import.meta.url).pathname;
+  // split as a page's bundler splits it: the entry's own file, and the files a dynamic import makes of its own
   const bundle = async (contents: string) => {
-    const result = await build({ stdin: { contents, resolveDir: root, loader: "ts" }, bundle: true, format: "esm", minify: true, write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
-    return result.outputFiles.map((file) => file.text).join("");
+    const result = await build({ stdin: { contents, resolveDir: root, sourcefile: "entry.ts", loader: "ts" }, bundle: true, splitting: true, outdir: "/out", format: "esm", minify: true, write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
+    const entry = result.outputFiles.find((file) => !/chunk-/.test(file.path))!.text;
+    return { entry, all: result.outputFiles.map((file) => file.text).join("") };
   };
   // Eros' semi-major axis, which appears only in the table
   const marks = ["1.458243716760167"];
   const asteroids = await bundle(`export * from "./src/asteroids.ts";`);
-  for (const mark of marks) assert.ok(asteroids.includes(mark), `the /asteroids bundle holds the table (${mark})`);
+  for (const mark of marks) assert.ok(asteroids.entry.includes(mark), `the /asteroids bundle holds the table (${mark})`);
+  // the space view reaches the table only through `import("../asteroids.ts")`, for its attribute `asteroids`: a file of its own
+  const SPACE_VIEW = ["./src/index.ts", "./src/space/index.ts", "./src/element.ts", "./src/space/element.ts"];
   for (const entry of ["./src/index.ts", "./src/space/index.ts", "./src/spacecraft.ts", "./src/roadster.ts", "./src/nearest.ts", "./src/element.ts", "./src/space/element.ts", "./src/door/index.ts"]) {
     const text = await bundle(`import ${JSON.stringify(entry)};`);
-    for (const mark of marks) assert.ok(!text.includes(mark), `${entry} does not carry the asteroid table`);
+    for (const mark of marks) {
+      assert.ok(!text.entry.includes(mark), `${entry} does not carry the asteroid table in its own file`);
+      if (!SPACE_VIEW.includes(entry)) assert.ok(!text.all.includes(mark), `${entry} reaches no file with the asteroid table`);
+    }
   }
+  const view = await bundle(`import "./src/space/element.ts";`);
+  for (const mark of marks) assert.ok(view.all.includes(mark) && !view.entry.includes(mark), "the space view has the table in a chunk of its own");
   const raw = readFileSync(new URL("../src/data/asteroids.ts", import.meta.url));
   const table = gzipSync(raw, { level: 9 }).length;
   console.log(`asteroids: ${ASTEROIDS.length} bodies, table source ${raw.length} bytes, ${table} bytes gzipped`);
   assert.ok(table < 25_000);
+});
+
+test("asteroidsSource gives every body as a data-door record, the same orbit, with the source and the day it was read, and an id of its own", async () => {
+  const source = asteroidsSource();
+  assert.equal(source.info.id, "wakusei-asteroids");
+  assert.equal(source.info.retrieved, ASTEROIDS_FETCHED);
+  assert.match(source.info.licence.name, /Public domain/);
+  assert.equal(source.kind, "records");
+  const records = await source.records(new AbortController().signal);
+  assert.equal(records.length, ASTEROIDS.length);
+  records.forEach((record, k) => assert.deepEqual(record, asteroidAsSmallBody(ASTEROIDS[k]!)));
+  // the sky of a date is the same from the record as from the body
+  const eros = records[ASTEROIDS.findIndex((body) => body.id === "eros")]!;
+  const el = ASTEROIDS.find((body) => body.id === "eros")!.elements;
+  assert.ok(length(sub(smallBodyAt(eros, el.epochJd), smallBodyAt(asteroidAsSmallBody("eros"), el.epochJd))) < 1e-12, "the record places Eros where the body does");
+  assert.ok(Math.abs(length(smallBodyAt(eros, el.epochJd)) - length(asteroidPositionAu("eros", (el.epochJd - 2440587.5) * 86_400_000))) < 1e-3, "and at the epoch it is at the same distance from the Sun");
 });

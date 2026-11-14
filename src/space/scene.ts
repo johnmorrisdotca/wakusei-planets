@@ -5,7 +5,8 @@ import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/r
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import type { SourceBook } from "../door/book.ts";
-import { createSmallBodyPoints, type PointsThree } from "../door/points.ts";
+import { createSmallBodyPoints, smallBodyPlace, type PointsThree } from "../door/points.ts";
+import type { SmallBody } from "../door/small-bodies.ts";
 import { createMoonDots, type DotsThree, type MoonDot } from "./all-moons.ts";
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
@@ -20,7 +21,7 @@ import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
 import type { SightInput } from "./sight.ts";
 import { spinAxis } from "./spin.ts";
-import { createTrack, EARTH_RADIUS_KM, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
+import { AU_IN_EARTH_RADII, createTrack, EARTH_RADIUS_KM, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
 import { createPaintOverlay } from "./paint-overlay.ts";
 import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
@@ -187,6 +188,18 @@ export interface OrbiterSet {
   name(id: string): { en: string; ja: string };
 }
 
+/** The asteroids of `/asteroids` as the view needs them: loaded only when they are shown. The bodies are in the data door's form, in the order of `ids`. */
+export interface AsteroidSet {
+  ids: readonly string[];
+  bodies: readonly SmallBody[];
+  name(id: string): { en: string; ja: string };
+}
+
+/** The most asteroid names shown at once, the nearest to the camera within `ASTEROID_NAME_RANGE`. */
+export const ASTEROID_NAMES = 12;
+/** How near an asteroid must be to the camera to be named, in astronomical units in the true scale and in the view's units in the compressed one (where the whole system is some 250 across). */
+export const ASTEROID_NAME_RANGE = { true: 1, compressed: 40 } as const;
+
 export interface SpaceModel {
   /** Moment shown, milliseconds since the epoch. */
   time: number;
@@ -246,6 +259,11 @@ export interface SpaceModel {
   orbiterTrack: boolean;
   /** The orbiters at the last draw: how many were drawn, each drawn one's status, which were drawn dim, how many orbit lines, and how many points of ground track. */
   orbitersDrawn: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
+  /** Place the asteroids of `/asteroids` in the view (the attribute `asteroids`): a point each, and a name for the few within `ASTEROID_NAME_RANGE`. Off by default; they are loaded when first shown. */
+  asteroids: boolean;
+  asteroidSet: AsteroidSet | null;
+  /** The asteroids at the last draw: how many were placed, how many were named, and the milliseconds the places took. */
+  asteroidsDrawn: { placed: number; named: number; ms: number };
   /** The craft whose ground track is painted on its body, or null. */
   paint: PaintSpec | null;
   /** The trail buffer the element and the scene share. */
@@ -374,6 +392,9 @@ export const newSpaceModel = (): SpaceModel => ({
   orbiterLines: "all",
   orbiterTrack: false,
   orbitersDrawn: { count: 0, status: {}, dim: [], lines: 0, track: 0 },
+  asteroids: false,
+  asteroidSet: null,
+  asteroidsDrawn: { placed: 0, named: 0, ms: 0 },
   paint: null,
   paintTrail: createPaintTrail(),
   roadster: false,
@@ -1478,12 +1499,33 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           if (points !== undefined && deps.book !== undefined && points.count > 0) for (const [id, read] of deps.book.recordReads()) used[id] = id === "wakusei-belts" ? model.door.belts : read.records.length;
           model.door.used = used;
 
+          // the asteroids of `/asteroids`, where the option is on: each placed as the data door's points are (the same mapping), the nearest few within range named; nothing is worked out with the option off
+          const asteroidAts: { id: string; at: Vec3; away: number }[] = [];
+          const asteroidSet = model.asteroids ? model.asteroidSet : null;
+          if (asteroidSet !== null) {
+            const began = performance.now();
+            const jd = toTerrestrialTime(model.time) / 86_400_000 + 2_440_587.5;
+            for (let k = 0; k < asteroidSet.ids.length; k += 1) {
+              const at = smallBodyPlace(mode, sunPos, asteroidSet.bodies[k]!, jd);
+              asteroidAts.push({ id: asteroidSet.ids[k]!, at, away: Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z) });
+            }
+            const range = mode === "true" ? ASTEROID_NAME_RANGE.true * AU_IN_EARTH_RADII : ASTEROID_NAME_RANGE.compressed;
+            model.asteroidsDrawn = { placed: asteroidAts.length, named: Math.min(ASTEROID_NAMES, asteroidAts.filter((one) => one.away <= range).length), ms: performance.now() - began };
+          } else if (model.asteroidsDrawn.placed !== 0) model.asteroidsDrawn = { placed: 0, named: 0, ms: 0 };
           if (deps.onLabels && model.labels) {
             const places: Record<string, BodyPlace | null> = { ...moonPlaces };
             for (const id of SPACE_BODIES) {
               const at = id === hiddenBody || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
               const drawing = slots.get(id)?.drawing;
               places[id] = at ? { x: at.x, y: at.y, r: px[id], named: drawing !== undefined && drawing.object.visible && drawing.label?.shown === true } : null;
+            }
+            if (asteroidAts.length > 0) {
+              const range = mode === "true" ? ASTEROID_NAME_RANGE.true * AU_IN_EARTH_RADII : ASTEROID_NAME_RANGE.compressed;
+              for (const one of asteroidAts.filter((near) => near.away <= range).sort((x, y) => x.away - y.away).slice(0, ASTEROID_NAMES)) {
+                const spot = labelFor(one.at);
+                places[one.id] = spot ? { x: spot.x, y: spot.y, r: 1 } : null;
+                if (spot) moonDistances[one.id] = one.away;
+              }
             }
             for (const [id, { at, px: dotPx }] of Object.entries(orbiterPlaces)) {
               const spot = labelFor(at);
@@ -1539,6 +1581,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             for (const id of moons) if (id !== hiddenMoon && !(SPACE_BODIES as readonly string[]).includes(id)) sight(id, absoluteSite(id as MoonId), moonPlaces[id]?.r ?? 0);
             for (const craft of craftAts) sight(craft.id, craft.at, craft.px);
             for (const [id, { at, px: dotPx }] of Object.entries(orbiterPlaces)) sight(id, at, dotPx);
+            for (const one of asteroidAts) sight(one.id, one.at, 1);
             projected.set(0, 0, -1).applyMatrix4(camera.projectionMatrix);
             deps.onSight(sights, { width: size.width, height: size.height, axis: { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height } });
           }

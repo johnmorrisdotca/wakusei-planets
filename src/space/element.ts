@@ -109,9 +109,9 @@ export interface BodyHover extends BodyInfo {
  * ```
  */
 export interface BodySight extends Sight {
-  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`. */
+  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`. or an asteroid's id from `/asteroids` (`eros`, with the option `asteroids` on) when `kind` is `small-body`. */
   id: string;
-  kind: SpaceKind | "spacecraft" | "orbiter";
+  kind: SpaceKind | "spacecraft" | "orbiter" | "small-body";
   host?: BodyId;
   /** Degrees between the camera's forward direction and the body, 0 (straight ahead) to 180 (straight behind). */
   offAxis: number;
@@ -287,7 +287,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -364,6 +364,7 @@ export class WakuseiSpace extends HTMLElement {
     const craft = this.getAttribute("spacecraft");
     if (craft !== null && craft !== "off") this.spacecraft = craft;
     this.orbiters = this.hasAttribute("orbiters") && this.getAttribute("orbiters") !== "off";
+    this.asteroids = this.hasAttribute("asteroids") && this.getAttribute("asteroids") !== "off";
     this.#model.orbiterChosen = this.getAttribute("orbiter") || null;
     this.#model.orbiterLines = orbiterLines(this.getAttribute("orbiter-lines"));
     this.#model.orbiterTrack = this.hasAttribute("orbiter-track") && this.getAttribute("orbiter-track") !== "off";
@@ -506,6 +507,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "roadster") this.roadster = value !== null && value !== "off";
     else if (name === "spacecraft") this.spacecraft = value === null || value === "off" ? false : value;
     else if (name === "orbiters") this.orbiters = value !== null && value !== "off";
+    else if (name === "asteroids") this.asteroids = value !== null && value !== "off";
     else if (name === "orbiter") this.orbiter = value || null;
     else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
     else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
@@ -983,6 +985,41 @@ export class WakuseiSpace extends HTMLElement {
     return this.#model.region;
   }
   #orbitersLoading = false;
+  #asteroidsLoading = false;
+  /**
+   * Place the asteroids of `/asteroids` in the view (the attribute `asteroids`; off by default): about a hundred bodies, each a point on its orbit on the date shown, drawn with the belts' points in the one instanced draw, and the
+   * nearest few within about an astronomical unit (the true scale) named, in the page's language. A name is pressable: `wakusei-body-click` (`{ id, name, kind: "small-body" }`) and `wakusei-asteroid-click` (`{ id, name }`)
+   * say which, and nothing else happens (going to an asteroid is not done). Each is an entry of `sight()` with `kind: "small-body"`. The records and their orbits are loaded when the option is first turned on and cost nothing
+   * before; with it off nothing is worked out or drawn for them. The positions are two-body: good near each body's epoch (`ASTEROID_ACCURACY` in `/asteroids`), less so far from it. `stats.asteroids` says how many were
+   * placed and named and what placing them cost.
+   */
+  get asteroids(): boolean {
+    return this.#model.asteroids;
+  }
+  set asteroids(value: boolean) {
+    this.#model.asteroids = value;
+    if (value && this.#model.asteroidSet === null && !this.#asteroidsLoading) {
+      this.#asteroidsLoading = true;
+      void import("../asteroids.ts").then(
+        (mod) => {
+          const list = mod.asteroidList();
+          const source = mod.asteroidsSource();
+          if (this.#door.book.get(source.info.id) === undefined) this.#door.book.addSource(source);
+          this.#model.asteroidSet = { ids: list.map((one) => one.id), bodies: list.map((one) => mod.asteroidAsSmallBody(one)), name: (id) => ({ ...(list.find((one) => one.id === id)?.name ?? { en: id, ja: id }) }) };
+          this.#door.book.enableSource(source.info.id, this.#model.asteroids);
+          this.#gate?.request();
+        },
+        () => {
+          this.#asteroidsLoading = false;
+        },
+      );
+    } else if (this.#model.asteroidSet !== null) this.#door.book.enableSource("wakusei-asteroids", value);
+    this.#gate?.request();
+  }
+  /** Whether `id` is one of the asteroids placed in the view. */
+  #isAsteroid(id: string): boolean {
+    return this.#model.asteroids && this.#model.asteroidSet !== null && this.#model.asteroidSet.ids.includes(id);
+  }
   /**
    * Show the spacecraft in orbit round the Moon and Mars (the attribute `orbiters`; off by default): each a small dot where `/orbiters` puts it on the date shown, scaled with its body, on its orbit line, with its
    * name beside it in the page's language, once the body is at least 24 CSS pixels in radius on the screen. A modelled path is drawn dim, and a predicted one whose measured error is more than 2 per cent of its body's radius (`orbiterDim`); a craft with no path is not drawn. The paths (a 9 kB module)
@@ -2054,6 +2091,8 @@ export class WakuseiSpace extends HTMLElement {
     moonSize: { asked: number; factor: number; clamped: boolean };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
     orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
+    /** The asteroids of `/asteroids` at the last draw (the attribute `asteroids`): how many were placed (all of them, with the option on and the records loaded), how many named, and the milliseconds the places took; 0, 0 and 0 with it off. */
+    asteroids: { placed: number; named: number; ms: number };
     /** Surface pictures still being fetched. A rest test waits for 0, then for the draw count to stay still: a sharper picture draws one more frame when it arrives. */
     pictures: { pending: number };
     /** The body the last arrival kept in the picture beside the one gone to, or null. */
@@ -2083,6 +2122,7 @@ export class WakuseiSpace extends HTMLElement {
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
       orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
+      asteroids: { ...this.#model.asteroidsDrawn },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
       spacecraft: { count: this.#model.craftDrawn.count, status: { ...this.#model.craftDrawn.status }, drawn: [...this.#model.craftDrawn.drawn] },
       companion: this.#model.companion,
@@ -2138,6 +2178,7 @@ export class WakuseiSpace extends HTMLElement {
     if (id === "roadster") return this.#names[id] ?? this.#model.roadsterPath?.name[lang] ?? "Starman";
     if (this.#model.craftIds.includes(id)) return this.#names[id] ?? this.#model.craftNames?.(id, lang) ?? id;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return this.#names[id] ?? this.#model.orbiterSet.name(id)[lang];
+    if (this.#isAsteroid(id)) return this.#names[id] ?? this.#model.asteroidSet!.name(id)[lang];
     return this.#names[id] ?? BODIES[id as BodyId].name[lang];
   }
 
@@ -2262,7 +2303,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#hovered = id;
     this.#hoverBy = by;
     this.#markFar();
-    if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
+    if (id !== null && this.#isAsteroid(id)) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
+    else if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
     else if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
     else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: was }, bubbles: true, composed: true }));
   }
@@ -2312,8 +2354,9 @@ export class WakuseiSpace extends HTMLElement {
     for (const [id, input] of Object.entries(bodies)) {
       const body = id as BodyId;
       const orbiter = this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id);
-      const craft = orbiter || this.#model.craftIds.includes(id) || id === "roadster";
-      const one: BodySight = { id, kind: orbiter ? "orbiter" : craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis), offAxis: input.offAxis ?? 0, distance: input.distance ?? 0, distanceKm: input.distanceKm ?? null };
+      const asteroid = this.#isAsteroid(id);
+      const craft = orbiter || asteroid || this.#model.craftIds.includes(id) || id === "roadster";
+      const one: BodySight = { id, kind: orbiter ? "orbiter" : asteroid ? "small-body" : craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis), offAxis: input.offAxis ?? 0, distance: input.distance ?? 0, distanceKm: input.distanceKm ?? null };
       const host = craft ? undefined : hostOf(body);
       if (host !== undefined) one.host = host;
       now[id] = one;
@@ -2374,6 +2417,7 @@ export class WakuseiSpace extends HTMLElement {
     if (id === "sun") return 1;
     if (id === "roadster" || this.#model.craftIds.includes(id)) return 3;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return 5;
+    if (this.#isAsteroid(id)) return 6;
     const kind = bodyKindOf(id as BodyId);
     return kind === "moon" ? 4 : kind === "planet" || kind === "star" ? 2 : 3;
   }
@@ -2488,6 +2532,12 @@ export class WakuseiSpace extends HTMLElement {
    */
   #press(id: BodyId): void {
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
+    if (this.#isAsteroid(id)) {
+      // an asteroid is no body of the package: the press says which one, in the body event and in an event of its own, and goes nowhere
+      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id, name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("wakusei-asteroid-click", { detail: { id, name: this.#nameOf(id) }, bubbles: true, composed: true }));
+      return;
+    }
     if ((id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id))) {
       this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
       // an orbiter is told in an event of its own as well (`{ id, name }`, the id `orbiter` takes), the one above unchanged
@@ -2506,8 +2556,9 @@ export class WakuseiSpace extends HTMLElement {
     const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
     if (!id) return;
     // a craft's name is no body: focus tells the page its id and name, as a press does
-    const craft = (id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id));
-    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: craft ? { id, name: this.#nameOf(id), kind: "spacecraft" } : this.bodyInfo(id), bubbles: true, composed: true }));
+    const asteroid = this.#isAsteroid(id);
+    const craft = asteroid || (id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id));
+    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: craft ? { id, name: this.#nameOf(id), kind: asteroid ? "small-body" : "spacecraft" } : this.bodyInfo(id), bubbles: true, composed: true }));
     this.#hover(id, "focus");
   };
 

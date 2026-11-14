@@ -3,7 +3,8 @@
 // (`asteroidPosition`) or astronomical units (`asteroidPositionAu`, the unit `heliocentric` gives the planets in). The Kepler solver is the package's own. Pure: no DOM, no clock reads, no three.js.
 import { ASTEROID_FETCHED, ASTEROID_TABLE } from "./data/asteroids.ts";
 import { toTerrestrialTime } from "./clock.ts";
-import type { SmallBody } from "./door/small-bodies.ts";
+import { madeHere } from "./door/own.ts";
+import type { SmallBody, SmallBodySource } from "./door/small-bodies.ts";
 import { heliocentric, kepler } from "./ephemeris.ts";
 import { length, RAD, sub, type Vec3 } from "./vec.ts";
 import { moment, type When } from "./when.ts";
@@ -537,3 +538,31 @@ export const ASTEROID_ACCURACY = {
   /** In words, what the numbers leave out. */
   note: "Two-body motion: the planets' pull is not included, so a body that passes close to the Earth or Jupiter, and every body far from its epoch, drifts further. Positions of near-Earth asteroids a year or more from the epoch are a guide, not an ephemeris.",
 } as const;
+
+/**
+ * The bodies as a record source of the data door, the way the view draws them as points beside the belts: every body of the set as a `SmallBody`, in the order of `asteroidList()`. `<wakusei-space>` adds it for
+ * its attribute `asteroids`; a page can hand it to a view's `sources` too.
+ *
+ * @returns The source.
+ *
+ * @example
+ * ```ts
+ * import { asteroidsSource } from "@johnmorrisdotca/wakusei-planets/asteroids";
+ *
+ * console.log(asteroidsSource().info.id, asteroidsSource().info.licence.name);
+ * ```
+ */
+export function asteroidsSource(): SmallBodySource {
+  return madeHere({
+    kind: "records" as const,
+    info: {
+      id: "wakusei-asteroids",
+      name: { en: "Named asteroids and comets of the Small-Body Database", ja: "小天体データベースの名のある小惑星" },
+      credit: { en: "Asteroid orbits: NASA/JPL Small-Body Database", ja: "小惑星の軌道：NASA/JPL 小天体データベース" },
+      licence: { name: "Public domain (NASA/JPL: not subject to copyright in the United States)", url: "https://www.nasa.gov/nasa-brand-center/images-and-media/" },
+      url: "https://ssd-api.jpl.nasa.gov/doc/sbdb.html",
+      retrieved: ASTEROID_FETCHED,
+    },
+    records: (): Promise<SmallBody[]> => Promise.resolve(ASTEROIDS.map((body) => asteroidAsSmallBody(body))),
+  });
+}
