@@ -339,12 +339,16 @@ export interface BaselineEntry {
   drift: number;
   driftWorst: number;
   step: number;
+  /** Samples with the planet circled out of the picture, and moments of a turn too fast, turned away from the last view's, a jump of the camera or a whole turn too long. */
+  planet: number;
+  pace: number;
 }
 /** The counts of a walk's faults that a baseline entry holds. */
 export function faultCounts(w: Walk): Omit<BaselineEntry, "digest"> {
   const count = (kind: FaultKind): number => w.events.filter((e) => e.kind === kind).length;
   const step = w.events.filter((e) => e.kind === "step" && /of the frame in one sample/.test(e.text)).length;
-  return { empty: count("empty"), lost: count("lost"), drift: count("drift"), driftWorst: Math.max(0, ...w.events.filter((e) => e.kind === "drift").map((e) => e.value)), step };
+  const pace = count("turn") + w.events.filter((e) => e.kind === "step" && !/of the frame in one sample/.test(e.text)).length;
+  return { empty: count("empty"), lost: count("lost"), drift: count("drift"), driftWorst: Math.max(0, ...w.events.filter((e) => e.kind === "drift").map((e) => e.value)), step, planet: count("planet"), pace };
 }
 /** Every baseline move by name: `default a>b scale shape` and `plain a>b scale shape side`. */
 export function baselineMoves(): [string, () => Move][] {

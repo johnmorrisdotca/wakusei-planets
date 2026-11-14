@@ -1000,7 +1000,7 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
 }
 
 /** The faults a walk of a move has that the way on is judged by: samples with neither body in the picture, with the destination out of it after the turn, where the destination moves away from its last place on the screen (and the most it does in a sample), and where it moves a third of the frame in one. */
-interface Faults {
+export interface Faults {
   empty: number;
   lost: number;
   drift: number;
@@ -1050,10 +1050,13 @@ function faultsOf(route: Route): Faults {
   if (turned > 1.25 * (angleOf(unit(input.start.forward), lastF) / RAD) + 2) faults.pace += 1;
   return faults;
 }
-/** `now` has no kind of fault more than `was` and fewer in all. */
-const total = (f: Faults): number => f.empty + f.lost + f.drift + f.step;
-const betterThan = (now: Faults, was: Faults): boolean =>
-  now.empty <= was.empty && now.lost <= was.lost && now.drift <= was.drift && now.step <= was.step && now.pace <= was.pace && now.driftWorst <= was.driftWorst + 1e-12 && total(now) < total(was);
+export const total = (f: Faults): number => f.empty + f.lost + f.drift + f.step;
+/**
+ * `now` has no kind of fault more than `was` (and no more of the drift in its worst sample) and fewer in all. A way that keeps the planet in the picture all through (`was.planet` is 0: the views promised it) must go
+ * on keeping it; where the first way did not (plain views never promised it) the planet out of the picture is not a fault, and only breaks a tie between two ways.
+ */
+export const betterThan = (now: Faults, was: Faults): boolean =>
+  now.empty <= was.empty && now.lost <= was.lost && now.drift <= was.drift && now.step <= was.step && now.pace <= was.pace && now.driftWorst <= was.driftWorst + 1e-12 && (was.planet > 0 || now.planet === 0) && total(now) < total(was);
 
 /** The samples of a walk of the move (a 240th of it apart) at which neither the moon left nor the destination is in the picture. */
 function emptyMoments(route: Route): number {
