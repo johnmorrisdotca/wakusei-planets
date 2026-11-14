@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { moonOffset } from "../src/scene/orient.ts";
-import { arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, frameAt, moonOrbit, orbitLine, placeAround, placeMoon, placeSun, planetOrbit, spinArrow, spinAxis, ARROWS_PER_ORBIT, type ScaleMode } from "../src/space/index.ts";
+import { arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, frameAt, helpSpin, moonOrbit, orbitLine, placeAround, placeMoon, placeSun, planetOrbit, readHelpPlace, spinArrow, spinAxis, ARROWS_PER_ORBIT, type ScaleMode } from "../src/space/index.ts";
 import { cross, dot, length, unit, type Vec3 } from "../src/vec.ts";
 
 const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -101,6 +101,25 @@ test("the spin arrow turns the way the body turns by the right-hand rule about t
     const tip = arc[28]!;
     for (const wing of head) assert.ok(length(minus(wing, tip)) < 0.3 && length(minus(wing, tip)) > 0.05);
   }
+});
+
+test("the spin arrow sits above the north pole by default, and across the body when asked", () => {
+  assert.equal(readHelpPlace(null), "pole");
+  assert.equal(readHelpPlace("across"), "across");
+  assert.equal(readHelpPlace("pole"), "pole");
+  assert.equal(readHelpPlace("somewhere"), "pole");
+  const centre: Vec3 = [0, 0, 0];
+  const axis: Vec3 = [0, -1, 0];
+  const pole: Vec3 = [0, 1, 0];
+  const above = helpSpin(centre, axis, pole, 10);
+  assert.ok(Math.abs(above.middle[1] - 12.5) < 1e-9, "1.25 radii along the north pole");
+  for (const point of above.arc) assert.ok(Math.abs(length(minus(point, above.middle)) - 4.5) < 1e-9);
+  let turn: Vec3 = [0, 0, 0];
+  for (let i = 0; i + 1 < above.arc.length; i += 1) turn = [turn[0] + cross(minus(above.arc[i]!, above.middle), minus(above.arc[i + 1]!, above.middle))[0], turn[1] + cross(minus(above.arc[i]!, above.middle), minus(above.arc[i + 1]!, above.middle))[1], turn[2] + cross(minus(above.arc[i]!, above.middle), minus(above.arc[i + 1]!, above.middle))[2]];
+  assert.ok(dot(unit(turn), axis) > 0.99, "a backwards spin still curls about its axis");
+  const across = helpSpin(centre, axis, pole, 10, "across");
+  assert.ok(Math.abs(across.middle[1] + 4) < 1e-9, "0.4 radii along the spin axis, which points south");
+  for (const point of across.arc) assert.ok(Math.abs(length(minus(point, across.middle)) - 13) < 1e-9);
 });
 
 test("an orbit carries two arrows by default, at most four, and the count is a whole number from none to four", () => {

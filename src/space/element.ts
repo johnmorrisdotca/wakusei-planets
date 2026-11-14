@@ -5,7 +5,7 @@ import { carryControls, type ElementControls, type ViewController } from "@johnm
 import "../tables/minor.ts";
 import { BODIES, BODY_IDS, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
-import { arrowCount } from "./arrows.ts";
+import { arrowCount, readHelpPlace, type HelpPlace } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
@@ -287,7 +287,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -371,6 +371,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.helpThrough = this.hasAttribute("help-through") && this.getAttribute("help-through") !== "off";
+    this.#model.helpPlace = readHelpPlace(this.getAttribute("help-place"));
     this.#travel = { kind: readTravel(this.getAttribute("transition"), "turn-travel"), pace: readPace(this.getAttribute("pace"), 1) };
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
@@ -515,6 +516,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "far-opacity") this.#farStrength();
     else if (name === "help-through") this.helpThrough = value !== null && value !== "off";
+    else if (name === "help-place") this.helpPlace = readHelpPlace(value);
     else if (name === "transition") this.transition = readTravel(value, "turn-travel");
     else if (name === "pace") this.pace = readPace(value, 1);
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
@@ -1312,6 +1314,18 @@ export class WakuseiSpace extends HTMLElement {
   }
   set helpThrough(value: boolean) {
     this.#model.helpThrough = value;
+    this.#gate?.request();
+  }
+
+  /**
+   * Where the spin arrow sits (the attribute `help-place`; `pole` by default). `pole` draws a small arrow just outside the surface, around the north-pole line. `across` draws the wide arrow a little off the centre, across the body.
+   * Either way it turns by the right-hand rule about the axis the body really spins about.
+   */
+  get helpPlace(): HelpPlace {
+    return this.#model.helpPlace;
+  }
+  set helpPlace(value: HelpPlace) {
+    this.#model.helpPlace = value === "across" ? "across" : "pole";
     this.#gate?.request();
   }
 

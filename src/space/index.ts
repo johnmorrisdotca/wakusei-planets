@@ -6,7 +6,7 @@ export { RIDE_FOV, ridePose, type RideInput, type RideLook, type RidePose } from
 export { chooseLabels, LABEL_GAP, nameSpot, type LabelBox } from "./labels.ts";
 export { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, systemOf, type SpaceKind } from "./bodies.ts";
 export { besideMoon, BESIDE_RADII, type BesideCamera, type BesideInput } from "./beside.ts";
-export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, spinArrow, type OrbitArrow } from "./arrows.ts";
+export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, helpSpin, readHelpPlace, spinArrow, type HelpPlace, type OrbitArrow } from "./arrows.ts";
 export { spinAxis, type SpinAxis } from "./spin.ts";
 export { COVER_ARROW_GAP, COVER_MIN_PX, coverArrows, coveredBy, type CoverArrow, type CoverEntry } from "./covered.ts";
 export { TRAVEL_CLEARANCE, arrivalSide, travelArrival, travelPlan, travelPose, type ArrivalCompanion, type TravelBody, type TravelInput, type TravelKind, type TravelPlan, type TravelSample, type TravelSight, type TravelView } from "./travel.ts";

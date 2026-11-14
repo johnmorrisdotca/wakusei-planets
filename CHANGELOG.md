@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The spin arrow can sit above the pole** . `help-place` (and `space.helpPlace`) chooses where help mode's curved arrow is drawn. `pole`, the default, draws a small arrow just outside the surface, around the north-pole line. `across` draws the wide arrow a little off the centre, across the body, which is how it was drawn before. The arrow still turns by the right-hand rule about the axis the body really spins about.
+
 ## [0.52.0] - 2026-11-13
 
 - **The craft page's Play moves only its marker** (MODULES-1339). `demo/craft.html` no longer redraws the whole chart on each Play step: it moves the marker and the line and leaves the rest alone, and `e2e/craft-freeze.demo.ts` counts the craft loop's frames apart from the page's others. Demo page only: the package is unchanged.
