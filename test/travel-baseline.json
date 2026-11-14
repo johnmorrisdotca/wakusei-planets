@@ -290,7 +290,7 @@
   "pace": 7
  },
  "default neptune>mercury true tall": {
-  "digest": "befd497e976bc6c4",
+  "digest": "fc640c8b3a6db6b3",
   "empty": 0,
   "lost": 0,
   "drift": 0,
@@ -4810,7 +4810,7 @@
   "pace": 0
  },
  "plain neptune>mercury true square 9": {
-  "digest": "a89601346435559b",
+  "digest": "2519a5009a909ccf",
   "empty": 0,
   "lost": 0,
   "drift": 0,
