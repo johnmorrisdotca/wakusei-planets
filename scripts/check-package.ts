@@ -75,6 +75,9 @@ const sheets = await import(sheetsEntry);
 if (sheets.KIDS_SHEETS.length !== 19 || !sheets.kidsSvg("saturn", { ...sheets.kidsRoom("a4"), lang: "en" }).includes("Colour me!") || sheets.kidsFacts("jupiter", "en").length !== 3) throw new Error("sheets package entry failed");
 
 // The sun and moon times through package resolution too, both conventions.
+const minorEntry = "@johnmorrisdotca/wakusei-planets/minor-facts";
+const minor = await import(minorEntry);
+if (minor.MINOR_FACT_IDS.length !== 14 || minor.MINOR_FACTS.vesta.discovery.by[0] !== "Olbers, H. W." || minor.minorFacts("ERIS").source.read !== "2026-11-13") throw new Error("minor-facts package entry failed");
 const skyEntry = "@johnmorrisdotca/wakusei-planets/sky-bodies";
 const sky = await import(skyEntry);
 const tonight = sky.skyBodies(Date.UTC(2026, 5, 21, 12), { latitude: 35.69, longitude: 139.69 });

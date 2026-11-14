@@ -394,6 +394,11 @@
       "import": "./dist/ground-track.js",
       "default": "./dist/ground-track.js"
     },
+    "./minor-facts": {
+      "types": "./dist/minor-facts.d.ts",
+      "import": "./dist/minor-facts.js",
+      "default": "./dist/minor-facts.js"
+    },
     "./sky-bodies": {
       "types": "./dist/sky-bodies.d.ts",
       "import": "./dist/sky-bodies.js",

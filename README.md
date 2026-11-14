@@ -499,6 +499,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Serve it yourself](docs/guides/serve-it-yourself.md) | A small Node server over the package, that you host |
 | [The Sun and Moon from a place](docs/guides/suncalc.md) | Position, sunrise and sunset, Moon rise, set and phase; a drop-in for suncalc |
 | [Where the planets are in the sky](docs/guides/sky-bodies.md) | The Sun, the Moon and the planets for a moment and a place: right ascension and declination of date and J2000, magnitude, size, phase, elongation, azimuth and altitude, as plain data |
+| [Facts about the minor bodies and dwarf planets](docs/guides/minor-facts.md) | The orbit's size, shape and period and the discovery of Vesta, Pallas, Chiron, Pholus, Halley's comet and the nine dwarf planets, each figure with its uncertainty, epoch, source and read date. |
 | [Coordinate conversions](docs/guides/coordinates.md) | Pure spherical, ecliptic, equatorial and horizontal coordinate conversions |
 | [TypeScript and Node](docs/guides/typescript-and-node.md) | Types and the pure side |
 | [How it works](docs/guides/how-it-works.md) | Where the numbers come from |

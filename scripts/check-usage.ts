@@ -469,6 +469,11 @@ await step("sky-bodies-node", () => {
   if (out !== "Up: moon, venus\nMoon: 46 per cent lit, 27.3 degrees up\nMars: magnitude 1.3, 35 degrees west of the Sun") throw new Error(`unexpected output: ${out}`);
 });
 
+await step("minor-facts-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("minor-facts"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (out !== "1P/Halley: semi-major axis 17.9 au, period 75.9 years, found 1758-12-25 by Palitzsch, Johann Georg (read 2026-11-13)\n136199 Eris (2003 UB313): semi-major axis 67.9 au, period 559.9 years, found 2003-10-21 by Brown, M. E. (read 2026-11-13)") throw new Error(`unexpected output: ${out}`);
+});
+
 await step("plan-node", () => {
   const out = execFileSync(process.execPath, [join(examples("plan"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
   if (out !== "Mars: 1.60 au from the Sun, 46 per cent of the way to the edge (50 au)\nIo: 5.9 Jupiter radii from Jupiter's centre\nThe SVG is an <svg>") throw new Error(`unexpected output: ${out}`);
@@ -554,6 +559,7 @@ const FILES: Record<string, string[]> = {
   "plan/cdn.html": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
   "plan/node.mjs": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
   "sky-bodies/node.mjs": ["docs/guides/sky-bodies.md", "docs/guides/ja/sky-bodies.md"],
+  "minor-facts/node.mjs": ["docs/guides/minor-facts.md", "docs/guides/ja/minor-facts.md"],
   "lineup/cdn.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/iframe.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/node.mjs": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
