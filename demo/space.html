@@ -106,7 +106,7 @@
               <button type="button" data-look="painted" aria-pressed="false" data-say="look_painted">Painted</button>
             </div>
           </div>
-          <div class="fam-row" data-help-en="Orbits draws each path with small arrows that show which way the body goes. Names puts the name by each body. With Help on, the body in the middle also shows its axis and a curved arrow for the way it spins." data-help-ja="「軌道」は天体の通り道を線で描き、小さな矢印で進む向きを示します。「名前」は天体の横に名前を出します。「説明」をオンにすると、真ん中の天体の軸と、自転の向きを示す曲がった矢印も出ます。">
+          <div class="fam-row" data-help-en="Orbits draws each path with small arrows that show which way the body goes. Names puts the name by each body. With Help on, the body in the middle also shows its axis and a curved arrow for the way it spins. Above the pole draws that arrow as a small ring around the north-pole line. Across the body draws the wide arrow through the disc, which is how it was drawn before." data-help-ja="「軌道」は天体の通り道を線で描き、小さな矢印で進む向きを示します。「名前」は天体の横に名前を出します。「説明」をオンにすると、真ん中の天体の軸と、自転の向きを示す曲がった矢印も出ます。「極の上」はその矢印を、北極の線のまわりの小さな輪にします。「天体を横切る」は、円盤を横切る大きな矢印で、以前の描き方です。">
             <span class="fam-label" data-say="sp_light">Light</span>
             <div class="group fam-seg" id="lights" role="group" aria-label="Light" data-say-label="sp_light">
               <button type="button" data-light="sun" aria-pressed="true" data-say="sp_light_sun">The Sun's</button>
@@ -120,6 +120,11 @@
             <button type="button" class="fam-button" id="orbiters" aria-pressed="false" data-say="sp_orbiters">Orbiters</button>
             <button type="button" class="fam-button" id="all-moons" aria-pressed="false" data-say="sp_all_moons">All moons</button>
             <button type="button" class="fam-button" id="belts" aria-pressed="true" data-say="sp_belts">Belts</button>
+            <span class="fam-label" data-say="sp_spin">Spin arrow</span>
+            <div class="group fam-seg" id="spin-place" role="group" aria-label="Spin arrow" data-say-label="sp_spin">
+              <button type="button" data-place="pole" aria-pressed="true" data-say="sp_spin_pole">Above the pole</button>
+              <button type="button" data-place="across" aria-pressed="false" data-say="sp_spin_across">Across the body</button>
+            </div>
           </div>
           <div class="fam-row" id="orbiter-row" hidden data-help-en="Pick a craft to see its numbers, where its path comes from, and its next pass over a famous landing site. Tracked is within the fit to Horizons' track; predicted is that fit carried on past it; modelled is a mean orbit only, drawn dim." data-help-ja="探査機を選ぶと、数値、経路のもとになったデータ、有名な着陸地点の上を次に通る時刻が出ます。「追跡」はHorizonsの経路に合わせた期間の中、「予測」は合わせた軌道をその期間のあとへのばしたもの、「モデル」は平均の軌道だけで、暗く描きます。">
             <span class="fam-label" data-say="sp_craft">Craft</span>

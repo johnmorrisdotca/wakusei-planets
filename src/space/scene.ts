@@ -16,7 +16,7 @@ import "../bodies/all.ts";
 import { turn, type Vec3 } from "../vec.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
-import { arrowSites, ARROWS_PER_ORBIT, chevron, MAX_ARROWS_PER_ORBIT, spinArrow, type OrbitArrow } from "./arrows.ts";
+import { arrowSites, ARROWS_PER_ORBIT, chevron, helpSpin, MAX_ARROWS_PER_ORBIT, type HelpPlace, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
 import { coveredBy, type CoverEntry } from "./covered.ts";
 import type { SightInput } from "./sight.ts";
@@ -246,6 +246,8 @@ export interface SpaceModel {
   help: boolean;
   /** Help mode draws its lines whole over the globe (`true`); by default they have depth against the body they are on, so the axis shows only outside the globe and the part of the arrow behind it is hidden. */
   helpThrough: boolean;
+  /** Where the spin arrow sits: `pole` rings the north-pole line, `across` cuts across the body. */
+  helpPlace: HelpPlace;
   /** How many arrowheads each orbit line carries: 0 to `MAX_ARROWS_PER_ORBIT`, two by default. */
   arrowCount: number;
   /** Show the spacecraft in orbit round the Moon and Mars: a dot each on its orbit line, named, once its body is big enough on the screen. Off by default; their paths are loaded when first shown. */
@@ -384,6 +386,7 @@ export const newSpaceModel = (): SpaceModel => ({
   arrows: {},
   help: false,
   helpThrough: false,
+  helpPlace: "pole",
   arrowPx: 0,
   arrowCount: ARROWS_PER_ORBIT,
   orbiters: false,
@@ -1388,7 +1391,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           model.helpDrawn = null;
           if (model.help) {
             const turn = spinAxis(focus, model.time);
-            const spin = spinArrow(focusPos, turn.axis, 1.3 * focusRadius, 0.4 * focusRadius, HELP_SEGMENTS);
+            const spin = helpSpin(focusPos, turn.axis, turn.pole, focusRadius, model.helpPlace, HELP_SEGMENTS);
             const reach = 1.8 * focusRadius;
             const segments: Vec3[] = [
               [focusPos[0] - turn.pole[0] * reach, focusPos[1] - turn.pole[1] * reach, focusPos[2] - turn.pole[2] * reach],
@@ -1400,7 +1403,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             segments.forEach((p, i) => helpPositions.set(p, i * 3));
             (helpGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
             // the axis the drawn arc turns about, measured from its own points, round the middle of its circle
-            const middle: Vec3 = [focusPos[0] + turn.axis[0] * 0.4 * focusRadius, focusPos[1] + turn.axis[1] * 0.4 * focusRadius, focusPos[2] + turn.axis[2] * 0.4 * focusRadius];
+            const middle = spin.middle;
             let sum: Vec3 = [0, 0, 0];
             for (let i = 0; i < HELP_SEGMENTS; i += 1) {
               const a = minus(spin.arc[i]!, middle);

@@ -165,3 +165,64 @@ export function spinArrow(centre: Vec3, axis: Vec3, radius: number, lift: number
   const head: [Vec3, Vec3] = [add(tip, add(scale(tangent, -back), scale(outward, back * 0.55))), add(tip, add(scale(tangent, -back), scale(outward, -back * 0.55)))];
   return { arc, head };
 }
+
+/**
+ * Where help mode draws the curved arrow: `pole` rings the north-pole line, `across` cuts across the body.
+ *
+ * @example
+ * ```ts
+ * import type { HelpPlace } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const place: HelpPlace = "pole";
+ * console.log(place);
+ * ```
+ */
+export type HelpPlace = "pole" | "across";
+
+/**
+ * Which place a page asked for (the attribute `help-place`). `across` is the wide arrow across the body. Anything else, including nothing, is `pole`.
+ *
+ * @param value - The attribute's text, or the property.
+ * @returns `pole` or `across`.
+ *
+ * @example
+ * ```ts
+ * import { readHelpPlace } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(readHelpPlace(null), readHelpPlace("across"));
+ * ```
+ */
+export function readHelpPlace(value: string | null | undefined): HelpPlace {
+  return value === "across" ? "across" : "pole";
+}
+
+/**
+ * The help mode's spin arrow in one of its two places. `pole` (the default) is a small circle just outside the surface, centred on the north-pole line. `across` is the wide circle a little off the centre, the way the arrow was drawn
+ * before. Either way the arrow turns by the right-hand rule about `axis`, so a body that spins backwards still shows that.
+ *
+ * @param centre - The body's centre.
+ * @param axis - The unit axis it spins about.
+ * @param pole - The unit vector to its north pole.
+ * @param radius - The body's drawn radius, in the scene's units.
+ * @param place - `pole` or `across`. Left out, `pole`.
+ * @param segments - How many pieces the arc is cut into.
+ * @returns The arc, the arrowhead's wings, and the middle of the circle.
+ *
+ * @example
+ * ```ts
+ * import { helpSpin } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const arrow = helpSpin([0, 0, 0], [0, 1, 0], [0, 1, 0], 2);
+ * console.log(arrow.middle[1].toFixed(1), arrow.arc.length);
+ * ```
+ */
+export function helpSpin(centre: Vec3, axis: Vec3, pole: Vec3, radius: number, place: HelpPlace = "pole", segments = 28): { arc: Vec3[]; head: [Vec3, Vec3]; middle: Vec3 } {
+  if (place === "across") {
+    const lift = 0.4 * radius;
+    const drawn = spinArrow(centre, axis, 1.3 * radius, lift, segments);
+    return { ...drawn, middle: add(centre, scale(axis, lift)) };
+  }
+  const at = add(centre, scale(unit(pole), 1.25 * radius));
+  const drawn = spinArrow(at, axis, 0.45 * radius, 0, segments);
+  return { ...drawn, middle: at };
+}

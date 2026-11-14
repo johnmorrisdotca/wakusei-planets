@@ -509,6 +509,12 @@ const followHelp = (): void => {
 };
 document.addEventListener("family-help", followHelp);
 followHelp();
+for (const button of document.querySelectorAll<HTMLButtonElement>("#spin-place [data-place]")) {
+  button.addEventListener("click", () => {
+    space.helpPlace = button.dataset.place === "across" ? "across" : "pole";
+    for (const other of document.querySelectorAll<HTMLButtonElement>("#spin-place [data-place]")) other.setAttribute("aria-pressed", String(other === button));
+  });
+}
 // the picker: a kind (the Sun and planets, dwarf planets, small bodies, moons), for a moon the planet it goes round, then the body; or a search by name. A choice goes there.
 type PickKind = "planet" | "dwarf-planet" | "minor" | "moon";
 const choice = { kind: "planet" as PickKind, host: "" };
