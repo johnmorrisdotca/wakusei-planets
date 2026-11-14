@@ -75,64 +75,60 @@ for (const [a, b] of [["earth", "mars"], ["mercury", "sun"], ["callisto", "europ
   }
 }
 
-// The plain views (the whole body from the side the camera comes from, a moon too), from ten sides: the walk reports every fault of every move, and the test fails for the empty picture, which the aim point's
-// turn cures, and for the kinds the planner has never had (clearance, a turn that undoes itself, a jump of the up direction, a number that is not finite, a shrinking destination). The faults it does not cure
-// (the destination drifting on the screen and the destination out of the picture after the turn, which are the way on's, and the planet out of a picture that never showed it) are printed as a count with each move.
-/** The sides and shapes of the plain views that still pass through an empty picture, and how many samples: the turn of a move that has to be made faster than the pace limits allow in its share of the move is left as it was, and the two moons of Titan's tall pictures are lost in the way on. It may only get shorter. */
-const PLAIN_EMPTY: Record<string, number> = {
-  "callisto to europa|true|wide|6": 9,
-  "callisto to europa|true|tall|0": 1,
-  "titan to enceladus|compressed|tall|1": 5,
-  "titan to enceladus|compressed|tall|2": 3,
-  "titan to enceladus|compressed|tall|3": 3,
-  "titan to enceladus|compressed|tall|5": 4,
-  "titan to enceladus|compressed|tall|6": 3,
-  "titan to enceladus|compressed|tall|7": 2,
-  "titan to enceladus|compressed|tall|8": 4,
-  "titan to enceladus|compressed|tall|9": 2,
-  "titan to enceladus|true|wide|7": 3,
-  "titan to enceladus|true|wide|8": 64,
-  "titan to enceladus|true|wide|9": 11,
-  "titan to enceladus|true|tall|1": 3,
-  "titan to enceladus|true|tall|2": 3,
-  "titan to enceladus|true|tall|3": 3,
-  "titan to enceladus|true|tall|5": 3,
-  "titan to enceladus|true|tall|6": 3,
-  "titan to enceladus|true|tall|8": 3,
-  "titan to enceladus|true|tall|9": 1,
-  "oberon to miranda|compressed|tall|8": 4,
-  "phobos to deimos|compressed|square|4": 8,
-  "phobos to deimos|compressed|tall|4": 15,
-  "phobos to deimos|true|square|0": 13,
-  "phobos to deimos|true|square|5": 13,
-  "phobos to deimos|true|square|8": 13,
-  "phobos to deimos|true|tall|0": 26,
-  "phobos to deimos|true|tall|1": 57,
-  "phobos to deimos|true|tall|5": 36,
-  "phobos to deimos|true|tall|8": 33,
-  "phobos to deimos|true|tall|9": 43,
+// The plain views (the whole body from the side the camera comes from, a moon too), from ten sides: the walk reports every fault of every move, and the test fails for the faults the family move cures (an
+// empty picture, the destination out of the picture after the turn, the destination drifting away from its place on the screen, a jump of the destination) above the ceilings listed for each side, and for the
+// kinds the planner has never had (clearance, a turn that undoes itself, a jump of the up direction, a number that is not finite, a shrinking destination). The planet out of a picture that never showed it is
+// printed as a count with each move.
+/** The sides and shapes of the plain views that still have one of the faults, and how many samples of each: the ceilings may only fall (a notice is printed when one does). The empty pictures are a turn that would have to be made faster than the pace limits allow, and the way on of Titan's tall pictures; the drift is the way on passing the planet within a little more than the clearance. */
+const PLAIN_LEFT: Record<string, { empty?: number; drift?: number; lost?: number; step?: number }> = {
+  "titan to enceladus|compressed|square|5": { drift: 4 },
+  "titan to enceladus|compressed|square|8": { drift: 3 },
+  "titan to enceladus|compressed|tall|1": { empty: 5, drift: 4, lost: 5 },
+  "titan to enceladus|compressed|tall|8": { empty: 4, drift: 3, lost: 4 },
+  "titan to enceladus|true|square|3": { drift: 1 },
+  "titan to enceladus|true|square|8": { drift: 6 },
+  "titan to enceladus|true|tall|8": { empty: 3, drift: 3, lost: 3 },
+  "phobos to deimos|compressed|tall|0": { drift: 4 },
+  "phobos to deimos|compressed|tall|1": { drift: 3 },
+  "phobos to deimos|compressed|tall|2": { drift: 4 },
+  "phobos to deimos|compressed|tall|3": { drift: 3 },
+  "phobos to deimos|compressed|tall|4": { drift: 3 },
+  "phobos to deimos|compressed|tall|5": { drift: 3 },
+  "phobos to deimos|compressed|tall|6": { drift: 4 },
+  "phobos to deimos|compressed|tall|8": { drift: 3 },
+  "phobos to deimos|compressed|tall|9": { drift: 3 },
+  "phobos to deimos|true|tall|1": { empty: 15 },
 };
+const PLAIN_COUNTED = ["empty", "drift", "lost", "step"] as const;
 const PLAIN_NEVER = /^(clear|turn|up|numbers|shrink)$/;
+const isStepOfTheDestination = (text: string): boolean => /of the frame in one sample/.test(text);
 for (const [a, b] of [["callisto", "europa"], ["io", "ganymede"], ["titan", "enceladus"], ["oberon", "miranda"], ["phobos", "deimos"], ["triton", "proteus"]] as [BodyId, BodyId][]) {
   for (const mode of SCALES) {
-    test(`${a} to ${b} from plain views, ${mode}: an empty picture only where it is listed, and none of the faults the planner has never had`, () => {
+    test(`${a} to ${b} from plain views, ${mode}: the faults only where they are listed, and none of the faults the planner has never had`, () => {
       const counts: Record<string, number> = {};
-      let left = 0;
+      const left: Record<string, number> = { empty: 0, drift: 0, lost: 0, step: 0 };
       for (const shape of SHAPES) {
         SIDES.forEach((side, i) => {
           const w = walk(moveOf(a, b, mode, shape.aspect, undefined, side), { bent: BENT[`${a} to ${b}`] });
           row(`${a} to ${b} (plain)`, mode, shape.name, w);
           const key = `${a} to ${b}|${mode}|${shape.name}|${i}`;
-          for (const e of w.events) counts[e.kind] = (counts[e.kind] ?? 0) + 1;
-          const empty = w.events.filter((e) => e.kind === "empty").length;
-          left += PLAIN_EMPTY[key] ?? 0;
-          assert.ok(empty <= (PLAIN_EMPTY[key] ?? 0), `${key}: ${empty} samples with neither body in the picture, ${PLAIN_EMPTY[key] ?? 0} listed; the first at sample ${w.events.find((e) => e.kind === "empty")?.sample}`);
+          for (const e of w.events) counts[e.kind === "step" && !isStepOfTheDestination(e.text) ? "jump" : e.kind] = (counts[e.kind === "step" && !isStepOfTheDestination(e.text) ? "jump" : e.kind] ?? 0) + 1;
+          const now = { empty: 0, drift: 0, lost: 0, step: 0 };
+          for (const e of w.events) {
+            if (e.kind === "empty" || e.kind === "drift" || e.kind === "lost") now[e.kind] += 1;
+            else if (e.kind === "step" && isStepOfTheDestination(e.text)) now.step += 1;
+          }
+          for (const kind of PLAIN_COUNTED) {
+            const ceiling = PLAIN_LEFT[key]?.[kind] ?? 0;
+            left[kind]! += ceiling;
+            assert.ok(now[kind] <= ceiling, `${key}: ${now[kind]} samples of ${kind}, ${ceiling} listed; the first at sample ${w.events.find((e) => e.kind === kind)?.sample}`);
+          }
           assert.deepEqual(w.events.filter((e) => PLAIN_NEVER.test(e.kind)).map((e) => `sample ${e.sample} (${e.stage}): ${e.text}`), [], key);
         });
       }
-      const others = Object.entries(counts).filter(([kind]) => kind !== "empty").map(([kind, n]) => `${kind} ${n}`).join(", ");
-      console.log(`# plain ${a} to ${b}, ${mode}: ${counts.empty ?? 0} empty samples (${left} listed); not counted against it: ${others || "none"}`);
-      if ((counts.empty ?? 0) < left) console.log(`# NOTICE: ${a} to ${b}, ${mode}: ${left - (counts.empty ?? 0)} fewer empty samples than listed; lower the ceilings in PLAIN_EMPTY`);
+      const others = Object.entries(counts).filter(([kind]) => !PLAIN_COUNTED.includes(kind as never)).map(([kind, n]) => `${kind} ${n}`).join(", ");
+      console.log(`# plain ${a} to ${b}, ${mode}: ${PLAIN_COUNTED.map((kind) => `${kind} ${counts[kind] ?? 0}`).join(", ")} (ceilings ${PLAIN_COUNTED.map((kind) => left[kind]).join(", ")}); not counted against it: ${others || "none"}`);
+      for (const kind of PLAIN_COUNTED) if ((counts[kind] ?? 0) < left[kind]!) console.log(`# NOTICE: ${a} to ${b}, ${mode}: ${left[kind]! - (counts[kind] ?? 0)} fewer samples of ${kind} than listed; lower the ceilings in PLAIN_LEFT`);
     });
   }
 }

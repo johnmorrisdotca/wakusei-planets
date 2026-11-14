@@ -327,8 +327,18 @@ export const BASELINE_PLAIN: readonly (readonly [BodyId, BodyId])[] = [
 ];
 export interface BaselineEntry {
   digest: string;
-  /** The empty pictures the move had when the baseline was taken. */
+  /** The empty pictures the move had when the baseline was taken, the samples where the destination was out of the picture after the turn, where it moved away from its last place on the screen (and the most it did in a sample), and where it moved a third of the frame in one. */
   empty: number;
+  lost: number;
+  drift: number;
+  driftWorst: number;
+  step: number;
+}
+/** The counts of a walk's faults that a baseline entry holds. */
+export function faultCounts(w: Walk): Omit<BaselineEntry, "digest"> {
+  const count = (kind: FaultKind): number => w.events.filter((e) => e.kind === kind).length;
+  const step = w.events.filter((e) => e.kind === "step" && /of the frame in one sample/.test(e.text)).length;
+  return { empty: count("empty"), lost: count("lost"), drift: count("drift"), driftWorst: Math.max(0, ...w.events.filter((e) => e.kind === "drift").map((e) => e.value)), step };
 }
 /** Every baseline move by name: `default a>b scale shape` and `plain a>b scale shape side`. */
 export function baselineMoves(): [string, () => Move][] {
