@@ -112,6 +112,9 @@ test("the names are in the page's language, and the option reads its attribute",
 test("placing the asteroids costs a few milliseconds a draw, measured, and nothing is drawn at rest", async ({ page }, testInfo) => {
   await openSpace(page, QUERY);
   await turnOn(page);
+  // the figure in the guide is this run, with the CPU at a quarter of its speed, so a slow machine takes longer and the number stays a number
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 4 });
   // fifty draws, one for each step of the held clock, and the cost the view reports of placing the bodies at each
   const costs: number[] = [];
   for (let i = 0; i < 50; i += 1) {
@@ -125,6 +128,7 @@ test("placing the asteroids costs a few milliseconds a draw, measured, and nothi
   testInfo.annotations.push({ type: "cost", description: `placing 104 asteroids: median ${median.toFixed(2)} ms, worst ${worst.toFixed(2)} ms over 50 draws` });
   console.log(`placing 104 asteroids: median ${median.toFixed(2)} ms, worst ${worst.toFixed(2)} ms over 50 draws`);
   expect(median, "the median cost of placing them is a few milliseconds").toBeLessThan(8);
+  await session.detach();
   // at rest: no draw is made while nothing changes
   await quiet(page);
   const held = (await statsOf(page)).draws;
