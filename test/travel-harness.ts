@@ -96,6 +96,7 @@ export interface FaultEvent {
   stage: TravelSample["stage"];
   kind: FaultKind;
   value: number;
+  text: string;
 }
 const KINDS: readonly [RegExp, FaultKind][] = [
   [/neither body/, "empty"], [/moved away from its place on the screen/, "drift"], [/planet circled/, "planet"], [/out of the picture after the turn/, "lost"], [/shrank/, "shrink"], [/radii from the centre/, "clear"],
@@ -138,12 +139,12 @@ export function walk(move: Move, options: { shrink?: boolean; bent?: { back: num
   const faults: string[] = [];
   const events: FaultEvent[] = [];
   const fault = (i: number, text: string, value = 0): void => {
-    events.push({ sample: i, stage: samples[i]!.stage, kind: kindOf(text), value });
+    events.push({ sample: i, stage: samples[i]!.stage, kind: kindOf(text), value, text });
     if (faults.length < 6) faults.push(`sample ${i} (${samples[i]!.stage}): ${text}`);
   };
   /** A fault of the whole move, not of a sample: it is counted at the last sample. */
   const whole = (text: string, kind: FaultKind): void => {
-    events.push({ sample: SAMPLES, stage: samples[SAMPLES]!.stage, kind, value: 0 });
+    events.push({ sample: SAMPLES, stage: samples[SAMPLES]!.stage, kind, value: 0, text });
     faults.push(text);
   };
   const last = samples[SAMPLES]!;
