@@ -2,7 +2,9 @@
 
 ## [Unreleased]
 
-- **The spin arrow can sit above the pole** . `help-place` (and `space.helpPlace`) chooses where help mode's curved arrow is drawn. `pole`, the default, draws a small arrow just outside the surface, around the north-pole line. `across` draws the wide arrow a little off the centre, across the body, which is how it was drawn before. The arrow still turns by the right-hand rule about the axis the body really spins about.
+## [0.53.0] - 2026-11-14
+
+- **The spin arrow can sit above the pole** (MODULES-1359). `help-place` (and `space.helpPlace`) chooses where help mode's curved arrow is drawn. `pole`, the default, draws a small arrow just outside the surface, around the north-pole line. `across` draws the wide arrow a little off the centre, across the body, which is how it was drawn before. The arrow still turns by the right-hand rule about the axis the body really spins about.
 
 ## [0.52.0] - 2026-11-13
 
