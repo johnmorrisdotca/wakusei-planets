@@ -25,10 +25,11 @@ import { moonOffset, orientation } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, readMoonSize, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
 import { groundDirection } from "./aim.ts";
-import { besideFace, faceView, facingPoint, subCameraPoint } from "./face.ts";
+import { besideFace, faceView, facingPoint } from "./face.ts";
 import { besideMoon } from "./beside.ts";
 import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
+import { controlsFor, readFrame, type FrameKind } from "./hold.ts";
 import type { MoonDot } from "./all-moons.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
@@ -36,7 +37,7 @@ import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } f
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
-import { createSpaceItem, FIT_DISTANCE, framedOf, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
@@ -287,7 +288,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -372,6 +373,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.helpThrough = this.hasAttribute("help-through") && this.getAttribute("help-through") !== "off";
     this.#model.helpPlace = readHelpPlace(this.getAttribute("help-place"));
+    this.#model.frame = readFrame(this.getAttribute("frame"));
+    this.#model.pairWith = readBody(this.getAttribute("pair-with") ?? "") || null;
     this.#travel = { kind: readTravel(this.getAttribute("transition"), "turn-travel"), pace: readPace(this.getAttribute("pace"), 1) };
     this.#model.look = this.getAttribute("look") === "painted" ? "painted" : "realistic";
     this.#model.light = readLight(this.getAttribute("light"));
@@ -419,6 +422,7 @@ export class WakuseiSpace extends HTMLElement {
         this.#placeLabels(places);
         this.#placeOort();
         this.#door.announce();
+        this.#announceFrame();
       },
       onSight: (bodies, frame) => this.#see(bodies, frame),
       wantSight: () => this.#sightAsked || this.#sightListeners.size > 0,
@@ -517,6 +521,8 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "far-opacity") this.#farStrength();
     else if (name === "help-through") this.helpThrough = value !== null && value !== "off";
     else if (name === "help-place") this.helpPlace = readHelpPlace(value);
+    else if (name === "frame") this.frame = readFrame(value);
+    else if (name === "pair-with") this.pairWith = value;
     else if (name === "transition") this.transition = readTravel(value, "turn-travel");
     else if (name === "pace") this.pace = readPace(value, 1);
     else if (name === "look") this.look = value === "painted" ? "painted" : "realistic";
@@ -686,7 +692,12 @@ export class WakuseiSpace extends HTMLElement {
       const away: Vec3 = [camera.position[0] - here[0], camera.position[1] - here[1], camera.position[2] - here[2]];
       return length(away) < 1e-12 ? null : facingPoint(moon, away, model.time);
     }
-    return subCameraPoint(model.focus, model.view, model.centre, model.anchor ?? model.time, model.time);
+    // the stars' direction (with what a drag in a held frame added to the controls), carried to now when the frame holds the camera to a body or a pair
+    const anchor = model.anchor ?? model.time;
+    const bias = model.holdBias !== null && model.holdBias.anchor === model.anchor ? model.holdBias : { yaw: 0, tilt: 0, up: [0, 1, 0] as Vec3 };
+    const base = groundDirection(model.centre.lon - model.view.yaw - bias.yaw, Math.max(-90, Math.min(90, model.centre.lat - model.view.tilt - bias.tilt)), anchor);
+    const held = model.frame !== "stars" && model.frameDrawn.drawn !== "stars" && model.anchor !== null;
+    return facingPoint(model.focus, held ? heldAim(model, model.focus, base, bias.up, model.mode, (id) => this.#site(id).at, 0).aim : base, model.time);
   }
 
   /**
@@ -1329,6 +1340,36 @@ export class WakuseiSpace extends HTMLElement {
     this.#gate?.request();
   }
 
+  /**
+   * How the camera holds its direction while time runs (the attribute `frame`): `stars` (the default: fixed to the stars, the ground of the body turns under it), `body` (it turns with the body in focus, so
+   * the body's ground stays still under the viewer as it spins: Ceres, Mars, a moon), or `pair` (it turns with the body in focus and a companion, `pairWith`, so the companion stays at the same place in the picture,
+   * the Sun behind Mercury at the back left, and the camera circles the body in focus as the two move). A drag changes the framing and the new framing is kept, in any frame. `goTo` and `ride` end a pair unless
+   * the move arrives with a companion, which becomes the pair. A body with no known rotation is held to the stars in `body`, and `stats.frame` says so. It costs no draw of its own: it is worked out in the draws the running
+   * clock already makes.
+   */
+  get frame(): FrameKind {
+    return this.#model.frame;
+  }
+  set frame(value: FrameKind) {
+    const next = readFrame(value);
+    if (next === this.#model.frame) return;
+    // the direction the camera looks from now is kept: the stars' direction is taken from this moment under the frame that held it until now
+    this.#reanchor(0, 0, this.#model.view);
+    this.#model.frame = next;
+    this.#gate?.request();
+  }
+
+  /** The body a pair is held with (the attribute `pair-with`): the one set, or, when none is, the companion the last move arrived with; null when there is none. */
+  get pairWith(): BodyId | null {
+    return this.#model.pairWith ?? ((this.#model.companion as BodyId | null) ?? null);
+  }
+  set pairWith(value: BodyId | string | null) {
+    const id = typeof value === "string" ? readBody(value) : null;
+    this.#reanchor(0, 0, this.#model.view);
+    this.#model.pairWith = id || null;
+    this.#gate?.request();
+  }
+
   /** How the bodies are drawn: `realistic` (shaded from the body's real colours and features) or `painted` (public-domain surface maps). */
   get look(): "realistic" | "painted" {
     return this.#model.look === "painted" ? "painted" : "realistic";
@@ -1380,6 +1421,10 @@ export class WakuseiSpace extends HTMLElement {
         this.#siding = false;
         return;
       }
+    }
+    // a drag in a held frame (`body`, `pair`) turns the camera from the direction it is looking from now, and the new framing is kept as the frame goes on: the stars' direction is taken from now
+    if (!this.#siding && this.#model.frame !== "stars" && this.#model.frameDrawn.drawn !== "stars" && this.#model.ride === null && this.#model.anchor !== null && this.#model.anchor !== this.#model.time && (view.yaw !== now.yaw || view.tilt !== now.tilt) && reason !== "set" && reason !== "jump") {
+      this.#reanchor(view.yaw - now.yaw, view.tilt - now.tilt, view);
     }
     this.#model.view = { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY };
     this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: view.yaw, tilt: view.tilt, zoom: view.zoom, roll, panX, panY } }));
@@ -1449,7 +1494,13 @@ export class WakuseiSpace extends HTMLElement {
     // a straight move (`direct`, `look-back`) keeps its destination in the picture all the way, and is not turned to a companion's side: that could take the destination out of the picture. A turning move may be, and its plan
     // works round the planet in a way that never leaves the picture empty (`travelPlan`).
     const swing = kind === "cut" || kind === "turn-travel";
+    // in a held frame the side the camera arrives from is chosen for this moment: the stars' direction is taken from now
+    if (model.frame !== "stars") {
+      model.anchor = model.time;
+      model.holdBias = null;
+    }
     const side = this.#faceApproach(id, swing);
+    this.#endPair();
     if (!this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set(side ? { ...side, zoom } : { zoom }, true, "jump");
     this.#schedule();
     this.#gate?.request();
@@ -1578,6 +1629,50 @@ export class WakuseiSpace extends HTMLElement {
     return { at: [centre[0] + real[0] * k, centre[1] + real[1] * k, centre[2] + real[2] * k], radius: Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusIn(host, mode) * moonScaleFor(mode, host, this.#model.moonSize, this.#model.time).factor) };
   }
 
+  #frameTold = "stars||";
+  /** Tell the page when the frame the camera is held in changes (`wakusei-frame`): after a draw, which has worked out what was held. */
+  #announceFrame(): void {
+    const drawn = this.#model.frameDrawn;
+    const key = `${drawn.drawn}|${drawn.pair ?? ""}|`;
+    if (key === this.#frameTold) return;
+    const previous = this.#frameTold.split("|")[0]!;
+    this.#frameTold = key;
+    this.dispatchEvent(new CustomEvent("wakusei-frame", { detail: { frame: drawn.drawn, asked: drawn.asked, pair: drawn.pair, previous } }));
+  }
+
+  /**
+   * The direction the held frame has the camera looking from now, turned by a drag (`dyaw`, `dtilt`), and the stars' direction taken from now on: the drag moves the picture as it does in the stars' frame, and the framing
+   * it leaves is the one the frame then keeps. The controls are left as they are; what the stars' direction needs more than their yaw and tilt is kept as a bias (`holdBias`) that holds while the anchor is this moment.
+   */
+  #reanchor(dyaw: number, dtilt: number, view: { yaw: number; tilt: number }): void {
+    const model = this.#model;
+    if (model.anchor === null) return;
+    const was = model.holdBias !== null && model.holdBias.anchor === model.anchor ? model.holdBias : { yaw: 0, tilt: 0, up: [0, 1, 0] as Vec3 };
+    const before = { yaw: view.yaw - dyaw + was.yaw, tilt: view.tilt - dtilt + was.tilt };
+    const base = groundDirection(model.centre.lon - before.yaw, Math.max(-90, Math.min(90, model.centre.lat - before.tilt)), model.anchor);
+    const held = heldAim(model, model.focus, base, was.up, model.mode, (id) => this.#site(id).at, 0);
+    const aim = held.aim;
+    // the stars' direction, taken from now, that looks from here once the drag has turned it
+    const turned = controlsFor(aim, model.centre, model.time);
+    const yaw = turned.yaw + dyaw;
+    const tilt = turned.tilt + dtilt;
+    model.anchor = model.time;
+    model.holdBias = { anchor: model.time, yaw: yaw - view.yaw, tilt: tilt - view.tilt, up: held.up };
+  }
+
+  /** A move ends a pair unless it arrives with a companion, which becomes the pair. */
+  #endPair(): void {
+    const model = this.#model;
+    if (model.frame !== "pair") return;
+    if (model.companion !== null) {
+      model.pairWith = model.companion as BodyId;
+      return;
+    }
+    model.frame = "stars";
+    model.pairWith = null;
+    this.#gate?.request();
+  }
+
   #siding = false;
   /** The body the camera was at when the latest arrival was chosen, so that body can stay in the picture. */
   #arrivedFrom: BodyId | null = null;
@@ -1652,6 +1747,8 @@ export class WakuseiSpace extends HTMLElement {
     const kind = this.#moveKind(options, "sun");
     if (model.ride !== null) this.ride(null, { smooth: false });
     model.transition = this.#startMove(kind, model.region !== null ? "sun" : leaving, "sun", options.duration);
+    model.companion = null;
+    this.#endPair();
     model.region = region;
     this.#selected = "sun";
     model.focus = "sun";
@@ -1794,6 +1891,9 @@ export class WakuseiSpace extends HTMLElement {
       if (!found) return;
       if (!wasRiding) this.#focusBeforeRide = model.focus;
       model.ride = found;
+      // a ride arrives with no companion: it ends a pair
+      model.companion = null;
+      this.#endPair();
       if (found.view === "follow" && typeof target === "string" && (SPACE_BODIES as readonly string[]).includes(target)) model.focus = target as SpaceBody;
       else if (wasRiding) model.focus = this.#focusBeforeRide;
     }
@@ -2061,6 +2161,8 @@ export class WakuseiSpace extends HTMLElement {
     pictures: { pending: number };
     /** The body the last arrival kept in the picture beside the one gone to, or null. */
     companion: string | null;
+    /** How the camera is held while time runs, as the last draw held it: the frame asked for, the frame held (`body` for a body with no known rotation, and `pair` with no companion, are held to the `stars`) and the body a pair is held with. */
+    frame: { asked: FrameKind; frame: FrameKind; pair: string | null };
   } {
     const stats = this.#taken?.renderer.stats;
     return {
@@ -2089,6 +2191,7 @@ export class WakuseiSpace extends HTMLElement {
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
       spacecraft: { count: this.#model.craftDrawn.count, status: { ...this.#model.craftDrawn.status }, drawn: [...this.#model.craftDrawn.drawn] },
       companion: this.#model.companion,
+      frame: { asked: this.#model.frameDrawn.asked, frame: this.#model.frameDrawn.drawn, pair: this.#model.frameDrawn.pair },
       moonSize: { asked: this.#model.moonSize, factor: this.#model.moonDrawn.factor, clamped: this.#model.moonDrawn.clamped },
       pictures: { pending: picturesPending() },
     };

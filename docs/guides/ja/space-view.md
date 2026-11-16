@@ -100,6 +100,14 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 めぐる順番は一つに決まっています。太陽、水星、金星、地球、月、火星、フォボス、ダイモス、木星とその衛星、と外へ進み、各惑星の次にその衛星が近い順に来ます (全体は `/space` の `HOP_ORDER` です)。`space.next()` と `space.previous()` は、次の天体と前の天体へ行き、最後からは太陽にもどります。どちらも、行った先の `BodyInfo` を返します。中心が変わるたびに `wakusei-hop` が `{ current, previous, next }` (それぞれ `BodyInfo`。`goTo` やめぐる操作がズームを求めたときは `zoom` も) つきで発火するので、矢印を2つ置いて、それぞれの行き先の名前を見せられます。`space.hopper` では、同じ内容がいつでも読めます。`space.bodyList()` はジャンプ用の一覧で、行けるすべての天体を順番に、種類 (`kind`: `star`、`planet`、`dwarf-planet`、`moon`) と、衛星なら `host` つきで返します。`/space` の `findBody("Saturn")` と `findBody("土星")` は、人が入力した言葉から天体を読み取ります。
 
+## 時間が進むあいだのカメラの向き: 星、天体、ペア
+
+`frame` (属性。または `space.frame`) は、時間が進むあいだカメラの向きを何に合わせて保つかを決めます。既定の `stars` は星に固定します。見ている天体の地表はそれ自身の自転でカメラの下を回り、太陽は水星のまわりをぐるりと回ります。`body` は見ている天体といっしょにカメラを回すので、天体が自転しても地表は見ている人の下で動きません。地球の表示にある、地球といっしょに回る切り替えと同じ考え方で、どの天体 (ケレス、火星、衛星) でも使えます。`space.subCameraPoint()` は同じ地点のままです。自転がわかっていない天体 (ハレー彗星、ネレイド、ヒイアカ、ナマカ) は、`body` でも星に固定され、`stats.frame.frame` は `stars` と答えます。`pair` は見ている天体と相手の天体を組にして、その組といっしょにカメラを回すので、二つが動いても相手は画面の同じ場所にとどまり、カメラは見ている天体のまわりを回ります。水星の左奥に太陽が見えているなら、時間が進むあいだずっとそこにあります。`pair-with` (属性。または `space.pairWith`) は相手を天体の名前で決めます。決めないときは、最後の移動が着いたときの相手 (`stats.companion`。移動は離れた天体を行き先の後ろに残して着きます) になり、相手がいなければペアは星に固定されます。
+
+ドラッグは構図を変え、新しい構図はどの枠組みでも保たれます。カメラはいま見ている向きから回り、星の向きはその瞬間から取り直され、枠組みが新しい構図を引き継ぎます。`goTo` と `ride` はペアを終わらせます (枠組みは `stars` に戻ります)。ただし、その移動が相手を連れて着くときは、その相手が新しいペアになります。ペアでは、相手が見ている天体の後ろに隠れることはありません。カメラが、見ている天体をはさんで相手のちょうど反対側に来そうなときは、必要なだけ横にずらすので、絵は滑るだけで飛びません。動きを減らす設定には、特別な扱いは要りません。枠組みは時計が進むときにカメラの位置を変えるだけで、時計はその人の設定どおりに動くからです。
+
+この機能のための描画はありません。向きは動いている時計がすでに行う描画のなかで計算し、止まっているときは何も描きません。`stats.frame` は `{ asked, frame, pair }` で、求められた枠組み、最後の描画で保たれた枠組み、ペアの相手です。`wakusei-frame` は、保たれる枠組みが変わったときに `{ frame, asked, pair, previous }` とともに送られます。純粋な部品は `/space` の `FRAMES`、`readFrame`、`bodyBasis`、`hasRotation`、`pairAxis`、`pairBasis`、`carry`、`keepClear`、`directionBetween` です。
+
 ## 全画面
 
 `immersive` (属性、または `space.immersive`) をつけると、要素は全画面の表示になります。入れ物の大きさに、どんな形でもぴったり広がり (`width: 100%; height: 100%`。ページが幅と高さを決めれば、属性なしでも同じです)、ホイールだけで拡大縮小し、どこをドラッグしても (タッチのドラッグも) 回ります。ページはスクロールしません。`immersive` がないときは kazoku-ui の決まりのままで、Ctrl、Command、Alt のどれかを押しながらホイールを回すと拡大縮小し、ホイールだけならページがスクロールします。ズーム1では、見ている天体は表示の短いほうの辺の約8割の大きさで、まわりに約5分の1の余白が残るので、縦長の窓でも横長の窓でも切れません (土星は環ごと収まります)。`zoom-min` まで引くと、カメラは太陽系ぜんぶが見えるところまで下がります。
@@ -126,7 +134,7 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`help-place` (`pole` か `across`。初期値は `pole`)、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`all-moons` (ほかの衛星をすべて点で)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`help-place` (`pole` か `across`。初期値は `pole`)、`frame` (`stars`、`body`、`pair`)、`pair-with`、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`all-moons` (ほかの衛星をすべて点で)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体)、`wakusei-frame` (カメラの向きを保つ枠組みが変わった) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`frame`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 天体から天体への移動
 

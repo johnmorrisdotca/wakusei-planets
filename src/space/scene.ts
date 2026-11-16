@@ -28,6 +28,7 @@ import { ridePose, type RideLook } from "./ride.ts";
 import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
 import { TRAVEL_BUDGET_MS, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
+import { bodyBasis, carry, controlsFor, directionBetween, hasRotation, keepClear, pairAxis, pairBasis, type FrameKind, type HoldBasis } from "./hold.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -210,6 +211,15 @@ export interface SpaceModel {
   focus: BodyId;
   /** The body kept in the picture beside the one arrived at, or null. Its name is not dropped for a clash. */
   companion: string | null;
+  /** How the camera holds its direction while time runs (`frame`): the one asked for, and the body a pair is asked to be with (null: the companion of the last arrival). */
+  frame: FrameKind;
+  pairWith: BodyId | null;
+  /** The frame the last draw really held: a body with no known rotation, or a pair with no companion, is held to the stars. */
+  frameDrawn: { asked: FrameKind; drawn: FrameKind; pair: string | null };
+  /** The basis the held frame had at the anchor moment, kept while the frame, the body, the pair, the scale and the anchor stay the same. */
+  holdFrom: { key: string; from: HoldBasis; axis: Vec3 | null } | null;
+  /** What a drag in a held frame added to the controls' yaw and tilt so that the stars' direction could be taken again from that moment (`anchor`); it holds only while the anchor is that moment. */
+  holdBias: { anchor: number; yaw: number; tilt: number; up: Vec3 } | null;
   /** How many times larger than life the squeezed view draws moons. Ignored at true distances. 2 by default. */
   moonSize: number;
   /** The factor actually used for the system in the middle, and whether a limit cut the one asked for. */
@@ -340,6 +350,43 @@ export interface SpaceTransition {
   origin: Vec3;
 }
 
+/**
+ * The direction the camera looks from, held in the frame the view is set to. `aim` is the direction from the body in focus to the camera as the stars hold it (fixed since the anchor moment); `body` turns it with the body's
+ * ground and `pair` with the direction to a companion, from the anchor moment to now, and a pair keeps the companion from passing behind the body. Records the frame it held in `model.frameDrawn`. Worked out in the draw
+ * the clock already makes; at rest, or with the frame on the stars, it costs nothing.
+ */
+export function heldAim(model: SpaceModel, focus: BodyId, aim: Vec3, up: Vec3, mode: ScaleMode, siteNow: (id: BodyId) => Vec3, limb: number): { aim: Vec3; up: Vec3 } {
+  const asked = model.frame;
+  let drawn: FrameKind = "stars";
+  let pair: BodyId | null = null;
+  if (asked === "body" && hasRotation(focus)) drawn = "body";
+  else if (asked === "pair") {
+    const id = (model.pairWith ?? model.companion) as BodyId | null;
+    if (id !== null && id !== focus && id in BODIES) {
+      drawn = "pair";
+      pair = id;
+    }
+  }
+  model.frameDrawn = { asked, drawn, pair };
+  const anchor = model.anchor;
+  if (drawn === "stars" || anchor === null) return { aim, up };
+  const key = `${drawn}|${focus}|${pair}|${mode}|${anchor}`;
+  if (model.holdFrom?.key !== key) {
+    if (drawn === "body") model.holdFrom = { key, from: bodyBasis(focus, anchor)!, axis: null };
+    else {
+      const axis = pairAxis((ms) => directionBetween(focus, pair!, mode, ms), anchor);
+      model.holdFrom = { key, from: pairBasis(directionBetween(focus, pair!, mode, anchor), axis), axis };
+    }
+  }
+  const from = model.holdFrom!;
+  // the whole camera turns as one, the picture's up with the look direction: carried the same way, so that what is in the picture stays where it is in it
+  if (drawn === "body") return anchor === model.time ? { aim, up } : { aim: carry(aim, from.from, bodyBasis(focus, model.time)!), up: carry(up, from.from, bodyBasis(focus, model.time)!) };
+  const toward = unit(minus(siteNow(pair!), siteNow(focus)));
+  const to = pairBasis(toward, from.axis!);
+  const turned = anchor === model.time ? { aim, up } : { aim: carry(aim, from.from, to), up: carry(up, from.from, to) };
+  return { aim: keepClear(turned.aim, toward, limb), up: turned.up };
+}
+
 export const newSpaceModel = (): SpaceModel => ({
   time: Date.now(),
   mode: "true",
@@ -354,6 +401,11 @@ export const newSpaceModel = (): SpaceModel => ({
   speed: 1,
   focus: "earth",
   companion: null,
+  frame: "stars",
+  pairWith: null,
+  frameDrawn: { asked: "stars", drawn: "stars", pair: null },
+  holdFrom: null,
+  holdBias: null,
   moonSize: 2,
   moonDrawn: { factor: 1, clamped: false },
   light: "sun",
@@ -845,6 +897,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (position && ride.view === "from") rideFrom = { around, centre, unitWorld, position, velocity, perSecond, hiddenBody, hiddenMoon };
           }
 
+          // what the draw holds the camera's direction to: the stars unless the frame (`heldAim`) says otherwise
+          model.frameDrawn = { asked: model.frame, drawn: "stars", pair: null };
           let fovNow = FOV;
           let distance = 0;
           if (besideIn) {
@@ -874,12 +928,20 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           } else {
             // looks at the focus body from the direction the sky was in when it was last moved, turned by yaw and tilt, as far as the zoom says
             model.anchor ??= model.time;
-            const lon = model.centre.lon - aimWay * model.view.yaw;
-            const lat = Math.max(-90, Math.min(90, model.centre.lat - aimWay * model.view.tilt));
-            const aim = groundDirection(lon, lat, model.anchor);
+            const bias = model.holdBias !== null && model.holdBias.anchor === model.anchor ? model.holdBias : { yaw: 0, tilt: 0, up: [0, 1, 0] as Vec3 };
+            const lon = model.centre.lon - aimWay * (model.view.yaw + bias.yaw);
+            const lat = Math.max(-90, Math.min(90, model.centre.lat - aimWay * (model.view.tilt + bias.tilt)));
+            let aim = groundDirection(lon, lat, model.anchor);
             // at zoom 1 the whole picture of the body fits the shorter side of the view, in any shape: a tall view is as far again as it is taller than wide, and a ringed body is framed with its rings
             const across = focusRadius * (FRAMED[focus as SpaceBody] ?? 1) * Math.max(1, size.height / Math.max(1, size.width));
             distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * across) / Math.max(1e-9, model.view.zoom));
+            // held in the frame the view is set to (`frame`): turned with the body's ground or with a pair, from the anchor moment to now
+            let upNow: Vec3 = bias.up;
+            if (model.frame !== "stars" && model.ride === null && model.region === null) {
+              const held = heldAim(model, focus, aim, bias.up, mode, absoluteSite, Math.asin(Math.min(0.99, focusRadius / Math.max(1e-9, distance))) * 1.05);
+              aim = held.aim;
+              upNow = held.up;
+            }
             target.set(focusPos[0], focusPos[1], focusPos[2]);
             model.regionDrawn = null;
             if (model.region !== null && focus === "sun") {
@@ -892,7 +954,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               model.regionDrawn = { id: model.region, reach: framed.reach, distance };
             }
             camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
-            camera.up.set(0, 1, 0);
+            camera.up.set(upNow[0], upNow[1], upNow[2]);
             camera.lookAt(target);
             camera.near = Math.max(0.0005, distance * 0.02 - focusRadius * 0.5, focusRadius * 0.01);
             camera.far = Math.max(2000, distance * 4 + (mode === "true" ? 40 * 23_481 : 400));
@@ -971,6 +1033,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (k >= 1) {
               model.transition = null;
               model.travelling = null;
+              // in a held frame the camera is where the move put it, and the frame carries it on from here: the stars' direction is taken again from this moment, with the direction the last frame had
+              if (model.frame !== "stars" && model.ride === null && model.region === null) {
+                const away = unit(minus([camera.position.x, camera.position.y, camera.position.z], focusPos));
+                const turned = controlsFor(away, model.centre, model.time);
+                model.anchor = model.time;
+                model.holdBias = { anchor: model.time, yaw: turned.yaw - model.view.yaw, tilt: turned.tilt - model.view.tilt, up: [camera.up.x, camera.up.y, camera.up.z] };
+              }
             }
           }
           // the controls' roll turns the picture clockwise about the line of sight, and a pan moves everything by that many CSS pixels at any depth: the window of the projection moves the other way

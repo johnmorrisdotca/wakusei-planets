@@ -502,6 +502,39 @@ test("the space view at a day a second: at most thirty frames a second, one fram
   expect(still.rafRequests - hidden.rafRequests).toBeLessThanOrEqual(1);
 });
 
+test("the space view held in a pair or with a body at a day a second: at most thirty frames a second, one frame at a time, a lookup about once a second, and nothing drawn at rest", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=off&scale=true`);
+  await liveSky(page);
+  for (const frame of ["pair", "body"]) {
+    await sky(page).evaluate(async (el, wanted) => {
+      const space = el as unknown as { goTo(id: string, options: unknown): boolean; frame: string; speed: number };
+      space.speed = 0;
+      space.goTo("sun", { smooth: false });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      space.goTo("mercury", { smooth: false });
+      space.frame = wanted as string;
+    }, frame);
+    await settle(page, 1500);
+    // at rest: nothing is drawn
+    const rest0 = await skyStats(page);
+    await settle(page, 2500);
+    expect((await skyStats(page)).draws - rest0.draws, `${frame}: nothing is drawn at rest`).toBe(0);
+    await sky(page).evaluate((el) => Reflect.set(el, "speed", 86400));
+    await settle(page, 1500);
+    const before = await readCounts(page);
+    const s0 = await skyStats(page);
+    await settle(page, 4000);
+    const after = await readCounts(page);
+    const s1 = await skyStats(page);
+    expect(s1.draws - s0.draws, `${frame}: draws while time runs`).toBeGreaterThan(0);
+    expect(s1.draws - s0.draws).toBeLessThanOrEqual(4 * 31);
+    expect((s1.lookups - s0.lookups) / 4).toBeLessThanOrEqual(2.6);
+    expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(4 * 31 * 2);
+    expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
+    await sky(page).evaluate((el) => Reflect.set(el, "speed", 0));
+  }
+});
+
 test("changes to the space view give back what they took: the zooms, the scales, the looks, the light, the clock and a removed element leave contexts and graphics memory flat", async ({ page }) => {
   // at least eight rounds of the changes below (about 15 to 25 seconds each in the CI image) and a wait for each to settle: more than the 180 seconds a test is given
   test.setTimeout(420_000);

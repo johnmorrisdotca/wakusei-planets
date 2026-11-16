@@ -10,6 +10,7 @@ export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron
 export { spinAxis, type SpinAxis } from "./spin.ts";
 export { COVER_ARROW_GAP, COVER_MIN_PX, coverArrows, coveredBy, type CoverArrow, type CoverEntry } from "./covered.ts";
 export { TRAVEL_BUDGET_MS, TRAVEL_CLEARANCE, arrivalSide, travelArrival, travelPlan, travelPose, type ArrivalCompanion, type TravelBody, type TravelInput, type TravelKind, type TravelPlan, type TravelSample, type TravelSight, type TravelView } from "./travel.ts";
+export { bodyBasis, carry, controlsFor, directionBetween, FRAMES, hasRotation, holdSite, keepClear, pairAxis, pairBasis, readFrame, type FrameKind, type HoldBasis } from "./hold.ts";
 export { regionOrbits, regionView, SUN_REGIONS, type SunRegion } from "./regions.ts";
 export { SIGHT_STEP_PX, sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 export { besideFace, facingPoint, faceView, subCameraPoint, surfaceDirection, type Face, type FaceView } from "./face.ts";
