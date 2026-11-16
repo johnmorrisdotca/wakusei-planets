@@ -6,6 +6,7 @@ import { test } from "node:test";
 import { type BodyId } from "../src/facts.ts";
 import { TRAVEL_CLEARANCE, travelArrival, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelView } from "../src/space/index.ts";
 import { dot, length, RAD, sub, type Vec3 } from "../src/vec.ts";
+import { holdSite } from "../src/space/hold.ts";
 import { angle, moveOf, SAMPLES, SCALES, SHAPES, walk, type Walk } from "./travel-harness.ts";
 
 const FOV = 35;
@@ -196,4 +197,18 @@ test("without `behind` an arrival is as it was, and with it the side puts the bo
   const z = dot(v, kept.forward);
   const across = Math.abs(dot(v, [kept.forward[1] * kept.up[2] - kept.forward[2] * kept.up[1], kept.forward[2] * kept.up[0] - kept.forward[0] * kept.up[2], kept.forward[0] * kept.up[1] - kept.forward[1] * kept.up[0]])) / z;
   assert.ok(across > Math.tan((FOV / 2) * RAD) * 0.4 && across < Math.tan((FOV / 2) * RAD) * (16 / 9) * 0.93, `${across}`);
+});
+
+test("an arrival with the body left behind it still keeps a moon in the picture where a side does both (Jupiter from the Earth, wide and tall)", () => {
+  const ms = Date.UTC(2026, 10, 11, 12);
+  for (const mode of SCALES) {
+    for (const aspect of [1280 / 900, 390 / 844]) {
+      const jupiter = holdSite("jupiter", mode, ms);
+      const earth = holdSite("earth", mode, ms);
+      const companions = ["io", "europa", "ganymede", "callisto"].map((id) => ({ id, at: holdSite(id as BodyId, mode, ms).at, rank: 1 as const }));
+      const view = travelArrival({ body: jupiter.at, radius: jupiter.radius, from: earth.at, sun: holdSite("sun", mode, ms).at, aspect, behind: earth.at, companions });
+      assert.equal(view.behind, true, `${mode} ${aspect}`);
+      assert.ok(["io", "europa", "ganymede", "callisto"].includes(view.companion ?? ""), `${mode} ${aspect}: ${view.companion}`);
+    }
+  }
 });

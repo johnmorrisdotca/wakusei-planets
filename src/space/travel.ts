@@ -1538,7 +1538,7 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
     // a near-square picture has no room beside the disc: any side of it will do
     return aspect > 0.77 && aspect < 1.3 ? true : aspect >= 1 ? Math.abs(y) <= 0.45 : Math.abs(x) <= 0.45;
   };
-  const found: { side: Vec3; rank: number; near: number; id: string | null }[] = [];
+  const found: { side: Vec3; rank: number; near: number; id: string | null; both?: boolean }[] = [];
   const half = Math.PI / 2 + 1e-4;
   const companions = input.companions ?? [];
   const behind = input.behind;
@@ -1546,9 +1546,19 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
     const u = length(side) < 1e-9 ? approach : unit(side);
     // the body left, behind the body gone to at its back left or right, comes first and is kept even where that gives a dark side: it is what keeps the body left in the picture
     if (behind !== undefined && frames(u, behind) && level(u, behind)) {
+      // a side that also frames a moon of the body (or its planet) is taken before one that does not: the arrival keeps both, and names the moon
+      let moon: string | null = null;
+      let framed = false;
+      for (const companion of companions) {
+        if (companion.rank === 1 && frames(u, companion.at)) {
+          framed = true;
+          moon = companion.id ?? null;
+          break;
+        }
+      }
       const near = angleOf(u, approach);
       const top = found[0];
-      if (top === undefined || top.rank > 0 || near < top.near - 1e-6) found[0] = { side: u, rank: 0, near, id: null };
+      if (top === undefined || top.rank > 0 || (framed && !top.both) || (framed === (top.both === true) && near < top.near - 1e-6)) found[0] = { side: u, rank: 0, near, id: moon, both: framed };
       return;
     }
     if (sunDir && angleOf(u, sunDir) > half) return;

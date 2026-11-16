@@ -24,19 +24,21 @@ test("squeezed moons grow from the default size to 4", async ({ page }, testInfo
     (el as unknown as { moonSize: number }).moonSize = value;
   }, n);
   const radius = (id: string) => space.evaluate((el, name) => (el as unknown as { placeOf: (body: string) => { r: number } | null }).placeOf(name)?.r ?? 0, id);
+  // the arrival now stands where the body left is in the picture behind Jupiter, so which of its moons is near the camera and which is lost behind the planet depends on the date and the picture's shape: the largest of the four is read
+  const largest = async () => Math.max(...(await Promise.all(["io", "europa", "ganymede", "callisto"].map((id) => radius(id)))));
   const report = () => space.evaluate((el) => (el as unknown as { stats: { moonSize: { asked: number; factor: number; clamped: boolean } } }).stats.moonSize);
 
   await show("jupiter", 0.22);
   await expect.poll(() => space.evaluate((el) => (el as unknown as { body: string }).body)).toBe("jupiter");
   await size(2);
-  await expect.poll(() => radius("ganymede")).toBeGreaterThan(2);
-  const atDefault = await radius("ganymede");
+  await expect.poll(largest).toBeGreaterThan(2);
+  const atDefault = await largest();
   await testInfo.attach("moon-jupiter-size-2", { body: await page.screenshot(), contentType: "image/png" });
   expect((await report()).factor).toBeCloseTo(2, 5);
   await size(4);
-  // twice the factor draws Ganymede about twice as wide (nothing at Jupiter limits 4); read until the next draw has it
-  await expect.poll(() => radius("ganymede")).toBeGreaterThan(atDefault * 1.6);
-  const atFour = await radius("ganymede");
+  // twice the factor draws the largest moon about twice as wide (nothing at Jupiter limits 4); read until the next draw has it
+  await expect.poll(largest).toBeGreaterThan(atDefault * 1.6);
+  const atFour = await largest();
   expect(atFour).toBeLessThan(atDefault * 2.4);
   const jupiter = await report();
   expect(jupiter.asked).toBe(4);

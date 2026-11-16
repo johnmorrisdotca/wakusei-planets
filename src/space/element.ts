@@ -1720,7 +1720,7 @@ export class WakuseiSpace extends HTMLElement {
     const behind = swing && this.#arrivedFrom !== null && this.#arrivedFrom !== id ? this.#site(this.#arrivedFrom).at : undefined;
     const wanted = travelArrival({ body: body.at, radius: body.radius, from: model.camera.position, sun, aspect, companions: swing ? this.#companions(id) : [], ...(behind === undefined ? {} : { behind }) });
     // the body left, kept in the picture behind the body gone to, is the companion of that arrival
-    model.companion = wanted.behind ? this.#arrivedFrom : wanted.companion;
+    model.companion = wanted.behind ? (wanted.companion ?? this.#arrivedFrom) : wanted.companion;
     const side: [number, number, number] = [wanted.position[0] - body.at[0], wanted.position[1] - body.at[1], wanted.position[2] - body.at[2]];
     const anchor = model.anchor ?? model.time;
     // the scene aims from the ground direction of (lon - yaw, lat - tilt) at the anchor moment: search the pair that lies along the wanted side, coarse then fine
