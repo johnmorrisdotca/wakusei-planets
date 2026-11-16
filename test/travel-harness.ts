@@ -47,7 +47,7 @@ export function site(id: BodyId, mode: ScaleMode, ms: number): { at: Vec3; radiu
 export const bodyOf = (id: BodyId, mode: ScaleMode, span = SPAN, t0 = START): TravelBody => ({ from: site(id, mode, t0).at, to: site(id, mode, t0 + span).at, radius: site(id, mode, t0).radius });
 
 /** The framed view at a body at a moment: beside a moon with its planet behind it, or the whole body from the side `from` is on. */
-export function viewOf(id: BodyId, mode: ScaleMode, ms: number, aspect: number, from: Vec3, plain = false): TravelView {
+export function viewOf(id: BodyId, mode: ScaleMode, ms: number, aspect: number, from: Vec3, plain = false, behind?: Vec3): TravelView {
   const here = site(id, mode, ms);
   const sun = site("sun", mode, ms).at;
   const host = hostOf(id);
@@ -56,7 +56,7 @@ export function viewOf(id: BodyId, mode: ScaleMode, ms: number, aspect: number, 
     const camera = besideMoon({ moon: here.at, moonRadius: here.radius, host: planet.at, hostRadius: planet.radius, sun, aspect, zoom: 1, yaw: 0, tilt: 0, north: orientation(host, ms).pole });
     return { position: camera.position, forward: camera.forward, up: camera.up, fov: camera.fov };
   }
-  return travelArrival({ body: here.at, radius: here.radius, from, sun: id === "sun" ? undefined : sun, aspect });
+  return travelArrival({ body: here.at, radius: here.radius, from, sun: id === "sun" ? undefined : sun, aspect, ...(behind === undefined ? {} : { behind }) });
 }
 
 /** The time budget given to the planner by every move made from here on: none, so that a walk is the same each time. Only the table of scripts/travel-table.ts sets one, to see what it costs. */
@@ -72,7 +72,8 @@ export interface Move {
 }
 
 /** `plain` gives both views as the space view frames a body it goes to (the whole body from the side the camera is on, a moon too), not beside a moon with its planet behind it. */
-export function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, kind?: TravelKind, plain: boolean | Vec3 = false, span = SPAN, t0 = START): Move {
+/** `behind`: the last view keeps the body left in the picture, behind the destination at its back left or right (`travelArrival`'s `behind`), as the space view arrives. */
+export function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, kind?: TravelKind, plain: boolean | Vec3 = false, span = SPAN, t0 = START, behind = false): Move {
   const names = new Set<BodyId>([a, b, "sun"]);
   for (const id of [a, b]) {
     const host = hostOf(id);
@@ -88,7 +89,7 @@ export function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, ki
   // `plain` as a direction: the camera comes from that side of the body left
   const first = Array.isArray(plain) ? [site(a, mode, t0).at[0] + plain[0], site(a, mode, t0).at[1] + plain[1], site(a, mode, t0).at[2] + plain[2]] as Vec3 : sunSide;
   const start = viewOf(a, mode, t0, aspect, first, plain !== false);
-  const end = viewOf(b, mode, t0 + span, aspect, start.position, plain !== false);
+  const end = viewOf(b, mode, t0 + span, aspect, start.position, plain !== false, behind ? site(a, mode, t0 + span).at : undefined);
   const input: TravelInput = { start, end, leaving: get(a), destination: get(b), around: shared === undefined ? undefined : get(shared), others: bodies.map((entry) => entry.body), aspect, kind, ...(budgetOf === undefined ? {} : { budget: budgetOf }) };
   return { input, bodies };
 }
@@ -113,7 +114,7 @@ const kindOf = (text: string): FaultKind => KINDS.find(([pattern]) => pattern.te
 export interface Walk {
   samples: TravelSample[];
   /** What the plan says: the kind, the path, the shares of the move, its length in milliseconds, the least turn, the settle and the easing. */
-  plan: { kind: string; path: string; stages: { turn: number; travel: number; arrive: number }; duration: number; turn: number; settle: number; easing: { turn: string; distance: string } };
+  plan: { kind: string; path: string; stages: { turn: number; travel: number; arrive: number }; duration: number; turn: number; settle: number; blend: number; easing: { turn: string; distance: string } };
   duration: number;
   path: string;
   turnShare: number;
@@ -219,7 +220,7 @@ export function walk(move: Move, options: { shrink?: boolean; bent?: { back: num
   const close = (a: Vec3, b: Vec3, scale: number): boolean => length(sub(a, b)) <= 1e-9 * Math.max(1, scale);
   if (!close(samples[0]!.position, input.start.position, length(input.start.position)) || angle(samples[0]!.forward, input.start.forward) > 1e-6 || samples[0]!.fov !== input.start.fov) whole("the first sample is not the first view", "step")
   if (!close(last.position, input.end.position, length(input.end.position)) || angle(last.forward, input.end.forward) > 1e-6 || angle(last.up, input.end.up) > 1e-6 || last.fov !== input.end.fov) whole("the last sample is not the last view", "step")
-  return { samples, plan: { kind: plan.kind, path: plan.path, stages: plan.stages, duration: plan.duration, turn: plan.turn, settle: plan.settle, easing: plan.easing }, duration: plan.duration, path: plan.path, turnShare: plan.stages.turn, least, turned, back, settle: plan.settle, worstTurn, worstScreen, nearest, faults, events };
+  return { samples, plan: { kind: plan.kind, path: plan.path, stages: plan.stages, duration: plan.duration, turn: plan.turn, settle: plan.settle, blend: plan.blend, easing: plan.easing }, duration: plan.duration, path: plan.path, turnShare: plan.stages.turn, least, turned, back, settle: plan.settle, worstTurn, worstScreen, nearest, faults, events };
 }
 
 /** Where the camera comes from, as a direction from the body left: along each axis and between them. */

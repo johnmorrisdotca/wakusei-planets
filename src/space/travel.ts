@@ -66,7 +66,7 @@ const unit = (a: Vec3): Vec3 => {
 export type TravelKind = "turn-travel" | "direct" | "look-back" | "auto" | "cut";
 
 /**
- * How near a move may come to a body, in that body's radii above its surface: 1, so a body passed is never more than 60 degrees across. A move that starts or ends nearer than one and a half times that keeps two thirds of the nearer distance.
+ * How near a move may come to a body, in that body's radii above its surface: a third of a radius (0.35), a margin so the camera never flies through a body. Bodies near the way are passed, not routed round: a body passed close is one more thing to see on the way. A move that starts or ends nearer than one and a half times that keeps two thirds of the nearer distance.
  *
  * @example
  * ```ts
@@ -75,7 +75,7 @@ export type TravelKind = "turn-travel" | "direct" | "look-back" | "auto" | "cut"
  * console.log(TRAVEL_CLEARANCE);
  * ```
  */
-export const TRAVEL_CLEARANCE = 1;
+export const TRAVEL_CLEARANCE = 0.35;
 
 /**
  * The time in milliseconds, counted from the start of the plan, that the space view lets the planner spend on the other ways of a move within a planet's family (`TravelInput.budget`); the first way, with its aim
@@ -246,6 +246,8 @@ export interface TravelPlan {
   easing: { turn: "smooth-step"; distance: "geometric" };
   /** The angle the camera turns round the destination as it arrives, in degrees: 0 when the whole turn is made before the way on. */
   settle: number;
+  /** How much of the turn the way on overlaps: 0 when the way on starts when the turn ends, and up to 0.8 of the turn when it starts earlier so that the camera never stops between the two (the move is then shorter by the time they share). */
+  blend: number;
   /** The path itself, for `travelPose`. */
   route: unknown;
 }
@@ -435,6 +437,8 @@ interface Turn {
   hold?: { body: TravelBody; u: Vec3; d: number; q: number; far: number };
   /** Where the turn is made by an aim point (see `Aim`) and not by a swing about the pivot. */
   aim?: Aim;
+  /** Set where the turn ends at the stand of a framed move (`frameStand`). */
+  framed?: boolean;
 }
 /**
  * The turn of a move within one planet's family when no turn about the planet keeps one of the two bodies in the picture: the camera looks at an aim point that goes from the moon being left to the destination,
@@ -512,6 +516,8 @@ interface Route {
   turn: Turn | null;
   /** The share of the time the turn takes, and the moment the arrival starts. */
   share: number;
+  /** The moment the way on starts: the end of the turn (`share`) when the turn is made first, and earlier when the way on starts while the turn is still going (see `blended`). */
+  legStart: number;
   arrive: number;
   leg: Leg;
   shells: { body: TravelBody; clear: number }[];
@@ -584,7 +590,17 @@ function clearOf(route: Route, position: Vec3, t: number): Vec3 {
 
 function along(route: Route, t: number): { position: Vec3; o: Facing; fov: number; stage: "turn" | "travel" | "arrive" } {
   const inTurn = route.turn !== null && t < route.share;
-  const at = inTurn ? turnAt(route.turn!, ease(t / route.share), t, clamp01(t / route.share)) : legAt(route.leg, ease(route.share >= 1 ? 1 : (t - route.share) / (1 - route.share)), t);
+  let at: { position: Vec3; o: Facing; fov: number };
+  if (inTurn) {
+    at = turnAt(route.turn!, ease(t / route.share), t, clamp01(t / route.share));
+    if (t > route.legStart) {
+      // the way on has started while the turn is still going: the camera goes where the turn takes it and, as well, as far along the way on as that has got, so the two motions add and there is no stop and no corner where one gives way to the other
+      const q = ease((t - route.legStart) / (1 - route.legStart));
+      const now = legAt(route.leg, q, t);
+      const start = legAt(route.leg, 0, t);
+      at = { ...at, position: add(at.position, sub(now.position, start.position)) };
+    }
+  } else at = legAt(route.leg, ease(route.legStart >= 1 ? 1 : (t - route.legStart) / (1 - route.legStart)), t);
   return { position: clearOf(route, at.position, t), o: at.o, fov: at.fov, stage: inTurn ? "turn" : t < route.arrive ? "travel" : "arrive" };
 }
 
@@ -598,7 +614,11 @@ function sightOf(body: TravelBody, t: number, position: Vec3, o: Facing, frame: 
 }
 
 /** The pivot's stand at the end of the turn, for a moment `tm` of the move. */
-function standAt(input: TravelInput, tm: number, family: boolean, variant = 0): { turn: Turn; leg: Leg } {
+function standAt(input: TravelInput, tm: number, family: boolean, variant = 0, framed = false): { turn: Turn; leg: Leg } {
+  if (framed && !family) {
+    const picture = frameStand(input, tm);
+    if (picture !== null) return picture;
+  }
   const o0 = facingOf(input.start);
   const o1 = facingOf(input.end);
   const clearance = input.clearance ?? TRAVEL_CLEARANCE;
@@ -727,6 +747,123 @@ function standAt(input: TravelInput, tm: number, family: boolean, variant = 0): 
       about: input.destination, type: "swing", swing: rest, fov0: input.start.fov, fov1: input.end.fov, from, to: e1, d0: dm, d1, dn: Math.min(dm, d1 * Math.exp(2 + swingDegrees(rest) / 15)),
       u0: unit(toCamera(om, scale(from, -1))), u1: unit(toCamera(o1, scale(e1, -1))), l: dm - d1, ea: Math.max(1e-9, chosen.d), eb: d1,
     },
+  };
+}
+
+/** The share of the picture's height the body left keeps at the stand of a framed move (`frameStand`), and the least and most it may keep. */
+const FRAME_HEIGHT = 0.5;
+const FRAME_LEAST = 0.4;
+const FRAME_MOST = 0.6;
+/** The most the line between the two bodies may be tilted from the picture's long axis at the stand, in radians. */
+const FRAME_TILT = 0.6;
+/** Where the stand frames the pair along their line in the picture: the body left this share of the way from the middle to the far edge, so the other body is on the other side. */
+const FRAME_SPLIT = 0.45;
+
+/** The distance at which a body of radius `r` keeps `share` of the picture's height. */
+const distanceFor = (r: number, share: number, tv: number): number => {
+  const t = Math.max(1e-6, share * tv);
+  return r / (t / Math.sqrt(1 + t * t));
+};
+const FRAME_SPHERE = (() => {
+  const points: Vec3[] = [];
+  const n = 240;
+  for (let i = 0; i < n; i += 1) {
+    const z = 1 - (2 * (i + 0.5)) / n;
+    const r = Math.sqrt(1 - z * z);
+    const a = i * 2.399963229728653;
+    points.push([r * Math.cos(a), r * Math.sin(a), z]);
+  }
+  return points;
+})();
+
+/**
+ * The stand of a framed move (B1): the camera backs up a little from the body left, until it keeps about half the picture's height, and goes round it only as far as it takes for the other body to be in the picture
+ * too, on the other side of the middle: the body left large on one side, the destination small on the other, whichever side needs less movement. The look direction is the one that gives that picture, so the whole turn is
+ * made before the way on and the way on starts from a picture that holds both. Null where there is no such picture (the destination too near the body left to leave its disc, or the picture too narrow).
+ */
+function frameStand(input: TravelInput, tm: number): { turn: Turn; leg: Leg } | null {
+  const pivot = input.leaving;
+  if (pivot.reach !== undefined || input.destination.reach !== undefined) return null;
+  const o0 = facingOf(input.start);
+  const o1 = facingOf(input.end);
+  const frame = frameOf(input.end.fov, input.aspect);
+  const wide = frame.th >= frame.tv;
+  const clearance = input.clearance ?? TRAVEL_CLEARANCE;
+  const centre = placeOf(pivot, tm);
+  const b = placeOf(input.destination, tm);
+  const e1 = sub(input.end.position, placeOf(input.destination, 1));
+  const last = add(b, e1);
+  const fromPivot = sub(pivot.from, input.start.position);
+  const d0 = Math.max(1e-12, length(fromPivot));
+  const near = distanceFor(pivot.radius, FRAME_MOST, frame.tv);
+  const far = distanceFor(pivot.radius, FRAME_LEAST, frame.tv);
+  const dm = d0 < near ? distanceFor(pivot.radius, FRAME_HEIGHT, frame.tv) : d0;
+  const share = pivot.radius / dm;
+  const tanL = share / Math.sqrt(Math.max(1e-12, 1 - share * share));
+  const n0 = unit(scale(fromPivot, -1));
+  // the camera at `n` round the body left, looking so that the two bodies are either side of the middle: its picture, or null if the picture does not do
+  const standAtN = (n: Vec3): { stand: Vec3; o: Facing; cost: number } | null => {
+    const stand = add(centre, scale(n, dm));
+    const toB = sub(b, stand);
+    if (length(toB) < 1e-9) return null;
+    const dirL = scale(n, -1);
+    const dirB = unit(toB);
+    const apart = angleOf(dirL, dirB);
+    if (apart < 1e-6) return null;
+    const f = arc(dirL, dirB, FRAME_SPLIT);
+    const pick = o0.u;
+    const across = sub(pick, scale(f, dot(pick, f)));
+    const o: Facing = { f, u: length(across) < 1e-6 ? squareTo(f) : unit(across) };
+    const sl = toCamera(o, sub(centre, stand));
+    const sb = toCamera(o, toB);
+    if (!(sl[2] > 0) || !(sb[2] > 0)) return null;
+    const xl = sl[0] / (sl[2] * frame.th);
+    const yl = sl[1] / (sl[2] * frame.tv);
+    const xb = sb[0] / (sb[2] * frame.th);
+    const yb = sb[1] / (sb[2] * frame.tv);
+    // the disc of the body left inside the picture, the destination's place inside it, and the destination clear of the disc
+    if (Math.abs(xl) + tanL / frame.th > 1 || Math.abs(yl) + tanL / frame.tv > 1) return null;
+    if (Math.abs(xb) > 0.85 || Math.abs(yb) > 0.85) return null;
+    const dx = (xb - xl) * frame.th;
+    const dy = (yb - yl) * frame.tv;
+    const gap = Math.hypot(dx, dy);
+    if (gap < 1.2 * tanL) return null;
+    const tilt = wide ? Math.atan2(Math.abs(dy), Math.abs(dx)) : Math.atan2(Math.abs(dx), Math.abs(dy));
+    if (tilt > FRAME_TILT) return null;
+    if (missOf(stand, last, centre) < Math.min(1.05 * (1 + clearance) * pivot.radius, 0.9 * dm)) return null;
+    return { stand, o, cost: angleOf(n0, n) + 0.8 * tilt };
+  };
+  let best: { n: Vec3; cost: number } | null = null;
+  const here = standAtN(n0);
+  if (here !== null) best = { n: n0, cost: here.cost };
+  else {
+    for (const n of FRAME_SPHERE) {
+      const found = standAtN(n);
+      if (found !== null && (best === null || found.cost < best.cost)) best = { n, cost: found.cost };
+    }
+    if (best === null) return null;
+    // the least turn about the body left that is still a good picture: along the way from where the camera is to the best found
+    let lo = 0;
+    let hi = 1;
+    const goal = best.n;
+    for (let i = 0; i < 14; i += 1) {
+      const mid = (lo + hi) / 2;
+      if (standAtN(arc(n0, goal, mid)) !== null) hi = mid;
+      else lo = mid;
+    }
+    best = { n: arc(n0, goal, hi), cost: 0 };
+  }
+  const at = standAtN(best.n);
+  if (at === null) return null;
+  const { stand, o } = at;
+  const from = sub(stand, b);
+  const lengthOn = length(sub(e1, from));
+  const leaving = placeOf(input.leaving, tm);
+  const d1 = Math.max(1e-12, length(e1));
+  void far;
+  return {
+    turn: { pivot, swing: swingOf(o0, o), u0: unit(toCamera(o0, fromPivot)), u1: unit(toCamera(o, sub(centre, stand))), d0, d1: dm, lift: 0, fov0: input.start.fov, fov1: input.end.fov, framed: true },
+    leg: { about: input.destination, type: "line", swing: swingOf(o, o1), fov0: input.end.fov, fov1: input.end.fov, from, to: e1, d0: length(from), d1, dn: d1, u0: unit(toCamera(o0, fromPivot)), u1: unit(toCamera(o0, fromPivot)), l: lengthOn, ea: Math.max(1e-9, Math.min(dm, length(sub(leaving, stand)))), eb: d1 },
   };
 }
 
@@ -900,7 +1037,8 @@ function backOffKit(input: TravelInput, turn: Turn, share: number): (lift: numbe
   };
 }
 
-function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<TravelPlan, "route"> } {
+type Made = { route: Route; plan: Omit<TravelPlan, "route"> };
+function routeBase(input: TravelInput, variant = 0, framed = false): Made {
   const wanted = input.reduced ? "cut" : (input.kind ?? "turn-travel");
   const kind: Exclude<TravelKind, "auto"> = wanted === "auto" ? "turn-travel" : wanted;
   const clearance = input.clearance ?? TRAVEL_CLEARANCE;
@@ -912,7 +1050,7 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
   const easing = { turn: "smooth-step", distance: "geometric" } as const;
   if (kind === "cut") {
     const leg = lineLeg(input, input.destination, undefined);
-    return { route: { ...base, cut: true, turn: null, share: 0, arrive: 0, leg }, plan: { kind, path: "cut", stages: { turn: 0, travel: 0, arrive: 1 }, duration: 0, turn: least, settle: 0, easing } };
+    return { route: { ...base, cut: true, turn: null, share: 0, legStart: 0, arrive: 0, leg }, plan: { kind, path: "cut", stages: { turn: 0, travel: 0, arrive: 1 }, duration: 0, turn: least, settle: 0, blend: 0, easing } };
   }
   let turn: Turn | null = null;
   let leg: Leg;
@@ -929,7 +1067,7 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
     const d0 = length(sub(input.leaving.from, input.start.position));
     const facing = swingDegrees(swingOf(o0, facingOf(input.end))) < 1 && within(toCamera(o0, sub(input.destination.from, input.start.position)), frameOf(input.start.fov, input.aspect), 0.93);
     const open = missOf(input.start.position, input.end.position, input.leaving.from) >= Math.min(1.52 * (1 + clearance) * input.leaving.radius, 0.9 * d0);
-    let stand = facing && open ? { turn: { pivot: input.leaving, swing: swingOf(o0, o0), u0: [0, 0, 1] as Vec3, u1: [0, 0, 1] as Vec3, d0: 1, d1: 1, lift: 0, fov0: input.start.fov, fov1: input.start.fov }, leg: lineLeg(input, input.destination, undefined) } : standAt(input, 0.25, family, variant);
+    let stand = facing && open ? { turn: { pivot: input.leaving, swing: swingOf(o0, o0), u0: [0, 0, 1] as Vec3, u1: [0, 0, 1] as Vec3, d0: 1, d1: 1, lift: 0, fov0: input.start.fov, fov1: input.start.fov }, leg: lineLeg(input, input.destination, undefined) } : standAt(input, 0.25, family, variant, framed);
     // the stand is worked out for the moment the turn ends, which is the share of the move its own length gives: found by trying, until the two agree (the bodies move, so a stand for another moment would not meet the way on)
     let tm = 0.25;
     for (let pass = 0; pass < 8; pass += 1) {
@@ -937,7 +1075,7 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
       share = t0 === 0 ? 0 : t0 / (t0 + legMs(stand.leg, t0));
       if ((facing && open) || share === 0 || Math.abs(share - tm) < 0.002) break;
       tm = pass === 0 ? share : (tm + share) / 2;
-      stand = standAt(input, tm, family, variant);
+      stand = standAt(input, tm, family, variant, framed);
     }
     if (share > 0 && !(facing && open)) share = tm;
     turn = stand.turn;
@@ -999,8 +1137,8 @@ function routeBase(input: TravelInput, variant = 0): { route: Route; plan: Omit<
     else hi = mid;
   }
   const arrive = share + (1 - share) * Math.min(0.9, Math.max(0.6, hi));
-  const route: Route = { ...base, cut: false, turn, share, arrive, leg };
-  return { route, plan: { kind, path, stages: { turn: share, travel: arrive - share, arrive: 1 - arrive }, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)), turn: least, settle: leg.type === "swing" ? swingDegrees(leg.swing) : 0, easing } };
+  const route: Route = { ...base, cut: false, turn, share, legStart: share, arrive, leg };
+  return { route, plan: { kind, path, stages: { turn: share, travel: arrive - share, arrive: 1 - arrive }, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)), turn: least, settle: leg.type === "swing" ? swingDegrees(leg.swing) : 0, blend: 0, easing } };
 }
 
 /** The faults a walk of a move has that the way on is judged by: samples with neither body in the picture, with the destination out of it after the turn, where the destination moves away from its last place on the screen (and the most it does in a sample), and where it moves a third of the frame in one. */
@@ -1117,6 +1255,74 @@ function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPla
   const total = Math.max(t0 / share, first.plan.duration / Math.max(0.05, input.pace ?? 1));
   return { route: aimed, plan: { ...first.plan, duration: Math.round(Math.min(9000, Math.max(1200, total)) * Math.max(0.05, input.pace ?? 1)) } };
 }
+/** How much of the turn the way on may overlap, tried from the most, and how much of the shorter stage's time the overlap saves. */
+const BLENDS = [1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
+const BLEND_SAVES = 0.6;
+/** The moment the arrival starts for a way on that starts at `legStart`. */
+const arriveFor = (leg: Leg, legStart: number): number => {
+  const near = leg.type === "line" ? 2 * leg.eb : leg.dn - leg.d1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 30; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (leftOf(ease(mid), leg.l, leg.ea, leg.eb) > near) lo = mid;
+    else hi = mid;
+  }
+  return legStart + (1 - legStart) * Math.min(0.9, Math.max(0.6, hi));
+};
+/** The most the look direction or the picture's up turns between two moments of a walk of the move (a 240th apart), in degrees. */
+function steepest(route: Route): number {
+  const plan = { route } as unknown as TravelPlan;
+  let before = travelPose(route.input, 0, plan);
+  let worst = 0;
+  for (let i = 1; i <= 240; i += 1) {
+    const s = travelPose(route.input, i / 240, plan);
+    worst = Math.max(worst, angleOf(before.forward, s.forward) / RAD, angleOf(before.up, s.up) / RAD);
+    before = s;
+  }
+  return worst;
+}
+/** The furthest from the middle of the picture the nearer of the two bodies gets in the turn (1 is the edge of the picture, infinity is neither in it at some moment). */
+function turnEdge(route: Route): number {
+  const plan = { route } as unknown as TravelPlan;
+  const off = (sight: TravelSight): number => (sight.inside ? Math.max(Math.abs(sight.x), Math.abs(sight.y)) : Number.POSITIVE_INFINITY);
+  let edge = 0;
+  for (let i = 0; i <= 240; i += 1) {
+    if (i / 240 >= route.share) break;
+    const s = travelPose(route.input, i / 240, plan);
+    edge = Math.max(edge, Math.min(off(s.leaving), off(s.destination)));
+  }
+  return edge;
+}
+/** `now` has none of any kind of fault more than `was` (the planet out of the picture only where it was in all through, and the drift's worst no worse). */
+const noWorse = (now: Faults, was: Faults): boolean =>
+  now.empty <= was.empty && now.lost <= was.lost && now.drift <= was.drift && now.step <= was.step && now.pace <= was.pace && now.driftWorst <= was.driftWorst + 1e-12 && (was.planet > 0 || now.planet === 0) && total(now) <= total(was);
+
+/**
+ * The way on starts while the turn is still going, so the camera never stops between the two and never turns a corner: its place is where the turn takes it plus as far along the way on as that has got, and both
+ * stages ease in and out, so the speed does not drop to nothing in between and the direction of travel bends over the overlap instead of changing at once. The turn ends where it did, so the look direction, the
+ * stand and every picture from the end of the turn on are the same shape; the overlap is the largest of `BLENDS` that leaves no kind of fault more than the move had, and none if none does. The move is shorter by the
+ * time the two stages now share.
+ */
+function blended(first: { route: Route; plan: Omit<TravelPlan, "route"> }): { route: Route; plan: Omit<TravelPlan, "route"> } {
+  const route = first.route;
+  // a way on that turns round the destination as it goes keeps its own timing: its look direction follows the distance, which an earlier start would make jump
+  if (route.cut || route.turn === null || route.leg.type !== "line" || route.share <= 0 || route.share >= 1) return first;
+  const was = faultsOf(route);
+  const rate = Math.max(1.25 * steepest(route), 3);
+  for (const share of BLENDS) {
+    const legStart = route.share * (1 - share);
+    const candidate: Route = { ...route, legStart, arrive: arriveFor(route.leg, legStart) };
+    if (!noWorse(faultsOf(candidate), was) || steepest(candidate) > rate) continue;
+    // a turn made by an aim point keeps the nearer body inside `AIM_EDGE` of the way to the edge, and the overlap must not take it out
+    if (route.turn.aim !== undefined && turnEdge(candidate) > AIM_EDGE) continue;
+    const pace = Math.max(0.05, route.input.pace ?? 1);
+    const duration = Math.round(Math.max(1200, Math.round(first.plan.duration / pace) * (1 - BLEND_SAVES * share * Math.min(route.share, 1 - route.share))) * pace);
+    return { route: candidate, plan: { ...first.plan, duration, blend: share, stages: { turn: route.share, travel: candidate.arrive - route.share, arrive: 1 - candidate.arrive } } };
+  }
+  return first;
+}
+
 /**
  * The route of a move. A move within one planet's family (the path `circle`) is first made as it always was. If a walk of it has a picture with neither the body left nor the destination in it, its turn is made again by an
  * aim point (see `Aim`): the turn takes the same share of the move and ends in the same place, so the way on and the arrival are the same, sample for sample, and only the turn is new. The new turn is taken when
@@ -1130,7 +1336,7 @@ function routeOf(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "ro
   if (kept !== undefined) return kept;
   // a plan is kept for the input it was made for, so the input is frozen (its top level: a field set after planning would be a plan of something else; the views and bodies are not to be changed either)
   Object.freeze(input);
-  const made = routeMade(input);
+  const made = blended(routeMade(input));
   routes.set(input, made);
   return made;
 }
@@ -1139,7 +1345,12 @@ function routeMade(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
   // before the other ways were tried and what they are measured against
   const started = input.budget?.now();
   const stop = input.budget === undefined || started === undefined ? undefined : (): boolean => input.budget!.now() - started >= input.budget!.ms;
-  const first = withAim(input, routeBase(input));
+  let first = withAim(input, routeBase(input));
+  if (first.plan.path === "pivot" && first.route.turn !== null && first.route.share > 0) {
+    // a move that turns beside the body left is framed (B1) where there is a picture that holds both bodies, its look direction and stand being those of the picture; it is taken if it has no fault more than the other
+    const framed = routeBase(input, 0, true);
+    if (framed.route.turn?.framed === true && framed.route.share > 0 && noWorse(faultsOf(framed.route), faultsOf(first.route)) && steepest(framed.route) <= Math.max(1.25 * steepest(first.route), 3)) first = framed;
+  }
   if (first.route.turn === null || first.plan.path !== "circle" || first.route.cut || first.route.share <= 0) return first;
   const was = faultsOf(first.route);
   if (total(was) === 0) return first;
@@ -1286,7 +1497,7 @@ export interface ArrivalCompanion {
  * console.log(side.companion, side.lit >= 0.5);
  * ```
  */
-export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; companions?: readonly ArrivalCompanion[]; fov?: number; aspect?: number; fit?: number }): { side: Vec3; lit: number; companion: string | null } {
+export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; companions?: readonly ArrivalCompanion[]; behind?: Vec3; fov?: number; aspect?: number; fit?: number }): { side: Vec3; lit: number; companion: string | null; behind: boolean } {
   let approach = sub(input.from, input.body);
   approach = length(approach) < 1e-9 ? ([0, 0, 1] as Vec3) : unit(approach);
   const sunFar = input.sun ? sub(input.sun, input.body) : null;
@@ -1315,11 +1526,31 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
     const limb = Math.atan(input.radius / distance);
     return angleOf(forward, unit(v)) > limb * 1.15;
   };
+  // the body left at the back left or right (above or below in a tall picture): not far from the line across the picture's middle
+  const level = (side: Vec3, at: Vec3): boolean => {
+    const forward = scale(side, -1);
+    const north = sub([0, 1, 0], scale(forward, forward[1]));
+    const up = length(north) < 1e-6 ? squareTo(forward) : unit(north);
+    const v = sub(at, add(input.body, scale(side, distance)));
+    const z = dot(v, forward);
+    const x = dot(v, cross(forward, up)) / (tv * aspect * z);
+    const y = dot(v, up) / (tv * z);
+    // a near-square picture has no room beside the disc: any side of it will do
+    return aspect > 0.77 && aspect < 1.3 ? true : aspect >= 1 ? Math.abs(y) <= 0.45 : Math.abs(x) <= 0.45;
+  };
   const found: { side: Vec3; rank: number; near: number; id: string | null }[] = [];
   const half = Math.PI / 2 + 1e-4;
   const companions = input.companions ?? [];
+  const behind = input.behind;
   const consider = (side: Vec3): void => {
     const u = length(side) < 1e-9 ? approach : unit(side);
+    // the body left, behind the body gone to at its back left or right, comes first and is kept even where that gives a dark side: it is what keeps the body left in the picture
+    if (behind !== undefined && frames(u, behind) && level(u, behind)) {
+      const near = angleOf(u, approach);
+      const top = found[0];
+      if (top === undefined || top.rank > 0 || near < top.near - 1e-6) found[0] = { side: u, rank: 0, near, id: null };
+      return;
+    }
     if (sunDir && angleOf(u, sunDir) > half) return;
     let rank = 99;
     let id: string | null = null;
@@ -1335,7 +1566,7 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
     if (top === undefined || rank < top.rank || (rank === top.rank && near < top.near - 1e-6)) found[0] = { side: u, rank, near, id };
   };
   consider(approach);
-  for (const companion of companions) {
+  for (const companion of behind === undefined ? companions : [{ at: behind, rank: 2 as const }, ...companions]) {
     const away = sub(input.body, companion.at);
     if (length(away) < 1e-6) continue;
     const u = unit(away);
@@ -1357,7 +1588,7 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
   }
   const picked = found[0];
   const side = picked?.side ?? swing(approach);
-  return { side, lit: litOf(side), companion: picked?.id ?? null };
+  return { side, lit: litOf(side), companion: picked?.id ?? null, behind: picked?.rank === 0 };
 }
 
 /**
@@ -1376,12 +1607,12 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
  * console.log(view.position.map((n) => n.toFixed(1)).join(", "), view.lit.toFixed(2));
  * ```
  */
-export function travelArrival(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; aspect: number; fov?: number; fit?: number; north?: Vec3; companions?: readonly ArrivalCompanion[] }): TravelView & { lit: number; companion: string | null } {
+export function travelArrival(input: { body: Vec3; radius: number; from: Vec3; sun?: Vec3; aspect: number; fov?: number; fit?: number; north?: Vec3; companions?: readonly ArrivalCompanion[]; behind?: Vec3 }): TravelView & { lit: number; companion: string | null; behind: boolean } {
   const picked = arrivalSide(input);
   const side = picked.side;
   const distance = input.radius * (input.fit ?? 4.1) * Math.max(1, 1 / Math.max(1e-3, input.aspect));
   const forward = scale(side, -1);
   const north = input.north ?? ([0, 1, 0] as Vec3);
   const across = sub(north, scale(forward, dot(north, forward)));
-  return { position: add(input.body, scale(side, distance)), forward, up: length(across) < 1e-6 ? squareTo(forward) : unit(across), fov: input.fov ?? 35, lit: picked.lit, companion: picked.companion };
+  return { position: add(input.body, scale(side, distance)), forward, up: length(across) < 1e-6 ? squareTo(forward) : unit(across), fov: input.fov ?? 35, lit: picked.lit, companion: picked.companion, behind: picked.behind };
 }

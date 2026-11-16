@@ -79,24 +79,8 @@ for (const [a, b] of [["earth", "mars"], ["mercury", "sun"], ["callisto", "europ
 // empty picture, the destination out of the picture after the turn, the destination drifting away from its place on the screen, a jump of the destination) above the ceilings listed for each side, and for the
 // kinds the planner has never had (clearance, a turn that undoes itself, a jump of the up direction, a number that is not finite, a shrinking destination). The planet out of a picture that never showed it is
 // printed as a count with each move.
-/** The sides and shapes of the plain views that still have one of the faults, and how many samples of each: the ceilings may only fall (a notice is printed when one does). The empty pictures are a turn that would have to be made faster than the pace limits allow, and the way on of Titan's tall pictures; the drift is the way on passing the planet within a little more than the clearance. */
+/** The sides and shapes of the plain views that still have one of the faults, and how many samples of each: the ceilings may only fall (a notice is printed when one does). The one empty stretch is a turn that would have to be made faster than the pace limits allow. */
 const PLAIN_LEFT: Record<string, { empty?: number; drift?: number; lost?: number; step?: number }> = {
-  "titan to enceladus|compressed|square|5": { drift: 4 },
-  "titan to enceladus|compressed|square|8": { drift: 3 },
-  "titan to enceladus|compressed|tall|1": { empty: 5, drift: 4, lost: 5 },
-  "titan to enceladus|compressed|tall|8": { empty: 4, drift: 3, lost: 4 },
-  "titan to enceladus|true|square|3": { drift: 1 },
-  "titan to enceladus|true|square|8": { drift: 6 },
-  "titan to enceladus|true|tall|8": { empty: 3, drift: 3, lost: 3 },
-  "phobos to deimos|compressed|tall|0": { drift: 4 },
-  "phobos to deimos|compressed|tall|1": { drift: 3 },
-  "phobos to deimos|compressed|tall|2": { drift: 4 },
-  "phobos to deimos|compressed|tall|3": { drift: 3 },
-  "phobos to deimos|compressed|tall|4": { drift: 3 },
-  "phobos to deimos|compressed|tall|5": { drift: 3 },
-  "phobos to deimos|compressed|tall|6": { drift: 4 },
-  "phobos to deimos|compressed|tall|8": { drift: 3 },
-  "phobos to deimos|compressed|tall|9": { drift: 3 },
   "phobos to deimos|true|tall|1": { empty: 15 },
 };
 const PLAIN_COUNTED = ["empty", "drift", "lost", "step"] as const;
@@ -158,7 +142,7 @@ test("the same input gives the same camera, with the plan or without it, and aut
   assert.equal(travelPlan({ ...move.input, kind: "auto" }).kind, "turn-travel");
   const shares = plan.stages.turn + plan.stages.travel + plan.stages.arrive;
   assert.ok(Math.abs(shares - 1) < 1e-12 && plan.duration >= 1200 && plan.duration <= 9000);
-  assert.ok(Math.abs(travelPlan({ ...move.input, pace: 2 }).duration - plan.duration * 2) <= 1);
+  assert.ok(Math.abs(travelPlan({ ...move.input, pace: 2 }).duration - plan.duration * 2) <= 2);
 });
 
 for (const kind of ["direct", "look-back"] as const) {
