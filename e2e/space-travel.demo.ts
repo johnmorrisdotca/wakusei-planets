@@ -16,6 +16,7 @@ interface Travelling {
   path: string;
   stage: "turn" | "travel" | "arrive";
   progress: number;
+  duration: number;
   leaving: boolean;
   destination: boolean;
 }
@@ -25,9 +26,11 @@ interface Frame {
   gliding: boolean;
   forward: [number, number, number];
   onScreen: { leaving: boolean; destination: boolean; planet: boolean };
+  /** Where the body left is on the screen (CSS pixels) and the size of the view, null when the body has no place. */
+  where: { x: number; y: number; r: number; w: number; h: number } | null;
 }
 /** The planet two moons of one planet go round (the move keeps it in the picture, and it is what the turn holds). */
-const PLANET: Record<string, string> = { callisto: "jupiter", europa: "jupiter" };
+const PLANET: Record<string, string> = { callisto: "jupiter", europa: "jupiter", moon: "earth", titan: "saturn" };
 
 /** Puts the reader of one frame on the page: what the page reports now, read in one go so every part is of the same draw (the move, the look direction, and whether each body's disc or marker is on the screen: its place is inside the box, or within its radius, at least a marker's 4 pixels, of the edge). It lives on the page so that a move can be watched there at every animation frame, not at the pace of a round trip to the test, which a loaded machine stretches to a few readings a move. */
 const installReader = (): void => {
@@ -40,7 +43,8 @@ const installReader = (): void => {
       const r = Math.max(place.r, 4);
       return place.x > -r && place.y > -r && place.x < el.clientWidth + r && place.y < el.clientHeight + r;
     };
-    return { draws: stats.draws, travelling: stats.travelling, gliding: stats.ride.gliding, forward: stats.camera.forward, onScreen: { leaving: on(a), destination: on(b), planet: on(c) } };
+    const at = (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(a);
+    return { draws: stats.draws, travelling: stats.travelling, gliding: stats.ride.gliding, forward: stats.camera.forward, onScreen: { leaving: on(a), destination: on(b), planet: on(c) }, where: at ? { x: at.x, y: at.y, r: at.r, w: el.clientWidth, h: el.clientHeight } : null };
   });
 };
 const bodiesOf = (from: string, to: string): [string, string, string | null] => [from, to, PLANET[from] !== undefined && PLANET[from] === PLANET[to] ? PLANET[from]! : null];
@@ -114,6 +118,7 @@ for (const scale of ["true", "compressed"] as const) {
       const frames = await move(page, from, to, {}, 1, PLANET[from] !== undefined && PLANET[from] === PLANET[to]);
       const moving = frames.filter((f) => f.travelling !== null);
       expect(moving.length, `${moving.length} frames of the move were seen`).toBeGreaterThan(6);
+      console.log(`# GL walk ${scale} ${from} to ${to}: ${moving.length} draws, ${moving.filter((f) => !f.onScreen.leaving && !f.onScreen.destination).length} with neither body on the screen, ${(moving[0]!.travelling!.duration / 1000).toFixed(1)} s (at pace 2), turn ${(moving.filter((f) => f.travelling!.stage === "turn").length)} of the draws`);
       expect(moving[0]!.travelling!.kind).toBe("turn-travel");
       expect(moving.some((f) => f.travelling!.stage === "travel" || f.travelling!.stage === "arrive"), "the move travels").toBe(true);
       for (const [i, frame] of moving.entries()) {
@@ -285,3 +290,24 @@ test("with a bar bound to the element a move that travels announces the side the
   expect(Math.abs(place.x - place.w / 2), "Jupiter is in the middle across").toBeLessThan(2);
   expect(Math.abs(place.y - place.h / 2), "Jupiter is in the middle up and down").toBeLessThan(2);
 });
+
+// The body left stays in the picture (MODULES-1371): at every draw of the move it is on the screen, or, where it cannot be (a body that is a long way off and the camera on its way to a body in front of it), it is at the back left
+// or right of the destination in the last view. The Sun to each inner planet, a planet to its moon, a moon to another planet. The numbers are printed: the draws seen, how many had the body left off the screen, where it is in the last.
+for (const [from, to] of [["sun", "mercury"], ["sun", "venus"], ["sun", "earth"], ["sun", "mars"], ["earth", "moon"], ["saturn", "titan"], ["moon", "mars"]] as const) {
+  test(`${from} to ${to}: the body left is on the screen at every draw, or in the last view at the back left or right of the ${to}`, async ({ page }) => {
+    test.setTimeout(240_000);
+    await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed");
+    // four times as slow: a move between a planet and its moon is short, and software drawing catches only a few frames of it at pace 2
+    await page.locator('#paces [data-pace="4"]').dispatchEvent("click");
+    const frames = await move(page, from, to, {}, 1, PLANET[from] !== undefined && PLANET[from] === PLANET[to]);
+    const moving = frames.filter((f) => f.travelling !== null);
+    expect(moving.length, `${moving.length} frames of the move were seen`).toBeGreaterThan(6);
+    for (const [i, frame] of moving.entries()) expect(frame.onScreen.leaving || frame.onScreen.destination, `frame ${i}: the ${from} or the ${to} is on the screen`).toBe(true);
+    const out = moving.filter((f) => !f.onScreen.leaving).length;
+    const last = frames[frames.length - 1]!;
+    const where = last.where;
+    const sideways = where !== null && where.x > 0 && where.x < where.w && where.y > 0 && where.y < where.h && Math.abs(where.x - where.w / 2) >= 0.2 * (where.w / 2);
+    console.log(`# GL walk ${from} to ${to}: ${moving.length} draws of the move, the ${from} off the screen in ${out}; last view: ${where === null ? "no place" : `at ${(where.x / where.w).toFixed(2)} across, ${(where.y / where.h).toFixed(2)} down`}${out === 0 ? " (on the screen all through)" : sideways ? " (back left or right)" : " (NOT at the back)"}`);
+    expect(out === 0 || sideways, `the ${from} is off the screen in ${out} draws and is not at the back left or right in the last view`).toBe(true);
+  });
+}
