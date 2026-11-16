@@ -7,7 +7,7 @@ import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "../scene/shared.ts";
 import { TILES_BASE } from "../scene/textures.ts";
 import { madeGround, rocksAround, setKeepOut, standingPlace } from "./detail.ts";
-import { driveStep, driveView, ROVER, startDrive, toWorld, type DriveState } from "./drive.ts";
+import { driveStep, driveView, ROVER, startDrive, toWorld, type DriveDrag, type DriveState } from "./drive.ts";
 import { DustField } from "./dust.ts";
 import { calloutsBy, clockText, LANDING, landingAt, type Callout } from "./landing.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
@@ -89,7 +89,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera", "watch", "watch-from", "watch-camera"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera", "drive-drag", "watch", "watch-from", "watch-camera"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -282,6 +282,13 @@ export class WakuseiSurface extends HTMLElement {
     }
     if (name === "drive-camera") {
       this.driveCamera = this.getAttribute("drive-camera") === "seat" ? "seat" : "chase";
+      return;
+    }
+    if (name === "drive-drag") {
+      if (this.#vehicle !== undefined) {
+        this.#syncDriveCamera();
+        this.#changed();
+      }
       return;
     }
     if (name === "stick") {
@@ -525,6 +532,25 @@ export class WakuseiSurface extends HTMLElement {
     this.#changed();
   }
 
+  /**
+   * What a drag does in the chase view: `head` (the default; the attribute `drive-drag`) turns the view where the camera is, like turning your head, so the camera keeps its place 6.5 m behind the rover and the rover leaves
+   * the picture as you look away and comes back when you look back; `orbit` takes the camera round the rover as it looks about, as the chase view did up to 0.55. The seat view turns in place either way. Set while driving it
+   * moves the camera at once and keeps the drive.
+   *
+   * @example
+   * ```ts
+   * const surface = document.querySelector("wakusei-surface") as HTMLElement & { driveDrag: "head" | "orbit" };
+   * surface.driveDrag = "orbit";
+   * console.log(surface.driveDrag);
+   * ```
+   */
+  get driveDrag(): DriveDrag {
+    return this.getAttribute("drive-drag") === "orbit" ? "orbit" : "head";
+  }
+  set driveDrag(value: DriveDrag) {
+    this.setAttribute("drive-drag", value === "orbit" ? "orbit" : "head");
+  }
+
   /** The rover being driven, or `undefined` when it is not. */
   get vehicle(): DriveState | undefined {
     return this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] };
@@ -561,7 +587,7 @@ export class WakuseiSurface extends HTMLElement {
   #syncDriveCamera(): void {
     const v = this.#vehicle;
     if (v === undefined) return;
-    const view = driveView(v, this.#driveCamera, this.#camOffset, (e, n) => this.#groundAt(e, n));
+    const view = driveView(v, this.#driveCamera, this.#camOffset, (e, n) => this.#groundAt(e, n), this.driveDrag);
     this.#at = { east: view.eye.east, north: view.eye.north };
     this.#driveEyeUp = view.eye.up;
     this.#look = clampLook({ azimuth: view.azimuth, pitch: view.pitch, fov: this.#look.fov });

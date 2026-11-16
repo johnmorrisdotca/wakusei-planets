@@ -515,6 +515,40 @@ test("the drawn rover is turned and placed with it: its heading puts the dish on
   assert.ok(Math.abs(seat.eye.up - ROVER.seat[1]) < 1e-6 && seat.azimuth === 100, "in the seat: the eyes' height, and the view turned by the driver");
 });
 
+test("the chase view's drag: in head the eyes do not move under any drag and the look turns; in orbit the rover holds its place in the picture and the eyes go round it; the seat turns in place either way", () => {
+  const ground = (): number => 0;
+  const rover = startDrive(40, -25, 70, 0);
+  const rest = driveView(rover, "chase", { azimuth: 0, pitch: 0 }, ground, "head");
+  const dist = (v: ReturnType<typeof driveView>): number => Math.hypot(v.eye.east - rover.east, v.eye.north - rover.north);
+  // the bearing from the eyes to the rover, against the way the view looks: how far the rover is from the middle of the picture
+  const off = (v: ReturnType<typeof driveView>): number => {
+    const bearing = (Math.atan2(rover.east - v.eye.east, rover.north - v.eye.north) * 180) / Math.PI;
+    return ((v.azimuth - bearing + 540) % 360) - 180;
+  };
+  assert.ok(Math.abs(dist(rest) - 6.5) < 1e-9, "6.5 m behind it");
+  assert.ok(Math.abs(off(rest)) < 1e-9, "no drag: the rover is in the middle");
+  for (const azimuth of [-180, -135, -90, -30, 0, 17, 45, 90, 180, 270]) {
+    for (const pitch of [-60, 0, 25, 60]) {
+      const head = driveView(rover, "chase", { azimuth, pitch }, ground, "head");
+      assert.deepEqual(head.eye, rest.eye, `head: the eyes do not move under a drag of ${azimuth}, ${pitch}`);
+      assert.ok(Math.abs(((head.azimuth - rest.azimuth - azimuth + 540) % 360) - 180) < 1e-9, "head: the look turns by the drag");
+      assert.ok(Math.abs(head.pitch - (rest.pitch + pitch)) < 1e-9, "head: and tips by it");
+      const orbit = driveView(rover, "chase", { azimuth, pitch }, ground, "orbit");
+      assert.ok(Math.abs(dist(orbit) - 6.5) < 1e-9, "orbit: still 6.5 m from it");
+      assert.ok(Math.abs(off(orbit)) < 1e-9, `orbit: the rover holds its place in the picture under a drag of ${azimuth}`);
+    }
+  }
+  assert.ok(Math.abs(off(driveView(rover, "chase", { azimuth: 90, pitch: 0 }, ground, "head")) - 90) < 1e-9, "head: turned a quarter, the rover is a quarter out of the middle, so out of the picture");
+  assert.ok(Math.abs(off(driveView(rover, "chase", { azimuth: 90, pitch: 0 }, ground, "head"))) > 60, "well outside a picture of a few tens of degrees");
+  // a call without the drag is the old orbit; the seat does not care
+  assert.deepEqual(driveView(rover, "chase", { azimuth: 90, pitch: 0 }, ground), driveView(rover, "chase", { azimuth: 90, pitch: 0 }, ground, "orbit"));
+  const seat = driveView(rover, "seat", { azimuth: 40, pitch: 5 }, ground, "head");
+  assert.deepEqual(seat, driveView(rover, "seat", { azimuth: 40, pitch: 5 }, ground, "orbit"), "the seat turns in place in both");
+  // the eyes keep their height over a rise in head too: the ground under the place they keep decides, not the one under the turned place
+  const rise = (e: number): number => (e > 40 ? 3 : 0);
+  assert.equal(driveView(rover, "chase", { azimuth: 120, pitch: 0 }, rise, "head").eye.up, driveView(rover, "chase", { azimuth: 0, pitch: 0 }, rise, "head").eye.up);
+});
+
 test("a thrown grain flies a parabola at the Moon's gravity and lands where it should: the same every time for one seed", () => {
   const dust = new DustField(8, 5);
   dust.emit([0, 0.3, 0], [2, 1.5, 0], 10);

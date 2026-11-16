@@ -7,6 +7,10 @@ description: What changed in each version that you must act on, and what is new 
 
 The package is at 0.x, so a minor version can change behaviour. Read [CHANGELOG.md](../../CHANGELOG.md) for the full list; this page says what to act on.
 
+## Unreleased: a drag in the rover's chase view turns your head
+
+In the rover's chase view (`<wakusei-surface drive="on">`) a drag used to take the camera round the rover; now it turns the view where the camera is, like turning your head, and the rover leaves the picture as you look away. Nothing to change unless you want the old look-around: set `drive-drag="orbit"` on the element (property `driveDrag`). If you call `driveView` yourself it works as before; pass `"head"` as its last argument for the new look.
+
 ## Unreleased: every view zooms by itself
 
 `<wakusei-body>`, `<wakusei-portrait>` and `<wakusei-space>` now carry the shared view controls, so a plain tag takes a drag, a pinch, Ctrl and the wheel, and the keys. Nothing to change for a page with no controls, except that a tag is now a tab stop and a drag on it turns the body; `controls="none"` brings back the old still tag. A page that adds `<kazoku-view-controls>` should point its `for` at the element itself (not at a box round it), or the element's hands and the bar's both handle a drag, and it can drop the `zoom-min` and `zoom-max` it used to write: the bar reads the element's range, now 0.1x to 8x for a shaded body (it was 1x to 5x on the bar's default), 0.1x to 50x for a line drawing and a millionth to 3x for the space view. The [zoom and pan](zoom-and-pan.md) guide has the reason for each end. This needs kazoku-ui 0.21.1 or later.
