@@ -79,10 +79,8 @@ for (const [a, b] of [["earth", "mars"], ["mercury", "sun"], ["callisto", "europ
 // empty picture, the destination out of the picture after the turn, the destination drifting away from its place on the screen, a jump of the destination) above the ceilings listed for each side, and for the
 // kinds the planner has never had (clearance, a turn that undoes itself, a jump of the up direction, a number that is not finite, a shrinking destination). The planet out of a picture that never showed it is
 // printed as a count with each move.
-/** The sides and shapes of the plain views that still have one of the faults, and how many samples of each: the ceilings may only fall (a notice is printed when one does). The one empty stretch is a turn that would have to be made faster than the pace limits allow. */
-const PLAIN_LEFT: Record<string, { empty?: number; drift?: number; lost?: number; step?: number }> = {
-  "phobos to deimos|true|tall|1": { empty: 15 },
-};
+/** The sides and shapes of the plain views that still have one of the faults, and how many samples of each: none now, and a ceiling added here may only fall (a notice is printed when one does). */
+const PLAIN_LEFT: Record<string, { empty?: number; drift?: number; lost?: number; step?: number }> = {};
 const PLAIN_COUNTED = ["empty", "drift", "lost", "step"] as const;
 const PLAIN_NEVER = /^(clear|turn|up|numbers|shrink)$/;
 const isStepOfTheDestination = (text: string): boolean => /of the frame in one sample/.test(text);

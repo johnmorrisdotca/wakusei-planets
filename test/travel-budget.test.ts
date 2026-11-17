@@ -1,5 +1,6 @@
 // The time budget of the planner (`TravelInput.budget`): the planner reads no clock itself, so a test gives it a clock of its own. Without a budget every way is tried and the plan is always the same (every other
-// test runs so); with one the planner stops looking when the time is up and keeps the best way so far, which is never worse than the first way it made.
+// test runs so); with one the planner stops looking when the time is up and keeps the best way so far, which is never worse than the first way it made. The fitted aim turn is not part of the looking: it is
+// quick, and is tried on the ways made so far whatever the time.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { TRAVEL_BUDGET_MS, travelPlan } from "../src/space/index.ts";
@@ -12,6 +13,8 @@ const MOVES: [string, string, "compressed" | "true", number, number][] = [
   ["phobos", "deimos", "compressed", 2, 0],
   ["callisto", "europa", "true", 0, 6],
   ["triton", "proteus", "true", 1, 0],
+  ["titan", "enceladus", "compressed", 2, 5],
+  ["phobos", "deimos", "true", 2, 1],
 ];
 const build = (m: (typeof MOVES)[number], budget?: { now: () => number; ms: number }): Move => {
   const move = moveOf(m[0] as never, m[1] as never, m[2], SHAPES[m[3]]!.aspect, undefined, SIDES[m[4]]!);
@@ -31,7 +34,7 @@ test("the value the space view passes is 60 ms", () => {
   assert.equal(TRAVEL_BUDGET_MS, 60);
 });
 
-test("with no time left the planner keeps the first way it made, and with a little it keeps the best so far, never worse than the first and never better than trying every way", () => {
+test("with no time left the planner tries no other way than the first it made, and with a little it keeps the best so far, never worse than the first and never better than trying every way", () => {
   let better = 0;
   for (const m of MOVES) {
     const none = faultCounts(walk(build(m, { now: clock(100), ms: TRAVEL_BUDGET_MS }))); // the first look at the clock is over the limit: no other way is tried
