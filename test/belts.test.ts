@@ -197,3 +197,38 @@ test("one instanced draw for each belt, in its own colour; a body with no belt i
   assert.equal(points.countOf(""), 1);
   points.dispose();
 });
+
+test("status, parts, filters and tiers come from the rows already carried (MODULES-558)", async () => {
+  const { beltPart, beltStatus, beltTiers, filterBeltBodies, BELT_TIERS } = await import("../src/belts/index.ts");
+  assert.equal(beltStatus("588 Achilles"), "named");
+  assert.equal(beltStatus("15760"), "numbered");
+  assert.equal(beltStatus("2007 OR10"), "provisional");
+  // the main belt's three parts by distance, and every main-belt body is in one
+  for (const b of bodies.filter((x) => x.belt === "main")) assert.ok(["inner-main", "middle-main", "outer-main"].includes(beltPart(b, BELT_EPOCH)!), b.name);
+  // Jupiter's longitude on the epoch, from the ephemeris: Achilles leads it (L4) and Patroclus follows (L5)
+  const { heliocentric } = await import("../src/ephemeris.ts");
+  const ms = (BELT_EPOCH - 2440587.5) * 86_400_000;
+  const [jx, jy] = heliocentric("jupiter", ms);
+  const jl = (Math.atan2(jy, jx) * 180) / Math.PI;
+  assert.equal(beltPart(bodies.find((b) => b.name === "588 Achilles")!, BELT_EPOCH, jl), "trojan-l4");
+  assert.equal(beltPart(bodies.find((b) => b.name === "617 Patroclus")!, BELT_EPOCH, jl), "trojan-l5");
+  assert.equal(beltPart(bodies.find((b) => b.name === "588 Achilles")!, BELT_EPOCH), undefined, "a Trojan's camp needs Jupiter's longitude");
+  // filters
+  assert.equal(filterBeltBodies(bodies).length, bodies.length);
+  const big = filterBeltBodies(bodies, { belts: ["main"], hMax: 7 });
+  assert.ok(big.length > 0 && big.length < 200 && big.every((b) => b.belt === "main" && b.H <= 7));
+  assert.ok(filterBeltBodies(bodies, { hMin: 14 }).every((b) => b.H >= 14));
+  assert.ok(filterBeltBodies(bodies, { status: ["named"] }).every((b) => /^\d+ \S/.test(b.name)));
+  const l4 = filterBeltBodies(bodies, { part: "trojan-l4", jd: BELT_EPOCH, jupiterLongitude: jl });
+  const l5 = filterBeltBodies(bodies, { part: "trojan-l5", jd: BELT_EPOCH, jupiterLongitude: jl });
+  assert.equal(l4.length + l5.length, BELT_SAMPLE.trojan);
+  assert.ok(l4.length > 100 && l5.length > 100);
+  // tiers add up to what is carried, against what is known
+  const tiers = beltTiers(bodies);
+  for (const id of BELT_IDS) {
+    assert.equal(tiers[id].carried.length, BELT_TIERS.length);
+    assert.equal(tiers[id].carried.reduce((a, c) => a + c, 0), tiers[id].sample);
+    assert.equal(tiers[id].sample, BELT_SAMPLE[id]);
+    assert.equal(tiers[id].known, BELTS[id].known);
+  }
+});

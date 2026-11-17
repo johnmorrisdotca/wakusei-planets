@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Belt filters and size tiers** (MODULES-558, part). `filterBeltBodies(bodies, { belts, hMax, hMin, status, part })`, `beltStatus(name)` (provisional, numbered or named), `beltPart(body, jd, jupiterLongitude)` (the main belt's inner, middle and outer parts, the Trojans' L4 and L5 camps, plutinos and detached bodies), `BELT_TIERS` and `beltTiers(bodies)` (how many bodies of each size tier are carried, against how many the database knows). All from the rows already carried: no new data. Still open on the ticket: discovery facts and pictures (need files fetched), the embed and the builder.
+
 ## [0.61.0] - 2026-11-17
 
 - **IM-2's three rovers stand on Athena, east of the prime meridian** (MODULES-1402; John Morris, 2026-11-17). GCAT's lander catalogue has the whole IM-2 landing at 84.7906 S, 29.1957 W; NASA's table, which the places take, puts Athena at 29.1957 E, but GRACE, MAPP and Yaoki, which NASA's table does not list, kept the catalogue's point on the far side of the prime meridian. `scripts/make-places-data.py` now moves a rover the catalogue puts at its lander's own point with the lander whenever a better source moves the lander more than 0.05 degree and has no position of its own for the rover; the rovers keep the catalogue's figure in `gcatPosition`. No other rover on the Moon or Mars disagrees with its lander, and a test pins both.
