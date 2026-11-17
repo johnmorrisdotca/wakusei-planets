@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.63.0] - 2026-11-17
+
 - **A drop-in for suncalc 2.1 and 1.9: both flags, default exports, a guide** (MODULES-535). `getTimes` and `getMoonTimes` in `/suncalc` now give `alwaysUp` and `alwaysDown` both, one `true` and one `false`, on a day without a sunrise or without a Moon rise and set, as suncalc 2 does (before, only the true one was there). `/suncalc` and `/suncalc/legacy` each have a default export holding the same functions and the same `times` array, for code written `import SunCalc from "suncalc"`. A new guide, "Replacing suncalc" (English and Japanese), has the one-line import change, every function side by side, the three conventions people trip on, the differences kept on purpose, the measured limits, and suncalc3's extras listed and not built. `test/suncalc-grid.test.ts` runs every function against suncalc 2.1.2 and suncalc 1.9.0 (dev-only) on fourteen places (both hemispheres, both polar circles, 78 degrees north and south) by eleven days from 1900 to 2100 by three times of day; `test/docs-replacing-suncalc.test.ts` runs the guide's examples. The API snapshot was updated for the two default exports.
 
 - **The ephemeris package survey, as a record** (MODULES-531). `docs/design/ephemeris-survey.md` lists each surveyed package with its licence line read on its own GitHub page on 2026-11-17 (MIT, Apache-2.0, AGPL-3.0, GPL), what it holds and how accurate it claims to be, and what is still open. Two facts of the first survey were corrected (vsop87 is about 2.3 MB, not 7; the ephemeris package says GPL v2 on its repo).
