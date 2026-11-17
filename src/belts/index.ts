@@ -373,3 +373,6 @@ export function beltFlight(belt: BeltId): { at(ms: number): { position: [number,
     },
   };
 }
+
+export { BELT_TIERS, beltPart, beltStatus, beltTiers, filterBeltBodies } from "./filter.ts";
+export type { BeltFilter, BeltPart, BeltStatus } from "./filter.ts";

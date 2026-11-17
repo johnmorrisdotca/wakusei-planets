@@ -570,18 +570,26 @@ function kidsSvg(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" 
 const BELTS: Readonly<Record<"main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered", BeltInfo>>
 const BELT_EPOCH: 2461200.5
 const BELT_IDS: readonly ["main", "hilda", "trojan", "centaur", "classical", "resonant", "scattered"]
+const BELT_TIERS: readonly [8, 10, 12, 14, 99]
 const BELT_TOTALS: { readonly all: 1580096; readonly numbered: 895910; readonly main: 1429419; readonly hilda: 7929; readonly trojan: 16472; readonly centaur: 1087; readonly tno: 8338; readonly classical: 3000; readonly resonant: 2306; readonly scattered: 2266; }
 export interface BeltBody extends SmallBody { belt: BeltId; }
+export interface BeltFilter { belts?: readonly BeltId[]; hMax?: number; hMin?: number; status?: readonly BeltStatus[]; part?: BeltPart; jd?: number; jupiterLongitude?: number; }
 export type BeltId = (typeof BELT_IDS)[number];
 export interface BeltInfo { id: BeltId; name: { en: string; ja: string; }; about: { en: string; ja: string; }; colour: string; known: number; sample: number; }
+export type BeltPart = "inner-main" | "middle-main" | "outer-main" | "trojan-l4" | "trojan-l5" | "plutino" | "detached";
+export type BeltStatus = "provisional" | "numbered" | "named";
 const OORT: { readonly innerAu: 2000; readonly outerAu: 100000; readonly name: { readonly en: "Oort cloud"; readonly ja: "オールトの雲"; }; readonly about: { readonly en: "where long-period comets are thought to come from: nothing in it has been seen"; readonly ja: "長周期彗星の起源と考えられる領域。そこにある天体はまだ見つかっていません"; }; }
 function beltCounts(bodies: readonly BeltBody[]) => Record<"main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered", number>
 function beltDensity(bodies: readonly SmallBody[], jd: number, options?: { from?: number | undefined; to?: number | undefined; bins?: number | undefined; }) => { start: number[]; count: number[]; perCubicAu: number[]; }
 function beltFlight(belt: "main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered") => { at(ms: number): { position: [number, number, number]; velocity: [number, number, number]; }; }
 function beltNote(belt: "main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered", spacing: { known: number; drawn: number; }, language: "en" | "ja") => string
+function beltPart(body: BeltBody, jd: number, jupiterLongitude?: number | undefined) => BeltPart | undefined
 function beltPositions(bodies: readonly SmallBody[], jd: number) => Float32Array<ArrayBufferLike>
 function beltSpacing(belt: "main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered", bodies: readonly BeltBody[], jd: number) => { known: number; drawn: number; innerAu: number; outerAu: number; thicknessAu: number; }
+function beltStatus(name: string) => BeltStatus
+function beltTiers(bodies: readonly BeltBody[]) => Record<"main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered", { carried: number[]; sample: number; known: number; }>
 function beltsSource() => SmallBodySource
+function filterBeltBodies(bodies: readonly BeltBody[], filter?: BeltFilter) => BeltBody[]
 function loadBeltBodies() => Promise<readonly BeltBody[]>
 function parseBeltRows(belt: "main" | "centaur" | "hilda" | "trojan" | "classical" | "resonant" | "scattered", rows: string, epoch: number) => BeltBody[]
 ## ./nearest
