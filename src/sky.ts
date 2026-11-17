@@ -2,7 +2,9 @@
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { NextGlobalSolarEclipse, NextLunarEclipse, NextMoonQuarter, SearchGlobalSolarEclipse, SearchLunarEclipse, SearchMoonPhase, SearchMoonQuarter, Seasons } from "astronomy-engine";
+import { Body, NextGlobalSolarEclipse, NextLunarEclipse, NextMoonQuarter, Observer as EngineObserver, SearchGlobalSolarEclipse, SearchHourAngle, SearchLunarEclipse, SearchMoonPhase, SearchMoonQuarter, SearchRiseSet, Seasons } from "astronomy-engine";
+import type { SkyBodyId } from "./sky-bodies.ts";
+import type { Observer } from "./sky/types.ts";
 import { moment, type When } from "./when.ts";
 
 const DAY_MS = 86_400_000;
@@ -188,4 +190,133 @@ export function findEclipses(from: When, to: When): SkyEclipse[] {
     found.push({ type: "solar", kind: solar.kind as SkyEclipse["kind"], peak: solar.peak.date, ...(solar.obscuration === undefined ? {} : { obscuration: solar.obscuration }) });
   }
   return found.sort((a, b) => a.peak.getTime() - b.peak.getTime()).map(({ obscuration, ...rest }) => (obscuration === undefined ? rest : { ...rest, obscuration }));
+}
+
+const BODIES: Record<SkyBodyId, Body> = { sun: Body.Sun, moon: Body.Moon, mercury: Body.Mercury, venus: Body.Venus, mars: Body.Mars, jupiter: Body.Jupiter, saturn: Body.Saturn, uranus: Body.Uranus, neptune: Body.Neptune, pluto: Body.Pluto };
+
+/** The engine's body for an id of this package, throwing a `RangeError` that names the ids there are. */
+function bodyOf(id: SkyBodyId): Body {
+  const body = Object.hasOwn(BODIES, id) ? BODIES[id] : undefined;
+  if (body === undefined) throw new RangeError(`body must be one of ${Object.keys(BODIES).join(", ")}, got ${String(id)}`);
+  return body;
+}
+
+/** The engine's observer for `{ latitude, longitude, heightM }` (degrees north, degrees east, metres above the ellipsoid, 0 when not given), throwing a `RangeError` with the value for anything out of range. */
+function observerOf(observer: Observer): EngineObserver {
+  if (typeof observer !== "object" || observer === null) throw new TypeError("observer must be { latitude, longitude, heightM }");
+  const { latitude, longitude, heightM = 0 } = observer;
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) throw new RangeError(`latitude must be between -90 and 90 degrees, got ${String(latitude)}`);
+  if (!Number.isFinite(longitude)) throw new RangeError(`longitude must be a finite number of degrees, got ${String(longitude)}`);
+  if (!Number.isFinite(heightM)) throw new RangeError(`heightM must be a finite number of metres, got ${String(heightM)}`);
+  return new EngineObserver(latitude, longitude, heightM);
+}
+
+/** The search window of `options.within` in days (2 when not given), throwing a `RangeError` for anything but a positive number. */
+function windowDays(within: { days: number } | undefined): number {
+  const days = within?.days ?? 2;
+  if (!(days > 0) || !Number.isFinite(days)) throw new RangeError(`within.days must be a positive number, got ${String(days)}`);
+  return days;
+}
+
+/**
+ * The options of the rise, set and transit searches: where to stand and how far to look.
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextRise, type SkyHorizonOptions } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const options: SkyHorizonOptions = { observer: { latitude: 49.3, longitude: -123.1, heightM: 0 }, within: { days: 1 } };
+ * console.log(nextRise("venus", Date.UTC(2026, 10, 8), options) instanceof Date);
+ * ```
+ */
+export interface SkyHorizonOptions {
+  /** Degrees north and east, metres above the ellipsoid (0 when not given). */
+  observer: Observer;
+  /** How far to look from `from`: `{ days }`, 2 when not given. The start is included and the end is not. */
+  within?: { days: number };
+}
+
+/**
+ * The next time a body rises for an observer, at or after `from`, as a `Date`, or `null` when it does not rise within `within.days` (2 when not given; at a pole, or for a body that stays up or down, there is none).
+ * The Sun and the Moon rise when their upper limb touches a horizon lowered by 34 arc-minutes of refraction, the planets when their centre does; the height of the observer lowers it further.
+ *
+ * @param body - A body of this package: the Sun, the Moon or a planet (`"mars"`).
+ * @param from - Where to start looking, included (an event within a quarter of a second before it counts as at it: the search settles to about 0.1 s).
+ * @param options - The observer, and how far to look.
+ * @returns The moment, or `null` when there is none inside the window.
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextRise } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const tokyo = { latitude: 35.6895, longitude: 139.6917, heightM: 0 };
+ * console.log(nextRise("mars", Date.UTC(2026, 10, 8), { observer: tokyo })?.toISOString());
+ * ```
+ */
+export function nextRise(body: SkyBodyId, from: When, options: SkyHorizonOptions): Date | null {
+  return riseOrSet(body, from, options, 1);
+}
+
+/**
+ * The next time a body sets for an observer, at or after `from`, as a `Date`, or `null` when it does not set within `within.days` (2 when not given). The horizon is the same as for `nextRise`.
+ *
+ * @param body - A body of this package: the Sun, the Moon or a planet.
+ * @param from - Where to start looking, included.
+ * @param options - The observer, and how far to look.
+ * @returns The moment, or `null` when there is none inside the window.
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextSet } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const tokyo = { latitude: 35.6895, longitude: 139.6917, heightM: 0 };
+ * console.log(nextSet("venus", Date.UTC(2026, 10, 8), { observer: tokyo })?.toISOString());
+ * ```
+ */
+export function nextSet(body: SkyBodyId, from: When, options: SkyHorizonOptions): Date | null {
+  return riseOrSet(body, from, options, -1);
+}
+
+function riseOrSet(body: SkyBodyId, from: When, options: SkyHorizonOptions, direction: 1 | -1): Date | null {
+  const start = moment(from, "from");
+  const engineBody = bodyOf(body);
+  const observer = observerOf(options.observer);
+  const days = windowDays(options.within);
+  const found = atOrAfter(start, (at) => SearchRiseSet(engineBody, observer, direction, at, days + 1 / 86_400)?.date ?? null);
+  return found !== null && found.getTime() < start + days * DAY_MS ? found : null;
+}
+
+/** The engine's searches settle to within about 0.1 second (measured: a rise of Mars comes out 37 and 91 ms from the same event for two starts), so an event this close before `start` counts as at `start`. */
+const SEARCH_SLACK_MS = 250;
+
+/** The first moment of a search at or after `start`: the engine finds events after its start, so look from a second earlier and, if that finds one before `start` by more than the search's slack, look again from `start`. */
+function atOrAfter(start: number, find: (from: Date) => Date | null): Date | null {
+  const early = find(new Date(start - 1000));
+  return early !== null && early.getTime() < start - SEARCH_SLACK_MS ? find(new Date(start)) : early;
+}
+
+/**
+ * The next time a body crosses the observer's meridian (its highest point in the sky, hour angle 0), at or after `from`, as a `Date`, or `null` when it does not within `within.days` (2 when not given).
+ *
+ * @param body - A body of this package: the Sun, the Moon or a planet.
+ * @param from - Where to start looking, included.
+ * @param options - The observer, and how far to look.
+ * @returns The moment, or `null` when there is none inside the window.
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextTransit } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const tokyo = { latitude: 35.6895, longitude: 139.6917, heightM: 0 };
+ * console.log(nextTransit("jupiter", Date.UTC(2026, 10, 8), { observer: tokyo })?.toISOString());
+ * ```
+ */
+export function nextTransit(body: SkyBodyId, from: When, options: SkyHorizonOptions): Date | null {
+  const start = moment(from, "from");
+  const engineBody = bodyOf(body);
+  const observer = observerOf(options.observer);
+  const days = windowDays(options.within);
+  const found = atOrAfter(start, (at) => SearchHourAngle(engineBody, observer, 0, at).time.date)!;
+  return found.getTime() < start + days * DAY_MS ? found : null;
 }

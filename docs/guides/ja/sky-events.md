@@ -34,6 +34,7 @@ console.log(`Winter solstice ${year.decemberSolstice.toISOString().slice(0, 16)}
 | `seasons(year)` | その年の春分、夏至、秋分、冬至を `Date` (UTC) で | 米国海軍天文台の表: 1900、2000、2026、2050 年の 16 件、最大のずれは 60 秒 (表は分単位) |
 | `moonPhases(from, to)`、`nextMoonPhase(from, { phase, within })` | 期間内 (始まりは含み、終わりは含まない) の新月、上弦、満月、下弦、または次の一つを `Date` で | 米国海軍天文台の 2026 年の表: 50 件すべてが順序どおりで、エンジンは表の時刻より 11 から 80 秒後 (表は秒を落としています) |
 | `findEclipses(from, to)` | 期間内 (始まりは含み、終わりは含まない) のすべての日食と月食: 種類、食の最大の瞬間、日食では食分の覆い (obscuration) | NASA の 2021 から 2030 年の食の予報: 日食 22 件と月食 22 件のすべてが種類も一致。食の最大は NASA の力学時から 69 秒を引いた時刻に対し、日食は 9 秒以内、月食は 13 秒以内 |
+| `nextRise`、`nextSet`、`nextTransit(body, from, { observer, within })` | 太陽、月、惑星の次の出、入り、子午線通過を、観測者に対して `Date` または `null` で | JPL Horizons の出・南中・入り: 東京での7惑星、2日分。42件すべてが Horizons の時刻の刻み (出と入りは事象の後の最初の分) の中に入る。太陽は `/suncalc` と 10 秒以内で一致 |
 
 ## 約束事
 
