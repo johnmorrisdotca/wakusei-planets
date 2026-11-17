@@ -91,6 +91,8 @@ export interface SunDay {
   events: Map<string, number | null>;
   alwaysUp: boolean;
   alwaysDown: boolean;
+  /** Whether the Sun at solar noon is above the sunrise height: suncalc's rule for which flag to set when `sunrise` is null. */
+  noonHigh: boolean;
 }
 
 /**
@@ -124,8 +126,9 @@ export function sunDay(ms: number, observer: Observer, utcOffset: number | undef
   const sunrise = events.get("sunrise");
   const sunset = events.get("sunset");
   const none = sunrise === null && sunset === null;
-  const high = none && altitude(noon) > -0.833 - dip(height);
-  return { noon, nadir, events, alwaysUp: high, alwaysDown: none && !high };
+  const noonHigh = altitude(noon) > -0.833 - dip(height);
+  const high = none && noonHigh;
+  return { noon, nadir, events, alwaysUp: high, alwaysDown: none && !high, noonHigh };
 }
 
 /** The Moon between two instants at a place: rise and set (the upper limb at the horizon through 34 arc-minutes of refraction), the upper and lower meridian crossings, and whether it stays up or down. */

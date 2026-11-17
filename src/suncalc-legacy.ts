@@ -247,3 +247,17 @@ export function getMoonTimes(date: Date | number, lat: number, lng: number, inUT
   if (found.alwaysDown) result.alwaysDown = true;
   return result;
 }
+
+/**
+ * Every function of this entry as one object, for code written `import SunCalc from "suncalc"` (or `const SunCalc = require("suncalc")`) against suncalc 1.x. `SunCalc.times` is the same array as the named `times`, so `addTime` reaches both.
+ *
+ * @example
+ * ```ts
+ * import SunCalc from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
+ *
+ * const t = SunCalc.getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 51.5, -0.1);
+ * console.log(t.sunrise instanceof Date);
+ * ```
+ */
+const SunCalc = { getPosition, getTimes, times, addTime, getMoonPosition, getMoonIllumination, getMoonTimes };
+export default SunCalc;
