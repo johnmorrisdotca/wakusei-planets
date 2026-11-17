@@ -513,6 +513,28 @@ await step("flat-cdn", async () => {
   });
 });
 
+await step("flat-system-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("flat-system"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (out !== "The Tesla Roadster is 1.39 au from the Sun, the Earth 0.99 au\nWith the edge at 50 au, the Earth is 39 per cent of the way out, squeezed, and 2 per cent to scale") throw new Error(`unexpected output: ${out}`);
+});
+
+await step("flat-system-cdn", async () => {
+  await opened(browser, async (page) => {
+    await page.route("https://cdn.jsdelivr.net/**", async (route) => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/flat/system/define/+esm") return route.fulfill({ body: await bundleOf(modules("flat/system-define.js")), contentType: "text/javascript" });
+      return route.fulfill({ status: 404, body: "" });
+    });
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("flat-system"), "cdn.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    await page.waitForFunction(() => document.querySelectorAll("wakusei-flat-system[data-state=ready]").length === 2, undefined, { timeout: 20_000 });
+    const labels = await page.locator("wakusei-flat-system").evaluateAll((all) => all.map((el) => el.shadowRoot?.querySelector(".dots")?.getAttribute("aria-label")));
+    if (labels[0] !== "Flat map of the solar system" || labels[1] !== labels[0]) throw new Error(`the maps' labels are wrong: ${labels.join(" | ")}`);
+    const drawn = await page.locator("wakusei-flat-system").evaluateAll((all) => all.map((el) => (el as unknown as { stats: { dots: number }; placeOf(id: string): unknown }).placeOf("roadster") !== null && (el as unknown as { stats: { dots: number } }).stats.dots > 9));
+    if (!drawn[0] || !drawn[1]) throw new Error(`the maps did not draw the planets and the Tesla Roadster: ${JSON.stringify(drawn)}`);
+  });
+});
+
 const lineupApp = async (name: string, plugins: unknown[] = []): Promise<void> => {
   const dir = examples(`lineup/${name}`);
   const out = join(usage, "out", "lineup", name);
@@ -579,6 +601,8 @@ const FILES: Record<string, string[]> = {
   "plan/node.mjs": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
   "flat/cdn.html": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
   "flat/node.mjs": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
+  "flat-system/cdn.html": ["docs/guides/flat-system.md", "docs/guides/ja/flat-system.md"],
+  "flat-system/node.mjs": ["docs/guides/flat-system.md", "docs/guides/ja/flat-system.md"],
   "sky-bodies/node.mjs": ["docs/guides/sky-bodies.md", "docs/guides/ja/sky-bodies.md"],
   "lineup/cdn.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/iframe.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
