@@ -284,29 +284,49 @@ export interface DriveView {
 }
 
 /**
+ * What a drag does in the chase view of the rover: `head` (the default of the element, its `drive-drag`) turns the view where the camera is, like turning your head, so the camera keeps its place 6.5 m behind the rover
+ * and the scene turns round it; `orbit` takes the camera round the rover as it looks about, so the rover stays in the same place in the picture and is seen from every side, as the chase view was up to 0.55.
+ *
+ * @example
+ * ```ts
+ * import type { DriveDrag } from "@johnmorrisdotca/wakusei-planets/surface";
+ *
+ * const drags: DriveDrag[] = ["head", "orbit"];
+ * console.log(drags.join(" or "));
+ * ```
+ */
+export type DriveDrag = "head" | "orbit";
+
+/**
  * The eyes for a view of the rover. The chase view stands 6.5 m behind it and 2.8 m up (never under the ground), looking at it; the seat view is the commander's eyes in the left seat, looking along the rover's heading
- * and tilting with it. `offset` is the driver's own turn of the view from a drag (degrees), added to the direction either looks in.
+ * and tilting with it. `offset` is the driver's own turn of the view from a drag (degrees), added to the direction either looks in. In the chase view `drag` says what that turn does: with `head` the eyes stay where the rover
+ * puts them with no drag and only the way they look turns, so the rover leaves the picture as the view turns away; with `orbit` (what a call without it does, as before) the eyes go round the rover as they look about.
+ * The seat view turns in place either way.
  *
  * @param state - The rover.
  * @param view - `chase` or `seat`.
  * @param offset - The driver's turn of the view, degrees right and up.
  * @param ground - The ground's height over the site's ground at a place.
+ * @param drag - What a drag does in the chase view: `head` or `orbit` (the default).
  * @returns The eyes.
  *
  * @example
  * ```ts
  * import { driveView, startDrive } from "@johnmorrisdotca/wakusei-planets/surface";
  *
- * const view = driveView(startDrive(0, 0, 0, 0), "chase", { azimuth: 0, pitch: 0 }, () => 0);
- * console.log(view.eye.north.toFixed(1), view.eye.up.toFixed(1));
+ * const rover = startDrive(0, 0, 0, 0);
+ * const view = driveView(rover, "chase", { azimuth: 0, pitch: 0 }, () => 0);
+ * const turned = driveView(rover, "chase", { azimuth: 90, pitch: 0 }, () => 0, "head");
+ * console.log(view.eye.north.toFixed(1), turned.eye.north.toFixed(1), turned.azimuth);
  * ```
  */
-export function driveView(state: DriveState, view: "chase" | "seat", offset: { azimuth: number; pitch: number }, ground: (east: number, north: number) => number): DriveView {
+export function driveView(state: DriveState, view: "chase" | "seat", offset: { azimuth: number; pitch: number }, ground: (east: number, north: number) => number, drag: DriveDrag = "orbit"): DriveView {
   if (view === "seat") {
     const eye = toWorld(state, ROVER.seat);
     return { eye: { east: eye[0], north: eye[2], up: eye[1] }, azimuth: (((state.heading + offset.azimuth) % 360) + 360) % 360, pitch: state.pitch / RAD + offset.pitch };
   }
-  const a = (state.heading + offset.azimuth) * RAD;
+  // the eyes stand behind the rover along the heading turned by the drag (`orbit`: they go round it) or along the heading alone (`head`: they keep their place and only the look turns)
+  const a = (state.heading + (drag === "head" ? 0 : offset.azimuth)) * RAD;
   const [east, north] = [state.east - Math.sin(a) * 6.5, state.north - Math.cos(a) * 6.5];
   const up = Math.max(state.y + 2.8, ground(east, north) + 1.4);
   const drop = (up - (state.y + 1.0)) / 6.5;

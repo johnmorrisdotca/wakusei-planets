@@ -23,6 +23,7 @@ type Surface = HTMLElement & {
   choose(id: string | undefined): boolean;
   vehicle?: { east: number; north: number; heading: number; speed: number; y: number; airborne: boolean; distance: number };
   driveCamera: "chase" | "seat";
+  driveDrag: "head" | "orbit";
   landing?: { t: number; playing: boolean; camera: string; altitude: number; speed: number };
   landingTime: number;
   pauseLanding(): void;
@@ -292,6 +293,46 @@ test("drive=on puts the eyes behind the rover at its place: W drives it west alo
   await page.keyboard.press("c");
   const seat = await read(page, (el) => ({ camera: el.driveCamera, eyeUp: el.position.up, y: el.vehicle!.y }));
   expect(seat.camera).toBe("seat");
+});
+
+test("a drag in the chase view: in head (the default) the eyes keep their place and only the look turns, so the rover leaves the picture and comes back; in orbit the eyes go round the rover and it holds its place", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off drive=on");
+  expect(await read(page, (el) => el.driveDrag), "head is the default").toBe("head");
+  const box = (await view(page).boundingBox())!;
+  const [cx, cy] = [box.x + box.width / 2, box.y + box.height / 2];
+  const drag = async (dx: number): Promise<void> => {
+    await page.mouse.move(cx, cy);
+    await page.mouse.down();
+    await page.mouse.move(cx + dx, cy, { steps: 6 });
+    await page.mouse.up();
+  };
+  // where the rover is against the middle of the picture, in degrees (0 is in the middle), and the eyes' distance from it
+  const state = (): Promise<{ east: number; north: number; off: number; away: number }> =>
+    read(page, (el) => {
+      const v = el.vehicle!;
+      const bearing = (Math.atan2(v.east - el.position.east, v.north - el.position.north) * 180) / Math.PI;
+      return { east: el.position.east, north: el.position.north, off: ((el.look.azimuth - bearing + 540) % 360) - 180, away: Math.hypot(v.east - el.position.east, v.north - el.position.north) };
+    });
+  const at = await state();
+  expect(at.away).toBeCloseTo(6.5, 1);
+  expect(Math.abs(at.off)).toBeLessThan(0.5);
+  await drag(150);
+  const head = await state();
+  expect(head.east, "head: the eyes did not move").toBeCloseTo(at.east, 6);
+  expect(head.north).toBeCloseTo(at.north, 6);
+  expect(Math.abs(head.off), "and the view turned: the rover is out of the middle").toBeGreaterThan(20);
+  await drag(-150);
+  const back = await state();
+  expect(Math.abs(back.off), "turned back, the rover is in the middle again").toBeLessThan(0.5);
+  expect(back.east).toBeCloseTo(at.east, 6);
+  await page.evaluate(() => document.querySelector("#test-surface")!.setAttribute("drive-drag", "orbit"));
+  expect(await read(page, (el) => el.driveDrag)).toBe("orbit");
+  await drag(150);
+  const orbit = await state();
+  expect(Math.abs(orbit.off), "orbit: the rover holds its place").toBeLessThan(0.5);
+  expect(orbit.away).toBeCloseTo(6.5, 1);
+  expect(Math.hypot(orbit.east - at.east, orbit.north - at.north), "and the eyes went round it").toBeGreaterThan(1);
 });
 
 test("driveFor drives by a set time: two seconds at full throttle is about two metres and a quarter a second, and steering turns it", async ({ page }) => {
