@@ -3,6 +3,7 @@
 // This file registers nothing: `@johnmorrisdotca/wakusei-planets/flat/define` does.
 import { coverageAngleRad } from "../ground-track.ts";
 import { orbiterElements, type OrbiterId } from "../orbiters.ts";
+import { flagCodeOf, LANDING_SITES, type LandingSite } from "../landing-sites.ts";
 import { layerOf, placeRank, readPlaceLayers, readSurfaceNames, type PlaceLayer } from "../place-marks.ts";
 import { loadPlaces, type Place, type PlaceKind } from "../places.ts";
 import { texturePaths } from "../scene/textures.ts";
@@ -52,8 +53,12 @@ export interface FlatPick {
   altitudeKm: number | null;
   /** Where an orbiter's path comes from at this moment. */
   status: OrbiterStatus | null;
-  /** A place's kind (`crewed`, `landing`, `rover`, ...). */
+  /** A place's kind (`crewed`, `landing`, `rover`, `crash`, `feature`, ...). */
   placeKind: PlaceKind | null;
+  /** For a place: the record of the place tables (the names in both languages, the kind, the mission, the operator, the country, the date, the feature's type and size). Left out for an orbiter and for a tap on nothing. */
+  place?: Place;
+  /** For a place that is a landing on the Moon or Mars (the lander, or the rover or descent stage on the same spot): the landing site (`/landing-sites`: names, the day, the agency, the country and its flag code, where each number is from). Left out for any other place. */
+  site?: LandingSite;
   /** What chose it: a pointer going over it (`hover`), a tap or click (`tap`), or the keyboard (`key`). */
   via: "hover" | "tap" | "key";
 }
@@ -84,6 +89,16 @@ const readTime = (value: string | null): number | "now" => {
 };
 const prefersLessMotion = (): boolean => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const hidden = (): boolean => typeof document !== "undefined" && document.visibilityState === "hidden";
+/** The landing site of each place of the tables that is on one: the lander's place, and the rover's and the descent stage's on the same spot. */
+let siteOfPlace: Map<string, LandingSite> | undefined;
+const siteOf = (id: string): LandingSite | undefined => {
+  if (!siteOfPlace) {
+    siteOfPlace = new Map();
+    for (const site of LANDING_SITES) for (const place of [site.place, ...(site.alsoAt ?? [])]) siteOfPlace.set(place, site);
+  }
+  return siteOfPlace.get(id);
+};
+const FLAG_W = 21;
 const LAYER_WORD: Readonly<Record<PlaceLayer, string>> = { landing: "landing", crash: "crash", planned: "planned", feature: "feature" };
 
 const CSS = `
@@ -116,6 +131,11 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
 .tip{position:absolute;left:0;top:0;pointer-events:none;background:rgba(8,14,28,.94);color:#fff;padding:4px 8px;border-radius:6px;font-size:.85em;line-height:1.3;max-width:calc(100% - 12px);width:max-content;border:1px solid rgba(255,255,255,.3)}
 .msg{position:absolute;inset:0;display:grid;place-items:end center;margin:0;padding:8px;text-align:center;color:#fff;font-size:.85em;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}
 .msg:empty{display:none}
+.flags{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.flags[hidden]{display:none}
+.flag{position:absolute;left:0;top:0;height:11px;width:16px;pointer-events:none}
+.flag:not(:defined){display:none}
+.tip .flag{position:static;display:inline-block;vertical-align:-1px;margin-right:6px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 `;
 
@@ -172,9 +192,9 @@ function picture(url: string): Promise<HTMLImageElement> {
  * `paused` (same: hold the clock and keep the speed; nothing is drawn while it is held), `time` (same: `now`, an ISO date or milliseconds since 1970; live when absent), `speed` (same: 1 is real time, 0 holds, 86400 is a day a second, negative runs backwards),
  * `selected` (same: the chosen orbiter's id such as `lro`, or a place's id such as `moon/apollo-11-lunar-module`), `shade` (same: `off` for no night), `dot-size` (same: pixels), `controls` (same: `none`, or any of `centre zoom footprint track chips`; all by default), `lang` (same: `en` or `ja`; the page's language by default),
  * `orbiters` (`all`, the default, `off`, or some ids with commas: the orbiters drawn), `places` (the kinds of place marked, from `landing` (crewed, landing and rover sites), `crash` (crashes and impacts), `planned` and `feature` (named craters, seas and mountains); `landing` by default, `all` for every kind, `off` for none),
- * `names` (`off` for no names beside the marks, or the most names to show), `texture-base` and `texture-far-base` (where the body's pictures are: the package's folder on jsDelivr by default).
+ * `names` (`off` for no names beside the marks, or the most names to show), `site-flags` (the landing sites carry their country's flag: `<hata-flag>` beside the name on the map and in the tip; the page imports `@johnmorrisdotca/hata`, and without it the name stands alone), `texture-base` and `texture-far-base` (where the body's pictures are: the package's folder on jsDelivr by default).
  *
- * Events (the same names as chikyu's with `wakusei-` for `chikyu-`): `wakusei-flat-pick` (an orbiter or a place under the pointer, tapped, or reached by the keyboard: a `FlatPick`; `detail.id` is null when a tap lands on nothing and clears the choice), `wakusei-flat-filter` (a chip changed what is shown: `{ orbiters, layers }`),
+ * Events (the same names as chikyu's with `wakusei-` for `chikyu-`): `wakusei-flat-pick` (an orbiter, a place of the tables (a landing, a rover, a crash, a crater, a mountain) or a landing site under the pointer, tapped, or reached by the keyboard: a `FlatPick` with `kind`, `id`, `name`, `via` and, for a place, `place` (its record) and `site` (the landing site, where it is one); `detail.id` is null when a tap lands on nothing and clears the choice), `wakusei-flat-filter` (a chip changed what is shown: `{ orbiters, layers }`),
  * `wakusei-flat-view` (the reader panned or zoomed: `{ center, zoom }`) and `wakusei-timechange` (`{ time, running, paused }`, at most four a second while time runs; the name the space view uses).
  * Style it with the custom properties `--wakusei-flat-sea`, `--wakusei-flat-aspect`, `--wakusei-flat-aspect-narrow` and `--wakusei-flat-radius`.
  *
@@ -191,7 +211,7 @@ function picture(url: string): Promise<HTMLImageElement> {
  * ```
  */
 export class WakuseiFlat extends HTMLElement {
-  static observedAttributes = ["body", "center", "home-lon", "home-lat", "time", "speed", "paused", "footprint", "track", "footprint-elevation", "selected", "shade", "dot-size", "controls", "lang", "orbiters", "places", "names", "texture-base", "texture-far-base"];
+  static observedAttributes = ["body", "center", "home-lon", "home-lat", "time", "speed", "paused", "footprint", "track", "footprint-elevation", "selected", "shade", "dot-size", "controls", "lang", "orbiters", "places", "names", "site-flags", "texture-base", "texture-far-base"];
 
   #body: FlatBodyId = "moon";
   #info: FlatBodyInfo = flatBody("moon");
@@ -213,6 +233,8 @@ export class WakuseiFlat extends HTMLElement {
   #hover: Chosen | null = null;
   #orbs: Orb[] = [];
   #marks: Mark[] = [];
+  #flagSpots: { x: number; y: number; code: string }[] = [];
+  #flagLayer: HTMLElement | undefined;
   #lastDraw = 0;
   #totalMs = 0;
   #timer: ReturnType<typeof setTimeout> | undefined;
@@ -255,6 +277,14 @@ export class WakuseiFlat extends HTMLElement {
   }
   set body(value: FlatBodyId) {
     this.setAttribute("body", value);
+  }
+
+  /** Whether the landing sites carry their country's flag (the attribute `site-flags`): beside the name on the map, and in the tip. The flag is `<hata-flag>` from `@johnmorrisdotca/hata`, which the page imports; where it is not defined the name stands alone. */
+  get siteFlags(): boolean {
+    return this.hasAttribute("site-flags");
+  }
+  set siteFlags(on: boolean) {
+    this.toggleAttribute("site-flags", on);
   }
 
   /** The id of the chosen orbiter or place, or null. Set it to choose one from code (no `wakusei-flat-pick` is sent), `null` to clear. */
@@ -483,7 +513,7 @@ export class WakuseiFlat extends HTMLElement {
     else if (name === "paused") {
       if (flag(value) !== this.#paused) this.paused = flag(value);
     } else if (name === "time" || name === "speed") this.#readClock();
-    else if (name === "shade" || name === "dot-size" || name === "names" || name === "home-lon" || name === "home-lat") this.#mapKey = "";
+    else if (name === "shade" || name === "dot-size" || name === "names" || name === "site-flags" || name === "home-lon" || name === "home-lat") this.#mapKey = "";
     else if (name === "texture-base" || name === "texture-far-base") {
       this.#imageAsked = "";
       this.#imageFailed = false;
@@ -522,7 +552,9 @@ export class WakuseiFlat extends HTMLElement {
   #find(id: string | null): Chosen | null {
     if (id === null) return null;
     if (this.#info.orbiters.includes(id as OrbiterId)) return { kind: "orbiter", id: id as OrbiterId };
-    return this.#placeIds.has(id) || /^(moon|mars)\//.test(id) ? { kind: "place", id } : null;
+    // a landing site's own id (`moon/apollo-11`) is its lander's place
+    const place = LANDING_SITES.find((site) => site.id === id)?.place ?? id;
+    return this.#placeIds.has(place) || /^(moon|mars)\//.test(place) ? { kind: "place", id: place } : null;
   }
 
   #loadPlaces(): void {
@@ -684,7 +716,7 @@ export class WakuseiFlat extends HTMLElement {
     const lang = this.language;
     const names = readSurfaceNames(this.getAttribute("names"));
     // the map is drawn again only when the view, the home, the marks, the picture or the Sun's place (about a quarter of a degree) changed
-    const key = [v.width, v.height, this.#dpr, v.centerLon.toFixed(3), v.centerLat.toFixed(3), v.zoom.toFixed(3), shade ? Math.round(sun.lon * 4) : "x", shade ? Math.round(sun.lat * 4) : "x", this.#fast() ? "f" : "s", home ? `${home.lon},${home.lat}` : "", [...this.#layers].join("+"), this.#places.length, names.on ? (names.limit ?? "on") : "off", lang, this.#imageWidth, this.#imageFailed].join("|");
+    const key = [v.width, v.height, this.#dpr, v.centerLon.toFixed(3), v.centerLat.toFixed(3), v.zoom.toFixed(3), shade ? Math.round(sun.lon * 4) : "x", shade ? Math.round(sun.lat * 4) : "x", this.#fast() ? "f" : "s", home ? `${home.lon},${home.lat}` : "", [...this.#layers].join("+"), this.#places.length, this.hasAttribute("site-flags"), names.on ? (names.limit ?? "on") : "off", lang, this.#imageWidth, this.#imageFailed].join("|");
     if (key === this.#mapKey) return;
     this.#mapKey = key;
     this.#counts.mapDraws += 1;
@@ -788,8 +820,13 @@ export class WakuseiFlat extends HTMLElement {
   #drawMarks(ctx: CanvasRenderingContext2D, names: { on: boolean; limit: number | null }, lang: FlatLang): void {
     const v = this.#view;
     this.#marks = [];
-    if (this.#layers.size === 0 || this.#places.length === 0) return;
+    this.#flagSpots = [];
+    if (this.#layers.size === 0 || this.#places.length === 0) {
+      this.#syncFlags();
+      return;
+    }
     const pad = 8;
+    const flags = this.hasAttribute("site-flags");
     const shown: Mark[] = [];
     for (const place of this.#places) {
       const layer = layerOf(place.kind);
@@ -800,8 +837,9 @@ export class WakuseiFlat extends HTMLElement {
     }
     const rank = (place: Place): number => (place.kind === "crewed" ? -3_000_000 : placeRank(place));
     shown.sort((a, b) => rank(a.place) - rank(b.place));
-    // named features are marked only where there is room to name them; every site is marked
+    // a feature with no room for its name is marked by a small dot once the map is zoomed in far enough, so every feature can be pressed
     const limit = names.on ? (names.limit ?? Math.round(7 * v.zoom ** 1.7)) : 0;
+    const dotsFrom = v.zoom >= 2.5;
     const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
     const hit = (a: { x0: number; y0: number; x1: number; y1: number }): boolean => boxes.some((b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0);
     let named = 0;
@@ -812,20 +850,25 @@ export class WakuseiFlat extends HTMLElement {
     const chosenId = this.#selected?.kind === "place" ? this.#selected.id : null;
     for (const mark of shown) {
       const feature = mark.layer === "feature";
-      const text = mark.place.name[lang];
-      let label: { x0: number; y0: number; x1: number; y1: number; x: number; align: CanvasTextAlign } | null = null;
-      if (names.on && (named < limit || mark.place.id === chosenId)) {
-        const width = this.#measureText(text);
-        const right = { x0: mark.x + 8, y0: mark.y - 7, x1: mark.x + 8 + width, y1: mark.y + 7, x: mark.x + 8, align: "left" as CanvasTextAlign };
-        const left = { x0: mark.x - 8 - width, y0: mark.y - 7, x1: mark.x - 8, y1: mark.y + 7, x: mark.x - 8, align: "right" as CanvasTextAlign };
+      const site = siteOf(mark.place.id);
+      // a landing site is named by its own name (Apollo 11), once, on the lander
+      const text = site ? site.name[lang] : mark.place.name[lang];
+      const flag = flags && site !== undefined ? flagCodeOf(site.country) : undefined;
+      const room = flag === undefined ? 0 : FLAG_W;
+      let label: { x0: number; y0: number; x1: number; y1: number; x: number; align: CanvasTextAlign; flagX: number } | null = null;
+      if (names.on && (named < limit || mark.place.id === chosenId) && (site === undefined || site.place === mark.place.id)) {
+        const width = this.#measureText(text) + room;
+        const right = { x0: mark.x + 8, y0: mark.y - 7, x1: mark.x + 8 + width, y1: mark.y + 7, x: mark.x + 8 + room, align: "left" as CanvasTextAlign, flagX: mark.x + 8 };
+        const left = { x0: mark.x - 8 - width, y0: mark.y - 7, x1: mark.x - 8, y1: mark.y + 7, x: mark.x - 8 - room, align: "right" as CanvasTextAlign, flagX: mark.x - 8 - FLAG_W + 3 };
         const fits = (b: typeof right): boolean => b.x0 >= 0 && b.x1 <= v.width && !hit(b);
         label = fits(right) ? right : fits(left) ? left : null;
       }
-      // a feature is marked only with its name
-      if (feature && label === null && mark.place.id !== chosenId) continue;
+      // a feature is marked by its name, or by a dot when the map is zoomed in
+      if (feature && label === null && !dotsFrom && mark.place.id !== chosenId) continue;
       if (label !== null) {
         boxes.push(label);
         labels.push({ text, x: label.x, y: mark.y, align: label.align });
+        if (flag !== undefined) this.#flagSpots.push({ x: label.flagX, y: mark.y, code: flag });
         named += 1;
       }
       boxes.push({ x0: mark.x - 5, y0: mark.y - 5, x1: mark.x + 5, y1: mark.y + 5 });
@@ -840,6 +883,28 @@ export class WakuseiFlat extends HTMLElement {
       ctx.strokeText(label.text, label.x, label.y);
       ctx.fillText(label.text, label.x, label.y);
     }
+    this.#syncFlags();
+  }
+
+  /** The flags beside the names of the landing sites: `<hata-flag>` elements (from `@johnmorrisdotca/hata`, which the page imports; where it is not defined they draw nothing and the name stands alone), moved to the spots the map drew, each made once and kept. */
+  #syncFlags(): void {
+    const layer = this.#flagLayer;
+    if (!layer) return;
+    const spots = this.#flagSpots;
+    layer.hidden = spots.length === 0;
+    while (layer.children.length > spots.length) layer.lastElementChild!.remove();
+    spots.forEach((spot, i) => {
+      let flag = layer.children[i] as HTMLElement | undefined;
+      if (!flag) {
+        flag = this.ownerDocument.createElement("hata-flag");
+        flag.className = "flag";
+        flag.setAttribute("border", "");
+        flag.setAttribute("aria-hidden", "true");
+        layer.append(flag);
+      }
+      if (flag.getAttribute("code") !== spot.code) flag.setAttribute("code", spot.code);
+      flag.style.transform = `translate(${spot.x.toFixed(1)}px,${(spot.y - 5.5).toFixed(1)}px)`;
+    });
   }
 
   /** One mark: a diamond for a site (gold for a crewed one, white for a lander, outlined for a rover), a cross for a crash or an impact, a dashed ring for a planned landing and a small dot for a named feature. */
@@ -1127,7 +1192,22 @@ export class WakuseiFlat extends HTMLElement {
       return;
     }
     tip.hidden = false;
-    tip.textContent = this.#describe(item);
+    // the words, and the flag of a landing site's country when the page asks for flags; made again only when they change
+    const words = this.#describe(item);
+    const code = item.kind === "place" && this.hasAttribute("site-flags") ? flagCodeOf(siteOf(item.id)?.country) : undefined;
+    const key = `${code ?? ""}|${words}`;
+    if (tip.dataset["key"] !== key) {
+      tip.dataset["key"] = key;
+      if (code === undefined) tip.textContent = words;
+      else {
+        const flag = this.ownerDocument.createElement("hata-flag");
+        flag.className = "flag";
+        flag.setAttribute("code", code);
+        flag.setAttribute("border", "");
+        flag.setAttribute("aria-hidden", "true");
+        tip.replaceChildren(flag, words);
+      }
+    }
     const wide = tip.offsetWidth;
     const left = where.x + 14 + wide > this.#view.width ? Math.max(0, where.x - 14 - wide) : where.x + 14;
     const top = Math.max(0, Math.min(this.#view.height - tip.offsetHeight, where.y - 10));
@@ -1175,7 +1255,9 @@ export class WakuseiFlat extends HTMLElement {
     live.setAttribute("aria-live", "polite");
     const help = Object.assign(d.createElement("p"), { className: "sr", id: "help" });
     dots.setAttribute("aria-describedby", "help live");
-    stage.append(map, dots, selRing, hovRing, tip, msg);
+    const flagLayer = Object.assign(d.createElement("div"), { className: "flags", hidden: true });
+    stage.append(map, flagLayer, dots, selRing, hovRing, tip, msg);
+    this.#flagLayer = flagLayer;
     root.append(bar, stage, live, help);
     this.#bar = bar;
     this.#stage = stage;
@@ -1359,7 +1441,8 @@ export class WakuseiFlat extends HTMLElement {
       detail = { kind: "orbiter", id: item.id, name: orbiterName(item.id, this.language), body: this.#body, lat: o?.lat ?? null, lon: o?.lon ?? null, altitudeKm: o?.altitudeKm ?? null, status: o?.status ?? null, placeKind: null, via };
     } else {
       const place = this.#placeIds.get(item.id);
-      detail = { kind: "place", id: item.id, name: place?.name[this.language] ?? item.id, body: this.#body, lat: place?.lat ?? null, lon: place?.lon ?? null, altitudeKm: null, status: null, placeKind: place?.kind ?? null, via };
+      const site = siteOf(item.id);
+      detail = { kind: "place", id: item.id, name: place?.name[this.language] ?? item.id, body: this.#body, lat: place?.lat ?? null, lon: place?.lon ?? null, altitudeKm: null, status: null, placeKind: place?.kind ?? null, via, ...(place ? { place } : {}), ...(site ? { site } : {}) };
     }
     this.dispatchEvent(new CustomEvent("wakusei-flat-pick", { detail, bubbles: true, composed: true }));
   }

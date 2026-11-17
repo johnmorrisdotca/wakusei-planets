@@ -164,3 +164,4 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .flat-call pre { overflow-x: auto; }
 @media (max-width: 520px) { .flat-facts { grid-template-columns: 1fr; gap: 0; } .flat-facts dd { margin-bottom: 6px; } }
 .flat-swatch { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: var(--c, #9aa5b1); box-shadow: 0 0 0 1px rgba(0,0,0,.5); vertical-align: baseline; }
+.flat-flag { height: 14px; vertical-align: -1px; }
