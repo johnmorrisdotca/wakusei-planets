@@ -214,6 +214,11 @@
       "import": "./dist/comets.js",
       "default": "./dist/comets.js"
     },
+    "./landing-sites": {
+      "types": "./dist/landing-sites.d.ts",
+      "import": "./dist/landing-sites.js",
+      "default": "./dist/landing-sites.js"
+    },
     "./places": {
       "types": "./dist/places.d.ts",
       "import": "./dist/places.js",
@@ -637,6 +642,7 @@
     "@angular/platform-browser": "^22.2.4",
     "@eslint/js": "^9.0.0",
     "@johnmorrisdotca/chikyu-earth": "^0.36.0",
+    "@johnmorrisdotca/hata": "^1.9.0",
     "@playwright/test": "1.64.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^24.0.0",

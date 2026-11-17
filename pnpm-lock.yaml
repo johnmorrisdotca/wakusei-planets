@@ -30,6 +30,9 @@ importers:
       '@johnmorrisdotca/chikyu-earth':
         specifier: ^0.36.0
         version: 0.36.0(astronomy-engine@2.1.19)(three@0.186.1)
+      '@johnmorrisdotca/hata':
+        specifier: ^1.9.0
+        version: 1.9.0
       '@playwright/test':
         specifier: 1.64.0
         version: 1.64.0
@@ -411,6 +414,10 @@ packages:
   '@johnmorrisdotca/chizu@1.6.1':
     resolution: {integrity: sha512-h4FL4u99l4qKrZ1SPtQydC3PS3eswM8TZ0eH+wSCPchfZeW9CMfyNWjhXfx3EivDHIllfzC3e270PsKhj0ZYjg==}
     engines: {node: '>=22'}
+
+  '@johnmorrisdotca/hata@1.9.0':
+    resolution: {integrity: sha512-TlKv9O3elQzgpbCngQZuadYe7sbsuhoJB8F0L5Ip5IiHfTaWlEzZtcRKzKYPpU4VWHPe0i3jgYfeEudY9o+azw==}
+    engines: {node: '>=24'}
 
   '@johnmorrisdotca/kazoku-ui@0.41.0':
     resolution: {integrity: sha512-Zp/iTun5jgsXMPAJ9qCoIpr6Oc6O/kBSwAeEw4MdNRwwmALHtAwAuALXewecxhQ2j5HUEXamu5HKTA8OFOz+HA==}
@@ -1856,6 +1863,8 @@ snapshots:
       three: 0.186.1
 
   '@johnmorrisdotca/chizu@1.6.1': {}
+
+  '@johnmorrisdotca/hata@1.9.0': {}
 
   '@johnmorrisdotca/kazoku-ui@0.41.0(three@0.186.1)':
     optionalDependencies:
