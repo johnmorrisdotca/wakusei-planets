@@ -500,6 +500,12 @@ await step("flat-node", () => {
   if (out !== "Apollo 11: the Sun is overhead at 103 degrees east, 0 degrees from the equator\nLRO is 113 km up, MRO 244 km\nTianwen-1 has a path to draw: false") throw new Error(`unexpected output: ${out}`);
 });
 
+await step("flat-projections-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("flat"), "projections.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  const wanted = ["equirectangular: -2.34, 0.33; back at 18.65, -133.80", "mercator: -2.34, 0.33; back at 18.65, -133.80", "sinusoidal: -2.21, 0.33; back at 18.65, -133.80", "mollweide: -2.03, 0.36; back at 18.65, -133.80", "azimuthal: -2.07, 0.97; back at 18.65, -133.80", "18 lines", "800 pixels, the corner is empty"].join("\n");
+  if (out !== wanted) throw new Error(`unexpected output: ${out}`);
+});
+
 await step("flat-cdn", async () => {
   await opened(browser, async (page) => {
     await page.route("https://cdn.jsdelivr.net/**", async (route) => {
@@ -607,6 +613,7 @@ const FILES: Record<string, string[]> = {
   "plan/node.mjs": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
   "flat/cdn.html": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
   "flat/node.mjs": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
+  "flat/projections.mjs": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
   "flat-system/cdn.html": ["docs/guides/flat-system.md", "docs/guides/ja/flat-system.md"],
   "flat-system/node.mjs": ["docs/guides/flat-system.md", "docs/guides/ja/flat-system.md"],
   "sky-bodies/node.mjs": ["docs/guides/sky-bodies.md", "docs/guides/ja/sky-bodies.md"],
