@@ -629,6 +629,17 @@ function spacecraftSpeed(id: "voyager1" | "voyager2" | "newhorizons" | "pioneer1
 function spacecraftStats(id: "voyager1" | "voyager2" | "newhorizons" | "pioneer10" | "pioneer11" | "cassini" | "galileo" | "juno" | "parker" | "webb" | "bepicolombo" | "psyche" | "europaclipper" | "lucy" | "juice" | "hayabusa2" | "osirisapex" | "solarorbiter" | "roadster", when: When) => SpacecraftStats
 function spacecraftSunDistance(id: "voyager1" | "voyager2" | "newhorizons" | "pioneer10" | "pioneer11" | "cassini" | "galileo" | "juno" | "parker" | "webb" | "bepicolombo" | "psyche" | "europaclipper" | "lucy" | "juice" | "hayabusa2" | "osirisapex" | "solarorbiter" | "roadster", when: When) => number
 function spacecraftVelocity(id: "voyager1" | "voyager2" | "newhorizons" | "pioneer10" | "pioneer11" | "cassini" | "galileo" | "juno" | "parker" | "webb" | "bepicolombo" | "psyche" | "europaclipper" | "lucy" | "juice" | "hayabusa2" | "osirisapex" | "solarorbiter" | "roadster", when: When) => Vec3
+## ./fact-sheets
+const DEFINITION_IDS: readonly ["planet", "dwarf-planet", "moon", "asteroid", "comet", "meteoroid", "meteor", "meteorite"]
+export interface Definition { id: DefinitionId; term: { en: string; ja: string; }; en: string; ja: string; source: string; }
+export type DefinitionId = (typeof DEFINITION_IDS)[number];
+const FACT_SHEET_IDS: readonly ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
+export interface FactSheet { id: FactSheetId; name: { en: string; ja: string; }; kind: "star" | "planet" | "dwarf-planet"; radius: Length; distanceFromSun: Length & { au: number; }; yearDays: number | null; rotationHours: number; retrograde: boolean; knownMoons: number; moonsReadOn: string; nasaPage: string; description: { en: string; ja: string; }; }
+export type FactSheetId = (typeof FACT_SHEET_IDS)[number];
+export interface Length { km: number; miles: number; }
+const MOONS_READ_ON: "2026-11-11"
+function definition(id: "moon" | "planet" | "dwarf-planet" | "asteroid" | "comet" | "meteoroid" | "meteor" | "meteorite") => Definition
+function factSheet(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto") => FactSheet
 ## ./roadster
 const ROADSTER: { readonly name: { readonly en: "Starman"; readonly ja: "スターマン"; }; readonly car: { readonly en: "Tesla Roadster"; readonly ja: "テスラ・ロードスター"; }; readonly launch: number; readonly horizonsId: "-143205"; readonly record: { readonly start: number; readonly end: number; }; }
 const ROADSTER_ACCURACY: { readonly from: number; readonly to: number; readonly stepDays: 10; readonly interpolationKm: 755; readonly note: "Horizons' path was fitted to observations from February and March 2018 and is a prediction after that; sunlight's push is modelled only as one number fitted to those observations, so the real car drifts from the predicted path, and the further from 2018 the more. The interpolation error above is separate and small beside it."; }
