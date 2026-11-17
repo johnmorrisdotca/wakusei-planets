@@ -184,6 +184,8 @@ await step("earth-without-chikyu", async () => {
   const absent = { name: "no-chikyu", setup: (b: import("esbuild").PluginBuild) => b.onResolve({ filter: /^@johnmorrisdotca\/chikyu-earth/ }, (a) => ({ errors: [{ text: `${a.path} is not installed` }] })) };
   const out = await esbuild({ stdin: { contents: `import "@johnmorrisdotca/wakusei-planets/element"; import "@johnmorrisdotca/wakusei-planets/earth";`, resolveDir: usage }, bundle: true, format: "esm", write: false, absWorkingDir: root, logLevel: "silent", plugins: [absent] });
   await opened(browser, async (page) => {
+    const told: string[] = [];
+    page.on("console", (message) => message.type() === "info" && told.push(message.text()));
     await page.route("https://page.test/**", (route) => {
       const { pathname } = new URL(route.request().url());
       if (pathname === "/main.js") return route.fulfill({ body: out.outputFiles[0]!.text, contentType: "text/javascript" });
@@ -194,6 +196,10 @@ await step("earth-without-chikyu", async () => {
       const root = document.querySelector("wakusei-body")?.shadowRoot;
       return root !== null && root !== undefined && root.querySelector("chikyu-earth") === null && root.querySelectorAll("svg path, svg ellipse").length > 0;
     }, undefined, { timeout: 20_000 });
+    // and the page's console says why, once (after a short grace for an element that is a moment behind)
+    const start = Date.now();
+    while (told.length === 0 && Date.now() - start < 6000) await page.waitForTimeout(200);
+    if (told.length !== 1 || !told[0]!.includes("chikyu-earth's element is not on the page")) throw new Error(`the console was told ${JSON.stringify(told)}, not the one message about chikyu-earth`);
   });
 });
 
