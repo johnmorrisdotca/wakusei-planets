@@ -3,7 +3,7 @@
 // (`asteroidPosition`) or astronomical units (`asteroidPositionAu`, the unit `heliocentric` gives the planets in). The Kepler solver is the package's own. Pure: no DOM, no clock reads, no three.js.
 import { ASTEROID_FETCHED, ASTEROID_TABLE } from "./data/asteroids.ts";
 import { toTerrestrialTime } from "./clock.ts";
-import { madeHere } from "./door/own.ts";
+import { madeHere } from "./door/made.ts";
 import type { SmallBody, SmallBodySource } from "./door/small-bodies.ts";
 import { heliocentric, kepler } from "./ephemeris.ts";
 import { length, RAD, sub, type Vec3 } from "./vec.ts";

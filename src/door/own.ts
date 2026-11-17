@@ -62,17 +62,7 @@ export const OWN_SOURCES: readonly SourceInfo[] = freeze([
 /** The rows of `OWN_SOURCES` by id. */
 export const OWN_BY_ID: ReadonlyMap<string, SourceInfo> = new Map(OWN_SOURCES.map((source) => [source.id, source]));
 
-/** The source objects this package made itself: only these are its own, whatever id a caller's source gives itself. */
-const MADE_HERE = new WeakSet<object>();
-
-/** Marks a source object as made by this package. */
-export function madeHere<T extends object>(source: T): T {
-  MADE_HERE.add(source);
-  return source;
-}
-
-/** True for a source object this package made (`tilesSource`), false for any other. */
-export const isOwnSource = (source: object): boolean => MADE_HERE.has(source);
+export { isOwnSource, madeHere } from "./made.ts";
 
 /**
  * The credit of one of the package's own sources, for a page that draws something itself: the pictures and positions of the elements are credited by the elements' own `credits()`, and a page that draws a body from the
