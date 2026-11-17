@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Design drafts for John's review** (MODULES-540, part). `docs/design/roadmap.md`, `areas.md` and `which-package.md`, beside the conventions, the migration plan and the 1.0 criteria. Drafts only: not published, nothing in them is built, and no number in them is claimed without a Horizons measurement.
+
 ## [0.61.0] - 2026-11-17
 
 - **IM-2's three rovers stand on Athena, east of the prime meridian** (MODULES-1402; John Morris, 2026-11-17). GCAT's lander catalogue has the whole IM-2 landing at 84.7906 S, 29.1957 W; NASA's table, which the places take, puts Athena at 29.1957 E, but GRACE, MAPP and Yaoki, which NASA's table does not list, kept the catalogue's point on the far side of the prime meridian. `scripts/make-places-data.py` now moves a rover the catalogue puts at its lander's own point with the lander whenever a better source moves the lander more than 0.05 degree and has no position of its own for the rover; the rovers keep the catalogue's figure in `gcatPosition`. No other rover on the Moon or Mars disagrees with its lander, and a test pins both.
