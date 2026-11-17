@@ -45,7 +45,7 @@ test("the local frame is a right-handed east, north, up with the Earth toward th
 });
 
 test("the sites table: Apollo 17, looked at first toward the massif at the landing", () => {
-  assert.deepEqual(SURFACE_SITES.map((site) => site.id), ["apollo-17"]);
+  assert.deepEqual(SURFACE_SITES.map((site) => site.id), ["apollo-17", "perseverance", "curiosity", "apollo-15", "apollo-16", "chang-e-3", "chang-e-4"]);
   const site = siteById("apollo-17")!;
   assert.equal(site.time, LANDING);
   assert.ok(site.look.azimuth > 200 && site.look.azimuth < 260);

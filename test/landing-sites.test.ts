@@ -75,7 +75,7 @@ test("the sites the work asked for are all there, and the ones that crashed are 
   for (const body of ["moon", "mars"] as const) assert.deepEqual(landingSitesOf(body).map((s) => s.date), landingSitesOf(body).map((s) => s.date).sort(), `${body}: by date`);
 });
 
-test("the lookups take an id, a place id or a name, and Apollo 17 leads to the standing view", () => {
+test("the lookups take an id, a place id or a name, and seven sites lead to the standing view", () => {
   assert.equal(findLandingSite("moon/apollo-11")?.place, "moon/apollo-11-lunar-module");
   assert.equal(findLandingSite("Moon/Apollo-11-Lunar-Module")?.id, "moon/apollo-11");
   assert.equal(findLandingSite("zhurong")?.country, "CN");
@@ -83,7 +83,7 @@ test("the lookups take an id, a place id or a name, and Apollo 17 leads to the s
   assert.equal(findLandingSite("nowhere"), undefined);
   assert.equal(findLandingSite(undefined as unknown as string), undefined);
   const standing = LANDING_SITES.filter((site) => site.stand !== undefined);
-  assert.deepEqual(standing.map((site) => site.id), ["moon/apollo-17"]);
+  assert.deepEqual(standing.map((site) => site.id), ["moon/apollo-15", "moon/apollo-16", "moon/apollo-17", "moon/chang-e-3", "moon/chang-e-4", "mars/curiosity", "mars/perseverance"]);
   assert.ok(siteById(standing[0]!.stand!) !== undefined, "the standing view has that site");
   assert.ok(findPlace(PLACES_MOON, "Apollo 17 lunar module") !== undefined);
   const stand = siteById("apollo-17")!;
