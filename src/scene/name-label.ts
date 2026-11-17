@@ -5,6 +5,7 @@ import { BODY_LABEL_FONT, createBodyLabel, loadBodyLabelFont, type BodyLabel, ty
 import type * as THREE from "three";
 import type { ThreeParts } from "./body.ts";
 import type { Vec3 } from "../vec.ts";
+import { ROUND_GLSL } from "./round.ts";
 
 /**
  * The name written on a body's globe: the family's `bodyLabel` property. `look` is the one setting with no default: `painted` (pale letters over the surface), `etched` (the letters lighten the surface), `outline`
@@ -190,12 +191,13 @@ let warned = false;
 const canDraw = (): boolean => typeof document !== "undefined" || typeof OffscreenCanvas !== "undefined";
 
 const LABEL_VERTEX = /* glsl */ `
+${ROUND_GLSL}
 varying vec2 vUv;
 varying vec3 vN;
 void main() {
   vUv = uv;
   vN = normalize(transpose(inverse(mat3(modelMatrix))) * normal);
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  gl_Position = projectionMatrix * viewMatrix * roundWorld(modelMatrix * vec4(position, 1.0));
 }`;
 
 // lit as the bodies are: the Sun's direction in the scene's axes, a little wrap past the terminator and a little ambient on the night side, so a name on the night side is dark too
@@ -215,6 +217,12 @@ void main() {
   #include <colorspace_fragment>
 }`;
 
+/** The two uniforms of `ROUND_GLSL`, one object each, written by the body at each draw. */
+export interface RoundUniforms {
+  uRoundAxis: { value: THREE.Vector3 };
+  uRoundK: { value: number };
+}
+
 interface LitUniforms {
   uMap: { value: unknown };
   uLight: { value: THREE.Vector3 };
@@ -224,7 +232,7 @@ interface LitUniforms {
 }
 
 /** The three.js the shared label is handed: its own, but with a material lit by the bodies' light instead of three's Lambert (the scenes here have no three.js lights). */
-function litThree(T: ThreeParts & LabelParts, emissive: boolean): BodyLabelThree & { made: THREE.ShaderMaterial[] } {
+function litThree(T: ThreeParts & LabelParts, emissive: boolean, squeeze: RoundUniforms): BodyLabelThree & { made: THREE.ShaderMaterial[] } {
   const made: THREE.ShaderMaterial[] = [];
   class LitLabelMaterial extends T.ShaderMaterial {
     constructor(parameters: Record<string, unknown>) {
@@ -233,7 +241,7 @@ function litThree(T: ThreeParts & LabelParts, emissive: boolean): BodyLabelThree
         ...rest,
         vertexShader: LABEL_VERTEX,
         fragmentShader: LABEL_FRAGMENT,
-        uniforms: { uMap: { value: map }, uLight: { value: new T.Vector3(0, 0, 1) }, uOpacity: { value: 1 }, uAmbient: { value: emissive ? 1 : 0.06 }, uWrap: { value: 0.08 } } satisfies LitUniforms,
+        uniforms: { ...squeeze, uMap: { value: map }, uLight: { value: new T.Vector3(0, 0, 1) }, uOpacity: { value: 1 }, uAmbient: { value: emissive ? 1 : 0.06 }, uWrap: { value: 0.08 } } satisfies LitUniforms,
       });
       made.push(this);
     }
@@ -290,8 +298,9 @@ const ensureFont = (font: string): Promise<unknown> => (font === BODY_LABEL_FONT
  * @param emissive - The body glows (the Sun): the name is lit fully, from no direction.
  * @param onReady - Called when the name is drawn, and again when a new font is in.
  * @param colour - The body's mean colour, `#rrggbb`: with `tone: "auto"` the letters are dark on a light body and pale on a dark one. Left out, they are the look's own.
+ * @param squeeze - The uniforms a body drawn round shares with its name (see `round.ts`), so the name is squeezed with the globe. Left out, the name is not squeezed.
  */
-export function createNameLabel(T: ThreeParts, text: string, options: NameLabelOptions, emissive: boolean, onReady: () => void, colour?: string): NameLabel {
+export function createNameLabel(T: ThreeParts, text: string, options: NameLabelOptions, emissive: boolean, onReady: () => void, colour?: string, squeeze?: RoundUniforms): NameLabel {
   const group = new T.Group();
   group.name = "name-label";
   // the shared label's frame has longitude 0 along +x and east towards -z; the bodies' has longitude 0 along +z and east along +x: a quarter turn about the pole maps one onto the other
@@ -316,7 +325,7 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
 
   const make = (): void => {
     if (disposed || label !== undefined || !able) return;
-    const lit = litThree(T as ThreeParts & LabelParts, emissive);
+    const lit = litThree(T as ThreeParts & LabelParts, emissive, squeeze ?? { uRoundAxis: { value: new T.Vector3(1, 0, 0) }, uRoundK: { value: 1 } });
     label = createBodyLabel(lit, { text: wanted.text, ...wanted.options, radius: 1 });
     materials = lit.made;
     group.add(label.object as unknown as THREE.Object3D);

@@ -1,4 +1,5 @@
 // The shader code shared by every body: noise, craters and bands for the realistic look, the lighting, and the ring and glow shaders. Strings only.
+import { ROUND_GLSL } from "./round.ts";
 
 export const VERTEX = /* glsl */ `
 varying vec3 vObj;
@@ -321,6 +322,7 @@ void main() {
  * (`uScale` is the body's size in scene units), and `vV` points at the camera.
  */
 export const VERTEX_WORLD = /* glsl */ `
+${ROUND_GLSL}
 uniform float uScale;
 varying vec3 vObj;
 varying vec3 vN;
@@ -332,11 +334,12 @@ void main() {
   vN = normalize(transpose(inverse(mat3(modelMatrix))) * normal);
   vW = mat3(modelMatrix) * position / uScale;
   vV = cameraPosition - w.xyz;
-  gl_Position = projectionMatrix * viewMatrix * w;
+  gl_Position = projectionMatrix * viewMatrix * roundWorld(w);
 }`;
 
 /** The ring's vertex shader for a perspective camera, with the same frame as `VERTEX_WORLD`. */
 export const RING_VERTEX_WORLD = /* glsl */ `
+${ROUND_GLSL}
 uniform float uScale;
 varying vec3 vL;
 varying vec3 vW;
@@ -346,7 +349,7 @@ void main() {
   vec4 w = modelMatrix * vec4(position, 1.0);
   vW = mat3(modelMatrix) * position / uScale;
   vV = cameraPosition - w.xyz;
-  gl_Position = projectionMatrix * viewMatrix * w;
+  gl_Position = projectionMatrix * viewMatrix * roundWorld(w);
 }`;
 
 /** The ring's fragment shader for a perspective camera: which side is seen comes from the direction to the camera. */

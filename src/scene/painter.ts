@@ -19,6 +19,7 @@ import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, nameLabelText, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import { roundShape } from "./round.ts";
 
 let pictureLoads = 0;
 
@@ -163,8 +164,14 @@ export interface PaintInfo {
   pose?: { pole: Vec3; meridian: Vec3 };
   /** Spheres that may shade this body from the Sun: x, y, z (from this body's centre) and radius, all in this body's radii, in the scene's axes. At most six are used. */
   occluders?: readonly (readonly [number, number, number, number])[];
-  /** The camera, so that a body big in the view gets finer map tiles for the part in view (see `PaintView`). Left out, none are used. */
+  /** The camera, so that a body big in the view gets finer map tiles for the part in view (see `PaintView`), and so that the body is drawn round wherever it is in the picture (see `round`). Left out, none are used. */
   view?: PaintView;
+  /**
+   * Draw the body round wherever it is in the picture. A perspective camera draws a sphere near the picture's edge as an ellipse (long along the line to the middle, by 1 / cos of the angle off the line of sight: a quarter
+   * as long again 37 degrees out, which is the edge of a wide window); with `view` given, a body is drawn as the ellipsoid that projects to a circle, its colours, light and map unchanged, a ring and a name squeezed with it. `false` leaves
+   * the camera's own stretch. Default `true`; it takes effect only for a perspective camera given in `view`.
+   */
+  round?: boolean;
 }
 
 /**
@@ -331,9 +338,12 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   // a glowing body (the Sun) is drawn as it always was: no window of finer map and no generic detail
   const generic = look.emissive !== true;
   const fine = detailOf(look);
+  // the squeeze that makes the body look round (see `round.ts`), written at each draw and shared by the globe, the rings and the name: one object each, so that a material made later holds the same
+  const squeeze = { uRoundAxis: { value: new T.Vector3(1, 0, 0) }, uRoundK: { value: 1 } };
   const uniforms = (painted: boolean): Record<string, THREE.IUniform> => {
     const a = look.atmosphere;
     return {
+      ...squeeze,
       ...(generic
         ? {
             uTexel: { value: painted ? (2 * Math.PI) / (look.painted?.widths[0] ?? 2048) : 0.005 },
@@ -400,7 +410,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       transparent: true,
       premultipliedAlpha: true,
       depthWrite: false,
-      uniforms: { uRingTex: { value: strip }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(1, 0, 0) }, uRingN: { value: new T.Vector3(0, 1, 0) }, uScale: { value: 1 } },
+      uniforms: { ...squeeze, uRingTex: { value: strip }, uRingR: { value: new T.Vector2(ringInner, ringOuter) }, uLight: { value: new T.Vector3(1, 0, 0) }, uRingN: { value: new T.Vector3(0, 1, 0) }, uScale: { value: 1 } },
     });
     disposables.push(ringMaterial);
     ringMesh = new T.Mesh(ringGeometry, ringMaterial);
@@ -596,7 +606,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     labelText = text ?? nameLabelText(facts.name, lang ?? "en");
     labelReport.text = labelText;
     if (label === undefined) {
-      label = createNameLabel(T, labelText, options, look.emissive === true, redraw, facts.colour);
+      label = createNameLabel(T, labelText, options, look.emissive === true, redraw, facts.colour, squeeze);
       labelReport.look = label.look;
       mesh.add(label.object);
     } else {
@@ -625,6 +635,16 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       // never turned, so `camera.quaternion` (the camera's local turn, which is its world turn for a camera with no parent, as the views here have) is the glow's own; the globe inside it has the body's own
       // pole and prime meridian like every other body
       if (glowMesh !== undefined && info.view !== undefined) glowMesh.quaternion.copy(info.view.camera.quaternion);
+      // round wherever it is in the picture: a perspective camera given to us, the body not squeezed when it was asked not to be (the glow is a disc facing the camera, which a perspective camera draws round already)
+      {
+        const camera = info.view?.camera as THREE.PerspectiveCamera | undefined;
+        if (camera !== undefined && camera.isPerspectiveCamera === true && info.round !== false) {
+          const e = camera.matrixWorld.elements;
+          const shape = roundShape([e[12]!, e[13]!, e[14]!], [-e[8]!, -e[9]!, -e[10]!], [group.position.x, group.position.y, group.position.z], scale);
+          squeeze.uRoundAxis.value.set(shape.axis[0], shape.axis[1], shape.axis[2]);
+          squeeze.uRoundK.value = shape.k;
+        } else squeeze.uRoundK.value = 1;
+      }
       {
         const { pole, meridian } = info.pose ?? orientation(id, info.ms);
         const east = cross(pole, meridian);

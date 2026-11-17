@@ -10,6 +10,7 @@ import { createMoonDots, type DotsThree, type MoonDot } from "./all-moons.ts";
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
+import { edgeStretch, roundShape, squashPoint } from "../scene/round.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import { turn, type Vec3 } from "../vec.ts";
@@ -1060,10 +1061,13 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
 
           // how many pixels across each body is: for the pictures it needs and for what is chosen
           const half = Math.tan((fovNow / 2) * RAD);
+          // a body is drawn round wherever it is in the picture, and wider across the farther out it is (the picture's plane is that much farther from the camera there): its radius on the screen is that of one in the middle times `1 / cos` of how far off the line of sight it is
+          const eyeAt: Vec3 = [camera.position.x, camera.position.y, camera.position.z];
+          const lookAt: Vec3 = [-e2[8]!, -e2[9]!, -e2[10]!];
           const radiusPxOf = (id: SpaceBody): number => {
             const d = Math.hypot(pos[id][0] - camera.position.x, pos[id][1] - camera.position.y, pos[id][2] - camera.position.z);
             const r = radiusOf(id);
-            return d <= r * 1.001 ? 1e5 : ((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half;
+            return d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, pos[id]);
           };
           const px = {} as Record<SpaceBody, number>;
           for (const id of SPACE_BODIES) px[id] = radiusPxOf(id);
@@ -1104,7 +1108,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const r = shown.object.scale.x;
               const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
               const { pole, meridian } = orientation(model.focus, model.time);
-              deps.onSurface({ id: model.focus, centre: [at.x, at.y, at.z], radius: r, pole, meridian, eye: [camera.position.x, camera.position.y, camera.position.z], project: labelFor, width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : ((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half });
+              const centre: Vec3 = [at.x, at.y, at.z];
+              // what is laid over the body is put where the drawn (round) body's surface is
+              const shape = roundShape(eyeAt, lookAt, centre, r);
+              deps.onSurface({ id: model.focus, centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre) });
             }
           }
           if (points !== undefined && deps.book !== undefined) {
@@ -1499,7 +1506,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.object.visible = true;
               drawing.object.position.set(at[0], at[1], at[2]);
               drawing.object.scale.setScalar(drawn);
-              const moonPx = away <= drawn * 1.001 ? 1e5 : ((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half;
+              const moonPx = away <= drawn * 1.001 ? 1e5 : (((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half) * edgeStretch(eyeAt, lookAt, at);
               drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
               const spot = labelFor(at);
               if (spot) {
@@ -1588,7 +1595,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const r = earth.object.scale.x;
               const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
               const { pole, meridian } = orientation("earth", model.time);
-              deps.onEarth({ id: "earth", centre: [at.x, at.y, at.z], radius: r, pole, meridian, eye: [camera.position.x, camera.position.y, camera.position.z], project: labelFor, width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : ((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half, sun: model.light === "lit" ? null : toSunOf("earth") });
+              const centre: Vec3 = [at.x, at.y, at.z];
+              const shape = roundShape(eyeAt, lookAt, centre, r);
+              deps.onEarth({ id: "earth", centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre), sun: model.light === "lit" ? null : toSunOf("earth") });
             }
           }
           if (deps.onSight && (deps.wantSight?.() ?? true)) {
