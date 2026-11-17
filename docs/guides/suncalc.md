@@ -69,26 +69,53 @@ Change the import and run your tests. The results agree within the limits above,
 - **Below the horizon** the Sun's and Moon's `altitude` is the geometric altitude with a refraction that fades to nothing at -2 degrees. suncalc 2 keeps adding the horizon's 0.49 degrees of refraction at any depth, which is not physical; above the horizon the two agree to 0.006 degrees.
 - **The Moon's rise and set** are the upper limb at the horizon through 34 arc-minutes of refraction, from the Moon's real distance, which is what the Naval Observatory tables use.
 
-## Coming from suncalc 1.x or its forks
+## Coming from suncalc 1.x or suncalc2
 
-suncalc 1 (and the forks suncalc2 and suncalc3) use a different set of conventions. `/suncalc/legacy` keeps them, so only the import changes:
+suncalc 1.x, and the forks suncalc2 and suncalc3, use a different set of conventions from suncalc 2. `/suncalc/legacy` keeps them, so the one line that changes is the import:
 
 ```ts
-import { getPosition, getTimes } from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
+// import * as SunCalc from "suncalc";   // 1.x, suncalc2
+import * as SunCalc from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
 
-const { azimuth, altitude } = getPosition(new Date(Date.UTC(2026, 5, 21, 12)), 51.5, -0.1);
+const noon = new Date(Date.UTC(2026, 5, 21, 12));
+const { azimuth, altitude } = SunCalc.getPosition(noon, 51.5, -0.1);
 console.log((azimuth * 180 / Math.PI).toFixed(0), (altitude * 180 / Math.PI).toFixed(0));
-console.log(Number.isNaN(getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 69.65, 18.96).sunrise!.getTime()));
+console.log(Number.isNaN(SunCalc.getTimes(noon, 69.65, 18.96).sunrise!.getTime()));
 ```
 
-The three changes that trip people up when they move to suncalc 2 (or to `/suncalc` here) are:
+To move on to `/suncalc` (suncalc 2's conventions) later, three things change:
 
-1. **Angles are degrees**, not radians.
-2. **Azimuth is measured from north**, clockwise (0 north, 90 east, 180 south, 270 west), not from south toward west.
-3. **An event that does not happen is `null`** (or absent for the Moon) and a polar day or night sets `alwaysUp` or `alwaysDown`, not an invalid `Date`.
+| | `/suncalc/legacy` (suncalc 1.x) | `/suncalc` (suncalc 2) |
+|---|---|---|
+| Angles | radians | degrees: `radians * 180 / Math.PI` |
+| Azimuth | from south toward west (0 south, a quarter turn west) | clockwise from north (0 north, 90 east, 180 south): `(legacy * 180 / Math.PI + 180) % 360` |
+| An event that does not happen | an invalid `Date`, so test with `Number.isNaN(d.getTime())` | `null` (absent for the Moon), with `alwaysUp` or `alwaysDown` at the poles |
 
-The legacy sub-path has suncalc 1's other conventions too: the Sun's altitude without refraction and the Moon's with it, the bright-limb `angle` negative while the Moon waxes, and `getMoonTimes(date, lat, lng, inUTC)` searching the 24 hours from midnight (the machine's, or UTC). Its numbers come from the same engine, so they are better than suncalc 1's, which has no delta T and a mean-element Moon: it is 0.3 to 0.6 degrees off for the Sun in 1950.
+The same Sun, read both ways:
+
+```ts
+import { getPosition as legacyPosition } from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
+import { getPosition } from "@johnmorrisdotca/wakusei-planets/suncalc";
+
+const noon = new Date(Date.UTC(2026, 5, 21, 12));
+const old = legacyPosition(noon, 51.5, -0.1);
+const now = getPosition(noon, 51.5, -0.1);
+console.log(((old.azimuth * 180 / Math.PI + 180) % 360).toFixed(1), now.azimuth.toFixed(1));
+console.log((old.altitude * 180 / Math.PI).toFixed(1), now.altitude.toFixed(1));
+```
+
+Both lines agree. The altitudes part only low in the sky, by the refraction suncalc 1 leaves out of the Sun (about half a degree at the horizon).
+
+### The day rule
+
+- **`getTimes(date, lat, lng, height?)`** has no `utcOffset`: it gives the solar day nearest `date`, from one solar midnight to the next, as suncalc 1 does. Pass a time near local noon and the events are the local day's.
+- **`getMoonTimes(date, lat, lng, inUTC?)`** searches the 24 hours from midnight of `date`'s day, midnight in the machine's zone or, with `inUTC` true, in UTC. A Moon that rises late can set on the next day and then the day has a `rise` and no `set`.
+- In `/suncalc` both take `utcOffset` (minutes east of UTC) instead: the local calendar day, whatever the machine's zone.
+
+### What else is the same as suncalc 1
+
+The Sun's altitude has no refraction in it and the Moon's has; the bright-limb `angle` is negative while the Moon waxes; `getMoonTimes` has no `transit`; `getTimes` has `height` but no `utcOffset`. Its numbers come from the same engine as `/suncalc`, so they are better than suncalc 1's, which has no delta T and a mean-element Moon: it is 0.3 to 0.6 degrees off for the Sun in 1950.
 
 ## What is not here yet
 
-suncalc3 and suncalc-ts add a few functions and options that this package has not covered (MODULES-537). Eclipses, planets' rise and set and equinoxes are planned on the same engine and are not in `/suncalc`.
+suncalc3 adds functions and options that this package has not covered, among them the Sun's time at a chosen azimuth, solar time and the dates of the next phases (MODULES-537; suncalc-ts adds none). Eclipses, planets' rise and set and equinoxes are planned on the same engine and are not in `/suncalc`.

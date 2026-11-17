@@ -69,26 +69,53 @@ import を変えて、テストを回してください。結果は上の範囲�
 - **水平線より下**では、太陽と月の `altitude` は幾何学的な高度で、大気差は -2度でなくなります。suncalc 2 は、どんなに深くても水平線の大気差 0.49度を足し続けますが、それは物理的ではありません。水平線より上では、0.006度以内で一致します。
 - **月の出と月の入り**は、月の本当の距離で、上の縁が大気差34分角を通して水平線にあるときです。米国海軍天文台の表と同じ決め方です。
 
-## suncalc 1.x とそのフォークから移るとき
+## suncalc 1.x や suncalc2 から移るとき
 
-suncalc 1 (と、フォークの suncalc2、suncalc3) は別の約束を使っています。`/suncalc/legacy` はその約束を守るので、import だけを変えれば動きます。
+suncalc 1.x と、そのフォークの suncalc2、suncalc3 は、suncalc 2 とは別の約束を使っています。`/suncalc/legacy` はその約束を守るので、変えるのは import の1行だけです。
 
 ```ts
-import { getPosition, getTimes } from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
+// import * as SunCalc from "suncalc";   // 1.x, suncalc2
+import * as SunCalc from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
 
-const { azimuth, altitude } = getPosition(new Date(Date.UTC(2026, 5, 21, 12)), 51.5, -0.1);
+const noon = new Date(Date.UTC(2026, 5, 21, 12));
+const { azimuth, altitude } = SunCalc.getPosition(noon, 51.5, -0.1);
 console.log((azimuth * 180 / Math.PI).toFixed(0), (altitude * 180 / Math.PI).toFixed(0));
-console.log(Number.isNaN(getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 69.65, 18.96).sunrise!.getTime()));
+console.log(Number.isNaN(SunCalc.getTimes(noon, 69.65, 18.96).sunrise!.getTime()));
 ```
 
-suncalc 2 (またはここの `/suncalc`) に移るときにつまずきやすい点は3つです。
+あとで `/suncalc` (suncalc 2 の約束) に移るときに変わるのは3つです。
 
-1. **角度は度**で、ラジアンではありません。
-2. **方位は北から**時計回りです (0 が北、90 が東、180 が南、270 が西)。南から西向きではありません。
-3. **起きない出来事は `null`** (月は、そのキーがない) で、白夜や極夜では `alwaysUp` か `alwaysDown` が付きます。無効な `Date` ではありません。
+| | `/suncalc/legacy` (suncalc 1.x) | `/suncalc` (suncalc 2) |
+|---|---|---|
+| 角度 | ラジアン | 度: `radians * 180 / Math.PI` |
+| 方位 | 南から西向き (0 が南、4分の1回転で西) | 北から時計回り (0 が北、90 が東、180 が南): `(legacy * 180 / Math.PI + 180) % 360` |
+| 起きない出来事 | 無効な `Date`。`Number.isNaN(d.getTime())` で調べます | `null` (月は、そのキーがない)。極地では `alwaysUp` か `alwaysDown` |
 
-legacy には、suncalc 1 のほかの約束もあります。太陽の高度は大気差なし、月の高度は大気差あり、満ちていく月の明るい縁の `angle` は負、`getMoonTimes(date, lat, lng, inUTC)` は (その機械の、または UTC の) 0時から24時間を探します。数値は同じエンジンから出るので、suncalc 1 より正確です。suncalc 1 には ΔT がなく、月は平均要素なので、1950年の太陽で0.3〜0.6度ずれます。
+同じ太陽を、両方で読むと次のようになります。
+
+```ts
+import { getPosition as legacyPosition } from "@johnmorrisdotca/wakusei-planets/suncalc/legacy";
+import { getPosition } from "@johnmorrisdotca/wakusei-planets/suncalc";
+
+const noon = new Date(Date.UTC(2026, 5, 21, 12));
+const old = legacyPosition(noon, 51.5, -0.1);
+const now = getPosition(noon, 51.5, -0.1);
+console.log(((old.azimuth * 180 / Math.PI + 180) % 360).toFixed(1), now.azimuth.toFixed(1));
+console.log((old.altitude * 180 / Math.PI).toFixed(1), now.altitude.toFixed(1));
+```
+
+どちらの行も一致します。高度が違ってくるのは空の低いところだけで、suncalc 1 が太陽に足さない大気差の分です (水平線で約0.5度)。
+
+### 日の決め方
+
+- **`getTimes(date, lat, lng, height?)`** には `utcOffset` がありません。suncalc 1 と同じく、`date` にいちばん近い太陽日 (ある太陽の真夜中から次まで) の出来事を返します。現地の正午ごろの時刻を渡せば、現地のその日の出来事になります。
+- **`getMoonTimes(date, lat, lng, inUTC?)`** は、`date` の日の0時から24時間を探します。0時は、その機械のタイムゾーンの0時、`inUTC` が true なら UTC の0時です。遅く出た月が翌日に沈むと、その日は `rise` だけで `set` がありません。
+- `/suncalc` では、どちらも `utcOffset` (UTC から東へ何分か) を取り、機械のタイムゾーンによらず現地の暦の日になります。
+
+### suncalc 1 と同じほかの点
+
+太陽の高度は大気差なし、月の高度は大気差ありです。明るい縁の `angle` は、月が満ちていくあいだ負です。`getMoonTimes` に `transit` はなく、`getTimes` には `height` はあっても `utcOffset` はありません。数値は `/suncalc` と同じエンジンから出るので、suncalc 1 より正確です。suncalc 1 には ΔT がなく、月は平均要素なので、1950年の太陽で0.3〜0.6度ずれます。
 
 ## まだないもの
 
-suncalc3 と suncalc-ts は、このパッケージがまだ扱っていない関数やオプションを足しています (MODULES-537)。日食と月食、惑星の出入り、春分や夏至などは、同じエンジンの上で計画していて、`/suncalc` にはまだありません。
+suncalc3 は、このパッケージがまだ扱っていない関数やオプションを足しています。たとえば、太陽が決めた方位に来る時刻、太陽時、次の月相の日付です (MODULES-537。suncalc-ts が足すものはありません)。日食と月食、惑星の出入り、春分や夏至などは、同じエンジンの上で計画していて、`/suncalc` にはまだありません。
