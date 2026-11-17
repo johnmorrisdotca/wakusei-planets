@@ -9,6 +9,7 @@ type Flat = HTMLElement & {
   zoom: number;
   time: number;
   selected: string | null;
+  pick(id: string | null): void;
   orbiters: { id: string; name: string; shown: boolean }[];
 };
 
@@ -188,6 +189,53 @@ test("a pick by the pointer: an orbiter, a site, and nothing; a hover names what
   await page.mouse.click(await spot(page, 5, 5).then((p) => p.x), await spot(page, 5, 5).then((p) => p.y));
   expect((await picks(page)).at(-1)).toMatchObject({ kind: null, id: null });
   expect(await flat(page).evaluate((el) => (el as Flat).selected)).toBeNull();
+});
+
+test("every pressable thing sends one pick event: a landing carries its place and its landing site, a crater carries its place alone, and the flags of the sites are <hata-flag> elements", async ({ page }) => {
+  await open(page);
+  await hold(page);
+  await listen(page);
+  type Pick = { kind: string; id: string; place?: { kind: string; name: { en: string } }; site?: { id: string; country: string; name: { en: string }; agency: { en: string } } };
+  const last = async (): Promise<Pick> => (await picks(page)).at(-1) as unknown as Pick;
+  // the flags: one beside each named landing, made of <hata-flag>, the tip of a landing has one too
+  await expect.poll(() => flat(page).locator(".flags hata-flag").count()).toBeGreaterThan(2);
+  expect(await flat(page).locator(".flags hata-flag").evaluateAll((all) => all.every((el) => el.getAttribute("code") !== null))).toBe(true);
+  // a landing: Apollo 11, the lander's own place, with its landing site
+  const eagle = (await where(page, "moon/apollo-11-lunar-module"))!;
+  const at = await spot(page, eagle.x, eagle.y);
+  await page.mouse.click(at.x, at.y);
+  const pick = await last();
+  expect(pick).toMatchObject({ kind: "place", id: "moon/apollo-11-lunar-module", via: "tap" });
+  expect(pick.place).toMatchObject({ kind: "crewed" });
+  expect(pick.site).toMatchObject({ id: "moon/apollo-11", country: "US", name: { en: "Apollo 11" }, agency: { en: "NASA" } });
+  await page.mouse.move(at.x, at.y + 40);
+  await page.mouse.move(at.x, at.y);
+  await expect(flat(page).locator(".tip hata-flag")).toHaveAttribute("code", "US");
+  // a rover on a landing spot is that landing: the same site
+  await flat(page).evaluate((el) => (el as Flat).pick("moon/apollo-17-lunar-rover"));
+  expect(await flat(page).evaluate((el) => (el as Flat).selected)).toBe("moon/apollo-17-lunar-rover");
+  // a landing site's own id chooses its lander
+  await flat(page).evaluate((el) => (el as Flat).pick("moon/apollo-14"));
+  expect(await flat(page).evaluate((el) => (el as Flat).selected)).toBe("moon/apollo-14-lunar-module");
+  // a crash has a place and no landing site
+  await flat(page).evaluate((el) => el.setAttribute("places", "landing crash feature"));
+  await flat(page).evaluate((el) => {
+    (el as Flat).zoom = 3;
+    (el as Flat).center = -20;
+  });
+  await settled(page);
+  const crater0 = await where(page, "moon/copernicus");
+  expect(crater0).not.toBeNull();
+  const t = await spot(page, crater0!.x, crater0!.y);
+  await page.mouse.click(t.x, t.y);
+  const crater = await last();
+  expect(crater).toMatchObject({ kind: "place", id: "moon/copernicus", via: "tap" });
+  expect(crater.place).toMatchObject({ kind: "feature", name: { en: "Copernicus" } });
+  expect(crater.site).toBeUndefined();
+  // a tap on nothing is one event with id null
+  const empty = await spot(page, 4, 4);
+  await page.mouse.click(empty.x, empty.y);
+  expect(await last()).toMatchObject({ kind: null, id: null });
 });
 
 test("the keyboard: the canvas takes the focus, the arrows go from one orbiter or mark to the next, Enter chooses, Escape lets go, plus zooms", async ({ page }) => {

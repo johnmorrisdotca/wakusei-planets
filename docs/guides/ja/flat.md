@@ -55,6 +55,7 @@ description: 月または火星を平面の地図で表します。好きな時�
 | `selected` | 選ぶ周回機の id (`lro`) か、地点の id (`moon/apollo-11-lunar-module`) |
 | `orbiters` | `all` (既定)、`off`、またはカンマで区切った id |
 | `places` | 印をつける地点の種類。`landing` (有人着陸・着陸・探査車。既定)、`crash`、`planned`、`feature`、いくつかの組み合わせ、`all`、`off` |
+| `site-flags` | 着陸地点に、その国の国旗をつけます。地図の名前のそばとヒントに出ます (下の「着陸地点と国旗」を見てください) |
 | `names` | `off` で印のそばの名前をなくします。数を書くと、その数までの名前を出します |
 | `shade`, `dot-size`, `controls`, `lang` | 夜 (`off`)、点の大きさ、表示するボタン (`none`、または `centre zoom footprint track chips`)、`en` か `ja` (既定はページの言語) |
 | `texture-base`, `texture-far-base` | 天体の絵がある場所 |
@@ -78,10 +79,26 @@ for (const map of Object.values(maps)) {
 
 ## イベント
 
-- `wakusei-flat-pick`: ポインターの下にある、タップした、またはキーボードで移った周回機や地点。`detail` は `{ kind, id, name, body, lat, lon, altitudeKm, status, placeKind, via }` で、`via` は `hover`、`tap`、`key` です。何もない場所をタップすると `id: null` が送られ、選択が解けます。ポインターの下にあるものの名前は要素自身が出します (ヒントと輪)。タップで何をするかはページが決めます。
+- `wakusei-flat-pick`: 押せるものすべてに共通の、1つのイベントです。対象は、周回機、地点データの地点 (着陸、探査車、墜落、クレーター、山)、着陸地点です。`detail` は `{ kind, id, name, body, lat, lon, altitudeKm, status, placeKind, place, site, via }` で、`kind` は `orbiter` か `place` です。地点では、`place` が地点データの記録 (2つの言語の名前、種類、ミッション、運用者、国、日付、地形の種類と大きさ)、`site` が [`/landing-sites`](landing-sites.md) の着陸地点 (名前、日付、運用機関、国と国旗のコード、座標の出典) で、着陸地点であるとき (着陸機、および同じ場所の探査車や降下ステージ) だけ入ります。該当しないときは、どちらも含まれません。`via` は `hover`、`tap`、`key` です。何もない場所をタップすると `id: null` が送られ、選択が解けます。ポインターの下にあるものの名前は要素自身が出します (ヒントと輪)。カードはページが作るもので、デモのように、イベントから組み立ててください。
 - `wakusei-flat-filter`: チップで表示するものが変わったとき: `{ orbiters, layers }`。
 - `wakusei-flat-view`: 見る人が地図を動かしたり拡大したりしたとき: `{ center, zoom }`。
 - `wakusei-timechange`: `{ time, running, paused }`。時間が進んでいる間、1秒に4回まで。
+
+## 着陸地点と国旗
+
+`/landing-sites` の着陸地点 (月に28件、火星に11件) は、「アポロ11号 月着陸船」ではなく「アポロ11号」のように、着陸地点自身の名前で、着陸機の上に1回だけ表示します。`site-flags` を指定すると、それぞれにその国の国旗がつきます。地図では名前のそばに、ヒントでは先頭に `<hata-flag>` 要素が出ます。3D 表示の `site-flags` と同じやり方です。国旗は `@johnmorrisdotca/hata` のもので、ページ側で読み込みます (`import "@johnmorrisdotca/hata/element/define"`)。このパッケージは hata に依存しません。この要素が定義されていなければ何も描かず、名前だけが残ります。着陸地点と同じ場所にある探査車や降下ステージは、その着陸地点の一部として扱い、押すと同じ `site` が送られます。
+
+```ts no-run
+import "@johnmorrisdotca/hata/element/define";
+import "@johnmorrisdotca/wakusei-planets/flat/define";
+
+const map = document.querySelector("wakusei-flat")!;
+map.toggleAttribute("site-flags", true);
+map.addEventListener("wakusei-flat-pick", (event) => {
+  const { kind, place, site } = (event as CustomEvent).detail;
+  if (kind === "place") console.log(place.name.en, site?.agency.en, site?.country, site?.date);
+});
+```
 
 ## 時間
 

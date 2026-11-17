@@ -1,7 +1,9 @@
 // The flat map page: the Moon or Mars as a flat map, drawn by <wakusei-flat>. Every dot is an orbiter at the place the package's own orbit puts it for the time shown, over the body's own picture with day and night.
 // Choose the body (the one control that swaps the Earth's map for these, as in the satellites' page), drive the clock, press an orbiter or a mark, and set a site as "my place". Nothing here asks a server for orbits.
+import "@johnmorrisdotca/hata/element/define";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import { BODIES } from "../src/facts.ts";
+import { flagCodeOf } from "../src/landing-sites.ts";
 import { FLAT_BODIES, coordinateText, flatBody, flatSun, hasPath, isFlatBody, orbiterColour, orbiterName, type FlatBodyId } from "../src/flat/index.ts";
 import "../src/flat/define.ts";
 import type { FlatPick, WakuseiFlat } from "../src/flat/define.ts";
@@ -161,6 +163,7 @@ function card(): void {
   const facts = $("#card-facts");
   const button = $("#make-home");
   facts.replaceChildren();
+  $("#card-source").hidden = true;
   if (chosen === null || chosen.id === null) {
     empty.hidden = false;
     full.hidden = true;
@@ -185,6 +188,7 @@ function card(): void {
     }
     $("#card-about").textContent = f.about[l];
     button.hidden = true;
+    $("#card-source").hidden = true;
     return;
   }
   const place = places.find((p) => p.id === chosen!.id);
@@ -192,16 +196,33 @@ function card(): void {
     full.hidden = true;
     return;
   }
-  $("#card-name").textContent = place.name[l];
+  // the page draws the card: the event carries the place and, for a landing, the landing site with its country's flag code
+  const site = chosen.site;
+  const name = $("#card-name");
+  name.replaceChildren();
+  const code = site ? flagCodeOf(site.country) : undefined;
+  if (code !== undefined) name.append(Object.assign(document.createElement("hata-flag"), { className: "flat-flag" }), " ");
+  if (code !== undefined) name.querySelector("hata-flag")!.setAttribute("code", code);
+  name.append((site?.name[l] ?? place.name[l]) as string);
   fact(facts, "fl_c_kind", say(`fl_kind_${place.kind}`));
+  if (site) {
+    fact(facts, "fl_c_agency", site.agency[l]);
+    fact(facts, "fl_c_when", site.date.slice(0, 10));
+  }
   fact(facts, "fl_c_where", `${coordinateText(l, "lat", place.lat)}, ${coordinateText(l, "lon", place.lon)}`);
   const solar = localSolarTime(body, place.lon, ms);
   fact(facts, "fl_c_solar", `${String(Math.floor(solar)).padStart(2, "0")}:${String(Math.floor((solar % 1) * 60)).padStart(2, "0")}`);
-  if (place.date) fact(facts, "fl_c_when", place.date.slice(0, 10));
+  if (place.date && !site) fact(facts, "fl_c_when", place.date.slice(0, 10));
   if (place.site) fact(facts, "fl_c_site", place.site);
   if (place.mission) fact(facts, "fl_c_mission", place.mission);
   if (place.operator) fact(facts, "fl_c_operator", `${place.operator}${place.country ? ` (${place.country})` : ""}`);
-  $("#card-about").textContent = place.approximate ? say("fl_approx") : "";
+  $("#card-about").textContent = place.approximate || site?.approximate ? say("fl_approx") : "";
+  const link = $<HTMLAnchorElement>("#card-source");
+  link.hidden = !site;
+  if (site) {
+    link.href = site.source.url;
+    link.textContent = say("fl_source", { name: site.source.name });
+  }
   button.hidden = false;
 }
 $("#make-home").addEventListener("click", () => {
@@ -247,7 +268,7 @@ function render(): void {
   $("#code").textContent = [
     'import "@johnmorrisdotca/wakusei-planets/flat/define";',
     "",
-    `<wakusei-flat body="${body}" track${home && places.find((p) => p.id === home) ? ` home-lon="${places.find((p) => p.id === home)!.lon}" home-lat="${places.find((p) => p.id === home)!.lat}"` : ""}></wakusei-flat>`,
+    `<wakusei-flat body="${body}" track site-flags${home && places.find((p) => p.id === home) ? ` home-lon="${places.find((p) => p.id === home)!.lon}" home-lat="${places.find((p) => p.id === home)!.lat}"` : ""}></wakusei-flat>`,
     "",
     'document.querySelector("wakusei-flat").addEventListener("wakusei-flat-pick", (event) => {',
     "  console.log(event.detail.name, event.detail.kind);",
@@ -274,6 +295,7 @@ window.addEventListener("wakusei-language", () => {
   flat.setAttribute("lang", lang());
   render();
 });
+flat.setAttribute("site-flags", "");
 flat.setAttribute("lang", lang());
 render();
 void loadList().then(() => {

@@ -56,6 +56,7 @@ The places are the package's own for each body: 22 landings, 6 crewed landings, 
 | `orbiters` | `all` (the default), `off`, or some ids with commas |
 | `places` | the kinds of place marked: `landing` (crewed, landing and rover sites; the default), `crash`, `planned`, `feature`, several of them, `all` or `off` |
 | `names` | `off` for no names beside the marks, or the most names to show |
+| `site-flags` | the landing sites carry their country's flag, beside the name and in the tip (see below) |
 | `shade`, `dot-size`, `controls`, `lang` | the night (`off`), the dots' size, the buttons shown (`none`, or any of `centre zoom footprint track chips`), and `en` or `ja` (the page's language by default) |
 | `texture-base`, `texture-far-base` | where the body's pictures are |
 
@@ -78,10 +79,26 @@ What differs is what there is to pick: a satellite's `id` is its catalogue numbe
 
 ## The events
 
-- `wakusei-flat-pick`: an orbiter or a place under the pointer, tapped, or reached by the keyboard. `detail` is `{ kind, id, name, body, lat, lon, altitudeKm, status, placeKind, via }`; `via` is `hover`, `tap` or `key`. A tap on nothing sends `id: null` and clears the choice. The element names what is under the pointer itself (a tip and a ring); the page decides what a tap does.
+- `wakusei-flat-pick`: one event for everything that can be pressed: an orbiter, a place of the tables (a landing, a rover, a crash, a crater, a mountain) or a landing site. `detail` is `{ kind, id, name, body, lat, lon, altitudeKm, status, placeKind, place, site, via }`: `kind` is `orbiter` or `place`; for a place, `place` is its record from the places data (names in both languages, kind, mission, operator, country, date, a feature's type and size) and `site` is its landing site from [`/landing-sites`](landing-sites.md) (the names, the day, the agency, the country with its flag code, the source of the coordinates) when it is one (the lander, and the rover or descent stage on the same spot); both are left out otherwise. `via` is `hover`, `tap` or `key`. A tap on nothing sends `id: null` and clears the choice. The element names what is under the pointer itself (a tip and a ring); the card is the page's: build it from the event, as the demo does.
 - `wakusei-flat-filter`: a chip changed what is shown: `{ orbiters, layers }`.
 - `wakusei-flat-view`: the reader panned or zoomed: `{ center, zoom }`.
 - `wakusei-timechange`: `{ time, running, paused }`, at most four times a second while time runs.
+
+## Landing sites and their flags
+
+The landing sites of `/landing-sites` (28 on the Moon, 11 on Mars) are named by their own names (Apollo 11, not "Apollo 11 lunar module"), once, on the lander. With `site-flags` each carries its country's flag: a `<hata-flag>` element beside the name on the map and in front of the tip, the same way the 3D views do it with their `site-flags`. The flag comes from `@johnmorrisdotca/hata`, which your page imports (`import "@johnmorrisdotca/hata/element/define"`); this package does not depend on it, and where the element is not defined nothing is drawn and the name stands alone. A rover or a descent stage on a landing's spot is that landing: pressing it sends the same `site`.
+
+```ts no-run
+import "@johnmorrisdotca/hata/element/define";
+import "@johnmorrisdotca/wakusei-planets/flat/define";
+
+const map = document.querySelector("wakusei-flat")!;
+map.toggleAttribute("site-flags", true);
+map.addEventListener("wakusei-flat-pick", (event) => {
+  const { kind, place, site } = (event as CustomEvent).detail;
+  if (kind === "place") console.log(place.name.en, site?.agency.en, site?.country, site?.date);
+});
+```
 
 ## Time
 
