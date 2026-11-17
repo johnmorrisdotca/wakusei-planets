@@ -336,8 +336,8 @@
       "platform": "node"
     },
     "./fact-sheets": {
-      "en": "A fact sheet for the Sun, the planets and Pluto (size, distance, year, day, moons, NASA page, a short description in English and Japanese) and the definitions of planet, dwarf planet, moon, asteroid, comet, meteoroid, meteor and meteorite",
-      "ja": "太陽、惑星、冥王星のファクトシート (大きさ、距離、1年、1日、衛星、NASAのページ、日本語と英語の短い説明) と、惑星、準惑星、衛星、小惑星、彗星、流星物質、流星、隕石の定義"
+      "en": "A fact sheet for the Sun, the planets and Pluto (size, distance, year, day, moons, NASA page, a short description in English and Japanese)",
+      "ja": "太陽、惑星、冥王星のファクトシート (大きさ、距離、1年、1日、衛星、NASAのページ、日本語と英語の短い説明) "
     },
     "./suncalc": {
       "en": "The Sun and Moon from a place: position, sunrise and sunset, Moon rise, set and phase, with suncalc 2's names and a better engine",

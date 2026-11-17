@@ -1,10 +1,10 @@
-// The fact sheets and definitions: every number is held to the package's own data or to a published figure, and the moon counts to `/moon-catalogue`, which they are read from.
+// The fact sheets: every number is held to the package's own data or to a published figure, and the moon counts to `/moon-catalogue`, which they are read from.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MOON_CATALOGUE_FETCHED, moonCounts } from "../src/moon-catalogue.ts";
 import { BODIES } from "../src/facts.ts";
 import { journeyStop } from "../src/stops.ts";
-import { DEFINITION_IDS, FACT_SHEET_IDS, MOONS_READ_ON, definition, factSheet } from "../src/fact-sheets.ts";
+import { FACT_SHEET_IDS, MOONS_READ_ON, factSheet } from "../src/fact-sheets.ts";
 
 test("a sheet's size, distance and spin are the package's own numbers, in km and in miles", () => {
   for (const id of FACT_SHEET_IDS) {
@@ -51,21 +51,9 @@ test("the moon counts are what /moon-catalogue holds, read on the same day", () 
   }
 });
 
-test("a sheet is a copy: changing it does not change the next one; a body without a sheet and a word without a definition throw naming themselves", () => {
+test("a sheet is a copy: changing it does not change the next one; a body without a sheet throws naming itself", () => {
   const a = factSheet("mars");
   a.description.en = "changed";
   assert.notEqual(factSheet("mars").description.en, "changed");
   assert.throws(() => factSheet("io" as never), /"io"/);
-  assert.throws(() => definition("star" as never), /"star"/);
-});
-
-test("every word has a definition in both languages and a source, and a planet is not a dwarf planet", () => {
-  for (const id of DEFINITION_IDS) {
-    const d = definition(id);
-    assert.ok(d.en.length > 40 && /[ぁ-ん]/.test(d.ja) && d.source.length > 5 && d.term.en.length > 0 && d.term.ja.length > 0, id);
-  }
-  assert.match(definition("planet").en, /cleared the neighbourhood/);
-  assert.match(definition("dwarf-planet").en, /has not cleared/);
-  assert.match(definition("meteor").en, /light/);
-  assert.match(definition("meteorite").en, /lands on the ground/);
 });

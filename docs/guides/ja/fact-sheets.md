@@ -1,11 +1,11 @@
 ---
-title: ファクトシートと定義
+title: ファクトシート
 section: how-to
 order: 15
-description: 太陽、惑星、冥王星のファクトシートと、空のページで使う言葉の定義を、日本語と英語のデータとして提供します。
+description: 太陽、惑星、冥王星のファクトシートを、日本語と英語のデータとして提供します。
 ---
 
-`/fact-sheets` は、惑星についてのページがたいてい載せていることを、印刷や検索やカードに使えるデータにしたものです。大きさ、太陽からの距離、1年と1日の長さ、知られている衛星の数、NASA の公式ページ、日本語と英語の短い説明が入っています。惑星、準惑星、衛星、小惑星、彗星、流星物質、流星、隕石の定義もあります。ブラウザー用のコードはないので、サーバーでも動きます。
+`/fact-sheets` は、惑星についてのページがたいてい載せていることを、印刷や検索やカードに使えるデータにしたものです。大きさ、太陽からの距離、1年と1日の長さ、知られている衛星の数、NASA の公式ページ、日本語と英語の短い説明が入っています。ブラウザー用のコードはないので、サーバーでも動きます。
 
 ```ts
 import { factSheet } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
@@ -29,22 +29,9 @@ console.log(mars.description.ja);
 | `nasaPage` | その天体についての NASA の公式ページ |
 | `description` | 私たち自身の言葉による短い説明。`en` と `ja` |
 
-## 定義
-
-```ts
-import { DEFINITION_IDS, definition } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
-
-for (const id of DEFINITION_IDS) console.log(definition(id).term.ja);
-const meteor = definition("meteor");
-console.log(meteor.ja);
-console.log(meteor.source);
-```
-
-定義はどれも私たち自身の言葉で、日本語と英語があり、`source` に意味の出どころを示します。惑星と準惑星は IAU の2006年の決議、流星物質、流星、隕石は IAU の流星の定義、正式な定義がないもの (衛星、小惑星、彗星) は NASA と JPL の使い方です (IAU の用語は「太陽系小天体」)。流星物質の大きさの範囲は、IAU の文書で再確認する予定です。
-
 ## 事実の出どころ
 
-半径と自転は IAU の作業部会の値、距離は JPL の近似軌道要素です (どちらもすでにパッケージに入っています。`NOTICE.md` を参照)。1年は NASA の惑星ファクトシート、衛星の数は JPL の惑星衛星のページからです。リンクは NASA のページに向いているだけで、中身は写していません。説明と定義はここで書いたもので、NASA、IAU、百科事典、ほかのパッケージの文章は写していません。
+半径と自転は IAU の作業部会の値、距離は JPL の近似軌道要素です (どちらもすでにパッケージに入っています。`NOTICE.md` を参照)。1年は NASA の惑星ファクトシート、衛星の数は JPL の惑星衛星のページからです。リンクは NASA のページに向いているだけで、中身は写していません。説明はここで書いたもので、NASA、IAU、百科事典、ほかのパッケージの文章は写していません。
 
 ## npm-solar-system から移る
 
