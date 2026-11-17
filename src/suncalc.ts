@@ -229,8 +229,11 @@ export function getTimes(date: Date | number, lat: number, lng: number, height =
   const day = sunDay(moment(date), place(lat, lng, height), utcOffset, times);
   const result = { solarNoon: new Date(day.noon), nadir: new Date(day.nadir) } as SunTimes;
   for (const [name, at] of day.events) result[name] = at === null ? null : new Date(at);
-  if (day.alwaysUp) result.alwaysUp = true;
-  if (day.alwaysDown) result.alwaysDown = true;
+  // suncalc's shape: when the Sun does not rise, both flags are there, one true and one false
+  if (result.sunrise === null) {
+    result.alwaysUp = day.noonHigh;
+    result.alwaysDown = !day.noonHigh;
+  }
   return result;
 }
 
@@ -261,7 +264,24 @@ export function getMoonTimes(date: Date | number, lat: number, lng: number, utcO
   if (day.set !== null) result.set = new Date(day.set);
   if (day.transit !== null) result.transit = new Date(day.transit);
   if (day.lowerTransit !== null) result.lowerTransit = new Date(day.lowerTransit);
-  if (day.alwaysUp) result.alwaysUp = true;
-  if (day.alwaysDown) result.alwaysDown = true;
+  // suncalc's shape: on a day with no rise and no set both flags are there, one true and one false
+  if (day.rise === null && day.set === null) {
+    result.alwaysUp = day.alwaysUp;
+    result.alwaysDown = !day.alwaysUp;
+  }
   return result;
 }
+
+/**
+ * Every function of this entry as one object, for code written `import SunCalc from "suncalc"`. `SunCalc.times` is the same array as the named `times`, so `addTime` reaches both.
+ *
+ * @example
+ * ```ts
+ * import SunCalc from "@johnmorrisdotca/wakusei-planets/suncalc";
+ *
+ * const t = SunCalc.getTimes(new Date(Date.UTC(2026, 5, 21, 12)), 51.5, -0.1);
+ * console.log(t.sunrise instanceof Date);
+ * ```
+ */
+const SunCalc = { getPosition, getTimes, times, addTime, getMoonPosition, getMoonIllumination, getMoonTimes };
+export default SunCalc;

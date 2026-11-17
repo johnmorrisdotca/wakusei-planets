@@ -824,6 +824,7 @@ export interface Position { azimuth: number; altitude: number; }
 export type SunTimeName = "sunrise" | "sunset" | "sunriseEnd" | "sunsetStart" | "dawn" | "dusk" | "nauticalDawn" | "nauticalDusk" | "nightEnd" | "night" | "goldenHourEnd" | "goldenHour";
 export type SunTimes = Record<SunTimeName, Date | null> & { solarNoon: Date; nadir: Date; alwaysUp?: boolean; alwaysDown?: boolean; [custom: string]: Date | boolean | null | undefined; };
 function addTime(angle: number, riseName: string, setName: string) => void
+const default: { getPosition: (date: number | Date, lat: number, lng: number) => Position; getTimes: (date: number | Date, lat: number, lng: number, height?: number, utcOffset?: number | undefined) => SunTimes; times: [number, string, string][]; addTime: (angle: number, riseName: string, setName: string) => void; getMoonPosition: (date: number | Date, lat: number, lng: number) => MoonPosition; getMoonIllumination: (date?: number | Date) => MoonIllumination; getMoonTimes: (date: number | Date, lat: number, lng: number, utcOffset?: number | undefined) => MoonTimes; }
 function getMoonIllumination(date?: number | Date) => MoonIllumination
 function getMoonPosition(date: number | Date, lat: number, lng: number) => MoonPosition
 function getMoonTimes(date: number | Date, lat: number, lng: number, utcOffset?: number | undefined) => MoonTimes
@@ -837,6 +838,7 @@ export interface LegacyMoonTimes { rise?: Date; set?: Date; alwaysUp?: boolean; 
 export interface LegacyPosition { azimuth: number; altitude: number; }
 export type LegacySunTimes = Record<string, Date>;
 function addTime(angle: number, riseName: string, setName: string) => void
+const default: { getPosition: (date: number | Date, lat: number, lng: number) => LegacyPosition; getTimes: (date: number | Date, lat: number, lng: number, height?: number) => LegacySunTimes; times: [number, string, string][]; addTime: (angle: number, riseName: string, setName: string) => void; getMoonPosition: (date: number | Date, lat: number, lng: number) => LegacyMoonPosition; getMoonIllumination: (date?: number | Date) => LegacyMoonIllumination; getMoonTimes: (date: number | Date, lat: number, lng: number, inUTC?: boolean) => LegacyMoonTimes; }
 function getMoonIllumination(date?: number | Date) => LegacyMoonIllumination
 function getMoonPosition(date: number | Date, lat: number, lng: number) => LegacyMoonPosition
 function getMoonTimes(date: number | Date, lat: number, lng: number, inUTC?: boolean) => LegacyMoonTimes
