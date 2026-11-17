@@ -8,6 +8,7 @@ export type { SurfaceState } from "./element.ts";
 export { ascentParts, landerParts, roverParts } from "./shapes.ts";
 export { calloutsBy, CALLOUTS, clockText, LANDING, landingAt, type Callout, type LandingPose } from "./landing.ts";
 export { DustField } from "./dust.ts";
+export { MODEL_NODES, fromModelFrame, modelPose, modelShadowParts, rigOf, type ModelNodes, type Rig } from "./rig.ts";
 export { driveParts, driveStep, driveView, startDrive, ROVER, type DriveDrag, type DriveInput, type DriveState, type DriveView } from "./drive.ts";
 export { keepAway, objectParts, objectsOf, partShadows, traverseOf, KEEP_OUT, type Part, type SiteObject } from "./objects.ts";
 export { craterIn, craterProfile, madeGround, setKeepOut, rimBoost, rocksAround, standingPlace, type Crater, type Rock } from "./detail.ts";

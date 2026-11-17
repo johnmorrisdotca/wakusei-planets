@@ -2,6 +2,7 @@
 // settling on a spring over the four places its wheels touch, free in the air where the ground falls away (the Moon's gravity is a sixth of ours, so a crest throws it). The ground is whatever function the page gives:
 // the measured heights and the made craters, so the rover follows the craters exactly. What is real: the rover's size, the gravity and a top speed near the published one. What is made: the feel of the spring, the
 // steering, the limits on a slope. No DOM.
+import type { Rig } from "./rig.ts";
 import { roverParts, type Part, type V3 } from "./shapes.ts";
 
 /**
@@ -130,10 +131,10 @@ export function toWorld(state: Pick<DriveState, "east" | "north" | "heading" | "
 }
 
 /** The ground under each wheel, at the places the four wheels are. */
-function wheelGrounds(state: DriveState, ground: (east: number, north: number) => number): number[] {
+function wheelGrounds(state: DriveState, ground: (east: number, north: number) => number, rig: Rig): number[] {
   const h = state.heading * RAD;
   const [c, s] = [Math.cos(h), Math.sin(h)];
-  return ROVER.wheels.map(([x, , z]) => ground(state.east + x * c + z * s, state.north - x * s + z * c));
+  return rig.wheels.map(([x, , z]) => ground(state.east + x * c + z * s, state.north - x * s + z * c));
 }
 
 /**
@@ -145,6 +146,7 @@ function wheelGrounds(state: DriveState, ground: (east: number, north: number) =
  * @param dt - Seconds (at most 0.05 are used; call it more often for a longer time).
  * @param ground - The ground's height over the site's ground at a place.
  * @param blocked - True at a place the rover cannot go (a big rock, the lunar module).
+ * @param rig - The vehicle's measures (its wheels' places and size); the lunar rover's by default, a model's from `rigOf`.
  * @returns The rover a moment later.
  *
  * @example
@@ -156,7 +158,7 @@ function wheelGrounds(state: DriveState, ground: (east: number, north: number) =
  * console.log(`${rover.north.toFixed(1)} m north after two seconds, at ${rover.speed.toFixed(1)} m/s`);
  * ```
  */
-export function driveStep(state: DriveState, input: DriveInput, dt: number, ground: (east: number, north: number) => number, blocked?: (east: number, north: number) => boolean): DriveState {
+export function driveStep(state: DriveState, input: DriveInput, dt: number, ground: (east: number, north: number) => number, blocked?: (east: number, north: number) => boolean, rig: Rig = ROVER): DriveState {
   const d = Math.min(Math.max(dt, 0), 0.05);
   const next: DriveState = { ...state, spin: [...state.spin] };
   const throttle = Math.min(1, Math.max(-1, input.throttle));
@@ -174,11 +176,11 @@ export function driveStep(state: DriveState, input: DriveInput, dt: number, grou
   // the brake holds it once it has nearly stopped, on any slope it could climb: a rover left alone stays where it is
   if (Math.abs(throttle) < 0.02 && Math.abs(next.speed) < 0.08 && Math.abs(state.pitch) < ROVER.maxSlope) next.speed = 0;
   // the heading: four wheels steer, so the turn is tight; the move
-  const yaw = (next.speed * 2 * Math.tan(next.steer)) / ROVER.wheelbase;
+  const yaw = (next.speed * 2 * Math.tan(next.steer)) / rig.wheelbase;
   next.heading = (((state.heading + yaw * d * (180 / Math.PI)) % 360) + 360) % 360;
   const h = next.heading * RAD;
   const [e, n] = [state.east + Math.sin(h) * next.speed * d, state.north + Math.cos(h) * next.speed * d];
-  const front = [e + Math.sin(h) * ROVER.length * 0.5, n + Math.cos(h) * ROVER.length * 0.5];
+  const front = [e + Math.sin(h) * rig.length * 0.5, n + Math.cos(h) * rig.length * 0.5];
   if (next.speed !== 0 && blocked !== undefined && (blocked(e, n) || blocked(front[0]!, front[1]!))) {
     next.speed = 0;
   } else {
@@ -187,11 +189,11 @@ export function driveStep(state: DriveState, input: DriveInput, dt: number, grou
     next.distance += Math.abs(next.speed) * d;
   }
   // the ground under the four wheels: the plane they make, and where the rover sits over it
-  const g = wheelGrounds(next, ground);
+  const g = wheelGrounds(next, ground, rig);
   const [fl, fr, rl, rr] = [g[0]!, g[1]!, g[2]!, g[3]!];
   const rest = (fl + fr + rl + rr) / 4;
-  const pitchTarget = Math.atan2((fl + fr) / 2 - (rl + rr) / 2, ROVER.wheelbase);
-  const rollTarget = Math.atan2((fr + rr) / 2 - (fl + rl) / 2, ROVER.track);
+  const pitchTarget = Math.atan2((fl + fr) / 2 - (rl + rr) / 2, rig.wheelbase);
+  const rollTarget = Math.atan2((fr + rr) / 2 - (fl + rl) / 2, rig.track);
   const settle = 1 - Math.exp(-d * 10);
   next.pitch += (pitchTarget - next.pitch) * settle;
   next.roll += (rollTarget - next.roll) * settle;
@@ -204,7 +206,7 @@ export function driveStep(state: DriveState, input: DriveInput, dt: number, grou
     next.y = rest - 0.04;
     if (next.vy < 0) next.vy *= -0.15; // the springs take most of a landing
   }
-  const turn = (next.speed * d) / ROVER.wheelRadius;
+  const turn = (next.speed * d) / rig.wheelRadius;
   for (let i = 0; i < 4; i += 1) next.spin[i] = (next.spin[i]! + turn) % (Math.PI * 2);
   return next;
 }
@@ -308,6 +310,7 @@ export type DriveDrag = "head" | "orbit";
  * @param offset - The driver's turn of the view, degrees right and up.
  * @param ground - The ground's height over the site's ground at a place.
  * @param drag - What a drag does in the chase view: `head` or `orbit` (the default).
+ * @param rig - The vehicle's measures (where its eyes are); the lunar rover's by default, a model's from `rigOf`.
  * @returns The eyes.
  *
  * @example
@@ -320,9 +323,9 @@ export type DriveDrag = "head" | "orbit";
  * console.log(view.eye.north.toFixed(1), turned.eye.north.toFixed(1), turned.azimuth);
  * ```
  */
-export function driveView(state: DriveState, view: "chase" | "seat", offset: { azimuth: number; pitch: number }, ground: (east: number, north: number) => number, drag: DriveDrag = "orbit"): DriveView {
+export function driveView(state: DriveState, view: "chase" | "seat", offset: { azimuth: number; pitch: number }, ground: (east: number, north: number) => number, drag: DriveDrag = "orbit", rig: Rig = ROVER): DriveView {
   if (view === "seat") {
-    const eye = toWorld(state, ROVER.seat);
+    const eye = toWorld(state, rig.seat);
     return { eye: { east: eye[0], north: eye[2], up: eye[1] }, azimuth: (((state.heading + offset.azimuth) % 360) + 360) % 360, pitch: state.pitch / RAD + offset.pitch };
   }
   // the eyes stand behind the rover along the heading turned by the drag (`orbit`: they go round it) or along the heading alone (`head`: they keep their place and only the look turns)

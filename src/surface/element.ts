@@ -9,6 +9,8 @@ import { TILES_BASE } from "../scene/textures.ts";
 import { madeGround, rocksAround, setKeepOut, standingPlace } from "./detail.ts";
 import { driveStep, driveView, ROVER, startDrive, toWorld, type DriveDrag, type DriveState } from "./drive.ts";
 import { DustField } from "./dust.ts";
+import type { VehicleModel } from "./model.ts";
+import type { Rig } from "./rig.ts";
 import { calloutsBy, clockText, LANDING, landingAt, type Callout } from "./landing.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
@@ -89,7 +91,7 @@ const num = (value: string | null, fallback: number): number => {
  * ```
  */
 export class WakuseiSurface extends HTMLElement {
-  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera", "drive-drag", "watch", "watch-from", "watch-camera"];
+  static observedAttributes = ["quality", "shadows", "detail", "exposure", "site", "time", "heading", "pitch", "fov", "tiles", "lang", "body", "standby", "scale", "stick", "objects", "drive", "drive-camera", "drive-drag", "drive-model", "watch", "watch-from", "watch-camera"];
 
   #root!: ShadowRoot;
   #stage!: HTMLElement;
@@ -138,6 +140,10 @@ export class WakuseiSurface extends HTMLElement {
   #chosen: string | undefined;
   /** The rover being driven (`drive="on"`), the view of it, the driver's own turn of the view, the path left, the dust thrown, and the places it cannot go. */
   #vehicle: DriveState | undefined;
+  /** The rover model asked for with `drive-model`, once it has loaded, and the address it was asked for at. */
+  #model: VehicleModel | undefined;
+  #modelUrl = "";
+  #modelAbort: AbortController | undefined;
   #driveCamera: "chase" | "seat" = "chase";
   #camOffset = { azimuth: 0, pitch: 0 };
   #driveEyeUp = 0;
@@ -262,6 +268,7 @@ export class WakuseiSurface extends HTMLElement {
     clearTimeout(this.#landingTimer);
     this.#gate?.cancel();
     clearTimeout(this.#walkTimer);
+    this.#dropModel();
     for (const [type, fn] of [["pointerdown", this.#onPointerDown], ["pointermove", this.#onPointerMove], ["pointerup", this.#onPointerUp], ["pointercancel", this.#onPointerUp], ["wheel", this.#onWheel], ["keydown", this.#onKeyDown], ["keyup", this.#onKeyUp], ["blur", this.#onBlur]] as const) this.removeEventListener(type, fn as EventListener);
     this.#view?.dispose();
     this.#view = undefined;
@@ -278,6 +285,10 @@ export class WakuseiSurface extends HTMLElement {
     }
     if (name === "watch" || name === "watch-from" || name === "watch-camera") {
       this.#syncLanding(name !== "watch");
+      return;
+    }
+    if (name === "drive-model") {
+      this.#syncModel();
       return;
     }
     if (name === "drive-camera") {
@@ -514,7 +525,7 @@ export class WakuseiSurface extends HTMLElement {
     const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
     if (measure && !this.#moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
     this.#placeLabels();
@@ -564,6 +575,7 @@ export class WakuseiSurface extends HTMLElement {
       const v = this.#vehicle;
       this.#vehicle = undefined;
       this.#trail = [];
+      this.#dropModel();
       this.#at = { east: v.east, north: v.north };
       this.#changed();
       return;
@@ -579,15 +591,79 @@ export class WakuseiSurface extends HTMLElement {
     this.#blockersAt = undefined;
     for (const el of this.#labelEls.values()) el.hidden = true;
     this.choose(undefined);
+    this.#syncModel();
     this.#syncDriveCamera();
     this.#changed();
+  }
+
+  /** The vehicle's measures: a loaded model's, or the lunar rover's. */
+  #rig(): Rig {
+    return this.#model?.rig ?? ROVER;
+  }
+
+  /**
+   * The rover model being drawn in place of the shapes, with the node names it has and the angles its wheels and pivots were last set to; `undefined` while none is asked for (`drive-model`), while it loads or when it could not be loaded.
+   *
+   * @example
+   * ```ts no-run
+   * const surface = document.querySelector("wakusei-surface") as HTMLElement & { driveModel?: { url: string; nodes: readonly string[] } };
+   * surface.addEventListener("wakusei-model", () => console.log(surface.driveModel?.nodes.join(" ")));
+   * surface.setAttribute("drive-model", "/models/perseverance.glb");
+   * ```
+   */
+  get driveModel(): { url: string; nodes: readonly string[]; angles: Readonly<Record<string, number>>; rig: Rig; renders: number } | undefined {
+    const m = this.#model;
+    return m === undefined ? undefined : { url: this.#modelUrl, nodes: m.nodes, angles: { ...m.angles }, rig: m.rig, renders: m.renders };
+  }
+
+  #dropModel(): void {
+    this.#modelAbort?.abort();
+    this.#modelAbort = undefined;
+    this.#model?.dispose();
+    this.#model = undefined;
+    this.#modelUrl = "";
+  }
+
+  /**
+   * Load the model `drive-model` names, once the rover is being driven: its file is fetched and its loader imported only then. Until it is in (or if it cannot be loaded) the shapes are drawn; `wakusei-model` is sent when it is
+   * drawn, with `detail.url` and `detail.nodes`, and `wakusei-model-error` with `detail.url` and `detail.reason` when it cannot be.
+   */
+  #syncModel(): void {
+    const url = this.getAttribute("drive-model") ?? "";
+    if (this.#vehicle === undefined || url === "") {
+      this.#dropModel();
+      if (this.#vehicle !== undefined) this.#changed();
+      return;
+    }
+    if (url === this.#modelUrl) return;
+    this.#dropModel();
+    this.#modelUrl = url;
+    const abort = new AbortController();
+    this.#modelAbort = abort;
+    void import("./model.ts")
+      .then((m) => m.loadVehicleModel(url, { signal: abort.signal }))
+      .then((model) => {
+        if (abort.signal.aborted) {
+          model.dispose();
+          return;
+        }
+        this.#model = model;
+        this.#syncDriveCamera();
+        this.#changed();
+        this.dispatchEvent(new CustomEvent("wakusei-model", { detail: { url, nodes: model.nodes }, bubbles: true, composed: true }));
+      })
+      .catch((error: unknown) => {
+        if (abort.signal.aborted) return;
+        this.#modelUrl = "";
+        this.dispatchEvent(new CustomEvent("wakusei-model-error", { detail: { url, reason: error instanceof Error ? error.message : String(error) }, bubbles: true, composed: true }));
+      });
   }
 
   /** The eyes where the view of the rover puts them. */
   #syncDriveCamera(): void {
     const v = this.#vehicle;
     if (v === undefined) return;
-    const view = driveView(v, this.#driveCamera, this.#camOffset, (e, n) => this.#groundAt(e, n), this.driveDrag);
+    const view = driveView(v, this.#driveCamera, this.#camOffset, (e, n) => this.#groundAt(e, n), this.driveDrag, this.#rig());
     this.#at = { east: view.eye.east, north: view.eye.north };
     this.#driveEyeUp = view.eye.up;
     this.#look = clampLook({ azimuth: view.azimuth, pitch: view.pitch, fov: this.#look.fov });
@@ -613,17 +689,18 @@ export class WakuseiSurface extends HTMLElement {
     const ground = (e: number, n: number): number => this.#groundAt(e, n);
     const blockers = this.#obstacles();
     const blocked = (e: number, n: number): boolean => blockers.some((b) => (e - b.x) ** 2 + (n - b.y) ** 2 < b.r * b.r);
+    const rig = this.#rig();
     const steps = Math.max(1, Math.ceil(seconds * 60));
     const dt = seconds / steps;
     for (let i = 0; i < steps; i += 1) {
-      v = driveStep(v, input, dt, ground, blocked);
+      v = driveStep(v, input, dt, ground, blocked, rig);
       // each wheel on the ground throws grains up and back: the faster, the more
       if (!v.airborne && Math.abs(v.speed) > 0.6) {
         const h = (v.heading * Math.PI) / 180;
         const [fx, fz] = [Math.sin(h), Math.cos(h)];
         const grains = Math.abs(v.speed) * dt * 26;
         const [rx, rz] = [Math.cos(h), -Math.sin(h)];
-        for (const [wx, , wz] of ROVER.wheels) {
+        for (const [wx, , wz] of rig.wheels) {
           const w = toWorld(v, [wx, 0, wz]);
           for (let k = 0; k < grains + Math.random() * 0.999; k += 1) {
             // thrown up and back from the tyre in a fan: the faster the rover, the wider and farther

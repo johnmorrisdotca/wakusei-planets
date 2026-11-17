@@ -274,6 +274,15 @@ The height tiles of `<wakusei-surface>` (`scripts/make-moon-terrain.py`; they ar
 - **Left out**: the merged LOLA and Kaguya (SELENE) height grid. The JAXA part's terms could not be found, and an MIT-licensed package can pass on only what it knows to be free to pass on.
 - **Made, not measured**: everything below the 5 m grid (small craters from 0.5 to 20 m, the roughness of the dust, rocks of 0.1 to 1.5 m) is made by this package from a seeded random grid, by the lunar size-frequency law, and is not a picture or a measurement of any place. The picture says so under the ground.
 
+## Rover models
+
+Two rover models for `drive-model` on `<wakusei-surface>`, in `models/` (served beside the demo at `models/`, in no npm package; each is a GLB the page fetches only when it asks for it). Both are NASA 3D Resources, NASA content, public domain; each was prepared for this package (split into separate wheels and steering pivots, simplified, textures shrunk to WebP at 512 px, packed with meshopt) and nothing was repainted.
+
+| File | Title | Author | Licence | Source | Size |
+|---|---|---|---|---|---|
+| `perseverance.glb` | Mars 2020 Perseverance Rover | NASA/Jet Propulsion Laboratory (JPL-Caltech) | Public domain (NASA 3D Resources; NASA content is not copyrighted) | https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/ | 1,020,496 bytes |
+| `curiosity.glb` | Curiosity Rover, 3D Model | NASA/JPL-Caltech | Public domain (NASA 3D Resources; NASA content is not copyrighted) | https://science.nasa.gov/resource/curiosity-rover-3d-model/ | 1,065,672 bytes |
+
 ## Interior cutaway
 
 The cutaway's figures were read on 2026-11-13. NASA content is not subject to copyright in the United States. Nothing was copied from the pages; the numbers and the materials they name are the pages' facts, and a figure the page gives as "about" stays marked about.
