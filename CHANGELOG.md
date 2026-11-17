@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.58.0] - 2026-11-17
+
 - **Landing sites with their country's flag** (MODULES-1398; John Morris, 2026-11-16). New entry point `/landing-sites`: `LANDING_SITES`, 39 landings that touched down softly and were heard from (28 on the Moon: Apollo 11 to 17, Surveyor 1, 3, 5, 6 and 7, Luna 9, 13, 16, 17, 20, 21, 23 and 24, Chang'e 3 to 6, Chandrayaan-3, SLIM, IM-1, Blue Ghost 1, IM-2; 11 on Mars: Mars 3, Viking 1 and 2, Pathfinder, Spirit, Opportunity, Phoenix, Curiosity, InSight, Perseverance, Zhurong), each with its names in English and Japanese, its day, its point, its agency, its ISO country code and the page each coordinate is from, plus `landingSitesOf`, `findLandingSite` and `flagCodeOf`. The points are the place tables' own and a test pins them together; the Moon's were compared row by row with NASA NSSDCA's table. The attribute `site-flags` (property `siteFlags`) on `<wakusei-body>` and `<wakusei-space>` puts the country's flag in the tip of a place and, on a body at least 110 pixels of radius across on the screen, names each landing site beside its dot with its flag; the flag is `<hata-flag>`, drawn when the page has imported `@johnmorrisdotca/hata` (no new dependency: without it only the name shows). `wakusei-place`'s `detail` gains `site`. Nothing changes with the attribute off. The demo's Places row has a Flags button (`flags=1` in the address). `@johnmorrisdotca/hata` is a dev dependency, for the tests and the demo. Guide: Landing sites, with their flags.
 
 ## [0.57.0] - 2026-11-17
