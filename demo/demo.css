@@ -154,6 +154,9 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .flat-stage { display: grid; gap: 10px; padding: 14px 12px 10px; margin-bottom: 8px; }
 .flat-stage wakusei-flat, .flat-stage wakusei-flat-system { width: 100%; color: #e6edf7; }
 .flat-orbiters { flex-wrap: wrap; }
+.projected-stage { margin-top: 10px; }
+.projected-map { display: block; margin: 0 auto; max-width: 100%; height: auto; background: transparent; }
+.projected-stage .fam-row { align-items: center; }
 .flat-card { margin-top: 10px; }
 .flat-card h2 { margin: 0 0 6px; font-size: 1.15rem; }
 .flat-card-name { margin: 0 0 6px; font-size: 1.1rem; font-weight: 600; }

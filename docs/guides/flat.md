@@ -108,6 +108,51 @@ The map keeps the same clock as [the space view](space-view.md): it advances by 
 
 A drag pans, two fingers pinch, the plus and minus buttons zoom (and so do the `+` and `-` keys), and Control or Command with the wheel zooms; a plain wheel scrolls the page. The map is one control for the keyboard: Tab to it, the arrow keys, Page Up and Page Down, Home and End go from one orbiter or mark to the next from left to right, Enter chooses, Escape lets go. Each step is spoken in a live region ("Lunar Reconnaissance Orbiter, orbiting the Moon, 113 km up"). The words are English and Japanese (`lang`): the body, the orbiters and the sites are named from the package's own tables in the language asked for.
 
+## Any body, in a projection
+
+`<wakusei-flat>` draws the Moon and Mars on the plain map, in which a degree is a degree both ways. The pure side of the same entry point also has the maths to flatten the painted map of any body (the 25 with a picture in `textures/`, from Mercury to Charon) five ways, and the demo's flat page has a panel that does it: choose the body and the projection, turn the middle, set the grid, and the Sun's ring marks where it is overhead at the time shown.
+
+| Projection | What it keeps | The shape |
+|---|---|---|
+| `equirectangular` | the picture as drawn | a rectangle twice as wide as tall |
+| `mercator` | angles (a small shape keeps its shape); stops at 85.05 degrees north and south, where the poles would be at infinity | a square |
+| `sinusoidal` | areas; every parallel its true length | a leaf |
+| `mollweide` | areas | an ellipse twice as wide as tall |
+| `azimuthal` | distances from the middle (an azimuthal equidistant map; the middle can be any point, a pole among them) | a disc; the point opposite the middle is its rim |
+
+`projectMap(projection, lon, lat, centre)` and `unprojectMap(projection, x, y, centre)` go each way, in radii from the middle of the map (x east, y north); `unprojectMap` answers `null` outside the leaf, the ellipse or the disc. `graticule(projection, step, centre)` gives the lines of longitude and latitude as pieces of line to draw, cut where they would cross the map (the rim of the disc), and never at a pole on Mercator; `mapOutline` is the edge; `fitMap` and `mapPixels` put the map in a box; `mapSun` is the sub-solar point on the map; and `resampleMap(picture, projection, width, height, { centre, zoom })` turns a body's painted map (its pixels, from `ImageData` or any array of RGBA bytes) into the same body in the projection, smooth between pixels, wrapping at the seam and holding at the poles, with transparent pixels outside the map's shape. None of it needs a page, a canvas or a dependency.
+
+```js
+import { PROJECTIONS, graticule, projectMap, resampleMap, unprojectMap } from "@johnmorrisdotca/wakusei-planets/flat";
+
+// Where Olympus Mons on Mars (18.65 degrees north, 133.8 degrees west) falls on each map, in radii from the middle, and the way back.
+for (const projection of PROJECTIONS) {
+  const { x, y } = projectMap(projection, -133.8, 18.65);
+  const back = unprojectMap(projection, x, y);
+  console.log(`${projection}: ${x.toFixed(2)}, ${y.toFixed(2)}; back at ${back.lat.toFixed(2)}, ${back.lon.toFixed(2)}`);
+}
+
+// The lines of a 30 degree grid on a Mollweide map, and a painted map of two pixels redrawn on it.
+console.log(`${graticule("mollweide", 30).length} lines`);
+const picture = { width: 2, height: 1, data: [255, 0, 0, 255, 0, 0, 255, 255] };
+const answer = resampleMap(picture, "mollweide", 40, 20);
+console.log(`${answer.length / 4} pixels, the corner is ${answer[3] === 0 ? "empty" : "drawn"}`);
+```
+
+It prints:
+
+```text
+equirectangular: -2.34, 0.33; back at 18.65, -133.80
+mercator: -2.34, 0.33; back at 18.65, -133.80
+sinusoidal: -2.21, 0.33; back at 18.65, -133.80
+mollweide: -2.03, 0.36; back at 18.65, -133.80
+azimuthal: -2.07, 0.97; back at 18.65, -133.80
+18 lines
+800 pixels, the corner is empty
+```
+
+`<wakusei-flat>` itself still draws the plain map only: its pans, picks and ground tracks all read the plain map, so giving the element a `projection` attribute is a larger change and is not part of this.
+
 ## Without a browser
 
 ```js
