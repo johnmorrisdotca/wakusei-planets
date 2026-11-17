@@ -620,6 +620,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.check.json && tsc -p tsconfig.tools.json && tsc -p tsconfig.demo.json",
     "test": "node --test test/*.test.ts",
+    "api:update": "node scripts/api-surface.mjs --write",
     "test:package": "pnpm build && node scripts/check-package.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && node scripts/check-package.ts",
     "prepublishOnly": "pnpm check",
