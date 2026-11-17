@@ -14,6 +14,8 @@
   Positions on the Moon: NASA's NSSDCA "Table of Anthropogenic Impacts and Spacecraft on the Moon" (https://nssdc.gsfc.nasa.gov/planetary/lunar/lunar_artifact_impacts.html, a US government work), nssdca-lunar-artifacts.html in --cache.
   Where the table gives a position for a craft GCAT lists, the table's position is used (it is newer, from LRO images, and where the two disagree GCAT's is kept in `gcatPosition`); the rest of the record (operator, site, notes) stays GCAT's.
   A few rows only the table has (the Saturn upper stages that struck the Moon, a booster) are added from it. A record whose position is given to a degree or less carries `approximate: true`.
+  A rover that rode down aboard its lander and that GCAT puts at the lander's own point moves with the lander when a better source moves the lander more than 0.05 degrees and has no position of its own for the rover
+  (GCAT has the whole IM-2 landing at 29.1957 W; NASA's table puts Athena at 29.1957 E, so GRACE, MAPP and Yaoki, never deployed, go there too).
   Crewed landings (the six Apollo lunar modules) have the kind `crewed`. Every Mars place has planetocentric latitude and east longitude: the features' are the Gazetteer's, and each lander named in MARS_POSITIONS takes one source that is planetocentric or is converted (Phoenix, below); the other Mars sites are GCAT's, whose convention it does not state (`source.latitude`).
 
 Usage: python3 -I scripts/make-places-data.py --cache DIR"""
@@ -307,6 +309,8 @@ def sites_of(body, cache):
             "date": gcat_date(land) or gcat_date(launch),
             "mission": name, "operator": owner, "country": state, "outcome": outcome,
             "source": {"id": "gcat-landercat", "read": updated},
+            # not written out: whether the row is cargo of a landed craft, and the landing and point it shares with that craft (follow_landers)
+            "_cargo": cargo, "_at": (land, lat, lon),
         }
         if decimals_of(lon) <= 1 and decimals_of(lat) <= 1:
             record["approximate"] = True
@@ -319,6 +323,26 @@ def sites_of(body, cache):
         out.append(record)
     out.sort(key=lambda r: r["date"] or "")
     return out, updated
+
+
+def follow_landers(sites):
+    """A rover that GCAT puts at its lander's point (the same landing time and the same numbers) and that no better source places on its own takes the lander's position when that moved
+    more than 0.05 degrees (the lander then carries `gcatPosition`): the catalogue's point was wrong for the whole landing, not only for the lander. Returns the lines for the log."""
+    landers = {p["_at"]: p for p in sites if "_at" in p and not p["_cargo"]}
+    lines = []
+    for place in sites:
+        lander = landers.get(place["_at"]) if place.get("_cargo") else None
+        if lander is None or "gcatPosition" not in lander or place["source"]["id"] != "gcat-landercat":
+            continue
+        place["gcatPosition"] = [place["lat"], place["lon"]]
+        place["lat"], place["lon"] = lander["lat"], lander["lon"]
+        place["source"] = dict(lander["source"])
+        if lander.get("approximate"):
+            place["approximate"] = True
+        else:
+            place.pop("approximate", None)
+        lines.append(f"{place['name']['en']} moves with {lander['name']['en']} to {place['lat']}, {place['lon']} from GCAT {place['gcatPosition'][0]}, {place['gcatPosition'][1]}")
+    return lines
 
 
 def main():
@@ -372,6 +396,8 @@ def main():
                 else:
                     place["source"]["latitude"] = "not stated"
             print("mars: positions moved from GCAT's (km): " + ", ".join(f"{n} {k}" for n, k in moved), file=sys.stderr)
+        followed = follow_landers(sites)
+        print(f"{body}: rovers moved with their landers: " + ("; ".join(followed) or "none"), file=sys.stderr)
         kinds = {}
         for s in sites:
             kinds[s["kind"]] = kinds.get(s["kind"], 0) + 1
@@ -395,7 +421,8 @@ def main():
             f.write(f"// Made by scripts/make-places-data.py. Named features from the IAU Gazetteer of Planetary Nomenclature (USGS Astrogeology, public domain; the nightly centre-point file of {stamp}),\n")
             f.write(f"// the maria and every type but the albedo features and the small and satellite craters (craters from {CRATER_FLOOR_KM[body]:.0f} km across). Landing, crash and impact sites from GCAT's lander catalogue (J. McDowell, planet4589.org/space/gcat, CC BY 4.0;\n")
             f.write(f"// updated {updated}): positions, dates, operators and site names are the catalogue's, the Japanese names are ours. Do not edit by hand.\n")
-            f.write(f"export const PLACES_{body.upper()} = " + json.dumps(sites + features, ensure_ascii=False, separators=(",", ":")).replace("},{", "},\n{") + " as const;\n")
+            shown = [{k: v for k, v in p.items() if not k.startswith("_")} for p in sites + features]
+            f.write(f"export const PLACES_{body.upper()} = " + json.dumps(shown, ensure_ascii=False, separators=(",", ":")).replace("},{", "},\n{") + " as const;\n")
         print(f"wrote {path} ({os.path.getsize(path) // 1024} kB)", file=sys.stderr)
 
 
