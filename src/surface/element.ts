@@ -1,5 +1,5 @@
-// <wakusei-surface>: a person standing on the Moon, at a site with measured heights. The ground is drawn from the heights, lit by the Sun where it really is and shadowed by the ground itself, under a
-// black sky with the Earth where it really is. It draws through kazoku-ui's shared renderer (one WebGL context for the page), only when something changes (a look, a step, a new time) and at most
+// <wakusei-surface>: a person standing on the Moon or Mars, at a site. The ground is drawn from measured heights where the site has them (Apollo 17) and is a flat stand-in where it has none yet, lit by the Sun where it really is and shadowed by the ground itself, under
+// a black sky with the Earth where it really is (on the Moon) or Mars's dust-hazed sky (on Mars). It draws through kazoku-ui's shared renderer (one WebGL context for the page), only when something changes (a look, a step, a new time) and at most
 // thirty times a second while a key is held, and nothing at rest or out of sight. The heights come from tiles (`tiles`), not from the package: see the surface guide.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { createGate, frameCap, type Gate } from "../gate.ts";
@@ -16,7 +16,8 @@ import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
 import { createSurfaceItem, type SurfaceScene } from "./scene.ts";
 import { objectsOf, traverseOf, type SiteObject } from "./objects.ts";
-import { moonSky, type MoonSky } from "./sky.ts";
+import { standSky, type StandSky } from "./sky.ts";
+import { flatTerrain } from "./flat.ts";
 import { siteById } from "./site.ts";
 import { clampLook, EYE_HEIGHT, stepOver, viewProjection, WALK_SPEED, type Look } from "./view.ts";
 
@@ -74,7 +75,7 @@ const num = (value: string | null, fallback: number): number => {
 /**
  * The `<wakusei-surface>` custom element: standing on a body.
  *
- * Attributes: `body` (`moon`), `site` (a name from `SURFACE_SITES`, `apollo-17`), `time` (an ISO date and time, or milliseconds since 1970; the site's own landing moment when left out; `now` for the real time),
+ * Attributes: `body` (`moon`; the site's own body is the one used), `site` (a name from `SURFACE_SITES`: `apollo-17`, `apollo-15`, `apollo-16`, `chang-e-3`, `chang-e-4`, `perseverance`, `curiosity`; all but `apollo-17` stand on a flat stand-in ground until a height model is added), `time` (an ISO date and time, or milliseconds since 1970; the site's own landing moment when left out; `now` for the real time),
  * `heading` (degrees clockwise from north to look toward), `pitch` (degrees up), `fov` (the view's height in degrees: zoom), `tiles` (the folder the height tiles are served from; the demo site's `tiles/` by default),
  * `lang` (`en` or `ja`: the words on the picture).
  *
@@ -108,7 +109,7 @@ export class WakuseiSurface extends HTMLElement {
   #look: Look = { azimuth: 232, pitch: 13, fov: 74 };
   #at = { east: 0, north: 0 };
   #time = 0;
-  #sky: MoonSky | undefined;
+  #sky: StandSky | undefined;
   #visible = typeof IntersectionObserver !== "function";
   #io: IntersectionObserver | undefined;
   #keys = new Set<string>();
@@ -191,7 +192,7 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /** The sky now: the Sun and the Earth in it. */
-  get sky(): MoonSky | undefined {
+  get sky(): StandSky | undefined {
     return this.#sky;
   }
 
@@ -340,6 +341,16 @@ export class WakuseiSurface extends HTMLElement {
     return siteById(this.getAttribute("site") ?? "apollo-17");
   }
 
+  /** The body's surface gravity at the site, m/s2. */
+  #gravity(): number {
+    return this.#site()?.gravity ?? 1.62;
+  }
+
+  /** True where no made detail is drawn: the page said `detail="off"`, or the site's ground is a flat stand-in, which has no relief to make detail on (made craters and rocks would be relief that is not there). */
+  #noDetail(): boolean {
+    return this.getAttribute("detail") === "off" || this.#site()?.ground === "flat";
+  }
+
   #readAttributes(): void {
     const site = this.#site();
     if (site === undefined) {
@@ -351,8 +362,9 @@ export class WakuseiSurface extends HTMLElement {
     const time = this.getAttribute("time");
     this.#time = time === null || time === "" ? site.time : time === "now" ? Date.now() : Number.isFinite(Number(time)) ? Number(time) : Date.parse(time);
     if (!Number.isFinite(this.#time)) this.#time = site.time;
-    this.#sky = moonSky(site.lat, site.lon, this.#time);
-    this.setAttribute("aria-label", `${site.name[this.#lang()]}: ${this.#lang() === "ja" ? "月面に立った視点" : "standing on the Moon"}`);
+    this.#sky = standSky(site.body, site.lat, site.lon, this.#time);
+    const onMars = site.body === "mars";
+    this.setAttribute("aria-label", `${site.name[this.#lang()]}: ${this.#lang() === "ja" ? (onMars ? "火星表面に立った視点" : "月面に立った視点") : onMars ? "standing on Mars" : "standing on the Moon"}`);
   }
 
   #lang(): "en" | "ja" {
@@ -385,7 +397,7 @@ export class WakuseiSurface extends HTMLElement {
     setKeepOut(this.#objects);
     if (!this.#placed) {
       // a step or two from the landing point, out of any made crater
-      const stand = this.getAttribute("detail") === "off" ? { x: 0, y: 0 } : standingPlace(0, 0);
+      const stand = this.#noDetail() ? { x: 0, y: 0 } : standingPlace(0, 0);
       this.#at = { east: stand.x, north: stand.y };
       this.#placed = true;
       this.#syncDrive();
@@ -417,6 +429,12 @@ export class WakuseiSurface extends HTMLElement {
     this.#abort?.abort();
     this.#abort = new AbortController();
     try {
+      if (this.#site()?.ground === "flat") {
+        // a flat stand-in: nothing to fetch, the ground is whole at once
+        this.#terrain = flatTerrain(this.#site()!);
+        this.setAttribute("data-loading", "done");
+        return;
+      }
       const base = this.getAttribute("tiles");
       const folder = base === null || base === "" ? TILES_BASE : base;
       this.#terrain = await loadTerrain(folder, body, site, {
@@ -460,7 +478,8 @@ export class WakuseiSurface extends HTMLElement {
   #noteText(): string {
     const m = this.#terrain?.manifest;
     if (m === undefined) return "";
-    const made = this.getAttribute("detail") === "off" ? "" : this.#lang() === "ja" ? "5 m より細かい地形（小さなクレーター、砂塵、岩）は計算で作ったもので、実測ではありません。" : "Detail finer than the 5 m grid (small craters, dust, rocks) is made, not measured.";
+    if (this.#site()?.ground === "flat") return this.#lang() === "ja" ? "地面: 高さのデータが追加されるまでの平らな代用です。ここには起伏がありません（実測も、作ったものも）。太陽・空・重力はこの場所と時刻の実際のものです。" : "Ground: flat stand-in until a DTM is added. There is no relief here, measured or made. The Sun, sky and gravity are the real ones for this place and time.";
+    const made = this.#noDetail() ? "" : this.#lang() === "ja" ? "5 m より細かい地形（小さなクレーター、砂塵、岩）は計算で作ったもので、実測ではありません。" : "Detail finer than the 5 m grid (small craters, dust, rocks) is made, not measured.";
     const things = this.#objects.length === 0 ? "" : this.#lang() === "ja" ? " 地面の物は、公表された座標の位置にこのパッケージが置いたもので、形は簡単な絵です。" : " The things on the ground are placed by this package at published positions, as plain drawings.";
     const picture = m.picture === null || m.picture === undefined ? "" : ` ${m.picture.credit}.`;
     return this.#lang() === "ja" ? `高さの実測: ${m.accuracy}。${m.credit}。${made}${things}` : `Heights measured: ${m.accuracy}. ${m.credit}.${picture} ${made}${things}`;
@@ -470,7 +489,7 @@ export class WakuseiSurface extends HTMLElement {
   #groundAt(east: number, north: number): number {
     const t = this.#terrain!;
     const h = groundAt(t.levels, t.manifest.height, east, north) ?? t.manifest.ground;
-    const made = this.getAttribute("detail") === "off" ? 0 : madeGround(east, north, 0.35).h;
+    const made = this.#noDetail() ? 0 : madeGround(east, north, 0.35).h;
     return h - t.manifest.ground - drop(Math.hypot(east, north), t.manifest.radius) + made;
   }
 
@@ -500,7 +519,7 @@ export class WakuseiSurface extends HTMLElement {
     if (scene === undefined || this.#terrain === undefined) return;
     const site = this.#site();
     if (site === undefined) return;
-    this.#sky = moonSky(site.lat, site.lon, this.#time);
+    this.#sky = standSky(site.body, site.lat, site.lon, this.#time);
     // `auto`: a draw at rest is timed now and then, and a machine that takes too long at rest steps down (a card does a draw at full quality in a few milliseconds; a phone may not)
     const auto = this.getAttribute("quality") === null || this.getAttribute("quality") === "auto";
     const was = scene.drawMs;
@@ -525,7 +544,7 @@ export class WakuseiSurface extends HTMLElement {
     const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
     if (measure && !this.#moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: this.getAttribute("detail") !== "off", exposure: num(this.getAttribute("exposure"), 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
+    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: !this.#noDetail(), exposure: num(this.getAttribute("exposure"), this.#site()?.body === "mars" ? 1.5 : 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
     this.#placeLabels();
@@ -675,7 +694,7 @@ export class WakuseiSurface extends HTMLElement {
     if (this.#blockersAt === undefined || Math.hypot(v.east - this.#blockersAt.east, v.north - this.#blockersAt.north) > 8) {
       this.#blockersAt = { east: v.east, north: v.north };
       const list: { x: number; y: number; r: number }[] = [];
-      if (this.getAttribute("detail") !== "off") for (const rock of rocksAround(v.east, v.north, 28, 0.0024)) if (rock.size >= 0.6) list.push({ x: rock.x, y: rock.y, r: rock.size * 0.5 + 1.1 });
+      if (!this.#noDetail()) for (const rock of rocksAround(v.east, v.north, 28, 0.0024)) if (rock.size >= 0.6) list.push({ x: rock.x, y: rock.y, r: rock.size * 0.5 + 1.1 });
       const near: Record<string, number> = { lander: 6, flag: 1.6, station: 2.8, instrument: 1.8, rover: 0 };
       for (const o of this.#objects) if (near[o.kind]! > 0) list.push({ x: o.east, y: o.north, r: near[o.kind]! });
       this.#blockers = list;
@@ -693,7 +712,7 @@ export class WakuseiSurface extends HTMLElement {
     const steps = Math.max(1, Math.ceil(seconds * 60));
     const dt = seconds / steps;
     for (let i = 0; i < steps; i += 1) {
-      v = driveStep(v, input, dt, ground, blocked, rig);
+      v = driveStep(v, input, dt, ground, blocked, rig, this.#gravity());
       // each wheel on the ground throws grains up and back: the faster, the more
       if (!v.airborne && Math.abs(v.speed) > 0.6) {
         const h = (v.heading * Math.PI) / 180;
@@ -710,7 +729,7 @@ export class WakuseiSurface extends HTMLElement {
           }
         }
       }
-      this.#dust.step(dt, ground);
+      this.#dust.step(dt, ground, this.#gravity());
     }
     this.#vehicle = v;
     // the tracks: a point every 1.2 m
@@ -924,7 +943,7 @@ export class WakuseiSurface extends HTMLElement {
         this.#dust.emit([e, ground(e, n) + 0.3, n], [Math.sin(a) * v, lift, Math.cos(a) * v], 4);
       }
     }
-    if (seconds > 0) this.#dust.step(seconds, ground);
+    if (seconds > 0) this.#dust.step(seconds, ground, this.#gravity());
     if (l.camera === "lander") {
       this.#at = { east: lx, north: ly };
       this.#landingEyeUp = lz + pose.altitude + 4;

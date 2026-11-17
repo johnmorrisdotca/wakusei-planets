@@ -138,8 +138,8 @@ function wheelGrounds(state: DriveState, ground: (east: number, north: number) =
 }
 
 /**
- * One step of driving: the speed follows the throttle (slowed uphill by the Moon's gravity, stopped by a slope over 25 degrees and by anything in `blocked`), the heading follows the steering (the four wheels steer, the
- * back ones the other way), the rover moves, and its height, pitch and roll follow the four places its wheels touch, the height on a spring and in free fall (at lunar gravity) when the ground drops away.
+ * One step of driving: the speed follows the throttle (slowed uphill by the body's gravity, stopped by a slope over 25 degrees and by anything in `blocked`), the heading follows the steering (the four wheels steer, the
+ * back ones the other way), the rover moves, and its height, pitch and roll follow the four places its wheels touch, the height on a spring and in free fall (at the body's gravity) when the ground drops away.
  *
  * @param state - The rover now.
  * @param input - The throttle and the steering.
@@ -147,6 +147,7 @@ function wheelGrounds(state: DriveState, ground: (east: number, north: number) =
  * @param ground - The ground's height over the site's ground at a place.
  * @param blocked - True at a place the rover cannot go (a big rock, the lunar module).
  * @param rig - The vehicle's measures (its wheels' places and size); the lunar rover's by default, a model's from `rigOf`.
+ * @param gravity - The body's surface gravity in m/s2 (the Moon's 1.62 by default; Mars's is `MARS_GRAVITY`, 3.71): what slows it uphill and what it falls at.
  * @returns The rover a moment later.
  *
  * @example
@@ -158,7 +159,7 @@ function wheelGrounds(state: DriveState, ground: (east: number, north: number) =
  * console.log(`${rover.north.toFixed(1)} m north after two seconds, at ${rover.speed.toFixed(1)} m/s`);
  * ```
  */
-export function driveStep(state: DriveState, input: DriveInput, dt: number, ground: (east: number, north: number) => number, blocked?: (east: number, north: number) => boolean, rig: Rig = ROVER): DriveState {
+export function driveStep(state: DriveState, input: DriveInput, dt: number, ground: (east: number, north: number) => number, blocked?: (east: number, north: number) => boolean, rig: Rig = ROVER, gravity: number = ROVER.gravity): DriveState {
   const d = Math.min(Math.max(dt, 0), 0.05);
   const next: DriveState = { ...state, spin: [...state.spin] };
   const throttle = Math.min(1, Math.max(-1, input.throttle));
@@ -171,7 +172,7 @@ export function driveStep(state: DriveState, input: DriveInput, dt: number, grou
   const delta = target - next.speed;
   next.speed += Math.sign(delta) * Math.min(Math.abs(delta), a * d);
   if (Math.abs(throttle) < 0.02) next.speed -= Math.sign(next.speed) * Math.min(Math.abs(next.speed), 0.35 * d); // a little rolling resistance
-  next.speed -= ROVER.gravity * Math.sin(state.pitch) * d;
+  next.speed -= gravity * Math.sin(state.pitch) * d;
   if ((state.pitch > ROVER.maxSlope && next.speed > 0) || (state.pitch < -ROVER.maxSlope && next.speed < 0)) next.speed = 0; // uphill past 25 degrees: it does not go
   // the brake holds it once it has nearly stopped, on any slope it could climb: a rover left alone stays where it is
   if (Math.abs(throttle) < 0.02 && Math.abs(next.speed) < 0.08 && Math.abs(state.pitch) < ROVER.maxSlope) next.speed = 0;
@@ -199,7 +200,7 @@ export function driveStep(state: DriveState, input: DriveInput, dt: number, grou
   next.roll += (rollTarget - next.roll) * settle;
   // the height: on its springs while the wheels are down (stiffness 81, damping 12.6, a quick and well damped settle), free where the ground has dropped more than a few centimetres away
   next.airborne = next.y - rest > 0.03;
-  if (next.airborne) next.vy -= ROVER.gravity * d;
+  if (next.airborne) next.vy -= gravity * d;
   else next.vy += (81 * (rest - next.y) - 12.6 * next.vy) * d;
   next.y += next.vy * d;
   if (next.y < rest - 0.04) {

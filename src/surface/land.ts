@@ -1,6 +1,6 @@
 // The descent: from `<wakusei-space>`'s view of the Moon to standing at a site, in one move. `import "@johnmorrisdotca/wakusei-planets/surface/land"` for its effect adds `land(site)`, `leave()` and `landed` to
 // `<wakusei-space>` (the way `earth-places` adds its places): a page that never imports it carries none of the standing view, and the space element is unchanged. Only what the space element already offers is
-// used: `goTo`, `goToPlace` (the package's own places are given to the views if the page has not given any), `stats` and its shadow root. The standing view is made and its ground loaded on standby while the camera comes in; the page has one renderer and one view has it at a time, so the orbit view goes dark (the black of the lunar sky) as the standing view takes the renderer, and fades up into the ground.
+// used: `goTo`, `goToPlace` (the package's own places are given to the views if the page has not given any), `stats` and its shadow root. The standing view is made and its ground loaded on standby while the camera comes in; the page has one renderer and one view has it at a time, so the orbit view goes dark as the standing view takes the renderer, and fades up into the ground.
 import type { WakuseiSpace } from "../space/element.ts";
 import { siteById, type SurfaceSite } from "./site.ts";
 
@@ -114,12 +114,12 @@ export function surfaceOf(space: WakuseiSpace): HTMLElement | null {
 }
 
 /**
- * Come down to a site from the orbit view in one move: the camera goes to the Moon if it is not there, turns over the site and comes in to the Moon's closest zoom, the standing view is made and its ground
+ * Come down to a site from the orbit view in one move: the camera goes to the site's body (the Moon or Mars) if it is not there, turns over the site and comes in to the closest zoom, the standing view is made and its ground
  * loaded meanwhile, and it fades in over the picture. `wakusei-landing` is sent when it starts and `wakusei-landed` (with the site) when the person is standing. Resolves the standing view; rejects when there is
  * no such site, the view cannot be drawn, the ground does not come in time, or `leave` is called first.
  *
- * @param space - The orbit view, with the Moon in it.
- * @param siteId - A site's name from `SURFACE_SITES`.
+ * @param space - The orbit view, with the site's body (the Moon or Mars) in it.
+ * @param siteId - A site's name from `SURFACE_SITES`: `apollo-17`, `apollo-15`, `apollo-16`, `chang-e-3`, `chang-e-4`, `perseverance` or `curiosity`.
  * @param options - Where the tiles are, the moment, where to look first, and whether to move smoothly.
  * @returns The `<wakusei-surface>` element, standing.
  *
@@ -131,6 +131,8 @@ export function surfaceOf(space: WakuseiSpace): HTMLElement | null {
  * const space = document.querySelector("wakusei-space")!;
  * space.addEventListener("wakusei-landed", (event) => console.log("down at", (event as CustomEvent).detail.site));
  * await land(space, "apollo-17");
+ * await leave(space);
+ * await land(space, "perseverance"); // Jezero, on Mars: flat ground until a height model is added
  * await leave(space);
  * ```
  */
@@ -180,15 +182,15 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
     if (placesLoader() === undefined) setPlacesLoader((await import("../places.ts")).loadPlaces);
     if (landing.cancelled) throw new Error("the landing was called off");
     // the camera: to the Moon, then over the site and in to the closest zoom, while the standing view loads behind
-    if (space.body !== "moon") {
-      space.goTo("moon", { smooth });
+    if (space.body !== site.body) {
+      space.goTo(site.body, { smooth });
       if (smooth) {
         await frame();
         await waitWhile(landing, () => space.stats.ride.gliding || space.stats.travelling !== null, 60_000);
       }
     }
     if (landing.cancelled) throw new Error("the landing was called off");
-    const place = await space.goToPlace(site.place, { body: "moon", smooth, zoom: 3.6 });
+    const place = await space.goToPlace(site.place, { body: site.body, smooth, zoom: 3.6 });
     if (place === undefined) fail(`the orbit view has no place ${site.place}`);
     if (smooth) await sleep(GLIDE_MS, landing);
     if (smooth) await waitWhile(landing, () => space.stats.pictures.pending > 0, 3000);
@@ -240,7 +242,7 @@ export async function land(space: WakuseiSpace, siteId: string, options: LandOpt
 }
 
 /**
- * Go back up: the standing view fades out and the orbit view's camera rises to the whole Moon. Sends `wakusei-left`. Does nothing when nobody has landed; a landing that is still coming down is called off (its
+ * Go back up: the standing view fades out and the orbit view's camera rises to the whole body. Sends `wakusei-left`. Does nothing when nobody has landed; a landing that is still coming down is called off (its
  * `land` rejects).
  *
  * @param space - The orbit view.
@@ -271,7 +273,7 @@ export async function leave(space: WakuseiSpace, options: { smooth?: boolean } =
   surface.remove();
   if (wasDown) {
     await space.resume();
-    await space.goToPlace(site.place, { body: "moon", smooth: false, zoom: 1 });
+    await space.goToPlace(site.place, { body: site.body, smooth: false, zoom: 1 });
   } else {
     await space.resume();
   }
@@ -283,7 +285,7 @@ export async function leave(space: WakuseiSpace, options: { smooth?: boolean } =
 
 declare module "../space/element.ts" {
   interface WakuseiSpace {
-    /** Come down to a site on the Moon from this view in one move; see `land` in `/surface/land`. */
+    /** Come down to a site on the Moon or Mars from this view in one move; see `land` in `/surface/land`. */
     land(siteId: string, options?: LandOptions): Promise<HTMLElement>;
     /** Go back up from a site; see `leave` in `/surface/land`. */
     leave(options?: { smooth?: boolean }): Promise<void>;
