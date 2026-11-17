@@ -411,6 +411,54 @@ test("watching the landing: the clock starts at T+4:00 and runs, the report's mo
   expect(await draws(page)).toBe(rest);
 });
 
+test("the descent says when it ends and what state it is in: wakusei-landing-state on play, pause, rate and camera, wakusei-landing-ended once at the touchdown", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off");
+  await page.evaluate(() => {
+    const log: string[] = [];
+    Reflect.set(window, "__events", log);
+    const el = document.querySelector("#test-surface")!;
+    el.addEventListener("wakusei-landing-state", (event) => {
+      const d = (event as CustomEvent).detail;
+      log.push(`state:${d.playing ? "play" : "pause"}:${d.rate}:${d.camera}:${d.ended}`);
+    });
+    el.addEventListener("wakusei-landing-ended", (event) => log.push(`ended:${(event as CustomEvent).detail.t}`));
+    el.setAttribute("watch", "landing");
+  });
+  const events = (): Promise<string[]> => page.evaluate(() => [...(Reflect.get(window, "__events") as string[])]);
+  expect(await events(), "starting the watch is not a change of state").toEqual([]);
+  // a change says so once; setting what it already is says nothing
+  await read(page, (el) => {
+    el.pauseLanding();
+    el.pauseLanding();
+    (el as unknown as { landingRate: number }).landingRate = 4;
+    (el as unknown as { landingRate: number }).landingRate = 4;
+    el.playLanding();
+    el.playLanding();
+    el.setAttribute("watch-camera", "ground");
+  });
+  expect(await events()).toEqual(["state:pause:1:lander:false", "state:pause:4:lander:false", "state:play:4:lander:false", "state:play:4:ground:false"]);
+  // running into the touchdown: stopped, said once, and the end said once
+  await read(page, (el) => {
+    el.landingTime = 722;
+    (el as unknown as { landingRate: number }).landingRate = 16;
+  });
+  await expect.poll(async () => (await events()).filter((e) => e.startsWith("ended")).length, { timeout: 120_000 }).toBe(1);
+  const run = await events();
+  expect(run.slice(-2)).toEqual(["state:pause:16:ground:true", "ended:725"]);
+  expect(await read(page, (el) => el.landing!.playing)).toBe(false);
+  // going to the touchdown again while it is there says nothing more; leaving it and arriving again ends it again
+  await read(page, (el) => {
+    el.landingTime = 725;
+  });
+  expect((await events()).filter((e) => e.startsWith("ended"))).toHaveLength(1);
+  await read(page, (el) => {
+    el.landingTime = 700;
+    el.landingTime = 725;
+  });
+  expect((await events()).filter((e) => e.startsWith("ended"))).toHaveLength(2);
+});
+
 test("the ground camera stands 150 m north of the touchdown point, looking south at the lander, and watch-from moves it", async ({ page }) => {
   test.setTimeout(300_000);
   await open(page, "shadows=off detail=off");
