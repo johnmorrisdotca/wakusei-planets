@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <span class="fam-label" data-say="sy_goto">Go to</span>
+            <span class="fam-seg flat-orbiters" id="goto" role="group" data-say-label="sy_goto" data-testid="goto"></span>
+          </div>
+        </div>
+      </div>
+
+      <section class="fam-felt flat-stage" aria-labelledby="stage-h">
+        <h2 id="stage-h" class="fam-sr" data-say="sy_stage">Flat map of the solar system</h2>
+        <wakusei-flat-system id="system" data-testid="system"></wakusei-flat-system>
+        <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
+        <p class="fam-fine stage-name" data-say="sy_hint">Press a planet, a comet or a spacecraft for its name; the belts are clouds of points you can press too. Drag to pan and pinch to zoom; the + and − buttons and the keyboard do the same.</p>
+      </section>
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <span class="fam-label" data-say="fl_time">Time</span>
+            <span class="fam-seg" id="clock" role="group" data-say-label="fl_time" data-testid="clock"></span>
+            <label class="field"><span data-say="fl_date">Date (UTC)</span><input type="datetime-local" id="date" class="fam-field" data-testid="date" /></label>
+            <span class="fam-fine" id="shown-time" role="status" data-testid="shown-time"></span>
+          </div>
+        </div>
+      </div>
+
+      <section class="fam-panel flat-card" aria-labelledby="card-h" data-testid="card">
+        <h2 id="card-h" data-say="fl_card">The one you chose</h2>
+        <p class="fam-fine" id="card-empty" data-say="sy_card_empty">Press a body on the map.</p>
+        <div id="card-body" hidden>
+          <p class="flat-card-name" id="card-name"></p>
+          <dl class="flat-facts" id="card-facts"></dl>
+          <p class="fam-fine" id="card-about"></p>
+        </div>
+      </section>
+
+      <details class="flat-call"><summary data-say="fl_code">The call that draws it</summary><pre><code id="code" data-testid="code"></code></pre></details>
+
+      <p class="fam-fine credits"><span data-say="sy_credits">The planets, dwarf planets and comets are this package's own positions (VSOP87B, fitted tables and JPL's elements); the belts are a few thousand numbered bodies from the NASA/JPL Small-Body Database; the craft are fitted to JPL Horizons. The Tesla Roadster's place is Horizons' prediction from 2018's observations.</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts system.js-->
+  </body>
+</html>

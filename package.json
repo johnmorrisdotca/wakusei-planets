@@ -93,6 +93,7 @@
     "./dist/space/element.js",
     "./dist/plan/element.js",
     "./dist/flat/define.js",
+    "./dist/flat/system-define.js",
     "./dist/surface/element.js",
     "./dist/surface/land.js",
     "./dist/earth-places.js",
@@ -105,6 +106,7 @@
     "./src/space/element.ts",
     "./src/plan/element.ts",
     "./src/flat/define.ts",
+    "./src/flat/system-define.ts",
     "./src/surface/element.ts",
     "./src/surface/land.ts",
     "./src/earth-places.ts",
@@ -165,6 +167,16 @@
       "types": "./dist/flat/define.d.ts",
       "import": "./dist/flat/define.js",
       "default": "./dist/flat/define.js"
+    },
+    "./flat/system": {
+      "types": "./dist/flat/system.d.ts",
+      "import": "./dist/flat/system.js",
+      "default": "./dist/flat/system.js"
+    },
+    "./flat/system/define": {
+      "types": "./dist/flat/system-define.d.ts",
+      "import": "./dist/flat/system-define.js",
+      "default": "./dist/flat/system-define.js"
     },
     "./surface": {
       "types": "./dist/surface/index.d.ts",
