@@ -146,7 +146,7 @@ export class WakuseiSurface extends HTMLElement {
   #blockers: { x: number; y: number; r: number }[] = [];
   #blockersAt: { east: number; north: number } | undefined;
   /** The descent being watched (`watch="landing"`): the clock in seconds from ignition, whether it runs, how fast, which camera, where the ground camera stands, and how far the callouts have got. */
-  #landing: { t: number; playing: boolean; rate: number; camera: "lander" | "ground"; from: { distance: number; bearing: number }; passed: number; second: number } | undefined;
+  #landing: { t: number; playing: boolean; rate: number; camera: "lander" | "ground"; from: { distance: number; bearing: number }; passed: number; second: number; ended: boolean } | undefined;
   #landingTimer: ReturnType<typeof setTimeout> | undefined;
   #landingAt = 0;
   #landingEyeUp = 0;
@@ -674,7 +674,26 @@ export class WakuseiSurface extends HTMLElement {
 
   // --- watching the landing (`watch="landing"`): Apollo 17's powered descent from the lunar module's window or from the ground ---------------------------------------------------------------------
 
-  /** The descent being watched: its clock in seconds from ignition, whether it runs, the camera and what the lunar module is doing at that moment; `undefined` when it is not watched. */
+  /**
+   * The descent being watched: its clock in seconds from ignition, whether it runs, the camera and what the lunar module is doing at that moment; `undefined` when it is not watched.
+   *
+   * Two events say what happens to it, both bubbling and composed. `wakusei-landing-state` is sent when it starts or stops running (`playLanding()`, `pauseLanding()`, and the clock reaching the touchdown),
+   * when `landingRate` changes and when `watch-camera` changes; its `detail` is `{ t, playing, rate, camera, ended }` (`t` in seconds from ignition, `ended` true at the touchdown), so a page can keep the pause
+   * state without reading `landing` every second. `wakusei-landing-ended` is sent once each time the clock arrives at the touchdown (T+12:05, 725 s), by running or by a seek; its `detail` is
+   * `{ t: 725, rate, camera }`, and it is sent again only after the clock has left the touchdown and come back.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSurface } from "@johnmorrisdotca/wakusei-planets/surface/element";
+   *
+   * const view = document.querySelector("wakusei-surface") as WakuseiSurface;
+   * view.addEventListener("wakusei-landing-state", (event) => {
+   *   const { playing, rate, camera } = (event as CustomEvent).detail;
+   *   location.hash = `${playing ? "play" : "pause"}-${rate}-${camera}`;
+   * });
+   * view.addEventListener("wakusei-landing-ended", () => console.log("the lunar module is down"));
+   * ```
+   */
   get landing(): { t: number; playing: boolean; rate: number; camera: "lander" | "ground"; altitude: number; speed: number; descent: number } | undefined {
     const l = this.#landing;
     if (l === undefined) return undefined;
@@ -703,7 +722,12 @@ export class WakuseiSurface extends HTMLElement {
     return this.#landing?.rate ?? 1;
   }
   set landingRate(value: number) {
-    if (this.#landing !== undefined) this.#landing.rate = Math.min(16, Math.max(0.25, value));
+    const l = this.#landing;
+    if (l === undefined) return;
+    const rate = Math.min(16, Math.max(0.25, value));
+    if (rate === l.rate) return;
+    l.rate = rate;
+    this.#landingAnnounce();
   }
 
   /** Run the descent from where the clock is (from the start again if it had ended). */
@@ -711,17 +735,29 @@ export class WakuseiSurface extends HTMLElement {
     const l = this.#landing;
     if (l === undefined) return;
     if (l.t >= LANDING.duration) this.landingTime = l.camera === "ground" ? 540 : LANDING.viewStart;
+    const was = l.playing;
     l.playing = true;
     this.#landingAt = performance.now();
+    if (!was) this.#landingAnnounce();
     this.#landingTick();
   }
 
   /** Hold the descent where it is. */
   pauseLanding(): void {
-    if (this.#landing === undefined) return;
-    this.#landing.playing = false;
+    const l = this.#landing;
+    if (l === undefined) return;
+    const was = l.playing;
+    l.playing = false;
     clearTimeout(this.#landingTimer);
     this.#landingFrame(0, true);
+    if (was) this.#landingAnnounce();
+  }
+
+  /** Tell a page the descent's state changed: `wakusei-landing-state` with the clock, whether it runs, the rate, the camera and whether it has ended. */
+  #landingAnnounce(): void {
+    const l = this.#landing;
+    if (l === undefined) return;
+    this.dispatchEvent(new CustomEvent("wakusei-landing-state", { detail: { t: l.t, playing: l.playing, rate: l.rate, camera: l.camera, ended: l.t >= LANDING.duration }, bubbles: true, composed: true }));
   }
 
   /** The touchdown point: where the lunar module stands at Apollo 17 (the published place), or the site point where it has none. */
@@ -758,13 +794,15 @@ export class WakuseiSurface extends HTMLElement {
     if (this.#landing !== undefined) {
       if (!again) return;
       if (this.#landing.camera !== camera) this.#look = clampLook({ ...this.#look, fov: camera === "ground" ? 27 : 74 });
+      const changed = this.#landing.camera !== camera;
       this.#landing.camera = camera;
       this.#landing.from = from;
       this.#camOffset = { azimuth: 0, pitch: 0 };
       this.#landingFrame(0, true);
+      if (changed) this.#landingAnnounce();
       return;
     }
-    this.#landing = { t: camera === "ground" ? 540 : LANDING.viewStart, playing: true, rate: 1, camera, from, passed: 0, second: -1 };
+    this.#landing = { t: camera === "ground" ? 540 : LANDING.viewStart, playing: true, rate: 1, camera, from, passed: 0, second: -1, ended: false };
     this.#landing.passed = calloutsBy(this.#landing.t).length;
     this.#dust = new DustField(20000, 17);
     this.#camOffset = { azimuth: 0, pitch: 0 };
@@ -782,6 +820,13 @@ export class WakuseiSurface extends HTMLElement {
   #landingFrame(seconds: number, announce: boolean): void {
     const l = this.#landing;
     if (l === undefined) return;
+    // arriving at the touchdown, by running or by a seek, stops the clock
+    const atEnd = l.t >= LANDING.duration;
+    const stopped = atEnd && l.playing;
+    if (stopped) {
+      l.playing = false;
+      clearTimeout(this.#landingTimer);
+    }
     const pose = landingAt(l.t);
     const td = this.#touchdown();
     const ground = (e: number, n: number): number => this.#groundAt(e, n);
@@ -869,6 +914,12 @@ export class WakuseiSurface extends HTMLElement {
       l.second = second;
       this.dispatchEvent(new CustomEvent("wakusei-landing-clock", { detail: { t: l.t, clock, altitude: pose.altitude, speed: pose.speed, descent: pose.descent, playing: l.playing, callout: newest === undefined ? undefined : { id: newest.id, t: newest.t, en: newest.en, ja: newest.ja, reported: newest.reported } }, bubbles: true, composed: true }));
     }
+    if (stopped) this.#landingAnnounce();
+    // the descent ends once each time the clock arrives at the touchdown; a seek back or a play from the start makes it ready to end again
+    if (atEnd && !l.ended) {
+      l.ended = true;
+      this.dispatchEvent(new CustomEvent("wakusei-landing-ended", { detail: { t: l.t, rate: l.rate, camera: l.camera }, bubbles: true, composed: true }));
+    } else if (!atEnd) l.ended = false;
     this.#changed(l.playing);
   }
 
@@ -882,10 +933,7 @@ export class WakuseiSurface extends HTMLElement {
     this.#landingAt = now;
     const seconds = Math.min(dt * l.rate, LANDING.duration - l.t);
     l.t += seconds;
-    if (l.t >= LANDING.duration - 1e-6) {
-      l.t = LANDING.duration;
-      l.playing = false;
-    }
+    if (l.t >= LANDING.duration - 1e-6) l.t = LANDING.duration;
     this.#landingFrame(seconds, false);
     if (l.playing) this.#landingTimer = setTimeout(this.#landingTick, 33);
     else this.#changed(true);
