@@ -91,7 +91,7 @@ body.addEventListener("wakusei-place", (event) => {
 });
 ```
 
-Apollo 17 is also a place to stand: its record has `stand: "apollo-17"`, the id `<wakusei-surface site>` and `land(space, "apollo-17")` (`/surface/land`) take. The marker and the standing view are the same site; the list does not repeat it.
+Seven sites are also places to stand: Apollo 15, 16 and 17, Chang'e 3 and 4, Curiosity and Perseverance have `stand` set (`stand: "apollo-17"`, `"perseverance"`, and so on), the id `<wakusei-surface site>` and `land(space, "perseverance")` (`/surface/land`) take. The marker and the standing view are the same site, at the same point and landing moment (a test pins them). Only Apollo 17's ground is measured; the other six stand on a flat stand-in until a height model is added (see Standing on the Moon and Mars).
 
 ## What it costs
 

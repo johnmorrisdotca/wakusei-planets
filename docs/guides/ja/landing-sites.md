@@ -91,7 +91,7 @@ body.addEventListener("wakusei-place", (event) => {
 });
 ```
 
-アポロ17号は立てる場所でもあります。その記録の `stand: "apollo-17"` は、`<wakusei-surface site>` と `land(space, "apollo-17")` (`/surface/land`) が受け取る id です。印と立ち位置ビューは同じ着陸地点で、一覧では二重に持ちません。
+7つのサイトは立てる場所でもあります。アポロ15号、16号、17号、嫦娥3号、4号、キュリオシティ、パーシビアランスの記録には `stand` があり（`stand: "apollo-17"`、`"perseverance"` など）、`<wakusei-surface site>` と `land(space, "perseverance")`（`/surface/land`）が受け取る id です。印と立ち位置の表示は、同じ地点、同じ着陸の時刻にある同じサイトです（テストで固定しています）。地面を実測してあるのはアポロ17号だけで、残る6か所は高さのモデルが追加されるまで平らな代用の地面に立ちます（「月面と火星に立つ」を参照）。
 
 ## 費用
 
