@@ -643,6 +643,7 @@
     "test:coverage": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=96 --test-coverage-branches=93 --test-coverage-functions=95 test/*.test.ts",
     "size:budget": "node scripts/check-size.mjs",
     "size:budget:update": "node scripts/check-size.mjs --write",
+    "api:update": "node scripts/api-surface.mjs --write",
     "test:package": "pnpm build && node scripts/check-package.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test:coverage && pnpm build && node scripts/check-package.ts && pnpm size:budget",
     "prepublishOnly": "pnpm check",
