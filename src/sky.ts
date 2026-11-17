@@ -2,7 +2,7 @@
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { NextMoonQuarter, SearchMoonPhase, SearchMoonQuarter, Seasons } from "astronomy-engine";
+import { NextGlobalSolarEclipse, NextLunarEclipse, NextMoonQuarter, SearchGlobalSolarEclipse, SearchLunarEclipse, SearchMoonPhase, SearchMoonQuarter, Seasons } from "astronomy-engine";
 import { moment, type When } from "./when.ts";
 
 const DAY_MS = 86_400_000;
@@ -139,4 +139,53 @@ export function nextMoonPhase(from: When, options: { phase: MoonPhaseName; withi
   if (!(days > 0) || !Number.isFinite(days)) throw new RangeError(`within.days must be a positive number, got ${String(days)}`);
   const found = SearchMoonPhase(index * 90, new Date(start), days);
   return found === null || found.date.getTime() >= start + days * DAY_MS ? null : found.date;
+}
+
+/**
+ * One eclipse of the Sun or the Moon: which, what kind, the moment of greatest eclipse (UT, as a `Date`) and, for a solar eclipse that has one, the fraction of the Sun's disc covered at that moment (`obscuration`, 0 to 1).
+ * A lunar eclipse is `"penumbral"`, `"partial"` or `"total"`; a solar one `"partial"`, `"annular"` or `"total"` (astronomy-engine calls a hybrid eclipse by the kind at its greatest moment).
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { findEclipses, type SkyEclipse } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const first: SkyEclipse = findEclipses(Date.UTC(2026, 0, 1), Date.UTC(2027, 0, 1))[0]!;
+ * console.log(first.type, first.kind, first.peak.toISOString());
+ * ```
+ */
+export interface SkyEclipse {
+  type: "solar" | "lunar";
+  kind: "penumbral" | "partial" | "annular" | "total";
+  peak: Date;
+  obscuration?: number;
+}
+
+/**
+ * Every solar and lunar eclipse whose greatest moment falls from `from` (included) to `to` (not included), in time order. A solar eclipse is listed if it is seen anywhere on Earth. An end before the start throws a `RangeError`.
+ *
+ * @param from - The start of the interval, included.
+ * @param to - The end of the interval, not included.
+ * @returns The eclipses in time order; empty when the interval holds none.
+ * @experimental
+ * @example
+ * ```ts
+ * import { findEclipses } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * for (const eclipse of findEclipses(Date.UTC(2026, 0, 1), Date.UTC(2027, 0, 1))) console.log(eclipse.type, eclipse.kind, eclipse.peak.toISOString().slice(0, 10));
+ * ```
+ */
+export function findEclipses(from: When, to: When): SkyEclipse[] {
+  const [start, end] = interval(from, to);
+  const found: SkyEclipse[] = [];
+  // astronomy-engine searches from the full or new Moon after its start, which can fall just before an eclipse that peaks just after it: start a day early and keep what peaks inside the interval.
+  for (let lunar = SearchLunarEclipse(new Date(start - DAY_MS)); lunar.peak.date.getTime() < end; lunar = NextLunarEclipse(lunar.peak)) {
+    if (lunar.peak.date.getTime() < start) continue;
+    found.push({ type: "lunar", kind: lunar.kind as SkyEclipse["kind"], peak: lunar.peak.date, obscuration: undefined });
+  }
+  for (let solar = SearchGlobalSolarEclipse(new Date(start - DAY_MS)); solar.peak.date.getTime() < end; solar = NextGlobalSolarEclipse(solar.peak)) {
+    if (solar.peak.date.getTime() < start) continue;
+    found.push({ type: "solar", kind: solar.kind as SkyEclipse["kind"], peak: solar.peak.date, ...(solar.obscuration === undefined ? {} : { obscuration: solar.obscuration }) });
+  }
+  return found.sort((a, b) => a.peak.getTime() - b.peak.getTime()).map(({ obscuration, ...rest }) => (obscuration === undefined ? rest : { ...rest, obscuration }));
 }
