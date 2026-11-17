@@ -77,13 +77,14 @@ export class DustField {
    *
    * @param dt - Seconds.
    * @param ground - The ground's height over the site's ground at a place.
+   * @param gravity - The body's surface gravity, m/s2 (the Moon's by default). Air's drag on a grain is not modelled.
    */
-  step(dt: number, ground: (east: number, north: number) => number): void {
+  step(dt: number, ground: (east: number, north: number) => number, gravity: number = G): void {
     let live = 0;
     for (let i = 0; i < this.age.length; i += 1) {
       if (this.age[i]! >= this.life[i]!) continue;
       this.age[i]! += dt;
-      this.velocity[i * 3 + 1]! -= G * dt;
+      this.velocity[i * 3 + 1]! -= gravity * dt;
       const [x, y, z] = [this.position[i * 3]! + this.velocity[i * 3]! * dt, this.position[i * 3 + 1]! + this.velocity[i * 3 + 1]! * dt, this.position[i * 3 + 2]! + this.velocity[i * 3 + 2]! * dt];
       if (this.age[i]! >= this.life[i]! || y < ground(x, z)) {
         this.age[i] = 1e9;

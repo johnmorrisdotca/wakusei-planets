@@ -4,14 +4,14 @@
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import type { ThreeParts } from "../scene/body.ts";
 import { rocksAround } from "./detail.ts";
-import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX, DUST_FRAGMENT, DUST_VERTEX, PLUME_FRAGMENT, PLUME_VERTEX } from "./glsl.ts";
+import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX, DUST_FRAGMENT, DUST_VERTEX, PLUME_FRAGMENT, PLUME_VERTEX, SKY_FRAGMENT, SKY_VERTEX } from "./glsl.ts";
 import { driveParts, type DriveState } from "./drive.ts";
 import type { VehicleModel } from "./model.ts";
 import { modelShadowParts } from "./rig.ts";
 import { placePart, ascentParts, landerParts } from "./shapes.ts";
 import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
-import type { MoonSky } from "./sky.ts";
+import type { MoonSky, SkyAir } from "./sky.ts";
 import { rockMesh } from "./rocks.ts";
 import { cameraAxes, viewProjection, type Look } from "./view.ts";
 
@@ -20,7 +20,8 @@ export interface SurfaceState {
   /** The eyes: metres east and north of the site, and metres over the site's ground (the site's own height is the origin). */
   eye: { east: number; north: number; up: number };
   look: Look;
-  sky: MoonSky;
+  /** The sky: the Moon's (`moonSky`) or a body's with air (`standSky`: `air` is its colours, and `earthDisc` false hides the Earth's disc). */
+  sky: MoonSky & { air?: SkyAir | null; earthDisc?: boolean };
   /** Brightness: the sunlit ground of an albedo of 0.14 comes out as this share of white times the Sun's height factor (default 4.5). */
   exposure?: number;
   /** The ground's own brightness, 0 to 1 (default 0.14, a grey a little lighter than the Moon's mean). */
@@ -203,6 +204,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         uAlbedo: { value: 0.14 },
         uMaxY: { value: maxY },
         uEarthshine: { value: 0.05 },
+        uTint: { value: new T.Vector3(1, 1, 1) },
         uShadows: { value: 1 },
         uHmin: { value: manifest.height.min },
         uHrange: { value: manifest.height.range },
@@ -263,8 +265,25 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       };
       const sun = disc(0, Math.tan((0.533 * Math.PI) / 360));
       const earth = disc(1, Math.tan((1.9 * Math.PI) / 360));
+      // the sky of a body with air: one square behind the discs, hidden where there is none
+      const skyUniforms = {
+        uForwardEnu: { value: new T.Vector3(0, 1, 0) },
+        uRightEnu: { value: new T.Vector3(1, 0, 0) },
+        uUpEnu: { value: new T.Vector3(0, 0, 1) },
+        uTan: { value: new T.Vector2(1, 1) },
+        uSunEnu: { value: new T.Vector3(0, 0, 1) },
+        uHorizon: { value: new T.Vector3() },
+        uZenith: { value: new T.Vector3() },
+        uGlow: { value: new T.Vector3() },
+        uGlowSize: { value: 0.2 },
+      };
+      const skyMaterial = new T.ShaderMaterial({ vertexShader: SKY_VERTEX, fragmentShader: SKY_FRAGMENT, uniforms: skyUniforms, depthTest: false, depthWrite: false });
+      const skyMesh = new T.Mesh(square as never, skyMaterial);
+      skyMesh.frustumCulled = false;
+      skyMesh.renderOrder = -20;
+      skyMesh.visible = false;
       const scene = new T.Scene();
-      scene.add(sun.mesh, earth.mesh, ground);
+      scene.add(skyMesh, sun.mesh, earth.mesh, ground);
       // the rocks and their shadows, made again when the eyes have walked a while or the Sun has moved
       const rockMaterial = new T.ShaderMaterial({ vertexShader: ROCK_VERTEX, fragmentShader: ROCK_FRAGMENT, uniforms });
       const shadowMaterial = new T.ShaderMaterial({ vertexShader: SHADOW_VERTEX, fragmentShader: SHADOW_FRAGMENT, uniforms: { uVP: uniforms.uVP }, transparent: true, depthWrite: false });
@@ -714,7 +733,10 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const tilt = Math.abs(look.pitch) + look.fov / 2;
         uniforms.uSpan.value = tilt > 78 ? Math.PI : Math.min(Math.PI, halfH / Math.cos((tilt * Math.PI) / 180) + 0.06);
         uniforms.uSun.value.set(sky.sun.enu[0], sky.sun.enu[2], sky.sun.enu[1]);
-        uniforms.uExposure.value = state.exposure ?? 4.5;
+        const air = sky.air ?? null;
+        uniforms.uExposure.value = state.exposure ?? (air === null ? 4.5 : 3.2);
+        uniforms.uEarthshine.value = air === null ? 0.05 : air.ambient;
+        uniforms.uTint.value.set(air?.tint[0] ?? 1, air?.tint[1] ?? 1, air?.tint[2] ?? 1);
         uniforms.uAlbedo.value = state.albedo ?? 0.14;
         uniforms.uShadows.value = state.shadows === false ? 0 : 1;
         uniforms.uDetail.value = state.detail === false ? 0 : 1;
@@ -750,7 +772,22 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         (earth.uniforms.uHalf as { value: number }).value = Math.tan((sky.earthDiameter * Math.PI) / 360);
         (sun.uniforms.uHalf as { value: number }).value = Math.tan((sky.sunDiameter * Math.PI) / 360);
         sun.mesh.visible = sky.sun.altitude > -1;
-        earth.mesh.visible = sky.earth.altitude > -1;
+        earth.mesh.visible = sky.earthDisc !== false && sky.earth.altitude > -1;
+        skyMesh.visible = air !== null;
+        if (air !== null) {
+          const e = toEnu(axes.forward);
+          skyUniforms.uForwardEnu.value.set(e[0], e[1], e[2]);
+          const r2 = toEnu(axes.right);
+          skyUniforms.uRightEnu.value.set(r2[0], r2[1], r2[2]);
+          const u2 = toEnu(axes.up);
+          skyUniforms.uUpEnu.value.set(u2[0], u2[1], u2[2]);
+          skyUniforms.uTan.value.set(halfV * aspect, halfV);
+          skyUniforms.uSunEnu.value.set(sky.sun.enu[0], sky.sun.enu[1], sky.sun.enu[2]);
+          skyUniforms.uHorizon.value.set(...air.horizon);
+          skyUniforms.uZenith.value.set(...air.zenith);
+          skyUniforms.uGlow.value.set(...air.glow);
+          skyUniforms.uGlowSize.value = air.glowSize;
+        }
       };
       const camera = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       // the stretch of a smaller draw to the canvas: one square with the target as its texture (made when first needed)
@@ -828,6 +865,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           rockMaterial.dispose();
           shadowMaterial.dispose();
           sun.material.dispose();
+          skyMaterial.dispose();
           earth.material.dispose();
           target?.dispose();
           objectMesh?.geometry.dispose();

@@ -245,7 +245,8 @@ uniform vec2 uEyeEN;
 uniform float uExposure;
 uniform float uAlbedo;
 uniform float uMaxY; // the highest ground over the site's, for the end of a shadow's march
-uniform float uEarthshine; // the light of the sunlit ground round the shade, a small share of a lit slope's
+uniform float uEarthshine; // the light of the sunlit ground round the shade, a small share of a lit slope's (on Mars the sky's light, a good deal more)
+uniform vec3 uTint; // the ground's colour over its grey: white on the Moon
 uniform float uShadows; // 1 for the ground to shadow itself (the default), 0 for none (a try-out)
 uniform float uSunDegrees; // the Sun's elevation in degrees
 uniform vec3 uNear; // the near march: steps, the distance it reaches in metres, the distance out to which the made craters are in it (the quality of the draw)
@@ -315,7 +316,7 @@ void main() {
   float shine = 0.0;
   if (mu0 > 0.0 && uSun.y > -0.01) shine = (uShadows > 0.5 ? lit(vP, dist) : 1.0) * 2.0 * mu0 / (mu0 + mu);
   float light = uAlbedo * albedoAt(vP.xz, dist) * (shine + uEarthshine * max(n.y, 0.0)) * uExposure;
-  gl_FragColor = vec4(vec3(pow(clamp(light, 0.0, 1.0), 1.0 / 2.2)), 1.0);
+  gl_FragColor = vec4(pow(clamp(vec3(light) * uTint, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);
 }
 `;
 
@@ -527,5 +528,39 @@ void main() {
   float a = uPlume * 0.38 * (1.0 - vAlong) * (1.0 - vAlong);
   if (a < 0.003) discard;
   gl_FragColor = vec4(1.0, 0.92, 0.78, a);
+}
+`;
+
+/** The sky of a body with air (Mars): one square over the whole picture, behind everything. Each pixel's direction is found from the camera's axes, so the colour follows how high it looks and how near the Sun it is. */
+export const SKY_VERTEX = /* glsl */ `
+precision highp float;
+varying vec2 vNdc;
+void main() {
+  vNdc = position.xy;
+  gl_Position = vec4(position.xy, 0.999, 1.0);
+}
+`;
+
+export const SKY_FRAGMENT = /* glsl */ `
+precision highp float;
+uniform vec3 uForwardEnu; // the camera's axes in the sky's frame (east, north, up)
+uniform vec3 uRightEnu;
+uniform vec3 uUpEnu;
+uniform vec2 uTan; // half the picture's width and height as tangents
+uniform vec3 uSunEnu;
+uniform vec3 uHorizon; // the colour at the horizon, at the zenith and round the Sun, already scaled by the daylight
+uniform vec3 uZenith;
+uniform vec3 uGlow;
+uniform float uGlowSize; // the glow's width as the sine of its half angle
+varying vec2 vNdc;
+void main() {
+  vec3 ray = normalize(uForwardEnu + uRightEnu * vNdc.x * uTan.x + uUpEnu * vNdc.y * uTan.y);
+  float up = clamp(ray.z, 0.0, 1.0);
+  vec3 colour = mix(uHorizon, uZenith, pow(up, 0.55));
+  float s = length(cross(ray, uSunEnu));
+  float near = dot(ray, uSunEnu) > 0.0 ? exp(-(s * s) / (uGlowSize * uGlowSize)) : 0.0;
+  colour = mix(colour, uGlow, clamp(near, 0.0, 1.0));
+  // under the horizon the ground hides it; keep the horizon colour so a gap shows no seam
+  gl_FragColor = vec4(pow(clamp(colour, 0.0, 1.0), vec3(1.0 / 2.2)), 1.0);
 }
 `;

@@ -42,7 +42,7 @@ export interface HeightLevelInfo {
  */
 export interface TerrainManifest {
   version: 1;
-  body: "moon";
+  body: "moon" | "mars";
   site: string;
   name: { en: string; ja: string };
   /** Where the viewer stands: planetocentric degrees. */

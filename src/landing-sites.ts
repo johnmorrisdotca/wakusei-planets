@@ -170,7 +170,7 @@ export const LANDING_SITES: readonly LandingSite[] = [
     id: "moon/apollo-15", place: "moon/apollo-15-lunar-module", body: "moon", name: { en: "Apollo 15", ja: "アポロ15号" },
     alsoAt: ["moon/apollo-15-lunar-rover"],
     date: "1971-07-30T22:16Z", lat: 26.1324, lon: 3.6333, agency: AGENCY.NASA,
-    country: "US",
+    country: "US", stand: "apollo-15",
     source: SRC_NASA_MOON, page: `${NSS}1971-063C`,
   },
   {
@@ -183,7 +183,7 @@ export const LANDING_SITES: readonly LandingSite[] = [
     id: "moon/apollo-16", place: "moon/apollo-16-lunar-module", body: "moon", name: { en: "Apollo 16", ja: "アポロ16号" },
     alsoAt: ["moon/apollo-16-lunar-rover"],
     date: "1972-04-21T02:23Z", lat: -8.9734, lon: 15.5011, agency: AGENCY.NASA,
-    country: "US",
+    country: "US", stand: "apollo-16",
     source: SRC_NASA_MOON, page: `${NSS}1972-031C`,
   },
   {
@@ -215,14 +215,14 @@ export const LANDING_SITES: readonly LandingSite[] = [
     id: "moon/chang-e-3", place: "moon/chang-e-3", body: "moon", name: { en: "Chang'e 3", ja: "嫦娥3号" },
     alsoAt: ["moon/yutu"],
     date: "2013-12-14T13:11Z", lat: 44.1214, lon: -19.5117, agency: AGENCY.CNSA,
-    country: "CN",
+    country: "CN", stand: "chang-e-3",
     source: SRC_NASA_MOON,
   },
   {
     id: "moon/chang-e-4", place: "moon/chang-e-4", body: "moon", name: { en: "Chang'e 4", ja: "嫦娥4号" },
     alsoAt: ["moon/yutu-2"],
     date: "2019-01-03T02:26Z", lat: -45.4561, lon: 177.5885, agency: AGENCY.CNSA,
-    country: "CN",
+    country: "CN", stand: "chang-e-4",
     source: SRC_NASA_MOON,
   },
   {
@@ -319,7 +319,7 @@ export const LANDING_SITES: readonly LandingSite[] = [
     id: "mars/curiosity", place: "mars/curiosity", body: "mars", name: { en: "Curiosity", ja: "キュリオシティ" },
     alsoAt: ["mars/curiosity-s-descent-stage"],
     date: "2012-08-06T05:17Z", lat: -4.5895, lon: 137.4417, agency: AGENCY.NASA,
-    country: "US",
+    country: "US", stand: "curiosity",
     source: SRC_GCAT, checkedAgainst: SRC_ODE, page: `${NSS}2011-070A`,
   },
   {
@@ -332,7 +332,7 @@ export const LANDING_SITES: readonly LandingSite[] = [
     id: "mars/perseverance", place: "mars/perseverance", body: "mars", name: { en: "Perseverance", ja: "パーシビアランス" },
     alsoAt: ["mars/perseverance-s-descent-stage"],
     date: "2021-02-18T20:43Z", lat: 18.4446, lon: 77.4508, agency: AGENCY.NASA,
-    country: "US",
+    country: "US", stand: "perseverance",
     source: SRC_GCAT, checkedAgainst: SRC_MARS24, page: `${NSS}2020-052A`,
   },
   {
