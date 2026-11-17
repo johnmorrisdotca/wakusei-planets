@@ -6,7 +6,7 @@ import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/
 import "./tables/ceres.ts";
 import "./tables/dwarfs.ts";
 import { loadMinorTables, loadMoonTheory } from "./tables/lazy.ts";
-import { orbitPath, type Pose } from "./ephemeris.ts";
+import { orbitPath } from "./ephemeris.ts";
 import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId } from "./facts.ts";
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
@@ -22,6 +22,7 @@ import { createDoorHost, type DoorHost } from "./door/host.ts";
 import { ownCredit } from "./door/own.ts";
 export { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE } from "./scene/textures.ts";
 import { mapWidthOf, ringWidthOf, zoomLimit } from "./scene/reach.ts";
+import { viewPose } from "./scene/tumble.ts";
 import type { DetailStats } from "./scene/detail.ts";
 import type { TileLevel } from "./scene/tiles.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
@@ -74,12 +75,6 @@ const readTime = (value: string | null): number | "now" | undefined => {
 };
 
 const vectorKey = (v: Vec3): string => `${v[0].toFixed(2)},${v[1].toFixed(2)},${v[2].toFixed(2)}`;
-
-function turnPose(pose: Pose, axis: Vec3, degrees: number): void {
-  pose.pole = turnVec(pose.pole, axis, degrees);
-  pose.meridian = turnVec(pose.meridian, axis, degrees);
-  pose.light = turnVec(pose.light, axis, degrees);
-}
 
 /** Keep the body in the picture: at least a quarter of its width stays inside the edge, however far the view is moved. `pan` is in half-widths of the picture. */
 function clampPan(pan: number, extent: number, zoom: number): number {
@@ -162,6 +157,8 @@ export class WakuseiBody extends HTMLElement {
   #tilt = 0;
   #roll = 0;
   #pitchDelta = 0;
+  /** True while the shared controller tumbles the view about all three axes: the pose is then drawn so it follows the controller's orientation (`scene/tumble.ts`). */
+  #tumble = false;
   #lastAnchors = -1;
   #zoom = 1;
   #panX = 0;
@@ -632,7 +629,10 @@ export class WakuseiBody extends HTMLElement {
     this.#handsKey = key;
     const limits = this.#limits();
     this.#limitKey = `${limits.zoomMax}|${this.look}`;
-    this.#hands = carryControls(this, { on, limits, grabRadius: this.discRadius, objectSize: { width: this.discRadius * 2, height: this.discRadius * 2 }, onChange: (view) => this.setView(view) });
+    this.#hands = carryControls(this, { on, limits, grabRadius: this.discRadius, objectSize: { width: this.discRadius * 2, height: this.discRadius * 2 }, onChange: (view) => {
+      this.#tumble = this.#hands?.controller.turnAxis === "all";
+      this.setView(view);
+    } });
     if (this.#zoom !== 1 || this.#yaw !== 0 || this.#tilt !== 0 || this.#panX !== 0 || this.#panY !== 0 || this.#roll !== 0) {
       if (!this.hasAttribute("data-kazoku-bar")) this.setView({});
     }
@@ -754,15 +754,12 @@ export class WakuseiBody extends HTMLElement {
   // --- the state of the scene --------------------------------------------------------------------------------------------------------------------
 
   #sceneOf(frame: LiveFrame): SceneState {
-    const pose: Pose = { pole: frame.pose.pole, meridian: frame.pose.meridian, light: frame.pose.light };
     const tiltBy = this.#pitchDelta - this.#tilt;
-    if (this.#yaw !== 0) pose.meridian = turnVec(pose.meridian, pose.pole, this.#yaw);
-    if (tiltBy !== 0) turnPose(pose, [1, 0, 0], tiltBy);
-    const roll = -this.#roll;
-    if (roll !== 0) turnPose(pose, [0, 0, 1], roll);
+    const roll = this.#tumble ? this.#roll : -this.#roll;
+    const pose = viewPose(frame.pose, this.#yaw, tiltBy, roll, this.#tumble);
     const r = this.#request();
     const extent = this.#extent(r.moons);
-    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll) : undefined;
+    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll, this.#tumble ? this.#yaw : 0) : undefined;
     const label = this.#labelNow();
     return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, label };
   }
@@ -821,32 +818,34 @@ export class WakuseiBody extends HTMLElement {
     this.#hands.setLimits(limits);
   }
 
-  #moonsOf(frame: LiveFrame, extent: number, tilt: number, roll: number): MoonDraw[] {
+  #moonsOf(frame: LiveFrame, extent: number, tilt: number, roll: number, spin: number): MoonDraw[] {
     const moons: MoonDraw[] = [];
     for (const m of frame.moons) {
       if (m.distance <= extent * 1.05) {
         const orbit = this.#orbits.get(m.id as string);
-        const tipped = tilt === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [1, 0, 0], tilt);
+        const spun = spin === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [0, 1, 0], spin);
+        const tipped = tilt === 0 ? spun : turnVec(spun, [1, 0, 0], tilt);
         const rotated = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
-        moons.push({ id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], orbit: orbit === undefined || (tilt === 0 && roll === 0) ? orbit : this.#tiltedOrbit(m.id as string, orbit, tilt, roll) });
+        moons.push({ id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], orbit: orbit === undefined || (spin === 0 && tilt === 0 && roll === 0) ? orbit : this.#tiltedOrbit(m.id as string, orbit, tilt, roll, spin) });
       }
     }
     return moons;
   }
 
-  #tilted = new Map<string, { source: Float32Array; tilt: number; roll: number; out: Float32Array }>();
-  #tiltedOrbit(id: string, orbit: Float32Array, tilt: number, roll: number): Float32Array {
+  #tilted = new Map<string, { source: Float32Array; tilt: number; roll: number; spin: number; out: Float32Array }>();
+  #tiltedOrbit(id: string, orbit: Float32Array, tilt: number, roll: number, spin: number): Float32Array {
     const held = this.#tilted.get(id);
-    if (held !== undefined && held.source === orbit && held.tilt === tilt && held.roll === roll) return held.out;
+    if (held !== undefined && held.source === orbit && held.tilt === tilt && held.roll === roll && held.spin === spin) return held.out;
     const out = new Float32Array(orbit.length);
     for (let i = 0; i < orbit.length; i += 3) {
-      const tipped = turnVec([orbit[i]!, orbit[i + 1]!, orbit[i + 2]!], [1, 0, 0], tilt);
+      const spun = spin === 0 ? ([orbit[i]!, orbit[i + 1]!, orbit[i + 2]!] as Vec3) : turnVec([orbit[i]!, orbit[i + 1]!, orbit[i + 2]!], [0, 1, 0], spin);
+      const tipped = turnVec(spun, [1, 0, 0], tilt);
       const v = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
       out[i] = v[0];
       out[i + 1] = v[1];
       out[i + 2] = v[2];
     }
-    this.#tilted.set(id, { source: orbit, tilt, roll, out });
+    this.#tilted.set(id, { source: orbit, tilt, roll, spin, out });
     return out;
   }
 
