@@ -459,6 +459,8 @@ interface Aim {
   bend: number;
   /** How much slower than a plain turn the aim point's turn is made. */
   slow: number;
+  /** Set where the backing off is fitted to the two moons (see `aimNeed`): the tangent of the angle from the look direction that the nearer moon is kept inside. `far` is then the most the fitted turn backs off. */
+  fit?: number;
   /** The look direction's turn through the table, in degrees. */
   degrees: number;
   facings: Facing[];
@@ -478,6 +480,13 @@ function aimDistance(a: { r0: number; r1: number; far: number }, p: number): num
   const top = Math.max(a.r0, a.r1) * a.far;
   return Math.exp(Math.log(a.r0) + (Math.log(top) - Math.log(a.r0)) * smooth(p / 0.5) + (Math.log(a.r1) - Math.log(top)) * smooth((p - 0.5) / 0.5));
 }
+/**
+ * The distance from the aim point that keeps the nearer moon inside the tangent `fit` of the look direction, as the aim goes `w` of the way along the `apart` between the two moons: nothing at either end, and
+ * the most in the middle. A turn fitted to it backs off no further than the two moons need, where the plain backing off (a smooth step in the log of the distance) must go many times as far to be far enough early.
+ */
+const aimNeed = (apart: number, w: number, fit: number): number => ((apart * Math.sin(Math.PI * w)) / 2) * (1 + 1 / fit);
+/** How far inside the nearer edge of the picture a fitted turn keeps the nearer moon. */
+const AIM_FIT = 0.9;
 /** The backing off to try, in turn, and how far from the middle of the picture the nearer moon may get (1 is the edge), and how many moments of the turn are looked at. */
 const AIM_FAR = Array.from({ length: 19 }, (_, k) => 1.5 ** k);
 const AIM_BEND = [0, 0.5, 1, 2, 4];
@@ -538,7 +547,8 @@ function turnAt(turn: Turn, p: number, t: number, share?: number): { position: V
     const u = mix(a.facings[i]!.u, a.facings[i + 1]!.u, x - i);
     const w = aimPan(q);
     const aim = mix(placeOf(a.from, t), placeOf(a.to, t), w);
-    return { position: add(aim, scale(aimSide(a, w), aimDistance(a, q))), o: { f, u: unit(sub(u, scale(f, dot(u, f)))) }, fov: fovBetween(turn.fov0, turn.fov1, p) };
+    const d = a.fit === undefined ? aimDistance(a, q) : Math.hypot(aimDistance({ r0: a.r0, r1: a.r1, far: 1 }, q), aimNeed(length(sub(placeOf(a.to, t), placeOf(a.from, t))), w, a.fit));
+    return { position: add(aim, scale(aimSide(a, w), d)), o: { f, u: unit(sub(u, scale(f, dot(u, f)))) }, fov: fovBetween(turn.fov0, turn.fov1, p) };
   }
   const o = swingAt(turn.swing, p);
   // the lift is early: the camera backs off as it starts to turn, so the body left goes into the picture, not out of its side
@@ -1218,7 +1228,7 @@ function emptyMoments(route: Route): number {
   return empty;
 }
 
-function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPlan, "route"> }, stop?: () => boolean): { route: Route; plan: Omit<TravelPlan, "route"> } {
+function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPlan, "route"> }, stop?: () => boolean, fitted = false): { route: Route; plan: Omit<TravelPlan, "route"> } {
   const route = first.route;
   if (route.turn === null || first.plan.path !== "circle" || route.cut || route.share <= 0) return first;
   const was = emptyMoments(route);
@@ -1226,6 +1236,9 @@ function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPla
   const share = route.share;
   const swing = route.turn;
   const flawsOf = (candidate: Turn): { edge: number; fair: boolean } => aimFlaws(input, candidate, route.shells, route.leg, share);
+  const frame = frameOf(input.start.fov, input.aspect);
+  const fit = AIM_FIT * Math.min(frame.th, frame.tv);
+  const apart = length(sub(placeOf(input.destination, share / 2), placeOf(input.leaving, share / 2)));
   // each way of leaning out and each pace, with the least backing off that keeps the nearer moon inside 0.95 of the way to the edge and every pace of the walk inside its limit; of those the one
   // that costs least (the log of the backing off, the lean and the slowing) is taken, and none if none will do
   let cost = Number.POSITIVE_INFINITY;
@@ -1238,11 +1251,12 @@ function withAim(input: TravelInput, first: { route: Route; plan: Omit<TravelPla
     // the look directions and ups are the same at every pace: they are worked out once for each lean
     if (!bases.has(bend)) bases.set(bend, aimOf(input, swing, share, bend, 1));
     const base = { ...bases.get(bend)!, slow };
-    for (const far of AIM_FAR) {
+    // a fitted turn has one backing off, the one the two moons need
+    for (const far of fitted ? [Math.hypot(1, aimNeed(apart, 0.5, fit) / Math.max(base.r0, base.r1))] : AIM_FAR) {
       const spent = Math.log(far) + lean;
       if (best !== null && spent >= cost) break;
       if (stop?.() === true) break;
-      const candidate: Turn = { ...swing, aim: { ...base, far } };
+      const candidate: Turn = { ...swing, aim: fitted ? { ...base, far, fit } : { ...base, far } };
       const flaws = flawsOf(candidate);
       if (flaws.edge <= AIM_EDGE && flaws.fair) {
         best = candidate;
@@ -1361,7 +1375,8 @@ function routeMade(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
   // before the other ways were tried and what they are measured against
   const started = input.budget?.now();
   const stop = input.budget === undefined || started === undefined ? undefined : (): boolean => input.budget!.now() - started >= input.budget!.ms;
-  let first = withAim(input, routeBase(input));
+  const base = routeBase(input);
+  let first = withAim(input, base);
   if (first.plan.path === "pivot" && first.route.turn !== null && first.route.share > 0) {
     // a move that turns beside the body left is framed (B1) where there is a picture that holds both bodies, its look direction and stand being those of the picture; it is taken if it has no fault more than the other
     const framed = routeBase(input, 0, true);
@@ -1381,6 +1396,7 @@ function routeMade(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
   // budget, keeping the best so far
   let best = first;
   let least = was;
+  const made: Made[] = [base];
   for (const variant of WAYS) {
     if (stop?.() === true) break;
     const raw = routeBase(input, variant);
@@ -1394,6 +1410,20 @@ function routeMade(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
     const faults = rough.empty > 0 ? faultsOf(other.route) : rough;
     const wins = (a: Faults, b: Faults): boolean => total(a) < total(b) || (total(a) === total(b) && (a.driftWorst < b.driftWorst - 1e-12 || (a.driftWorst <= b.driftWorst + 1e-12 && a.planet < b.planet)));
     if (betterThan(faults, was) && (best === first || wins(faults, least))) {
+      best = other;
+      least = faults;
+    }
+    if (total(least) === 0) break;
+    made.push(raw);
+  }
+  // a picture is still empty in the best of them: each way's turn is made once more by an aim point whose backing off is fitted to the two moons, which is quick (one backing off for each lean and pace), so it
+  // is done whatever the budget; a move that had no empty picture left is not looked at, so it is the move it was
+  if (least.empty === 0) return best;
+  for (const raw of made) {
+    const other = withAim(input, raw, undefined, true);
+    if (other.route.turn?.aim === undefined) continue;
+    const faults = faultsOf(other.route);
+    if (betterThan(faults, was) && total(faults) < total(least)) {
       best = other;
       least = faults;
     }
