@@ -60,6 +60,16 @@
       "ja": "<wakusei-flat> 要素 (月や火星の平面地図。昼と夜、着陸地点、その上を動く周回機)",
       "platform": "browser"
     },
+    "./flat/system": {
+      "en": "The flat solar system's pure parts: the planets, dwarf planets, belts, comets and spacecraft (the Tesla Roadster among them) on a top-down map, the squeezed scale, the view's geometry and the words",
+      "ja": "太陽系の平面図の計算部分: 惑星・準惑星・小惑星帯・彗星・探査機 (テスラ・ロードスターを含む) の上から見た位置、圧縮した距離、座標計算、言葉",
+      "platform": "node"
+    },
+    "./flat/system/define": {
+      "en": "The <wakusei-flat-system> element: the solar system as a flat top-down map, with the planets, belts, comets and spacecraft",
+      "ja": "<wakusei-flat-system> 要素 (太陽系の平面図。惑星、小惑星帯、彗星、探査機)",
+      "platform": "browser"
+    },
     "./door": {
       "en": "The data door: hand the package your own maps of a body or small bodies as a source with its own licence and credit, and see whose data is on the screen",
       "ja": "データの入口（自分で用意した天体の地図や小天体を、ライセンスと出典つきのソースとして渡し、いま画面にあるのは誰のデータかを示します）",
