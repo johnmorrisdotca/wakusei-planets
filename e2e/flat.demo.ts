@@ -54,9 +54,10 @@ const picks = (page: Page): Promise<{ kind: string | null; id: string | null; na
 test("the Moon: the map is in, the five orbiters with a path are drawn, the sites are marked, nothing is wider than the page, and there is no fold-open section", async ({ page }, info) => {
   const errors = await open(page);
   await expect.poll(async () => (await stats(page)).mapLoaded).toBe(true);
+  // the sites come from a chunk of their own that loads after the map picture, so they are waited for
+  await expect.poll(async () => (await stats(page)).marks).toBeGreaterThan(20);
   const s = await stats(page);
   expect(s.dots).toBe(5);
-  expect(s.marks).toBeGreaterThan(20);
   expect(await flat(page).evaluate((el) => (el as Flat).orbiters.filter((o) => o.shown).map((o) => o.id))).toEqual(["lro", "chandrayaan-2", "danuri", "artemis-p1", "artemis-p2"]);
   // CAPSTONE has no public path: it is named on the page, not drawn
   await expect(page.locator("#nopath")).toContainText("CAPSTONE");
@@ -268,6 +269,7 @@ test("the chips, the footprint and the ground track: they change what is drawn a
     Reflect.set(window, "__filters", []);
     el.addEventListener("wakusei-flat-filter", (event) => (Reflect.get(window, "__filters") as unknown[]).push((event as CustomEvent).detail));
   });
+  await expect.poll(async () => (await stats(page)).marks, { message: "the sites are loaded" }).toBeGreaterThan(20);
   const marks = (await stats(page)).marks;
   await flat(page).locator('.chip[data-layer="landing"]').click();
   await expect.poll(async () => (await stats(page)).marks).toBe(0);
