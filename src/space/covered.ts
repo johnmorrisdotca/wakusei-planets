@@ -54,15 +54,38 @@ export const COVER_MIN_PX = 6;
 export function coveredBy(entries: readonly CoverEntry[]): Map<string, string> {
   const behind = new Map<string, string>();
   for (const body of entries) {
-    let cover: CoverEntry | undefined;
-    for (const other of entries) {
-      if (other === body || other.r < COVER_MIN_PX || other.distance >= body.distance) continue;
-      if (Math.hypot(body.x - other.x, body.y - other.y) >= other.r) continue;
-      if (cover === undefined || other.distance < cover.distance) cover = other;
-    }
-    if (cover !== undefined) behind.set(body.id, cover.id);
+    const cover = coverOf(body, entries, body.id);
+    if (cover !== null) behind.set(body.id, cover);
   }
   return behind;
+}
+
+/**
+ * Which body, if any, hides a point of a label: the nearest body whose drawn disc holds the point on the screen and which is nearer the camera than the point is. For a name, a ring or a pin whose place is a point
+ * (a belt's name at its anchor, the Oort cloud's note, a mark on a surface), not a body. A disc narrower than `COVER_MIN_PX` hides nothing, and `self` (the point's own body) never hides it. A disc test
+ * for each of the few discs big enough to matter; nothing is read back from the picture.
+ *
+ * @param point - The point's place on the screen in CSS pixels and its distance from the camera (any unit, the same as the discs').
+ * @param discs - The drawn discs: their places and radii on the screen (the radius `placeOf(id).r` gives, rounded at the edge of the picture) and their distances.
+ * @param self - The id of the body the point belongs to, if it belongs to one.
+ * @returns The id of the covering body, or `null` when the point is in the open.
+ *
+ * @example
+ * ```ts
+ * import { coverOf } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const discs = [{ id: "pholus", x: 300, y: 300, r: 200, distance: 4 }];
+ * console.log(coverOf({ x: 340, y: 280, distance: 5_000 }, discs), coverOf({ x: 640, y: 280, distance: 5_000 }, discs));
+ * ```
+ */
+export function coverOf(point: { x: number; y: number; distance: number }, discs: readonly CoverEntry[], self?: string): string | null {
+  let cover: CoverEntry | undefined;
+  for (const other of discs) {
+    if (other.id === self || other.r < COVER_MIN_PX || other.distance >= point.distance) continue;
+    if (Math.hypot(point.x - other.x, point.y - other.y) >= other.r) continue;
+    if (cover === undefined || other.distance < cover.distance) cover = other;
+  }
+  return cover === undefined ? null : cover.id;
 }
 
 /**

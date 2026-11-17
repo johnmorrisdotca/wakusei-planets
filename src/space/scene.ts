@@ -18,7 +18,7 @@ import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, helpSpin, MAX_ARROWS_PER_ORBIT, type HelpPlace, type OrbitArrow } from "./arrows.ts";
 import { besideMoon, type BesideInput } from "./beside.ts";
-import { coveredBy, type CoverEntry } from "./covered.ts";
+import { coveredBy, coverOf, type CoverEntry } from "./covered.ts";
 import type { SightInput } from "./sight.ts";
 import { spinAxis } from "./spin.ts";
 import { createTrack, EARTH_RADIUS_KM, eclipticToScene, frameAt, moonOrbit, planetOrbit, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceFrame, type SpaceMinor, type SpacePlanet, type SpaceVec3 } from "./frame.ts";
@@ -288,7 +288,10 @@ export interface SpaceModel {
   /** The belts drawn (the package's own source of them, `wakusei-belts`): `[]` for none. The default is every belt. */
   belts: readonly BeltId[];
   /** Where the label of the Oort cloud's shell is on the screen at the last draw, in CSS pixels, or null when the shell is not drawn or not in view. */
-  oort: { x: number; y: number } | null;
+  oort: { x: number; y: number; distance: number } | null;
+  /** The drawn discs at the last draw (the bodies and moons placed on the screen, with their distances from the camera), and which of them hides a point of the scene (in the scene's absolute places), or null when none does. */
+  discs: readonly CoverEntry[];
+  coverAt: (point: Vec3) => string | null;
   /** How many frames the ephemeris has worked out. */
   lookups: number;
   /** Pixels a game-second moves things on the screen (the fastest turning body in sight): the draw rate follows it. */
@@ -444,6 +447,8 @@ export const newSpaceModel = (): SpaceModel => ({
   door: { points: 0, belts: 0, draws: 0, used: {} },
   belts: BELT_IDS,
   oort: null,
+  discs: [],
+  coverAt: () => null,
   lookups: 0,
   motion: 0,
   drawnView: null,
@@ -1161,7 +1166,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const off = projected.x * projected.x + projected.y * projected.y;
               if (off < best) {
                 best = off;
-                model.oort = { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height };
+                model.oort = { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height, distance: Math.hypot(oortPositions[i * 3]! - camera.position.x, oortPositions[i * 3 + 1]! - camera.position.y, oortPositions[i * 3 + 2]! - camera.position.z) };
               }
             }
           }
@@ -1584,7 +1589,20 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               if (distance !== undefined) entries.push({ id, x: at.x, y: at.y, r: at.r, distance });
             }
             for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
+            // a point of the scene that a page labels (a belt's name at its anchor) is hidden by the same discs
+            model.discs = entries;
+            model.coverAt = (point) => {
+              // in front of the camera, whatever the far plane cuts: a belt's name is labelled far beyond what is drawn
+              projected.set(point[0] - origin[0], point[1] - origin[1], point[2] - origin[2]).applyMatrix4(camera.matrixWorldInverse);
+              if (!(projected.z < 0)) return null;
+              const distance = Math.hypot(projected.x, projected.y, projected.z);
+              projected.applyMatrix4(camera.projectionMatrix);
+              return coverOf({ x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height, distance }, entries);
+            };
             deps.onLabels(places);
+          } else {
+            model.discs = [];
+            model.coverAt = () => null;
           }
           // after the names: the places on the Earth keep clear of them
           if (deps.onEarth && (deps.wantEarth?.() ?? false)) {

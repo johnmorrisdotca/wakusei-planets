@@ -1,5 +1,5 @@
 // A body behind another : with `covered="arrow"` its name and ring are not drawn over the nearer body's disc; one quiet arrow sits outside the disc's edge instead, named for the surest
-// hidden body, and a press on it goes there. Off (the default) the names are drawn over the disc as before. Chromium, drawing in software; every wait is on what the page reports.
+// hidden body, and a press on it goes there. With `covered="name"` the names are drawn over the disc as before; the default hides them (`space-occlude.demo.ts`). Chromium, drawing in software; every wait is on what the page reports.
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, clickCounted, drawnAfter, drawnAtRest, openSpace, SPACE } from "./space-ui.ts";
 
@@ -38,9 +38,11 @@ async function behindTheEarth(page: Page): Promise<string[]> {
   return [];
 }
 
-test("off by default: a body behind the Earth keeps its name over the disc; with covered=\"arrow\" the name goes and one arrow on the Earth's edge names the surest of them", async ({ page }) => {
+test("covered=\"name\": a body behind the Earth keeps its name over the disc; with covered=\"arrow\" the name goes and one arrow on the Earth's edge names the surest of them", async ({ page }) => {
   test.setTimeout(240_000);
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&scale=compressed&ride=moon:beside");
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "covered"))).toBe("hide");
+  await page.locator(SPACE).evaluate((el) => el.setAttribute("covered", "name"));
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "covered"))).toBe("name");
   const behind = await behindTheEarth(page);
   expect(behind.length, "some body sits behind the Earth's disc from beside the Moon").toBeGreaterThan(0);
