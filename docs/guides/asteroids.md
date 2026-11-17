@@ -52,6 +52,10 @@ const mine = asteroidFromElements("2026 XX", { epochJd: 2461200.5, a: 1.8, e: 0.
 console.log(mine.kind, mine.group, asteroidOrbitPoints(mine, 90).length, "points on its orbit");
 ```
 
+## In the space view
+
+`<wakusei-space>` places the 104 bodies as points with its option `asteroids`, names the ones near the camera, and with the option on `space.goTo("eros")` brings the camera to a body and `space.ride("apophis")` rides along with one, at the true scale; the option off, or an id that is not in the set, throws a `RangeError` that says so. The details, with the cost measured, are in [The space view](space-view.md).
+
 ## How exact it is
 
 The motion is two-body: Kepler's equation from the elements, with the package's own solver, and no planet pulls on the body. At the epoch (2026-06-09) it agrees with JPL Horizons to under 0.0000001 au. Away from it the error grows: on 16 bodies of every kind, at five times between a year before and a year after each epoch, the worst error against Horizons' own positions (which include the planets) was 0.001 au (150,000 km) within half a year and 0.004 au (600,000 km) within a year, the main-belt asteroids being the worst and the others under a quarter of it. `ASTEROID_ACCURACY` states the numbers. Beyond a year, or close to a planet, treat a position as a guide: a close approach in 2029 is not worked out from 2026's elements, and Apophis' pass of the Earth is in `/approaches`.

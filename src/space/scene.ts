@@ -130,6 +130,8 @@ export type SpaceLight = "sun" | "lit";
  * ```
  */
 export interface RidePoint {
+  /** What the point is, where it is something with an id: for the point `ride` and `goTo` make of an asteroid, the asteroid's id from `/asteroids`. A point of your own needs none. */
+  readonly id?: string;
   at(ms: number): { position: SpaceVec3; velocity: SpaceVec3 } | null;
 }
 
@@ -196,6 +198,10 @@ export interface AsteroidSet {
   ids: readonly string[];
   bodies: readonly SmallBody[];
   name(id: string): { en: string; ja: string };
+  /** The asteroid as a moving point to ride, round the Sun: kilometres and kilometres a second, ecliptic J2000 turned to the scene's axes. */
+  point(id: string): RidePoint;
+  /** A length to keep from it when going to it, in kilometres: a few times its measured size, 200 at the least. */
+  distanceKm(id: string): number;
 }
 
 /** The most asteroid names shown at once, the nearest to the camera within `ASTEROID_NAME_RANGE`. */

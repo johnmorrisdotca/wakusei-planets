@@ -6,7 +6,7 @@ import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
 import { BODIES } from "../src/facts.ts";
-import { asteroidIdOf, asteroidKey } from "../src/space/asteroid-ids.ts";
+import { ASTEROID_IDS, asteroidIdOf, asteroidKey } from "../src/space/asteroid-ids.ts";
 import {
   asteroidsSource,
   ASTEROID_ACCURACY,
@@ -292,4 +292,10 @@ test("two asteroids have the id of a body of the package (europa, dione), and th
     assert.equal(asteroidIdOf(asteroidKey(body.id)), body.id, `${body.id}: the key gives the id back`);
   }
   for (const id of Object.keys(BODIES)) assert.equal(asteroidIdOf(id), undefined, `${id} is no asteroid's key`);
+});
+
+test("the space view's list of the asteroids' ids is the table's, in its order, so an id is known without loading the table", () => {
+  assert.deepEqual([...ASTEROID_IDS], ASTEROIDS.map((body) => body.id));
+  assert.equal(new Set(ASTEROID_IDS).size, ASTEROID_IDS.length);
+  for (const id of ASTEROID_IDS) assert.equal(id, id.toLowerCase(), `${id}: ids are in lower case, as a call is read`);
 });
