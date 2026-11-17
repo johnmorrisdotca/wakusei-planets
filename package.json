@@ -236,6 +236,11 @@
       "import": "./dist/spacecraft.js",
       "default": "./dist/spacecraft.js"
     },
+    "./fact-sheets": {
+      "types": "./dist/fact-sheets.d.ts",
+      "import": "./dist/fact-sheets.js",
+      "default": "./dist/fact-sheets.js"
+    },
     "./roadster": {
       "types": "./dist/roadster.d.ts",
       "import": "./dist/roadster.js",
