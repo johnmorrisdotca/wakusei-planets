@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
+import { BODIES } from "../src/facts.ts";
+import { asteroidIdOf, asteroidKey } from "../src/space/asteroid-ids.ts";
 import {
   asteroidsSource,
   ASTEROID_ACCURACY,
@@ -239,8 +241,10 @@ test("the table is a chunk of its own: no other entry point of the package carri
   const root = new URL("..", import.meta.url).pathname;
   // split as a page's bundler splits it: the entry's own file, and the files a dynamic import makes of its own
   const bundle = async (contents: string) => {
-    const result = await build({ stdin: { contents, resolveDir: root, sourcefile: "entry.ts", loader: "ts" }, bundle: true, splitting: true, outdir: "/out", format: "esm", minify: true, write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
-    const entry = result.outputFiles.find((file) => !/chunk-/.test(file.path))!.text;
+    const result = await build({ stdin: { contents, resolveDir: root, sourcefile: "entry.ts", loader: "ts" }, bundle: true, splitting: true, outdir: "/out", format: "esm", minify: true, write: false, metafile: true, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
+    // the entry's own file is the output the metafile names for `entry.ts` (the other files, whatever they are called, are the chunks a dynamic import made)
+    const entryPath = Object.entries(result.metafile.outputs).find(([, output]) => output.entryPoint === "entry.ts")![0];
+    const entry = result.outputFiles.find((file) => file.path.endsWith(entryPath.replace(/^.*\//, "")))!.text;
     return { entry, all: result.outputFiles.map((file) => file.text).join("") };
   };
   // Eros' semi-major axis, which appears only in the table
@@ -278,4 +282,14 @@ test("asteroidsSource gives every body as a data-door record, the same orbit, wi
   const el = ASTEROIDS.find((body) => body.id === "eros")!.elements;
   assert.ok(length(sub(smallBodyAt(eros, el.epochJd), smallBodyAt(asteroidAsSmallBody("eros"), el.epochJd))) < 1e-12, "the record places Eros where the body does");
   assert.ok(Math.abs(length(smallBodyAt(eros, el.epochJd)) - length(asteroidPositionAu("eros", (el.epochJd - 2440587.5) * 86_400_000))) < 1e-3, "and at the epoch it is at the same distance from the Sun");
+});
+
+test("two asteroids have the id of a body of the package (europa, dione), and the space view's key keeps them apart", () => {
+  const clash = ASTEROIDS.map((body) => body.id).filter((id) => id in BODIES);
+  assert.deepEqual(clash, ["europa", "dione"], "the ids the view must not take for the moons");
+  for (const body of ASTEROIDS) {
+    assert.ok(!(asteroidKey(body.id) in BODIES), `${body.id}: the key is no body of the package`);
+    assert.equal(asteroidIdOf(asteroidKey(body.id)), body.id, `${body.id}: the key gives the id back`);
+  }
+  for (const id of Object.keys(BODIES)) assert.equal(asteroidIdOf(id), undefined, `${id} is no asteroid's key`);
 });

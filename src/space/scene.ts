@@ -6,6 +6,7 @@ import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
 import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, smallBodyPlace, type PointsThree } from "../door/points.ts";
+import { asteroidKey } from "./asteroid-ids.ts";
 import type { SmallBody } from "../door/small-bodies.ts";
 import { createMoonDots, type DotsThree, type MoonDot } from "./all-moons.ts";
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
@@ -1588,7 +1589,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const jd = toTerrestrialTime(model.time) / 86_400_000 + 2_440_587.5;
             for (let k = 0; k < asteroidSet.ids.length; k += 1) {
               const at = smallBodyPlace(mode, sunPos, asteroidSet.bodies[k]!, jd);
-              asteroidAts.push({ id: asteroidSet.ids[k]!, at, away: Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z) });
+              asteroidAts.push({ id: asteroidKey(asteroidSet.ids[k]!), at, away: Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z) });
             }
             const range = mode === "true" ? ASTEROID_NAME_RANGE.true * AU_IN_EARTH_RADII : ASTEROID_NAME_RANGE.compressed;
             model.asteroidsDrawn = { placed: asteroidAts.length, named: Math.min(ASTEROID_NAMES, asteroidAts.filter((one) => one.away <= range).length), ms: performance.now() - began };
