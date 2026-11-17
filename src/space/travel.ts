@@ -1152,6 +1152,8 @@ export interface Faults {
   pace: number;
   /** Samples with the planet circled out of the picture (not a fault: it breaks a tie). */
   planet: number;
+  /** Samples of the turn with the body left (and the planet circled, if there is one) out of the picture: the turn holds it, and a way on that starts during the turn must not let it go. */
+  held: number;
 }
 const FAULT_DRIFT = 0.02;
 const FAULT_STEP = 0.3;
@@ -1160,7 +1162,7 @@ function faultsOf(route: Route): Faults {
   const plan = { route } as unknown as TravelPlan;
   const at = (t: number): TravelSample => travelPose(input, t, plan);
   const last = at(1);
-  const faults: Faults = { empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0, planet: 0 };
+  const faults: Faults = { empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0, planet: 0, held: 0 };
   const lastF = unit(input.end.forward);
   let turned = 0;
   let way = 0;
@@ -1171,6 +1173,7 @@ function faultsOf(route: Route): Faults {
     const s = at(i / 240);
     if (!s.leaving.inside && !s.destination.inside) faults.empty += 1;
     if (s.around !== undefined && !s.around.inside) faults.planet += 1;
+    if (i / 240 < route.share && !s.leaving.inside && !(s.around?.inside === true)) faults.held += 1;
     if (i >= afterTurn && !s.destination.inside) faults.lost += 1;
     if (i > afterTurn) {
       const off = Math.hypot(s.destination.x - last.destination.x, s.destination.y - last.destination.y);
@@ -1296,7 +1299,7 @@ function turnEdge(route: Route): number {
 }
 /** `now` has none of any kind of fault more than `was` (the planet out of the picture only where it was in all through, and the drift's worst no worse). */
 const noWorse = (now: Faults, was: Faults): boolean =>
-  now.empty <= was.empty && now.lost <= was.lost && now.drift <= was.drift && now.step <= was.step && now.pace <= was.pace && now.driftWorst <= was.driftWorst + 1e-12 && (was.planet > 0 || now.planet === 0) && total(now) <= total(was);
+  now.empty <= was.empty && now.lost <= was.lost && now.drift <= was.drift && now.step <= was.step && now.pace <= was.pace && now.held <= was.held && now.driftWorst <= was.driftWorst + 1e-12 && (was.planet > 0 || now.planet === 0) && total(now) <= total(was);
 
 /**
  * The way on starts while the turn is still going, so the camera never stops between the two and never turns a corner: its place is where the turn takes it plus as far along the way on as that has got, and both
@@ -1480,14 +1483,21 @@ export interface ArrivalCompanion {
   rank: 1 | 2 | 3;
 }
 
+/** The least share of the body gone to that must be lit for the body left to be kept behind it in the last view (`arrivalSide`'s `behind`): half, the same as the rule for every other arrival. */
+const BEHIND_LIT = 0.5;
+
 /**
  * The side of a body to stand on so a companion is in the picture, and the body stays at least half lit.
  * Companions are tried in rank order (1, then 2, then 3). The first rank that fits wins; within a rank the side nearest the approach is kept.
  * A side more than 90 degrees from the Sun is refused, so a lit globe is never traded for a black one. With no companion that fits, the side is the
  * approach, swung toward the Sun when it would show less than about three fifths of the body lit (never more than 75 degrees off the Sun).
  *
- * @param input - The body, where the move comes from, the Sun, and the companions in rank order.
- * @returns A unit side from the body toward the camera, how much of the disc is lit, and the companion's id (null when none was framed).
+ * `behind` is the body the move comes from: a side that puts it in the picture at the back left or right of the body, clear of the disc, is taken before any companion where the body is still at least half lit
+ * (`BEHIND_LIT`); a side that also frames a moon of the body is preferred, and that moon is the companion returned. Where the body would show its night side, or no side frames the body left (a picture too narrow),
+ * the rules above stand: the lit side wins, with a moon where one fits, and the body left is not in the last view.
+ *
+ * @param input - The body, where the move comes from, the Sun, the companions in rank order, and optionally `behind`.
+ * @returns A unit side from the body toward the camera, how much of the disc is lit, the companion's id (null when none was framed), and whether the side is the one `behind` asked for.
  *
  * @example
  * ```ts
@@ -1545,7 +1555,8 @@ export function arrivalSide(input: { body: Vec3; radius: number; from: Vec3; sun
   const consider = (side: Vec3): void => {
     const u = length(side) < 1e-9 ? approach : unit(side);
     // the body left, behind the body gone to at its back left or right, comes first and is kept even where that gives a dark side: it is what keeps the body left in the picture
-    if (behind !== undefined && frames(u, behind) && level(u, behind)) {
+    // ...but only where the body gone to is still at least half lit: the lit side wins over the body left (an outward move to a planet shows its sunlit side, with a moon, and the body left is not in the last view)
+    if (behind !== undefined && (sunDir === null || litOf(u) >= BEHIND_LIT) && frames(u, behind) && level(u, behind)) {
       // a side that also frames a moon of the body (or its planet) is taken before one that does not: the arrival keeps both, and names the moon
       let moon: string | null = null;
       let framed = false;

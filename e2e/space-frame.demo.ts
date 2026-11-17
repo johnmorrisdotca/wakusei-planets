@@ -19,13 +19,33 @@ async function openClocked(page: Page, query: string): Promise<void> {
 const DAY_SPEED = 86_400;
 const placeOf = (page: Page, id: string) => page.locator(SPACE).evaluate((el, name) => (el as unknown as { placeOf(id: string): { x: number; y: number; r: number } | null }).placeOf(name), id);
 const frameOf = async (page: Page) => ((await statsOf(page)) as unknown as { frame: { asked: string; frame: string; pair: string | null }; companion: string | null }).frame;
-/** Go to a body from another with a cut, so that the arrival is chosen as a move chooses it (with the body left behind the body gone to), and let the draws come. */
+/**
+ * Go to a body from another with a cut, then turn the camera round it until the companion is in the picture beside its disc (at the back left or right, about a third of the way to the edge): an arrival now stands on the
+ * body's lit side, which seldom has the body left in the picture, and a pair needs the companion in view to show that it stays where it is.
+ */
 async function arrive(page: Page, from: string, to: string): Promise<void> {
   await callOn(page, "goTo", from, { smooth: false });
   await advance(page, 500);
   await callOn(page, "goTo", to, { smooth: false });
   await advance(page, 500);
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe(to);
+  const place = async () => {
+    const at = await placeOf(page, from);
+    const size = await page.locator(SPACE).evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));
+    return at === null ? null : { ...at, ...size };
+  };
+  const good = (at: Awaited<ReturnType<typeof place>>) => at !== null && at.x > 0 && at.x < at.w && at.y > 0 && at.y < at.h && Math.abs(at.x - at.w / 2) > 0.25 * (at.w / 2) && Math.abs(at.x - at.w / 2) < 0.8 * (at.w / 2) && Math.abs(at.y - at.h / 2) < 0.6 * (at.h / 2);
+  if (good(await place())) return;
+  const base = await page.locator("#controls").evaluate((el) => (Reflect.get(el, "controller") as { state: { yaw: number; tilt: number; zoom: number } }).state);
+  for (const turn of [0, 20, -20, 40, -40, 60, -60, 80, -80, 100, -100, 120, -120, 140, -140, 160, 180]) {
+    for (const tilt of [0, 10, -10, 20, -20]) {
+      // through the page's own controls, which hold the view's state: a drag made later starts from it
+      await page.locator("#controls").evaluate((el, view) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set(view, true, "set"), { yaw: base.yaw + turn, tilt: base.tilt + tilt, zoom: base.zoom });
+      await advance(page, 200);
+      if (good(await place())) return;
+    }
+  }
+  throw new Error(`the ${from} could not be brought into the picture beside the ${to}`);
 }
 /** Where a body is in the picture at the end of each of `n` seconds of the page's time. */
 async function walkPlaces(page: Page, id: string, n: number): Promise<{ x: number; y: number }[]> {
@@ -45,7 +65,6 @@ for (const [focus, companion, days] of [["mercury", "sun", 30], ["moon", "earth"
     test.setTimeout(240_000);
     await openClocked(page, "t=2026-11-02T14:00Z&play=off&scale=true");
     await arrive(page, companion, focus);
-    expect((await statsOf(page) as unknown as { companion: string | null }).companion, "the arrival keeps the body left behind it").toBe(companion);
     // fixed to the stars first: the companion goes round the body in focus
     await setOn(page, "speed", DAY_SPEED);
     const stars = await walkPlaces(page, companion, days);
@@ -54,6 +73,7 @@ for (const [focus, companion, days] of [["mercury", "sun", 30], ["moon", "earth"
     expect(spread(stars), "fixed to the stars the companion leaves its place").toBeGreaterThan(100);
     // paired: the same arrival, the same days
     await arrive(page, companion, focus);
+    await setOn(page, "pairWith", companion);
     await setOn(page, "frame", "pair");
     await advance(page, 300);
     expect(await frameOf(page)).toEqual({ asked: "pair", frame: "pair", pair: companion });
@@ -114,6 +134,7 @@ test("a drag in a pair changes the framing and the new framing is kept; a move t
     document.querySelector("wakusei-space")!.addEventListener("wakusei-frame", (event) => told.push((event as CustomEvent).detail));
   });
   await arrive(page, "sun", "mercury");
+  await setOn(page, "pairWith", "sun");
   await setOn(page, "frame", "pair");
   await advance(page, 300);
   const told = (): Promise<{ frame: string; previous: string; pair: string | null }[]> => page.evaluate(() => Reflect.get(window, "__frames") as { frame: string; previous: string; pair: string | null }[]);
@@ -122,22 +143,38 @@ test("a drag in a pair changes the framing and the new framing is kept; a move t
   const before = (await placeOf(page, "sun"))!;
   await setOn(page, "speed", DAY_SPEED);
   await advance(page, 3000);
-  await page.locator("#controls").evaluate((el) => {
+  // the reader turns the camera by a few degrees (the other way if that would take the Sun out of the picture): the Sun moves in the picture
+  const turn = (by: number) => page.locator("#controls").evaluate((el, delta) => {
     const controller = Reflect.get(el, "controller") as { state: { yaw: number; tilt: number }; set(view: unknown, final: boolean, reason: string): void };
-    controller.set({ yaw: controller.state.yaw + 25 }, true, "drag");
-  });
+    controller.set({ yaw: controller.state.yaw + delta }, true, "drag");
+  }, by);
+  await turn(10);
   await advance(page, 300);
-  const moved = (await placeOf(page, "sun"))!;
+  const inside = async (): Promise<{ x: number; y: number } | null> => {
+    const at = await placeOf(page, "sun");
+    const size = await page.locator(SPACE).evaluate((el) => ({ w: el.clientWidth, h: el.clientHeight }));
+    return at !== null && at.x > 0 && at.x < size.w && at.y > 0 && at.y < size.h ? at : null;
+  };
+  let found = await inside();
+  if (found === null) {
+    await turn(-20);
+    await advance(page, 300);
+    found = await inside();
+  }
+  expect(found, "the Sun is still in the picture after the drag").not.toBeNull();
+  const moved = found!;
   expect(Math.hypot(moved.x - before.x, moved.y - before.y), "the drag moved the Sun in the picture").toBeGreaterThan(30);
   expect((await frameOf(page)).frame, "a drag does not leave the pair").toBe("pair");
   const after = [{ x: moved.x, y: moved.y }, ...(await walkPlaces(page, "sun", 20))];
   await setOn(page, "speed", 0);
   console.log(`# GL walk a drag in the pair: the Sun moved ${Math.hypot(moved.x - before.x, moved.y - before.y).toFixed(0)} px and then stayed within ${spread(after).toFixed(1)} px for 20 days`);
   expect(spread(after), "the new framing is kept").toBeLessThanOrEqual(6);
-  // a move that arrives with a companion (Venus, with Mercury behind it): that body is the pair
-  await callOn(page, "goTo", "venus", { smooth: false });
+  // a move that arrives with a companion (the Earth keeps its Moon): that body is the pair; one that arrives with none ends the pair
+  await callOn(page, "goTo", "earth", { smooth: false });
   await advance(page, 500);
-  expect(await frameOf(page)).toEqual({ asked: "pair", frame: "pair", pair: "mercury" });
+  const companion = ((await statsOf(page)) as unknown as { companion: string | null }).companion;
+  expect(companion, "the Earth is arrived at with a companion").not.toBeNull();
+  expect(await frameOf(page)).toEqual({ asked: "pair", frame: "pair", pair: companion });
   // a ride ends it
   await callOn(page, "ride", "moon");
   await advance(page, 800);

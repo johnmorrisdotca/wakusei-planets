@@ -88,6 +88,7 @@ for (const look of ["etched", "outline", "burned"] as const) {
     expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "bodyLabel"))).toEqual({ look, repeat: "both", strength: 1 });
     await drawn(page, () => setOn(page, "bodyLabel", null), (now) => now.focus === null);
     const changed = await changedInside(page, "mars", await shot(page), on);
+    console.log(`# ${look} changes ${changed} pixels inside Mars's disc`);
     expect(changed, `${look} changes ${changed} pixels inside Mars's disc`).toBeGreaterThan(300);
   });
 }

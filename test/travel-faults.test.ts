@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { betterThan, total, type Faults } from "../src/space/travel.ts";
 
-const was: Faults = { empty: 5, lost: 4, drift: 3, driftWorst: 0.2, step: 2, pace: 1, planet: 0 };
+const was: Faults = { empty: 5, lost: 4, drift: 3, driftWorst: 0.2, step: 2, pace: 1, planet: 0, held: 0 };
 const KINDS = ["empty", "lost", "drift", "step"] as const;
 
 test("a way with fewer faults in total and none of any kind more is taken", () => {
   assert.ok(betterThan({ ...was, empty: 4 }, was));
-  assert.ok(betterThan({ empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0, planet: 0 }, was));
+  assert.ok(betterThan({ empty: 0, lost: 0, drift: 0, driftWorst: 0, step: 0, pace: 0, planet: 0, held: 0 }, was));
   assert.ok(betterThan({ ...was, drift: 1, driftWorst: 0.1, pace: 0 }, was));
 });
 
