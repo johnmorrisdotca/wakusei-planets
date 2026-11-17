@@ -816,6 +816,9 @@ export type SkyBodyId = (typeof SKY_BODY_IDS)[number];
 export interface SkyHorizontal { azimuthDeg: number; altitudeDeg: number; apparentAltitudeDeg: number; hourAngleDeg: number; parallacticAngleDeg: number; }
 function skyBodies(when: number | Date, observer?: Observer | undefined) => SkyBody[]
 function skyBody(id: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", when: number | Date, observer?: Observer | undefined) => SkyBody
+## ./sky
+export interface SkySeasons { marchEquinox: Date; juneSolstice: Date; septemberEquinox: Date; decemberSolstice: Date; }
+function seasons(year: number) => SkySeasons
 ## ./suncalc
 export interface MoonIllumination { fraction: number; phase: number; angle: number; waxing: boolean; }
 export interface MoonPosition extends Position { distance: number; parallacticAngle: number; }

@@ -436,6 +436,11 @@
       "import": "./dist/sky-bodies.js",
       "default": "./dist/sky-bodies.js"
     },
+    "./sky": {
+      "types": "./dist/sky.d.ts",
+      "import": "./dist/sky.js",
+      "default": "./dist/sky.js"
+    },
     "./suncalc": {
       "types": "./dist/suncalc.d.ts",
       "import": "./dist/suncalc.js",
@@ -715,9 +720,13 @@
   },
   "peerDependencies": {
     "@johnmorrisdotca/chikyu-earth": ">=0.10.0",
+    "astronomy-engine": ">=2.1.19 <3",
     "three": ">=0.160.0"
   },
   "peerDependenciesMeta": {
+    "astronomy-engine": {
+      "optional": true
+    },
     "three": {
       "optional": true
     },

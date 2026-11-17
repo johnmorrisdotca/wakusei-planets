@@ -475,6 +475,11 @@ await step("sky-bodies-node", () => {
   if (out !== "Up: moon, venus\nMoon: 46 per cent lit, 27.3 degrees up\nMars: magnitude 1.3, 35 degrees west of the Sun") throw new Error(`unexpected output: ${out}`);
 });
 
+await step("sky-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("sky"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (out !== "Spring equinox 2026-03-20T14:45Z\nSummer solstice 2026-06-21T08:25Z\nAutumn equinox 2026-09-23T00:05Z\nWinter solstice 2026-12-21T20:50Z") throw new Error(`unexpected output: ${out}`);
+});
+
 await step("plan-node", () => {
   const out = execFileSync(process.execPath, [join(examples("plan"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
   if (out !== "Mars: 1.60 au from the Sun, 46 per cent of the way to the edge (50 au)\nIo: 5.9 Jupiter radii from Jupiter's centre\nThe SVG is an <svg>") throw new Error(`unexpected output: ${out}`);
@@ -610,6 +615,7 @@ const FILES: Record<string, string[]> = {
   "flat-system/cdn.html": ["docs/guides/flat-system.md", "docs/guides/ja/flat-system.md"],
   "flat-system/node.mjs": ["docs/guides/flat-system.md", "docs/guides/ja/flat-system.md"],
   "sky-bodies/node.mjs": ["docs/guides/sky-bodies.md", "docs/guides/ja/sky-bodies.md"],
+  "sky/node.mjs": ["docs/guides/sky-events.md", "docs/guides/ja/sky-events.md"],
   "lineup/cdn.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/iframe.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/node.mjs": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
