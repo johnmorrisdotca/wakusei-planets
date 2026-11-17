@@ -1577,6 +1577,10 @@ export class WakuseiSpace extends HTMLElement {
 
   /** The body the camera is at now: the target of the ride, or the body looked at. */
   #leaving(): BodyId {
+    // a move that has been asked for and not yet drawn has not moved the camera: the body it leaves is still the one the camera is at, not the one the move was going to (a page that leaves a ride and then rides
+    // on, in the same breath, would otherwise leave the planet from beside its moon and back out to the whole system to do it)
+    const pending = this.#model.transition;
+    if (pending !== null && pending.input === null && pending.leaving !== null) return pending.leaving;
     const ride = this.#model.ride;
     if (ride !== null) return typeof ride.target === "string" ? (ride.target as BodyId) : (ride.around as BodyId);
     return this.#model.focus;

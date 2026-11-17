@@ -311,3 +311,44 @@ for (const [from, to] of [["sun", "mercury"], ["sun", "venus"], ["sun", "earth"]
     console.log(`# GL walk ${from} to ${to}: ${moving.length} draws of the move, the ${from} off the screen in ${out}; last view: ${where === null ? "the body left is not in it" : `at ${(where.x / where.w).toFixed(2)} across, ${(where.y / where.h).toFixed(2)} down`}`);
   });
 }
+
+test("a ride left and another begun in the same breath leaves the moon the camera is beside, not the planet: Io to Europa stays near the two moons and never backs off to the whole system", async ({ page }) => {
+  test.setTimeout(240_000);
+  await openSpace(page, "t=2026-06-21T12:00Z&play=off&scale=compressed");
+  await page.locator('#paces [data-pace="2"]').dispatchEvent("click");
+  const result = await page.locator(SPACE).evaluate(async (el) => {
+    const space = el as unknown as {
+      ride(id: string | null, options?: unknown): void;
+      riding: unknown;
+      controller: { set(v: unknown, f: boolean, r: string): void };
+      stats: { draws: number; camera: { position: number[] }; ride: { gliding: boolean } };
+    };
+    const frame = (): Promise<void> => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    space.ride("io", { view: "beside", smooth: false });
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const first = space.stats.camera.position.slice();
+    // as a page does that goes from one moon to another: out of the ride, then into the next
+    if (space.riding) space.ride(null);
+    space.ride("europa", { view: "beside", smooth: true });
+    space.controller.set({ zoom: 1, yaw: 0, tilt: 0, panX: 0, panY: 0 }, true, "jump");
+    const seen: number[][] = [];
+    let last = space.stats.draws;
+    const t0 = performance.now();
+    for (;;) {
+      await frame();
+      if (space.stats.draws !== last) {
+        last = space.stats.draws;
+        seen.push(space.stats.camera.position.slice());
+      }
+      if (!space.stats.ride.gliding && seen.length > 0) break;
+      if (performance.now() - t0 > 60_000) break;
+    }
+    return { first, seen };
+  });
+  const d = (a: number[], b: number[]): number => Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!, a[2]! - b[2]!);
+  const end = result.seen[result.seen.length - 1]!;
+  const between = d(result.first, end);
+  const farthest = Math.max(...result.seen.map((p) => Math.min(d(p, result.first), d(p, end))));
+  expect(result.seen.length, "frames of the move were seen").toBeGreaterThan(2);
+  expect(farthest, `the camera went ${farthest.toFixed(0)} from the nearer of the two views, which are ${between.toFixed(0)} apart`).toBeLessThan(3 * Math.max(between, 1));
+});
