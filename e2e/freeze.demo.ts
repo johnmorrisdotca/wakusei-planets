@@ -1044,6 +1044,35 @@ test("a star out of sight draws nothing, even while it is told to keep turning",
   expect(after.rafRequests - before.rafRequests).toBeLessThanOrEqual(1);
 });
 
+test("a star picture below the fold of a scrolling box makes no still until it is scrolled to, then settles in a few seconds in software", async ({ page }) => {
+  // the site's star card (MODULES-1462): a short card scrolls inside itself, and its picture, below the card's fold, waited at "loading" for as long as nobody scrolled to it
+  await page.goto(`${STAR}?star=proxima`);
+  const snapshots = () => page.locator("#card-star").evaluate((el) => (el as unknown as { stats: { renderer?: { snapshots: number } } }).stats.renderer?.snapshots ?? 0);
+  await page.evaluate(() => {
+    const box = document.createElement("section");
+    box.style.cssText = "position:fixed;left:16px;top:16px;width:320px;max-height:200px;overflow:auto;z-index:9;background:#000";
+    const facts = document.createElement("div");
+    facts.style.height = "260px";
+    const el = document.createElement("wakusei-body");
+    el.id = "card-star";
+    for (const [name, value] of Object.entries({ star: JSON.stringify({ name: "Betelgeuse", temperatureK: 3710, radiusSun: 553, estimated: ["temperatureK", "radiusSun"], luminosityClass: "Ia" }), look: "realistic", "span-km": "1154166300", live: "hover", turn: "10" })) el.setAttribute(name, value);
+    el.style.cssText = "display:block;width:100%;height:240px";
+    box.append(facts, el);
+    document.body.append(box);
+  });
+  const card = page.locator("#card-star");
+  await settle(page, 2000);
+  const before = await snapshots();
+  await settle(page, 1500);
+  expect(await card.evaluate((el) => (el as unknown as { state: string }).state), "out of sight it waits").toBe("loading");
+  expect(await snapshots(), "and takes no still").toBe(before);
+  const start = Date.now();
+  await card.scrollIntoViewIfNeeded();
+  await expect.poll(() => card.evaluate((el) => (el as unknown as { state: string }).state), { timeout: 10_000 }).toBe("still");
+  console.log(`still ${Date.now() - start} ms after it came into sight`);
+  expect(await snapshots()).toBe(before + 1);
+});
+
 test("the cheaper star for weak devices is drawn the same way and says so", async ({ page }) => {
   await page.goto(`${STAR}?star=proxima&spin=1`);
   await star(page).evaluate((el) => el.setAttribute("quality", "low"));

@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - **IM-2's three rovers stand on Athena, east of the prime meridian** (MODULES-1402; John Morris, 2026-11-17). GCAT's lander catalogue has the whole IM-2 landing at 84.7906 S, 29.1957 W; NASA's table, which the places take, puts Athena at 29.1957 E, but GRACE, MAPP and Yaoki, which NASA's table does not list, kept the catalogue's point on the far side of the prime meridian. `scripts/make-places-data.py` now moves a rover the catalogue puts at its lander's own point with the lander whenever a better source moves the lander more than 0.05 degree and has no position of its own for the rover; the rovers keep the catalogue's figure in `gcatPosition`. No other rover on the Moon or Mars disagrees with its lander, and a test pins both.
+- **The `loading` state says it also waits for the picture to come into sight** (MODULES-1462; John Morris, 2026-11-17). A still is made only for a picture on the screen. On spaceprogramx.com the star card, held short by a notice above the time bar, scrolls inside itself, and its star picture below the card's fold stayed `loading` until it was scrolled to, which read as a picture that never settled. Nothing in the drawing changes. A new freeze test holds both halves: a star below the fold of a scrolling box takes no still, and once scrolled to it is `still` in about half a second in software.
 
 ## [0.60.0] - 2026-11-17
 
