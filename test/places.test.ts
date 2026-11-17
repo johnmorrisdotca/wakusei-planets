@@ -132,6 +132,28 @@ test("the famous places are where the sources put them: Apollo 11 at Tranquility
   assert.ok(Math.abs(placeDistanceKm("mars", { lat: 0, lon: 0 }, { lat: 0, lon: 90 }) - (Math.PI / 2) * 3396.19) < 1, "a quarter of Mars's equator");
 });
 
+test("a rover stands at its lander's site: IM-2's three rovers on Athena, east of the prime meridian, and no rover on the mirror side of its lander", () => {
+  // GCAT has the whole IM-2 landing at 29.1957 W; NASA's table puts Athena at 29.1957 E, and the rovers it carried were never deployed, so the script moves them with it
+  const athena = findPlace(moon, "IM-2 Athena")!;
+  assert.deepEqual([athena.lat, athena.lon], [-84.7906, 29.1957]);
+  for (const name of ["GRACE", "MAPP", "Yaoki"]) {
+    const rover = findPlace(moon, name)!;
+    assert.equal(rover.kind, "rover", name);
+    assert.deepEqual([rover.lat, rover.lon], [athena.lat, athena.lon], `${name} stands on IM-2 Athena`);
+    assert.deepEqual(rover.gcatPosition, [-84.7906, -29.1957], `${name} keeps GCAT's own point beside the one used`);
+    assert.equal(rover.source.id, "nssdca", name);
+  }
+  // every rover on the Moon and Mars lands within a degree of a lander of the same day (Lunokhod 2 drove 39 km, the farthest), never on the far side of the prime meridian from it
+  for (const places of [moon, mars]) {
+    for (const rover of places.filter((p) => p.kind === "rover")) {
+      const landers = places.filter((p) => (p.kind === "landing" || p.kind === "crewed") && p.date?.slice(0, 10) === rover.date?.slice(0, 10));
+      if (landers.length === 0) continue;
+      const nearest = Math.min(...landers.map((l) => angleBetween(rover.lat, rover.lon, l.lat, l.lon)));
+      assert.ok(nearest < 1, `${rover.name.en} is ${nearest.toFixed(3)} degrees from its lander`);
+    }
+  }
+});
+
 test("features with a Japanese name are found by it and by the Latin one; the rest keep the IAU's Latin name", () => {
   const tranquility = findPlace(moon, "静かの海")!;
   assert.equal(tranquility.id, "moon/mare-tranquillitatis");
