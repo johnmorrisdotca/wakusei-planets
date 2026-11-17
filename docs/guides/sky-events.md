@@ -2,10 +2,10 @@
 title: Sky events (experimental)
 section: how-to
 order: 37
-description: Equinoxes and solstices today, and the other sky events to come, through astronomy-engine as an optional peer. Experimental in 0.x.
+description: Equinoxes and solstices, Moon phases, and the other sky events to come, through astronomy-engine as an optional peer. Experimental in 0.x.
 ---
 
-`@johnmorrisdotca/wakusei-planets/sky` answers "when": when the seasons begin, and, as they are added, the Moon's phases, eclipses and a planet's rise and set. It is **experimental during 0.x**: the names, the search windows and the results may change before 1.0 (every export is marked `@experimental`). Where [Where the planets are in the sky](sky-bodies.md) says where a body is at a moment, this entry finds the moment a thing happens.
+`@johnmorrisdotca/wakusei-planets/sky` answers "when": when the seasons begin, when the Moon is new, full or at a quarter, and, as they are added, eclipses and a planet's rise and set. It is **experimental during 0.x**: the names, the search windows and the results may change before 1.0 (every export is marked `@experimental`). Where [Where the planets are in the sky](sky-bodies.md) says where a body is at a moment, this entry finds the moment a thing happens.
 
 It is a thin, typed layer over [astronomy-engine](https://github.com/cosinekitty/astronomy), which is an **optional peer dependency**. A page that never imports `/sky` never needs it, and the rest of the package never reaches it (a test holds that, by the import graph of every entry point).
 
@@ -32,6 +32,7 @@ console.log(`Winter solstice ${year.decemberSolstice.toISOString().slice(0, 16)}
 | Function | Gives | Checked against |
 |---|---|---|
 | `seasons(year)` | the March equinox, June solstice, September equinox and December solstice of a year, as `Date`s (UTC) | the US Naval Observatory's table: 16 events in 1900, 2000, 2026 and 2050, the worst miss 60 seconds (the table is to the minute) |
+| `moonPhases(from, to)`, `nextMoonPhase(from, { phase, within })` | the new, first quarter, full and last quarter Moon in an interval (start included, end not), or the next one of a kind, as `Date`s | the USNO table of 2026: all 50 phases, in order, the engine 11 to 80 seconds after the table's stamp (the table drops the seconds) |
 
 ## The conventions
 

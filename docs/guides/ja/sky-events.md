@@ -32,6 +32,7 @@ console.log(`Winter solstice ${year.decemberSolstice.toISOString().slice(0, 16)}
 | 関数 | 返すもの | 照らし合わせた相手 |
 |---|---|---|
 | `seasons(year)` | その年の春分、夏至、秋分、冬至を `Date` (UTC) で | 米国海軍天文台の表: 1900、2000、2026、2050 年の 16 件、最大のずれは 60 秒 (表は分単位) |
+| `moonPhases(from, to)`、`nextMoonPhase(from, { phase, within })` | 期間内 (始まりは含み、終わりは含まない) の新月、上弦、満月、下弦、または次の一つを `Date` で | 米国海軍天文台の 2026 年の表: 50 件すべてが順序どおりで、エンジンは表の時刻より 11 から 80 秒後 (表は秒を落としています) |
 
 ## 約束事
 
