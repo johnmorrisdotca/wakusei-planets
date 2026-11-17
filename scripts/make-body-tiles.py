@@ -43,7 +43,7 @@ COMMONS = "https://upload.wikimedia.org/wikipedia/commons"
 
 # Each source: where it is, its SHA-256 (a file with another hash is never used), how it lies on the sphere (the same steps scripts/make-textures.py takes for the 2048 picture) and the
 # WebP quality of its tiles. `roll` is a turn east, in fractions of the width; `strip` is ("lat", degrees) for a strip of an equirectangular map or ("merc", degrees) for a Mercator
-# strip, `crop` the box of the source that is the map, `keep` the colour kept by `desaturate`, `grey` takes the source's detail as brightness only, `night` marks black that was never imaged.
+# strip, `crop` the box of the source that is the map, `keep` the colour kept by `desaturate`, `grey` takes the source's detail as brightness only, `night` marks black that was never imaged, `fade` how many cells of 8 pixels the source's detail fades over at the edge of its data (4 unless the picture fades the same edge into a plain tone).
 SOURCES = {
     "mercury": {
         "url": f"{COMMONS}/4/41/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_32ppd.jpg",
@@ -78,7 +78,7 @@ SOURCES = {
         "sha256": "d63da5ee9eab8d0b98ebef3c0cdc3a92676d7c9b247b2383294fb5da5c67a71a",
         "file": "Pluto color mapmosaic.jpg",
         "credit": "NASA / Johns Hopkins University Applied Physics Laboratory / Southwest Research Institute (New Horizons global colour mosaic)",
-        "roll": 0.5, "night": True, "quality": 78,
+        "roll": 0.5, "night": True, "fade": 14, "quality": 78,
     },
     "charon": {
         "url": f"{COMMONS}/3/39/Charon_map_iau1803c.jpg",
@@ -310,7 +310,8 @@ def detail_level(name, source, base, image, width):
     low_small = resize_wrapped(seen * weight[..., None], BASE, BASE // 2) / np.maximum(resize_wrapped(weight, BASE, BASE // 2), 1e-3)[..., None]
     low = resize_wrapped(low_small.astype(np.float32), width, height, Image.BICUBIC)
     up = resize_wrapped(base, width, height, Image.BICUBIC)
-    fade = erode_feather(valid, 4)
+    # where the 2048 picture fades the detail of the map into a plain tone (Pluto's unseen south), the detail fades over as far here, or the tiles show crisp ground right up to the ragged edge of the map and a seam against the plain beyond it
+    fade = erode_feather(valid, source.get("fade", 4))
     out = up + fade[..., None] * (seen - low)
     return np.clip(out, 0, 1).astype(np.float32)
 
@@ -471,6 +472,9 @@ def selftest():
         assert np.corrcoef(added[..., 0].ravel(), fine[100:400, :, 0].ravel())[0, 1] > 0.8, "the detail is not the source's"
         # where the source holds nothing (the black pole) no detail is added
         assert np.abs((picture - up)[:16]).mean() < 0.01, "detail came from where the source has none"
+        # a source whose edge the picture fades into a plain tone (`fade`) has its detail fade as far: less of it just inside the edge, none of the crisp ground a seam is made of
+        wide = detail_level("fake", {"night": True, "fade": 8}, base, image, width)
+        assert np.abs((wide - up)[44:70]).mean() < 0.6 * np.abs((picture - up)[44:70]).mean(), "a wider fade did not take the detail from the edge"
         entry = cut(picture, tempfile.mkdtemp(), "fake", 2, 100)
         assert entry["columns"] == width // TILE and entry["rows"] == width // 2 // TILE, entry
         assert entry["tiles"] == entry["columns"] * entry["rows"]
