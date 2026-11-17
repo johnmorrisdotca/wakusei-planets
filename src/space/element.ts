@@ -2418,9 +2418,10 @@ export class WakuseiSpace extends HTMLElement {
     else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: was }, bubbles: true, composed: true }));
   }
 
-  /** The body at a point of the element, in CSS pixels: on its disc (at least 14 pixels round its place) or on its name. */
-  #bodyAt(x: number, y: number): BodyId | null {
-    if (!this.#places || !this.#model.labels) return null;
+  /** The body at a point of the element, in CSS pixels: on its disc (at least 14 pixels round its place) or on its name. A press (`#up`) and the hover (`#pointAt`) both ask this, so what lights up under the pointer is what a press picks. */
+  #bodyAt(x: number, y: number, pressing = false): BodyId | null {
+    // the hover lights a system only with the names on; a press picks a body on its disc whether the names are shown or not
+    if (!this.#places || (!pressing && !this.#model.labels)) return null;
     let best: BodyId | null = null;
     let bestD = Infinity;
     for (const [id, at] of Object.entries(this.#places)) {
@@ -2618,18 +2619,8 @@ export class WakuseiSpace extends HTMLElement {
     if (Math.hypot(event.clientX - this.#downX, event.clientY - this.#downY) > 6) return;
     if (!this.#places) return;
     const rect = this.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    let best: BodyId | undefined;
-    let bestD = Infinity;
-    for (const [id, at] of Object.entries(this.#places)) {
-      if (!at) continue;
-      const d = Math.hypot(x - at.x, y - at.y);
-      if (d <= Math.max(at.r, 14) && d < bestD) {
-        best = id as BodyId;
-        bestD = d;
-      }
-    }
+    // the one hit test the hover uses: a body's disc (14 pixels at least) or, failing that, a drawn name's box, so a press on a name picks its body
+    const best = this.#bodyAt(event.clientX - rect.left, event.clientY - rect.top, true);
     if (best) this.#press(best);
   };
   #labelClick = (event: Event): void => {
