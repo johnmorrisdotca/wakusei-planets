@@ -6,6 +6,8 @@ import type { ThreeParts } from "../scene/body.ts";
 import { rocksAround } from "./detail.ts";
 import { DISC_FRAGMENT, DISC_VERTEX, GROUND_FRAGMENT, GROUND_VERTEX, OBJECT_FRAGMENT, OBJECT_VERTEX, ROCK_FRAGMENT, ROCK_VERTEX, SHADOW_FRAGMENT, SHADOW_VERTEX, TRACK_FRAGMENT, TRACK_VERTEX, DUST_FRAGMENT, DUST_VERTEX, PLUME_FRAGMENT, PLUME_VERTEX } from "./glsl.ts";
 import { driveParts, type DriveState } from "./drive.ts";
+import type { VehicleModel } from "./model.ts";
+import { modelShadowParts } from "./rig.ts";
 import { placePart, ascentParts, landerParts } from "./shapes.ts";
 import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
@@ -33,6 +35,8 @@ export interface SurfaceState {
   scale?: number;
   /** The rover being driven, as `driveStep` leaves it: drawn in place of the one standing at its published place. */
   vehicle?: DriveState;
+  /** A loaded rover model (`loadVehicleModel`): drawn in place of the shapes of the rover being driven, with its own materials, over the ground. */
+  model?: VehicleModel;
   /** The path the driven rover has left, east, north, east, north, ... in metres: drawn as tracks. */
   trail?: readonly number[];
   /** The lunar module coming down (Apollo 17's descent): where it is, how high over the ground under it, which way it flies and the share of full thrust; drawn whole, with its plume, in place of the one standing at its place. */
@@ -422,13 +426,25 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       let vehicleMesh: InstanceType<ThreeParts["Mesh"]> | undefined;
       let vehicleShadow: InstanceType<ThreeParts["Mesh"]> | undefined;
       let vehicleCount = 0;
+      let modelDrawn: VehicleModel | undefined;
       const makeVehicle = (state: SurfaceState): void => {
         const v = state.vehicle;
         if (v === undefined || state.objects === false) {
+          modelDrawn = undefined;
           if (vehicleMesh !== undefined) vehicleMesh.visible = false;
           if (vehicleShadow !== undefined) vehicleShadow.visible = false;
           return;
         }
+        if (state.model !== undefined) {
+          // a model draws itself (in its own pass, after the ground); the shapes are hidden and its shadow is a box the size of its body
+          if (vehicleMesh !== undefined) vehicleMesh.visible = false;
+          const sun = state.sky.sun;
+          state.model.place(v, [sun.enu[0], sun.enu[2], -sun.enu[1]], Math.max(0, Math.min(1, sun.altitude / 8)));
+          modelDrawn = state.model;
+          makeVehicleShadow(state, modelShadowParts(v, state.model.rig, state.model.height));
+          return;
+        }
+        modelDrawn = undefined;
         const parts = driveParts(v);
         const count = parts.reduce((n, part) => n + part.position.length / 3, 0);
         if (vehicleMesh === undefined || count !== vehicleCount) {
@@ -467,6 +483,10 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         position.needsUpdate = true;
         normal.needsUpdate = true;
         vehicleMesh.visible = true;
+        makeVehicleShadow(state, parts);
+      };
+      const makeVehicleShadow = (state: SurfaceState, parts: readonly Part[]): void => {
+        const v = state.vehicle!;
         const shadow = state.shadows === false ? [] : partShadows(parts, v.y, state.sky.sun.azimuth, state.sky.sun.altitude);
         const geometry = new T.BufferGeometry();
         geometry.setAttribute("position", new T.BufferAttribute(new Float32Array(shadow), 3));
@@ -770,9 +790,13 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
             } else if (target.width !== w || target.height !== h) target.setSize(w, h);
             three.setRenderTarget(target);
             gl.render(scene, camera);
+            modelDrawn?.render(gl as never, uniforms.uVP.value as Float32Array);
             three.setRenderTarget(null);
             gl.render(blitScene, camera);
-          } else gl.render(scene, camera);
+          } else {
+            gl.render(scene, camera);
+            modelDrawn?.render(gl as never, uniforms.uVP.value as Float32Array);
+          }
           if (measuring) {
             const canvas = gl.domElement;
             // reading one pixel back waits for the card to finish the draw (`finish` returns at once in a browser that draws in another process)

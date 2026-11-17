@@ -191,6 +191,11 @@
       "import": "./dist/surface/element.js",
       "default": "./dist/surface/element.js"
     },
+    "./surface/model": {
+      "types": "./dist/surface/model.d.ts",
+      "import": "./dist/surface/model.js",
+      "default": "./dist/surface/model.js"
+    },
     "./surface/land": {
       "types": "./dist/surface/land.d.ts",
       "import": "./dist/surface/land.js",

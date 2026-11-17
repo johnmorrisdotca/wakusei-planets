@@ -459,6 +459,65 @@ test("the descent says when it ends and what state it is in: wakusei-landing-sta
   expect((await events()).filter((e) => e.startsWith("ended"))).toHaveLength(2);
 });
 
+const MODEL = "/wakusei-planets/models/perseverance.glb";
+
+test("drive-model draws NASA's Perseverance in place of the shapes: its wheels roll and its corner pivots steer with the drive, its eye is the seat view, and the drive takes its size", async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await open(page, `shadows=off detail=off drive=on drive-model=${MODEL}`);
+  await expect.poll(() => read(page, (el) => (el as unknown as { driveModel?: unknown }).driveModel !== undefined), { timeout: 120_000 }).toBe(true);
+  const rolled = await read(page, (el) => {
+    const e = el as unknown as { driveModel: { nodes: string[]; angles: Record<string, number>; rig: { track: number; wheelbase: number; wheelRadius: number; seat: number[] } }; driveFor(s: number, i: { throttle: number; steer: number }): boolean; vehicle: { spin: number[]; steer: number; y: number } };
+    e.driveFor(1.5, { throttle: 1, steer: 0.6 });
+    const model = e.driveModel;
+    return { nodes: model.nodes, angles: model.angles, rig: model.rig, spin: e.vehicle.spin, steer: e.vehicle.steer };
+  });
+  for (const name of ["wheel-fl", "wheel-fr", "wheel-ml", "wheel-mr", "wheel-rl", "wheel-rr", "steer-fl", "steer-fr", "steer-rl", "steer-rr", "eye"]) expect(rolled.nodes, name).toContain(name);
+  expect(rolled.rig.track, "the track is the model's (about 2.3 m between the wheels' middles), not the lunar rover's 1.9").toBeGreaterThan(2.1);
+  expect(rolled.rig.track).toBeLessThan(2.7);
+  expect(rolled.rig.wheelRadius, "a Mars wheel is about 0.26 m in radius").toBeGreaterThan(0.2);
+  expect(rolled.rig.wheelRadius).toBeLessThan(0.35);
+  expect(rolled.steer, "the steering has turned").toBeGreaterThan(0.1);
+  expect(rolled.angles["wheel-fl"]).toBeCloseTo(rolled.spin[0]!, 9);
+  expect(rolled.angles["wheel-rr"]).toBeCloseTo(rolled.spin[3]!, 9);
+  expect(rolled.angles["wheel-ml"]).toBeCloseTo((rolled.spin[0]! + rolled.spin[2]!) / 2, 9);
+  expect(rolled.angles["steer-fl"], "right is the model's -Y: the front pivots turn one way").toBeCloseTo(-rolled.steer, 9);
+  expect(rolled.angles["steer-rr"], "the rear the other").toBeCloseTo(rolled.steer, 9);
+  // the seat view takes the model's eye (the numbers are tested in test/rig.test.ts; here it is asked for with the model loaded)
+  const seat = await read(page, (el) => {
+    const e = el as unknown as { driveCamera: string; driveModel: { rig: { seat: number[] } } };
+    e.driveCamera = "seat";
+    return { camera: e.driveCamera, eye: e.driveModel.rig.seat };
+  });
+  expect(seat.camera).toBe("seat");
+  expect(seat.eye[1], "Perseverance's eye is 1.95 m up").toBeCloseTo(1.95, 1);
+  // it draws, and a drive after it still draws and says nothing wrong
+  const before = await draws(page);
+  const renders = await read(page, (el) => (el as unknown as { driveModel: { renders: number } }).driveModel.renders);
+  await read(page, (el) => (el as unknown as { driveFor(s: number, i: { throttle: number; steer: number }): boolean }).driveFor(0.5, { throttle: 1, steer: 0 }));
+  await drawnTo(page, before + 1);
+  await expect.poll(() => read(page, (el) => (el as unknown as { driveModel: { renders: number } }).driveModel.renders), { message: "the model is drawn by the scene" }).toBeGreaterThan(renders);
+  expect(errors).toEqual([]);
+});
+
+test("drive-model that cannot be loaded says so and the shapes are drawn: the drive goes on with the lunar rover's measures", async ({ page }) => {
+  test.setTimeout(300_000);
+  await open(page, "shadows=off detail=off drive=on");
+  const said = await read(page, (el) => {
+    const log: string[] = [];
+    Reflect.set(window, "__model", log);
+    el.addEventListener("wakusei-model", () => log.push("model"));
+    el.addEventListener("wakusei-model-error", (event) => log.push(`error:${(event as CustomEvent).detail.url}`));
+    el.setAttribute("drive-model", "/wakusei-planets/models/none.glb");
+    return log.length;
+  });
+  expect(said).toBe(0);
+  await expect.poll(() => page.evaluate(() => [...(Reflect.get(window, "__model") as string[])]), { timeout: 60_000 }).toEqual(["error:/wakusei-planets/models/none.glb"]);
+  const after = await read(page, (el) => ({ model: (el as unknown as { driveModel?: unknown }).driveModel, driving: el.vehicle !== undefined }));
+  expect(after).toEqual({ model: undefined, driving: true });
+});
+
 test("the ground camera stands 150 m north of the touchdown point, looking south at the lander, and watch-from moves it", async ({ page }) => {
   test.setTimeout(300_000);
   await open(page, "shadows=off detail=off");
