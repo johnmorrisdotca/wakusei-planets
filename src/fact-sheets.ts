@@ -125,7 +125,7 @@ const NASA: Record<FactSheetId, string> = {
 const DESCRIPTION: Record<FactSheetId, { en: string; ja: string }> = {
   sun: {
     en: "The star at the centre of the solar system. It holds almost all of the system's mass and its light and heat keep every planet going.",
-    ja: "太陽系の中心にある恒星です。太陽系のほぼすべての質量を持ち、その光と熱がすべての惑星を支えています。",
+    ja: "太陽系の中心にある恒星です。太陽系の質量のほぼすべてを占め、その光と熱がすべての惑星を支えています。",
   },
   mercury: {
     en: "The smallest planet and the nearest to the Sun. It is a dry, cratered rock with almost no air, so its days are scorching and its nights bitterly cold.",
@@ -133,35 +133,35 @@ const DESCRIPTION: Record<FactSheetId, { en: string; ja: string }> = {
   },
   venus: {
     en: "A rocky planet almost the size of the Earth, wrapped in thick clouds and a heavy carbon dioxide atmosphere that makes it the hottest planet. It turns backwards, very slowly.",
-    ja: "地球とほぼ同じ大きさの岩の惑星です。厚い雲と重い二酸化炭素の大気に包まれ、太陽系でいちばん高温です。とてもゆっくり、逆向きに自転します。",
+    ja: "地球とほぼ同じ大きさの岩の惑星です。厚い雲と二酸化炭素の濃い大気に包まれ、惑星の中でいちばん高温です。とてもゆっくり、逆向きに自転します。",
   },
   earth: {
     en: "Our home, the only place known to have life. It is the one planet with liquid water on its surface, and it has one large Moon.",
-    ja: "私たちの住む星で、生命が知られている唯一の場所です。表面に液体の水がある唯一の惑星で、大きな月を1つ持っています。",
+    ja: "私たちの住む星で、生命が確認されている唯一の場所です。表面に液体の水がある唯一の惑星で、大きな衛星を1つ持っています。",
   },
   mars: {
     en: "A cold, dry, rusty-red desert planet with a thin air of carbon dioxide, the tallest volcano known and two small moons. Robots have explored its surface for decades.",
-    ja: "二酸化炭素の薄い大気をもつ、冷たく乾いた赤さび色の砂漠の惑星です。知られている中で最も高い火山と、2つの小さな月があります。何十年も前からロボットが地表を調べています。",
+    ja: "二酸化炭素の薄い大気を持つ、冷たく乾いた赤さび色の砂漠の惑星です。知られている中で最も高い火山と、2つの小さな衛星があります。何十年も前からロボットが地表を調べています。",
   },
   jupiter: {
     en: "The largest planet, a giant ball of hydrogen and helium with bands of cloud and a storm bigger than the Earth that has raged for centuries. It has a faint ring and a great many moons.",
-    ja: "最大の惑星で、水素とヘリウムでできた巨大なガスの球です。雲の縞模様と、何百年も続く地球より大きな嵐があります。かすかな環と、たくさんの月を持っています。",
+    ja: "最大の惑星で、水素とヘリウムでできた巨大なガスの球です。雲の縞模様と、何百年も続く地球より大きな嵐があります。かすかな環と、たくさんの衛星を持っています。",
   },
   saturn: {
     en: "A giant planet of hydrogen and helium, famous for its wide, bright rings of ice. It is light enough that it would float in a big enough bath, and it has more known moons than any other planet.",
-    ja: "水素とヘリウムでできた巨大な惑星で、氷でできた広く明るい環で知られています。とても軽く、十分に大きな風呂があれば浮かぶほどです。知られている月の数は惑星の中でいちばん多いです。",
+    ja: "水素とヘリウムでできた巨大な惑星で、氷でできた広く明るい環で知られています。密度が水より小さく、十分に大きなお風呂があれば浮かぶほどです。知られている衛星の数は惑星の中でいちばん多いです。",
   },
   uranus: {
     en: "A cold blue-green giant that spins on its side, as if rolling round the Sun. Its air of hydrogen, helium and methane gives it its colour, and it has faint rings and many moons.",
-    ja: "冷たい青緑色の巨大な惑星で、横倒しになって、転がるように太陽のまわりを回ります。水素、ヘリウム、メタンの大気がその色を生みます。かすかな環と多くの月があります。",
+    ja: "冷たい青緑色の巨大な惑星で、横倒しになって、転がるように太陽のまわりを回ります。水素、ヘリウム、メタンの大気がその色を生みます。かすかな環と多くの衛星があります。",
   },
   neptune: {
     en: "The farthest planet from the Sun, a deep blue giant with the fastest winds known on any planet. It takes about 165 years to go once round the Sun and has faint rings and many moons.",
-    ja: "太陽からいちばん遠い惑星で、濃い青色の巨大な惑星です。惑星の中で最も速い風が吹きます。太陽を1周するのに約165年かかり、かすかな環と多くの月があります。",
+    ja: "太陽からいちばん遠い惑星で、濃い青色の巨大な惑星です。知られている中で最も速い風が吹きます。太陽を1周するのに約165年かかり、かすかな環と多くの衛星があります。",
   },
   pluto: {
     en: "A small, icy dwarf planet in the Kuiper belt beyond Neptune, with a heart-shaped bright plain, a thin air that freezes and falls as snow when it moves away from the Sun, and five known moons.",
-    ja: "海王星の外のカイパーベルトにある、小さく氷でできた準惑星です。ハート形の明るい平原があり、薄い大気は太陽から遠ざかると凍って雪になります。知られている月は5つです。",
+    ja: "海王星より外側のカイパーベルトにある、小さく氷でできた準惑星です。ハート形の明るい平原があり、薄い大気は太陽から遠ざかると凍って雪になります。知られている衛星は5つです。",
   },
 };
 

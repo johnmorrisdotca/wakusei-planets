@@ -110,17 +110,17 @@ map.addEventListener("wakusei-flat-pick", (event) => {
 
 ## どの天体も、いろいろな図法で
 
-`<wakusei-flat>` は月と火星を、1度が縦にも横にも同じ長さの普通の地図で描きます。同じ入口の純粋な側には、ほかの天体の描かれた地図(`textures/` に絵のある25天体、水星から冥王星の衛星カロンまで)を5つの図法で平らにする計算もあり、デモの平面地図のページにはそのパネルがあります。天体と図法を選び、中心を回し、格子を決めると、表示した時刻に太陽が真上にある場所を輪で示します。
+`<wakusei-flat>` は月と火星を、1度が縦にも横にも同じ長さの地図 (正距円筒図法) で描きます。DOM を使わない `/flat` の入口には、ほかの天体の描かれた地図 (`textures/` に絵のある25天体、水星から冥王星の衛星カロンまで) を5つの図法で平面に投影する計算もあり、デモの平面地図のページには、それを使うパネルがあります。天体と図法を選び、地図の中心を動かし、経緯線を選ぶと、表示している時刻に太陽が真上にある場所が輪で示されます。
 
 | 図法 | 保たれるもの | 形 |
 |---|---|---|
 | `equirectangular` (正距円筒図法) | 絵のまま | 幅が高さの2倍の長方形 |
-| `mercator` (メルカトル図法) | 角度(小さな形はそのまま)。極は無限遠になるので北緯・南緯85.05度で止まる | 正方形 |
+| `mercator` (メルカトル図法) | 角度 (小さな形はそのまま)。極は無限遠になるため、北緯・南緯85.05度までを描く | 正方形 |
 | `sinusoidal` (サンソン図法) | 面積。どの緯線も本当の長さ | 葉の形 |
 | `mollweide` (モルワイデ図法) | 面積 | 幅が高さの2倍の楕円 |
-| `azimuthal` (正距方位図法) | 中心からの距離(中心は極を含む任意の点) | 円盤。中心の反対側の点が縁 |
+| `azimuthal` (正距方位図法) | 中心からの距離 (中心は極を含む任意の点) | 円形。中心の反対側の点が縁 |
 
-`projectMap(projection, lon, lat, centre)` と `unprojectMap(projection, x, y, centre)` は、地図の中心からの半径を単位に(x は東、y は北)、行きと帰りを計算します。`unprojectMap` は、葉・楕円・円盤の外では `null` を返します。`graticule(projection, step, centre)` は経線と緯線を、地図をまたぐところ(円盤の縁)で切った線分として返し、メルカトルでは極に線を引きません。`mapOutline` は縁、`fitMap` と `mapPixels` は地図を箱に収め、`mapSun` は地図上の太陽直下点、`resampleMap(picture, projection, width, height, { centre, zoom })` は、天体の描かれた地図(ピクセル。`ImageData` またはRGBAのバイト列)を、その図法の同じ天体にして返します。ピクセルの間は滑らかに、継ぎ目では回り込み、極では端の値を保ち、地図の形の外は透明です。ページもキャンバスも依存パッケージも要りません。
+`projectMap(projection, lon, lat, centre)` は経度・緯度から地図上の位置を、`unprojectMap(projection, x, y, centre)` は地図上の位置から経度・緯度を求めます。位置は、地図の中心からの半径を単位にした値です (x は東、y は北)。`unprojectMap` は、葉の形・楕円・円の外では `null` を返します。`graticule(projection, step, centre)` は経線と緯線を、地図の端 (円形の図法では縁) をまたぐところで切った折れ線として返し、メルカトル図法では極に線を引きません。`mapOutline` は地図の縁の線、`fitMap` と `mapPixels` は地図を枠に収め、`mapSun` は地図上の太陽直下点を返します。`resampleMap(picture, projection, width, height, { centre, zoom })` は、天体の描かれた地図 (ピクセル。`ImageData` または RGBA のバイト列) を、その図法で描いた同じ天体の絵に変換して返します。ピクセルの間は滑らかに補間し、左右の継ぎ目では反対側へ回り込み、極では端の値を保ち、地図の形の外は透明です。ページも canvas も依存パッケージも要りません。
 
 ```js
 import { PROJECTIONS, graticule, projectMap, resampleMap, unprojectMap } from "@johnmorrisdotca/wakusei-planets/flat";
@@ -151,7 +151,7 @@ azimuthal: -2.07, 0.97; back at 18.65, -133.80
 800 pixels, the corner is empty
 ```
 
-`<wakusei-flat>` 自体は今も普通の地図だけを描きます。パン、選択、地上軌跡のすべてが普通の地図を前提にしているため、要素に `projection` 属性を持たせるのは大きな変更で、ここには含みません。
+`<wakusei-flat>` 自体は、今も正距円筒図法の地図だけを描きます。移動、選択、地上軌跡のどれも正距円筒図法の地図を前提にしているため、要素に `projection` 属性を持たせるのは大きな変更になり、今回は含みません。
 
 ## ブラウザなしで
 

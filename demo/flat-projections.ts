@@ -179,7 +179,7 @@ export function startProjections(host: ProjectionsHost): { render(): void; stats
     const l = host.lang();
     const label = word(`pj_${projection}`);
     canvas.setAttribute("aria-label", host.say("pj_alt", { body: name(body), proj: label }));
-    caption.textContent = host.say("pj_caption", { body: name(body), proj: label, middle: projection === "azimuthal" ? `${coordinateText(l, "lat", c.lat)}, ${coordinateText(l, "lon", c.lon)}` : coordinateText(l, "lon", c.lon), lat: coordinateText(l, "lat", sun.lat), lon2: coordinateText(l, "lon", sun.lon) });
+    caption.textContent = host.say("pj_caption", { body: name(body), proj: label, middle: projection === "azimuthal" ? `${coordinateText(l, "lat", c.lat)}${l === "ja" ? "、" : ", "}${coordinateText(l, "lon", c.lon)}` : coordinateText(l, "lon", c.lon), lat: coordinateText(l, "lat", sun.lat), lon2: coordinateText(l, "lon", sun.lon) });
     canvas.dataset["body"] = body;
     canvas.dataset["projection"] = projection;
     canvas.dataset["sunX"] = String(Math.round(spot.x));
