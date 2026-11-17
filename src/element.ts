@@ -37,7 +37,7 @@ export { setThreeLoader };
 export { placeLine, setPlacesLoader } from "./scene/place-layer.ts";
 
 /**
- * What the element is doing: `line` (an SVG), `loading` (waiting for three.js or a picture), `still` (a picture of the 3D look, nothing running), `live` (drawing), `lost` (the GPU took the context; it comes back by itself) or `unavailable` (no WebGL: the line drawing is shown).
+ * What the element is doing: `line` (an SVG), `loading` (waiting for three.js or a picture, or for the element to come into sight: a still is made only for a picture on the screen, so one below the fold of a box that scrolls, a short card for instance, stays `loading` until it is scrolled to), `still` (a picture of the 3D look, nothing running), `live` (drawing), `lost` (the GPU took the context; it comes back by itself) or `unavailable` (no WebGL: the line drawing is shown).
  *
  * @example
  * ```ts no-run
