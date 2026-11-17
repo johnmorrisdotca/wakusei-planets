@@ -445,6 +445,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
 | `.../plan` | The top-down plan: `planAt`, `planSvg`, `planText`. `.../plan/element` is `<wakusei-plan>`, in SVG with no WebGL. |
+| `.../landing-sites` | The 39 soft landings on the Moon and Mars as plain data: `LANDING_SITES`, `landingSitesOf`, `findLandingSite`, `flagCodeOf`. No browser, no three.js. |
 | `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
 | `.../sheets` | Printable colouring sheets for children: the Sun, the planets and the big moons in thick lines with the real colours and three facts, and all the planets at one scale, in English and Japanese (`kidsSvg`, `kidsSheet`, `kidsFacts`). |
 | `.../look` | What a body needs to be drawn with three.js. |
@@ -494,6 +495,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Starman and the Tesla Roadster](docs/guides/roadster.md) | where the car launched on the first Falcon Heavy is on any date from 2018 to the start of 2036, its distances, speeds, orbit and key moments |
 | [Comets](docs/guides/comets.md) | 34 well-known comets with orbits from JPL: where each is on any date, its distances, orbit line, last and next perihelion, meteor showers, and a door to add a new comet |
 | [Places on the Moon, Mars and 31 more bodies](docs/guides/places.md) | every landing, rover, crash, impact and atmospheric-entry site and the named features of 33 bodies, with positions, dates and sources, the famous ones marked, and the Sun's point, the terminator and the local solar time on any body |
+| [Landing sites, with their flags](docs/guides/landing-sites.md) | the 28 soft landings on the Moon and 11 on Mars as one small plain list (names in English and Japanese, day, point, agency, country, the page each coordinate is from), and `site-flags` on the 3D views: the sites named beside their dots with their country's flag, from `@johnmorrisdotca/hata` when the page has it |
 | [Which face of a body the view looks at](docs/guides/which-face.md) | `subCameraPoint()` and `faceTo()` on the space view and on a body's picture: the longitude and latitude under the camera, and a turn to a point, for a card picture that follows the view |
 | [Data files](docs/guides/data-files.md) | CSV and Parquet tables of the bodies, orbits and spacecraft, for Python, R and Rust |
 | [Serve it yourself](docs/guides/serve-it-yourself.md) | A small Node server over the package, that you host |

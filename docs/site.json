@@ -140,6 +140,11 @@
       "ja": "彗星: ハレー、エンケ、ヘール・ボップ、ネオワイズ、オウムアムアなど有名な34個の軌道 (JPL小天体データベース)、任意の日の位置、距離、軌道の線、関連する流星群 (gzip で約6 kB)",
       "platform": "node"
     },
+    "./landing-sites": {
+      "en": "Landing sites: every soft landing on the Moon and Mars, with names, day, point, agency, country (as a flag code) and the page each coordinate is from",
+      "ja": "着陸地点: 月と火星の軟着陸すべて。名前・日付・位置・運用機関・国 (国旗のコード)・各座標の出典ページつき",
+      "platform": "node"
+    },
     "./places": {
       "en": "Places on a body: the record's shape, lookups by kind, name and nearness, distances over the surface, and the sub-solar point, the terminator and the local solar time at any moment",
       "ja": "天体上の場所: 記録の形、種類・名前・近さによる検索、地表上の距離、任意の時刻の太陽直下点・明暗境界線・地方太陽時",

@@ -1,5 +1,6 @@
 // The "Places" row shared by the body page and the space page: the layers of places marked on the body (landings, crashes, planned, features), kept in the address as `places`, a few
 // places to go to, the chosen place's name and what it is, and the credit the places owe their sources. The row writes the element's `places` attribute; the lists load as chunks of their own.
+import "@johnmorrisdotca/hata/element/define";
 import { loadPlaces, PLACES_CREDITS, PLACE_LAYERS, readPlaceLayers, type Place, type PlaceLayer } from "../src/places.ts";
 import { placeLine, setPlacesLoader } from "../src/scene/place-layer.ts";
 
@@ -12,10 +13,12 @@ interface Address {
 
 export interface PlacesState {
   layers: PlaceLayer[];
+  /** The landing sites carry their country's flag (the `site-flags` attribute). */
+  flags: boolean;
 }
 
 /** The row's state from the address (`places=landing,crash`). */
-export const readPlacesState = (address: Address): PlacesState => ({ layers: readPlaceLayers(address.get("places") ?? "none") });
+export const readPlacesState = (address: Address): PlacesState => ({ layers: readPlaceLayers(address.get("places") ?? "none"), flags: address.get("flags") === "1" });
 
 const $$ = (selector: string): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>(selector)];
 
@@ -25,6 +28,12 @@ export function bindPlacesRow(state: PlacesState, element: HTMLElement & { goToP
     b.addEventListener("click", () => {
       const layer = b.dataset["layer"] as PlaceLayer;
       state.layers = state.layers.includes(layer) ? state.layers.filter((l) => l !== layer) : PLACE_LAYERS.filter((l) => l === layer || state.layers.includes(l));
+      render();
+    });
+  }
+  for (const b of $$("#place-flags [data-flags]")) {
+    b.addEventListener("click", () => {
+      state.flags = !state.flags;
       render();
     });
   }
@@ -50,6 +59,12 @@ export function renderPlacesRow(state: PlacesState, element: HTMLElement, addres
     b.setAttribute("aria-pressed", String(on));
     b.classList.toggle("on", on);
   }
+  for (const b of $$("#place-flags [data-flags]")) {
+    b.setAttribute("aria-pressed", String(state.flags));
+    b.classList.toggle("on", state.flags);
+  }
+  element.toggleAttribute("site-flags", state.flags);
+  address.set("flags", state.flags ? "1" : null);
   const value = state.layers.join(" ");
   if (state.layers.length === 0) element.removeAttribute("places");
   else if (element.getAttribute("places") !== value) element.setAttribute("places", value);

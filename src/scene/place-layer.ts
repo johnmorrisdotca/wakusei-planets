@@ -2,6 +2,7 @@
 // Enter. The buttons are kept by the place's id from one draw to the next and only moved, so a turning body moves its marks without making them again. Nothing here draws the 3D picture or asks for a draw.
 import type { Place, PlaceBody } from "../places.ts";
 import type { PlaceLayer, PlaceMark } from "../place-marks.ts";
+import { findLandingSite, flagCodeOf, type LandingSite } from "../landing-sites.ts";
 
 const STYLE = `.wk-places{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .wk-place{position:absolute;left:0;top:0;width:20px;height:20px;margin:-10px 0 0 -10px;padding:0;border:0;background:none;cursor:pointer;pointer-events:auto;will-change:transform;-webkit-tap-highlight-color:transparent}
@@ -16,7 +17,15 @@ const STYLE = `.wk-places{position:absolute;inset:0;pointer-events:none;overflow
 .wk-place[data-name]{width:auto;height:auto;margin:0;padding:0 3px;color:#fff;font:600 12px/1.2 var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:auto}
 .wk-place[data-pure]{pointer-events:none}
 .wk-place[data-name]::before{display:none}
-.wk-place-tip[data-on]{visibility:visible}`;
+.wk-place-tip[data-on]{visibility:visible}
+.wk-place-tip .wk-place-head{display:flex;align-items:center;gap:5px}
+.wk-place-flag{flex:none;height:11px;pointer-events:none}
+.wk-place-flag:not(:defined){display:none}
+.wk-place-site{position:absolute;top:50%;left:13px;display:flex;align-items:center;gap:4px;margin-top:-8px;color:#fff;font:600 11px/16px var(--wakusei-place-font,system-ui,-apple-system,sans-serif);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none}
+.wk-place-site[data-side=left]{left:auto;right:13px;flex-direction:row-reverse}`;
+
+/** A body's radius on the screen, in CSS pixels, from which the landing sites' names are written beside their dots (when the `site-flags` attribute is on). */
+export const SITE_LABEL_FROM_PX = 110;
 
 const KIND_WORD: Record<Place["kind"], { en: string; ja: string }> = {
   crewed: { en: "crewed landing", ja: "有人着陸" },
@@ -60,6 +69,18 @@ export function placeLine(place: Place, lang: "en" | "ja"): string {
   return year === undefined ? word : ja ? `${word}、${year}年` : `${word}, ${year}`;
 }
 
+/** A flag for a country, as `<hata-flag>` (from `@johnmorrisdotca/hata`, which the page imports; where it is not defined the element draws nothing and the name stands alone). */
+function flagFor(place: Place): HTMLElement | undefined {
+  const code = flagCodeOf(place.country);
+  if (code === undefined) return undefined;
+  const flag = document.createElement("hata-flag");
+  flag.className = "wk-place-flag";
+  flag.setAttribute("code", code);
+  flag.setAttribute("border", "");
+  flag.setAttribute("aria-hidden", "true");
+  return flag;
+}
+
 type PlacesLoader = (body: PlaceBody) => Promise<readonly Place[]>;
 // on globalThis, so the separate copies a CDN can load share the one loader
 const SLOT = Symbol.for("@johnmorrisdotca/wakusei-planets/places-loader");
@@ -100,8 +121,8 @@ export function onPlacesLoader(heard: () => void): () => void {
 
 /** The marks over one view. */
 export interface PlaceLayerView {
-  /** Lay these marks, moving the ones already there, adding the new and taking away the rest. */
-  set(marks: readonly PlaceMark[]): void;
+  /** Lay these marks, moving the ones already there, adding the new and taking away the rest. `radiusPx` is the body's radius on the screen: with flags on, the landing sites are named beside their dots from `SITE_LABEL_FROM_PX`. */
+  set(marks: readonly PlaceMark[], radiusPx?: number): void;
   /** Take every mark away. */
   clear(): void;
   /** The marks laid now: the place's id, its layer and where it is, in CSS pixels. */
@@ -116,7 +137,7 @@ export interface PlaceLayerView {
  * @param options - `lang` reads the view's language at the time a tip is shown; `pick` hears a chosen place.
  * @returns The layer.
  */
-export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja"; pick(place: Place, at: { x: number; y: number }): void }): PlaceLayerView {
+export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja"; flags?(): boolean; pick(place: Place, site: LandingSite | undefined, at: { x: number; y: number }): void }): PlaceLayerView {
   const style = document.createElement("style");
   style.textContent = STYLE;
   const box = document.createElement("div");
@@ -128,7 +149,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
   tip.setAttribute("aria-hidden", "true");
   box.append(tip);
   root.append(style, box);
-  const held = new Map<string, { button: HTMLButtonElement; mark: PlaceMark; x: number; y: number; lang: string }>();
+  const held = new Map<string, { button: HTMLButtonElement; mark: PlaceMark; x: number; y: number; lang: string; site: LandingSite | undefined; label?: HTMLElement; labelKey?: string }>();
   let shown: { id: string; layer: PlaceLayer; x: number; y: number }[] = [];
   let tipFor: string | null = null;
 
@@ -140,7 +161,14 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
     name.textContent = entry.mark.place.name[lang];
     const line = document.createElement("small");
     line.textContent = placeLine(entry.mark.place, lang);
-    tip.replaceChildren(name, line);
+    const flag = options.flags?.() === true ? flagFor(entry.mark.place) : undefined;
+    if (flag === undefined) tip.replaceChildren(name, line);
+    else {
+      const head = document.createElement("div");
+      head.className = "wk-place-head";
+      head.append(flag, name);
+      tip.replaceChildren(head, line);
+    }
     tip.setAttribute("data-on", "");
     tipFor = id;
     placeTip();
@@ -181,7 +209,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
     button.addEventListener("click", (event) => {
       event.stopPropagation();
       const entry = held.get(id);
-      if (entry !== undefined) options.pick(entry.mark.place, { x: entry.x, y: entry.y });
+      if (entry !== undefined) options.pick(entry.mark.place, entry.site, { x: entry.x, y: entry.y });
     });
     return button;
   };
@@ -208,7 +236,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
       const away = Math.hypot(event.clientX - (r.left + r.right) / 2, event.clientY - (r.top + r.bottom) / 2);
       if (best === undefined || away < best.away) best = { entry, away };
     }
-    if (best !== undefined) options.pick(best.entry.mark.place, { x: best.entry.x, y: best.entry.y });
+    if (best !== undefined) options.pick(best.entry.mark.place, best.entry.site, { x: best.entry.x, y: best.entry.y });
   };
   const nameCancel = (): void => {
     pressed = null;
@@ -216,8 +244,66 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
   window.addEventListener("pointerdown", nameDown, true);
   window.addEventListener("pointerup", nameUp, true);
   window.addEventListener("pointercancel", nameCancel, true);
+
+  // The landing sites' names beside their dots, with the country's flag: only with flags on, only on a body close enough to leave the room, and each in the first of the right or the left side that clears the dots and the names
+  // already written (marks come in the order they matter). A label belongs to its dot's button, so a press on it is the dot's.
+  const labelSites = (marks: readonly PlaceMark[], radiusPx: number): void => {
+    const lang = options.lang();
+    const width = box.clientWidth;
+    const on = options.flags?.() === true && radiusPx >= SITE_LABEL_FROM_PX;
+    // the names of the surface (Mare Imbrium, Plato) are written first and keep their place: a site's label goes round them
+    const taken: { x0: number; x1: number; y0: number; y1: number }[] = marks
+      .filter((mark) => mark.label === true && (mark.fade ?? 1) > 0.2)
+      .map((mark) => {
+        const halfWidth = Math.ceil(mark.place.name[lang].length * 3.7) + 5;
+        return { x0: mark.x - halfWidth, x1: mark.x + halfWidth, y0: mark.y - 9, y1: mark.y + 9 };
+      });
+    const dots = marks.filter((mark) => mark.label !== true).map((mark) => ({ mark, x0: mark.x - 8, x1: mark.x + 8, y0: mark.y - 8, y1: mark.y + 8 }));
+    const clear = (r: { x0: number; x1: number; y0: number; y1: number }, self: PlaceMark): boolean =>
+      (width <= 0 || (r.x0 >= 0 && r.x1 <= width)) && !taken.some((o) => r.x0 < o.x1 && r.x1 > o.x0 && r.y0 < o.y1 && r.y1 > o.y0) &&
+      !dots.some((d) => d.mark !== self && r.x0 < d.x1 && r.x1 > d.x0 && r.y0 < d.y1 && r.y1 > d.y0);
+    for (const mark of marks) {
+      const entry = held.get(mark.place.id);
+      if (entry === undefined) continue;
+      let side: "right" | "left" | undefined;
+      if (on && mark.label !== true && entry.site !== undefined) {
+        const text = entry.site.name[lang];
+        const w = 13 + text.length * 6.4 + (flagCodeOf(entry.site.country) === undefined ? 0 : 19);
+        const right = { x0: mark.x + 10, x1: mark.x + 10 + w, y0: mark.y - 8, y1: mark.y + 8 };
+        const left = { x0: mark.x - 10 - w, x1: mark.x - 10, y0: mark.y - 8, y1: mark.y + 8 };
+        const spot = clear(right, mark) ? right : clear(left, mark) ? left : undefined;
+        if (spot !== undefined) {
+          taken.push(spot);
+          side = spot === right ? "right" : "left";
+        }
+      }
+      if (side === undefined) {
+        entry.label?.remove();
+        entry.label = undefined;
+        entry.labelKey = undefined;
+        continue;
+      }
+      const key = `${lang}|${side}`;
+      if (entry.label === undefined || !entry.label.isConnected || entry.labelKey !== key) {
+        entry.label?.remove();
+        const label = document.createElement("span");
+        label.className = "wk-place-site";
+        label.setAttribute("part", "place-site");
+        label.setAttribute("aria-hidden", "true");
+        label.dataset.side = side;
+        const flag = flagFor(mark.place);
+        const name = document.createElement("span");
+        name.textContent = entry.site!.name[lang];
+        if (flag !== undefined) label.append(flag);
+        label.append(name);
+        entry.button.append(label);
+        entry.label = label;
+        entry.labelKey = key;
+      }
+    }
+  };
   return {
-    set(marks) {
+    set(marks, radiusPx = 0) {
       const lang = options.lang();
       const next = new Set<string>();
       for (const mark of marks) {
@@ -226,7 +312,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
         let entry = held.get(id);
         if (entry === undefined) {
           const button = make(mark);
-          entry = { button, mark, x: Number.NaN, y: Number.NaN, lang: "" };
+          entry = { button, mark, x: Number.NaN, y: Number.NaN, lang: "", site: findLandingSite(id) };
           held.set(id, entry);
           box.insertBefore(button, tip);
         }
@@ -265,6 +351,7 @@ export function createPlaceLayer(root: ShadowRoot, options: { lang(): "en" | "ja
           entry.button.style.transform = `translate(${mark.x.toFixed(1)}px,${mark.y.toFixed(1)}px)${shift}`;
         }
       }
+      labelSites(marks, radiusPx);
       for (const [id, entry] of held) {
         if (next.has(id)) continue;
         entry.button.remove();

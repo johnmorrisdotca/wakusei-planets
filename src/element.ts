@@ -135,7 +135,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "cutaway", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -310,6 +310,17 @@ export class WakuseiBody extends HTMLElement {
     if (layers === null || layers.length === 0) this.removeAttribute("places");
     else this.setAttribute("places", layers.join(" "));
   }
+  /**
+   * Whether the places carry their country's flag (the attribute `site-flags`): the tip of a place with a country shows its flag, and on a body close enough on the screen (110 pixels of radius) the landing sites (`LANDING_SITES` from
+   * `/landing-sites`) are named beside their dots, each with its flag. The flag is `<hata-flag>` from `@johnmorrisdotca/hata`, which the page imports itself (`import "@johnmorrisdotca/hata/element/define"`); until it is defined the name stands alone. Needs `places`.
+   * The `wakusei-place` event's detail carries the landing site as `site` where the place is one. Setting it writes the attribute.
+   */
+  get siteFlags(): boolean {
+    return this.hasAttribute("site-flags");
+  }
+  set siteFlags(on: boolean) {
+    this.toggleAttribute("site-flags", on);
+  }
   /** The marks laid on the body now: each place's id, its layer and where its mark is, in CSS pixels from the picture's top left. */
   get placesShown(): readonly { id: string; layer: PlaceLayer; x: number; y: number }[] {
     return this.#placeLayer?.shown ?? [];
@@ -442,7 +453,8 @@ export class WakuseiBody extends HTMLElement {
     if (this.#placeLayer === undefined && this.shadowRoot !== null) {
       this.#placeLayer = createPlaceLayer(this.shadowRoot, {
         lang: () => (this.getAttribute("lang") === "ja" ? "ja" : "en"),
-        pick: (place, at) => this.dispatchEvent(new CustomEvent("wakusei-place", { detail: { body, place, x: at.x, y: at.y }, bubbles: true, composed: true })),
+        flags: () => this.hasAttribute("site-flags"),
+        pick: (place, site, at) => this.dispatchEvent(new CustomEvent("wakusei-place", { detail: { body, place, site, x: at.x, y: at.y }, bubbles: true, composed: true })),
       });
       // a picture with buttons in it is a group, not an image
       if (this.getAttribute("role") === "img") this.setAttribute("role", "group");
@@ -471,7 +483,7 @@ export class WakuseiBody extends HTMLElement {
       height: h,
       radiusPx: (Math.min(w, h) / 2) * (state.zoom / state.extent),
     }, facts.radiusKm, names, [], this.getAttribute("lang") === "ja" ? "ja" : "en");
-    this.#placeLayer.set(marks);
+    this.#placeLayer.set(marks, (Math.min(w, h) / 2) * (state.zoom / state.extent));
   }
 
   /** What the element is doing now. */
@@ -567,7 +579,7 @@ export class WakuseiBody extends HTMLElement {
       this.#refreshLimits();
     }
     this.#lastAnchors = -1;
-    if (name === "places" || name === "lang" || name === "body" || name === "look" || name === "star" || name === "surface-names") this.#markPlaces();
+    if (name === "places" || name === "site-flags" || name === "lang" || name === "body" || name === "look" || name === "star" || name === "surface-names") this.#markPlaces();
     this.#queue();
   }
 

@@ -288,7 +288,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -536,7 +536,7 @@ export class WakuseiSpace extends HTMLElement {
       this.#showNote();
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
-    if (name === "places" || name === "lang" || name === "surface-names") this.#markSurface();
+    if (name === "places" || name === "site-flags" || name === "lang" || name === "surface-names") this.#markSurface();
     if (name === "earth-places" || name === "earth-places-look") this.#askEarthPlaces();
   }
 
@@ -550,6 +550,17 @@ export class WakuseiSpace extends HTMLElement {
   set places(layers: readonly PlaceLayer[] | null) {
     if (layers === null || layers.length === 0) this.removeAttribute("places");
     else this.setAttribute("places", layers.join(" "));
+  }
+  /**
+   * Whether the places carry their country's flag (the attribute `site-flags`): the tip of a place with a country shows its flag, and on a body close enough on the screen (110 pixels of radius) the landing sites (`LANDING_SITES` from
+   * `/landing-sites`) are named beside their dots, each with its flag. The flag is `<hata-flag>` from `@johnmorrisdotca/hata`, which the page imports itself (`import "@johnmorrisdotca/hata/element/define"`); until it is defined the name stands alone. Needs `places`.
+   * The `wakusei-place` event's detail carries the landing site as `site` where the place is one. Setting it writes the attribute.
+   */
+  get siteFlags(): boolean {
+    return this.hasAttribute("site-flags");
+  }
+  set siteFlags(on: boolean) {
+    this.toggleAttribute("site-flags", on);
   }
   /** The marks laid on the body looked at now: each place's id, its layer and where its mark is, in CSS pixels from the view's top left. */
   get placesShown(): readonly { id: string; layer: PlaceLayer; x: number; y: number }[] {
@@ -857,7 +868,8 @@ export class WakuseiSpace extends HTMLElement {
     if (this.#markLayer === undefined) {
       this.#markLayer = createPlaceLayer(root, {
         lang: () => (this.getAttribute("lang") === "ja" ? "ja" : "en"),
-        pick: (place, at) => this.dispatchEvent(new CustomEvent("wakusei-place", { detail: { body: id, place, x: at.x, y: at.y }, bubbles: true, composed: true })),
+        flags: () => this.hasAttribute("site-flags"),
+        pick: (place, site, at) => this.dispatchEvent(new CustomEvent("wakusei-place", { detail: { body: id, place, site, x: at.x, y: at.y }, bubbles: true, composed: true })),
       });
       if (this.getAttribute("role") === "img") this.setAttribute("role", "group");
     }
@@ -867,7 +879,7 @@ export class WakuseiSpace extends HTMLElement {
     // what the page draws over the body that a name keeps off: the names of the other bodies and of the craft (not the body's own name, which is the body they are written on), and the dots of the craft and the other bodies
     const keepClear: Obstacle[] = this.#nameBoxes.filter((one) => one.id !== id).map((one) => ({ x: one.x + one.width / 2, y: one.y + one.height / 2, halfWidth: one.width / 2, halfHeight: one.height / 2 }));
     for (const [other, at] of Object.entries(this.#places ?? {})) if (at !== null && other !== id) keepClear.push({ x: at.x, y: at.y, halfWidth: 8, halfHeight: 8 });
-    this.#markLayer.set(marksToShow(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm, names, keepClear, this.getAttribute("lang") === "ja" ? "ja" : "en"));
+    this.#markLayer.set(marksToShow(this.#markList.list, layers, { ...surface, scale }, facts.radiusKm, names, keepClear, this.getAttribute("lang") === "ja" ? "ja" : "en"), surface.radiusPx);
   }
 
   #bodyLabel: NameLabelOptions | null | undefined;
