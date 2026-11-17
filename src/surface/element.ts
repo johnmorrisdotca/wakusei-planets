@@ -478,7 +478,7 @@ export class WakuseiSurface extends HTMLElement {
   #noteText(): string {
     const m = this.#terrain?.manifest;
     if (m === undefined) return "";
-    if (this.#site()?.ground === "flat") return this.#lang() === "ja" ? "地面: 高さのデータが追加されるまでの平らな代用です。ここには起伏がありません（実測も、作ったものも）。太陽・空・重力はこの場所と時刻の実際のものです。" : "Ground: flat stand-in until a DTM is added. There is no relief here, measured or made. The Sun, sky and gravity are the real ones for this place and time.";
+    if (this.#site()?.ground === "flat") return this.#lang() === "ja" ? "地面: 高さのデータが追加されるまでの平らな代用です。ここには、実測した起伏も作った起伏もありません。太陽、空、重力は、この場所と時刻の実際のとおりです。" : "Ground: flat stand-in until a DTM is added. There is no relief here, measured or made. The Sun, sky and gravity are the real ones for this place and time.";
     const made = this.#noDetail() ? "" : this.#lang() === "ja" ? "5 m より細かい地形（小さなクレーター、砂塵、岩）は計算で作ったもので、実測ではありません。" : "Detail finer than the 5 m grid (small craters, dust, rocks) is made, not measured.";
     const things = this.#objects.length === 0 ? "" : this.#lang() === "ja" ? " 地面の物は、公表された座標の位置にこのパッケージが置いたもので、形は簡単な絵です。" : " The things on the ground are placed by this package at published positions, as plain drawings.";
     const picture = m.picture === null || m.picture === undefined ? "" : ` ${m.picture.credit}.`;
