@@ -44,7 +44,8 @@ export function surfaceOf() {
       lines.push(describe(symbol.name, real));
     }
   }
-  return `${lines.join("\n")}\n`;
+  // a type the checker names by file prints as import("<absolute path>/src/..."): the snapshot holds the path from the package root, so it is the same in every checkout
+  return `${lines.join("\n").split(root).join("")}\n`;
 
   function describe(name, symbol) {
     const f = symbol.flags;
