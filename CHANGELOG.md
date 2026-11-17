@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The ephemeris package survey, as a record** (MODULES-531). `docs/design/ephemeris-survey.md` lists each surveyed package with its licence line read on its own GitHub page on 2026-11-17 (MIT, Apache-2.0, AGPL-3.0, GPL), what it holds and how accurate it claims to be, and what is still open. Two facts of the first survey were corrected (vsop87 is about 2.3 MB, not 7; the ephemeris package says GPL v2 on its repo).
+
 ## [0.61.0] - 2026-11-17
 
 - **IM-2's three rovers stand on Athena, east of the prime meridian** (MODULES-1402; John Morris, 2026-11-17). GCAT's lander catalogue has the whole IM-2 landing at 84.7906 S, 29.1957 W; NASA's table, which the places take, puts Athena at 29.1957 E, but GRACE, MAPP and Yaoki, which NASA's table does not list, kept the catalogue's point on the far side of the prime meridian. `scripts/make-places-data.py` now moves a rover the catalogue puts at its lander's own point with the lander whenever a better source moves the lander more than 0.05 degree and has no position of its own for the rover; the rovers keep the catalogue's figure in `gcatPosition`. No other rover on the Moon or Mars disagrees with its lander, and a test pins both.
