@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <!--family:header-->
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <span class="fam-label" data-say="fl_body">Body</span>
+            <span class="fam-seg" id="bodies" role="group" data-say-label="fl_body" data-testid="bodies"></span>
+          </div>
+        </div>
+      </div>
+
+      <section class="fam-felt flat-stage" aria-labelledby="stage-h">
+        <h2 id="stage-h" class="fam-sr" data-say="fl_stage">Flat map of the Moon and Mars</h2>
+        <wakusei-flat id="flat" body="moon" texture-base="textures/" data-testid="flat"></wakusei-flat>
+        <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
+        <p class="fam-fine stage-name" data-say="fl_hint">Press an orbiter or a mark for its name. Drag to pan and pinch to zoom; the + and − buttons and the keyboard do the same.</p>
+      </section>
+
+      <div class="fam-panels">
+        <div class="fam-panel controls">
+          <div class="fam-row">
+            <span class="fam-label" data-say="fl_time">Time</span>
+            <span class="fam-seg" id="clock" role="group" data-say-label="fl_time" data-testid="clock"></span>
+            <label class="field"><span data-say="fl_date">Date (UTC)</span><input type="datetime-local" id="date" class="fam-field" data-testid="date" /></label>
+            <span class="fam-fine" id="shown-time" role="status" data-testid="shown-time"></span>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="fl_place">My place</span>
+            <span class="fam-seg" id="places" role="group" data-say-label="fl_place" data-testid="places"></span>
+          </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="fl_orbiters">Orbiters</span>
+            <span class="fam-seg flat-orbiters" id="orbiters" role="group" data-say-label="fl_orbiters" data-testid="orbiters"></span>
+          </div>
+          <p class="fam-fine" id="nopath" data-testid="nopath"></p>
+        </div>
+      </div>
+
+      <section class="fam-panel flat-card" aria-labelledby="card-h" data-testid="card">
+        <h2 id="card-h" data-say="fl_card">The one you chose</h2>
+        <p class="fam-fine" id="card-empty" data-say="fl_card_empty">Press an orbiter or a mark on the map.</p>
+        <div id="card-body" hidden>
+          <p class="flat-card-name" id="card-name"></p>
+          <dl class="flat-facts" id="card-facts"></dl>
+          <p class="fam-fine" id="card-about"></p>
+          <button type="button" class="fam-button" id="make-home" data-say="fl_makeHome" hidden>Make this my place</button>
+        </div>
+      </section>
+
+      <details class="flat-call"><summary data-say="fl_code">The call that draws it</summary><pre><code id="code" data-testid="code"></code></pre></details>
+
+      <p class="fam-fine credits"><span id="credits-map"></span> <span data-say="fl_credits">The orbiters' places are this package's own, from mean elements fitted to JPL Horizons; the sites are from the lander catalogue and the IAU Gazetteer. The Sun's place is worked out from the body's own pole and spin.</span> <a href="https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md">NOTICE.md</a></p>
+
+      <!--family:unreviewed-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts flat.js-->
+  </body>
+</html>
