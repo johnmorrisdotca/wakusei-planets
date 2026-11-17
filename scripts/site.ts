@@ -4,14 +4,14 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
-import { renderCraft, renderEmbed, renderFlat, renderIndex, renderKids, renderLineup, renderPlan, renderPortrait, renderSpace, renderSpaceFull, renderStar, renderSurface } from "./page.ts";
+import { renderCraft, renderEmbed, renderFlat, renderIndex, renderKids, renderLineup, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
 
 await rm(at("site/"), { recursive: true, force: true });
 await mkdir(at("site/"), { recursive: true });
 await build({
-  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts"), at("demo/flat.ts")],
+  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts"), at("demo/flat.ts"), at("demo/system.ts")],
   bundle: true,
   splitting: true,
   format: "esm",
@@ -48,6 +48,7 @@ await writeFile(at("site/craft.html"), renderCraft(), "utf8");
 await writeFile(at("site/lineup.html"), renderLineup(), "utf8");
 await writeFile(at("site/plan.html"), renderPlan(), "utf8");
 await writeFile(at("site/flat.html"), renderFlat(), "utf8");
+await writeFile(at("site/system.html"), renderSystem(), "utf8");
 await writeFile(at("site/surface.html"), renderSurface(), "utf8");
 await cp(at("demo/builder.html"), at("site/builder.html"));
-console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
+console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, system.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");

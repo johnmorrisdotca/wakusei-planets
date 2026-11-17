@@ -152,7 +152,7 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 
 /* The flat map page: the map on the felt, then the rows of choices and the card of the one chosen. */
 .flat-stage { display: grid; gap: 10px; padding: 14px 12px 10px; margin-bottom: 8px; }
-.flat-stage wakusei-flat { width: 100%; color: #e6edf7; }
+.flat-stage wakusei-flat, .flat-stage wakusei-flat-system { width: 100%; color: #e6edf7; }
 .flat-orbiters { flex-wrap: wrap; }
 .flat-card { margin-top: 10px; }
 .flat-card h2 { margin: 0 0 6px; font-size: 1.15rem; }
