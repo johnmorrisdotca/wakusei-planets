@@ -94,6 +94,59 @@ export function moveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, ki
   return { input, bodies };
 }
 
+/** Moons or the planet first, then the body left, then the Sun: the companions the space view hands an arrival (`#companions` of the element, without the nearest planet in the approach direction). */
+function companionsOf(id: BodyId, left: BodyId, mode: ScaleMode, ms: number): { id: string; at: Vec3; rank: 1 | 2 | 3 }[] {
+  const out: { id: string; at: Vec3; rank: 1 | 2 | 3 }[] = [];
+  const add = (body: BodyId, rank: 1 | 2 | 3): void => {
+    if (body !== id && !out.some((c) => c.id === body)) out.push({ id: body, at: site(body, mode, ms).at, rank });
+  };
+  const host = hostOf(id);
+  if (host !== undefined) add(host, 1);
+  for (const moon of (MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? []) add(moon, 1);
+  add(left, 2);
+  if (id !== "sun") add("sun", 3);
+  return out;
+}
+
+/** How far out, in the planet's radii, the space view frames a planet with its nearer moons (`zoomFor("<planet>-moons")`, which is what the site goes to a planet at): 4.1 for a body with none. */
+export function moonsFit(id: BodyId, mode: ScaleMode, ms: number): number {
+  const moons = (MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? [];
+  if (moons.length === 0 || hostOf(id) !== undefined) return 4.1;
+  const radius = site(id, mode, ms).radius;
+  const distances = moons.map((moon) => length(sub(site(moon, mode, ms).at, site(id, mode, ms).at)) / radius);
+  const near = distances.filter((r) => r <= 22);
+  const reach = Math.max(1, ...(near.length > 0 ? near : distances));
+  return Math.max(4.1, (reach * 1.15) / Math.tan(17.5 * RAD));
+}
+
+/**
+ * A move as the site makes it from the Earth view (hero-src/travel.ts): the camera stands `startRadii` radii from the body left (the Earth, a few pixels across) looking at it, round to the side where the destination
+ * is `offAxis` degrees from the middle of the picture, then goes to a planet framed with its nearer moons (`moonsFit`) or to a moon beside it. The last view keeps the body left behind it where it can, with the companions the view hands over.
+ */
+export function siteMoveOf(a: BodyId, b: BodyId, mode: ScaleMode, aspect: number, options: { startRadii?: number; offAxis?: number; span?: number; at?: number } = {}): Move {
+  const span = options.span ?? SPAN;
+  const at = options.at ?? START;
+  const made = moveOf(a, b, mode, aspect, undefined, false, span, at, true);
+  const left = site(a, mode, at);
+  const target = site(b, mode, at);
+  const input = { ...made.input };
+  if (options.startRadii !== undefined && hostOf(a) === undefined) {
+    const toward = unit(sub(target.at, left.at));
+    const side = unit(cross(toward, [0, 1, 0]));
+    const off = (options.offAxis ?? 0) * RAD;
+    // the camera is behind the body left, which it looks at; the destination is `offAxis` degrees to one side of the line of sight
+    const back: Vec3 = [-(Math.cos(off) * toward[0] + Math.sin(off) * side[0]), -(Math.cos(off) * toward[1] + Math.sin(off) * side[1]), -(Math.cos(off) * toward[2] + Math.sin(off) * side[2])];
+    const distance = options.startRadii * left.radius;
+    const forward: Vec3 = [-back[0], -back[1], -back[2]];
+    const across = sub([0, 1, 0], [forward[0] * forward[1], forward[1] * forward[1], forward[2] * forward[1]]);
+    input.start = { position: [left.at[0] + back[0] * distance, left.at[1] + back[1] * distance, left.at[2] + back[2] * distance], forward, up: unit(across), fov: 35 };
+  }
+  if (hostOf(b) === undefined) {
+    input.end = travelArrival({ body: target.at, radius: target.radius, from: input.start.position, sun: b === "sun" ? undefined : site("sun", mode, at).at, aspect, fit: moonsFit(b, mode, at), companions: companionsOf(b, a, mode, at), behind: left.at });
+  }
+  return { ...made, input };
+}
+
 export const placeAt = (body: TravelBody, t: number): Vec3 => (body.to === undefined ? body.from : [body.from[0] + (body.to[0] - body.from[0]) * t, body.from[1] + (body.to[1] - body.from[1]) * t, body.from[2] + (body.to[2] - body.from[2]) * t]);
 
 /** The kinds of fault the survey counts. `drift` and `empty` are the two the family move has; the rest are summed as "other". */
@@ -375,4 +428,16 @@ export function turnEdge(w: Walk): number {
   let edge = 0;
   for (const s of w.samples) if (s.stage === "turn") edge = Math.max(edge, Math.min(off(s.leaving), off(s.destination)));
   return edge;
+}
+
+/**
+ * How far out the camera goes in a move: the most, over a walk, of its distance from the nearer of the two bodies, in the larger of the distance between the two and what that distance was at the first view (a move that
+ * starts far out, as the site's hand-over does, is not blamed for where it began). A straight way from one to the other stays at 1 or under; backing off to a system that holds both (B3) is over 1.
+ */
+export function out(move: Move, w: Walk): number {
+  const near = (p: Vec3, t: number): number => Math.min(length(sub(p, placeAt(move.input.leaving, t))), length(sub(p, placeAt(move.input.destination, t))));
+  const unit = Math.max(length(sub(move.input.leaving.from, move.input.destination.from)), near(move.input.start.position, 0));
+  let most = 0;
+  for (let i = 0; i < w.samples.length; i += 1) most = Math.max(most, near(w.samples[i]!.position, i / (w.samples.length - 1)));
+  return most / Math.max(1e-12, unit);
 }

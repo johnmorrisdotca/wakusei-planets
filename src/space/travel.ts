@@ -672,7 +672,8 @@ function standAt(input: TravelInput, tm: number, family: boolean, variant = 0, f
     const stand = sub(v, toScene(o1, fallback));
     if (variant === 0 || missOf(stand, last, v) >= Math.min(1.52 * (1 + clearance) * pivot.radius, 0.9 * length(fallback), 0.98 * length(apex))) straight = fallback;
   }
-  if (variant >= 2) straight = null;
+  // variant 1 of a move that is not within a planet's family is the swing: straight at the destination from the nearest place the turn leaves the camera in, the look direction turned round it at the end, with no backing off to a stand on the line of the last view
+  if (variant >= 2 || (variant === 1 && !family)) straight = null;
   if (straight !== null) {
     const dm = Math.max(1e-12, length(straight));
     const stand = sub(v, toScene(o1, straight));
@@ -1285,6 +1286,18 @@ function steepest(route: Route): number {
   }
   return worst;
 }
+/** The most, in times its distance at the start, that the camera is from the body left (or from the planet circled) at any moment of a walk of the move: 1 or less is a move that never goes out beyond where it began. */
+function backOff(route: Route): number {
+  const input = route.input;
+  const plan = { route } as unknown as TravelPlan;
+  const pivot = input.around ?? input.leaving;
+  const d0 = Math.max(1e-12, length(sub(input.start.position, pivot.from)));
+  let most = 0;
+  for (let i = 0; i <= 120; i += 1) most = Math.max(most, length(sub(travelPose(input, i / 120, plan).position, placeOf(pivot, i / 120))) / d0);
+  return most;
+}
+/** The most, in times its distance from the body left at the start, that the camera may back off from it before the move is taken as a B3 (a pull back to a system that holds both) and the straight way is tried. */
+const BACK_UP = 1.2;
 /** The furthest from the middle of the picture the nearer of the two bodies gets in the turn (1 is the edge of the picture, infinity is neither in it at some moment). */
 function turnEdge(route: Route): number {
   const plan = { route } as unknown as TravelPlan;
@@ -1353,6 +1366,12 @@ function routeMade(input: TravelInput): { route: Route; plan: Omit<TravelPlan, "
     // a move that turns beside the body left is framed (B1) where there is a picture that holds both bodies, its look direction and stand being those of the picture; it is taken if it has no fault more than the other
     const framed = routeBase(input, 0, true);
     if (framed.route.turn?.framed === true && framed.route.share > 0 && noWorse(faultsOf(framed.route), faultsOf(first.route)) && steepest(framed.route) <= Math.max(1.25 * steepest(first.route), 3)) first = framed;
+    // a stand far beyond the body left (B3: the whole system in the picture) is taken only where the straight way, a swing, has a fault that it does not have; the Earth's own pull out to a planet is the straight way
+    const backed = backOff(first.route);
+    if (backed > BACK_UP) {
+      const swung = routeBase(input, 1);
+      if (swung.plan.path === "pivot" && swung.route.turn !== null && swung.route.share > 0 && noWorse(faultsOf(swung.route), faultsOf(first.route)) && backOff(swung.route) < backed) first = swung;
+    }
   }
   if (first.route.turn === null || first.plan.path !== "circle" || first.route.cut || first.route.share <= 0) return first;
   const was = faultsOf(first.route);
