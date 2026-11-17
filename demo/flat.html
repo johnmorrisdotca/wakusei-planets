@@ -45,6 +45,24 @@
         </div>
       </div>
 
+      <section class="fam-felt flat-stage projected-stage" aria-labelledby="proj-h" data-testid="projected-section">
+        <h2 id="proj-h" data-say="pj_h">Any body, in a projection</h2>
+        <div class="fam-row">
+          <label class="field"><span data-say="pj_body">Body</span><select id="pj-body" class="fam-field" data-testid="pj-body"></select></label>
+          <span class="fam-label" data-say="pj_proj">Projection</span>
+          <span class="fam-seg" id="pj-proj" role="group" data-say-label="pj_proj" data-testid="pj-proj"></span>
+        </div>
+        <div class="fam-row">
+          <span class="fam-label" data-say="pj_lines">Lines</span>
+          <span class="fam-seg" id="pj-lines" role="group" data-say-label="pj_lines" data-testid="pj-lines"></span>
+          <label class="field"><span data-say="pj_lon">Middle longitude</span><input type="range" id="pj-lon" class="fam-field" min="-180" max="180" step="5" value="0" data-testid="pj-lon" /></label>
+          <label class="field" id="pj-lat-field"><span data-say="pj_lat">Middle latitude</span><input type="range" id="pj-lat" class="fam-field" min="-90" max="90" step="5" value="0" data-testid="pj-lat" /></label>
+        </div>
+        <canvas id="projected" class="projected-map" role="img" data-testid="projected"></canvas>
+        <p class="fam-fine stage-name" id="pj-caption" role="status" data-testid="pj-caption"></p>
+        <p class="fam-fine stage-name" data-say="pj_hint">The body's own painted picture, redrawn by this package's own maths. The ring is where the Sun is overhead at the time chosen above.</p>
+      </section>
+
       <section class="fam-panel flat-card" aria-labelledby="card-h" data-testid="card">
         <h2 id="card-h" data-say="fl_card">The one you chose</h2>
         <p class="fam-fine" id="card-empty" data-say="fl_card_empty">Press an orbiter or a mark on the map.</p>

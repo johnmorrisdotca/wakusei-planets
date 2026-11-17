@@ -11,6 +11,7 @@ import { ORBITER_FACTS, orbiterNumbers, type OrbiterId } from "../src/orbiters.t
 import { localSolarTime, loadPlaces, type Place } from "../src/places.ts";
 import { picturesCredit } from "../src/picture-credits.ts";
 import { WORDS } from "./words.js";
+import { startProjections } from "./flat-projections.ts";
 
 type Lang = "en" | "ja";
 const chooser = (): { lang: Lang; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: Lang; word(key: string): string | undefined } | undefined;
@@ -142,6 +143,7 @@ flat.addEventListener("wakusei-timechange", (event) => {
   const { time } = (event as CustomEvent<{ time: number }>).detail;
   shownTime.textContent = say("fl_now", { time: iso(time) });
   caption(time);
+  projections.render();
   if (chosen?.kind === "orbiter") card();
 });
 
@@ -239,6 +241,10 @@ flat.addEventListener("wakusei-flat-pick", (event) => {
   render();
 });
 
+// ----- any body in a projection ---------------------------------------------------------------------------------------------------------------------------------------------
+const projections = startProjections({ say, lang, time: () => flat.time, get: (key) => address.get(key), set: (key, value) => address.set(key, value), textureBase: "textures/" });
+Reflect.set(window, "wakuseiProjections", projections);
+
 // ----- the page -------------------------------------------------------------------------------------------------------------------------------------------------------------
 function caption(ms = flat.time): void {
   const sun = flatSun(body, ms);
@@ -264,6 +270,7 @@ function render(): void {
   if (document.activeElement !== dateInput) dateInput.value = iso(m).replace(" ", "T");
   $("#credits-map").textContent = picturesCredit([body], l);
   caption(m);
+  projections.render();
   card();
   $("#code").textContent = [
     'import "@johnmorrisdotca/wakusei-planets/flat/define";',
