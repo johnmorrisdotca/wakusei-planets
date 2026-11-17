@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Fact sheets and definitions: `/fact-sheets`** (MODULES-529, first slice). `factSheet("mars")` gives, for the Sun, the eight planets and Pluto, the radius and mean distance in km and miles (and au), the sidereal year in Earth days, the rotation in hours and whether it is retrograde, the number of known moons and the date it was read (the `/moon-catalogue` count), NASA's own page, and a short description in our own words in English and Japanese. `definition("meteor")` gives the eight definitions (planet, dwarf planet, moon, asteroid, comet, meteoroid, meteor, meteorite) in English and Japanese with their sources. New guide, English and Japanese, with tested examples. A new entry point, so the API snapshot and the size baseline have a new line. Not in this slice: meteor showers (the IMO table's reuse terms must be read first) and a demo page.
+
 ## [0.61.0] - 2026-11-17
 
 - **IM-2's three rovers stand on Athena, east of the prime meridian** (MODULES-1402; John Morris, 2026-11-17). GCAT's lander catalogue has the whole IM-2 landing at 84.7906 S, 29.1957 W; NASA's table, which the places take, puts Athena at 29.1957 E, but GRACE, MAPP and Yaoki, which NASA's table does not list, kept the catalogue's point on the far side of the prime meridian. `scripts/make-places-data.py` now moves a rover the catalogue puts at its lander's own point with the lander whenever a better source moves the lander more than 0.05 degree and has no position of its own for the rover; the rovers keep the catalogue's figure in `gcatPosition`. No other rover on the Moon or Mars disagrees with its lander, and a test pins both.
