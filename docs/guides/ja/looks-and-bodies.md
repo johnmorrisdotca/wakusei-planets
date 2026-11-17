@@ -35,6 +35,8 @@ import "@johnmorrisdotca/wakusei-planets/earth";
 
 `/earth` は chikyu-earth を自分ではimportしないので、入っていないプロジェクトでもビルドでき、輪郭を描きます。あとから chikyu-earth の要素がページに来たときは、地球はその地球儀に切り替わります。
 
+chikyu-earth がなくても、線画の地球はこの輪郭のままで、ほかは何も変わりません。realistic と painted は chikyu-earth を必要としません。線画の地球を最初に描いてから2秒たっても要素が来ていないときは、ページのコンソールに `console.info` の1行を、1回だけ出して理由を伝えます。`wakusei-planets: the Earth's line look is drawn as a plain outline because chikyu-earth's element is not on the page. Import "@johnmorrisdotca/chikyu-earth/element" for the globe with the countries.`（地球の線画は、chikyu-earth の要素がページにないため、輪郭だけで描いています。国の入った地球儀にするには `@johnmorrisdotca/chikyu-earth/element` を import してください。）という英語の文です。警告ではなく情報として出すのは、省略できる peer を入れないのは選択だからです。`pnpm test:usage` は、chikyu-earth がない状態で `/earth` をビルドして輪郭を描き、この1行を確かめます。
+
 ## 準惑星
 
 冥王星のほかに、`ceres`、`orcus`、`haumea`、`quaoar`、`makemake`、`gonggong`、`eris`、`sedna` が、どの見た目でも描けます。位置は2026年6月のJPLの接触軌道要素から求めます (前後数年は合います)。大きさは NOTICE.md に挙げた論文の値です。ハウメア (1161 x 852 x 513 km、3.9時間で1回転) とクワオアーは、本当の細長い形で描きます。地図つきの見た目は、ケレス (探査機ドーンの地図) だけで、ケレスは realistic（デモの「リアル」）でもこの地図を使うので、どの見た目でも、オッカトル・クレーターの明るい点がある本物のケレスの姿になります。ほかの天体の表面は、発表されている色から描いた推定です。自転軸が測られていない天体は、軌道の極の向きにしています (どれかは NOTICE.md にあります)。ウェイウォト、シャンリュウ、S/2015 (136472) 1 は、日時つきの軌道が発表されていないので描きません。
