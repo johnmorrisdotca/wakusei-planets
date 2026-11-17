@@ -1,8 +1,8 @@
-// Sky events (equinoxes and solstices today; more to come) through astronomy-engine, an OPTIONAL peer dependency: `pnpm add astronomy-engine` (2.1.19 or newer, below 3) beside this package.
+// Sky events (seasons, Moon phases, eclipses, rise/set/transit, libration, lunar apsides and nodes, greatest elongation) through astronomy-engine, an OPTIONAL peer dependency: `pnpm add astronomy-engine` (2.1.19 or newer, below 3) beside this package.
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { Body, NextGlobalSolarEclipse, NextLunarEclipse, NextMoonQuarter, Observer as EngineObserver, SearchGlobalSolarEclipse, SearchHourAngle, SearchLunarEclipse, SearchMoonPhase, SearchMoonQuarter, SearchRiseSet, Seasons } from "astronomy-engine";
+import { ApsisKind, Body, Libration, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, SearchGlobalSolarEclipse, SearchHourAngle, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchRiseSet, Seasons } from "astronomy-engine";
 import type { SkyBodyId } from "./sky-bodies.ts";
 import type { Observer } from "./sky/types.ts";
 import { moment, type When } from "./when.ts";
@@ -319,4 +319,164 @@ export function nextTransit(body: SkyBodyId, from: When, options: SkyHorizonOpti
   const days = windowDays(options.within);
   const found = atOrAfter(start, (at) => SearchHourAngle(engineBody, observer, 0, at).time.date)!;
   return found.getTime() < start + days * DAY_MS ? found : null;
+}
+
+/**
+ * The Moon's libration: how far the Moon's disc is turned from its mean Earth-facing position, as seen from the centre of the Earth, with the Moon's distance and size. `longitude` is the libration in longitude (positive when the Moon's east limb is turned toward Earth) and `latitude` the libration in latitude (positive
+ * when its north pole is tipped toward Earth), both in degrees, as astronomy-engine gives them (optical libration; the physical libration of up to 0.04 degrees is not added).
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { moonLibration, type MoonLibration } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const l: MoonLibration = moonLibration(Date.UTC(2026, 10, 7, 12));
+ * console.log(Math.abs(l.longitude) < 8, Math.abs(l.latitude) < 7, l.distanceKm > 356000);
+ * ```
+ */
+export interface MoonLibration {
+  longitude: number;
+  latitude: number;
+  distanceKm: number;
+  angularDiameter: number;
+}
+
+/**
+ * The Moon's libration at a moment, as seen from the centre of the Earth.
+ *
+ * @param when - A `Date` or milliseconds since 1970 (UTC).
+ * @returns The libration in longitude and latitude, the Moon's distance in kilometres and its angular diameter in degrees.
+ * @experimental
+ * @example
+ * ```ts
+ * import { moonLibration } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const { longitude, latitude } = moonLibration(Date.UTC(2026, 10, 7, 12));
+ * console.log(longitude.toFixed(1), latitude.toFixed(1));
+ * ```
+ */
+export function moonLibration(when: When): MoonLibration {
+  const found = Libration(new Date(moment(when, "when")));
+  return { longitude: found.elon, latitude: found.elat, distanceKm: found.dist_km, angularDiameter: found.diam_deg };
+}
+
+/**
+ * One closest or farthest point of the Moon's orbit: the kind, the moment and the distance between the centres of the Earth and the Moon.
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { lunarApsides, type LunarApsis } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const first: LunarApsis = lunarApsides(Date.UTC(2026, 10, 1), Date.UTC(2026, 11, 1))[0]!;
+ * console.log(first.kind, Math.round(first.distanceKm));
+ * ```
+ */
+export interface LunarApsis {
+  kind: "perigee" | "apogee";
+  time: Date;
+  distanceKm: number;
+}
+
+/**
+ * Every perigee and apogee of the Moon from `from` (included; the search settles to about 0.1 s, so one within a quarter of a second before it counts) to `to` (not included), in time order. An end before the start throws a `RangeError`.
+ *
+ * @param from - The start of the interval, included.
+ * @param to - The end of the interval, not included.
+ * @returns The apsides in time order; empty when the interval holds none.
+ * @experimental
+ * @example
+ * ```ts
+ * import { lunarApsides } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * for (const apsis of lunarApsides(Date.UTC(2026, 10, 1), Date.UTC(2026, 11, 1))) console.log(apsis.kind, apsis.time.toISOString(), Math.round(apsis.distanceKm));
+ * ```
+ */
+export function lunarApsides(from: When, to: When): LunarApsis[] {
+  const [start, end] = interval(from, to);
+  const found: LunarApsis[] = [];
+  for (let apsis = SearchLunarApsis(new Date(start - DAY_MS)); apsis.time.date.getTime() < end; apsis = NextLunarApsis(apsis)) {
+    if (apsis.time.date.getTime() >= start - SEARCH_SLACK_MS) found.push({ kind: apsis.kind === ApsisKind.Pericenter ? "perigee" : "apogee", time: apsis.time.date, distanceKm: apsis.dist_km });
+  }
+  return found;
+}
+
+/**
+ * One crossing of the ecliptic by the Moon's centre: going north (`"ascending"`) or south (`"descending"`).
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { lunarNodes, type LunarNode } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const first: LunarNode = lunarNodes(Date.UTC(2026, 10, 1), Date.UTC(2026, 11, 1))[0]!;
+ * console.log(first.kind, first.time.toISOString());
+ * ```
+ */
+export interface LunarNode {
+  kind: "ascending" | "descending";
+  time: Date;
+}
+
+/**
+ * Every time the Moon's centre crosses the ecliptic plane from `from` (included; the search settles to about 0.1 s, so one within a quarter of a second before it counts) to `to` (not included), in time order. An end before the start throws a `RangeError`.
+ *
+ * @param from - The start of the interval, included.
+ * @param to - The end of the interval, not included.
+ * @returns The crossings in time order; empty when the interval holds none.
+ * @experimental
+ * @example
+ * ```ts
+ * import { lunarNodes } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * for (const node of lunarNodes(Date.UTC(2026, 10, 1), Date.UTC(2026, 11, 1))) console.log(node.kind, node.time.toISOString());
+ * ```
+ */
+export function lunarNodes(from: When, to: When): LunarNode[] {
+  const [start, end] = interval(from, to);
+  const found: LunarNode[] = [];
+  for (let node = SearchMoonNode(new Date(start - DAY_MS)); node.time.date.getTime() < end; node = NextMoonNode(node)) {
+    if (node.time.date.getTime() >= start - SEARCH_SLACK_MS) found.push({ kind: node.kind === NodeEventKind.Ascending ? "ascending" : "descending", time: node.time.date });
+  }
+  return found;
+}
+
+/**
+ * The greatest elongation of Mercury or Venus: the moment, the angle between the planet and the Sun as seen from Earth in degrees, and which side of the Sun it is on (`"east"`: an evening star, `"west"`: a morning star).
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextGreatestElongation, type GreatestElongation } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const e: GreatestElongation = nextGreatestElongation("venus", Date.UTC(2026, 0, 1));
+ * console.log(e.side, e.elongation.toFixed(0));
+ * ```
+ */
+export interface GreatestElongation {
+  time: Date;
+  elongation: number;
+  side: "east" | "west";
+}
+
+/**
+ * The next greatest elongation of Mercury or Venus after `from`. Any other body throws a `RangeError` (a body outside Earth's orbit has no greatest elongation).
+ *
+ * @param body - `"mercury"` or `"venus"`.
+ * @param from - Where to start looking.
+ * @returns The moment, the elongation in degrees and the side of the Sun.
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextGreatestElongation } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const mercury = nextGreatestElongation("mercury", Date.UTC(2026, 0, 1));
+ * console.log(mercury.time.toISOString(), mercury.side);
+ * ```
+ */
+export function nextGreatestElongation(body: "mercury" | "venus", from: When): GreatestElongation {
+  const start = moment(from, "from");
+  if (body !== "mercury" && body !== "venus") throw new RangeError(`body must be mercury or venus, got ${String(body)}`);
+  const found = SearchMaxElongation(bodyOf(body), new Date(start));
+  return { time: found.time.date, elongation: found.elongation, side: found.visibility === "evening" ? "east" : "west" };
 }
