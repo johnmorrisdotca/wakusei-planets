@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "earth-places", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets", "places", "places/moon", "places/mars", "landing-sites", "asteroids", "data/asteroids", "approaches", "data/approaches", "moon-catalogue", "data/moon-catalogue", "plan/index", "plan/element", "orbiters", "orbiter-facts", "data/orbiters"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "earth-places", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "comets", "data/comets", "places", "places/moon", "places/mars", "landing-sites", "asteroids", "data/asteroids", "approaches", "data/approaches", "moon-catalogue", "data/moon-catalogue", "plan/index", "plan/element", "flat/index", "flat/define", "orbiters", "orbiter-facts", "data/orbiters"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
@@ -152,6 +152,22 @@ try {
   noBody = error instanceof RangeError;
 }
 if (!noBody) throw new Error("places does not refuse a body it does not hold");
+
+// The flat map through package resolution: the pure entry computes where the Sun is over the Moon at the Apollo 11 landing and where an orbiter is over the ground, and it refuses a body it does not draw.
+const flatEntry = "@johnmorrisdotca/wakusei-planets/flat";
+const flat = await import(flatEntry);
+const landing = flat.flatSun("moon", Date.UTC(1969, 6, 20, 20, 17, 40));
+if (Math.abs(landing.lon - 102.9) > 1 || Math.abs(landing.lat) > 2) throw new Error("flat: the Sun is not low in the east at Tranquility Base at the Apollo 11 landing");
+const overLro = flat.flatOrbiter("lro", Date.UTC(2026, 10, 12));
+if (overLro === undefined || Math.abs(overLro.lat) > 90 || overLro.altitudeKm < 20 || overLro.altitudeKm > 200) throw new Error("flat: LRO is not over the ground of the Moon");
+if (flat.flatOrbiter("tianwen-1", Date.UTC(2026, 10, 12)) !== undefined) throw new Error("flat: an orbiter with no public path is drawn");
+let flatRefused = false;
+try {
+  flat.flatBody("venus");
+} catch (error) {
+  flatRefused = error instanceof RangeError;
+}
+if (!flatRefused) throw new Error("flat does not refuse a body it does not draw");
 
 // The asteroids through package resolution: the table loads with the entry point, Eros is where its elements put it at their epoch (a distance from the Sun between perihelion and aphelion), and the counts hold.
 const asteroidsEntry = "@johnmorrisdotca/wakusei-planets/asteroids";

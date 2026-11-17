@@ -149,3 +149,18 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 /* The Moon page: the orbit view is wide, and the standing view comes over it. */
 .surface-stage wakusei-space { width: 100%; aspect-ratio: 16 / 9; }
 .landing-row { margin-top: 10px; gap: 10px; }
+
+/* The flat map page: the map on the felt, then the rows of choices and the card of the one chosen. */
+.flat-stage { display: grid; gap: 10px; padding: 14px 12px 10px; margin-bottom: 8px; }
+.flat-stage wakusei-flat { width: 100%; color: #e6edf7; }
+.flat-orbiters { flex-wrap: wrap; }
+.flat-card { margin-top: 10px; }
+.flat-card h2 { margin: 0 0 6px; font-size: 1.15rem; }
+.flat-card-name { margin: 0 0 6px; font-size: 1.1rem; font-weight: 600; }
+.flat-facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0 0 8px; }
+.flat-facts dt { color: var(--muted); }
+.flat-facts dd { margin: 0; overflow-wrap: anywhere; }
+.flat-call { margin: 10px 0; }
+.flat-call pre { overflow-x: auto; }
+@media (max-width: 520px) { .flat-facts { grid-template-columns: 1fr; gap: 0; } .flat-facts dd { margin-bottom: 6px; } }
+.flat-swatch { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: var(--c, #9aa5b1); box-shadow: 0 0 0 1px rgba(0,0,0,.5); vertical-align: baseline; }

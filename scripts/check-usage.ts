@@ -489,6 +489,30 @@ await step("plan-cdn", async () => {
   });
 });
 
+await step("flat-node", () => {
+  const out = execFileSync(process.execPath, [join(examples("flat"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
+  if (out !== "Apollo 11: the Sun is overhead at 103 degrees east, 0 degrees from the equator\nLRO is 113 km up, MRO 244 km\nTianwen-1 has a path to draw: false") throw new Error(`unexpected output: ${out}`);
+});
+
+await step("flat-cdn", async () => {
+  await opened(browser, async (page) => {
+    await page.route("https://cdn.jsdelivr.net/**", async (route) => {
+      const { pathname } = new URL(route.request().url());
+      // the maps' pictures are answered from this checkout by the page opener's own route
+      if (pathname.endsWith(".webp")) return route.fallback();
+      if (pathname === "/npm/@johnmorrisdotca/wakusei-planets/flat/define/+esm") return route.fulfill({ body: await bundleOf(modules("flat/define.js")), contentType: "text/javascript" });
+      return route.fulfill({ status: 404, body: "" });
+    });
+    await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("flat"), "cdn.html")), contentType: "text/html" }));
+    await page.goto("https://page.test/");
+    await page.waitForFunction(() => document.querySelectorAll("wakusei-flat[data-state=ready]").length === 2, undefined, { timeout: 20_000 });
+    const labels = await page.locator("wakusei-flat").evaluateAll((all) => all.map((el) => el.shadowRoot?.querySelector(".dots")?.getAttribute("aria-label")));
+    if (labels[0] !== "Flat map of Moon" || labels[1] !== "Flat map of Mars") throw new Error(`the maps' labels are wrong: ${labels.join(" | ")}`);
+    const drawn = await page.locator("wakusei-flat").evaluateAll((all) => all.map((el) => (el as unknown as { stats: { dots: number; mapLoaded: boolean } }).stats));
+    if (!drawn[0]!.mapLoaded || drawn[0]!.dots < 1 || drawn[1]!.dots < 1) throw new Error(`the maps drew no orbiter: ${JSON.stringify(drawn)}`);
+  });
+});
+
 const lineupApp = async (name: string, plugins: unknown[] = []): Promise<void> => {
   const dir = examples(`lineup/${name}`);
   const out = join(usage, "out", "lineup", name);
@@ -553,6 +577,8 @@ const FILES: Record<string, string[]> = {
   "star/angular/star-view.component.ts": ["docs/guides/star-look.md", "docs/guides/ja/star-look.md"],
   "plan/cdn.html": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
   "plan/node.mjs": ["docs/guides/plan.md", "docs/guides/ja/plan.md"],
+  "flat/cdn.html": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
+  "flat/node.mjs": ["docs/guides/flat.md", "docs/guides/ja/flat.md"],
   "sky-bodies/node.mjs": ["docs/guides/sky-bodies.md", "docs/guides/ja/sky-bodies.md"],
   "lineup/cdn.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],
   "lineup/iframe.html": ["docs/guides/size-lineup.md", "docs/guides/ja/size-lineup.md"],

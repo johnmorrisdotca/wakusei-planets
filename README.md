@@ -163,6 +163,17 @@ const io = planAt(Date.UTC(2026, 10, 11), { system: "jupiter", mark: "io", spaci
 console.log(io?.distance.toFixed(1), "Jupiter radii from Jupiter");
 ```
 
+## Flat maps of the Moon and Mars
+
+`<wakusei-flat body="moon" track>` is the Moon on a flat map (`body="mars"` is Mars): the body's own painted picture with day and night for the time shown, the landing, rover and crash sites marked, and the spacecraft in orbit as dots that move over it with their coverage circles and ground tracks. It is a canvas with no WebGL, takes `time`, `speed` and `paused`, sends `wakusei-flat-pick` when an orbiter or a mark is pressed, works by keyboard and touch, and has the same attributes and events as chikyu-earth's `<chikyu-flat>`, so one control can swap the Earth, the Moon and Mars. It draws five lunar orbiters (LRO, Chandrayaan-2, Danuri, ARTEMIS P1 and P2) and six Martian ones (MRO, Odyssey, MAVEN, Mars Express, TGO and Hope); CAPSTONE and Tianwen-1 have no public path and are not drawn.
+
+```ts
+import { flatOrbiter } from "@johnmorrisdotca/wakusei-planets/flat";
+
+const lro = flatOrbiter("lro", Date.UTC(2026, 10, 12));
+console.log(lro?.altitudeKm.toFixed(0), "km up");
+```
+
 ## A name on the body
 
 `body-label="painted"` writes the body's name on its own globe, large and in capitals, lying on the surface and turning with it, as a film lays a title over the thing it names: on `<wakusei-body>` and on every body of `<wakusei-space>`, in the page's language, in Michroma by default or a font of yours. Four looks (`painted`, `etched`, `outline`, `burned`), once or on both sides, at the equator or near a pole, turning with the body or always facing you; nothing on a body too small on the screen. [A name on the body](docs/guides/name-on-the-body.md) has the attributes.
@@ -444,6 +455,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
+| `.../flat` | The flat maps' pure side: `flatSun`, `flatOrbiter`, `shadeNight`, `circleOutline`, `flatTrack`, the geometry and the words. `.../flat/define` is `<wakusei-flat>`, the Moon or Mars on a flat map, in a canvas with no WebGL. |
 | `.../plan` | The top-down plan: `planAt`, `planSvg`, `planText`. `.../plan/element` is `<wakusei-plan>`, in SVG with no WebGL. |
 | `.../landing-sites` | The 39 soft landings on the Moon and Mars as plain data: `LANDING_SITES`, `landingSitesOf`, `findLandingSite`, `flagCodeOf`. No browser, no three.js. |
 | `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
@@ -479,6 +491,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
 | [A star from its numbers](docs/guides/star-look.md) | Any star in 3D or as lines, what is measured and what is drawn, every way to put it in a page |
 | [The size line-up](docs/guides/size-lineup.md) | The Sun and the largest stars at true relative size, with each radius, its error and its paper, where the papers disagree, every way to put it in a page |
+| [Flat maps of the Moon and Mars](docs/guides/flat.md) | The Moon or Mars on a flat map: day and night, the sites, the orbiters moving with their coverage and ground tracks, the same attributes and events as the Earth's flat map |
 | [The top-down plan](docs/guides/plan.md) | The solar system or one planet's moons from above, with one body marked: squeezed or to-scale distances, drawing only on change |
 | [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |
 | [Close zoom and map tiles](docs/guides/close-zoom.md) | How far each body zooms and why, the finer map tiles for a close zoom (made from public-domain maps, served beside the demo, never in the package), the generic detail, what it costs |
