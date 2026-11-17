@@ -10,7 +10,7 @@ import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { chooseLabels, nameSpot, type LabelBox } from "./labels.ts";
-import { coverArrows } from "./covered.ts";
+import { coverArrows, coverOf } from "./covered.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
 import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
 import type { Credit, DataSource } from "../data-door.ts";
@@ -56,6 +56,20 @@ const SCALE_WORDS = {
 } as const;
 /** A body whose disc is smaller than this many CSS pixels across its radius is marked with a ring as well as its name. */
 const RING_BELOW_PX = 4;
+
+/**
+ * What a body behind another gets: `hide` (fade its name and ring out), `arrow` (a quiet arrow on the disc's edge) or `name` (draw it over the disc).
+ *
+ * @example
+ * ```ts
+ * import type { Covered } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const how: Covered = "hide";
+ * console.log(how);
+ * ```
+ */
+export type Covered = "hide" | "arrow" | "name";
+const readCovered = (value: string | null): Covered => (value === "arrow" ? "arrow" : value === "name" ? "name" : "hide");
 
 /**
  * What a page can tell a reader about a body now.
@@ -251,7 +265,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none;transition:opacity .35s ease}.sp-oort[data-covered]{opacity:0}@media (prefers-reduced-motion:reduce){.sp-oort{transition:none}}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p>`;
 
 const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value === "chosen" || value === "none" ? value : "all");
 
@@ -360,7 +374,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.moonSize = readMoonSize(this.getAttribute("moon-size") ?? 2);
     this.#model.labels = this.getAttribute("labels") !== "off";
     this.#labelsAlways = this.hasAttribute("labels-always") && this.getAttribute("labels-always") !== "off";
-    this.#covered = this.getAttribute("covered") === "arrow" ? "arrow" : "name";
+    this.#covered = readCovered(this.getAttribute("covered"));
     this.roadster = this.hasAttribute("roadster") && this.getAttribute("roadster") !== "off";
     const craft = this.getAttribute("spacecraft");
     if (craft !== null && craft !== "off") this.spacecraft = craft;
@@ -507,7 +521,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "moon-size") this.moonSize = readMoonSize(value);
     else if (name === "labels") this.labels = value !== "off";
     else if (name === "labels-always") this.labelsAlways = value !== null && value !== "off";
-    else if (name === "covered") this.covered = value === "arrow" ? "arrow" : "name";
+    else if (name === "covered") this.covered = readCovered(value);
     else if (name === "roadster") this.roadster = value !== null && value !== "off";
     else if (name === "spacecraft") this.spacecraft = value === null || value === "off" ? false : value;
     else if (name === "orbiters") this.orbiters = value !== null && value !== "off";
@@ -806,6 +820,7 @@ export class WakuseiSpace extends HTMLElement {
       this.#earthLayer?.clear();
       this.#earthOmitted = 0;
     };
+    if (surface !== null && this.#covered !== "name" && this.#places?.["earth"]?.behind !== undefined) return clear();
     if (surface === null || root === null || using === undefined || !this.hasAttribute("earth-places") || !(surface.radiusPx >= EARTH_PLACES_FROM_PX)) return clear();
     const places = this.#readEarthPlaces();
     if (places.length === 0) return clear();
@@ -843,6 +858,11 @@ export class WakuseiSpace extends HTMLElement {
     const names = readSurfaceNames(this.getAttribute("surface-names"));
     const surface = this.#surface;
     const root = this.shadowRoot;
+    // the marks lie on the body looked at: not drawn while a nearer body's disc is over it
+    if (surface !== null && this.#covered !== "name" && this.#places?.[surface.id]?.behind !== undefined) {
+      this.#markLayer?.clear();
+      return;
+    }
     if ((!names.on && layers.length === 0) || surface === null || root === null || !(PLACE_BODIES as readonly string[]).includes(surface.id)) {
       if (!names.on && layers.length === 0 && this.#markLayer !== undefined) {
         this.#markLayer.dispose();
@@ -1177,18 +1197,21 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.orbiterTrack = value;
     this.#gate?.request();
   }
-  #covered: "name" | "arrow" = "name";
+  #covered: Covered = "hide";
   #arrows = new Map<string, HTMLElement>();
   /**
-   * What a body behind another gets (the attribute `covered`): `name` (the default) draws its floating name and ring over the nearer body's disc as always; `arrow` draws instead one small quiet arrow just outside the
-   * disc's edge on the side nearest the hidden body, pointing in behind it, with the surest hidden body's name beside it and the others counted (`Uranus +4`); a press on it goes to that body. The arrow goes as the body comes out.
+   * What a body behind another gets (the attribute `covered`): `hide` (the default) fades its floating name and ring out while its place is inside a nearer body's drawn disc, and back when it comes out, as if the disc hid
+   * them; `arrow` draws instead one small quiet arrow just outside the disc's edge on the side nearest the hidden body, pointing in behind it, with the surest hidden body's name beside it and the others counted
+   * (`Uranus +4`); a press on it goes to that body. The arrow goes as the body comes out; `name` draws the name and ring over the nearer body's disc as 0.57 and earlier did. The same discs hide the Oort cloud's note, the
+   * marks of the places on a body that is behind another, and, through `coveredAt`, any label a page draws over the view.
    */
-  get covered(): "name" | "arrow" {
+  get covered(): Covered {
     return this.#covered;
   }
-  set covered(value: "name" | "arrow") {
+  set covered(value: Covered) {
     this.#covered = value;
     if (this.#places) this.#placeLabels(this.#places);
+    this.#placeOort();
   }
   #labelsAlways = false;
   /**
@@ -1723,12 +1746,14 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /**
-   * The controls' yaw and tilt that look at a body from the side the camera comes from, swung so a companion is in the picture and the body stays at least half lit; null when the camera has not drawn yet.
+   * The controls' yaw and tilt that look at a body from the side the camera comes from, swung so a companion is in the picture and the body stays at least half lit; null for the Earth before the camera has drawn.
    * The reader's own later turn is not touched: this runs for an arrival and for a double click, not for a drag.
    */
   #faceApproach(id: BodyId, swing = true): { yaw: number; tilt: number } | null {
     const model = this.#model;
-    if (!model.pose.valid) return null;
+    // a move asked for before the first draw (an address that opens at a body, `goTo` on a page that has just loaded) comes from where the view opens, the Earth: its camera is not drawn yet, and with no side
+    // chosen the body is looked at from whichever side the default aim falls on, which for a body beyond the Earth is the night side half the day
+    if (!model.pose.valid && id === "earth") return null;
     const body = this.#site(id);
     const sun = id === "sun" ? undefined : this.#site("sun").at;
     const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
@@ -2051,6 +2076,9 @@ export class WakuseiSpace extends HTMLElement {
     }
     if (this.#oortLabel.textContent === "") this.#showNote();
     if (this.#oortLabel.hidden) this.#oortLabel.hidden = false;
+    // the note fades out while a nearer body's disc is over its place
+    const behind = this.#covered !== "name" && coverOf(at, this.#model.discs) !== null;
+    if (this.#oortLabel.hasAttribute("data-covered") !== behind) this.#oortLabel.toggleAttribute("data-covered", behind);
     this.#oortLabel.style.transform = `translate(${Math.round(at.x) + 6}px,${Math.round(at.y) - 8}px)`;
   }
 
@@ -2299,7 +2327,8 @@ export class WakuseiSpace extends HTMLElement {
       // beside the dot, on the side that stays inside the view
       const { x, y, flipped } = nameSpot(at, { width, height: 16 }, frame);
       // a body that carries its drawn name gives its floating name up (it fades, and leaves its place to the others) unless the page keeps both; a body behind another gives it up for the arrow
-      const carried = at.named === true && !this.#labelsAlways;
+      const hidden = at.behind !== undefined && this.#covered === "hide";
+      const carried = hidden || (at.named === true && !this.#labelsAlways);
       const covered = at.behind !== undefined && this.#covered === "arrow";
       if (covered) continue;
       spots.set(id, { x, y, small: at.r < RING_BELOW_PX, carried, flipped });
@@ -2525,6 +2554,18 @@ export class WakuseiSpace extends HTMLElement {
   placeOf(id: BodyId): BodyPlace | null {
     const at = this.#places?.[id];
     return at ? { ...at } : null;
+  }
+
+  /**
+   * Which body's drawn disc hides a point of the scene at the last draw, or `null`: for a page that draws its own label over the view (a belt's name at its anchor, a pin) and wants it to go where a nearer body is in
+   * front of it, the way the view's own names do. The point is in the scene's places (`stats.camera` is in the same ones); the discs are the bodies and moons placed on the screen, at the radius `placeOf(id).r`
+   * gives. Always `null` while `labels` is off, since the discs are worked out with the names.
+   *
+   * @param point - A place in the scene.
+   * @returns The id of the covering body, or `null` when the point is in the open or off the view.
+   */
+  coveredAt(point: readonly [number, number, number]): string | null {
+    return this.#model.coverAt([point[0], point[1], point[2]]);
   }
 
   #nameLabel(button: HTMLElement, id: string): void {
