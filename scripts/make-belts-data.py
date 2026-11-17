@@ -9,7 +9,7 @@ Usage: python3 -I scripts/make-belts-data.py   (needs the network)"""
 import json, os, time, urllib.parse, urllib.request
 
 RAW = os.environ.get("SBDB_RAW", os.path.expanduser("~/Projects/backups/wakusei-planets/2026-11-10-sbdb"))
-UA = {"User-Agent": "wakusei-planets-data-build/1.0 (john@johnmorris.ca; one-off belt data for an npm package)"}
+UA = {"User-Agent": "wakusei-planets-data-build/1.0 (https://github.com/johnmorrisdotca/wakusei-planets; one-off belt data for an npm package)"}
 FIELDS = "spkid,full_name,pdes,name,class,a,e,i,om,w,ma,epoch,H,q"
 # group: (query, how many to keep)
 QUERIES = {

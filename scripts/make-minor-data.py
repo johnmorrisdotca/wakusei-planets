@@ -9,7 +9,7 @@ import datetime, json, math, os, urllib.parse, urllib.request
 
 UNIX_EPOCH_JD = 2440587.5
 RAW = os.environ.get("MINOR_RAW", os.path.expanduser("~/Projects/backups/wakusei-planets/2026-11-10-minor-horizons"))
-UA = {"User-Agent": "wakusei-planets-data-build (john@johnmorris.ca)"}
+UA = {"User-Agent": "wakusei-planets-data-build (https://github.com/johnmorrisdotca/wakusei-planets)"}
 TOLERANCE = 1.0
 # Halley is Horizons' record 90000030, the solution of the 1986 apparition (epoch 1968, observations 1835 to 1994): "DES=1P;CAP" picks a different apparition's solution for each request, so a table cut from several requests would join several orbits.
 # name: (Horizons command, first year, last year, days between samples, longest segment in years, degree)

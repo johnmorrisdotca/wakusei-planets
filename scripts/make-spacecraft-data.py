@@ -16,7 +16,7 @@ import bisect, datetime, hashlib, json, math, os, random, re, sys, time, urllib.
 SOURCE = "https://ssd.jpl.nasa.gov/api/horizons.api"
 UNIX_EPOCH_JD = 2440587.5
 PAUSE = 1.2
-UA = {"User-Agent": "wakusei-planets-data-build/1.0 (john@johnmorris.ca)"}  # the Solar System Dynamics terms ask for a User-Agent naming the product, its version and a contact
+UA = {"User-Agent": "wakusei-planets-data-build/1.0 (https://github.com/johnmorrisdotca/wakusei-planets)"}  # the Solar System Dynamics terms ask for a User-Agent naming the product, its version and a contact
 LIMIT_KM = 1000.0
 RELATIVE_LIMIT = 1e-6
 SPEED_LIMIT = float(os.environ.get('SPEED_LIMIT', '0.01'))

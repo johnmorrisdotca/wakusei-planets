@@ -14,7 +14,7 @@ back off on an error (this script stops on one, it does not retry).
 Usage: python3 -I scripts/make-asteroids-data.py --cache DIR   (needs the network; DIR is outside the repository, for example ~/Projects/backups/wakusei-planets/2026-11-11-data-bodies/cache)"""
 import hashlib, json, math, os, re, sys, time, unicodedata, urllib.parse, urllib.request
 
-UA = "wakusei-planets-data-build/1.0 (john@johnmorris.ca)"
+UA = "wakusei-planets-data-build/1.0 (https://github.com/johnmorrisdotca/wakusei-planets)"
 QUERY = "https://ssd-api.jpl.nasa.gov/sbdb_query.api"
 SBDB = "https://ssd-api.jpl.nasa.gov/sbdb.api"
 HORIZONS = "https://ssd.jpl.nasa.gov/api/horizons.api"

@@ -11,7 +11,7 @@ Usage: python3 -I scripts/make-approaches-data.py --cache DIR [--refresh]   (nee
 --refresh asks JPL again and replaces the cached answers, which is how the table is brought up to date: the approaches are predictions and change as orbits are refined. The date fetched is written into the file.)"""
 import hashlib, json, os, re, sys, time, urllib.parse, urllib.request
 
-UA = "wakusei-planets-data-build/1.0 (john@johnmorris.ca)"
+UA = "wakusei-planets-data-build/1.0 (https://github.com/johnmorrisdotca/wakusei-planets)"
 CAD = "https://ssd-api.jpl.nasa.gov/cad.api"
 PAUSE = 1.5
 FETCHED = time.strftime("%Y-%m-%d")

@@ -11,7 +11,7 @@ import datetime, hashlib, json, math, os, re, sys, time, urllib.parse, urllib.re
 
 SBDB = "https://ssd-api.jpl.nasa.gov/sbdb.api"
 HORIZONS = "https://ssd.jpl.nasa.gov/api/horizons.api"
-UA = {"User-Agent": "wakusei-planets-data-build (john@johnmorris.ca)"}
+UA = {"User-Agent": "wakusei-planets-data-build (https://github.com/johnmorrisdotca/wakusei-planets)"}
 PAUSE = 1.5
 UNIX_EPOCH_JD = 2440587.5
 

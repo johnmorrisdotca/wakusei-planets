@@ -11,7 +11,7 @@ from PIL import Image, ImageFilter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, ".cache", "src")
 OUT = os.path.join(ROOT, "textures")
-UA = {"User-Agent": "wakusei-planets-build/0.1 (john@johnmorris.ca)"}
+UA = {"User-Agent": "wakusei-planets-build/0.1 (https://github.com/johnmorrisdotca/wakusei-planets)"}
 WIDTHS = [512, 1024, 2048]
 os.makedirs(CACHE, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)

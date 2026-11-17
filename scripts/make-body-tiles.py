@@ -38,7 +38,7 @@ TILE = 512
 BASE = 2048
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
-UA = {"User-Agent": "wakusei-planets-build/0.1 (john@johnmorris.ca)"}
+UA = {"User-Agent": "wakusei-planets-build/0.1 (https://github.com/johnmorrisdotca/wakusei-planets)"}
 COMMONS = "https://upload.wikimedia.org/wikipedia/commons"
 
 # Each source: where it is, its SHA-256 (a file with another hash is never used), how it lies on the sphere (the same steps scripts/make-textures.py takes for the 2048 picture) and the
