@@ -440,6 +440,9 @@ export class WakuseiSpace extends HTMLElement {
         this.#door.announce();
         this.#announceFrame();
       },
+      onPlaces: (places) => {
+        this.#places = places;
+      },
       onSight: (bodies, frame) => this.#see(bodies, frame),
       wantSight: () => this.#sightAsked || this.#sightListeners.size > 0,
       onSurface: (surface) => {
