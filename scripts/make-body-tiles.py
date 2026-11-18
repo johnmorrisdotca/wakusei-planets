@@ -27,6 +27,7 @@ import json
 import math
 import os
 import shutil
+import ssl
 import sys
 import urllib.request
 
@@ -40,6 +41,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 UA = {"User-Agent": "wakusei-planets-build/0.1 (https://github.com/johnmorrisdotca/wakusei-planets)"}
 COMMONS = "https://upload.wikimedia.org/wikipedia/commons"
+
+
+def tls_context():
+    """The TLS context every download uses: it always verifies the server's certificate and its name. The certificates it trusts are certifi's bundle (Mozilla's list, current as of the package's release) when certifi is installed, which the
+    build's venv has, else the system's. A runner whose system store is older than a root a site has moved to (svs.gsfc.nasa.gov chains to Let's Encrypt's new root YR) therefore still verifies; nothing is ever downloaded unverified."""
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
 
 # Each source: where it is, its SHA-256 (a file with another hash is never used), how it lies on the sphere (the same steps scripts/make-textures.py takes for the 2048 picture) and the
 # WebP quality of its tiles. `roll` is a turn east, in fractions of the width; `strip` is ("lat", degrees) for a strip of an equirectangular map or ("merc", degrees) for a Mercator
@@ -170,7 +181,7 @@ def fetch(name, cache):
     path = os.path.join(cache, name + os.path.splitext(source["url"])[1])
     if not os.path.exists(path):
         os.makedirs(cache, exist_ok=True)
-        with urllib.request.urlopen(urllib.request.Request(source["url"], headers=UA), timeout=900) as response, open(path, "wb") as file:
+        with urllib.request.urlopen(urllib.request.Request(source["url"], headers=UA), timeout=900, context=tls_context()) as response, open(path, "wb") as file:
             shutil.copyfileobj(response, file)
     digest = sha256_of(path)
     if digest != source["sha256"]:
@@ -555,7 +566,7 @@ def sharp(cache, out, names):
         path = os.path.join(cache, source["file"])
         if not os.path.exists(path):
             print(f"downloading {source['file']}", flush=True)
-            with urllib.request.urlopen(urllib.request.Request(source["url"], headers=UA), timeout=900) as response, open(path, "wb") as file:
+            with urllib.request.urlopen(urllib.request.Request(source["url"], headers=UA), timeout=900, context=tls_context()) as response, open(path, "wb") as file:
                 shutil.copyfileobj(response, file)
         digest = sha256_of(path)
         if source["sha256"] == "":
@@ -626,12 +637,19 @@ def cut_sharp_strips(name, src, base, out, level, quality):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["build", "selftest", "sharp"])
+    parser.add_argument("command", choices=["build", "selftest", "sharp", "key"])
     parser.add_argument("--cache", default=os.path.join(ROOT, ".cache", "body-tiles"))
     parser.add_argument("--out", default=os.path.join(ROOT, ".cache", "body-tiles-out"))
     parser.add_argument("--bodies", default=",".join(SOURCES))
     args = parser.parse_args()
+    if args.command == "key":
+        # what the Pages workflow keys the cache of the downloaded sources on: the SHA-256 of each source, so the files are fetched again only when one of them is replaced in SOURCES
+        print(hashlib.sha256("\n".join(f"{name}:{SOURCES[name]['sha256']}" for name in sorted(SOURCES)).encode()).hexdigest())
+        return
     if args.command == "selftest":
+        context = tls_context()
+        if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
+            raise SystemExit("the download context does not verify certificates")
         selftest()
         saved = os.environ.pop("WAKUSEI_SHARP_TILES", None)
         gate = io.StringIO()

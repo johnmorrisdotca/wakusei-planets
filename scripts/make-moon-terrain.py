@@ -24,6 +24,7 @@ import argparse
 import json
 import math
 import os
+import ssl
 import struct
 import sys
 
@@ -552,6 +553,16 @@ WINDOW = {"name": "ldem_64_window_lat0-45_lon0-70.u16le", "url": LDEM, "row0": 2
 USER_AGENT = "wakusei-planets-data-build/1.0 (public-domain NASA data, once per cache)"
 
 
+def tls_context():
+    """Every download verifies the server's certificate and its name, against certifi's bundle (Mozilla's list, current as of its release) when certifi is installed, else the system's: a runner whose store lacks a root a site has moved to
+    (svs.gsfc.nasa.gov chains to Let's Encrypt's new root YR) still verifies. Nothing is ever downloaded unverified."""
+    try:
+        import certifi
+    except ImportError:
+        return ssl.create_default_context()
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 def sha256_of(path):
     import hashlib
 
@@ -574,7 +585,7 @@ def get(url, start=None, end=None, tries=5):
         if start is not None:
             request.add_header("Range", f"bytes={start}-{'' if end is None else end}")
         try:
-            response = urllib.request.urlopen(request, timeout=60)
+            response = urllib.request.urlopen(request, timeout=60, context=tls_context())
             if start is not None and response.status != 206:
                 raise RuntimeError(f"{url} did not honour a byte range (status {response.status})")
             return response
