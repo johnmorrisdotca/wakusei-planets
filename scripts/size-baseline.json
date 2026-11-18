@@ -102,7 +102,7 @@
     "./coordinates": 2069,
     "./asteroids": 39496,
     "./approaches": 136853,
-    "./moon-catalogue": 36478
+    "./moon-catalogue": 43646
   },
   "minified": {
     ".": 165522,
@@ -206,6 +206,6 @@
     "./coordinates": 5472,
     "./asteroids": 107569,
     "./approaches": 404821,
-    "./moon-catalogue": 141995
+    "./moon-catalogue": 156303
   }
 }

@@ -96,6 +96,12 @@ console.log(catalogueMoonsOf("jupiter", "carme").length, "moons in Jupiter's Car
 
 どの段階も、このパッケージがくわしく描く29個ほど正確ではありません。その29個は、メインの入口から求めると、ずれは数秒角から数分角におさまります ([正確さ](accuracy.md)を見てください)。何十年も離れた日 (1990年、2000年、2040年) では、ずれはずっと大きくなります (`accuracy.farDegrees`)。この表の位置は、小さな衛星が惑星のまわりのどのあたりにいるかを見せるためのもので、望遠鏡を向けるためのものではありません。
 
+## 2026-12-01の近くでは、不規則衛星は Horizons に合う
+
+巨大惑星の不規則衛星には、現在に近い日付について、ずっとよい位置があります。それぞれの衛星について、2026-12-01 の JPL Horizons の接触軌道 (その日の位置と速さに合う二体問題の軌道) を `osculating` (`MOON_OSCULATING_EPOCH_JD`、2461375.5) として持っていて、`catalogueMoonPosition` は、その日から `MOON_OSCULATING_DAYS` (150日) 以内ではこれを使い、それより外では平均軌道を使います。393個すべてについて、軌道を決めるのに使っていない16の日付 (前後15日から210日まで) で Horizons と比べました。150日以内の、衛星と日付のすべての組み合わせでは、中央値が0.06度、100組のうち95組が0.9度以内で、いちばん悪いのは、期間のはしにある木星の衛星のいくつかで、7度です。土星の衛星でいちばん悪いのは1.1度、天王星と海王星では0.1度です。平均軌道は数十度もずれます。`accuracy` と `grade` は、これまでどおり平均軌道について、この期間の外の日付で測ったものです。
+
+数値は `src/data/moon-osculating.ts` に整数で入っていて (gzip で約7 kB。`/moon-catalogue` のチャンクが増えた分です)、`scripts/make-moon-osculating.py` が作ります。Horizons への問い合わせは衛星ごとに1回で、元期と比べるための日付をまとめて頼み、結果はリポジトリの外にキャッシュします。更新するには、このスクリプトを新しい `--epoch` で実行します。
+
 ## 大きさ
 
 `radiusFrom` は半径の出どころです。`measured` は JPL の「Planetary Satellite Physical Parameters」にある46個 (不確かさは `radiusSigmaKm`)、`sheet` は Horizons のデータに半径がある19個、`derived` は382個です。その内訳は、V(1,0) 等級だけがデータにある26個と、ほかのどこにも大きさがない不規則衛星356個で、後者の等級は、英語版ウィキペディアの木星、土星、天王星、海王星の衛星の表にある絶対等級です (`magnitudeFrom` が `sheet` か `wikipedia` かを示します。`wikipedia` のときは、ページが `MOON_MAGNITUDE_PAGES[host]`、読んだ日 (2026-11-18) が `MOON_MAGNITUDES_READ` です)。それらの表は、不規則衛星の等級を小惑星センターの Natural Satellites Ephemeris Service から取っています。使っているのはその等級ひとつだけで、表の直径やほかの列は使っていません。

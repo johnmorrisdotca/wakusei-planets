@@ -1062,19 +1062,22 @@ function nearestApproaches(count: number, filter?: ApproachFilter) => Approach[]
 function nextApproach(object: string | number, after: When) => Approach | undefined
 ## ./moon-catalogue
 const ASSUMED_ALBEDO: 0.04
-export interface CatalogueMoon { id: string; name: string | null; ja: string | null; designation: string | null; label: string; number: string | null; host: HostId; code: number | null; named: boolean; confirmed: boolean; discovery: MoonDiscovery; orbit: MoonOrbit | null; retrograde: boolean | null; group: MoonGroup; radiusKm: number | null; radiusSigmaKm: number | null; radiusFrom: MoonSizeSource | null; albedo: number | null; magnitude: number | null; magnitudeFrom: MoonMagnitudeSource | null; accuracy: { worstKm: number; worstDegrees: number; farDegrees: number | null; } | null; grade: MoonGrade; full: boolean; }
+export interface CatalogueMoon { id: string; name: string | null; ja: string | null; designation: string | null; label: string; number: string | null; host: HostId; code: number | null; named: boolean; confirmed: boolean; discovery: MoonDiscovery; orbit: MoonOrbit | null; osculating: MoonOsculating | null; retrograde: boolean | null; group: MoonGroup; radiusKm: number | null; radiusSigmaKm: number | null; radiusFrom: MoonSizeSource | null; albedo: number | null; magnitude: number | null; magnitudeFrom: MoonMagnitudeSource | null; accuracy: { worstKm: number; worstDegrees: number; farDegrees: number | null; } | null; grade: MoonGrade; full: boolean; }
 export type HostId = PlanetId | DwarfId;
 const MOON_CATALOGUE: readonly CatalogueMoon[]
 const MOON_CATALOGUE_FETCHED: string
 const MOON_GROUPS: readonly MoonGroup[]
 const MOON_MAGNITUDES_READ: "2026-11-18"
 const MOON_MAGNITUDE_PAGES: Readonly<Partial<Record<HostId, string>>>
+const MOON_OSCULATING_DAYS: 150
+const MOON_OSCULATING_EPOCH_JD: 2461375.5
 export interface MoonCount { total: number; named: number; placed: number; }
 export interface MoonDiscovery { year: number | null; by: string | null; reference: string | null; }
 export type MoonGrade = "close" | "rough" | "loose" | "unmeasured" | "none";
 export type MoonGroup = "inner" | "major" | "regular" | "themisto" | "himalia" | "carpo" | "valetudo" | "ananke" | "carme" | "pasiphae" | "inuit" | "gallic" | "norse" | "prograde" | "retrograde" | "none";
 export type MoonMagnitudeSource = "sheet" | "wikipedia";
 export interface MoonOrbit { frame: "ecliptic" | "equatorial" | "laplace"; pole?: readonly [ number, number ]; epochJd: number; a: number; e: number; w: number; m: number; i: number; node: number; periodDays: number; apsisYears: number | null; nodeYears: number | null; ephemeris: string; }
+export interface MoonOsculating { epochJd: number; a: number; e: number; i: number; node: number; w: number; m: number; }
 export type MoonSizeSource = "measured" | "sheet" | "derived";
 export type When = Date | number;
 function catalogueMoonPosition(moon: string | number | CatalogueMoon, when: When) => Vec3 | undefined

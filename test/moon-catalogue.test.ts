@@ -283,4 +283,4 @@ test("the rows are a chunk of their own: no other entry point carries them, and 
 const COUNTS: Record<string, number> = { earth: 1, mars: 2, jupiter: 115, saturn: 293, uranus: 29, neptune: 16, pluto: 5, orcus: 1, haumea: 2, quaoar: 1, makemake: 1, gonggong: 1, eris: 1 };
 const GRADES: Record<string, number> = { close: 37, rough: 140, loose: 282, unmeasured: 1, none: 8 };
 const SIZES = { measured: 46, sheet: 19, derived: 382, none: 21 };
-const BUDGET_GZIP = 40_000;
+const BUDGET_GZIP = 45_000;
