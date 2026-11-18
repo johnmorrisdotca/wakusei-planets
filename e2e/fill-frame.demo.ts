@@ -47,8 +47,9 @@ for (const [name, url, frame, element] of PAGES) {
       test.setTimeout(120_000);
       await page.setViewportSize({ width, height });
       await page.goto(url);
-      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
+      // a view out of sight stays "loading" by design (nothing is drawn out of sight): on the phone the portrait's frame starts just below the fold, so bring it into sight first and then wait for it
       await page.locator(frame).scrollIntoViewIfNeeded();
+      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
       await page.waitForTimeout(1200);
       const seen = await boxes(page, frame, element);
       expect(seen.frame.width, "the frame has a size").toBeGreaterThan(100);
@@ -73,8 +74,8 @@ for (const [name, url, element] of [
       test.setTimeout(120_000);
       await page.setViewportSize({ width, height });
       await page.goto(url);
-      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
       await page.locator(element).scrollIntoViewIfNeeded();
+      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
       await page.waitForTimeout(1500);
       const seen = await page.evaluate((e) => {
         const el = document.querySelector(e)!;
