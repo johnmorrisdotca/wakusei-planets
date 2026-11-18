@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Vanth is ヴァンス in Japanese** (MODULES-1088). The Japanese name of Orcus's moon was ヴァント, for which no published source was found; Japanese Wikipedia (ヴァンス_(衛星)) and Wikidata write ヴァンス, the Nayoro Observatory's 2014 report on its star occultation writes バンス, and the Japanese moon-catalogue guide already wrote ヴァンス. `facts.ts`, the moon catalogue's `ja`, the site's description of the shaded dwarf-planet moons, and the Japanese close-zoom and plan guides now say ヴァンス. Checked by the Japanese reviewer. Gonggong's name (ゴンゴン) is not changed: no confirmed official katakana yet.
+
 ## [0.65.0] - 2026-11-17
 
 - **The Apollo lunar rover from a museum's 3D model** (MODULES-1459). `models/apollo-lrv.glb` (1.0 MB, served beside the demo like Perseverance and Curiosity, in no npm package): "Mondfahrzeug (Lunar Rover)" by Deutsches Museum | Digital, **CC BY-SA 4.0**, modified (trimmed from about 440,000 vertices to 74,000, the four wheels split into their own nodes inside steering pivots, two seat eyes, textures shrunk). It is not NASA's: the one file in the repository under that licence, a named exception, so the demo's surface page carries its credit line (title, author, licence with its link, modified, share-alike), `NOTICE.md` names the file and the code around it stays MIT. `drive-model="/models/apollo-lrv.glb"` draws it in place of the shapes, its wheels rolling and steering with the drive and `seat-commander` as the seat view. The replica is 3.02 m long and 1.75 m wide with a 1.92 m wheelbase against the published 3.05 m, 2.13 m and 2.29 m; its own proportions were kept, not stretched, and the drive takes the model's. A test loads it at Apollo 17 and checks its nodes, its wheels, its steering and its eye.

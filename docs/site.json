@@ -461,7 +461,7 @@
     },
     "./moons-dwarf": {
       "en": "The dwarf planets' moons: shaded looks (Vanth, Hiʻiaka, Namaka, Dysnomia)",
-      "ja": "準惑星の衛星の陰影つきの見た目 (ヴァント、ヒイアカ、ナマカ、ディスノミア)",
+      "ja": "準惑星の衛星の陰影つきの見た目 (ヴァンス、ヒイアカ、ナマカ、ディスノミア)",
       "platform": "browser"
     },
     "./earth": {
