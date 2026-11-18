@@ -340,8 +340,8 @@
       "ja": "太陽、惑星、冥王星のファクトシート (大きさ、距離、1年、1日、衛星、NASAのページ、日本語と英語の短い説明) "
     },
     "./sky": {
-      "en": "Sky events, experimental: the equinoxes and solstices (more to come), through astronomy-engine as an optional peer",
-      "ja": "空の出来事 (実験的): 春分・夏至・秋分・冬至 (これから増えます)。astronomy-engine を任意の peer として使います",
+      "en": "Sky events, experimental: seasons, Moon phases, eclipses (worldwide and from a place), rise, set and transit, conjunctions and oppositions, peak magnitude, libration, apsides, nodes and greatest elongation, through astronomy-engine as an optional peer",
+      "ja": "空の出来事 (実験的): 季節、月相、食 (世界全体と観測地点ごと)、出・南中・入り、合と衝、最大光度、秤動、近地点・遠地点と交点、最大離角。astronomy-engine を任意の peer として使います",
       "platform": "node"
     },
     "./suncalc": {

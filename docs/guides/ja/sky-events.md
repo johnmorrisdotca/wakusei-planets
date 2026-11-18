@@ -65,12 +65,12 @@ console.log(`Jupiter opposition ${opposition.time.toISOString().slice(0, 16)}Z`)
 
 新しい名前は API の約束事の草案 (リポジトリの docs/design/api-conventions.md) に従います。角度は単位の接尾辞なしの度、長さは単位つき、時刻は `Date`、期間内に起こらない出来事は `null` です。古い `skyBodies` の項目には `Deg` の接尾辞が付いていて、1.0 までは両者が異なったままです。
 
-## 既定で選んだもの (John の確認待ち)
+## 既定値
 
-この入口は、計画が勧める選択で作ってあります。どれも既定で、John の確認待ちです。
+この入口の選択は次のとおりです。
 
 - `./sky` の入口と、任意の peer としての astronomy-engine (`peerDependencies` は `>=2.1.19 <3`、`peerDependenciesMeta` で optional)。
-- peer がないときは、ふつうの静的 import による実行環境自身のエラー。計画ではトップレベルの `await import()` と専用のエラー文を勧めていましたが、パッケージのサイズ計測は ES2020 が対象でトップレベル await を受け付けず (読者の ES2020 のバンドラーも同じです)、計画の代案を使っています。
+- peer がないときは、ふつうの静的 import による実行環境自身のエラー。トップレベルの `await import()` と専用のエラー文のほうが親切ですが、パッケージのサイズ計測は ES2020 が対象でトップレベル await を受け付けず (読者の ES2020 のバンドラーも同じです)、使えません。
 - 結果の型には `Deg` の接尾辞を付けない (`SkyBody` とは異なる)。
 - 出来事は 0.x の間 `@experimental`。
 - 木星の衛星と星座は、このパッケージでは扱わない。このパッケージ自身の衛星はすでにテスト済みで、星座の境界は hoshi-stars のものです。

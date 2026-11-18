@@ -65,12 +65,12 @@ console.log(`Jupiter opposition ${opposition.time.toISOString().slice(0, 16)}Z`)
 
 New names follow the API conventions draft (docs/design/api-conventions.md in the repository): angles in degrees without a suffix, lengths with their unit, times as `Date`, and `null` for an event that does not happen in the window. The older `skyBodies` fields carry a `Deg` suffix; the two stay different until 1.0.
 
-## Choices made by default, for John to confirm
+## Defaults
 
-This entry was built with the plan's recommended choices. Each is a default, for John to confirm:
+The choices this entry makes:
 
 - the `./sky` entry, with astronomy-engine as an optional peer (`peerDependencies` `>=2.1.19 <3`, `peerDependenciesMeta` optional);
-- a missing peer is the runtime's own error, from a plain static import. The plan preferred a top-level `await import()` with a worded error, but the package's size measure targets ES2020, which refuses top-level await (and so would any reader's ES2020 bundler), so the plan's fallback is used;
+- a missing peer is the runtime's own error, from a plain static import. A top-level `await import()` with a worded error would be friendlier, but the package's size measure targets ES2020, which refuses top-level await (and so would any reader's ES2020 bundler);
 - result types have no `Deg` suffix, against `SkyBody`'s;
 - events are `@experimental` in 0.x;
 - Jupiter's moons and constellations are not wrapped: the package's own moons are already tested, and the constellation boundaries belong to hoshi-stars.
