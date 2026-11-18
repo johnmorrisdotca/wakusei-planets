@@ -20,7 +20,8 @@ import { BELT_IDS, BELTS, beltFlight, beltNote, beltsSource, beltSpacing, loadBe
 import type { ThreeParts } from "../scene/body.ts";
 import { setThreeLoader, takeRenderer } from "../scene/shared.ts";
 import { texturePaths, tilesBase } from "../scene/textures.ts";
-import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, frameAt, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "./frame.ts";
+import { ASTEROID_IDS, ASTEROID_PREFIX, asteroidIdOf } from "./asteroid-ids.ts";
+import { AU_IN_EARTH_RADII, EARTH_RADIUS_KM, eclipticToScene, frameAt, SPACE_DWARFS, SPACE_MINORS, SPACE_PLANETS, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "./frame.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
 import { moonDistance, placeBodies, radiusIn, readMoonSize, type ScaleMode } from "./scale.ts";
 import type { RideLook } from "./ride.ts";
@@ -124,9 +125,9 @@ export interface BodyHover extends BodyInfo {
  * ```
  */
 export interface BodySight extends Sight {
-  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`. */
+  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`, or an asteroid's id from `/asteroids` (`eros`, with the option `asteroids` on) when `kind` is `small-body`. */
   id: string;
-  kind: SpaceKind | "spacecraft" | "orbiter";
+  kind: SpaceKind | "spacecraft" | "orbiter" | "small-body";
   host?: BodyId;
   /** Degrees between the camera's forward direction and the body, 0 (straight ahead) to 180 (straight behind). */
   offAxis: number;
@@ -302,7 +303,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #allMoons = false;
@@ -379,6 +380,7 @@ export class WakuseiSpace extends HTMLElement {
     const craft = this.getAttribute("spacecraft");
     if (craft !== null && craft !== "off") this.spacecraft = craft;
     this.orbiters = this.hasAttribute("orbiters") && this.getAttribute("orbiters") !== "off";
+    this.asteroids = this.hasAttribute("asteroids") && this.getAttribute("asteroids") !== "off";
     this.#model.orbiterChosen = this.getAttribute("orbiter") || null;
     this.#model.orbiterLines = orbiterLines(this.getAttribute("orbiter-lines"));
     this.#model.orbiterTrack = this.hasAttribute("orbiter-track") && this.getAttribute("orbiter-track") !== "off";
@@ -525,6 +527,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "roadster") this.roadster = value !== null && value !== "off";
     else if (name === "spacecraft") this.spacecraft = value === null || value === "off" ? false : value;
     else if (name === "orbiters") this.orbiters = value !== null && value !== "off";
+    else if (name === "asteroids") this.asteroids = value !== null && value !== "off";
     else if (name === "orbiter") this.orbiter = value || null;
     else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
     else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
@@ -968,6 +971,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.mode = value;
     // a flight through a belt is at true distances: the squeezed scale does not map a camera that moves among the bodies
     if (value !== "true" && this.#flight !== null) this.leaveBelt();
+    // so is the ride with an asteroid
+    if (value !== "true" && this.#asteroidRide !== null) this.ride(null);
     this.#nameScale();
     this.#gate?.request();
   }
@@ -1028,6 +1033,122 @@ export class WakuseiSpace extends HTMLElement {
     return this.#model.region;
   }
   #orbitersLoading = false;
+  #asteroidsLoading = false;
+  /** Resolved when the records of the asteroids are in: a `goTo` or `ride` to an asteroid asked before that waits for it. */
+  #asteroidsLoaded = (() => {
+    let resolve!: () => void;
+    const promise = new Promise<void>((done) => (resolve = done));
+    return { promise, resolve };
+  })();
+  /** The move to an asteroid that is waiting for the records, or null: any other move or call to stop takes it back. */
+  #asteroidMove: object | null = null;
+  /** The asteroid the camera is at (`goTo`) or riding with (`ride`), or null. */
+  #asteroidRide: string | null = null;
+  /**
+   * Place the asteroids of `/asteroids` in the view (the attribute `asteroids`; off by default): about a hundred bodies, each a point on its orbit on the date shown, drawn with the belts' points in the one instanced draw, and the
+   * nearest few within about an astronomical unit (the true scale) named, in the page's language. A name is pressable: `wakusei-body-click` (`{ id, name, kind: "small-body" }`) and `wakusei-asteroid-click` (`{ id, name }`)
+   * say which, and nothing else happens (a press does not go there: `goTo(id)` and `ride(id)` do). Each is an entry of `sight()` with `kind: "small-body"`. The records and their orbits are loaded when the option is first turned on and cost nothing
+   * before; with it off nothing is worked out or drawn for them. The positions are two-body: good near each body's epoch (`ASTEROID_ACCURACY` in `/asteroids`), less so far from it. `stats.asteroids` says how many were
+   * placed and named and what placing them cost.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.addEventListener("wakusei-asteroid-click", (event) => console.log((event as CustomEvent<{ id: string; name: string }>).detail.name));
+   * space.asteroids = true;
+   * ```
+   */
+  get asteroids(): boolean {
+    return this.#model.asteroids;
+  }
+  set asteroids(value: boolean) {
+    this.#model.asteroids = value;
+    // an asteroid is no longer there to be at: the camera goes back where it was, and a move still waiting for the records is dropped
+    if (!value) {
+      this.#asteroidMove = null;
+      if (this.#asteroidRide !== null) this.ride(null);
+    }
+    if (value && this.#model.asteroidSet === null && !this.#asteroidsLoading) {
+      this.#asteroidsLoading = true;
+      void import("../asteroids.ts").then(
+        (mod) => {
+          const list = mod.asteroidList();
+          const source = mod.asteroidsSource();
+          if (this.#door.book.get(source.info.id) === undefined) this.#door.book.addSource(source);
+          const of = (id: string) => list.find((one) => one.id === id);
+          this.#model.asteroidSet = {
+            ids: list.map((one) => one.id),
+            bodies: list.map((one) => mod.asteroidAsSmallBody(one)),
+            name: (id) => ({ ...(of(id)?.name ?? { en: id, ja: id }) }),
+            point: (id) => ({
+              id,
+              at: (ms) => {
+                const here = eclipticToScene(mod.asteroidPosition(id, ms));
+                const soon = eclipticToScene(mod.asteroidPosition(id, ms + 1000));
+                return { position: here, velocity: [soon[0] - here[0], soon[1] - here[1], soon[2] - here[2]] };
+              },
+            }),
+            distanceKm: (id) => Math.max(200, 8 * (of(id)?.diameterKm ?? 0)),
+          };
+          this.#door.book.enableSource(source.info.id, this.#model.asteroids);
+          this.#gate?.request();
+          this.#asteroidsLoaded.resolve();
+        },
+        () => {
+          this.#asteroidsLoading = false;
+        },
+      );
+    } else if (this.#model.asteroidSet !== null) this.#door.book.enableSource("wakusei-asteroids", value);
+    this.#gate?.request();
+  }
+  /** Whether `key` is the view's key (`asteroidKey`) of one of the asteroids placed in the view. */
+  #isAsteroid(key: string): boolean {
+    const id = asteroidIdOf(key);
+    return id !== undefined && this.#model.asteroids && this.#model.asteroidSet !== null && this.#model.asteroidSet.ids.includes(id);
+  }
+  /**
+   * The asteroid a `goTo` or `ride` names, as its plain id, or `undefined` where the name is none and the call goes on as it did: `eros`, or `asteroid:eros` (the form that always means the asteroid; `europa` and `dione`
+   * are moons first). Throws a `RangeError` when it is one and the option `asteroids` is off, and, with the option on, for a name that is neither a body of the view nor an asteroid.
+   */
+  #asteroidNamed(target: string, call: string): string | undefined {
+    const lower = target.trim().toLowerCase();
+    const prefixed = lower.startsWith(ASTEROID_PREFIX);
+    const id = prefixed ? lower.slice(ASTEROID_PREFIX.length) : lower;
+    if (!prefixed && findBody(target) !== undefined) return undefined;
+    if (!ASTEROID_IDS.includes(id)) {
+      if (prefixed || this.#model.asteroids) throw new RangeError(`${call}(${JSON.stringify(target)}): not a body of the view and not an asteroid of /asteroids (an asteroid's id is one of asteroidList(), such as "eros")`);
+      return undefined;
+    }
+    if (!this.#model.asteroids) throw new RangeError(`${call}(${JSON.stringify(target)}): "${id}" is an asteroid of /asteroids, which the view places only with the option asteroids on (the attribute asteroids, or space.asteroids = true)`);
+    return id;
+  }
+  /**
+   * Go to or ride along with an asteroid: the camera moves to a point that goes round the Sun as the asteroid does, at the true scale (the squeezed scale does not map a camera that moves among the bodies, so it is
+   * set to `true`, as `enterBelt` does). `goTo` keeps a distance from it looking at it (`follow`); `ride` sits at it looking at the Sun, with the way it goes at the top (`from`). With the records still being loaded, the move
+   * is made when they are in, unless another move is asked for first.
+   */
+  #moveToAsteroid(id: string, call: "goTo" | "ride", options: RideOptions & { zoom?: number }): boolean {
+    if (options.view === "beside") throw new RangeError(`${call}(${JSON.stringify(id)}): the view beside is for a moon`);
+    const set = this.#model.asteroidSet;
+    if (set === null) {
+      const waiting = {};
+      this.#asteroidMove = waiting;
+      void this.#asteroidsLoaded.promise.then(() => {
+        if (this.#asteroidMove !== waiting) return;
+        this.#asteroidMove = null;
+        if (this.#model.asteroids) this.#moveToAsteroid(id, call, options);
+      });
+      return true;
+    }
+    if (this.#model.mode !== "true") this.scale = "true";
+    const view = call === "goTo" ? "follow" : (options.view ?? "from");
+    this.ride(set.point(id), { ...options, around: "sun", view, distanceKm: options.distanceKm ?? set.distanceKm(id) });
+    this.#asteroidRide = id;
+    if (call === "goTo" && !this.hasAttribute("data-kazoku-bar")) this.#hands?.controller.set({ zoom: options.zoom ?? 1 }, true, "jump");
+    return true;
+  }
   /**
    * Show the spacecraft in orbit round the Moon and Mars (the attribute `orbiters`; off by default): each a small dot where `/orbiters` puts it on the date shown, scaled with its body, on its orbit line, with its
    * name beside it in the page's language, once the body is at least 24 CSS pixels in radius on the screen. A modelled path is drawn dim, and a predicted one whose measured error is more than 2 per cent of its body's radius (`orbiterDim`); a craft with no path is not drawn. The paths (a 9 kB module)
@@ -1502,16 +1623,36 @@ export class WakuseiSpace extends HTMLElement {
    * `outer-planets`, `kuiper-belt`, `whole-system`) is a target too: the Sun is looked at and the camera stands back until the stage's orbits are all in the picture, with the stage's name shown. `wakusei-hop`
    * tells the page where it went and where the next and previous hops lead. A name in any case, in English or Japanese, works.
    *
-   * @param target - A body's name (`"saturn"`, `"Saturn"`, `"土星"`) or a stage's id.
-   * @param options - `smooth` (true by default), `zoom` (1 by default), `transition` and `duration`.
+   *
+   * With the option `asteroids` on it takes an asteroid's id from `/asteroids` too (`"eros"`; `"asteroid:europa"` and `"asteroid:dione"` are the forms that mean the asteroid, for `europa` and `dione` are moons first): the view
+   * is set to the true scale (the squeezed scale cannot place a camera among the bodies, and going back to it ends the move), and the camera goes to a distance of a few times the asteroid's size (at least 200 km) looking at it
+   * and keeps it there as the clock runs: `riding` says which asteroid (`riding.target.id`), `wakusei-ride` is sent as for any ride and `wakusei-hop` is not (an asteroid is no stop of the hopper), and a `goTo` of a body or `ride(null)` ends it.
+   * Asked before the records are in, the move is made when they are, unless another move is asked for first.
+   *
+   * @param target - A body's name (`"saturn"`, `"Saturn"`, `"土星"`), a stage's id, or an asteroid's id.
+   * @param options - `smooth` (true by default), `zoom` (1 by default), `transition` and `duration`; for an asteroid also `distanceKm`.
    * @returns Whether the view can go there.
+   * @throws RangeError For an asteroid's id with the option `asteroids` off (the message says to turn it on), and, with it on, for a name that is no body of the view and no asteroid.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.asteroids = true;
+   * space.goTo("eros");
+   * console.log(space.riding?.target);
+   * ```
    */
-  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number; transition?: TravelKind; duration?: number } = {}): boolean {
+  goTo(target: BodyId | string, options: { smooth?: boolean; zoom?: number; transition?: TravelKind; duration?: number; distanceKm?: number } = {}): boolean {
     const region = readRegion(target);
     if (region !== undefined) {
       this.#goToRegion(region, options);
       return true;
     }
+    const asteroid = this.#asteroidNamed(target, "goTo");
+    if (asteroid !== undefined) return this.#moveToAsteroid(asteroid, "goTo", options);
+    this.#asteroidMove = null;
     const id = readBody(target);
     if (!id) return false;
     const model = this.#model;
@@ -1917,10 +2058,34 @@ export class WakuseiSpace extends HTMLElement {
    * controls' zoom narrows the view. A body of the view (`"moon"`, `"mars"`) goes round the Earth; a moon (`"io"`) goes round its planet; a point of your own (`{ at(ms) }`, a satellite, a probe) goes round `around` (the Earth by default) and the
    * element knows nothing of what it is. Another call switches smoothly; `null` stops. The draw rate follows how fast the picture moves, never more than 30 a second (one a second for a reader who asked for reduced motion), and nothing is drawn out of sight.
    *
-   * @param target - A body name, a moon name, a point, or `null` to stop.
+   *
+   * With the option `asteroids` on, an asteroid's id from `/asteroids` is a target too (`"apophis"`; `"asteroid:europa"` for the asteroid where the id is a moon's as well): the view is set to the true scale, the camera sits at the
+   * asteroid looking at the Sun with the way it goes at the top (`view: "follow"` and `distanceKm` keep a distance and look at it instead, as `goTo` does), and `riding.target.id` is the asteroid's id.
+   *
+   * @param target - A body name, a moon name, an asteroid's id, a point, or `null` to stop.
    * @param options - `view`, `look`, `distanceKm`, `around`, `smooth` (see `RideOptions`).
+   * @throws RangeError For an asteroid's id with the option `asteroids` off (the message says to turn it on), for the view `beside` with an asteroid, and, with the option on, for a name that is no body of the view and no asteroid.
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.asteroids = true;
+   * space.ride("apophis", { smooth: false });
+   * space.ride(null);
+   * ```
    */
-  ride(target: RideTarget | null, options: RideOptions = {}): void {
+  ride(target: RideTarget | (string & Record<never, never>) | null, options: RideOptions = {}): void {
+    if (typeof target === "string") {
+      const asteroid = this.#asteroidNamed(target, "ride");
+      if (asteroid !== undefined) {
+        this.#moveToAsteroid(asteroid, "ride", options);
+        return;
+      }
+    }
+    this.#asteroidMove = null;
+    this.#asteroidRide = null;
     const model = this.#model;
     const leaving = this.#leaving();
     const wasRiding = model.ride !== null;
@@ -1977,7 +2142,7 @@ export class WakuseiSpace extends HTMLElement {
     return best.yaw;
   }
 
-  #resolveRide(target: RideTarget, options: RideOptions): RideState | undefined {
+  #resolveRide(target: RideTarget | string, options: RideOptions): RideState | undefined {
     const look = options.look ?? "down";
     const distanceKm = Math.max(100, options.distanceKm ?? 3000);
     if (typeof target !== "string") {
@@ -2201,6 +2366,8 @@ export class WakuseiSpace extends HTMLElement {
     moonSize: { asked: number; factor: number; clamped: boolean };
     /** The orbiters at the last draw: how many dots were drawn (their body big enough on the screen), each drawn craft's status (`tracked`, `predicted`, `modelled`); `dim` lists the craft drawn dim (`orbiterDim` from `/orbiters`); `lines` how many orbit lines and `track` how many points of ground track were drawn. */
     orbiters: { count: number; status: Record<string, "tracked" | "predicted" | "modelled" | "none">; dim: string[]; lines: number; track: number };
+    /** The asteroids of `/asteroids` at the last draw (the attribute `asteroids`): how many were placed (all of them, with the option on and the records loaded), how many named, and the milliseconds the places took; 0, 0 and 0 with it off. */
+    asteroids: { placed: number; named: number; ms: number };
     /** Surface pictures still being fetched. A rest test waits for 0, then for the draw count to stay still: a sharper picture draws one more frame when it arrives. */
     pictures: { pending: number };
     /** The body the last arrival kept in the picture beside the one gone to, or null. */
@@ -2232,6 +2399,7 @@ export class WakuseiSpace extends HTMLElement {
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
       orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
+      asteroids: { ...this.#model.asteroidsDrawn },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
       spacecraft: { count: this.#model.craftDrawn.count, status: { ...this.#model.craftDrawn.status }, drawn: [...this.#model.craftDrawn.drawn] },
       companion: this.#model.companion,
@@ -2288,6 +2456,7 @@ export class WakuseiSpace extends HTMLElement {
     if (id === "roadster") return this.#names[id] ?? this.#model.roadsterPath?.name[lang] ?? "Starman";
     if (this.#model.craftIds.includes(id)) return this.#names[id] ?? this.#model.craftNames?.(id, lang) ?? id;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return this.#names[id] ?? this.#model.orbiterSet.name(id)[lang];
+    if (this.#isAsteroid(id)) return this.#names[asteroidIdOf(id)!] ?? this.#model.asteroidSet!.name(asteroidIdOf(id)!)[lang];
     return this.#names[id] ?? BODIES[id as BodyId].name[lang];
   }
 
@@ -2413,7 +2582,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#hovered = id;
     this.#hoverBy = by;
     this.#markFar();
-    if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
+    if (id !== null && this.#isAsteroid(id)) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
+    else if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
     else if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
     else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: was }, bubbles: true, composed: true }));
   }
@@ -2463,8 +2633,9 @@ export class WakuseiSpace extends HTMLElement {
     for (const [id, input] of Object.entries(bodies)) {
       const body = id as BodyId;
       const orbiter = this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id);
-      const craft = orbiter || this.#model.craftIds.includes(id) || id === "roadster";
-      const one: BodySight = { id, kind: orbiter ? "orbiter" : craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis), offAxis: input.offAxis ?? 0, distance: input.distance ?? 0, distanceKm: input.distanceKm ?? null };
+      const asteroid = this.#isAsteroid(id);
+      const craft = orbiter || asteroid || this.#model.craftIds.includes(id) || id === "roadster";
+      const one: BodySight = { id: asteroid ? asteroidIdOf(id)! : id, kind: orbiter ? "orbiter" : asteroid ? "small-body" : craft ? "spacecraft" : bodyKindOf(body), ...sightOf(input, frame.width, frame.height, frame.axis), offAxis: input.offAxis ?? 0, distance: input.distance ?? 0, distanceKm: input.distanceKm ?? null };
       const host = craft ? undefined : hostOf(body);
       if (host !== undefined) one.host = host;
       now[id] = one;
@@ -2525,6 +2696,7 @@ export class WakuseiSpace extends HTMLElement {
     if (id === "sun") return 1;
     if (id === "roadster" || this.#model.craftIds.includes(id)) return 3;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return 5;
+    if (this.#isAsteroid(id)) return 6;
     const kind = bodyKindOf(id as BodyId);
     return kind === "moon" ? 4 : kind === "planet" || kind === "star" ? 2 : 3;
   }
@@ -2651,6 +2823,12 @@ export class WakuseiSpace extends HTMLElement {
    */
   #press(id: BodyId): void {
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
+    if (this.#isAsteroid(id)) {
+      // an asteroid is no body of the package: the press says which one, in the body event and in an event of its own, and goes nowhere
+      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("wakusei-asteroid-click", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id) }, bubbles: true, composed: true }));
+      return;
+    }
     if ((id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id))) {
       this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
       // an orbiter is told in an event of its own as well (`{ id, name }`, the id `orbiter` takes), the one above unchanged
@@ -2669,8 +2847,9 @@ export class WakuseiSpace extends HTMLElement {
     const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
     if (!id) return;
     // a craft's name is no body: focus tells the page its id and name, as a press does
-    const craft = (id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id));
-    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: craft ? { id, name: this.#nameOf(id), kind: "spacecraft" } : this.bodyInfo(id), bubbles: true, composed: true }));
+    const asteroid = this.#isAsteroid(id);
+    const craft = asteroid || (id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id));
+    this.dispatchEvent(new CustomEvent("wakusei-body-focus", { detail: craft ? { id: asteroid ? asteroidIdOf(id) : id, name: this.#nameOf(id), kind: asteroid ? "small-body" : "spacecraft" } : this.bodyInfo(id), bubbles: true, composed: true }));
     this.#hover(id, "focus");
   };
 

@@ -74,7 +74,7 @@ A planet's nearer moons appear round it once the planet is a few pixels across, 
 
 ## Bodies out of view
 
-`space.sight()` says where each body is for the picture at the last draw, as a list of `{ id, kind, host, inView, behind, edge, x, y, along, angle }`. A body whose disc is on the picture is `inView`. For one that is not, `edge` is the side of the picture it lies beyond (`top`, `right`, `bottom` or `left`), `x` and `y` the point on that edge where a line from the middle of the view to the body crosses it, `along` the same point measured along the edge (from the left for the top and bottom, from the top for the sides), `angle` the way to it in degrees clockwise from the top of the picture, and `behind` is true while it is behind the camera. The list holds the Sun, the planets, the dwarf planets and the minor bodies, the moons of the body looked at and any other moon drawn, and it holds while riding along (without the body ridden on). `wakusei-sight` fires with `{ bodies }`, the same list, when a body comes into view or leaves it, goes behind the camera or comes out, changes edge, or moves 8 CSS pixels along its edge, at most four times a second while the view moves and once more when it settles; never at rest. The view works the list out only for a page that asks: the first `sight()` call or the first `wakusei-sight` listener asks for one draw, and the list is there from that draw on. The view draws no tabs itself: a page places its own on the edges its controls leave free, and a press on one calls `space.goTo(id)`. `sightOf` and `sightChanged` from `/space` are the maths.
+`space.sight()` says where each body is for the picture at the last draw, as a list of `{ id, kind, host, inView, behind, edge, x, y, along, angle }`. A body whose disc is on the picture is `inView`. For one that is not, `edge` is the side of the picture it lies beyond (`top`, `right`, `bottom` or `left`), `x` and `y` the point on that edge where a line from the middle of the view to the body crosses it, `along` the same point measured along the edge (from the left for the top and bottom, from the top for the sides), `angle` the way to it in degrees clockwise from the top of the picture, and `behind` is true while it is behind the camera. The list holds the Sun, the planets, the dwarf planets and the minor bodies, the moons of the body looked at and any other moon drawn, the asteroids of `/asteroids` with `kind: "small-body"` when the option `asteroids` is on, and it holds while riding along (without the body ridden on). `wakusei-sight` fires with `{ bodies }`, the same list, when a body comes into view or leaves it, goes behind the camera or comes out, changes edge, or moves 8 CSS pixels along its edge, at most four times a second while the view moves and once more when it settles; never at rest. The view works the list out only for a page that asks: the first `sight()` call or the first `wakusei-sight` listener asks for one draw, and the list is there from that draw on. The view draws no tabs itself: a page places its own on the edges its controls leave free, and a press on one calls `space.goTo(id)`. `sightOf` and `sightChanged` from `/space` are the maths.
 
 Every entry also says how far off the line of sight the body is and how far away: `offAxis` is the angle in degrees between the camera's forward direction and the body (0 straight ahead, 180 straight behind), `distance` the distance from the camera in the view's units (Earth radii), and `distanceKm` the same in kilometres in the true scale and `null` in the compressed one, whose distances are drawn and not real. A page can rank its edge markers by nearness with them. An orbiter (with `orbiters` on) is an entry of its own, `kind: "orbiter"`, with the id `orbiter` takes (`lro`, `mro`); a press on its name sends `wakusei-orbiter-click` with `{ id, name }` as well as the `wakusei-body-click` it always sent.
 
@@ -91,6 +91,40 @@ The demo's picker is three clicks in a row: a kind (the Sun and planets, dwarf p
 `roadster` (and `space.roadster`) draws Starman and the Tesla Roadster as a small marked body on its orbit line with its name, from the launch in 2018 to the end of 2035, loading its path only when it is first shown: [Starman and the Tesla Roadster](roadster.md). `spacecraft` (and `space.spacecraft`) is off by default. `"all"` or `true` draws every deep-space craft whose record covers the date, as one set of dots with their names; a space-separated list draws those. A craft outside its record is not drawn, and `stats.spacecraft.status[id]` is `"outside"`. Each table loads the first time that craft is shown. `sight()` gives each drawn craft an entry with `kind: "spacecraft"` and the craft's own id. A press sends `wakusei-body-click` with that kind and does not move the camera.
 
 `orbiters` (and `space.orbiters`) draws the spacecraft in orbit round the Moon and Mars as dots on their orbit lines with their names, once the body is big enough on the screen, loading their paths only when first shown: [The orbiters of the Moon and Mars](orbiters.md).
+
+`asteroids` (and `space.asteroids`; off by default) places the 104 bodies of `/asteroids` in the view: each a point on its orbit on the date shown, drawn in the one instanced draw with the belts' points, with the nearest few (at most 12, within about an astronomical unit of the camera in the true scale) named in the page's language. A name is a button: a press sends `wakusei-body-click` with `{ id, name, kind: "small-body" }` and `wakusei-asteroid-click` with `{ id, name }`, and nothing else happens (going to an asteroid is a `goTo` or a `ride`, below). Each is an entry of `sight()` with `kind: "small-body"` (Vesta and Pallas keep `asteroid`, the kind the package's own bodies have). Two of them, `europa` and `dione`, have the id of a moon: with the option on the moon is still the moon, and the asteroid is the entry of that id with `kind: "small-body"`. The records are loaded when the option is first turned on, in a file of their own that a page that never turns it on does not fetch, and with it off nothing is worked out or drawn for them. The positions are two-body, good near each body's epoch (`ASTEROID_ACCURACY` of `/asteroids` says how good). Measured in Chromium drawing in software (24 draws each, the time stepped by the test, 2026-11-17): with the option on a draw gives the graphics card one more call (14 to 15) and holds six more GPU objects (105 to 111), and turned off again it is back to 14 and 105, frame for frame; a frame took a median of 66 ms and 89 ms at the 95th percentile with it off and 74 ms and 106 ms with it on, and with the CPU throttled to a quarter 81 and 100 ms off, 77 and 119 ms on; placing the 104 bodies took a median of 0.1 ms and at most 0.9 ms a draw (`stats.asteroids.ms`). Nothing is drawn at rest. `stats.asteroids` says how many were placed and named. A page turns it on with the attribute:
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The asteroids of the set, on 2 November 2026</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space time="2026-11-02T14:00Z" speed="0" scale="true" asteroids look="realistic" style="width: 420px"></wakusei-space>
+  </body>
+</html>
+```
+
+`goTo` and `ride` take an asteroid's id from `/asteroids` when the option is on: `space.goTo("eros")` brings the camera to a few times the asteroid's size from it (at least 200 km) looking at it, and keeps it there as the clock runs; `space.ride("apophis")` puts the camera at the asteroid, looking at the Sun with the way it goes at the top (`view: "follow"` and `distanceKm` keep a distance and look at it instead, as `goTo` does). Both are made at the true scale: the view is set to `scale="true"` if it is not already, because the squeezed scale cannot place a camera among the bodies, and going back to `compressed`, turning the option off, a `goTo` of a body or `ride(null)` ends the move and the camera goes back where it was. `space.riding.target.id` says which asteroid and `wakusei-ride` is sent as for any ride; `wakusei-hop` is not (an asteroid is no stop of the hopper). `europa` and `dione` are moons first; `asteroid:europa` and `asteroid:dione` are the forms that mean the asteroid (`asteroid:eros` works for every id). A call made before the records are in waits for them, and is dropped if another move is asked for first. With the option off, an asteroid's id throws a `RangeError` that says to turn it on, and with the option on a name that is no body of the view and no asteroid throws one that says so; with the option off a name that is neither returns `false` from `goTo`, as it always did.
+
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+space.asteroids = true;
+space.goTo("eros", { smooth: false });
+console.log(space.riding?.view, space.scale);
+space.ride("apophis", { smooth: false });
+try {
+  space.goTo("not-an-asteroid");
+} catch (error) {
+  console.log((error as RangeError).message);
+}
+```
 
 ## Every other known moon, as dots
 

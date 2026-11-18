@@ -74,7 +74,7 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 
 ## 画面の外の天体
 
-`space.sight()` は、最後に描いた絵の上で、それぞれの天体がどこにあるかを、`{ id, kind, host, inView, behind, edge, x, y, along, angle }` の一覧で返します。円盤が絵の中にある天体は `inView` が `true` です。そうでない天体では、`edge` は天体がある方向の絵の辺 (`top`、`right`、`bottom`、`left`)、`x` と `y` は、表示の真ん中から天体へ引いた線がその辺と交わる点、`along` は同じ点を辺にそって測った値 (上と下の辺は左から、左右の辺は上から)、`angle` は天体への向き (絵の上から時計まわりに測った角度、単位は度) です。カメラの後ろにある間は `behind` が `true` になります。一覧には、太陽、惑星、準惑星と小天体、見ている天体の衛星、ほかに描いている衛星が入り、乗って見ている間も同じです (乗っている天体は入りません)。`wakusei-sight` は、天体が絵に入ったり出たり、カメラの後ろに回ったり出てきたり、辺が変わったり、辺にそって 8 CSS ピクセル動いたりしたときに、同じ一覧を入れた `{ bodies }` つきで発火します。表示が動いている間は1秒に4回までで、止まったときにもう1回発火します。止まっているときは発火しません。この一覧は、ページが求めたときだけ計算します。はじめて `sight()` を呼ぶか、はじめて `wakusei-sight` のリスナーをつけると、1回描き直し、そのあとは一覧が使えます。この要素はタブを描きません。タブはページが自分で、ボタンなどのない辺に置き、押されたら `space.goTo(id)` を呼びます。`/space` の `sightOf` と `sightChanged` がその計算です。
+`space.sight()` は、最後に描いた絵の上で、それぞれの天体がどこにあるかを、`{ id, kind, host, inView, behind, edge, x, y, along, angle }` の一覧で返します。円盤が絵の中にある天体は `inView` が `true` です。そうでない天体では、`edge` は天体がある方向の絵の辺 (`top`、`right`、`bottom`、`left`)、`x` と `y` は、表示の真ん中から天体へ引いた線がその辺と交わる点、`along` は同じ点を辺にそって測った値 (上と下の辺は左から、左右の辺は上から)、`angle` は天体への向き (絵の上から時計まわりに測った角度、単位は度) です。カメラの後ろにある間は `behind` が `true` になります。一覧には、太陽、惑星、準惑星と小天体、見ている天体の衛星、ほかに描いている衛星が入り、オプション `asteroids` がオンのときは `/asteroids` の小惑星 (`kind: "small-body"`) も入り、乗って見ている間も同じです (乗っている天体は入りません)。`wakusei-sight` は、天体が絵に入ったり出たり、カメラの後ろに回ったり出てきたり、辺が変わったり、辺にそって 8 CSS ピクセル動いたりしたときに、同じ一覧を入れた `{ bodies }` つきで発火します。表示が動いている間は1秒に4回までで、止まったときにもう1回発火します。止まっているときは発火しません。この一覧は、ページが求めたときだけ計算します。はじめて `sight()` を呼ぶか、はじめて `wakusei-sight` のリスナーをつけると、1回描き直し、そのあとは一覧が使えます。この要素はタブを描きません。タブはページが自分で、ボタンなどのない辺に置き、押されたら `space.goTo(id)` を呼びます。`/space` の `sightOf` と `sightChanged` がその計算です。
 
 どの項目にも、天体が視線からどれだけ外れているかと、どれだけ遠いかが入ります。`offAxis` はカメラの前方と天体のあいだの角度 (度) で、正面なら 0、真後ろなら 180 です。`distance` はカメラからの距離で、表示の単位 (地球半径) です。`distanceKm` は同じ距離をキロメートルで表し、実際の縮尺では数値、圧縮した縮尺では描いた距離が実際の距離ではないので `null` です。ページはこれで、辺の目印を近い順に並べられます。周回機 (`orbiters` をオンにしたとき) は専用の項目で、`kind: "orbiter"`、id は `orbiter` が受け取るもの (`lro`、`mro`) です。名前を押すと、これまでどおり出る `wakusei-body-click` に加えて、`{ id, name }` を持つ `wakusei-orbiter-click` が出ます。
 
@@ -91,6 +91,40 @@ console.log(Math.hypot(x - sun[0], y - sun[1], z - sun[2]).toFixed(0));
 `roadster` (または `space.roadster`) は、スターマンとテスラ・ロードスターを、小さな点として軌道の線の上に、名前つきで描きます。描くのは2018年の打ち上げから2035年末までで、軌道の表は初めて表示するときだけ読み込みます。詳しくは [スターマンとテスラ・ロードスター](roadster.md) をどうぞ。`spacecraft` (または `space.spacecraft`) の初期値はオフです。`"all"` または `true` で、その日の記録がある深宇宙の探査機をすべて、点と名前で一度に描きます。空白区切りの id なら、その探査機だけです。記録の外の日は描かず、`stats.spacecraft.status[id]` は `"outside"` です。表は、その探査機を初めて表示するときに読み込みます。`sight()` は描いた探査機ごとに、`kind: "spacecraft"` とその id の項目を返します。押すと `wakusei-body-click` が同じ kind で発火し、カメラは動きません。
 
 `orbiters` (または `space.orbiters`) は、月と火星を周回する探査機を、軌道の線の上の点として名前つきで描きます。天体が画面で十分に大きくなってからで、経路は初めて表示するときだけ読み込みます。詳しくは[月と火星の周回機](orbiters.md)をどうぞ。
+
+`asteroids` (と `space.asteroids`。初期値はオフ) は、`/asteroids` の104個の天体を表示に置きます。それぞれ表示している日付の軌道上の点で、帯の点と同じ1回のインスタンス描画で描き、カメラに近い数個 (最大12個。実際の縮尺ではカメラから約1天文単位以内) に、ページの言語で名前をつけます。名前はボタンで、押すと `wakusei-body-click` (`{ id, name, kind: "small-body" }`) と `wakusei-asteroid-click` (`{ id, name }`) が送られ、ほかには何も起きません (小惑星へ行く動作は、下の `goTo` と `ride` です)。それぞれ `sight()` の項目で `kind: "small-body"` です (ベスタとパラスは、このパッケージ自身の天体と同じ `asteroid` のままです)。そのうちの2つ、`europa` と `dione` は、衛星と同じidです。オンにしても衛星は衛星のままで、小惑星は同じidで `kind: "small-body"` の項目です。データはこのオプションを初めてオンにしたときに、専用のファイルから読み込みます。一度もオンにしないページはそれを取りに行きません。オフのあいだは、何も計算も描画もしません。位置は二体問題で、それぞれの元期の近くでよく合います (どれほどかは `/asteroids` の `ASTEROID_ACCURACY` にあります)。Chromium のソフトウェア描画で測ると (テストが時刻を進めて各24回の描画、2026-11-17)、オンにすると1回の描画でグラフィックスカードに渡す呼び出しが1つ増え (14から15)、GPUのオブジェクトが6つ増え (105から111)、オフに戻すとフレームごとに14と105に戻ります。1フレームは、オフで中央値66ミリ秒・95パーセンタイル89ミリ秒、オンで74ミリ秒・106ミリ秒でした。CPUを4分の1の速さに絞ると、オフで81と100ミリ秒、オンで77と119ミリ秒です。104個の位置を求めるのは、中央値0.1ミリ秒、最大でも1回の描画あたり0.9ミリ秒でした (`stats.asteroids.ms`)。静止しているあいだは何も描きません。`stats.asteroids` が、置いた数と名前をつけた数を返します。属性でオンにします。
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The asteroids of the set, on 2 November 2026</title>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
+  </head>
+  <body>
+    <wakusei-space time="2026-11-02T14:00Z" speed="0" scale="true" asteroids look="realistic" style="width: 420px"></wakusei-space>
+  </body>
+</html>
+```
+
+オンのときは、`goTo` と `ride` が `/asteroids` の小惑星のidを受け取ります。`space.goTo("eros")` は、カメラを小惑星の大きさの数倍 (最低200km) の距離まで近づけて、それを見たまま、時計が進んでもその距離を保ちます。`space.ride("apophis")` は、カメラを小惑星の位置に置いて太陽を見下ろし、進む向きを上にします (`view: "follow"` と `distanceKm` を渡すと、`goTo` と同じように距離を保って小惑星を見ます)。どちらも実際の縮尺で行います。まだなっていなければ表示を `scale="true"` にします。縮めた縮尺ではカメラを天体のあいだに置けないからです。`compressed` に戻す、オプションをオフにする、天体への `goTo`、`ride(null)` のどれでも動作が終わり、カメラは元の場所に戻ります。`space.riding.target.id` がどの小惑星かを返し、`wakusei-ride` は通常のライドと同じように送られます。`wakusei-hop` は送られません (小惑星はホッパーの停留所ではありません)。`europa` と `dione` はまず衛星の名前です。小惑星を指すには `asteroid:europa`、`asteroid:dione` と書きます (`asteroid:eros` はどのidでも使えます)。データを読み込む前に呼んだ場合は、読み込みを待ち、そのあいだに別の移動を頼むと取り消されます。オプションがオフのときに小惑星のidを渡すと、オンにするよう伝える `RangeError` を投げます。オンのときに、表示の天体にも小惑星にもない名前を渡すと、そう伝える `RangeError` を投げます。オフのときにどちらでもない名前を渡した場合は、これまでどおり `goTo` が `false` を返します。
+
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+space.asteroids = true;
+space.goTo("eros", { smooth: false });
+console.log(space.riding?.view, space.scale);
+space.ride("apophis", { smooth: false });
+try {
+  space.goTo("not-an-asteroid");
+} catch (error) {
+  console.log((error as RangeError).message);
+}
+```
 
 ## ほかの衛星をすべて点で
 
