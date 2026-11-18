@@ -4,8 +4,18 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      soak_only:
+        description: "Run only the soak job (the other jobs are skipped)"
+        type: boolean
+        default: false
+      soak_minutes:
+        description: "How long the soak runs, in minutes (the job's own limit is 25 minutes: up to 10 is safe)"
+        type: string
+        default: "1"
 jobs:
   check:
+    if: ${{ !inputs.soak_only }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -22,6 +32,7 @@ jobs:
         run: pnpm check
       - run: node scripts/check-standard.mjs
   package:
+    if: ${{ !inputs.soak_only }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     strategy:
@@ -39,6 +50,7 @@ jobs:
       - name: The package as npm packs it installs and imports
         run: pnpm test:package
   usage:
+    if: ${{ !inputs.soak_only }}
     runs-on: ubuntu-latest
     # In the Playwright image at the lockfile's version, which has the browsers' system libraries: no apt mirror (down on 2026-11-11).
     container:
@@ -59,6 +71,7 @@ jobs:
       - name: Every way of using it in the README and the guides, built and opened in a browser
         run: pnpm test:usage
   demo:
+    if: ${{ !inputs.soak_only }}
     # One job a Playwright project: the four are the same tests at a desk's and a phone's width in Chromium and in WebKit. The desk's Chromium draws every body in software, so it is dealt out to ten jobs (`--shard`).
     # 25 minutes: shard 2 of 6 sat at 14:44 of 15 and was cancelled on 2026-11-10 (MODULES-766); eight shards and room for a slow apt mirror. Ten from 2026-11-19: shard 7 of 8 took 22 of its 25 minutes at 0.67.0, and with 0.68.0's specs it ran past 25 and was cancelled twice (run 44338921430).
     name: demo (${{ matrix.project }} ${{ matrix.shard }})
@@ -107,6 +120,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
   freeze:
+    if: ${{ !inputs.soak_only }}
     # Four jobs of the freeze test, dealt out by test (`--shard`; the project is `fullyParallel`, so a file is split between jobs, and the tests are independent: each opens its own page).
     # The 66 tests took 20.7 minutes in one job, and with the soak and the install the job reached its 25-minute limit and was cancelled on 2026-11-18 (the 0.62.0 and 0.63.0 runs), which blocks the release.
     # By shard they take 2 to 8 minutes each, and the job has 25.
@@ -152,8 +166,8 @@ jobs:
       - uses: ./.github/actions/playwright
         with:
           browsers: chromium
-      - name: The soak, one minute (ten minutes by hand with pnpm test:soak)
-        run: SOAK_MINUTES=1 pnpm test:soak
+      - name: The soak, one minute (a longer one by hand: the soak_minutes input of a manual run, or ten minutes with pnpm test:soak)
+        run: SOAK_MINUTES=${{ inputs.soak_minutes || 1 }} pnpm test:soak
   commits:
     # A pushed commit message never names an AI as author or co-author.
     if: github.event_name == 'push'
