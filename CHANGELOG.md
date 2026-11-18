@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.65.0] - 2026-11-17
+
 - **The Apollo lunar rover from a museum's 3D model** (MODULES-1459). `models/apollo-lrv.glb` (1.0 MB, served beside the demo like Perseverance and Curiosity, in no npm package): "Mondfahrzeug (Lunar Rover)" by Deutsches Museum | Digital, **CC BY-SA 4.0**, modified (trimmed from about 440,000 vertices to 74,000, the four wheels split into their own nodes inside steering pivots, two seat eyes, textures shrunk). It is not NASA's: the one file in the repository under that licence, a named exception, so the demo's surface page carries its credit line (title, author, licence with its link, modified, share-alike), `NOTICE.md` names the file and the code around it stays MIT. `drive-model="/models/apollo-lrv.glb"` draws it in place of the shapes, its wheels rolling and steering with the drive and `seat-commander` as the seat view. The replica is 3.02 m long and 1.75 m wide with a 1.92 m wheelbase against the published 3.05 m, 2.13 m and 2.29 m; its own proportions were kept, not stretched, and the drive takes the model's. A test loads it at Apollo 17 and checks its nodes, its wheels, its steering and its eye.
 
 - **The driven rover is drawn at every site** (MODULES-1522). At the six sites with no things on the ground (Perseverance, Curiosity, Apollo 15 and 16, Chang'e 3 and 4) a drive moved the rover and the view but drew no vehicle, neither the shapes nor a `drive-model`: the scene hid it for want of an objects table. The vehicle is drawn whenever a drive is on; the `objects` option is for the things at the site and the rover's tracks. `stats.vehicleDrawn` says it is in the picture. A test drives Yutu's flat ground with the package's shapes and Perseverance's with its model.
