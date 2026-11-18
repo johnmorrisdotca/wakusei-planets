@@ -15,8 +15,9 @@ async function drawing(page: Page): Promise<string> {
   return last;
 }
 
+// `rate=0` holds the clock at the time asked for: with it running, two loads draw Mars at times a few milliseconds apart, and a coordinate that sits on a rounding edge (169.745) comes out 169.75 on one and 169.74 on the other (webkit-desk, 2026-11-18)
 test("the embed frame turns by itself when it is asked to, and a line drawing is the same picture each time", async ({ page }) => {
-  await page.goto("/wakusei-planets/embed.html?body=mars&look=line&time=2026-11-02T12:00Z&turn=0");
+  await page.goto("/wakusei-planets/embed.html?body=mars&look=line&time=2026-11-02T12:00Z&turn=0&rate=0");
   const first = await drawing(page);
   expect(first).toContain("<svg");
   await page.reload();

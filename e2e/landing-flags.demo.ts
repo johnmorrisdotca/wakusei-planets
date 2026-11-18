@@ -77,6 +77,8 @@ test("Mars on the space page: the landers carry the United States' and China's f
     return viking?.id;
   });
   expect(result).toBe("mars/viking-1");
+  // wait on the state, not on a time: the page reports the places it has laid (`placesShown`) once Mars's places are loaded and a draw has laid them, and only then is the label looked for
+  await expect.poll(async () => (await shown(space)).some((place) => place.id === "mars/viking-1"), { timeout: 150_000, intervals: [500], message: "Viking 1 is among the places shown on Mars" }).toBe(true);
   const label = space.locator('.wk-place[data-place="mars/viking-1"] .wk-place-site');
   await expect(label).toBeVisible({ timeout: 60_000 });
   await expect(label.locator("hata-flag")).toHaveAttribute("code", "US");
