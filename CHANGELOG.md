@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The driven rover is drawn at every site** (MODULES-1522). At the six sites with no things on the ground (Perseverance, Curiosity, Apollo 15 and 16, Chang'e 3 and 4) a drive moved the rover and the view but drew no vehicle, neither the shapes nor a `drive-model`: the scene hid it for want of an objects table. The vehicle is drawn whenever a drive is on; the `objects` option is for the things at the site and the rover's tracks. `stats.vehicleDrawn` says it is in the picture. A test drives Yutu's flat ground with the package's shapes and Perseverance's with its model.
+
 ## [0.63.0] - 2026-11-17
 
 - **A drop-in for suncalc 2.1 and 1.9: both flags, default exports, a guide** (MODULES-535). `getTimes` and `getMoonTimes` in `/suncalc` now give `alwaysUp` and `alwaysDown` both, one `true` and one `false`, on a day without a sunrise or without a Moon rise and set, as suncalc 2 does (before, only the true one was there). `/suncalc` and `/suncalc/legacy` each have a default export holding the same functions and the same `times` array, for code written `import SunCalc from "suncalc"`. A new guide, "Replacing suncalc" (English and Japanese), has the one-line import change, every function side by side, the three conventions people trip on, the differences kept on purpose, the measured limits, and suncalc3's extras listed and not built. `test/suncalc-grid.test.ts` runs every function against suncalc 2.1.2 and suncalc 1.9.0 (dev-only) on fourteen places (both hemispheres, both polar circles, 78 degrees north and south) by eleven days from 1900 to 2100 by three times of day; `test/docs-replacing-suncalc.test.ts` runs the guide's examples. The API snapshot was updated for the two default exports.

@@ -61,6 +61,8 @@ export interface SurfaceScene extends Scene3D {
   readonly drawMs: number | undefined;
   /** The mesh's size, for a test or a status line. */
   readonly mesh: { rings: number; rays: number; triangles: number };
+  /** Whether the driven vehicle is in the picture as of the last `apply`: its shapes, or its model. It is, whenever a drive is on, at a site with things on the ground or without. */
+  readonly vehicleDrawn: boolean;
 }
 
 export interface SurfaceItemOptions {
@@ -446,9 +448,12 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       let vehicleShadow: InstanceType<ThreeParts["Mesh"]> | undefined;
       let vehicleCount = 0;
       let modelDrawn: VehicleModel | undefined;
+      // The driven vehicle is drawn whenever a drive is on. `objects` is for the things at the site and the rover's tracks: a site with none (the flat-ground ones) still has its vehicle.
+      let vehicleDrawn = false;
       const makeVehicle = (state: SurfaceState): void => {
         const v = state.vehicle;
-        if (v === undefined || state.objects === false) {
+        vehicleDrawn = v !== undefined;
+        if (v === undefined) {
           modelDrawn = undefined;
           if (vehicleMesh !== undefined) vehicleMesh.visible = false;
           if (vehicleShadow !== undefined) vehicleShadow.visible = false;
@@ -808,6 +813,9 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         scene,
         camera,
         mesh: { rings: RINGS, rays: RAYS, triangles },
+        get vehicleDrawn() {
+          return vehicleDrawn;
+        },
         get rocks() {
           return rockCount;
         },

@@ -501,6 +501,27 @@ test("drive-model draws NASA's Perseverance in place of the shapes: its wheels r
   expect(errors).toEqual([]);
 });
 
+type Driven = { stats: { vehicleDrawn: boolean }; driveFor(seconds: number, input: { throttle: number; steer: number }): boolean; driveModel?: { nodes: string[]; angles: Record<string, number>; rig: { track: number; wheelbase: number; wheelRadius: number; seat: number[] }; renders: number } };
+
+test("the vehicle is drawn at a site with nothing on the ground: Yutu's flat ground has its own shapes, and Perseverance's has its model", async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  // the Chang'e 3 site has no objects table: its rover used to be driven but never drawn
+  await open(page, "shadows=off detail=off drive=on site=chang-e-3");
+  expect(await read(page, (el) => (el as unknown as { objects: unknown[] }).objects.length), "the site has no things on the ground").toBe(0);
+  await read(page, (el) => (el as unknown as Driven).driveFor(0.5, { throttle: 1, steer: 0 }));
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).stats.vehicleDrawn), { timeout: 60_000 }).toBe(true);
+  await page.evaluate(() => document.querySelector("#test-surface")!.remove());
+  // the same with Perseverance's model: it is drawn by the scene, so its render count rises
+  await open(page, `shadows=off detail=off drive=on site=perseverance drive-model=${MODEL}`);
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).driveModel !== undefined), { timeout: 120_000 }).toBe(true);
+  await read(page, (el) => (el as unknown as Driven).driveFor(0.5, { throttle: 1, steer: 0.3 }));
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).driveModel!.renders), { timeout: 60_000 }).toBeGreaterThan(0);
+  expect(await read(page, (el) => (el as unknown as Driven).stats.vehicleDrawn)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test("drive-model that cannot be loaded says so and the shapes are drawn: the drive goes on with the lunar rover's measures", async ({ page }) => {
   test.setTimeout(300_000);
   await open(page, "shadows=off detail=off drive=on");

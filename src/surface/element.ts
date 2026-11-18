@@ -211,9 +211,9 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /** Numbers for a test or a status line: the draws, the tiles, the renderer's own counts, the mesh, the quality of the last draw and the milliseconds of the last measured one. */
-  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; landing: { t: number; playing: boolean; camera: string; altitude: number; speed: number } | undefined; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number } {
+  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; landing: { t: number; playing: boolean; camera: string; altitude: number; speed: number } | undefined; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number; vehicleDrawn: boolean } {
     const scene = this.#view?.scene as SurfaceScene | undefined;
-    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, landing: this.landing, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0 };
+    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, landing: this.landing, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0, vehicleDrawn: scene?.vehicleDrawn ?? false };
   }
 
   /** The quality of the next draw: the `quality` attribute, or in `auto` the quality of motion while the view moves and the machine's own quality of rest otherwise. */
