@@ -19,6 +19,7 @@ import { objectsOf, traverseOf, type SiteObject } from "./objects.ts";
 import { standSky, type StandSky } from "./sky.ts";
 import { flatTerrain } from "./flat.ts";
 import { siteById } from "./site.ts";
+import { blendPose, easeInOut, GLIDE_MS, type Pose } from "./glide.ts";
 import { clampLook, EYE_HEIGHT, stepOver, viewProjection, WALK_SPEED, type Look } from "./view.ts";
 
 export { setThreeLoader };
@@ -147,6 +148,10 @@ export class WakuseiSurface extends HTMLElement {
   #modelAbort: AbortController | undefined;
   #driveCamera: "chase" | "seat" = "chase";
   #camOffset = { azimuth: 0, pitch: 0 };
+  /** The pose the last draw used, and whether it was the watched descent's (or a move from it still going): where a move to the standing view or the rover starts (MODULES-1561). */
+  #lastPose: { pose: Pose; fromWatch: boolean } | undefined;
+  /** A smooth move of the camera in progress, from the pose it started at to wherever the view now puts it. */
+  #glide: { from: Pose; at: number; ms: number } | undefined;
   #driveEyeUp = 0;
   #trail: number[] = [];
   #dust = new DustField(900, 17);
@@ -212,9 +217,15 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /** Numbers for a test or a status line: the draws, the tiles, the renderer's own counts, the mesh, the quality of the last draw and the milliseconds of the last measured one. */
-  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; scale: number; scaled: number; landing: { t: number; playing: boolean; camera: string; altitude: number; speed: number } | undefined; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number; vehicleDrawn: boolean } {
+  get stats(): { state: SurfaceState; draws: number; tiles: TerrainProgress | undefined; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; mesh: SurfaceScene["mesh"] | undefined; quality: string; gliding: boolean; scale: number; scaled: number; landing: { t: number; playing: boolean; camera: string; altitude: number; speed: number } | undefined; vehicle: DriveState | undefined; drawMs: number | undefined; rocks: number; vehicleDrawn: boolean } {
     const scene = this.#view?.scene as SurfaceScene | undefined;
-    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, landing: this.landing, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0, vehicleDrawn: scene?.vehicleDrawn ?? false };
+    return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), gliding: this.#glide !== undefined, scale: this.#drawScale, scaled: this.#scaled, landing: this.landing, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0, vehicleDrawn: scene?.vehicleDrawn ?? false };
+  }
+
+  /** Where the camera was in the last draw: the eye (metres east and north of the site, and its height) and the look; during a move it is the pose on the way, not where the view will end. `undefined` before the first draw. */
+  get camera(): { east: number; north: number; up: number; look: Look } | undefined {
+    const last = this.#lastPose?.pose;
+    return last === undefined ? undefined : { east: last.east, north: last.north, up: last.up, look: { ...last.look } };
   }
 
   /** Whether the draws are those of a view in motion: the view moved a moment ago, or the watched descent is running (its frames come every 33 ms, but a slow draw can leave the 160 ms of the last change behind: the frame after that was drawn at the quality of rest and the next at the quality of motion, and the ground flickered, MODULES-1547). */
@@ -551,10 +562,33 @@ export class WakuseiSurface extends HTMLElement {
     const measure = (auto && !moving && this.#measured < 4) || timeMoving;
     if (measure && !moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
-    scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: !this.#noDetail(), exposure: num(this.getAttribute("exposure"), this.#site()?.body === "mars" ? 1.5 : 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
+    // the camera: where the view puts it, or on the way to there from where the watched descent had it (a move, not a cut)
+    let pose: Pose = { east: this.#at.east, north: this.#at.north, up: this.#eyeUp(), look: this.#look };
+    if (this.#glide !== undefined) {
+      const k = (performance.now() - this.#glide.at) / this.#glide.ms;
+      if (k >= 1) this.#glide = undefined;
+      else pose = blendPose(this.#glide.from, pose, easeInOut(k), (east, north) => this.#groundAt(east, north));
+    }
+    this.#lastPose = { pose, fromWatch: this.#landing !== undefined || this.#glide !== undefined };
+    scene.apply({ eye: { east: pose.east, north: pose.north, up: pose.up }, look: pose.look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: !this.#noDetail(), exposure: num(this.getAttribute("exposure"), this.#site()?.body === "mars" ? 1.5 : 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();
     this.#draws += 1;
     this.#placeLabels();
+    // a move goes on a frame after a frame, at the quality of motion, until it arrives
+    if (this.#glide !== undefined) this.#changed();
+  }
+
+  /**
+   * Start a smooth move of the camera from where the last draw had it, when that was the watched descent's (or a move from it that has not arrived): to the standing view when the watch ends and to the rover when it starts to be driven.
+   * The `glide` attribute is `off` for a cut, or the time in milliseconds (1100 by default); a reader who prefers reduced motion gets the cut.
+   */
+  #beginGlide(): void {
+    const last = this.#lastPose;
+    const setting = this.getAttribute("glide");
+    if (last === undefined || !last.fromWatch || setting === "off") return;
+    if (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const asked = Number(setting);
+    this.#glide = { from: last.pose, at: performance.now(), ms: setting !== null && Number.isFinite(asked) && asked > 0 ? asked : GLIDE_MS };
   }
 
   // --- driving the rover (`drive="on"`) ---------------------------------------------------------------------------------------------------------------
@@ -619,6 +653,7 @@ export class WakuseiSurface extends HTMLElement {
     this.choose(undefined);
     this.#syncModel();
     this.#syncDriveCamera();
+    this.#beginGlide();
     this.#changed();
   }
 
@@ -888,6 +923,7 @@ export class WakuseiSurface extends HTMLElement {
       this.#readAttributes();
       const td = this.#touchdown();
       this.#at = { east: td.east, north: td.north };
+      this.#beginGlide();
       this.#changed();
       return;
     }
@@ -1192,6 +1228,7 @@ export class WakuseiSurface extends HTMLElement {
   // --- hands ---------------------------------------------------------------------------------------------------------------------------------------
 
   #onPointerDown = (event: PointerEvent): void => {
+    this.#glide = undefined;
     this.#pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     this.setPointerCapture(event.pointerId);
     this.setAttribute("data-dragging", "");
@@ -1246,6 +1283,7 @@ export class WakuseiSurface extends HTMLElement {
   };
 
   #onKeyDown = (event: KeyboardEvent): void => {
+    this.#glide = undefined;
     const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
     if (key === "c" && this.#vehicle !== undefined) {
       this.driveCamera = this.#driveCamera === "chase" ? "seat" : "chase";
