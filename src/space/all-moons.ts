@@ -86,6 +86,8 @@ export interface MoonLayerDrawn {
 /** The dots and the orbits of the view. */
 export interface MoonLayer {
   update(input: MoonLayerInput): MoonLayerDrawn;
+  /** The moons whose orbits a planet's `LineSegments` holds, in order, each with how many segments it has: segment number n of the object belongs to the moon where the running total passes n. For a hover on a line. */
+  orbitMoons(host: string): readonly { id: string; segments: number }[];
   dispose(): void;
 }
 
@@ -93,6 +95,8 @@ export interface MoonLayer {
 export const MAX_MOON_DOTS = 1024;
 /** A dot's size, in CSS pixels across. */
 const DOT_PX = 3;
+/** The opacity of every orbit line, set here and nowhere else. */
+export const MOON_ORBIT_OPACITY = 0.6;
 /** How many points go round an orbit. */
 export const MOON_ORBIT_POINTS = 72;
 /** An orbit is drawn again when the view's moment is this far from the one it was drawn for: the orbits of the irregular moons turn over years. */
@@ -143,8 +147,8 @@ export function createMoonLayer(T: DotsThree, parent: THREE.Object3D): MoonLayer
   parent.add(dots);
 
   // the orbits: one `LineSegments` for each host, in the planet's radii round the planet's centre, moved and scaled with it
-  const lineMaterial = new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6, depthWrite: false });
-  const lines = new Map<string, { object: THREE.LineSegments; geometry: THREE.BufferGeometry; count: number }>();
+  const lineMaterial = new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: MOON_ORBIT_OPACITY, depthWrite: false });
+  const lines = new Map<string, { object: THREE.LineSegments; geometry: THREE.BufferGeometry; count: number; moons: { id: string; segments: number }[] }>();
   let built: { source: MoonSource; key: string; time: number } | null = null;
 
   const orbitsKey = (input: MoonLayerInput): string => `${input.mode}|${input.by}|${[...input.hosts].sort().join(",")}`;
@@ -179,13 +183,14 @@ export function createMoonLayer(T: DotsThree, parent: THREE.Object3D): MoonLayer
         const geometry = new T.BufferGeometry();
         const object = new T.LineSegments(geometry, lineMaterial);
         object.frustumCulled = false;
-        entry = { object, geometry, count: 0 };
+        entry = { object, geometry, count: 0, moons: [] };
         lines.set(host, entry);
         parent.add(object);
       }
       entry.geometry.setAttribute("position", new T.BufferAttribute(array, 3));
       entry.geometry.setAttribute("color", new T.BufferAttribute(tint, 3));
       entry.count = rings.length;
+      entry.moons = rings.map((ring) => ({ id: ring.moon.id, segments: ring.points.length - 1 }));
       total += rings.length;
     }
     built = { source: input.source, key: orbitsKey(input), time: input.time };
@@ -235,6 +240,7 @@ export function createMoonLayer(T: DotsThree, parent: THREE.Object3D): MoonLayer
       dots.visible = count > 0;
       return { dots: count, orbits: orbitsDrawn, spots };
     },
+    orbitMoons: (host) => lines.get(host)?.moons ?? [],
     dispose() {
       parent.remove(dots);
       for (const entry of lines.values()) parent.remove(entry.object);
