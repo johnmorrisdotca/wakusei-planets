@@ -157,6 +157,10 @@ test("two frames of the same moment of the playing descent match on the ground, 
   // each drag up tips the view down by a few degrees (the pitch of the turn is kept within 60 degrees): drag until the lower half of the picture is ground
   for (let n = 0; n < 6 && (await pitch(page)) > -6; n += 1) await drag(page, 0, -150);
   expect(await pitch(page), "the view looks down at the ground").toBeLessThan(-4);
+  // the words the page writes over the picture are put out of the way: the pictures are of the ground, and the clock in the words changes every second
+  await read(page, (el) => {
+    el.shadowRoot!.getElementById("landing")!.style.visibility = "hidden";
+  });
   await read(page, (el) => el.playLanding());
   mkdirSync("test-results/evidence", { recursive: true });
   const frames: { blocks: number[]; black: number; clock: number; quality: string }[] = [];
@@ -172,12 +176,21 @@ test("two frames of the same moment of the playing descent match on the ground, 
     const stats = await groundBlocks(page, png);
     frames.push({ blocks: stats.blocks, black: stats.black, clock: state.t, quality: state.quality });
   }
-  // the same picture, held and drawn at the quality of rest, for the eye (and the numbers): not compared
+  // the same moment held, for the eye: the draws stop (three reads the same) and the picture is taken. A slow machine steps its quality of rest down to the quality of motion, so the quality is not asserted here
   await read(page, (el) => el.pauseLanding());
-  await expect.poll(() => read(page, (el) => el.stats.quality), { timeout: 240_000 }).not.toBe("fast");
-  const restDraws = await draws(page);
-  await expect.poll(() => draws(page), { timeout: 240_000 }).toBeGreaterThanOrEqual(restDraws);
-  await page.waitForTimeout(2500);
+  let held = -1;
+  let same = 0;
+  await expect
+    .poll(
+      async () => {
+        const now = await draws(page);
+        same = now === held ? same + 1 : 0;
+        held = now;
+        return same;
+      },
+      { timeout: 240_000, intervals: [700] },
+    )
+    .toBeGreaterThanOrEqual(3);
   const rest = await view(page).screenshot();
   writeFileSync("test-results/evidence/crater-frame-rest.png", rest);
   await testInfo.attach("crater-frame-rest.png", { body: rest, contentType: "image/png" });
