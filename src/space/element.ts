@@ -2445,8 +2445,8 @@ export class WakuseiSpace extends HTMLElement {
     door: { points: number; belts: number; draws: number; sources: ReturnType<DoorHost["book"]["stats"]> };
     /** The catalogue's moons of the planets set to `all` (`moons`): whether any is asked for, whether the catalogue has loaded, how many dots and orbits the last draw drew, and the planets showing them. */
     allMoons: { on: boolean; loaded: boolean; dots: number; orbits: number; hosts: readonly string[] };
-    /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
-    orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
+    /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. `hidden` are the lines left out because a body is close, and `faded` the lines whose part near the close body is let go (only a line that passes through it). */
+    orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[] };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
     arrows: Record<string, { position: [number, number, number]; direction: [number, number, number] }[]>;
     /** How long an arrowhead on an orbit line is on the screen at the last draw, in CSS pixels (0 when none is drawn): the same at every zoom. */
@@ -2490,7 +2490,7 @@ export class WakuseiSpace extends HTMLElement {
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
-      orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden] },
+      orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden], faded: [...this.#model.rings.faded] },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,

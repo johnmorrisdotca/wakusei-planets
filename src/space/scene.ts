@@ -28,6 +28,7 @@ import { createPaintOverlay } from "./paint-overlay.ts";
 import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
+import { fadesNearBody, isOwnLine, nearBodyKeep } from "./orbit-rules.ts";
 import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
 import { TRAVEL_BUDGET_MS, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
@@ -263,7 +264,7 @@ export interface SpaceModel {
   /** What the windows of finer map tiles on the bodies are doing, summed at the last draw: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
   tiles: { requested: number; loading: number; failed: number; shown: number | null };
   /** The orbit lines drawn at the last draw, and how far each body is from its own line as a fraction of the line's radius (0 when it is on it). */
-  rings: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
+  rings: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[] };
   /** The arrowheads on the orbit lines at the last draw, by line: where each is and the way it points. */
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
@@ -454,7 +455,7 @@ export const newSpaceModel = (): SpaceModel => ({
   drawn: null,
   painted: { bodies: 0, moons: 0, held: 0 },
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
-  rings: { drawn: [], miss: {}, hidden: [] },
+  rings: { drawn: [], miss: {}, hidden: [], faded: [] },
   arrows: {},
   help: false,
   helpThrough: false,
@@ -1222,13 +1223,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           // the orbits round the Sun, placed by the same mapping as the bodies
           const drawnRings: string[] = [];
           const hiddenRings: string[] = [];
+          const fadedRings: string[] = [];
           const miss: Record<string, number> = {};
           // Close to a body (its disc is a few dozen pixels across) the other orbit lines are seen edge-on, long straight scratches across it: only the lines of its own system are kept, and of those the part near it fades
           const nearId = (rideFrom ? rideFrom.around : (SPACE_BODIES as readonly string[]).includes(focus) ? focus : (hostOf(focus) ?? "earth")) as SpaceBody;
           const closeUp = px[nearId] >= CLOSE_UP_PX;
           // flying through a belt (a point of the ride's own, round the Sun): the planets' orbit lines would be long scratches across the dots, so they are let go
           const flying = rideFrom !== null && rideFrom.around === "sun" && typeof model.ride?.target !== "string";
-          const ownLine = (id: OrbitBody): boolean => id === nearId || (id === "moon" && (nearId === "earth" || nearId === "moon"));
+          const ownLine = (id: OrbitBody): boolean => isOwnLine(id, nearId);
           const nearRadius = radiusOf(nearId);
           for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
@@ -1249,12 +1251,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             }
             (o.line.geometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
             // the part of its own line near the body is let go, from 3 radii out to 12 (a close view sees a few radii across): never a line across the disc
-            const fade = closeUp && ownLine(id);
+            const fade = fadesNearBody(id, nearId, closeUp);
+            if (fade) fadedRings.push(id);
             if (fade || o.faded) {
               for (let i = 0; i <= ORBIT_POINTS; i += 1) {
                 const away = Math.hypot(line[i]![0] - pos[nearId][0], line[i]![1] - pos[nearId][1], line[i]![2] - pos[nearId][2]) / nearRadius;
-                const t = Math.max(0, Math.min(1, (away - 3) / 9));
-                o.colours[i * 4 + 3] = fade ? t * t * (3 - 2 * t) : 1;
+                o.colours[i * 4 + 3] = fade ? nearBodyKeep(away) : 1;
               }
               (o.line.geometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
               o.faded = fade;
@@ -1266,7 +1268,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             drawnRings.push(id);
             miss[id] = distanceToLine(pos[id as SpaceBody], line) / radius;
           }
-          model.rings = { drawn: drawnRings, miss, hidden: hiddenRings };
+          model.rings = { drawn: drawnRings, miss, hidden: hiddenRings, faded: fadedRings };
 
           // Starman and the Roadster: where the table puts the car, in the same mapping as the planets, as a dot a few pixels across, on its orbit line (about one trip round the Sun, from the table, worked out again every month)
           const path = model.roadster ? model.roadsterPath : null;
