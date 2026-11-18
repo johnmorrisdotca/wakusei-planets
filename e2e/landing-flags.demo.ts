@@ -69,7 +69,8 @@ test("the Flags button writes site-flags, names the landing sites with their fla
 });
 
 test("Mars on the space page: the landers carry the United States' and China's flags", async ({ page }) => {
-  await page.goto("/wakusei-planets/space.html?places=landing&flags=1");
+  // a page with no date opens playing, an hour a second (motion is allowed here): Viking 1 turns out of sight after the move, and the label goes with it. A date holds the clock, so the site stays under the camera.
+  await page.goto("/wakusei-planets/space.html?t=2026-11-11T12:00:00Z&places=landing&flags=1");
   const space = page.locator("wakusei-space");
   await expect(space).toHaveAttribute("site-flags", "");
   const result = await space.evaluate(async (el) => {
