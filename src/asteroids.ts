@@ -557,7 +557,7 @@ export function asteroidsSource(): SmallBodySource {
     kind: "records" as const,
     info: {
       id: "wakusei-asteroids",
-      name: { en: "Named asteroids and comets of the Small-Body Database", ja: "小天体データベースの名のある小惑星" },
+      name: { en: "Named asteroids and comets of the Small-Body Database", ja: "小天体データベースの、名前のついた小惑星と彗星" },
       credit: { en: "Asteroid orbits: NASA/JPL Small-Body Database", ja: "小惑星の軌道：NASA/JPL 小天体データベース" },
       licence: { name: "Public domain (NASA/JPL: not subject to copyright in the United States)", url: "https://www.nasa.gov/nasa-brand-center/images-and-media/" },
       url: "https://ssd-api.jpl.nasa.gov/doc/sbdb.html",

@@ -52,9 +52,9 @@ const mine = asteroidFromElements("2026 XX", { epochJd: 2461200.5, a: 1.8, e: 0.
 console.log(mine.kind, mine.group, asteroidOrbitPoints(mine, 90).length, "points on its orbit");
 ```
 
-## 宇宙の表示で
+## 宇宙ビューで
 
-`<wakusei-space>` はオプション `asteroids` で104個の天体を点として置き、カメラの近くのものに名前をつけます。オンのときは `space.goTo("eros")` でカメラをその天体へ運び、`space.ride("apophis")` でその天体に乗って進みます。どちらも実際の縮尺で行います。オフのとき、またはセットにないidを渡したときは、そう伝える `RangeError` を投げます。測定した負荷を含む詳しいことは[宇宙の表示](space-view.md)にあります。
+`<wakusei-space>` はオプション `asteroids` で104個の天体を点として置き、カメラの近くのものに名前をつけます。オンのときは `space.goTo("eros")` でカメラをその天体へ運び、`space.ride("apophis")` でその天体に乗って進みます。どちらも実際の縮尺で行います。オフのとき、またはセットにないidを渡したときは、そう伝える `RangeError` を投げます。測定した負荷を含む詳しいことは[宇宙ビュー](space-view.md)にあります。
 
 ## どのくらい正確か
 
