@@ -104,6 +104,30 @@ moon("namaka", "Haumea II", "2005-11-07", "Keck Observatory, Mauna Kea", ["M.E. 
      notes=["Wikidata gives 30 June 2005."])
 moon("dysnomia", "Eris I", "2005-09-10", "Keck Observatory, Mauna Kea", ["M.E. Brown and the adaptive-optics team"], "adaptive-optics", "Named for the daughter of Eris, the spirit of lawlessness.", des="S/2005 (136199) 1", ann="IAUC 8610")
 
+# the moons added with their shape models (MODULES-1601): the date, place and discoverers are the Gazetteer's (read again on 2026-11-18), the designation, number and announcement JPL's, the account of each name told here in our own words
+moon("amalthea", "Jupiter V", "1892-09-09", "Mt. Hamilton", ["E.E. Barnard"], "visual", "Named for the nymph who nursed the infant Jupiter; a goat that suckled him is sometimes given her name too.", named_by="Camille Flammarion (the Gazetteer: the name was suggested by him)")
+moon("thebe", "Jupiter XIV", "1979-03-05", "Voyager 1", ["Voyager Science Team"], "spacecraft", "Named for a daughter of an Egyptian king and mother, by Zeus, of Aigyptos; the city of Thebes was named after her.", des="S/1979 J 2")
+moon("hyperion", "Saturn VII", "1848-09-16", "Cambridge, MA", ["W.C. Bond", "G.P. Bond"], "visual", "Named for one of the Titans.", named_by="William Lassell",
+     notes=["The Gazetteer adds that W. Lassell found it independently on 18 September 1848 at Liverpool."])
+moon("phoebe", "Saturn IX", "1898-08-16", "Arequipa", ["W.H. Pickering"], "photographic", "Named for one of the Titanesses.", named_by="W.H. Pickering",
+     notes=["It was the first moon found by photography, and the Gazetteer says it is the largest of Saturn's retrograde moons, which are otherwise named for Norse giants."])
+moon("janus", "Saturn X", "1966-12-15", "Pic du Midi (Dollfus), Washington (Pascu)", ["A. Dollfus", "D. Pascu"], "photographic", "Named for the two-faced Roman god of beginnings, who looks forward and back at once; its twin Epimetheus shares its orbit and the two never meet.", des="S/1980 S 1",
+     named_by="A. Dollfus", notes=["The Gazetteer's two dates: Dollfus reported it in December 1966, with a wrong orbital period, and Pascu confirmed it on 19 February 1980."])
+moon("epimetheus", "Saturn XI", "1980-02-26", "Tucson (Fountain and Larson, 1977), Mauna Kea (Cruikshank, 1980)", ["J. Fountain", "S. Larson", "D. Cruikshank"], "photographic", "Named for the brother of Prometheus whose name means afterthought: he understood his mistake only later.", des="S/1980 S 3",
+     notes=["The Gazetteer's dates: Fountain and Larson suspected it in 1977, because it confused the detection of Janus, and Cruikshank confirmed it on 26 February 1980. The year of the first sighting is 1977, which is the year /moon-catalogue holds."])
+moon("prometheus", "Saturn XVI", "1980-10", "Voyager 1", ["Voyager Science Team"], "spacecraft", "Named for the Titan who gave fire to humankind, brother of Atlas and Epimetheus.", des="S/1980 S 27")
+moon("pandora", "Saturn XVII", "1980-10", "Voyager 1", ["Voyager Science Team"], "spacecraft", "Named for the first woman, made of clay at Zeus's request, who opened the jar that let loose the world's troubles.", des="S/1980 S 26")
+moon("atlas", "Saturn XV", "1980-10", "Voyager 1", ["Voyager Science Team"], "spacecraft", "Named for the Titan who held up the sky.", des="S/1980 S 28")
+moon("pan", "Saturn XVIII", "1990", "Voyager 2", ["M.R. Showalter"], "spacecraft", "Named for the goat-legged god of shepherds; the moon runs in the Encke gap of the A ring.", des="S/1981 S 13",
+     notes=["The Gazetteer gives the year only: it was found in Voyager 2 images taken in 1981."])
+moon("daphnis", "Saturn XXXV", "2005-05-01", None, ["Cassini Imaging Science Team"], "spacecraft", "Named for a shepherd and pipe player of Greek myth, a son of Hermes and a brother of Pan; the moon runs in the Keeler gap of the A ring.", des="S/2005 S 1", ann="IAUC 8524",
+     notes=["The Gazetteer names no place."])
+moon("helene", "Saturn XII", "1980-03-01", "Pic du Midi", ["P. Laques", "J. Lecacheux"], "photographic", "Named for Helen, the granddaughter of Cronos whose beauty set off the Trojan War.", des="S/1980 S 6")
+moon("telesto", "Saturn XIII", "1980-04-08", "Tucson", ["B.A. Smith", "H. Reitsema", "S.M. Larson", "J. Fountain"], "photographic", "Named for a daughter of the Titans Oceanus and Tethys.", des="S/1980 S 13")
+moon("calypso", "Saturn XIV", "1980-03-13", "Flagstaff", ["D. Pascu", "P.K. Seidelmann", "W. Baum", "D. Currie"], "photographic", "Named for a daughter of the Titans Oceanus and Tethys, who kept Odysseus on her island.", des="S/1980 S 25")
+moon("larissa", "Neptune VII", "1989-07", "Voyager 2", ["Voyager Science Team"], "spacecraft", "Named for a lover of Poseidon.", des="S/1989 N 2",
+     notes=["The Gazetteer adds that a star was seen to be occulted by it in 1981, by H. Reitsema, W. Hubbard, L. Lebofsky and D.J. Tholen, before Voyager found it."])
+
 # --- what the sources were --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 SOURCES = {
     "usgs": ["IAU Working Group for Planetary System Nomenclature, Gazetteer of Planetary Nomenclature (USGS), Planet and Satellite Names, Discoverers, and Themes", "https://planetarynames.wr.usgs.gov/Page/Planets", "2026-11-18"],
@@ -113,8 +137,8 @@ SOURCES = {
     "derived": ["worked out here from the place and the date of the record (the instrument of the day); not a published field", "", "2026-11-18"],
 }
 ORDER = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna",
-         "moon", "phobos", "deimos", "io", "europa", "ganymede", "callisto", "mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "miranda", "ariel", "umbriel", "titania", "oberon",
-         "proteus", "triton", "nereid", "charon", "nix", "hydra", "vanth", "hiiaka", "namaka", "dysnomia"]
+         "moon", "phobos", "deimos", "io", "europa", "ganymede", "callisto", "amalthea", "thebe", "mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "hyperion", "phoebe", "janus", "epimetheus", "prometheus", "pandora", "atlas", "pan", "daphnis", "helene", "telesto", "calypso", "miranda", "ariel", "umbriel", "titania", "oberon",
+         "larissa", "proteus", "triton", "nereid", "charon", "nix", "hydra", "vanth", "hiiaka", "namaka", "dysnomia"]
 
 def fact(v):
     return "null" if v is None else "{ value: %s, source: %s }" % (json.dumps(v[0], ensure_ascii=False), json.dumps(v[1]))

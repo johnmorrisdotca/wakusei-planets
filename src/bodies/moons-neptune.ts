@@ -11,3 +11,4 @@ registerLook({
   painted: { map: "triton", widths: [512, 1024, 2048], far: 2048 },
 });
 registerLook({ id: "nereid", surface: rock({ dark: "#6e6e6e", light: "#9b9b9b", craters: 1, seed: 40 }), relief: 0.8, ambient: 0.02 });
+registerLook({ id: "larissa", surface: rock({ dark: "#5f5d5b", light: "#8f8d8a", craters: 1.5, contrast: 0.9, seed: 66 }), relief: 0.8, ambient: 0.02, shape: () => import("../data/shapes/larissa.ts").then((m) => m.SHAPE_LARISSA) });

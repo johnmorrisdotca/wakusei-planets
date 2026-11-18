@@ -157,7 +157,10 @@ test("compressing the moons keeps their order and leaves the true scale alone", 
     const real = moons.map((moon) => length(moonOffset(moon, Date.UTC(2026, 10, 2)))).sort((a, b) => a - b);
     const drawn = real.map((d) => moonDistance("compressed", host, d));
     for (let i = 1; i < drawn.length; i += 1) assert.ok(drawn[i]! > drawn[i - 1]!, `${host} keeps its order`);
-    assert.ok(drawn.every((d, i) => d <= real[i]! + 1e-9));
+    // a moon that really goes inside the rings (Jupiter's Amalthea, Saturn's Pan to Janus) is drawn just outside them: up to a quarter of a radius past the nearest a moon may be drawn
+    const ringEdge = BODIES[host].rings === undefined ? 0 : Math.max(...BODIES[host].rings!.map((band) => band.to)) / BODIES[host].radiusKm;
+    const inner = Math.max(1.5, ringEdge * 1.15);
+    assert.ok(drawn.every((d, i) => d <= Math.max(real[i]!, inner + 0.25) + 1e-9));
     assert.deepEqual(real.map((d) => moonDistance("true", host, d)), real);
   }
   assert.equal(moonDistance("compressed", "mars", 6.9), 6.9);

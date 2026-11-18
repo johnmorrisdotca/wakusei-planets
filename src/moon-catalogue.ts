@@ -47,7 +47,7 @@ export const MOON_GROUPS: readonly MoonGroup[] = ["inner", "major", "regular", "
 /**
  * How well the catalogue places a moon, by the worst angle (seen from the planet's centre) between `catalogueMoonPosition` and JPL Horizons on 2025-07-02, 2026-07-02 and 2027-07-02, dates the orbit was not set from:
  * `close` under 1 degree, `rough` under 10 degrees, `loose` 10 degrees or more (the moon is on the right orbit but not at the right place on it), `unmeasured` when Horizons has no position to measure against, and `none`
- * when there is no orbit. Every grade is below the package's own 29 moons (`full`), which the main entry point places within arc-seconds to minutes (see the accuracy guide).
+ * when there is no orbit. Every grade is below the package's own 44 moons (`full`), which the main entry point places within arc-seconds to minutes (see the accuracy guide).
  *
  * @example
  * ```ts

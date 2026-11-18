@@ -77,13 +77,13 @@ test("every body can be made, in both looks, and let go: nothing is held after d
   assert.throws(() => painter.make(THREE, "nibiru"), /no body called/);
 });
 
-test("the moons of a planet: the Galilean four for Jupiter, none for the Earth, nearest first, in the planet's radii", () => {
+test("the moons of a planet: the Galilean four and Amalthea and Thebe for Jupiter, none for the Earth, nearest first, in the planet's radii", () => {
   const moons = painter.moons("Jupiter", ms);
-  assert.deepEqual(moons.map((m) => m.name), ["Io", "Europa", "Ganymede", "Callisto"]);
-  assert.ok(moons[0]!.offset.every(Number.isFinite));
-  const io = length(moons[0]!.offset);
+  assert.deepEqual(moons.map((m) => m.name), ["Amalthea", "Thebe", "Io", "Europa", "Ganymede", "Callisto"]);
+  assert.ok(moons[2]!.offset.every(Number.isFinite));
+  const io = length(moons[2]!.offset);
   assert.ok(io > 5.5 && io < 6.3, String(io));
-  assert.ok(Math.abs(moons[2]!.radius - 2634.1 / 71492) < 0.005);
+  assert.ok(Math.abs(moons[4]!.radius - 2634.1 / 71492) < 0.005);
   assert.deepEqual(painter.moons("Earth", ms), []);
   assert.equal(painter.moons("Mercury", ms).length, 0);
   assert.equal(painter.moons("Pluto", ms).length, 3);

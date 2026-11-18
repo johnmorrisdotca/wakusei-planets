@@ -5,7 +5,7 @@ Each model (an OBJ, a gzipped STL or a glTF binary, read from --cache; the scrip
 longitude, 96 of latitude), and the farthest crossing of each ray is the radius there. The package draws a moon of this kind as that globe with every vertex moved to its radius, with the moon's own shader, map and light: the model is thinned to 18,624
 radii (a few thousand triangles' worth of the shape as seen from the centre, and no more than a moon this small shows), a moon is star-shaped about its centre, and the table is a few kilobytes in a chunk of its own, not the model.
 
-The table is written as radii in units of 1/UNIT km, as 16-bit integers each given as the step from the radius before it along the same latitude, little-endian, in base64. (An overhang, a ray that crosses the model more than twice, takes the farthest crossing.)
+The table is written as radii in units of a tenth of a per cent of the moon's mean radius, each as a 16-bit integer, the difference from the radius predicted by its neighbours (table_of), little-endian, in base64. (An overhang, a ray that crosses the model more than twice, takes the farthest crossing.)
 
 Frames: a model in the body-fixed IAU frame (Gaskell's Phobos and Phoebe) is used as it is. A model with no frame of its own (NASA's glTF files, Porter's Nix and Hydra) is turned so that its longest axis is the x axis (toward longitude 0), its middle axis y and its shortest z (north): where the IAU frame of the moon
 has its prime meridian on the long axis (Phobos, Deimos, Nix, Hydra: the long axis points at the planet), that is the frame; Hyperion tumbles, so any frame is as good as another. `ORIENT` says which, and a body whose model has a texture with its own mapping is turned to the
@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "src", "data", "shapes")
 # the steps of longitude and of latitude of each moon's table: as many as the model has detail for (a smooth model needs few)
-GRID = {"phobos": (192, 96), "phoebe": (160, 80), "deimos": (96, 48), "hyperion": (128, 64), "nix": (96, 48), "hydra": (96, 48), "atlas": (128, 64), "pan": (128, 64), "daphnis": (128, 64)}
+GRID = {"phobos": (192, 96), "phoebe": (160, 80), "deimos": (96, 48), "hyperion": (128, 64), "nix": (96, 48), "hydra": (96, 48), "atlas": (128, 64), "pan": (128, 64), "daphnis": (96, 48)}
 for _body in ("janus", "epimetheus", "prometheus", "pandora", "helene", "telesto", "calypso"):
     GRID[_body] = (96, 48)  # Thomas's 30,000 plates
 for _body in ("amalthea", "thebe", "larissa", "proteus"):
@@ -190,16 +190,22 @@ def cast(tris, dirs, centre):
 
 
 def table_of(radii_km, LON, LAT):
-    """radii (LAT+1, LON) km -> (unit, base64 text of the steps along each latitude)."""
-    top = float(radii_km.max())
-    unit = 1
-    while top * unit * 2 < 32000:
-        unit *= 2
+    """radii (LAT+1, LON) km -> (unit, base64 text of the residuals). The unit is a tenth of a per cent of the moon's mean radius: a step of it moves a point of the surface by 0.001 of the radius,
+    which no picture of the moon shows. Each radius, in units, is written as its difference from the one predicted from its neighbours: the west one plus the north one less the north-west one
+    (the first column: the north one; the first row: the west one; the first of all: 0), so a smooth shape is a table of small numbers, which gzips to about half what the steps along a row did."""
+    mean = float(np.cbrt((radii_km ** 3).mean()))
+    unit = round(1.0 / (0.001 * mean), 4)
     q = np.rint(radii_km * unit).astype(np.int64)
-    steps = np.diff(np.concatenate([np.zeros((LAT + 1, 1), dtype=np.int64), q], axis=1), axis=1)
-    # the first of each row is its own value; the rest are steps
-    assert steps.min() > -32768 and steps.max() < 32768, (steps.min(), steps.max())
-    return unit, base64.b64encode(steps.astype("<i2").tobytes()).decode()
+    res = np.zeros_like(q)
+    for r in range(LAT + 1):
+        for c in range(LON):
+            above = q[r - 1, c] if r > 0 else 0
+            left = q[r, c - 1] if c > 0 else 0
+            above_left = q[r - 1, c - 1] if r > 0 and c > 0 else 0
+            pred = above if c == 0 else left if r == 0 else left + above - above_left
+            res[r, c] = q[r, c] - pred
+    assert res.min() > -32768 and res.max() < 32768, (res.min(), res.max())
+    return unit, base64.b64encode(res.astype("<i2").tobytes()).decode()
 
 
 SOURCES = {

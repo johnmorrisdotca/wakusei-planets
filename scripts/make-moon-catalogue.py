@@ -177,7 +177,7 @@ CATALOGUE_JA = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__fil
 
 
 def ja_of(ident, ja_names):
-    """The Japanese name of a moon: the package's own (facts.ts) for the 29 it draws in full, else the checked table's, else None."""
+    """The Japanese name of a moon: the package's own (facts.ts) for the 44 it draws in full, else the checked table's, else None."""
     if ident in ja_names:
         return ja_names[ident][1]
     return CATALOGUE_JA.get(ident, {}).get("ja")

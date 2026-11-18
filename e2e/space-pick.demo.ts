@@ -14,10 +14,10 @@ const bodyOf = (page: Page): Promise<string> => page.locator(SPACE).evaluate((el
 const choices = (page: Page): Promise<string[]> => page.locator("#choices button").evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset["id"] ?? ""));
 const press = (page: Page, selector: string) => page.locator(selector).dispatchEvent("click");
 
-test("the view offers all 52 bodies: the Sun, every planet, dwarf planet and minor body, and every moon, each with its kind", async ({ page }) => {
+test("the view offers all 67 bodies: the Sun, every planet, dwarf planet and minor body, and every moon, each with its kind", async ({ page }) => {
   await openSpace(page);
   const list = await page.locator(SPACE).evaluate((el) => (el as unknown as { bodyList(): { id: string; kind: string; host?: string }[] }).bodyList());
-  expect(list.length).toBe(52);
+  expect(list.length).toBe(67);
   const of = (kind: string): string[] => list.filter((b) => b.kind === kind).map((b) => b.id);
   expect(of("star")).toEqual(["sun"]);
   expect(of("planet")).toEqual(["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"]);
@@ -25,7 +25,7 @@ test("the view offers all 52 bodies: the Sun, every planet, dwarf planet and min
   expect(of("asteroid")).toEqual(["vesta", "pallas"]);
   expect(of("centaur")).toEqual(["chiron", "pholus"]);
   expect(of("comet")).toEqual(["halley"]);
-  expect(of("moon").length).toBe(29);
+  expect(of("moon").length).toBe(44);
   expect(list.find((b) => b.id === "dysnomia")).toMatchObject({ host: "eris" });
 });
 
@@ -46,7 +46,7 @@ test("the picker: a kind, then (for a moon) the planet it goes round, then the b
   const hosts = await page.locator("#hosts button").evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset["id"]));
   expect(hosts).toEqual(["earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "orcus", "haumea", "eris"]);
   await page.locator('#hosts button[data-id="saturn"]').dispatchEvent("click");
-  expect(await choices(page)).toEqual(["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus"]);
+  expect(await choices(page)).toEqual(["pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "mimas", "enceladus", "tethys", "telesto", "calypso", "dione", "helene", "rhea", "titan", "hyperion", "iapetus", "phoebe"]);
   await page.locator('#choices button[data-id="titan"]').dispatchEvent("click");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("titan");
 });

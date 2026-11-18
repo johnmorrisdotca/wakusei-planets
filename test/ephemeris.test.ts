@@ -57,10 +57,10 @@ test("Venus is nearly new near its inferior conjunction; the outer planets are n
 test("Jupiter's moons stay inside their orbits and Io goes round in under two days", () => {
   const t = at(2026, 11, 2);
   const { moons } = system("jupiter", t);
-  assert.deepEqual(moons.map((m) => m.id), ["io", "europa", "ganymede", "callisto"]);
-  const io = moons[0]!;
+  assert.deepEqual(moons.map((m) => m.id), ["amalthea", "thebe", "io", "europa", "ganymede", "callisto"]);
+  const io = moons.find((m) => m.id === "io")!;
   assert.ok(io.distance > 5.8 && io.distance < 6.0, String(io.distance));
-  const later = system("jupiter", t + 3 * 3600_000).moons[0]!;
+  const later = system("jupiter", t + 3 * 3600_000).moons.find((m) => m.id === "io")!;
   assert.ok(Math.hypot(later.x - io.x, later.y - io.y, later.z - io.z) > 2, "Io moves a lot in three hours");
   const path = orbitPath("callisto", t, 12);
   assert.equal(path.length, 36);
@@ -72,5 +72,5 @@ test("a body's size, tilt and rotation are the IAU numbers", () => {
   assert.equal(BODIES.uranus.tiltDeg, 97.77);
   assert.ok(BODIES.venus.rotationHours < 0, "Venus turns backwards");
   assert.ok(BODIES.saturn.rings!.length >= 5);
-  assert.equal(BODY_IDS.length, 1 + 9 + 8 + 5 + 25 + 4);
+  assert.equal(BODY_IDS.length, 1 + 9 + 8 + 5 + 40 + 4);
 });

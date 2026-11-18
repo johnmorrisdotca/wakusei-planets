@@ -183,20 +183,22 @@ function room(host: SpacePlanet | SpaceDwarf): number {
 }
 
 const reaches = new Map<SpacePlanet | SpaceDwarf, number>();
-/** How far out a body's moons go, in its radii: the farthest any of them is found in a year of looks. */
+/** A moon so far out beyond the others that, if it set the scale, every other moon of its planet would be crowded into a few radii: Phoebe is 183 Saturn radii away and Iapetus, the next, 58. It is drawn just past the farthest of the others. */
+const OUTLIERS: ReadonlySet<string> = new Set(["phoebe"]);
+/** How far out a body's moons go, in its radii: the farthest any of them is found in a year of looks (an outlier does not count). */
 function reachOf(host: SpacePlanet | SpaceDwarf): number {
   let reach = reaches.get(host);
   if (reach === undefined) {
     reach = 0;
     const start = Date.UTC(2026, 0, 1);
-    for (const moon of (MOONS_OF as Record<string, readonly MoonId[]>)[host] ?? []) for (let i = 0; i < 24; i += 1) reach = Math.max(reach, length(moonOffset(moon, start + i * 15 * 86_400_000)));
+    for (const moon of (MOONS_OF as Record<string, readonly MoonId[]>)[host] ?? []) if (!OUTLIERS.has(moon)) for (let i = 0; i < 24; i += 1) reach = Math.max(reach, length(moonOffset(moon, start + i * 15 * 86_400_000)));
     reaches.set(host, reach);
   }
   return reach;
 }
 
 /**
- * How far from its planet a moon is drawn, in the planet's radii, when it is really `distance` radii away. True: as it is. Compressed: the same, until the farthest of the planet's moons would
+ * How far from its planet a moon is drawn, in the planet's radii, when it is really `distance` radii away. True: as it is. Compressed: the same (but never inside the planet's rings: a moon that really goes through them is drawn just outside), until the farthest of the planet's moons would
  * reach across the gap to the next planet's orbit; then every moon is drawn nearer, the farthest at about a third of the gap and the nearer ones in the order they are, so no moon's orbit crosses another planet's,
  * and none is drawn nearer than 1.5 radii or inside the planet's rings (Mimas stays outside Saturn's, Proteus outside Neptune's), so a camera at a moon is never in the ring plane.
  *
@@ -217,11 +219,16 @@ export function moonDistance(mode: ScaleMode, host: SpacePlanet | SpaceDwarf, di
   const reach = reachOf(host);
   const radius = radiusIn(host, "compressed");
   const space = room(host);
+  // a moon that really goes inside the planet's rings (Amalthea in Jupiter's gossamer ring, Saturn's small moons round the A ring and the F ring) is drawn just outside them, in the order the moons are, in the little room between the ring and the next moon
+  const inner = nearestOf(host);
+  if (distance < inner) return inner + 0.25 * (distance / inner) ** 8;
   if (reach === 0 || reach * radius <= space) return distance;
   // from the nearest a moon may be drawn (clear of the globe and its rings) out to the room's edge, in the order the moons are: a moon drawn in the ring plane, or inside the globe, put the camera riding beside it in the rings
   const near = nearestOf(host);
   const far = Math.max(space / radius, near * 1.6);
-  return Math.min(distance, near + (far - near) * Math.sqrt(distance / reach));
+  // beyond the reach (an outlier) the curve flattens: a little past the farthest of the others, in the order the moons are
+  const t = Math.sqrt(distance / reach);
+  return Math.min(distance, near + (far - near) * (t <= 1 ? t : 1 + 0.15 * (1 - 1 / t)));
 }
 
 /** The squeezed view draws moons this many times their real size, unless a moon would pass a limit. 1 is today's size. True distances ignore it. */

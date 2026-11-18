@@ -4,15 +4,16 @@ import type * as THREE from "three";
 import type { ThreeParts } from "./body.ts";
 
 /**
- * A moon's shape as a table of radii: `lon` steps of longitude and `lat` steps of latitude round the globe (the vertices of `SphereGeometry(1, lon, lat)`, `(lat + 1) * lon` radii, the seam and the poles shared), each in units of
- * 1 / `unit` kilometre, as 16-bit integers written as the step from the radius before it along the same line of latitude, little-endian, in base64.
+ * A moon's shape as a table of radii: `lon` steps of longitude and `lat` steps of latitude round the globe (the vertices of `SphereGeometry(1, lon, lat)`, `(lat + 1) * lon` radii, the seam and the poles shared), each
+ * in units of 1 / `unit` kilometre (`unit` is a tenth of a per cent of the moon's mean radius). The radii are whole numbers of those units, each stored as how far it is from the one predicted from its neighbours
+ * (the one to the west plus the one to the north less the one to the north-west; the first column from the one to its north; the first row from the one to its west), as 16-bit integers, little-endian, in base64.
  *
  * @example
  * ```ts
- * import type { ShapeTable } from "@johnmorrisdotca/wakusei-planets/look";
+ * import { shapeRadii, type ShapeTable } from "@johnmorrisdotca/wakusei-planets/look";
  *
- * const table: ShapeTable = { lon: 2, lat: 2, unit: 1, steps: "AQAAAAEAAAABAAAAAQAAAAEAAAAA" };
- * console.log(table.lon * (table.lat + 1));
+ * const table: ShapeTable = { lon: 2, lat: 1, unit: 2, steps: "BAAAAAAAAAAAAAAAAA==" };
+ * console.log(shapeRadii(table));
  * ```
  */
 export interface ShapeTable {
@@ -39,15 +40,18 @@ export function shapeRadii(table: ShapeTable): Float32Array {
   const raw = atob(table.steps);
   const count = table.lon * (table.lat + 1);
   if (raw.length < count * 2) throw new RangeError(`a shape table of ${table.lon} by ${table.lat + 1} needs ${count * 2} bytes, not ${raw.length}`);
+  const whole = new Int32Array(count);
   const out = new Float32Array(count);
   for (let row = 0; row < table.lat + 1; row += 1) {
-    let value = 0;
     for (let column = 0; column < table.lon; column += 1) {
-      const at = (row * table.lon + column) * 2;
-      let step = raw.charCodeAt(at) | (raw.charCodeAt(at + 1) << 8);
+      const i = row * table.lon + column;
+      let step = raw.charCodeAt(i * 2) | (raw.charCodeAt(i * 2 + 1) << 8);
       if (step >= 0x8000) step -= 0x10000;
-      value += step;
-      out[row * table.lon + column] = value / table.unit;
+      const above = row > 0 ? (whole[i - table.lon] as number) : 0;
+      const left = column > 0 ? (whole[i - 1] as number) : 0;
+      const aboveLeft = row > 0 && column > 0 ? (whole[i - table.lon - 1] as number) : 0;
+      whole[i] = step + (column === 0 ? above : row === 0 ? left : left + above - aboveLeft);
+      out[i] = (whole[i] as number) / table.unit;
     }
   }
   return out;

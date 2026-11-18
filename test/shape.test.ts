@@ -65,12 +65,11 @@ function volumeRadius(table: ShapeTable): number {
   return Math.cbrt(sum / weight);
 }
 
-test("a table reads back as the radii it was cut from: steps along a row of latitude, 16-bit, little-endian", () => {
-  // two columns, two rows of latitude: row 0 is 4, 4 (steps +4, 0), row 1 is 2, 3 (steps +2, +1), unit 2
-  const bytes = new Uint8Array([4, 0, 0, 0, 2, 0, 1, 0]);
-  const steps = btoa(String.fromCharCode(...bytes));
-  assert.deepEqual([...shapeRadii({ lon: 2, lat: 1, unit: 2, steps })], [2, 2, 1, 1.5]);
-  // a negative step
+test("a table reads back as the radii it was cut from: each is the difference from the one its neighbours predict, 16-bit, little-endian", () => {
+  // two columns, two rows of latitude, unit 2: the radii are 4 6 / 5 9 half-kilometres, so the residuals are 4 (from 0), 2 (from the west, 4), 1 (from the north, 4) and 2 (from 5 + 6 - 4 = 7)
+  const steps = btoa(String.fromCharCode(...new Uint8Array([4, 0, 2, 0, 1, 0, 2, 0])));
+  assert.deepEqual([...shapeRadii({ lon: 2, lat: 1, unit: 2, steps })], [2, 3, 2.5, 4.5]);
+  // a negative residual
   const down = btoa(String.fromCharCode(10, 0, 0xfe, 0xff));
   assert.deepEqual([...shapeRadii({ lon: 2, lat: 0, unit: 1, steps: down })], [10, 8]);
   assert.throws(() => shapeRadii({ lon: 4, lat: 4, unit: 1, steps: btoa("x") }), RangeError);

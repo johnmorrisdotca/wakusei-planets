@@ -3,7 +3,8 @@
 test/accuracy.test.ts can measure the package against it without the network. J2000 ecliptic, kilometres, UT. Planets from the Sun's centre (the outer planets as
 their system's barycentre, which is what JPL's elements describe), the Moon and the moons from their planet's centre (Nix and Hydra from the Pluto system's barycentre).
 Usage: python3 -I scripts/fetch-horizons-reference.py            (everything)
-       python3 -I scripts/fetch-horizons-reference.py minors      (only the minor bodies, to test/data/horizons-minor.json)"""
+       python3 -I scripts/fetch-horizons-reference.py minors      (only the minor bodies, to test/data/horizons-minor.json)
+       python3 -I scripts/fetch-horizons-reference.py more-moons  (only the moons added with their shape models, to test/data/horizons-more-moons.json)"""
 import json, sys, time, urllib.parse, urllib.request
 
 PLANET_DATES = ["1800-01-03T12:00:00Z", "1900-01-03T12:00:00Z", "2000-01-01T12:00:00Z", "2026-11-07T12:00:00Z", "2050-01-01T12:00:00Z"]
@@ -40,6 +41,25 @@ def vectors(code, centre, dates):
         time.sleep(4)
     sys.exit(f"Horizons gave nothing for {code}@{centre}: {text[:200]}")
 
+
+# the moons added with their shape models (MODULES-1601), each on the dates inside the years Horizons has an ephemeris for it (Saturn's small moons from 1949-12-27 to 2050-01-06, Daphnis from 1990-06-15 to 2018-01-14)
+MORE_MOONS = {
+    "amalthea": ("505", "599"), "thebe": ("514", "599"), "hyperion": ("607", "699"), "phoebe": ("609", "699"), "janus": ("610", "699"), "epimetheus": ("611", "699"), "helene": ("612", "699"),
+    "telesto": ("613", "699"), "calypso": ("614", "699"), "atlas": ("615", "699"), "prometheus": ("616", "699"), "pandora": ("617", "699"), "pan": ("618", "699"), "daphnis": ("635", "699"), "larissa": ("807", "899"),
+}
+SATURN_SMALL_DATES = ["1950-06-01T12:00:00Z", "1975-03-01T12:00:00Z", "2000-01-01T12:00:00Z", "2013-03-17T06:00:00Z", "2026-11-07T12:00:00Z", "2049-07-01T12:00:00Z"]
+DAPHNIS_DATES = ["1995-01-01T12:00:00Z", "2000-01-01T12:00:00Z", "2010-06-01T12:00:00Z", "2013-03-17T06:00:00Z", "2017-06-01T12:00:00Z"]
+MORE_DATES = {name: (DAPHNIS_DATES if name == "daphnis" else SATURN_SMALL_DATES if name in ("janus", "epimetheus", "helene", "telesto", "calypso", "atlas", "prometheus", "pandora", "pan") else MOON_DATES) for name in MORE_MOONS}
+
+if sys.argv[1:] == ["more-moons"]:
+    # one file for them (test/data/horizons-more-moons.json), so the file the published comparison hashes is left as it is; one request at a time, a second apart
+    out = {"source": "JPL Horizons, https://ssd.jpl.nasa.gov/api/horizons.api", "moons": {}}
+    for name, (code, centre) in MORE_MOONS.items():
+        out["moons"][name] = {"dates": MORE_DATES[name], "vectors": vectors(code, centre, MORE_DATES[name])}
+        time.sleep(1.2)
+    json.dump(out, open("test/data/horizons-more-moons.json", "w"), separators=(",", ":"))
+    print("wrote test/data/horizons-more-moons.json")
+    sys.exit(0)
 
 if sys.argv[1:] == ["minors"]:
     # only the minor bodies, to a file of their own (test/data/horizons-minor.json), so the planets' file, which the published comparison hashes, is left as it is.

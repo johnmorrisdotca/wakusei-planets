@@ -7,7 +7,7 @@ description: "Every known moon of the planets and the dwarf planets, 468 as JPL 
 
 [日本語](ja/moon-catalogue.md)
 
-The package draws 29 moons in full: each has a look, a size, a spin and its own orbit, fitted to JPL Horizons or worked out from a published theory. `/moon-catalogue` lists every known moon besides, 468 of them as JPL lists them on 2026-11-18: the name (or the provisional designation of a moon not yet named), the planet, the year it was found and who found it, the mean orbit, the size where it has been measured or can be worked out, and the group it belongs to. It also says where each moon is on any date, from its mean orbit, with the error that place was measured to have. It runs anywhere, with no DOM and no three.js, needs no loading step, and the rows (about 35 kB gzipped) are part of this entry point only: a page that does not import `/moon-catalogue` does not carry them.
+The package draws 44 moons in full: each has a look, a size, a spin and its own orbit, fitted to JPL Horizons or worked out from a published theory. `/moon-catalogue` lists every known moon besides, 468 of them as JPL lists them on 2026-11-18: the name (or the provisional designation of a moon not yet named), the planet, the year it was found and who found it, the mean orbit, the size where it has been measured or can be worked out, and the group it belongs to. It also says where each moon is on any date, from its mean orbit, with the error that place was measured to have. It runs anywhere, with no DOM and no three.js, needs no loading step, and the rows (about 35 kB gzipped) are part of this entry point only: a page that does not import `/moon-catalogue` does not carry them.
 
 ```ts
 import { catalogueMoonPosition, catalogueMoonsOf, findCatalogueMoon, moonCounts, MOON_CATALOGUE_FETCHED } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
@@ -44,14 +44,14 @@ A moon is "placed" when it has a mean orbit. Eight are not: S/2009 S 1, a moonle
 | Field | What it is |
 |---|---|
 | `id`, `label`, `name`, `designation`, `number` | the id ("himalia", "s-2003-j-18"), what to print (the name, else the designation), the IAU name, the provisional designation and the IAU number in Roman numerals |
-| `ja` | the Japanese name in katakana: the 29 moons the package draws in full, and 129 more from `scripts/moon-catalogue-ja.json`, each taken from a published Japanese list that is written down beside it (the National Museum of Nature and Science's moon table, which is mainly from the Rika Nenpyo, and the Japanese Wikipedia); `null` for the 17 named moons that no Japanese list gives katakana for yet and for every designation, which a Japanese page shows by their English name or designation |
+| `ja` | the Japanese name in katakana: the 44 moons the package draws in full, and 114 more from `scripts/moon-catalogue-ja.json`, each taken from a published Japanese list that is written down beside it (the National Museum of Nature and Science's moon table, which is mainly from the Rika Nenpyo, and the Japanese Wikipedia); `null` for the 17 named moons that no Japanese list gives katakana for yet and for every designation, which a Japanese page shows by their English name or designation |
 | `host`, `code` | the planet or dwarf planet, and the JPL (NAIF) id Horizons knows the moon by (501 for Io) |
 | `discovery` | `year`, `by` (the discoverers or the spacecraft team, as JPL writes them) and `reference` (where it was announced: an IAU Circular, a Minor Planet Electronic Circular, a CBET, or "IAU WGPSN" for the long-named moons) |
 | `orbit` | the mean orbit: `a`, `e`, `w`, `m`, `i`, `node`, `periodDays` (as fitted to Horizons), how many years the periapsis and the node take to turn (`apsisYears`, `nodeYears`), the plane it is measured from (`frame`, with its `pole`), the epoch (2026-01-01) and the JPL ephemeris it was taken from |
 | `retrograde`, `group` | whether it goes round against its planet's turn, and its dynamical group (below) |
 | `radiusKm`, `radiusSigmaKm`, `radiusFrom`, `albedo`, `magnitude`, `magnitudeFrom` | the size and where it comes from (below), the albedo where JPL gives it, the magnitude (V(1,0) from JPL's sheet, or an absolute magnitude from Wikipedia's tables) and which it is: `sheet` or `wikipedia` |
 | `accuracy`, `grade` | how far `catalogueMoonPosition` was from JPL Horizons, and its grade (below) |
-| `full` | `true` for the 29 moons the package draws in full: the main entry point's `moonVector` and `system` place those far better |
+| `full` | `true` for the 44 moons the package draws in full: the main entry point's `moonVector` and `system` place those far better |
 
 A number the sources do not give is `null`, never guessed.
 
@@ -119,7 +119,7 @@ console.log(moonOrbitKey("direction").map((entry) => `${entry.names.en}: ${entry
 
 The regular moons do well: the median worst angle is 0.5 degrees for the major moons and 0.6 for the inner ones. The irregular moons do not: the Sun's pull swings each one along its orbit by tens of degrees within months, which a mean orbit cannot follow. The median worst angle is 10 degrees for Saturn's Norse group, 12 for Jupiter's Himalia group, 25 to 27 for Saturn's Inuit and Gallic groups, 35 for Jupiter's Ananke group and over 50 for its Carme and Pasiphae groups.
 
-Every grade is below the 29 moons the package draws in full: from the main entry point those are within arc-seconds to a few arc-minutes (see [How exact it is](accuracy.md)). Decades away (1990, 2000 and 2040) the drift is much larger (`accuracy.farDegrees`). Use the catalogue's place to show where a small moon is round its planet, not to point a telescope at it.
+Every grade is below the 44 moons the package draws in full: from the main entry point those are within arc-seconds to a few arc-minutes (see [How exact it is](accuracy.md)). Decades away (1990, 2000 and 2040) the drift is much larger (`accuracy.farDegrees`). Use the catalogue's place to show where a small moon is round its planet, not to point a telescope at it.
 
 ## Near 2026-12-01 the irregular moons follow Horizons
 

@@ -20,11 +20,11 @@ WIDTHS = [512, 1024, 2048]
 Image.MAX_IMAGE_PIXELS = None
 
 # body -> (tint colour: the body's colour in src/facts.ts, mean level: the mean of the dark and the light colour of its look in src/bodies/moons-*.ts). Phoebe is not in the table of facts yet: its mosaic is panchromatic and the moon nearly neutral grey
-# (no tint), and its level is that of Phobos, a body as dark (geometric albedo 0.08 and 0.07).
+# (no tint), and its level is the mean of the dark and the light colour of its look, as for the others (it is as dark as Phobos: geometric albedo 0.08 and 0.07).
 STYLE = {
     "phobos": ("#8c8782", 0.42),
     "deimos": ("#9a948b", 0.52),
-    "phoebe": ("#808080", 0.40),
+    "phoebe": ("#808080", 0.34),
 }
 
 
