@@ -44,7 +44,7 @@ test("a move that turns beside the body left and then goes to the destination is
       assert.ok(corner < 5, `${a} to ${b}, ${shape.name}: a corner of ${corner.toFixed(1)} degrees in one sample`);
     }
   }
-  // the turn holds the body left in the picture, so a way on that starts during it may overlap only as far as that lets it
+  // the turn holds the body left in the picture until the way on starts, and while the two overlap one of the two bodies is in it (no empty picture, asserted above), so the overlap is not held back by the body left
   assert.ok(stops <= 6, `${stops} of 12 moves stop between the turn and the way on`);
 });
 
@@ -59,14 +59,22 @@ test("across fifty-four moves the camera stops between its turn and its way on i
         n += 1;
         if (pathOf(w).stop) stops += 1;
         const blend = w.plan.blend;
+        // the picture is never empty (the destination is in it where the body left is not), and the turn holds the body left in it until the way on starts
+        assert.deepEqual(w.faults, [], `${a} to ${b}, ${mode}, ${shape.name}`);
+        const legStart = w.plan.stages.turn * (1 - blend);
+        w.samples.forEach((sample, i) => {
+          const t = i / (w.samples.length - 1);
+          if (t < legStart - 1e-9) assert.ok(sample.leaving.inside || sample.around?.inside === true, `${a} to ${b}, ${mode}, ${shape.name}: the body left is out of the picture at ${t.toFixed(3)}, before the way on starts at ${legStart.toFixed(3)}`);
+        });
         assert.ok(blend >= 0 && blend <= 1);
         if (blend > 0) blended += 1;
       }
     }
   }
   table(`# ${n} moves: ${stops} with a stop between the turn and the way on, ${blended} with the way on starting during the turn`);
-  assert.ok(stops <= 30, `${stops} of ${n} moves stop between the turn and the way on`);
-  assert.ok(blended >= n / 2, `${blended} of ${n} moves start the way on during the turn`);
+  // 14 of the 54 stop (it was 26 when the overlap had to keep the body left all through the turn, 9 before that rule): what is left is every move whose way on turns round the destination as it goes, which keeps its own timing
+  assert.ok(stops <= 16, `${stops} of ${n} moves stop between the turn and the way on`);
+  assert.ok(blended >= 36, `${blended} of ${n} moves start the way on during the turn`);
 });
 
 const start = (): TravelView => ({ position: [0, 0, 4.1], forward: [0, 0, -1], up: [0, 1, 0], fov: FOV });

@@ -1163,7 +1163,7 @@ export interface Faults {
   pace: number;
   /** Samples with the planet circled out of the picture (not a fault: it breaks a tie). */
   planet: number;
-  /** Samples of the turn with the body left (and the planet circled, if there is one) out of the picture: the turn holds it, and a way on that starts during the turn must not let it go. */
+  /** Samples of the turn before the way on starts with the body left (and the planet circled, if there is one) out of the picture: the turn holds it. Once the way on has started (the overlap) the picture needs one of the two bodies, which is `empty`. */
   held: number;
 }
 const FAULT_DRIFT = 0.02;
@@ -1184,7 +1184,7 @@ function faultsOf(route: Route): Faults {
     const s = at(i / 240);
     if (!s.leaving.inside && !s.destination.inside) faults.empty += 1;
     if (s.around !== undefined && !s.around.inside) faults.planet += 1;
-    if (i / 240 < route.share && !s.leaving.inside && !(s.around?.inside === true)) faults.held += 1;
+    if (i / 240 < route.legStart && !s.leaving.inside && !(s.around?.inside === true)) faults.held += 1;
     if (i >= afterTurn && !s.destination.inside) faults.lost += 1;
     if (i > afterTurn) {
       const off = Math.hypot(s.destination.x - last.destination.x, s.destination.y - last.destination.y);
@@ -1460,7 +1460,7 @@ export function travelPlan(input: TravelInput): TravelPlan {
 
 /**
  * The camera at the moment `t` of a move, from 0 (the first view) to 1 (the last view), with where the two bodies are in the picture. The same input and moment always give the same camera. The default move,
- * `turn-travel`, never shows an empty picture between two framed views: the body being left (or the planet circled) is held in the picture through the turn, and the destination from the end of the turn on,
+ * `turn-travel`, never shows an empty picture between two framed views: the body being left (or the planet circled) is held in the picture through the turn until the way on starts, one of the two bodies is in it while the two overlap, and the destination from the end of the turn on,
  * where it only grows; the look direction turns one way only; no place is nearer a body than `TRAVEL_CLEARANCE`. `direct` and `look-back` are a straight eased glide and promise only the clearance. `cut`, or
  * `reduced`, gives the last view for every `t` above 0.
  *

@@ -1,5 +1,5 @@
 // Travelling between bodies: the view moves along the travel path, and no frame of the move is empty. At every draw of a move at least one of the two bodies (or its marker) is on the screen; the body being
-// left stays on the screen through the turn and the destination from then on; the look direction turns one way only; a move arrives at the body; and a reader who asked for reduced motion gets a cut. In both
+// left stays on the screen through the turn (until the way on starts, which may be during it) and the destination from then on; the look direction turns one way only; a move arrives at the body; and a reader who asked for reduced motion gets a cut. In both
 // scales and for several pairs, Mercury to the Sun among them. Chromium, drawing in software; every reading is what the page reports at each draw.
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
@@ -124,8 +124,9 @@ for (const scale of ["true", "compressed"] as const) {
       for (const [i, frame] of moving.entries()) {
         const t = frame.travelling!;
         expect(frame.onScreen.leaving || frame.onScreen.destination, `frame ${i} (${t.stage} ${t.progress.toFixed(2)}): the ${from} or the ${to} is on the screen`).toBe(true);
-        // the turn holds the body left, or, for two moons of one planet, the planet circled: one of the two is on the screen through the turn
-        if (t.stage === "turn") expect(frame.onScreen.leaving || (PLANET[from] === PLANET[to] && frame.onScreen.planet), `frame ${i}: the ${from} (or its planet) is on the screen through the turn`).toBe(true);
+        // the turn holds the body left, or, for two moons of one planet, the planet circled, until the way on starts; the way on starts while the turn is still going (MODULES-1384), and from then on the picture needs one of the two
+        // bodies, which the line above asks. Where the destination is not on the screen in the turn, the body left (or the planet) is: the turn's own part.
+        if (t.stage === "turn" && !frame.onScreen.destination) expect(frame.onScreen.leaving || (PLANET[from] === PLANET[to] && frame.onScreen.planet), `frame ${i}: the ${from} (or its planet) is on the screen through the turn`).toBe(true);
         if (t.stage !== "turn" && t.progress > 0.3) expect(frame.onScreen.destination, `frame ${i}: the ${to} is on the screen on the way`).toBe(true);
       }
       // two turns, neither undone. The camera arrives from the side that keeps a companion in the picture, which may be well round from the way it came, so the look direction turns twice: in the turn stage to face the way
