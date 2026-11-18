@@ -474,7 +474,7 @@ export const MOON_CATALOGUE_ROWS: readonly MoonRow[] = [
   ["kerberos","Kerberos","S/2011 (134340) 1","IV","pluto",904,2011,"M.R. Showalter, D.P. Hamilton, S.A. Stern, H.A. Weaver, A.J. Steffl, L.A. Young","IAUC 9221",[1,2461041.5,58300.0,0.01,32.1,317.7946,0.4,354.3,32.10299957,null,9.0,"PLU060",132.993,-6.163],6.0,1.0,0,null,null,9994,9.955,143.3,"regular","ケルベロス",1,0,null],
   ["hydra","Hydra","S/2005 P 1","III","pluto",903,2005,"H.A. Weaver, S.A. Stern, M.J. Mutchler, A.J. Steffl, M.W. Buie, W.J. Merline, J.R. Spencer, E.F. Young, L.A. Young","IAUC 8625",[1,2461041.5,65200.0,0.009,139.3,138.8308,0.3,165.7286,38.08293211,null,14.0,"PLU060",132.993,-6.163],18.5,1.0,0,null,null,19598,17.46,148.0,"regular","ヒドラ",1,1,null],
   ["s-2009-s-1",null,"S/2009 S 1",null,"saturn",null,2009,"Cassini Imaging Science Team","IAUC 9091",null,null,null,null,null,null,null,null,null,"none",null,1,0,null],
-  ["vanth","Vanth","S/2005 (90482) 1","I","orcus",null,2005,null,"Brown and Suer (2007), IAUC 8812",null,null,null,null,null,null,null,null,null,"none","ヴァント",1,1,null],
+  ["vanth","Vanth","S/2005 (90482) 1","I","orcus",null,2005,null,"Brown and Suer (2007), IAUC 8812",null,null,null,null,null,null,null,null,null,"none","ヴァンス",1,1,null],
   ["hiiaka","Hiʻiaka","S/2005 (136108) 1","I","haumea",null,2005,null,"Brown et al. (2005), IAUC 8577",null,null,null,null,null,null,null,null,null,"none","ヒイアカ",1,1,null],
   ["namaka","Namaka","S/2005 (136108) 2","II","haumea",null,2005,null,"Brown et al. (2005), IAUC 8636",null,null,null,null,null,null,null,null,null,"none","ナマカ",1,1,null],
   ["weywot","Weywot","S/2006 (50000) 1","I","quaoar",null,2006,null,"Brown and Suer (2007), IAUC 8812",null,null,null,null,null,null,null,null,null,"none",null,1,0,null],
