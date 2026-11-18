@@ -2,6 +2,7 @@
 // the made detail (craters and rocks: seeded, fixed to the place, many small and few large, fading by distance, their slope the slope of their height) and the rocks' mesh. The GLSL holds the same formulas as
 // src/surface/detail.ts; the pinned craters below are what both must give, so a change to one is a change to the other.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
 import { driveParts, driveStep, driveView, ROVER, startDrive, type DriveState } from "../src/surface/drive.ts";
@@ -14,6 +15,7 @@ import { loadPlan } from "../src/surface/load.ts";
 import { rockMesh, ROCK_VERTICES } from "../src/surface/rocks.ts";
 import { moonSky, localFrame } from "../src/surface/sky.ts";
 import { SURFACE_SITES, siteById } from "../src/surface/site.ts";
+import { LIGHT } from "../src/surface/glsl.ts";
 import { clampLook, forward, stepOver, viewProjection, FOV_LIMITS } from "../src/surface/view.ts";
 
 const LANDING = Date.UTC(1972, 11, 11, 19, 54);
@@ -627,4 +629,19 @@ test("the events come in order, the report's times are the table's, and the alti
   assert.ok(Math.abs(landingAt(at("manual").t).altitude - 300 * 0.3048) < 3, "manual takeover just under 300 ft");
   assert.deepEqual(calloutsBy(600).map((c) => c.id), ["ignition", "full", "radar", "throttle", "high-gate", "redesignation"]);
   assert.equal(calloutsBy(725).length, CALLOUTS.length);
+});
+
+test("the Sun's march sees the made craters exactly where the point it starts from has them (MODULES-1547): in the quality of motion, which leaves them out of the march, the start leaves them out too", () => {
+  const start = LIGHT.match(/P\.y = groundY\(([^;]*)\);/);
+  assert.ok(start, "the start's ground height is set from groundY");
+  assert.match(start[1]!, /uNear\.z > 0\.0 \? 2\.5 \* dist0 \* uPixel : 99\.0/, "the made craters are in the start's height only while the march has them (uNear.z above 0)");
+  assert.match(LIGHT, /t < uNear\.z \? max\(0\.2 \* t, 2\.5 \* dist \* uPixel\) : 99\.0/, "the march has them out to uNear.z");
+});
+
+test("while the descent plays, every frame is drawn at the quality of motion: a stall that lets the 160 ms of the last change run out does not give one frame the quality of rest (MODULES-1547)", () => {
+  const source = readFileSync("src/surface/element.ts", "utf8");
+  assert.match(source, /#movingNow\(\): boolean \{\s*return this\.#moving \|\| this\.#landing\?\.playing === true;/);
+  assert.match(source, /return this\.#movingNow\(\) \? "fast" : this\.#restQuality;/, "the quality");
+  const draw = source.slice(source.indexOf("  #draw(): void {"), source.indexOf("// --- driving the rover"));
+  assert.equal(/this\.#moving\b/.test(draw), false, "the draw's scale, timing and measuring read the same answer, not #moving");
 });
