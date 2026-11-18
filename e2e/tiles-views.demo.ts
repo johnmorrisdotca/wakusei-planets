@@ -1,6 +1,7 @@
 // The finer map tiles in the portrait and the space view, in a real browser (Chromium, drawn in software) with a made-up tile set (every tile a flat colour for its level, see tiles-fixture.ts). Nothing is
 // downloaded from anywhere. What is checked: that a far view fetches nothing, not even the manifest; that a close one asks for the tiles in view at the level it needs, each once, within a window; that they
 // are drawn over the body; that the zoom range follows what the body has; that nothing is drawn at rest, and that what the window took is given back when the view moves away.
+import "./load.ts";
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { detailOf, lookOf } from "../src/scene/look.ts";

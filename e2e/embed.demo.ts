@@ -1,3 +1,4 @@
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
 /** The drawing the element holds once it has drawn it: the line drawing is an SVG in its shadow, so wait for that and for it to stop changing (the same text on two reads), not for a fixed time. */

@@ -1,6 +1,7 @@
 // Every live view zooms and pans by itself: a drag, a pinch, Ctrl and the wheel, and the keys, with no controls on the page; the plain wheel at Fit scrolls the page; each element stops at its own zoom range.
 // The bare element is tried on the demo's page (it registers them all), the demo and the space view with the family's bar over them, the embed page with its + and - buttons and its address, and the code builder.
 // A wheel with Ctrl is sent as an event, so every browser sees the same one; the plain wheel is the browser's own, and so is a touch pinch (Chromium's input, on a phone).
+import "./load.ts";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { routeNoTiles } from "./tiles-fixture.ts";
 

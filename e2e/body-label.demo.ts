@@ -1,5 +1,6 @@
 // The name written on the body: `body-label` writes each body's name on its own globe, in the page's language, turning with the body or facing the reader, and nothing on a body
 // too small on the screen. A picture test: the pixels inside the disc that the name changes. Chromium, drawing in software. Every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { callOn, drawn as drawnShared, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";

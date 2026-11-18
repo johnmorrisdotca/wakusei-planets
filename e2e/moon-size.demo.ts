@@ -1,4 +1,5 @@
 // Moons in the squeezed view grow with moon-size. Jupiter is close enough that the radius on the screen can be read; Saturn and Uranus are pictured at the same two sizes.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(({ page }, testInfo) => {

@@ -1,4 +1,5 @@
 // The star page's presets are the size line-up's rows, so the two pages give the same radius for the same star.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { LINEUP_STARS } from "../src/lineup/data.ts";
 

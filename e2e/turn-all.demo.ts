@@ -1,5 +1,6 @@
 // Every body turns when nothing says otherwise, with no date and with a date. Two pictures, three seconds apart, must differ in the middle,
 // where the disc is (a ringed body's rings do not turn, so the whole frame barely changes). One percent of that middle must change. Chromium, in software, with motion allowed.
+import "./load.ts";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { apparent } from "../src/ephemeris.ts";
 import { BODY_IDS, type BodyId } from "../src/facts.ts";

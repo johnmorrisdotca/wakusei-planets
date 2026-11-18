@@ -1,4 +1,5 @@
 // "Put it in your page" is the family's <kazoku-embed-panel>: the code follows what is set up above, for every way a page is made, and the picture beside it is made from the same choices.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";

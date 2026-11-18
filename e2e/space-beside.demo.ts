@@ -1,5 +1,6 @@
 // The view from beside the Moon (MODULES-854): the camera beyond the Moon and off the line to the Earth, so the Moon is large in the foreground and the Earth is in view behind it and never hidden by it, with a glide to it
 // and back. Chromium, drawing in software.
+import "./load.ts";
 import { orientation } from "../src/scene/orient.ts";
 import { dot, unit, type Vec3 } from "../src/vec.ts";
 import { expect, test, type Page } from "@playwright/test";

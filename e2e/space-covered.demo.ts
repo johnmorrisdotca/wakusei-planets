@@ -1,5 +1,6 @@
 // A body behind another : with `covered="arrow"` its name and ring are not drawn over the nearer body's disc; one quiet arrow sits outside the disc's edge instead, named for the surest
 // hidden body, and a press on it goes there. With `covered="name"` the names are drawn over the disc as before; the default hides them (`space-occlude.demo.ts`). Chromium, drawing in software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, clickCounted, drawnAfter, drawnAtRest, openSpace, SPACE } from "./space-ui.ts";
 

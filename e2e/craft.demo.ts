@@ -1,4 +1,5 @@
 // The spacecraft page: pick a craft, the place changes with the date, and Japanese words show.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(({ page }, testInfo) => {

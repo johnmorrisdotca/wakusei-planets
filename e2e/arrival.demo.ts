@@ -1,4 +1,5 @@
 // An arrival keeps a companion in the picture: Jupiter one of its moons, Mercury (coming from the Earth) some other body. Reduced motion cuts the glide; the side is still chosen. Read from the element's own places and the name it shows.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(({ page }, testInfo) => {

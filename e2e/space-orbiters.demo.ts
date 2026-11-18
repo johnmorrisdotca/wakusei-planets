@@ -1,5 +1,6 @@
 // The orbiters in the space view: off by default and their module not fetched; on, each craft with a path is a dot on its orbit line round the Moon or Mars once the body is big enough
 // on the screen, named in the page's language, dim when its path is modelled or predicted with a large error (`orbiterDim`); from afar none is drawn. Chromium, drawing in software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { ORBITER_IDS, orbiterDim, orbiterElements, orbiterStatus } from "../src/orbiters.ts";
 import { callOn, drawnAtRest, openSpace, SPACE, statsOf } from "./space-ui.ts";

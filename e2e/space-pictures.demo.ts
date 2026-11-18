@@ -1,5 +1,6 @@
 // Every planet and moon of the space view shows its real picture in every look (MODULES-850, 809): the realistic look draws each body that has a surface map from it, Mars and the Moon included, so the finer map tiles
 // come to them too. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { openSpace, SPACE, statsOf } from "./space-ui.ts";
 import { routeTiles } from "./tiles-fixture.ts";

@@ -1,5 +1,6 @@
 // The plan page in a real browser: two insets (the solar system and one planet's moons from above), the choices in rows of clicks, a press on a dot, the keyboard, light and dark, Japanese, and that a plan draws only when an input changes
 // and not while it is out of sight. The plans are SVG, so there is no WebGL here and nothing to freeze.
+import "./load.ts";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 type Plan = HTMLElement & { draws: number; plan: { marked?: string; time: number; system: string; spacing: string; extent: number; dots: { id: string; x: number; y: number; marked: boolean }[] } | undefined };

@@ -1,5 +1,6 @@
 // Which face of the centred body the space view looks at, and turning it to one (MODULES-1330): `subCameraPoint` and `faceTo` on <wakusei-space> and on <wakusei-body>. The clock is held (speed 0) at a
 // fixed moment, so the body does not turn under the camera while it is read; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { callOn, drawn, openSpace, quiet, SPACE, statsOf } from "./space-ui.ts";
 

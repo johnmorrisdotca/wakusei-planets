@@ -1,6 +1,7 @@
 // A name, a ring or a note behind a nearer body is hidden, not drawn over its disc (MODULES-1404). From the view at Pholus (2026-11-30T06:01Z, the address spaceprogramx.com showed) the centaur is a big dark disc, and
 // Jupiter, Mercury and its ring, Halley and the rest were drawn over it as if it were glass. By default (`covered="hide"`) their names fade out and Pholus's own stays; `covered="name"` is the old way. Chromium and WebKit,
 // drawing in software where the browser can; every wait is on what the page reports. With SPACE_OCCLUDE_SHOTS set to a folder it writes the two pictures (occlude-before.png, occlude-after.png) there.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";

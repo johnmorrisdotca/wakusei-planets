@@ -1,5 +1,6 @@
 // The size line-up page in a real browser (Chromium, drawing in software): the choices in rows of clicks kept in the address, the zoom, a card for the body in frame with its papers, a hand that turns a star, the picture saved
 // as a PNG and an SVG, the poster printed on A4 and US Letter, the code for every way of putting it in a page, the embed page, and Japanese. The freeze rules are in `lineup-freeze.demo.ts`.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
 type Lineup = HTMLElement & { focused: string; zoom: number; metrics: { width: number; height: number; view: { x: number; y: number; h: number }; dots: { id: string; cx: number; cy: number; r: number }[] }; bodies: { id: string }[]; zoomTo(target: string | number, options?: { smooth?: boolean }): Promise<void> };

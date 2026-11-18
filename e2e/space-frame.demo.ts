@@ -1,6 +1,7 @@
 // The frames the camera holds its direction in while time runs (`frame`: stars, body, pair), in a real browser drawing in software, on the page's own clock (clock.ts): a day or thirty of the page's time pass in as many
 // seconds of it, however slowly this machine draws. Mercury paired with the Sun for thirty days at a day a second keeps the Sun where it was in the picture; the Moon paired with the Earth keeps the Earth; Mars turned with
 // for a day at an hour a second keeps its ground still under the camera; a drag changes the framing and the new framing is kept; a ride ends a pair; nothing is drawn at rest.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { advance, holdClock, takeClock } from "./clock.ts";
 import { callOn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";

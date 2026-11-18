@@ -1,5 +1,6 @@
 // The data door in a real browser (Chromium, drawn in software): a source of a body's map that a page hands in is drawn in place of the package's tiles, its credit is on the page in English and Japanese with its licence,
 // switching it off (the call, and `data=own` in the address) brings the first picture back and frees its tiles, and at rest the door sends nothing. The source is made in the page, as the README shows.
+import "./load.ts";
 import { COUNT_SCRIPT, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { ROOM } from "../src/scene/extent.ts";

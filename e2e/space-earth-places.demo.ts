@@ -1,5 +1,6 @@
 // The reader's place and favourite places on the space view's Earth (`earth-places`, `earthPlaces`, `earth-places-look`): drawn where the Earth's own ground is (the place the camera looks down on is in the middle),
 // hidden on the far side and when the Earth is small, never over a body's name, written both ways between the attribute and the property, and the three looks. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, crossing, goTo, nameBoxes, openSpace, SPACE, settle } from "./space-ui.ts";
 

@@ -1,5 +1,6 @@
 // Every 3D view of the demo fills its frame edge to edge, at any shape of window: no square box inside a wider frame, no letterbox, nothing cut off. The canvas of the space view, the portrait and the line-up is
 // measured against the frame that holds it, at a desk (1440), a phone (390) and a wide, short window, and the two boxes must agree to within a pixel. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
 test.use({ reducedMotion: "no-preference" });

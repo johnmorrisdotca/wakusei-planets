@@ -1,5 +1,6 @@
 // The landing sites with their country's flag: the Flags button on the body page and the space page, the flag in a place's tip, the site's name and flag written beside its dot once the body is close, the flag the real flag package draws,
 // and the page told which site a press was. Chromium, drawing in software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Locator } from "@playwright/test";
 
 test.use({ reducedMotion: "no-preference" });

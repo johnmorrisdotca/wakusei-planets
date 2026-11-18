@@ -1,5 +1,6 @@
 // The space view full screen (MODULES-848): the element fills the window in any shape and no body is cut off at Fit; in the immersive mode a plain wheel zooms and a drag anywhere turns, and kazoku-ui's own rules
 // (Ctrl, Command or Alt with the wheel zooms, a plain wheel scrolls the page) stand everywhere else; the family's gesture check passes on the page. Chromium, in software.
+import "./load.ts";
 import { checkGestures, COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, NOV2, setOn, settle, SPACE, statsOf } from "./space-ui.ts";

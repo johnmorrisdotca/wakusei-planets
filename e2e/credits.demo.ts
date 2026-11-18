@@ -1,5 +1,6 @@
 // The credits: every page of the demo links to every credit without opening a menu, and says in a line where its numbers come from. The family pages carry the link in the footer, the code builder in its own footer,
 // and the bare frame made for an iframe in a corner of its own, which must not cover a button, on a phone or on a desk.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOTICE.md";

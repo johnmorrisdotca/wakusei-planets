@@ -1,5 +1,6 @@
 // kazoku-ui's shared gesture check on the 3D views: every gesture of the view controls (turn, roll, keys, wheel, pinch, every kind of move) changes the view as the guide says, and the picture
 // moves by as many pixels as the controls report. Chromium in software drawing, one view at a time.
+import "./load.ts";
 import { checkGestures, COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 

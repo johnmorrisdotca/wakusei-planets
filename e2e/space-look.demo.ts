@@ -1,5 +1,6 @@
 // How the space view looks at first sight: close to a body no orbit line is drawn across it, the scale line overlaps nothing on the full-screen page, and with normal motion every view opens moving by itself
 // (reduced motion gets it still with Play ready). Chromium, drawing in software.
+import "./load.ts";
 import { COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, setOn, settle, SPACE, statsOf } from "./space-ui.ts";

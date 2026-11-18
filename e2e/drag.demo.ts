@@ -2,6 +2,7 @@
 // (the shared check of the family's drag rule: kazoku-ui's templates/e2e-ground.mjs, copied unchanged as e2e/ground.mjs). On top of it: exact grab (a drag of a few pixels moves the ground at
 // the middle of the body by as many pixels, because the view controls are told the disc's radius) and the Turn button's direction (Mars goes right, Venus, which turns backwards, goes left).
 // Real pointer events, real key presses, and the pictures compared. Chromium only, in software: the 3D looks have no software drawing in WebKit.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { checkFollowsTheHand, dragBy, groundShift, movedBy } from "./ground.mjs";
 

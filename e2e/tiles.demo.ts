@@ -1,5 +1,6 @@
 // The finer map tiles, in a real browser (Chromium, drawn in software) with a made-up tile set (every tile a flat colour for its level): which tiles are asked for, that they are drawn over the body's
 // own map, that they and their decoded pictures are freed when the zoom drops, that a tile that cannot be had leaves the map as it was, and that the zoom range follows what the body has.
+import "./load.ts";
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { zoomLimit } from "../src/scene/reach.ts";

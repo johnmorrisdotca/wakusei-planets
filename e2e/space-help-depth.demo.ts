@@ -1,5 +1,6 @@
 // Help mode's axis line and spin arrow have depth against their own body : by default less of them is drawn over the globe than whole (the axis runs into the near pole and out of the far pole, the part of the
 // arrow behind the globe is hidden), and `help-through` brings back the whole lines. A picture test: the pixels inside the disc that help mode changes, with it off, with depth and whole. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { callOn, changedInside, drawn, openSpace, setOn, shot, SPACE } from "./space-ui.ts";
 

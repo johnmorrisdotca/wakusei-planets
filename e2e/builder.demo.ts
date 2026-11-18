@@ -1,4 +1,5 @@
 // The code builder page: the family's <kazoku-embed-panel> with the builder's own choices in it, and the code for exactly what is chosen, for every way a page is made.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 test("the code builder writes the code for exactly what is chosen, and nothing scrolls sideways", async ({ page }) => {

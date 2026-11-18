@@ -1,6 +1,7 @@
 // The part of a map that was never imaged is a plain tone with no hard edge (MODULES-993). Pluto's map was mapped to about 30 degrees south and the rest was a dark brown that began on a straight line,
 // so a globe showed a hard-edged dark half, and its name, drawn on the equator, ran into it. A picture test on the shipped map itself: the detail (how much the brightness changes from one column to the
 // next) falls away gradually, not in one step, and the part never seen is a tone near the mapped ground's own average, a little darker, not black. Chromium decodes the picture.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(({ page }, testInfo) => {
