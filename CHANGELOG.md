@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Wording in the guides**: the Japanese surface guide's glide paragraph (`動きにかかる時間`, `（クリックやタップ）`, `動いている最中`) and the Japanese body-physics heading (`データのない天体`) as the reviewer suggested, and both body-physics guides give NSSDC its current name, NASA Space Science Data Coordinated Archive, as `NOTICE.md` does.
+
 ## [0.67.0] - 2026-11-18
 
 - **`<wakusei-surface>`: the camera glides from the watched descent to the standing view, to the rover and between its two cameras, with no jump cut** (MODULES-1561). When `watch` is taken off, `drive="on"` starts or the watch's camera changes, the camera moves from where the watched descent (the window or the ground camera) had it to the new view in 1.1 seconds, easing out and in, with the eye keeping its height above the ground so that it does not pass under a hill, the azimuth turning the short way and the field of view blended. New attribute `glide` (`off` for the cut, or the milliseconds), new `camera` (the pose of the last draw) and `stats.gliding`; a reader who prefers reduced motion gets the cut, and a press or a key on the view ends the move. A move from a move (the watch ends, then the rover starts) goes on from where the first had got to. Switching between the window and the ground camera while watching (or moving where the ground camera stands with `watch-from`) is a move too. Tests: `test/glide.test.ts` (the curve, the blend, the heights, and when a move starts) and `e2e/surface-glide.demo.ts` (the pose of each draw is sampled on the way: no step is most of the way, it arrives, `glide=off` and reduced motion cut).
