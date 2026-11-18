@@ -8,7 +8,7 @@ import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, smallBodyPlace, type PointsThree } from "../door/points.ts";
 import { asteroidKey } from "./asteroid-ids.ts";
 import type { SmallBody } from "../door/small-bodies.ts";
-import { createMoonDots, type DotsThree, type MoonDot } from "./all-moons.ts";
+import { createMoonLayer, type DotsThree, type MoonColorChoice, type MoonSource, type MoonSpot } from "./all-moons.ts";
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
@@ -53,6 +53,9 @@ const ARROW_PX = 9;
 const CLOSE_UP_PX = 30;
 /** How long the Moon's ring is kept before it is worked out again from the Moon's place, in milliseconds: its path changes by a couple of hundred kilometres in that time. */
 const MOON_RING_KEEP_MS = 5 * 86_400_000;
+/** A source with no moon: what the moon layer is handed before the catalogue has loaded. */
+const EMPTY_MOON_SOURCE: MoonSource = { moons: [], position: () => [0, 0, 0], orbit: () => [] };
+const NO_HOSTS: ReadonlySet<string> = new Set();
 type OrbitBody = (typeof ORBIT_BODIES)[number];
 /** How many radii across the picture of a body is at zoom 1 when it has more than its globe: Saturn's rings (to 2.27 radii) are inside the view, not cut by it. */
 const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.3 };
@@ -221,9 +224,14 @@ export interface SpaceModel {
   anchor: number | null;
   orbits: boolean;
   labels: boolean;
-  /** The catalogue's moons to draw as dots at a moment (`all-moons`), or null for none; and how many were drawn at the last draw. */
-  allMoons: ((ms: number) => readonly MoonDot[]) | null;
+  /** The catalogue as a source of places and orbits, for the planets set to show all their moons (`moons`), or null for none (or before it has loaded); the planets chosen; what the orbits' colours say. */
+  moonSource: MoonSource | null;
+  moonHosts: ReadonlySet<string>;
+  moonColors: MoonColorChoice;
+  /** How many moon dots and orbits the last draw drew, and where the dots are on the screen (for a press). */
   moonDots: number;
+  moonOrbits: number;
+  moonSpots: readonly MoonSpot[];
   /** Milliseconds of game time one second of wall time covers (the ephemeris is looked up once per such span). */
   stepMs: number;
   /** Game seconds for each second of wall time, with its sign (0 when the clock holds): the places a move is worked out for are those the clock reaches by its end. */
@@ -424,8 +432,12 @@ export const newSpaceModel = (): SpaceModel => ({
   anchor: null,
   orbits: true,
   labels: true,
-  allMoons: null,
+  moonSource: null,
+  moonHosts: new Set(),
+  moonColors: "group",
   moonDots: 0,
+  moonOrbits: 0,
+  moonSpots: [],
   stepMs: 1000,
   speed: 1,
   focus: "earth",
@@ -605,9 +617,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const points = deps.book !== undefined && typeof (three as Partial<PointsThree>).InstancedBufferGeometry === "function" ? createSmallBodyPoints(three as unknown as PointsThree, { colours: Object.fromEntries(BELT_IDS.map((id) => [id, BELTS[id].colour])) }) : undefined;
       if (points !== undefined) scene.add(points.object);
       let pointsVersion = -1;
-      // the catalogue's other moons as dots (a page's own subset of three needs Points and PointsMaterial for them)
-      const dots = typeof (three as Partial<DotsThree>).Points === "function" ? createMoonDots(three as unknown as DotsThree) : undefined;
-      if (dots !== undefined) scene.add(dots.object);
+      // the catalogue's moons of the planets set to `all`, as dots and orbits (a page's own subset of three needs Points, PointsMaterial, LineSegments and LineBasicMaterial for them)
+      const moonLayer = typeof (three as Partial<DotsThree>).Points === "function" && typeof (three as Partial<DotsThree>).LineSegments === "function" ? createMoonLayer(three as unknown as DotsThree, scene) : undefined;
       let pointsBelts: string | null = null;
       // the Oort cloud: three great circles at the shell's inner edge, drawn where the squeezed scale fits it (true to scale it is 2,000 astronomical units out, far past this view's reach)
       const OORT_SEGMENTS = 96;
@@ -1200,10 +1211,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               }
             }
           }
-          if (dots !== undefined) {
-            const list = model.allMoons?.(model.time) ?? [];
-            dots.object.visible = list.length > 0;
-            model.moonDots = list.length === 0 ? 0 : dots.update(list, mode, (host) => pos[host], radiusOf, model.ratio());
+          if (moonLayer !== undefined) {
+            const source = model.moonSource;
+            const drawn = moonLayer.update({ source: source ?? EMPTY_MOON_SOURCE, hosts: source === null ? NO_HOSTS : model.moonHosts, by: model.moonColors, mode, time: model.time, orbits: model.orbits, at: (host) => pos[host], radius: radiusOf, ratio: model.ratio(), spot: labelFor });
+            model.moonDots = drawn.dots;
+            model.moonOrbits = drawn.orbits;
+            model.moonSpots = drawn.spots;
           }
 
           // the orbits round the Sun, placed by the same mapping as the bodies
@@ -1706,7 +1719,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         },
         dispose() {
           points?.dispose();
-          dots?.dispose();
+          moonLayer?.dispose();
           oortGeometry.dispose();
           (oortLines.material as THREE.Material).dispose();
           paintOverlay?.dispose();

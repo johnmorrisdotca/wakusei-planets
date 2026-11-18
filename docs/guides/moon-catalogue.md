@@ -2,12 +2,12 @@
 title: Every known moon
 section: how-to
 order: 20
-description: "Every known moon of the planets and the dwarf planets, 468 as JPL lists them on 2026-11-11: names and designations, who found each and when, the mean orbit, the size where it is known, and where each is on a date, with how far that place was measured to be off. A 35 kB table that only /moon-catalogue carries."
+description: "Every known moon of the planets and the dwarf planets, 468 as JPL lists them on 2026-11-18: names and designations, who found each and when, the mean orbit, the size where it is known, and where each is on a date, with how far that place was measured to be off. A 35 kB table that only /moon-catalogue carries."
 ---
 
 [日本語](ja/moon-catalogue.md)
 
-The package draws 29 moons in full: each has a look, a size, a spin and its own orbit, fitted to JPL Horizons or worked out from a published theory. `/moon-catalogue` lists every known moon besides, 468 of them as JPL lists them on 2026-11-11: the name (or the provisional designation of a moon not yet named), the planet, the year it was found and who found it, the mean orbit, the size where it has been measured or can be worked out, and the group it belongs to. It also says where each moon is on any date, from its mean orbit, with the error that place was measured to have. It runs anywhere, with no DOM and no three.js, needs no loading step, and the rows (about 35 kB gzipped) are part of this entry point only: a page that does not import `/moon-catalogue` does not carry them.
+The package draws 29 moons in full: each has a look, a size, a spin and its own orbit, fitted to JPL Horizons or worked out from a published theory. `/moon-catalogue` lists every known moon besides, 468 of them as JPL lists them on 2026-11-18: the name (or the provisional designation of a moon not yet named), the planet, the year it was found and who found it, the mean orbit, the size where it has been measured or can be worked out, and the group it belongs to. It also says where each moon is on any date, from its mean orbit, with the error that place was measured to have. It runs anywhere, with no DOM and no three.js, needs no loading step, and the rows (about 35 kB gzipped) are part of this entry point only: a page that does not import `/moon-catalogue` does not carry them.
 
 ```ts
 import { catalogueMoonPosition, catalogueMoonsOf, findCatalogueMoon, moonCounts, MOON_CATALOGUE_FETCHED } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
@@ -80,6 +80,31 @@ A moon's `group` is this package's own sorting of the mean orbits, by the rule b
 
 The distances are the semi-major axis and the degrees the inclination to the ecliptic. The lines between the groups are where the moons' orbits fall apart into clusters in this table; a moon near a line could be put on either side.
 
+## By family
+
+`moonFamilies(host)` lists a planet's moons the way a list of them is read: by family, nearest family first, and in each family by distance from the planet. A family is `group` regrouped by planet, a sorting for lists and not a second rule: every moon of a planet is in exactly one.
+
+| Planet | Families, and how many moons each holds |
+|---|---|
+| Jupiter | `galilean` 4, `inner` 4 (Amalthea, Thebe, Metis, Adrastea), `himalia` 11, `ananke` 29, `carme` 41, `pasiphae` 22, `other` 4 (the irregular moons that belong to none of the four groups: Themisto, Carpo, Valetudo and S/2018 J 4) |
+| Saturn | `inner` 25 (its major and inner moons), `inuit` 39, `gallic` 19, `norse` 210 |
+| Uranus, Neptune | `inner` (19 and 8) and `irregular` (10 and 8) |
+| Earth, Mars, Pluto and the dwarf planets | one family, `moons` |
+
+Each family has its `names` in English and Japanese, its `count`, how many have a `named` name, how many have a size (`sized`) and how many of those sizes are estimates (`estimated`), the `largestKm` and `smallestKm` radii with `largestIsEstimate` and `smallestIsEstimate`, its `direction` (`prograde`, `retrograde`, `mixed` or `null` for a host with no moon placed), the `color` its orbits are drawn in by group and its `moons`, each with its `radiusKm` and an `estimate` flag. A size is an estimate when `radiusFrom` is `derived` (see Sizes): the family's own `estimated` count is the number of those. A moon without a size has `radiusKm: null`, never a guess.
+
+```ts
+import { moonFamilies, moonOrbitKey } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+
+for (const family of moonFamilies("jupiter")) {
+  console.log(family.names.en, family.count, "moons,", family.estimated, "of their sizes estimated");
+}
+// which way the colours of the orbits go: the key is data, with the number of moons each colour holds
+console.log(moonOrbitKey("direction").map((entry) => `${entry.names.en}: ${entry.count}`));
+```
+
+`moonOrbitKey("group")` and `moonOrbitKey("direction")` are the key to the orbit colours the space view draws (`moon-colors`): an entry each of `id`, `names` (English and Japanese), `color` and `count`. Pass the planets showing their moons (`moonOrbitKey("group", ["saturn"])`) to count only theirs. `moonOrbitColor(moon, by)` is the colour of one moon's orbit and `catalogueMoonOrbit(moon, when)` is the orbit itself, a closed line of points round the planet in kilometres, in the same axes as `catalogueMoonPosition`.
+
 ## Where each moon is, and how far to trust it
 
 `catalogueMoonPosition(moon, when)` gives x, y, z in kilometres from the planet's centre, in the J2000 ecliptic frame (the axes of `moonVector`), from the moon's mean orbit. The orbit's shape, its plane and how fast its periapsis and node turn are JPL's "Planetary Satellite Mean Elements". Where the moon is along the orbit, and how fast it goes round, are set from JPL Horizons: its place on 2026-01-01 sets the first, and its places 1, 31 and 90 days later the second. Taken as printed, JPL's mean elements put the moons of Saturn, Uranus, Neptune and Pluto tens of degrees from Horizons even at their own epoch (the package found the same for its own 29 moons, and fitted those to Horizons). A mean orbit leaves out the Sun's month-to-month pull and the moons' pulls on each other, so the place drifts from the real one. Every moon was measured against Horizons on three dates the orbit was not set from (2025-07-02, 2026-07-02 and 2027-07-02), and `accuracy` holds the worst distance and the worst angle seen from the planet:
@@ -108,9 +133,26 @@ The numbers are in `src/data/moon-osculating.ts`, as whole numbers (about 7 kB g
 
 ## In the space view
 
-`<wakusei-space all-moons>` (or `space.allMoons = true`) draws every catalogue moon the view does not draw in full as a small dot round its planet, all in one draw, at its mean-orbit place, nearer in the compressed scale by the same mapping as the drawn moons. The catalogue is fetched as a chunk of its own the first time the dots are turned on, so a view that never turns them on never loads it. The dots draw only when the view draws; nothing is drawn at rest. `stats.allMoons` says whether they are on, whether the catalogue has loaded and how many dots the last draw drew. A page that hands the element its own subset of three.js (`setThreeLoader`) must include `Points` and `PointsMaterial` for them. The demo's space page has an "All moons" switch that turns them on and lists the moons of the planet in view, with their groups; a moon measured more than 10 degrees off is marked "rough place" in the list.
+`moons` on `<wakusei-space>` says which planets draw every catalogue moon: `major`, today's default, draws the moons the view draws in full and nothing else; `all` draws every other moon of the planet as a small pressable dot with its orbit. It is set for one planet or for all of them, and a planet's own choice beats the default:
 
-The dots show each moon's orbit and roughly where on it the moon is. Regular moons are within about half a degree; many small outer moons can be tens of degrees off within a year (282 of the 468 are more than 10 degrees off), so a dot is not an exact position.
+```html
+<wakusei-space moons="major" moons-of="jupiter=all saturn=all" moon-colors="direction"></wakusei-space>
+```
+
+```ts
+space.moons = "all";                 // every planet at once (the default for planets with no choice of their own)
+space.setMoons("all", "saturn");     // Saturn alone
+space.setMoons("major");             // every planet at once, and every planet's own choice is cleared
+space.moonsFor("saturn");            // "all"
+space.moonHosts;                     // the planets showing every moon now, in the view's order
+space.moonColors = "direction";      // the orbits' colours: "group" (the default) or "direction"
+```
+
+A dot is where `catalogueMoonPosition` puts the moon, nearer in the compressed scale by the same mapping as the drawn moons, and its orbit is a closed line coloured by the moon's family (`moon-colors="group"`, each family's `color`) or by its direction (`direction`: blue goes with the planet's turn, red against it). `moonOrbitKey(by, hosts)` is the key to those colours as data, so a page draws its own legend from it. The dots are one draw and the orbits one more, built once for a scale, a colouring and a month and only moved with their planet after that; nothing is drawn at rest, and a draw at the same scale builds nothing again. The catalogue is a chunk of its own, fetched the first time a planet is set to `all`, so a view that never does never loads it. `stats.allMoons` says whether any planet is set to `all`, whether the catalogue has loaded, how many dots and orbits the last draw drew, and which planets show them. A page that hands the element its own subset of three.js (`setThreeLoader`) must include `Points`, `PointsMaterial`, `LineSegments` and `LineBasicMaterial`.
+
+A dot answers a press within 9 CSS pixels, after every body with a name: the first press selects the moon and fires `wakusei-body-select`, `wakusei-body-click` and `wakusei-moon-click` with `{ id, name, kind: "catalogue-moon", host }`; a second press on the same moon makes its planet the middle of the view. Hovering one fires `wakusei-body-hover` with the same detail. `all-moons` and `space.allMoons` still work, as `moons="all"` for every planet. The demo's space page has a switch and a panel that lists the families of the planet in view, each with its count and sizes (an estimated size is marked) and the colour key; a moon measured more than 10 degrees off is marked "rough place".
+
+The dots show each moon's orbit and roughly where on it the moon is. Regular moons are within about half a degree; many small outer moons can be tens of degrees off within a year (see how many above), so a dot is not an exact position.
 
 ## Kept current
 
@@ -118,4 +160,4 @@ New moons are announced every year, and orbits are refined. `python3 -I scripts/
 
 ## Where the numbers come from
 
-Everything is NASA/JPL's (Solar System Dynamics; a US government work, credit NASA/JPL-Caltech), read on 2026-11-11 by `scripts/make-moon-catalogue.py`: the mean orbits from "Planetary Satellite Mean Elements" (each moon's place along it and its rate from Horizons), the names, designations, years, discoverers and announcements from "Planetary Satellite Discovery Circumstances", the measured radii from "Planetary Satellite Physical Parameters", the moons of the dwarf planets besides Pluto from the Small-Body Satellites API, and each moon's data sheet and the positions it was measured against from JPL Horizons. [NOTICE.md](../../NOTICE.md) has the links and the terms.
+Everything is NASA/JPL's (Solar System Dynamics; a US government work, credit NASA/JPL-Caltech), read on 2026-11-18 by `scripts/make-moon-catalogue.py`: the mean orbits from "Planetary Satellite Mean Elements" (each moon's place along it and its rate from Horizons), the names, designations, years, discoverers and announcements from "Planetary Satellite Discovery Circumstances", the measured radii from "Planetary Satellite Physical Parameters", the moons of the dwarf planets besides Pluto from the Small-Body Satellites API, and each moon's data sheet and the positions it was measured against from JPL Horizons. [NOTICE.md](../../NOTICE.md) has the links and the terms.

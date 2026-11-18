@@ -2,12 +2,12 @@
 title: 知られている衛星すべて
 section: how-to
 order: 20
-description: "惑星と準惑星の、知られている衛星すべて (JPL の 2026-11-11 時点の一覧で 468個)。名前と仮符号、見つけた人と年、平均軌道、わかっている大きさ、好きな日の位置と、その位置がどれだけずれていたか。表 (約35 kB) は /moon-catalogue だけが持ちます。"
+description: "惑星と準惑星の、知られている衛星すべて (JPL の 2026-11-18 時点の一覧で 468個)。名前と仮符号、見つけた人と年、平均軌道、わかっている大きさ、好きな日の位置と、その位置がどれだけずれていたか。表 (約35 kB) は /moon-catalogue だけが持ちます。"
 ---
 
 [English](../moon-catalogue.md)
 
-このパッケージは29個の衛星をくわしく描きます。それぞれに見た目、大きさ、自転があり、軌道は JPL Horizons に合わせたものか、発表された理論から計算したものです。`/moon-catalogue` は、それ以外も含めて知られている衛星をすべて並べます。JPL の 2026-11-11 時点の一覧で 468個です。名前 (まだ名前のない衛星は仮符号)、まわる惑星、見つかった年と見つけた人、平均軌道、測った大きさか計算できる大きさ、グループがあります。どの日にどこにあるかも平均軌道から求め、その位置がどれだけずれるかを測った値もいっしょに示します。DOM も three.js も使わず、どこでも動き、読み込みの手順も要りません。表 (gzip で約35 kB) はこの入口だけが持ち、`/moon-catalogue` を読み込まないページには入りません。
+このパッケージは29個の衛星をくわしく描きます。それぞれに見た目、大きさ、自転があり、軌道は JPL Horizons に合わせたものか、発表された理論から計算したものです。`/moon-catalogue` は、それ以外も含めて知られている衛星をすべて並べます。JPL の 2026-11-18 時点の一覧で 468個です。名前 (まだ名前のない衛星は仮符号)、まわる惑星、見つかった年と見つけた人、平均軌道、測った大きさか計算できる大きさ、グループがあります。どの日にどこにあるかも平均軌道から求め、その位置がどれだけずれるかを測った値もいっしょに示します。DOM も three.js も使わず、どこでも動き、読み込みの手順も要りません。表 (gzip で約35 kB) はこの入口だけが持ち、`/moon-catalogue` を読み込まないページには入りません。
 
 ```ts
 import { catalogueMoonPosition, catalogueMoonsOf, findCatalogueMoon, moonCounts, MOON_CATALOGUE_FETCHED } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
@@ -80,6 +80,31 @@ console.log(catalogueMoonsOf("jupiter", "carme").length, "moons in Jupiter's Car
 
 距離は軌道長半径、角度は黄道に対する軌道傾斜角です。グループの境目は、この表で衛星の軌道がかたまりに分かれるところに引きました。境目の近くの衛星は、どちらに入れることもできます。
 
+## 衛星群ごと
+
+`moonFamilies(host)` は、惑星の衛星を、一覧として読む順に並べて返します。内側の衛星群から順に、それぞれの衛星群の中では惑星に近い順です。衛星群は `group` を惑星ごとにまとめ直したもので、一覧のための並べ方であり、別の分類ではありません。惑星の衛星は、かならずどれか一つの衛星群に入ります。
+
+| 惑星 | 衛星群と、それぞれの衛星の数 |
+|---|---|
+| 木星 | `galilean` 4、`inner` 4 (アマルテア、テーベ、メティス、アドラステア)、`himalia` 11、`ananke` 29、`carme` 41、`pasiphae` 22、`other` 4 (4つの群のどれにも入らない不規則衛星: テミスト、カルポ、バレトゥードー、S/2018 J 4) |
+| 土星 | `inner` 25 (おもな衛星と内側の衛星)、`inuit` 39、`gallic` 19、`norse` 210 |
+| 天王星、海王星 | `inner` (19と8) と `irregular` (10と8) |
+| 地球、火星、冥王星、ほかの準惑星 | 一つの衛星群 `moons` |
+
+衛星群には、英語と日本語の名前 `names`、衛星の数 `count`、名前のある数 `named`、大きさのある数 `sized`、そのうち大きさが見積もりの数 `estimated`、いちばん大きい半径と小さい半径 (`largestKm`、`smallestKm`。見積もりかどうかは `largestIsEstimate`、`smallestIsEstimate`)、向き `direction` (`prograde`、`retrograde`、`mixed`、軌道のある衛星がない天体では `null`)、軌道を衛星群ごとに描く色 `color`、そして `moons` があります。`moons` の各衛星には `radiusKm` と、見積もりかどうかの `estimate` があります。`radiusFrom` が `derived` のとき、大きさは見積もりです (「大きさ」を参照)。衛星群の `estimated` は、そうした衛星の数です。大きさのない衛星の `radiusKm` は `null` で、推測した値は入れません。
+
+```ts
+import { moonFamilies, moonOrbitKey } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+
+for (const family of moonFamilies("jupiter")) {
+  console.log(family.names.ja, family.count, "個、うち大きさが見積もりの衛星", family.estimated, "個");
+}
+// 軌道の色の意味: 凡例はデータで返り、色ごとの衛星の数もわかります
+console.log(moonOrbitKey("direction").map((entry) => `${entry.names.ja}: ${entry.count}`));
+```
+
+`moonOrbitKey("group")` と `moonOrbitKey("direction")` は、宇宙の表示が描く軌道の色 (`moon-colors`) の凡例です。項目ごとに `id`、`names` (英語と日本語)、`color`、`count` があります。衛星を表示している惑星を渡す (`moonOrbitKey("group", ["saturn"])`) と、その惑星の分だけ数えます。`moonOrbitColor(moon, by)` は一つの衛星の軌道の色、`catalogueMoonOrbit(moon, when)` は軌道そのもので、惑星のまわりを一周する閉じた点の列です。単位はキロメートルで、`catalogueMoonPosition` と同じ座標軸です。
+
 ## 衛星の位置と、どこまで信用できるか
 
 `catalogueMoonPosition(moon, when)` は、惑星の中心からの x、y、z をキロメートルで返します (J2000 黄道座標。`moonVector` と同じ軸)。平均軌道で計算します。軌道の形、面、近点と昇交点がまわる速さは JPL の「Planetary Satellite Mean Elements」のものです。軌道の上のどこにいるかと、軌道にそって進む速さは、JPL Horizons に合わせました。2026-01-01 の位置で場所を決め、1日後、31日後、90日後の位置で速さを決めています。JPL の平均軌道要素をそのまま使うと、土星、天王星、海王星、冥王星の衛星は、元期でも Horizons から数十度ずれるためです (このパッケージの29個の衛星でも同じことがわかり、Horizons に合わせた軌道に変えました)。平均軌道は、太陽の引力による月ごとのゆれや、衛星どうしの引力を入れていないので、位置は本当の位置から少しずつずれます。すべての衛星を、合わせるのに使っていない日 (2025-07-02、2026-07-02、2027-07-02) に Horizons とくらべました。`accuracy` は、いちばん大きいずれの距離と、惑星から見た角度です:
@@ -112,9 +137,26 @@ console.log(catalogueMoonsOf("jupiter", "carme").length, "moons in Jupiter's Car
 
 ## 宇宙の表示で
 
-`<wakusei-space all-moons>` (または `space.allMoons = true`) は、表の衛星のうち、この表示がくわしく描かないものを、平均軌道の位置に小さな点で惑星のまわりに描きます。すべての点を1回の描画でまとめて描きます。縮めた縮尺では、くわしく描く衛星と同じ方法で近くに寄せます。表は、はじめてオンにしたときに別のかたまりとして読み込みます。一度もオンにしない表示は読み込みません。点は表示が描くときだけ描くので、止まっているあいだは何も描きません。`stats.allMoons` で、オンかどうか、表を読み込んだかどうか、前回の描画で描いた点の数がわかります。three.js の一部だけを渡すページ (`setThreeLoader`) は、`Points` と `PointsMaterial` を含めてください。デモの宇宙のページには「すべての衛星」のスイッチがあり、オンにすると点を描き、いま見ている惑星の衛星の一覧をグループといっしょに表示します。一覧では、測ったずれが10度以上の衛星に「おおよその位置」と書きます。
+`<wakusei-space>` の `moons` は、どの惑星で表の衛星をすべて描くかを決めます。`major` (今の初期値) は、この表示がくわしく描く衛星だけを描きます。`all` は、その惑星のほかの衛星を、軌道つきの、押せる小さな点としてすべて描きます。惑星ごとにも、すべての惑星まとめても決められ、惑星に決めた値があれば、初期値よりそちらが優先されます。
 
-点は、それぞれの衛星の軌道と、軌道の上のだいたいの位置を示します。規則衛星のずれはだいたい0.5度以内ですが、外側の小さな衛星の多くは、1年のうちに数十度ずれることがあります (468個のうち282個は10度以上ずれます)。点は正確な位置ではありません。
+```html
+<wakusei-space moons="major" moons-of="jupiter=all saturn=all" moon-colors="direction"></wakusei-space>
+```
+
+```ts
+space.moons = "all";                 // すべての惑星に (自分の値がない惑星の初期値)
+space.setMoons("all", "saturn");     // 土星だけ
+space.setMoons("major");             // すべての惑星に。惑星ごとの値は消えます
+space.moonsFor("saturn");            // "all"
+space.moonHosts;                     // 衛星をすべて表示している惑星。表示の順
+space.moonColors = "direction";      // 軌道の色: "group" (初期値) か "direction"
+```
+
+点は `catalogueMoonPosition` が示す位置にあり、縮めた縮尺では、くわしく描く衛星と同じ方法で近くに寄せます。軌道は閉じた線で、衛星群の色 (`moon-colors="group"`。衛星群ごとの `color`) か、向きの色 (`direction`。青は惑星の自転と同じ向き、赤は逆向き) で描きます。`moonOrbitKey(by, hosts)` はその色の凡例をデータで返すので、ページは自分の凡例をそこから描けます。点は1回の描画、軌道は別の1回の描画で、縮尺、色分け、暦の月が変わったときに1回だけ作り、そのあとは惑星といっしょに動かすだけです。止まっているあいだは何も描かず、同じ縮尺での描画は何も作り直しません。表は別のかたまりで、いずれかの惑星をはじめて `all` にしたときに読み込みます。一度もしない表示は読み込みません。`stats.allMoons` で、`all` の惑星があるか、表を読み込んだか、前回の描画で描いた点と軌道の数、表示している惑星がわかります。three.js の一部だけを渡すページ (`setThreeLoader`) は、`Points`、`PointsMaterial`、`LineSegments`、`LineBasicMaterial` を含めてください。
+
+点は、名前のあるどの天体よりも優先度が低く、9 CSSピクセル以内の押す操作に応えます。最初に押すと衛星が選ばれ、`{ id, name, kind: "catalogue-moon", host }` を持つ `wakusei-body-select`、`wakusei-body-click`、`wakusei-moon-click` が発火します。同じ衛星をもう一度押すと、その惑星が表示の中心になります。点の上にポインターを置くと、同じ内容の `wakusei-body-hover` が発火します。`all-moons` と `space.allMoons` も、すべての惑星を `moons="all"` にする形で使えます。デモの宇宙のページには、スイッチと、いま見ている惑星の衛星群を並べるパネルがあり、衛星群ごとの数と大きさ (見積もりの大きさには印がつきます) と色の凡例を表示します。測ったずれが10度以上の衛星には「おおよその位置」と書きます。
+
+点は、それぞれの衛星の軌道と、軌道の上のだいたいの位置を示します。規則衛星のずれはだいたい0.5度以内ですが、外側の小さな衛星の多くは、1年のうちに数十度ずれることがあります (数は「数」の節の表を参照)。点は正確な位置ではありません。
 
 ## 新しい情報に合わせる
 
@@ -122,4 +164,4 @@ console.log(catalogueMoonsOf("jupiter", "carme").length, "moons in Jupiter's Car
 
 ## 数の出どころ
 
-すべて NASA/JPL (Solar System Dynamics。米国政府の著作物で、クレジットは NASA/JPL-Caltech) のもので、2026-11-11 に `scripts/make-moon-catalogue.py` で読み取りました。平均軌道は「Planetary Satellite Mean Elements」(軌道の上の位置と速さは Horizons)、名前、仮符号、年、発見者、発表は「Planetary Satellite Discovery Circumstances」、測った半径は「Planetary Satellite Physical Parameters」、冥王星以外の準惑星の衛星は Small-Body Satellites API、衛星ごとのデータと、合わせたりくらべたりした位置は JPL Horizons のものです。リンクと利用条件は [NOTICE.md](../../../NOTICE.md) にあります。
+すべて NASA/JPL (Solar System Dynamics。米国政府の著作物で、クレジットは NASA/JPL-Caltech) のもので、2026-11-18 に `scripts/make-moon-catalogue.py` で読み取りました。平均軌道は「Planetary Satellite Mean Elements」(軌道の上の位置と速さは Horizons)、名前、仮符号、年、発見者、発表は「Planetary Satellite Discovery Circumstances」、測った半径は「Planetary Satellite Physical Parameters」、冥王星以外の準惑星の衛星は Small-Body Satellites API、衛星ごとのデータと、合わせたりくらべたりした位置は JPL Horizons のものです。リンクと利用条件は [NOTICE.md](../../../NOTICE.md) にあります。

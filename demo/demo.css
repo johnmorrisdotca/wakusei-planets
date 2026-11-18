@@ -142,6 +142,8 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 
 /* The moon list of the space page: a box of its own height that scrolls, so a planet with hundreds of moons does not make the page long. */
 .moon-table-box { max-height: 22rem; overflow-y: auto; }
+.moon-key { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.moon-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; vertical-align: -0.1rem; }
 .moon-table-box th { position: sticky; top: 0; background: var(--surface); }
 .moon-list h2 { margin: 0; }
 /* The space page's orbiter row: a body's name stays with its craft when the row wraps. */
