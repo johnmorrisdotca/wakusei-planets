@@ -74,8 +74,17 @@ async function move(page: Page, from: string, to: string, options: Record<string
   // `fresh`: from the controls' own start (no turn, no tilt, set after the body is gone to, which now stands on the side it is arrived at), so two moves of the same pair begin from the same view and their plans can be compared
   const before = await callCounted(page, "goTo", from, { smooth: false, zoom: startZoom });
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(from);
-  if (fresh) await page.locator("#controls").evaluate((el, zoom) => (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom }, true, "set"), startZoom);
-  await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(before);
+  // the draws are read in the same call that sets the view, so no draw can come between the two: the draw that is waited for is one that has the set view in it, never the one the goTo made before it (on a loaded machine the move
+  // of this view was planned from the old turn once, 13.8 s against 10 s)
+  let drawnBefore = before;
+  if (fresh) {
+    drawnBefore = await page.locator("#controls").evaluate((el, zoom) => {
+      const draws = (Reflect.get(document.querySelector("wakusei-space")!, "stats") as { draws: number }).draws;
+      (Reflect.get(el, "controller") as { set(v: unknown, final: boolean, reason: string): void }).set({ yaw: 0, tilt: 0, zoom }, true, "set");
+      return draws;
+    }, startZoom);
+  }
+  await expect.poll(async () => (await statsOf(page)).draws, { timeout: 60_000 }).toBeGreaterThan(drawnBefore);
   await held(page);
   const base = (await statsOf(page)).draws;
   await page.evaluate(installReader);

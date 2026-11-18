@@ -118,9 +118,21 @@ test(`${MINUTES} minutes in the space view, going from the Earth to the planets 
     for (let k = 0; k < places.length; k += 1) await step();
     walks += 1;
     await rest();
-    const counts = await readCounts(page);
+    let counts = await readCounts(page);
     const held = await sky.evaluate((el) => { const s = Reflect.get(el, "stats"); return { ...s.bodies, camera: s.camera.position.map((n: number) => Math.round(n * 100) / 100) }; });
     console.log(`space soak walk ${walks}: ${gpuObjects(counts)} (start ${gpuObjects(start.counts)}), ${kinds(counts)}, ${JSON.stringify(held)}`);
+    // A bounded cache of the view (the pictures and shaders of the places a ride came to) can still hold a few objects when the count first holds still (CI counted 163 against 146 once, and the same source counted 146 the run before; a
+    // ten-minute soak is flat at 146 with some walks 2 to 4 over): what must not happen is that they are never let go. So the count has up to 45 seconds to come back to the start's, and a leak, which never comes back, still fails with its kinds.
+    if (gpuObjects(counts) > gpuObjects(start.counts) + 4) {
+      const over = Date.now();
+      const peak = kinds(counts);
+      await expect.poll(async () => {
+        // a collection may be what lets a picture go (the count is of the page's own objects, and a heap does not shrink by itself in a minute)
+        await page.evaluate(() => (globalThis as unknown as { gc?: () => void }).gc?.());
+        return gpuObjects((counts = await readCounts(page)));
+      }, { timeout: 45_000, intervals: [1000], message: `walk ${walks}: the objects over the start's were not let go in 45 s` }).toBeLessThanOrEqual(gpuObjects(start.counts) + 4);
+      console.log(`space soak walk ${walks}: ${peak} was let go in ${((Date.now() - over) / 1000).toFixed(0)} s`);
+    }
     expect(gpuObjects(counts), `walk ${walks}, started ${kinds(start.counts)}, now ${kinds(counts)}`).toBeLessThanOrEqual(gpuObjects(start.counts) + 4);
     await run();
   }

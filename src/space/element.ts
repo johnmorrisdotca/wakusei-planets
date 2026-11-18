@@ -2787,6 +2787,12 @@ export class WakuseiSpace extends HTMLElement {
   #sightTimer: ReturnType<typeof setTimeout> | undefined;
   #tellSight = (): void => {
     this.#sightTimer = undefined;
+    // a timer can fire a few milliseconds early (CI heard two events 244 ms apart): the wait is made good, so the least time between two events is the one the property promises
+    const early = this.#sightSent + SIGHT_EVENT_MS - performance.now();
+    if (early > 0.5 && this.isConnected) {
+      this.#sightTimer = setTimeout(this.#tellSight, early);
+      return;
+    }
     if (!this.isConnected || !sightChanged(this.#told, this.#sight)) return;
     this.#told = this.#sight;
     this.#sightSent = performance.now();

@@ -123,9 +123,10 @@ test.describe("with motion allowed", () => {
   test("glide=off is the cut: the camera is at the standing view in the first frame, with no move", async ({ page }) => {
     test.setTimeout(300_000);
     const start = await watching(page, "off");
+    // the draws are counted before the change that asks for one: counted after it, the draw it asked for may already be in the count (CI waited 120 s for a draw that had come), and a still view draws nothing more
+    const sent = await draws(page);
     await read(page, (el) => el.removeAttribute("watch"));
     expect(await read(page, (el) => el.stats.gliding)).toBe(false);
-    const sent = await draws(page);
     await expect.poll(() => draws(page), { timeout: 120_000 }).toBeGreaterThan(sent);
     const end = (await read(page, (el) => el.camera))!;
     const td = await touchdown(page);
