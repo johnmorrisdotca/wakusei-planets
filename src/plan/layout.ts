@@ -134,6 +134,8 @@ export interface Plan {
   orbits: PlanOrbit[];
   /** The id of the body marked, or `undefined`. */
   marked: string | undefined;
+  /** Every id marked in the solar system: `marked` first, then `PlanOptions.marks` that name a body or an extra of the plan, in the order given, none twice. Empty when nothing is marked. */
+  marks: readonly string[];
 }
 
 /**
@@ -175,6 +177,11 @@ export interface PlanOptions {
   spacing?: PlanSpacing;
   /** Bodies of your own, such as a craft's place. */
   extras?: readonly PlanExtra[];
+  /**
+   * More bodies to mark beside `mark`, each ringed and named like it: the favourites among the craft handed in with `extras`, say. An id that is neither a body of the plan nor an extra marks nothing. In the solar system only (a moon system
+   * has one mark).
+   */
+  marks?: readonly string[];
 }
 
 /** The reaches the solar-system plan steps through, in au: the plan is the smallest of them that holds every dot, so a mark that goes further out redraws the scale in whole steps and the planets keep their places in between. */
@@ -362,11 +369,13 @@ function sunPlan(time: number, options: PlanOptions, spacing: PlanSpacing): Plan
   // the plan is a view from above, so a body's distance is its distance in the ecliptic plane: its height does not push the edge out
   const farthest = Math.max(...raw.map((one) => Math.hypot(one.point[0], one.point[1])));
   const extent = planSunExtent(farthest);
-  const dots = raw.map((one) => place(one.id, one.kind, one.point, extent, spacing, SUN_INNER, one.id === wanted));
+  const present = new Set(raw.map((one) => one.id));
+  const marks = [...new Set([...(wanted === undefined ? [] : [wanted]), ...(options.marks ?? []).map((id) => id.trim().toLowerCase()).filter((id) => present.has(id) || id === "sun")])];
+  const dots = raw.map((one) => place(one.id, one.kind, one.point, extent, spacing, SUN_INNER, marks.includes(one.id)));
   const orbits: PlanOrbit[] = ids
-    .map((id) => ({ id, marked: id === wanted, points: sunOrbit(id as SpacePlanet | SpaceDwarf | SpaceMinor | "earth", time).map((p) => squeeze(p, extent, spacing, SUN_INNER)) }));
-  const centre: PlanDot = { id: "sun", kind: "star", x: 0, y: 0, distance: 0, marked: wanted === "sun", beyond: false };
-  return { system: "sun", time, spacing, unit: "au", extent, inner: SUN_INNER, centre, dots: dots.sort((a, b) => Number(a.marked) - Number(b.marked)), orbits: orbits.sort((a, b) => Number(a.marked) - Number(b.marked)), marked: wanted };
+    .map((id) => ({ id, marked: marks.includes(id), points: sunOrbit(id as SpacePlanet | SpaceDwarf | SpaceMinor | "earth", time).map((p) => squeeze(p, extent, spacing, SUN_INNER)) }));
+  const centre: PlanDot = { id: "sun", kind: "star", x: 0, y: 0, distance: 0, marked: marks.includes("sun"), beyond: false };
+  return { system: "sun", time, spacing, unit: "au", extent, inner: SUN_INNER, centre, dots: dots.sort((a, b) => Number(a.marked) - Number(b.marked)), orbits: orbits.sort((a, b) => Number(a.marked) - Number(b.marked)), marked: wanted, marks };
 }
 
 function moonPlan(time: number, host: Exclude<PlanSystem, "sun">, options: PlanOptions, spacing: PlanSpacing): Plan {
@@ -376,7 +385,7 @@ function moonPlan(time: number, host: Exclude<PlanSystem, "sun">, options: PlanO
   const dots = moons.map((id) => place(id, "moon", overPole(host, id, time), extent, spacing, MOON_INNER, id === wanted));
   const orbits: PlanOrbit[] = moons.map((id) => ({ id, marked: id === wanted, points: moonOrbit(host, id, time).map((p) => squeeze(p, extent, spacing, MOON_INNER)) }));
   const centre: PlanDot = { id: host, kind: BODIES[host].kind, x: 0, y: 0, distance: 0, marked: wanted === host, beyond: false };
-  return { system: host, time, spacing, unit: "radii", extent, inner: MOON_INNER, centre, dots: dots.sort((a, b) => Number(a.marked) - Number(b.marked)), orbits: orbits.sort((a, b) => Number(a.marked) - Number(b.marked)), marked: wanted };
+  return { system: host, time, spacing, unit: "radii", extent, inner: MOON_INNER, centre, dots: dots.sort((a, b) => Number(a.marked) - Number(b.marked)), orbits: orbits.sort((a, b) => Number(a.marked) - Number(b.marked)), marked: wanted, marks: wanted === undefined ? [] : [wanted] };
 }
 
 /**

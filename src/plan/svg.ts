@@ -106,7 +106,8 @@ const reachOf = (plan: Plan, lang: PlanLang): string => {
  */
 export function planText(plan: Plan, lang: PlanLang = "en"): PlanText {
   const words = WORDS[lang];
-  const marked = plan.marked === undefined ? undefined : nameOf(plan.marked, lang);
+  // every id marked, the plan's own mark first: "Voyager 1, Voyager 2 marked"
+  const marked = plan.marks.length === 0 ? undefined : plan.marks.map((id) => nameOf(id, lang)).join(lang === "ja" ? "、" : ", ");
   return {
     label: plan.system === "sun" ? words.sun(marked) : words.moons(nameOf(plan.system, lang), marked),
     scale: words[plan.spacing === "true" ? "true" : "squeezed"](reachOf(plan, lang)),
