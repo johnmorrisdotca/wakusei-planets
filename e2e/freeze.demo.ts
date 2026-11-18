@@ -444,6 +444,53 @@ test("pointing at bodies across the space view at rest lights their systems and 
   expect((await readCounts(page)).contexts).toBe(1);
 });
 
+test("pointing at orbit lines across the space view at rest lights them, names their bodies and draws nothing", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&play=off`);
+  await liveSky(page);
+  await drawn(page, () =>
+    sky(page).evaluate((el) => {
+      const space = el as unknown as { setView(v: unknown): void; zoomFor(p: string): number };
+      space.setView({ yaw: 0, tilt: 0, zoom: space.zoomFor("inner") });
+    }),
+  );
+  let last = -1;
+  const held = async (): Promise<number> => {
+    await expect
+      .poll(
+        async () => {
+          const now = (await readCounts(page)).draws;
+          const same = now === last;
+          last = now;
+          return same;
+        },
+        { timeout: 30_000, intervals: [300] },
+      )
+      .toBe(true);
+    return last;
+  };
+  const before = await held();
+  const counts = await readCounts(page);
+  // a sweep of the picture: the pointer crosses the lines of the inner system, and the lit line and its name come and go
+  const named = await sky(page).evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    const seen = new Set<string>();
+    for (let y = 10; y < box.height - 10; y += 6) {
+      for (let x = 10; x < box.width - 10; x += 6) {
+        el.dispatchEvent(new PointerEvent("pointermove", { clientX: box.left + x, clientY: box.top + y, pointerType: "mouse", buttons: 0, bubbles: true, composed: true }));
+        if (!el.shadowRoot!.querySelector(".sp-line")!.hasAttribute("hidden")) seen.add(el.shadowRoot!.querySelector(".sp-linename")!.textContent ?? "");
+      }
+    }
+    el.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse", bubbles: false, composed: true }));
+    return [...seen];
+  });
+  expect(named.length, "the lines of the inner system were lit as the pointer crossed them").toBeGreaterThan(3);
+  expect(await held()).toBe(before);
+  const after = await readCounts(page);
+  expect(after.rafRequests - counts.rafRequests).toBe(0);
+  expect(after.contexts).toBe(1);
+  expect(await sky(page).evaluate((el) => el.shadowRoot!.querySelector(".sp-line")!.hasAttribute("hidden"))).toBe(true);
+});
+
 test("zooming the space view from a millionth to its surface and back leaves contexts and graphics memory flat and draws nothing at rest", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&look=painted`);
   await liveSky(page);
