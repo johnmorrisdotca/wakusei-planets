@@ -186,9 +186,10 @@ export class WakuseiSurface extends HTMLElement {
     this.#changed();
   }
 
-  /** Where the eyes are: metres east and north of the site, and metres over the ground under them. */
+  /** Where the eyes are: metres east and north of the site, and metres over the ground under them. Standing, that is a person's height; while the rover is driven or the landing watched, it is the height of the view being drawn (the seat, the chase camera). */
   get position(): { east: number; north: number; up: number } {
-    return { ...this.#at, up: EYE_HEIGHT };
+    if (this.#terrain === undefined || (this.#vehicle === undefined && this.#landing === undefined)) return { ...this.#at, up: EYE_HEIGHT };
+    return { ...this.#at, up: this.#eyeUp() - this.#groundAt(this.#at.east, this.#at.north) };
   }
 
   /** The sky now: the Sun and the Earth in it. */

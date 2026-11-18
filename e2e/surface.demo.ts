@@ -293,6 +293,13 @@ test("drive=on puts the eyes behind the rover at its place: W drives it west alo
   await page.keyboard.press("c");
   const seat = await read(page, (el) => ({ camera: el.driveCamera, eyeUp: el.position.up, y: el.vehicle!.y }));
   expect(seat.camera).toBe("seat");
+  // position.up is the height the view is drawn from over the ground under it, not a person's 1.7 m: the seat's eyes are low on the rover, the chase camera is 2.8 m above it
+  expect(seat.eyeUp).toBeGreaterThan(1.2);
+  expect(seat.eyeUp).toBeLessThan(1.65);
+  await page.keyboard.press("c");
+  const chase = await read(page, (el) => ({ camera: el.driveCamera, eyeUp: el.position.up }));
+  expect(chase.camera).toBe("chase");
+  expect(chase.eyeUp).toBeGreaterThan(1.9);
 });
 
 test("a drag in the chase view: in head (the default) the eyes keep their place and only the look turns, so the rover leaves the picture and comes back; in orbit the eyes go round the rover and it holds its place", async ({ page }) => {
