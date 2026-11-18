@@ -54,7 +54,7 @@ export interface PlanPick {
 /**
  * The `<wakusei-plan>` custom element: a small plan seen from above, in SVG, light enough for an inset of 200 to 280 pixels.
  *
- * Attributes: `system` (`sun`, the default, draws the solar system from above the ecliptic's north pole; a planet or dwarf planet with moons, such as `jupiter`, draws its moons from above its north pole), `mark` (the body the plan is about: its
+ * Attributes: `system` (`sun`, the default, draws the solar system from above the ecliptic's north pole; a planet or dwarf planet with moons, such as `jupiter`, draws its moons from above its north pole), `marks` (more ids to mark beside it, separated by commas or spaces: the favourites among the craft, each ringed and named; the solar-system plan only), `mark` (the body the plan is about: its
  * id in any case, such as `mars`, `ceres`, `halley`, `io` or a craft such as `voyager1`; in the solar system a moon marks its planet. A craft's path, or the fitted table of a dwarf planet or minor body, is fetched the first time it is marked), `time` (an ISO date or milliseconds since 1970, and a bare number is always milliseconds, so `2026` is two seconds past the start of 1970 and not a year; the moment it is read when left out or `now`, and then it stands still:
  * set `time` again to move it), `spacing` (`squeezed`, the default, puts each body at the logarithm of its distance so inner and outer both show; `true` is to scale), `names` (`off` hides every name but the marked body's), `lang` (`en` or `ja`;
  * the page's `lang` when left out), `size` (pixels across, 240 by default; also `--wakusei-size`) and `theme` (`light` or `dark`; the page's colour scheme when left out). The colours are `--wakusei-plan-bg`, `-ink`, `-muted`, `-line`, `-sun`, `-dot` and `-mark`.
@@ -73,7 +73,7 @@ export interface PlanPick {
  * ```
  */
 export class WakuseiPlan extends HTMLElement {
-  static observedAttributes = ["system", "mark", "time", "spacing", "names", "lang", "size", "theme"];
+  static observedAttributes = ["system", "mark", "marks", "time", "spacing", "names", "lang", "size", "theme"];
 
   #root!: ShadowRoot;
   #box!: HTMLElement;
@@ -125,6 +125,17 @@ export class WakuseiPlan extends HTMLElement {
   set time(value: number | "now") {
     this.#time = value === "now" || !Number.isFinite(value) ? "now" : value;
     this.#queue();
+  }
+
+  /**
+   * More bodies marked beside `mark`, ringed and named like it: the favourites among the craft, say (the attribute `marks`, ids separated by commas or spaces). A craft's path is fetched the first time it is marked; an id that names nothing
+   * marks nothing. The solar-system plan only. Setting it draws again.
+   */
+  get marks(): readonly string[] {
+    return this.#marks();
+  }
+  set marks(value: readonly string[]) {
+    this.setAttribute("marks", (Array.isArray(value) ? value : []).join(","));
   }
 
   connectedCallback(): void {
@@ -204,33 +215,42 @@ export class WakuseiPlan extends HTMLElement {
     return this.getAttribute("mark")?.trim().toLowerCase() || undefined;
   }
 
-  /** The craft marked, if the mark is one. */
-  #craftMarked(): SpacecraftId | undefined {
-    const mark = this.#mark();
-    return mark !== undefined && (SPACECRAFT_IDS as readonly string[]).includes(mark) ? (mark as SpacecraftId) : undefined;
+  /** The ids in `marks`, in lower case, once each: the favourites, say. A list of ids separated by commas or spaces. */
+  #marks(): string[] {
+    return [...new Set((this.getAttribute("marks") ?? "").split(/[\s,]+/).map((id) => id.trim().toLowerCase()).filter((id) => id !== ""))];
   }
 
-  /** The place of the craft marked, once its path has been fetched (each craft's the first time it is marked); until then, nothing. */
-  #extras(id: SpacecraftId | undefined, time: number): PlanExtra[] {
-    if (id === undefined) return [];
-    if (!this.#craftLoaded.has(id) || this.#craft === undefined) {
-      if (!this.#craftLoading.has(id)) {
-        this.#craftLoading.add(id);
-        void import("../spacecraft.ts").then(async (module) => {
-          await module.loadSpacecraft(id);
-          this.#craft = module;
-          this.#craftLoaded.add(id);
-          this.#queue();
-        }, () => undefined);
+  /** The craft marked: the mark if it is one, and every craft in `marks`, once each. */
+  #craftsMarked(): SpacecraftId[] {
+    const mark = this.#mark();
+    const all = [...(mark === undefined ? [] : [mark]), ...this.#marks()];
+    return [...new Set(all)].filter((id): id is SpacecraftId => (SPACECRAFT_IDS as readonly string[]).includes(id));
+  }
+
+  /** The places of the craft marked, those whose paths have been fetched (each craft's the first time it is marked); the rest come as their paths do. */
+  #extras(ids: readonly SpacecraftId[], time: number): PlanExtra[] {
+    const out: PlanExtra[] = [];
+    for (const id of ids) {
+      if (!this.#craftLoaded.has(id) || this.#craft === undefined) {
+        if (!this.#craftLoading.has(id)) {
+          this.#craftLoading.add(id);
+          void import("../spacecraft.ts").then(async (module) => {
+            await module.loadSpacecraft(id);
+            this.#craft = module;
+            this.#craftLoaded.add(id);
+            this.#queue();
+          }, () => undefined);
+        }
+        continue;
       }
-      return [];
+      try {
+        const km = this.#craft.spacecraftPosition(id, time);
+        out.push({ id, au: [km[0] / PLAN_AU_KM, km[1] / PLAN_AU_KM, km[2] / PLAN_AU_KM] });
+      } catch {
+        // a craft with no place at this time is left out
+      }
     }
-    try {
-      const km = this.#craft.spacecraftPosition(id, time);
-      return [{ id, au: [km[0] / PLAN_AU_KM, km[1] / PLAN_AU_KM, km[2] / PLAN_AU_KM] }];
-    } catch {
-      return [];
-    }
+    return out;
   }
 
   /** A marked dwarf planet or minor body is drawn from its fitted table once that has been fetched; until then from the elements of one epoch. */
@@ -251,9 +271,8 @@ export class WakuseiPlan extends HTMLElement {
     const wanted = this.getAttribute("system") ?? "sun";
     const system: PlanSystem = (PLAN_SYSTEMS as readonly string[]).includes(wanted) ? (wanted as PlanSystem) : "sun";
     const spacing: PlanSpacing = this.getAttribute("spacing") === "true" ? "true" : "squeezed";
-    const craft = this.#craftMarked();
     this.#tables(this.#mark());
-    const plan = planAt(time, { system, spacing, mark: this.#mark(), extras: system === "sun" ? this.#extras(craft, time) : [] });
+    const plan = planAt(time, { system, spacing, mark: this.#mark(), marks: system === "sun" ? this.#marks() : [], extras: system === "sun" ? this.#extras(this.#craftsMarked(), time) : [] });
     const held = this.#root.activeElement?.getAttribute("data-id");
     this.#box.innerHTML = planSvg(plan, { size: this.#size, lang: this.#lang(), names: !off(this.getAttribute("names")), ...(measure === undefined ? {} : { measure }) });
     if (held !== null && held !== undefined) this.#box.querySelector<SVGElement>(`g[data-id="${held}"]`)?.focus();

@@ -9,7 +9,7 @@ import { arrowCount, readHelpPlace, type HelpPlace } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
-import { chooseLabels, nameSpot, type LabelBox } from "./labels.ts";
+import { craftRank, craftSize, LABEL_GAP, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox } from "./labels.ts";
 import { coverArrows, coverOf } from "./covered.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
 import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
@@ -320,6 +320,9 @@ export class WakuseiSpace extends HTMLElement {
   #pool = new Map<string, HTMLElement>();
   #places: Record<string, BodyPlace | null> | undefined;
   #names: Partial<Record<string, string>> = {};
+  #keepOut: readonly KeepOut[] = [];
+  #favourites: ReadonlySet<string> = new Set();
+  #short: Readonly<Record<string, string | { en?: string; ja?: string }>> = {};
   #selected: BodyId | null = null;
   #scaleNames: Partial<Record<ScaleMode, string>> = {};
   #rings = new Map<string, HTMLElement>();
@@ -2021,6 +2024,42 @@ export class WakuseiSpace extends HTMLElement {
     for (const [id, button] of this.#pool) this.#nameLabel(button, id);
   }
 
+  /**
+   * The short words written beside a craft's dot when its full name is long (`{ juice: { en: "JUICE", ja: "ジュース" }, webb: "Webb" }`): a text for every language, or an object with the `en` and `ja` words. A craft left out is written in full. The craft's
+   * name for a card, a press, an event and a screen reader stays the full one; only the written label is short. The package ships none: a page hands the table it wants (MODULES-1535).
+   */
+  get labelShort(): Readonly<Record<string, string | { en?: string; ja?: string }>> {
+    return { ...this.#short };
+  }
+  set labelShort(value: Readonly<Record<string, string | { en?: string; ja?: string }>>) {
+    this.#short = { ...value };
+    for (const [id, button] of this.#pool) this.#nameLabel(button, id);
+    if (this.#places) this.#placeLabels(this.#places);
+  }
+
+  /**
+   * The rectangles of the view the names are kept out of, in the element's own box in CSS pixels (`[{ x, y, w, h }]`): the page's bar, its notices, its strip. A name that would lie under one goes round its dot or is left out; the dot stays.
+   * Craft names move round their dot first; every name respects them. An empty list (the default) keeps nothing out.
+   */
+  get keepOut(): readonly KeepOut[] {
+    return this.#keepOut.map((one) => ({ ...one }));
+  }
+  set keepOut(value: readonly KeepOut[]) {
+    this.#keepOut = (Array.isArray(value) ? value : []).filter((one) => one !== null && typeof one === "object" && [one.x, one.y, one.w, one.h].every((n) => Number.isFinite(n))).map((one) => ({ x: one.x, y: one.y, w: one.w, h: one.h }));
+    if (this.#places) this.#placeLabels(this.#places);
+  }
+
+  /**
+   * The ids of the craft the page favourites: their names come before the other craft's when two touch (the craft chosen comes first of all). A body's name always comes before any craft's.
+   */
+  get favourites(): readonly string[] {
+    return [...this.#favourites];
+  }
+  set favourites(value: readonly string[]) {
+    this.#favourites = new Set(Array.isArray(value) ? value.map((id) => String(id).toLowerCase()) : []);
+    if (this.#places) this.#placeLabels(this.#places);
+  }
+
   /** What a screen reader hears after a body's name: "choose to look at it" by default, or the page's own words. */
   get bodyHint(): string {
     return this.#hint;
@@ -2480,6 +2519,8 @@ export class WakuseiSpace extends HTMLElement {
         button.type = "button";
         button.className = "sp-label";
         button.dataset["body"] = id;
+        // a craft's name is marked, so a page's styles (and a test) can tell it from a body's
+        if (this.#model.craftIds.includes(id)) button.dataset["craft"] = "";
         this.#nameLabel(button, id);
         box.append(button);
         this.#pool.set(id, button);
@@ -2504,14 +2545,26 @@ export class WakuseiSpace extends HTMLElement {
       const covered = at.behind !== undefined && this.#covered === "arrow";
       if (covered) continue;
       spots.set(id, { x, y, small: at.r < RING_BELOW_PX, carried, flipped });
-      if (!carried) wanted.push({ id, x, y, width, height: 16, rank: this.#rank(id), size: at.r });
+      if (carried) continue;
+      if (this.#model.craftIds.includes(id)) {
+        // a craft's name comes after every body's: the craft chosen first, then a favourite, then the nearer to the body in view; it goes round its dot before it gives way
+        const middle = places[this.#model.focus] ?? { x: frame.width / 2, y: frame.height / 2 };
+        const chosen = this.#selected === (id as BodyId) || this.#hovered === (id as BodyId) || this.#model.companion === id;
+        wanted.push({ id, x, y, width, height: 16, rank: craftRank({ chosen, favourite: this.#favourites.has(id) }), size: craftSize(Math.hypot(at.x - middle.x, at.y - middle.y)), alternates: nameAlternates(at, { width, height: 16 }, frame) });
+      } else wanted.push({ id, x, y, width, height: 16, rank: this.#rank(id), size: at.r });
     }
-    // no two names overlap: a moon gives way to its planet and a planet to the Sun
-    const shown = chooseLabels(wanted);
-    for (const id of this.#model.craftIds) if (spots.has(id)) shown.add(id);
+    // no two names overlap and none lies under a keep-out rectangle: a moon gives way to its planet, a planet to the Sun, and every craft to every body
+    const placed = placeLabels(wanted, LABEL_GAP, this.#keepOut);
+    const shown = new Set(placed.keys());
+    for (const [id, spot] of placed) {
+      const was = spots.get(id)!;
+      // a craft's name that went round its dot is on the left of it, or above or below
+      const moved = was.x !== spot.x || was.y !== spot.y;
+      spots.set(id, { ...was, x: spot.x, y: spot.y, flipped: moved ? spot.x + 1 < places[id]!.x : was.flipped });
+    }
     const companion = this.#model.companion;
-    if (companion !== null && spots.has(companion)) shown.add(companion);
-    this.#nameBoxes = wanted.filter((one) => shown.has(one.id));
+    if (companion !== null && spots.has(companion) && !this.#model.craftIds.includes(companion)) shown.add(companion);
+    this.#nameBoxes = wanted.filter((one) => shown.has(one.id)).map((one) => ({ ...one, ...(placed.get(one.id) ?? {}) }));
     for (const id of ids) {
       const label = this.#pool.get(id);
       const ring = this.#rings.get(id);
@@ -2746,9 +2799,19 @@ export class WakuseiSpace extends HTMLElement {
 
   #nameLabel(button: HTMLElement, id: string): void {
     const text = this.#nameOf(id);
-    button.textContent = text;
+    // a craft with a short label is written short and named in full for a screen reader
+    button.textContent = this.#shortOf(id) ?? text;
     this.#widths.delete(button);
     button.setAttribute("aria-label", `${text}: ${this.#hint}`);
+  }
+
+  /** The short words the page gave a craft, in the language shown, else its text for every language, else nothing. */
+  #shortOf(id: string): string | undefined {
+    if (!this.#model.craftIds.includes(id)) return undefined;
+    const given = this.#short[id];
+    if (given === undefined) return undefined;
+    const words = typeof given === "string" ? given : given[this.getAttribute("lang") === "ja" ? "ja" : "en"] ?? given.en ?? given.ja;
+    return words !== undefined && words.trim() !== "" ? words : undefined;
   }
 
   /** True for the full-screen mode (the `immersive` attribute): the element fills its box in any shape, a plain wheel zooms instead of scrolling the page, and a touch drag turns the view instead of scrolling it. */

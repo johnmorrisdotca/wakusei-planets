@@ -275,3 +275,36 @@ test("the orbit lines of a small body follow the theory in use: fitted once its 
   assert.equal(after.points.length, before.points.length);
   assert.ok(after.marked && after.points.every((p) => Number.isFinite(p[0])));
 });
+
+test("several craft can be marked at once: the favourites beside the mark, each ringed and named, and the label says them all (MODULES-1535)", () => {
+  const extras = [
+    { id: "voyager1", au: [-40, -120, 90] as [number, number, number] },
+    { id: "voyager2", au: [60, 100, -80] as [number, number, number] },
+    { id: "newhorizons", au: [20, -50, 10] as [number, number, number] },
+  ];
+  const plan = planAt(T, { mark: "voyager1", marks: ["voyager2", "mars", "no-such-body", "VOYAGER2"], extras });
+  assert.deepEqual(plan.marks, ["voyager1", "voyager2", "mars"], "the mark first, then the others that name a body or an extra of the plan, once each, in order");
+  assert.equal(plan.marked, "voyager1");
+  assert.deepEqual(plan.dots.filter((dot) => dot.marked).map((dot) => dot.id).sort(), ["mars", "voyager1", "voyager2"]);
+  assert.equal(plan.dots.find((dot) => dot.id === "newhorizons")!.marked, false, "an extra that is not named is not marked");
+  assert.ok(plan.orbits.some((orbit) => orbit.id === "mars" && orbit.marked), "a marked body's orbit line is the marked one");
+  // the marked dots are drawn last, on top
+  assert.ok(plan.dots.slice(-3).every((dot) => dot.marked));
+  // with no mark, the favourites alone
+  const only = planAt(T, { marks: ["voyager2"], extras });
+  assert.equal(only.marked, undefined);
+  assert.deepEqual(only.marks, ["voyager2"]);
+  assert.equal(planAt(T).marks.length, 0);
+  assert.deepEqual(planAt(T, { mark: "mars" }).marks, ["mars"]);
+  // a moon system has the one mark
+  assert.deepEqual(planAt(T, { system: "jupiter", mark: "io", marks: ["europa"] }).marks, ["io"]);
+  // the screen-reader label and the picture say them all
+  const text = planText(plan, "en").label;
+  assert.match(text, /Voyager 1/);
+  assert.match(text, /Voyager 2/);
+  assert.match(text, /Mars/);
+  assert.match(text, /marked/);
+  assert.match(planText(plan, "ja").label, /に印/);
+  const svg = planSvg(plan, { size: 240, lang: "en", names: false });
+  assert.equal((svg.match(/data-marked=""/g) ?? []).length, 3);
+});
