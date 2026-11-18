@@ -149,8 +149,8 @@ async function groundBlocks(page: Page, png: Buffer): Promise<{ blocks: number[]
 
 test("two frames of the same moment of the playing descent match on the ground, a made crater's floor included: it does not flicker between black and its shadow (MODULES-1547)", async ({ page }, testInfo) => {
   test.setTimeout(480_000);
-  // the shadows and the made detail are on, as on the site; the ground camera, at T+11:38 when the lunar module is 48 m up (no dust yet), and the view tipped down by a drag so that the ground fills the lower half
-  await watch(page, "", "ground", 698, false);
+  // the shadows and the made detail are on, as on the site; the ground camera, at T+11:20 when the lunar module is 85 m up, and still more than 20 m up when the six pictures are taken (the dust of the blast starts at 21 m and is made with random grains), and the view tipped down by a drag so that the ground fills the lower half
+  await watch(page, "", "ground", 680, false);
   await read(page, (el) => {
     el.landingRate = 0.25;
   });
@@ -159,7 +159,7 @@ test("two frames of the same moment of the playing descent match on the ground, 
   expect(await pitch(page), "the view looks down at the ground").toBeLessThan(-4);
   // the words the page writes over the picture are put out of the way: the pictures are of the ground, and the clock in the words changes every second
   await read(page, (el) => {
-    el.shadowRoot!.getElementById("landing")!.style.visibility = "hidden";
+    for (const id of ["landing", "note", "status"]) el.shadowRoot!.getElementById(id)!.style.visibility = "hidden";
   });
   await read(page, (el) => el.playLanding());
   mkdirSync("test-results/evidence", { recursive: true });
