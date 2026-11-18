@@ -4,7 +4,10 @@ registerLook({
   id: "mars",
   surface: `
 vec4 surface(vec3 p) {
-  float h = craters(p, 4.0, 0.4, 2.0) * 0.8 + craters(p, 12.0, 0.4, 9.0) * 0.4;
+  float h1 = craters(p, 4.0, 0.4, 2.0) * 0.8;
+  float h2 = craters(p, 12.0, 0.4, 9.0) * 0.4;
+  float h = h1 + h2;
+  float fine = h1 * (1.0 - reliefOf(p, 4.0)) + h2 * (1.0 - reliefOf(p, 12.0));
   float la = lat(p);
   float dk = smoothstep(0.5, 0.64, fbm(p * 2.1 + 7.0) + 0.14 * (1.0 - abs(la + 0.3) * 1.7));
   dk = max(dk, oval(p, 70.0, 8.0, 16.0, 11.0, 0.6) * 0.95);
@@ -17,7 +20,7 @@ vec4 surface(vec3 p) {
   float wob = (fbm(p * 7.0) - 0.5) * 0.14;
   float cap = smoothstep(radians(79.0), radians(83.0), abs(la) + wob);
   col = mix(col, vec3(0.96, 0.96, 0.98), cap);
-  return vec4(col, h);
+  return vec4(col, h - fine);
 }`,
   atmosphere: { colour: [0.85, 0.6, 0.45], strength: 0.16, power: 4 },
   relief: 0.7,

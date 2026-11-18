@@ -67,13 +67,17 @@ export function rock(options: RockOptions): string {
   const seed = (options.seed ?? 0).toFixed(1);
   return `
 vec4 surface(vec3 p) {
-  float h = craters(p, 3.0, ${(c * 1.0).toFixed(2)}, ${seed}) + craters(p, 8.0, ${(c * 0.7).toFixed(2)}, ${seed} + 7.0) * 0.6 + craters(p, 20.0, ${(c * 0.6).toFixed(2)}, ${seed} + 3.0) * 0.3;
+  float h1 = craters(p, 3.0, ${(c * 1.0).toFixed(2)}, ${seed});
+  float h2 = craters(p, 8.0, ${(c * 0.7).toFixed(2)}, ${seed} + 7.0) * 0.6;
+  float h3 = craters(p, 20.0, ${(c * 0.6).toFixed(2)}, ${seed} + 3.0) * 0.3;
+  float h = h1 + h2 + h3;
+  float fine = h1 * (1.0 - reliefOf(p, 3.0)) + h2 * (1.0 - reliefOf(p, 8.0)) + h3 * (1.0 - reliefOf(p, 20.0));
   float tone = fbm(p * ${(options.patches ?? 2.3).toFixed(2)} + ${seed});
   vec3 col = mix(${vec(options.dark)}, ${vec(options.light)}, smoothstep(0.25, 0.75, tone));
   col *= 1.0 + ${(options.contrast ?? 1).toFixed(2)} * 1.15 * h;
   col *= 0.94 + 0.12 * fbm(p * 60.0);
   ${options.extra ?? ""}
-  return vec4(col, h);
+  return vec4(col, h - fine);
 }`;
 }
 
@@ -104,13 +108,16 @@ vec4 surface(vec3 p) {
 export function ice(options: { base: string; stain: string; cracks?: number; craters?: number; extra?: string }): string {
   return `
 vec4 surface(vec3 p) {
-  float h = craters(p, 4.0, ${(options.craters ?? 0.5).toFixed(2)}, 11.0) + craters(p, 12.0, ${((options.craters ?? 0.5) * 0.8).toFixed(2)}, 5.0) * 0.6;
+  float h1 = craters(p, 4.0, ${(options.craters ?? 0.5).toFixed(2)}, 11.0);
+  float h2 = craters(p, 12.0, ${((options.craters ?? 0.5) * 0.8).toFixed(2)}, 5.0) * 0.6;
+  float h = h1 + h2;
+  float fine = h1 * (1.0 - reliefOf(p, 4.0)) + h2 * (1.0 - reliefOf(p, 12.0));
   float tone = fbm(p * 3.0 + 9.0);
   vec3 col = mix(${vec(options.base)}, ${vec(options.stain)}, smoothstep(0.45, 0.8, tone) * 0.7);
   float ridge = 1.0 - smoothstep(0.0, 0.02, abs(fbm(p * 7.0 + 4.0) - 0.5));
   col = mix(col, ${vec(options.stain)}, ridge * ${(options.cracks ?? 0.0).toFixed(2)});
   col *= 1.0 + 0.7 * h;
   ${options.extra ?? ""}
-  return vec4(col, h);
+  return vec4(col, h - fine);
 }`;
 }

@@ -40,6 +40,10 @@ float craters(vec3 p, float freq, float amp, float seed) {
   }
   return h;
 }
+// How much of a crater layer the relief may use, 0 to 1: the layer's mean crater (0.24 of a cell, a cell being 1 / freq of a radian) is about this many pixels across its radius, and under 10 of them it is left out of the relief and over 20
+// it is all in. The relief is the difference between neighbouring pixels (1 to 2 pixels apart, and the screen works in blocks of 2 by 2), and it tips the surface all the way wherever there is any slope at all (the clamp of nb below),
+// so a crater that is only a few pixels wide is read as noise: a lattice of dark dots over the lit side (MODULES-1639). The colour of the same crater is still drawn, and its own fade (in craters) still applies.
+float reliefOf(vec3 p, float freq) { return smoothstep(10.0, 20.0, 0.24 / (freq * max(length(fwidth(p)), 1e-6))); }
 float lon(vec3 p) { return atan(p.y, p.x); }
 float lat(vec3 p) { return asin(clamp(p.z, -1.0, 1.0)); }
 float wrapPi(float a) { return a - 6.2831853 * floor((a + 3.1415927) / 6.2831853); }
