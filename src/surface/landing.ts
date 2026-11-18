@@ -294,3 +294,38 @@ export function clockText(t: number): { t: string; get: string } {
   const g = 110 * 3600 + 9 * 60 + 53 + s;
   return { t: `T+${two(s / 60)}:${two(s % 60)}`, get: `${Math.floor(g / 3600)}:${two((g % 3600) / 60)}:${two(g % 60)}` };
 }
+
+/** How far a drag has turned the watched view from where its camera points by itself, in degrees. */
+export interface WatchTurn {
+  azimuth: number;
+  pitch: number;
+}
+
+/** The most a drag may tip the watched view up or down from where its camera points by itself, in degrees (the rover's view has the same limit). */
+export const WATCH_PITCH_LIMIT = 60;
+
+/**
+ * A drag turns the watched view (MODULES-1546): the camera follows the descent and points itself at each frame, so a drag cannot set where the view looks (the next frame would put it back); it adds to a turn kept
+ * beside it, which every frame adds to where the camera points by itself. Dragging right turns the view right, and dragging down tips it up, as in the standing view.
+ *
+ * @param turn - The turn so far.
+ * @param dx - How far the pointer moved across, in pixels, to the right positive.
+ * @param dy - How far it moved down, in pixels, down positive.
+ * @param degreesPerPixel - How many degrees a pixel of the drag turns the view (the field of view over the view's height).
+ * @returns The turn after the drag, the pitch kept within `WATCH_PITCH_LIMIT`.
+ */
+export function turnedBy(turn: WatchTurn, dx: number, dy: number, degreesPerPixel: number): WatchTurn {
+  return { azimuth: turn.azimuth - dx * degreesPerPixel, pitch: Math.max(-WATCH_PITCH_LIMIT, Math.min(WATCH_PITCH_LIMIT, turn.pitch + dy * degreesPerPixel)) };
+}
+
+/**
+ * Where the watched view looks at a frame: where its camera points by itself (towards the descending stage from the ground, along the lunar module's heading and pitch from its window) turned by what the viewer has dragged.
+ * Pure, and the same at every frame for the same turn, so the turn survives the frames that follow it.
+ *
+ * @param camera - Where the camera points by itself: azimuth clockwise from north and pitch up from the horizon, in degrees.
+ * @param turn - The viewer's turn.
+ * @returns The azimuth from 0 up to 360 and the pitch, before the view's own limits.
+ */
+export function watchedLook(camera: { azimuth: number; pitch: number }, turn: WatchTurn): { azimuth: number; pitch: number } {
+  return { azimuth: (((camera.azimuth + turn.azimuth) % 360) + 360) % 360, pitch: camera.pitch + turn.pitch };
+}
