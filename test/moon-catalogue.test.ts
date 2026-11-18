@@ -10,6 +10,8 @@ import {
   ASSUMED_ALBEDO,
   MOON_CATALOGUE,
   MOON_CATALOGUE_FETCHED,
+  MOON_MAGNITUDE_PAGES,
+  MOON_MAGNITUDES_READ,
   MOON_GROUPS,
   catalogueMoonPosition,
   catalogueMoonsOf,
@@ -208,10 +210,37 @@ test("sizes: measured where JPL measured them, from the Horizons sheet next, els
     assert.ok(Math.abs(m.radiusKm! - d / 2) <= 0.05, `${m.id}: the radius is half the estimator's diameter`);
   }
   for (const m of MOON_CATALOGUE) if (m.radiusFrom === null) assert.equal(m.radiusKm, null, m.id);
+  // the moons with no size are the seven moons of the dwarf planets, the regular and inner moons whose sizes JPL does not list, and Philophrosyne, which Wikipedia's table has no row for
+  const bare = MOON_CATALOGUE.filter((m) => m.radiusFrom === null);
+  assert.equal(bare.filter((m) => ["orcus", "haumea", "quaoar", "makemake", "gonggong", "eris"].includes(m.host)).length, 7);
+  assert.deepEqual(bare.filter((m) => !["orcus", "haumea", "quaoar", "makemake", "gonggong", "eris"].includes(m.host) && ["jupiter", "saturn", "uranus", "neptune"].includes(m.host) && !["regular", "inner", "none"].includes(m.group)).map((m) => m.id), ["philophrosyne"]);
   const counts = { measured: 0, sheet: 0, derived: 0, none: 0 };
   for (const m of MOON_CATALOGUE) counts[m.radiusFrom ?? "none"] += 1;
   console.log(`moon catalogue sizes: ${JSON.stringify(counts)}`);
   assert.deepEqual(counts, SIZES);
+});
+
+test("a size from Wikipedia's magnitude is an estimate that says so: the magnitude names its source, the page and the day, and only an irregular moon with no other size has one", () => {
+  const fromWikipedia = MOON_CATALOGUE.filter((m) => m.magnitudeFrom === "wikipedia");
+  assert.equal(fromWikipedia.length, 356);
+  assert.match(MOON_MAGNITUDES_READ, /^2026-11-18$/);
+  for (const m of fromWikipedia) {
+    assert.equal(m.radiusFrom, "derived", `${m.id}: an estimate, not a measurement`);
+    assert.ok(m.albedo === null && m.radiusSigmaKm === null, `${m.id}: the assumed albedo, no uncertainty`);
+    assert.ok(m.magnitude! > 9 && m.magnitude! < 18.5, `${m.id}: H ${m.magnitude}`);
+    assert.match(MOON_MAGNITUDE_PAGES[m.host]!, /^https:\/\/en\.wikipedia\.org\/wiki\/Moons_of_/, m.id);
+    assert.ok(!["regular", "inner", "none"].includes(m.group), `${m.id}: an irregular moon (a regular moon's table magnitude is worked out from its diameter)`);
+  }
+  // the numbers are the table in scripts/moon-catalogue-magnitudes.json, and a moon with a sheet magnitude keeps it
+  const table = JSON.parse(readFileSync(new URL("../scripts/moon-catalogue-magnitudes.json", import.meta.url), "utf8")) as { read: string; licence: string; moons: Record<string, { h: number; page: string }> };
+  assert.equal(table.read, MOON_MAGNITUDES_READ);
+  assert.equal(table.licence, "CC BY-SA 4.0");
+  assert.equal(Object.keys(table.moons).length, fromWikipedia.length);
+  for (const m of fromWikipedia) assert.equal(table.moons[m.id]?.h, m.magnitude, m.id);
+  for (const m of MOON_CATALOGUE.filter((x) => x.magnitudeFrom === "sheet")) assert.ok(m.magnitude !== null && m.radiusFrom !== null, m.id);
+  assert.equal(MOON_CATALOGUE.filter((m) => m.magnitude === null && m.magnitudeFrom !== null).length, 0);
+  // a moon found at magnitude 12 is a few tens of kilometres across and one at 17 a few: the formula and the assumed albedo
+  assert.ok(findCatalogueMoon("Ymir")!.radiusKm! > 10 && findCatalogueMoon("Ymir")!.radiusKm! < 25);
 });
 
 test("the space view's dots: a moon in the true scale is where its kilometres put it, in the scene's axes, like the drawn moons", () => {
@@ -253,5 +282,5 @@ test("the rows are a chunk of their own: no other entry point carries them, and 
 // The numbers the tests above pin, from the read of MOON_CATALOGUE_FETCHED. A new read changes them on purpose: update them with the changes the build script printed.
 const COUNTS: Record<string, number> = { earth: 1, mars: 2, jupiter: 115, saturn: 293, uranus: 29, neptune: 16, pluto: 5, orcus: 1, haumea: 2, quaoar: 1, makemake: 1, gonggong: 1, eris: 1 };
 const GRADES: Record<string, number> = { close: 37, rough: 140, loose: 282, unmeasured: 1, none: 8 };
-const SIZES = { measured: 46, sheet: 19, derived: 26, none: 377 };
+const SIZES = { measured: 46, sheet: 19, derived: 382, none: 21 };
 const BUDGET_GZIP = 40_000;

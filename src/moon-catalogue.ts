@@ -123,7 +123,7 @@ export interface MoonDiscovery {
 
 /**
  * Where a moon's size comes from: `measured` (JPL's "Planetary Satellite Physical Parameters", with its uncertainty), `sheet` (the radius on the moon's JPL Horizons data sheet) or `derived` (worked out here from the
- * moon's V(1,0) magnitude and an albedo: the sheet's albedo where it gives one, else `ASSUMED_ALBEDO`, by D = 10^(3.1236 - 0.5 log10(albedo) - 0.2 V), the formula of NASA/JPL's asteroid size estimator).
+ * moon's magnitude and an albedo: the sheet's albedo where it gives one, else `ASSUMED_ALBEDO`, by D = 10^(3.1236 - 0.5 log10(albedo) - 0.2 V), the formula of NASA/JPL's asteroid size estimator).
  *
  * @example
  * ```ts
@@ -134,6 +134,51 @@ export interface MoonDiscovery {
  * ```
  */
 export type MoonSizeSource = "measured" | "sheet" | "derived";
+
+/**
+ * Where a moon's magnitude comes from: `sheet` (the V(1,0) magnitude on its JPL Horizons data sheet) or `wikipedia` (the absolute magnitude of English Wikipedia's table of the moons of its planet, which takes the irregular
+ * moons' from the Minor Planet Center's Natural Satellites Ephemeris Service; read on `MOON_MAGNITUDES_READ`, the page is in `MOON_MAGNITUDE_PAGES`). A size worked out from a `wikipedia` magnitude is an estimate: it assumes the
+ * albedo `ASSUMED_ALBEDO`, and `radiusFrom` says `derived`.
+ *
+ * @example
+ * ```ts
+ * import { findCatalogueMoon, type MoonMagnitudeSource } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const from: MoonMagnitudeSource | null = findCatalogueMoon("Ymir")!.magnitudeFrom;
+ * console.log(from);
+ * ```
+ */
+export type MoonMagnitudeSource = "sheet" | "wikipedia";
+
+/**
+ * The day the magnitudes marked `wikipedia` were read from English Wikipedia's tables (CC BY-SA 4.0): one request for each of the four pages.
+ *
+ * @example
+ * ```ts
+ * import { MOON_MAGNITUDES_READ } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * console.log("Wikipedia read on", MOON_MAGNITUDES_READ);
+ * ```
+ */
+export const MOON_MAGNITUDES_READ = "2026-11-18";
+
+/**
+ * The English Wikipedia page each host's `wikipedia` magnitudes were read from.
+ *
+ * @example
+ * ```ts
+ * import { findCatalogueMoon, MOON_MAGNITUDE_PAGES } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const moon = findCatalogueMoon("Ymir")!;
+ * if (moon.magnitudeFrom === "wikipedia") console.log(MOON_MAGNITUDE_PAGES[moon.host]);
+ * ```
+ */
+export const MOON_MAGNITUDE_PAGES: Readonly<Partial<Record<HostId, string>>> = {
+  jupiter: "https://en.wikipedia.org/wiki/Moons_of_Jupiter",
+  saturn: "https://en.wikipedia.org/wiki/Moons_of_Saturn",
+  uranus: "https://en.wikipedia.org/wiki/Moons_of_Uranus",
+  neptune: "https://en.wikipedia.org/wiki/Moons_of_Neptune",
+};
 
 /**
  * One moon of the catalogue. A number the sources do not give is `null`, never guessed.
@@ -183,8 +228,10 @@ export interface CatalogueMoon {
   radiusFrom: MoonSizeSource | null;
   /** The geometric albedo, where the Horizons sheet gives one. */
   albedo: number | null;
-  /** The V(1,0) magnitude (as bright as it would be 1 au from the Sun and from us), where the Horizons sheet gives one. */
+  /** The V(1,0) magnitude (as bright as it would be 1 au from the Sun and from us), where the Horizons sheet gives one, else, for an irregular moon with no size, the absolute magnitude of English Wikipedia's table (see `magnitudeFrom`). */
   magnitude: number | null;
+  /** Where `magnitude` comes from; `null` when there is none. */
+  magnitudeFrom: MoonMagnitudeSource | null;
   /**
    * How far `catalogueMoonPosition` was from JPL Horizons: the worst distance (km) and angle seen from the planet (degrees) on 2025-07-02, 2026-07-02 and 2027-07-02 (dates the orbit was not set from), and the worst angle
    * decades away (1990, 2000 and 2040; `null` where Horizons has none of them). `null` when not measured.
@@ -211,9 +258,10 @@ export const ASSUMED_ALBEDO = 0.04;
 
 const FRAMES = ["ecliptic", "equatorial", "laplace"] as const;
 const SIZE_FROM = ["measured", "sheet"] as const;
+const MAGNITUDE_FROM = ["sheet", "wikipedia"] as const;
 
 function moonOf(row: MoonRow): CatalogueMoon {
-  const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed, drawn] = row;
+  const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed, drawn, magnitudeSource] = row;
   const orbit: MoonOrbit | null =
     o === null
       ? null
@@ -259,6 +307,7 @@ function moonOf(row: MoonRow): CatalogueMoon {
     radiusFrom,
     albedo,
     magnitude,
+    magnitudeFrom: magnitudeSource === null ? null : MAGNITUDE_FROM[magnitudeSource]!,
     accuracy: worstKm === null || worstDegrees === null ? null : { worstKm, worstDegrees, farDegrees },
     grade,
     full: drawn !== 0,
