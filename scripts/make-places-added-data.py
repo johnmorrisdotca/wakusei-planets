@@ -85,7 +85,7 @@ MARS_MISSIONS = [  # (land date prefix as GCAT writes it, the name shown, its Ja
 PIECES = [
     (r"^(TDU Marsa-\d)$", "motor (TDU)", "推進装置 (TDU)"), (r"^DMP$", "motor (DMP)", "推進装置 (DMP)"), (r"^Teplovoy Ekran$", "heat shield", "ヒートシールド"),
     (r"^(?:[\w-]+ )*Heat Shield$", "heat shield", "ヒートシールド"), (r"^(?:[\w-]+ )*Back ?[Ss]hell$", "backshell", "バックシェル"), (r"^(?:[\w-]+ )*Parachute$", "parachute", "パラシュート"),
-    (r"^(?:[\w-]+ )*Cruise Stage$", "cruise stage", "クルーズステージ"), (r"^(?:[\w-]+ )*Aeroshell Cover$", "aeroshell cover", "エアロシェルのカバー"), (r"^(?:[\w-]+ )*Aeroshell(?: Base)?$", "aeroshell", "エアロシェル"),
+    (r"^(?:[\w-]+ )*Cruise Stage$", "cruise stage", "巡航ステージ"), (r"^(?:[\w-]+ )*Aeroshell Cover$", "aeroshell cover", "エアロシェルのカバー"), (r"^(?:[\w-]+ )*Aeroshell(?: Base)?$", "aeroshell", "エアロシェル"),
     (r"^CBMD (\d)$", "cruise balance mass {0}", "巡航バランスウェイト{0}"), (r"^EBMD (\d)$", "entry balance mass {0}", "突入バランスウェイト{0}"), (r"^EXM-EDM Front Shield$", "front shield", "フロントシールド"),
     (r"^EXM-EDM Back Cover$", "back cover", "バックカバー"), (r"^Ejectable Belly Pan$", "ejectable belly pan", "投棄式ベリーパン"), (r"^MHDS Cover$", "helicopter delivery system cover", "ヘリコプター投下装置のカバー"),
 ]

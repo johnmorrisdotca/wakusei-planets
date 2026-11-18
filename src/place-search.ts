@@ -42,7 +42,16 @@ export interface PlaceHit {
   source: { id: Place["source"]["id"]; read: string; ref?: number };
 }
 
-/** The ids of the sources in the order the tables number them (the same as `PLACES_CREDITS`). */
+/**
+ * The ids of the sources in the order the tables number them: the same ones as `PLACES_CREDITS`, in another order.
+ *
+ * @example
+ * ```ts
+ * import { SEARCH_SOURCE_IDS } from "@johnmorrisdotca/wakusei-planets/places/search";
+ *
+ * console.log(SEARCH_SOURCE_IDS.length, "sources, the first is", SEARCH_SOURCE_IDS[0]);
+ * ```
+ */
 export const SEARCH_SOURCE_IDS: readonly Place["source"]["id"][] = ["iau-gazetteer", "gcat-landercat", "nssdca", "pds-ode", "nasa-mars24", "agency", "nasa-ntrs", "pds-atmospheres", "paper", "announcement"];
 
 /**
@@ -142,7 +151,7 @@ export function resolvePlaceId(id: string): string {
  * The page a hit comes from: a Gazetteer feature's page on the USGS site, or `undefined` for a site (its source is named in `PLACES_CREDITS`).
  *
  * @param hit - A row of a search list.
- * @returns The address.
+ * @returns The address, or `undefined` for a site.
  *
  * @example
  * ```ts

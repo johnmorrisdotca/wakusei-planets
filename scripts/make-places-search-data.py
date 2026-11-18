@@ -278,7 +278,32 @@ export const PLACE_HITS_{const}: readonly PlaceHit[] = readPlaceHits("{name.spli
 """)
     with open(os.path.join(OUT, "places-search-bodies.ts"), "w", encoding="utf-8") as f:
         f.write(tag + "// The bodies that have a search list, and how each list is fetched (a chunk of its own for a bundler). Used by `/places/search`.\n")
+        f.write("""
+/**
+ * The bodies that have a search list, in the order a picker shows them: the 33 bodies of `PLACE_BODIES`, then the small bodies (Phobos, Deimos, Amalthea, Thebe, Janus, Epimetheus, Hyperion, Phoebe, Proteus, Gaspra, Ida, Dactyl, Mathilde, Lutetia,
+ * Steins, Itokawa, Donaldjohanson, Didymos and Dinkinesh) the Gazetteer names features on. Puck and Nix have none: every name the Gazetteer has for them is without a position.
+ *
+ * @example
+ * ```ts
+ * import { PLACE_SEARCH_BODIES } from "@johnmorrisdotca/wakusei-planets/places/search";
+ *
+ * console.log(PLACE_SEARCH_BODIES.length, "bodies:", PLACE_SEARCH_BODIES.slice(0, 5).join(", "));
+ * ```
+ */
+""")
         f.write("export const PLACE_SEARCH_BODIES = [\n" + ",\n".join(f'  "{b}"' for b in bodies) + ",\n] as const;\n\n")
+        f.write("""/**
+ * A body with a search list.
+ *
+ * @example
+ * ```ts
+ * import type { PlaceSearchBody } from "@johnmorrisdotca/wakusei-planets/places/search";
+ *
+ * const body: PlaceSearchBody = "phobos";
+ * console.log(body);
+ * ```
+ */
+""")
         f.write("export type PlaceSearchBody = (typeof PLACE_SEARCH_BODIES)[number];\n\n")
         f.write("export async function readSearchTable(body: PlaceSearchBody | \"moon-satellites\"): Promise<readonly import(\"../place-search.ts\").PlaceHit[]> {\n  switch (body) {\n")
         for name in sorted(lists):
