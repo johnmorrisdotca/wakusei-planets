@@ -91,7 +91,7 @@ export interface FactSheet {
  * console.log("moon counts read on", MOONS_READ_ON);
  * ```
  */
-export const MOONS_READ_ON = "2026-11-11";
+export const MOONS_READ_ON = "2026-11-18";
 
 // The sidereal year in Earth days, NASA planetary fact sheets (orbital period).
 const YEAR_DAYS: Record<Exclude<FactSheetId, "sun">, number> = {
