@@ -14,7 +14,7 @@ import {
   type HostId,
   type MoonFamilyId,
 } from "../src/moon-catalogue.ts";
-import { createMoonLayer, MOON_ORBIT_KEEP_MS, moonDotOffset, type DotsThree, type MoonLayerInput } from "../src/space/all-moons.ts";
+import { createMoonLayer, MOON_ORBIT_KEEP_MS, MOON_ORBIT_OPACITY, MOON_ORBIT_POINTS, moonDotOffset, type DotsThree, type MoonLayerInput } from "../src/space/all-moons.ts";
 import { catalogueMoonIdOf, catalogueMoonKey, hostsShowingAll, moonSourceOf, MOON_HOSTS, readMoonColors, readMoonsChoice, readMoonsOf } from "../src/space/moon-settings.ts";
 import * as catalogue from "../src/moon-catalogue.ts";
 
@@ -235,6 +235,19 @@ test("the layer draws the dots of the moons the view does not draw in full, and 
   assert.ok(off.dots > 0);
   layer.dispose();
   assert.equal(children.size, 0);
+});
+
+test("each planet's orbit lines say which moon every segment belongs to, and share one material", () => {
+  const { T, parent } = fakeThree();
+  const layer = createMoonLayer(T, parent);
+  layer.update(inputOf());
+  const jupiter = MOON_CATALOGUE.filter((m) => m.host === "jupiter" && m.orbit !== null);
+  const owners = layer.orbitMoons("jupiter");
+  assert.equal(owners.length, jupiter.length);
+  assert.ok(owners.every((o) => o.segments === MOON_ORBIT_POINTS));
+  assert.equal(new Set(owners.map((o) => o.id)).size, owners.length, "one line for each moon");
+  assert.deepEqual(layer.orbitMoons("saturn"), [], "a planet not drawn has none");
+  assert.equal(MOON_ORBIT_OPACITY, LINE_OPACITY, "the opacity of the lines is one constant");
 });
 
 test("the orbits are made once and then only moved: nothing is built again for a draw at the same scale, colouring and month", () => {
