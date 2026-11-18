@@ -37,6 +37,7 @@ import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.t
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
 import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
+import { layBodyPlaces, bodiesOf, readBodyPlacesWith, type BodySurface, type PlaceOnBody, type PlaceOnBodyMark } from "../scene/body-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
 import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
@@ -46,6 +47,7 @@ export type { PaintSpec };
 
 export { setPlacesLoader } from "../scene/place-layer.ts";
 export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceKind, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
+export type { PlaceOnBody, PlaceOnBodyMark } from "../scene/body-places.ts";
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type Sight, type SightEdge, type SpaceBody, type SpaceLight };
 
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
@@ -307,7 +309,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #moons: MoonsChoice = "major";
@@ -368,6 +370,12 @@ export class WakuseiSpace extends HTMLElement {
   #earthHeard: (() => void) | undefined;
   #earthList: { text: string; list: readonly EarthPlace[] } | undefined;
   #earthOmitted = 0;
+  #bodyLayer: EarthPlaceLayerView | undefined;
+  #bodySurfaces: readonly BodySurface[] = [];
+  #bodyList: { text: string; list: readonly PlaceOnBody[]; bodies: readonly string[] } | undefined;
+  #bodyOmitted = 0;
+  // the pointer event of the last press a beam took, so the body under it is not pressed as well
+  #beamPress: PointerEvent | undefined;
   #surface: Parameters<NonNullable<Parameters<typeof createSpaceItem>[1]["onSurface"]>>[0] = null;
 
   /** The shared controller behind the element's own hands: for a page that moves the view itself, such as `controller.set({ zoom: space.zoomFor("moon") })`. It is there while the element is connected, whether `controls` is `none` or not. */
@@ -462,6 +470,11 @@ export class WakuseiSpace extends HTMLElement {
         this.#earthSurface = surface;
         this.#layEarthPlaces();
       },
+      wantBodyPlaces: () => this.#bodyWanted(),
+      onBodyPlaces: (surfaces) => {
+        this.#bodySurfaces = surfaces;
+        this.#layBodyPlaces();
+      },
       onMoving: () => this.#gate?.request(),
       onRideLost: () => this.#rideLost(),
       onPainterError: (error) => this.dispatchEvent(new CustomEvent("wakusei-bodies-unavailable", { detail: { reason: error instanceof Error ? error.message : String(error) } })),
@@ -487,7 +500,9 @@ export class WakuseiSpace extends HTMLElement {
     });
     this.#earthHeard = onEarthPlacesLayout(() => {
       this.#earthList = undefined;
+      this.#bodyList = undefined;
       this.#askEarthPlaces();
+      this.#askBodyPlaces();
     });
     this.#labelBox.addEventListener("click", this.#labelClick);
     this.#labelBox.addEventListener("focusin", this.#labelFocus);
@@ -519,6 +534,9 @@ export class WakuseiSpace extends HTMLElement {
     this.#markLayer = undefined;
     this.#markHeard?.();
     this.#markHeard = undefined;
+    this.#bodyLayer?.dispose();
+    this.#bodyLayer = undefined;
+    this.#bodySurfaces = [];
     this.#earthLayer?.dispose();
     this.#earthLayer = undefined;
     this.#earthSurface = null;
@@ -569,6 +587,7 @@ export class WakuseiSpace extends HTMLElement {
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
     if (name === "places" || name === "site-flags" || name === "lang" || name === "surface-names") this.#markSurface();
     if (name === "earth-places" || name === "earth-places-look") this.#askEarthPlaces();
+    if (name === "body-places" || name === "earth-places-look") this.#askBodyPlaces();
   }
 
   /**
@@ -650,6 +669,34 @@ export class WakuseiSpace extends HTMLElement {
   /** The markers laid on the Earth now, as the last draw left them: each place's id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`. */
   get earthPlacesShown(): { marks: readonly EarthPlaceMark[]; omitted: number } {
     return { marks: this.#earthLayer?.shown ?? [], omitted: this.#earthOmitted };
+  }
+
+  /**
+   * The places laid on the bodies other than the Earth wherever the camera looks, drawn as the Earth's are (`earthPlaces`): a list of `{ body, id, lon, lat, label, kind, color }`, `body` being `moon`, `mars`, `ceres` and so on (an entry for `earth` is not drawn:
+   * the Earth has `earthPlaces`). Each is a beam, a pin or a ring (`earthPlacesLook`) on the ground of its body, hidden on the far side, named beside it when there is room, never over a body's name. A body smaller than 40 CSS pixels of radius carries none, and at most
+   * `EARTH_PLACE_MARKS` stand up in all, the reader's `here` places first. `loadPlaceHits` and `hitToBodyPlace` from `@johnmorrisdotca/wakusei-planets/places/search` make the list from saved ids. Like the Earth's, it needs
+   * `@johnmorrisdotca/wakusei-planets/earth-places` imported (chikyu-earth's layout, an optional peer). A press that did not move on a drawn name or a foot ring is the event `wakusei-body-place`. Setting it writes the attribute `body-places`.
+   *
+   * @example
+   * ```ts no-run
+   * import "@johnmorrisdotca/wakusei-planets/space/element";
+   * import "@johnmorrisdotca/wakusei-planets/earth-places";
+   *
+   * const space = document.querySelector("wakusei-space")!;
+   * space.bodyPlaces = [{ body: "moon", id: "moon/apollo-11-lunar-module", lon: 23.4731, lat: 0.6742, label: "Apollo 11 lunar module" }];
+   * space.addEventListener("wakusei-body-place", (event) => console.log((event as CustomEvent).detail));
+   * ```
+   */
+  get bodyPlaces(): PlaceOnBody[] {
+    return [...this.#readBodyPlaces()];
+  }
+  set bodyPlaces(list: readonly PlaceOnBody[] | null) {
+    if (list === null || list.length === 0) this.removeAttribute("body-places");
+    else this.setAttribute("body-places", JSON.stringify(list));
+  }
+  /** The markers laid on the other bodies now, as the last draw left them: each place's body, id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`. */
+  get bodyPlacesShown(): { marks: readonly PlaceOnBodyMark[]; omitted: number } {
+    return { marks: (this.#bodyLayer?.shown ?? []) as readonly PlaceOnBodyMark[], omitted: this.#bodyOmitted };
   }
 
   /**
@@ -841,7 +888,7 @@ export class WakuseiSpace extends HTMLElement {
     if (surface === null || root === null || using === undefined || !this.hasAttribute("earth-places") || !(surface.radiusPx >= EARTH_PLACES_FROM_PX)) return clear();
     const places = this.#readEarthPlaces();
     if (places.length === 0) return clear();
-    this.#earthLayer ??= createEarthPlaceLayer(root);
+    this.#earthLayer ??= createEarthPlaceLayer(root, { press: (mark, event) => this.#pressBeam("earth", mark, event) });
     const layer = this.#earthLayer;
     const facts = BODIES.earth;
     const scale: Vec3 = [1, 1 - facts.flattening, 1];
@@ -858,6 +905,66 @@ export class WakuseiSpace extends HTMLElement {
     marks.labels = laid.labels.filter((spot) => marks.shapes.some((shape) => shape.index === spot.index));
     this.#earthOmitted = laid.shapes.length - marks.shapes.length;
     layer.set(places, marks, look);
+  }
+
+  /** The bodies the page has places on (the scene lays their surfaces at each draw), none without the layout, or the Earth's, which `earth-places` draws. */
+  #bodyWanted(): readonly string[] {
+    if (!this.hasAttribute("body-places") || earthPlacesLayout() === undefined) return [];
+    this.#readBodyPlaces();
+    return this.#bodyList?.bodies ?? [];
+  }
+
+  #readBodyPlaces(): readonly PlaceOnBody[] {
+    const text = this.getAttribute("body-places");
+    const using = earthPlacesLayout();
+    if (text === null || using === undefined) return [];
+    if (this.#bodyList?.text === text) return this.#bodyList.list;
+    const list = readBodyPlacesWith(text, using.read);
+    this.#bodyList = { text, list, bodies: bodiesOf(list) };
+    return list;
+  }
+
+  /** The places, the look or the layout changed: lay them from the last draw's bodies, or ask for one draw to learn them. */
+  #askBodyPlaces(): void {
+    if (!this.hasAttribute("body-places")) {
+      this.#bodyLayer?.dispose();
+      this.#bodyLayer = undefined;
+      this.#bodySurfaces = [];
+      this.#bodyOmitted = 0;
+      return;
+    }
+    if (this.#bodySurfaces.length > 0) this.#layBodyPlaces();
+    this.#gate?.request();
+  }
+
+  /** Lay the places over the bodies as the last draw left them, or take them away. Draws nothing: it runs inside the draw the view makes anyway. */
+  #layBodyPlaces(): void {
+    const root = this.shadowRoot;
+    const using = earthPlacesLayout();
+    const clear = (): void => {
+      this.#bodyLayer?.clear();
+      this.#bodyOmitted = 0;
+    };
+    if (root === null || using === undefined || !this.hasAttribute("body-places") || this.#bodySurfaces.length === 0) return clear();
+    const places = this.#readBodyPlaces();
+    if (places.length === 0) return clear();
+    this.#bodyLayer ??= createEarthPlaceLayer(root, { press: (mark, event) => this.#pressBeam(mark.body ?? "", mark, event) });
+    const layer = this.#bodyLayer;
+    const look = this.earthPlacesLook;
+    const laid = layBodyPlaces(places, this.#bodySurfaces, using, look, {
+      width: (text) => layer.width(text),
+      taken: this.#nameBoxes.map((one) => ({ left: one.x, top: one.y, width: one.width, height: one.height })),
+      // a body under another's disc carries none of its places, as the surface marks and the Earth's places
+      covered: (id) => this.#covered !== "name" && this.#places?.[id]?.behind !== undefined,
+    });
+    this.#bodyOmitted = laid.omitted;
+    layer.set(laid.places, laid.layout, look);
+  }
+
+  /** A press on a beam's name or foot ring: the event `wakusei-body-place`, `{ body, id, kind, x, y }` (the same for the Earth's places, `body: "earth"`). The page decides what it does; the body under the press is not pressed as well. */
+  #pressBeam(body: string, mark: EarthPlaceMark, event: PointerEvent): void {
+    this.#beamPress = event;
+    this.dispatchEvent(new CustomEvent("wakusei-body-place", { detail: { body, id: mark.id, kind: mark.kind, x: mark.x, y: mark.y }, bubbles: true, composed: true }));
   }
 
   async #loadMarks(body: BodyId): Promise<readonly Place[]> {
@@ -2933,6 +3040,7 @@ export class WakuseiSpace extends HTMLElement {
     if (this.#hoverBy === "pointer") this.#hover(null, "pointer");
   };
   #up = (event: PointerEvent): void => {
+    if (this.#beamPress === event) return;
     if (Math.hypot(event.clientX - this.#downX, event.clientY - this.#downY) > 6) return;
     if (!this.#places) return;
     const rect = this.getBoundingClientRect();

@@ -2,6 +2,7 @@
 // The lists themselves are the entry points `/places/search/<body>`, loaded one at a time by `loadPlaceSearch` from `/places/search`, so a page pays only for the body it searches.
 import { PLACE_ID_ALIASES } from "./data/places-aliases.ts";
 import { SEARCH_TYPES } from "./data/places-search-types.ts";
+import type { PlaceOnBody } from "./scene/body-places.ts";
 import type { Place, PlaceKind } from "./places.ts";
 
 /**
@@ -234,4 +235,27 @@ export function searchPlaces(hits: readonly PlaceHit[], query: string, options: 
   }
   out.sort((a, b) => a.score - b.score || KIND_ORDER[a.hit.kind] - KIND_ORDER[b.hit.kind] || b.hit.diameterKm - a.hit.diameterKm || (a.hit.name.en < b.hit.name.en ? -1 : a.hit.name.en > b.hit.name.en ? 1 : 0));
   return out.slice(0, options.limit ?? 20).map((entry) => entry.hit);
+}
+
+/**
+ * A hit as a place for `<wakusei-space>`'s `bodyPlaces`: a beam on the ground of the hit's body at its latitude and longitude, named in English or Japanese, the id the hit has (a favourite's id, so a press says which one it was).
+ *
+ * @param hit - A row of a search list.
+ * @param options - `lang` for the label (`en` by default), `kind` (`favourite` by default, or `here`), `color` (a CSS colour for this place alone) and `label` (your own text, or `false` for none).
+ * @returns The place to draw.
+ *
+ * @example
+ * ```ts
+ * import { hitToBodyPlace, loadPlaceSearch } from "@johnmorrisdotca/wakusei-planets/places/search";
+ *
+ * const olympus = (await loadPlaceSearch("mars")).find((hit) => hit.id === "mars/olympus-mons")!;
+ * console.log(hitToBodyPlace(olympus, { lang: "ja", color: "#ff8844" }));
+ * ```
+ */
+export function hitToBodyPlace(hit: PlaceHit, options: { lang?: "en" | "ja"; kind?: "here" | "favourite"; color?: string; label?: string | false } = {}): PlaceOnBody {
+  const place: PlaceOnBody = { body: hit.body, id: hit.id, lon: hit.lon, lat: hit.lat };
+  if (options.label !== false) place.label = options.label ?? hit.name[options.lang ?? "en"];
+  if (options.kind !== undefined) place.kind = options.kind;
+  if (options.color !== undefined) place.color = options.color;
+  return place;
 }

@@ -4,6 +4,7 @@ import type * as THREE from "three";
 import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { BODIES, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import type { ThreeParts } from "../scene/body.ts";
+import type { BodySurface } from "../scene/body-places.ts";
 import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, smallBodyPlace, type PointsThree } from "../door/points.ts";
 import { asteroidKey } from "./asteroid-ids.ts";
@@ -549,6 +550,10 @@ export interface SpaceDeps {
   wantEarth?: () => boolean;
   /** The Earth as this draw left it, wherever the camera looks, for the places laid on it: what `onSurface` gives, and `sun`, the direction of the Sun from the Earth in the scene (null with the light `lit`, when nothing is in the night). Null when the Earth is not drawn, or while the camera rides. */
   onEarth?: (body: { id: BodyId; centre: Vec3; radius: number; pole: Vec3; meridian: Vec3; eye: Vec3; project(point: Vec3): { x: number; y: number } | null; width: number; height: number; radiusPx: number; sun: Vec3 | null } | null) => void;
+  /** The bodies whose surfaces are wanted at this draw by `onBodyPlaces` (left out, none are): the ids of the bodies the page has places on, other than the Earth, which `wantEarth` is for. */
+  wantBodyPlaces?: () => readonly string[];
+  /** Those bodies as this draw left them, each in the form `onEarth` gives (a body that is not drawn, or while the camera rides, is left out of the list). Called at every draw while `wantBodyPlaces` names a body. */
+  onBodyPlaces?: (bodies: readonly BodySurface[]) => void;
   /** Called at the end of a draw while the camera is moving from one ride to another, so the next frame is asked for (at the page's frame cap). */
   onMoving?: () => void;
   /** The target of the ride could not be placed at this draw. */
@@ -1689,6 +1694,26 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const centre: Vec3 = [at.x, at.y, at.z];
               const shape = roundShape(eyeAt, lookAt, centre, r);
               deps.onEarth({ id: "earth", centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre), sun: model.light === "lit" ? null : toSunOf("earth") });
+            }
+          }
+          // the places on the other bodies: the same, for each body the page has places on (a planet, the Moon or a body drawn as a moon of the catalogue), after the names too
+          if (deps.onBodyPlaces) {
+            const wanted = deps.wantBodyPlaces?.() ?? [];
+            if (wanted.length > 0) {
+              const surfaces: BodySurface[] = [];
+              for (const id of wanted) {
+                const drawing = rideFrom ? undefined : (slots.get(id)?.drawing ?? moonSlots.get(id)?.slot.drawing);
+                if (drawing === undefined || !drawing.object.visible) continue;
+                const at = drawing.object.position;
+                const r = drawing.object.scale.x;
+                const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
+                const { pole, meridian } = orientation(id as BodyId, model.time);
+                const centre: Vec3 = [at.x, at.y, at.z];
+                const shape = roundShape(eyeAt, lookAt, centre, r);
+                const sun = model.light === "lit" || !(SPACE_BODIES as readonly string[]).includes(id) ? null : toSunOf(id as SpaceBody);
+                surfaces.push({ id, centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre), sun });
+              }
+              deps.onBodyPlaces(surfaces);
             }
           }
           if (deps.onSight && (deps.wantSight?.() ?? true)) {
