@@ -96,6 +96,14 @@ jobs:
           browsers: ${{ startsWith(matrix.project, 'webkit') && 'webkit' || 'chromium' }}
       - name: The demo and the docs site, played in one browser at one width (pnpm test:demo plays all four)
         run: pnpm test:demo:one --project=${{ matrix.project }} --shard=${{ matrix.shard }}
+      - name: The pictures the tests write for a person to look at (test-results/evidence)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-${{ matrix.project }}-${{ strategy.job-index }}
+          path: test-results/evidence
+          if-no-files-found: ignore
+          retention-days: 14
   freeze:
     # Four jobs of the freeze test, dealt out by test (`--shard`; the project is `fullyParallel`, so a file is split between jobs, and the tests are independent: each opens its own page).
     # The 66 tests took 20.7 minutes in one job, and with the soak and the install the job reached its 25-minute limit and was cancelled on 2026-11-18 (the 0.62.0 and 0.63.0 runs), which blocks the release.
