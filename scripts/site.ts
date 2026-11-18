@@ -27,7 +27,7 @@ await rm(at("site/kazoku-parts.src.js"));
 await cp(at("demo/demo.css"), at("site/demo.css"));
 await cp(at("demo/family.css"), at("site/family.css"));
 if (existsSync(at("textures"))) await cp(at("textures"), at("site/textures"), { recursive: true });
-// The rover models (NASA, public domain; NOTICE.md): each its own file, fetched only by a page that asks for it (`drive-model`), in no package.
+// The rover models (NASA's two public domain; the Apollo one is CC BY-SA 4.0, a named exception, with its credit line on the surface page; NOTICE.md): each its own file, fetched only by a page that asks for it (`drive-model`), in no package.
 if (existsSync(at("models"))) await cp(at("models"), at("site/models"), { recursive: true });
 // Michroma, for a name written on a body: kazoku-ui's copy and its licence, beside the scripts, where the label fetches it from (`new URL("./fonts/…", import.meta.url)` in the bundled chunk).
 await cp(at("node_modules/@johnmorrisdotca/kazoku-ui/dist/body-label/fonts"), at("site/fonts"), { recursive: true });
