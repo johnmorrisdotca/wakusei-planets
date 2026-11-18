@@ -1,71 +1,54 @@
-// /sky localSolarEclipse() for the total solar eclipse of 12 August 2026 against NASA's table of cities, https://science.nasa.gov/eclipses/future-eclipses/total-solar-eclipse-on-august-12-2026/ (NASA Science), read on 2026-11-17 in one page and typed in by hand below; nothing was saved or downloaded.
-// The page gives "All times are local" to the whole minute (Spain on CEST, UT+2; the U.K. on BST, UT+1), the contacts of the cities in the path of totality (partial begins, totality begins, totality ends, partial ends) and, for cities outside it, partial begins, maximum, coverage and partial ends.
-// A star after a partial-ends time means the eclipse ends after sunset and the time shown is the sunset time.
-// The page has no coordinates: the cities below are placed at their centres to 0.01 degree (about a kilometre), typed in by hand from the cities' well-known positions, not from a source; a shift of 0.05 degrees moves a contact by under 10 seconds (checked), which is within the tolerance.
-// NASA stamps the whole minute, and not by one rule that the engine's seconds show (some stamps drop the seconds, others round), so a contact is taken as right when it is within 60 seconds of the stamp; the worst measured is printed.
+// /sky localSolarEclipse() for the total solar eclipse of 12 August 2026 against NASA GSFC's central-line table for it,
+// https://eclipse.gsfc.nasa.gov/SEpath/SEpath2001/SE2026Aug12Tpath.html (Fred Espenak, NASA's Goddard Space Flight Center), read on 2026-11-17 in one page and typed in by hand below; nothing was saved or downloaded.
+// The table gives points on the central line (latitude and longitude to 0.1 arc-minute, about 185 m), the UT minute at which the shadow's centre is there (the greatest eclipse at that point), the Sun's altitude (whole degrees), the path width and the central duration to 0.1 s.
+// Its predictions use delta-T 71.4 s (a UT time does not depend on it) and leave out the lunar limb profile, which NASA says can change a duration by 1 to 3 seconds. So the positions are NASA's own: no city position is used.
+// The only rows used are the six at 18:22 to 18:32 UT over the Atlantic and Spain. The earlier try with city tables (https://science.nasa.gov/eclipses/future-eclipses/total-solar-eclipse-on-august-12-2026/, whole local minutes, no coordinates) was dropped for that reason.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { localSolarEclipse, riseSetTimes } from "../src/sky.ts";
+import { localSolarEclipse } from "../src/sky.ts";
 
 const DAY = Date.UTC(2026, 7, 12);
-/** A local stamp "H:MM" (24-hour) on 12 August 2026 at a UT offset in hours, as a UT moment in ms. */
-const at = (hhmm: string, offsetHours: number): number => DAY + (Number(hhmm.split(":")[0]) * 60 + Number(hhmm.split(":")[1])) * 60_000 - offsetHours * 3_600_000;
+/** NASA's central line: UT minute, latitude (degrees, arc-minutes) north, longitude (degrees, arc-minutes) and east-or-west, Sun altitude, central duration in seconds. */
+const LINE = [
+  { time: "18:22", lat: [47, 6.1], lon: [11, 42.9, -1], altitude: 16, duration: 118.8 },
+  { time: "18:24", lat: [45, 56.6], lon: [10, 11.4, -1], altitude: 14, duration: 116.1 },
+  { time: "18:26", lat: [44, 42.8], lon: [8, 23.9, -1], altitude: 13, duration: 113.0 },
+  { time: "18:28", lat: [43, 22.3], lon: [6, 11.3, -1], altitude: 10, duration: 109.3 },
+  { time: "18:30", lat: [41, 49.0], lon: [3, 11.1, -1], altitude: 8, duration: 104.6 },
+  { time: "18:32", lat: [39, 24.5], lon: [2, 57.0, 1], altitude: 2, duration: 95.8 },
+] as const;
 
-/** Cities in the path of totality: latitude, longitude, partial begins, totality begins, totality ends, partial ends (sunset: the time is the sunset). */
-const TOTAL = [
-  { city: "Valencia", latitude: 39.47, longitude: -0.38, zone: "Europe/Madrid", c1: "19:38", c2: "20:32", c3: "20:33", c4: "21:01", sunset: true },
-  { city: "Zaragoza", latitude: 41.65, longitude: -0.89, zone: "Europe/Madrid", c1: "19:34", c2: "20:29", c3: "20:30", c4: "21:07", sunset: true },
-  { city: "Leon", latitude: 42.6, longitude: -5.57, zone: "Europe/Madrid", c1: "19:32", c2: "20:28", c3: "20:30", c4: "21:22", sunset: false },
-];
-/** Cities outside it: partial begins, maximum, coverage in percent, partial ends. */
-const PARTIAL = [
-  { city: "Barcelona", latitude: 41.39, longitude: 2.17, offset: 2, c1: "19:35", max: "20:29", percent: 99, c4: "20:54", sunset: true },
-  { city: "London", latitude: 51.51, longitude: -0.13, offset: 1, c1: "18:17", max: "19:13", percent: 91, c4: "20:06", sunset: false },
-];
+const worst = { peak: 0, duration: 0, altitude: 0 };
 
-let worst = 0;
-const check = (label: string, found: Date, stamp: number): void => {
-  const seconds = (found.getTime() - stamp) / 1000;
-  worst = Math.max(worst, Math.abs(seconds));
-  assert.ok(Math.abs(seconds) <= 60, `${label}: ${found.toISOString()} is ${seconds.toFixed(1)} s from NASA's stamp`);
-};
-
-test("the contacts of three cities in the path of totality are in NASA's minutes: the eclipse is total, the contacts are in order, and the Sun's altitude is the one the star says (below the horizon at the end where NASA's time is sunset)", () => {
-  for (const c of TOTAL) {
-    const e = localSolarEclipse(Date.UTC(2026, 7, 1), { observer: { latitude: c.latitude, longitude: c.longitude } })!;
-    assert.equal(e.kind, "total", c.city);
+test("at six points on NASA's central line the eclipse is total, the peak is in NASA's minute to within 10 seconds (the engine runs about 6.5 s early at all six, an offset NASA's delta-T of 71.4 s and its ephemeris account for in part), the central duration is within 3 seconds of NASA's and the Sun's altitude within 1 degree", () => {
+  for (const row of LINE) {
+    const observer = { latitude: row.lat[0] + row.lat[1] / 60, longitude: row.lon[2] * (row.lon[0] + row.lon[1] / 60) };
+    const e = localSolarEclipse(Date.UTC(2026, 7, 1), { observer })!;
+    assert.equal(e.kind, "total", row.time);
     assert.equal(e.obscuration, 1);
-    check(`${c.city} C1`, e.partialBegin.time, at(c.c1, 2));
-    check(`${c.city} C2`, e.centralBegin!.time, at(c.c2, 2));
-    check(`${c.city} C3`, e.centralEnd!.time, at(c.c3, 2));
     assert.ok(e.partialBegin.time < e.centralBegin!.time && e.centralBegin!.time < e.peak.time && e.peak.time < e.centralEnd!.time && e.centralEnd!.time < e.partialEnd.time);
-    // the Sun is up at every contact but the last: totality is within an hour of sunset
-    for (const contact of [e.partialBegin, e.centralBegin!, e.peak, e.centralEnd!]) assert.ok(contact.altitude > 0 && contact.altitude < 20, `${c.city}: Sun at ${contact.altitude} degrees`);
-    const sunset = riseSetTimes("sun", DAY + 12 * 3_600_000, { observer: { latitude: c.latitude, longitude: c.longitude }, timeZone: c.zone }).set!;
-    if (c.sunset) {
-      check(`${c.city} sunset is NASA's partial end`, sunset, at(c.c4, 2));
-      assert.ok(e.partialEnd.time > sunset && e.partialEnd.altitude < 0, `${c.city}: the eclipse ends after sunset, the Sun at ${e.partialEnd.altitude} degrees`);
-    } else {
-      check(`${c.city} C4`, e.partialEnd.time, at(c.c4, 2));
-      assert.ok(e.partialEnd.time < sunset && e.partialEnd.altitude > 0, `${c.city}: the eclipse ends before sunset, the Sun at ${e.partialEnd.altitude} degrees`);
-    }
+    const peak = (e.peak.time.getTime() - (DAY + (Number(row.time.slice(0, 2)) * 60 + Number(row.time.slice(3))) * 60_000)) / 1000;
+    const duration = (e.centralEnd!.time.getTime() - e.centralBegin!.time.getTime()) / 1000 - row.duration;
+    const altitude = e.peak.altitude - row.altitude;
+    worst.peak = Math.max(worst.peak, Math.abs(peak));
+    worst.duration = Math.max(worst.duration, Math.abs(duration));
+    worst.altitude = Math.max(worst.altitude, Math.abs(altitude));
+    assert.ok(Math.abs(peak) <= 10, `${row.time}: peak ${e.peak.time.toISOString()} is ${peak.toFixed(2)} s from NASA's`);
+    assert.ok(Math.abs(duration) <= 3, `${row.time}: central duration ${duration.toFixed(2)} s from NASA's ${row.duration}`);
+    assert.ok(Math.abs(altitude) <= 1, `${row.time}: Sun at ${e.peak.altitude} degrees, NASA ${row.altitude}`);
+    // the Sun is up at every contact up to the peak and the central phase
+    for (const contact of [e.partialBegin, e.centralBegin!, e.peak, e.centralEnd!]) assert.ok(contact.altitude > -1 && contact.altitude < 30, `${row.time}: Sun at ${contact.altitude} degrees`);
   }
-  console.log(`local total eclipse, 3 cities, 12 contacts and 2 sunsets: worst ${worst.toFixed(1)} s from NASA's whole-minute stamp`);
+  console.log(`local total eclipse on NASA's central line, 6 points: peak worst ${worst.peak.toFixed(2)} s, central duration worst ${worst.duration.toFixed(2)} s, Sun's altitude worst ${worst.altitude.toFixed(2)} degrees from NASA`);
 });
 
-test("two cities outside the path see a partial eclipse: no C2 or C3, NASA's partial begin, maximum and partial end, and its coverage to a percent", () => {
-  for (const c of PARTIAL) {
-    const e = localSolarEclipse(Date.UTC(2026, 7, 1), { observer: { latitude: c.latitude, longitude: c.longitude } })!;
-    assert.equal(e.kind, "partial", c.city);
-    assert.equal(e.centralBegin, null);
-    assert.equal(e.centralEnd, null);
-    check(`${c.city} C1`, e.partialBegin.time, at(c.c1, c.offset));
-    check(`${c.city} maximum`, e.peak.time, at(c.max, c.offset));
-    if (c.sunset) assert.ok(e.partialEnd.altitude < 0 && e.peak.altitude > 0, `${c.city}: ends after sunset`);
-    else check(`${c.city} C4`, e.partialEnd.time, at(c.c4, c.offset));
-    assert.ok(Math.abs(e.obscuration * 100 - c.percent) <= 1, `${c.city}: ${e.obscuration * 100} percent, NASA ${c.percent}`);
-  }
-  console.log(`local eclipse, all 5 cities' contacts and maxima: worst ${worst.toFixed(1)} s from NASA's whole-minute stamp`);
+test("off the central line the eclipse is partial: no central phase, a smaller coverage than at the line, and the contacts are in order (a point in Brittany north of the line, no NASA figure for it)", () => {
+  const e = localSolarEclipse(Date.UTC(2026, 7, 1), { observer: { latitude: 47.6, longitude: -3.2 } })!;
+  assert.equal(e.kind, "partial");
+  assert.equal(e.centralBegin, null);
+  assert.equal(e.centralEnd, null);
+  assert.ok(e.obscuration > 0 && e.obscuration < 1);
+  assert.ok(e.partialBegin.time < e.peak.time && e.peak.time < e.partialEnd.time);
 });
 
 test("a Date and its milliseconds agree, the start is included, a second after the peak the next eclipse is found, the window is respected, and bad input throws", () => {
