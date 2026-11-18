@@ -1,7 +1,7 @@
 // `placeOf` says where a body is on the screen now, with the names off as well as on (MODULES-1401): the places were made only with the names on, so a page that switched them off was handed the last ones from before.
 import { expect, test } from "@playwright/test";
 
-type Space = HTMLElement & { placeOf(id: string): { x: number; y: number; r: number } | null; labels: boolean };
+type Space = HTMLElement & { placeOf(id: string): { x: number; y: number; r: number } | null; labels: boolean; goTo(id: string, options?: { smooth?: boolean }): boolean };
 
 test("with the names off, placeOf follows the view: the body it turns to is at the middle", async ({ page }) => {
   test.setTimeout(120_000);
@@ -12,7 +12,8 @@ test("with the names off, placeOf follows the view: the body it turns to is at t
   await expect.poll(() => view.evaluate((el) => (el as Space).placeOf("earth")?.r ?? 0)).toBeGreaterThan(20);
   await view.evaluate((el) => {
     (el as Space).setAttribute("labels", "off");
-    el.setAttribute("center", "mars");
+    // `center` is a place on the Earth (longitude and latitude), not a body: the view turns to a body with goTo
+    (el as Space).goTo("mars", { smooth: false });
   });
   const middle = (id: string) =>
     view.evaluate((el, who) => {

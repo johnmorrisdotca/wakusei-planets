@@ -54,7 +54,8 @@ test("a keep-out rectangle is never written under, and the dots stay", async ({ 
   const bar = { x: 0, y: Math.round(box.height - 60), w: Math.round(box.width), h: 60 };
   await page.locator(SPACE).evaluate((el, area) => Reflect.set(el, "keepOut", [area]), bar);
   await quiet(page);
-  for (const n of await shownNames(page)) expect(n.bottom <= bar.y || n.y >= bar.y + bar.h, `${n.id} is under the bar`).toBe(true);
+  // a name of a craft whose dot is far off the view (a dot at -679 px has its name at -675, wholly outside the bar's width) is under nothing: the bar is crossed only where the two overlap both ways
+  for (const n of await shownNames(page)) expect(n.bottom <= bar.y || n.y >= bar.y + bar.h || n.right <= bar.x || n.x >= bar.x + bar.w, `${n.id} is under the bar`).toBe(true);
   expect(await page.locator(SPACE).evaluate((el) => (Reflect.get(el, "keepOut") as unknown[]).length)).toBe(1);
   await page.locator(SPACE).evaluate((el) => Reflect.set(el, "keepOut", []));
 });
