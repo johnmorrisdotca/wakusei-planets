@@ -339,6 +339,10 @@
       "en": "A fact sheet for the Sun, the planets and Pluto (size, distance, year, day, moons, NASA page, a short description in English and Japanese)",
       "ja": "太陽、惑星、冥王星のファクトシート (大きさ、距離、1年、1日、衛星、NASAのページ、日本語と英語の短い説明) "
     },
+    "./body-physics": {
+      "en": "The physics of the Sun, the planets, Pluto and the Moon: mass and GM, surface gravity (at the 1 bar level for the gas giants), the air's density and pressure at the surface, and the surface temperature, each with its source and the day it was read",
+      "ja": "太陽、惑星、冥王星、月の物理量 (質量と GM、表面重力、地表の大気の密度と圧力、表面温度。ガス惑星は 1 bar の高さの値で、どれも出典と読み取った日つき)"
+    },
     "./discovery": {
       "en": "When, where, how and by whom each planet, dwarf planet and fully drawn moon was found, how it was designated and numbered, and where its name comes from, each fact with its source",
       "ja": "各惑星、準惑星、くわしく描く衛星が、いつ、どこで、どのように、だれによって見つかったか、仮符号と番号、名前の由来 (事実ごとに出どころつき)"
