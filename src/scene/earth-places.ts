@@ -43,7 +43,41 @@ export interface EarthPlace {
   kind?: EarthPlaceKind;
   /** A CSS colour for this place alone: a hex colour, `rgb()` or `hsl()` with numbers, or a colour's name. */
   color?: string;
+  /** A set of places (spaceports, harbours) the page shows or hides together with `earth-place-layers`; left out, the place is always shown. */
+  layer?: string;
+  /** `small` draws a shorter, narrower mark; left out, the kind's own size. */
+  size?: EarthPlaceSize;
+  /** How this place is drawn, over `earth-places-look`; left out, `earth-places-look`. */
+  look?: EarthPlaceLook;
+  /** `low` lays this place's name after the others' (and, past the 32 markers, its marker too), so its name gives way where they crowd; left out (`high`), it is laid with the rest. */
+  namePriority?: EarthPlaceNamePriority;
 }
+
+/**
+ * How big a place's mark is: `normal` (the default) or `small`, a shorter, narrower stick and a smaller ring, so a harbour can stand beside a city and "You are here" stays the tall beam.
+ *
+ * @example
+ * ```ts
+ * import type { EarthPlaceSize } from "@johnmorrisdotca/wakusei-planets/earth-places";
+ *
+ * const size: EarthPlaceSize = "small";
+ * console.log(size);
+ * ```
+ */
+export type EarthPlaceSize = "normal" | "small";
+
+/**
+ * Where a place's name is laid among the others: `high` (the default) in the order given, or `low`, after all the others.
+ *
+ * @example
+ * ```ts
+ * import type { EarthPlaceNamePriority } from "@johnmorrisdotca/wakusei-planets/earth-places";
+ *
+ * const priority: EarthPlaceNamePriority = "low";
+ * console.log(priority);
+ * ```
+ */
+export type EarthPlaceNamePriority = "high" | "low";
 
 /**
  * How a place is drawn: `beam` (a light rising out of the ground with a ring at its foot, the default), `pin` (a thin stick with a round head) or `ring` (only the ring lying on the ground).
@@ -84,6 +118,12 @@ export const EARTH_PLACE_MARKS = 32;
 
 /** Nothing is laid on an Earth under this many CSS pixels of radius: a marker the size of the planet is not a marker. */
 export const EARTH_PLACES_FROM_PX = 40;
+
+/** What a `small` place's stick and ring are of the kind's own. */
+const SMALL_LENGTH = 0.55;
+const SMALL_RING = 0.7;
+
+const isObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
 /** Where one place's marker goes: the foot on the ground, the top of the stick, the ring's turn, how flat it is and its radius, and how strongly it shows. The shape of chikyu-earth's `PlaceShape`. */
 export interface EarthPlaceShape {
@@ -135,6 +175,122 @@ export interface EarthPlaceLayoutOptions {
   taken?: readonly { left: number; top: number; width: number; height: number }[];
   maxLabels?: number;
   sun?: { lon: number; lat: number } | null;
+}
+
+/**
+ * Which layers of places are shown (the attribute `earth-place-layers`): a JSON object of layer names to true or false, such as `{"harbours":false}`. A layer that is not named is shown, and so is a place with no layer. Anything that is not an object
+ * of that kind is no switches. chikyu-earth's `readPlaceLayers`.
+ *
+ * @param value - The attribute's text, or null.
+ * @returns The switches, a name to whether it is shown.
+ *
+ * @example
+ * ```ts
+ * import { readEarthPlaceLayers } from "@johnmorrisdotca/wakusei-planets/earth-places";
+ *
+ * console.log(readEarthPlaceLayers('{"harbours":false,"airports":true,"x":1}')); // { harbours: false, airports: true }
+ * ```
+ */
+export function readEarthPlaceLayers(value: string | null | undefined): Record<string, boolean> {
+  if (!value) return {};
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!isObject(parsed)) return {};
+    const out: Record<string, boolean> = {};
+    for (const [name, on] of Object.entries(parsed)) if (typeof on === "boolean") out[name] = on;
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * The places whose layer is shown: a place with no layer is always in, and a layer is in unless `layers` says `false` for it. A place of a layer that is off is not drawn, not named and cannot be pressed. The list is returned as it came when nothing is left out.
+ *
+ * @param places - The places, as `readEarthPlaces` makes them.
+ * @param layers - The switches, a layer's name to whether it is shown (`readEarthPlaceLayers`).
+ * @returns The places to draw.
+ *
+ * @example
+ * ```ts
+ * import { shownEarthPlaces } from "@johnmorrisdotca/wakusei-planets/earth-places";
+ *
+ * const places = [{ id: "yvr", lon: -123.18, lat: 49.19, layer: "airports" }, { id: "cavan", lon: -123.1, lat: 49.29, layer: "harbours" }, { id: "me", lon: -79.4, lat: 43.7 }];
+ * console.log(shownEarthPlaces(places, { harbours: false }).map((place) => place.id)); // ["yvr", "me"]
+ * ```
+ */
+export function shownEarthPlaces<T extends EarthPlace>(places: readonly T[], layers: Readonly<Record<string, boolean>>): readonly T[] {
+  const shown = places.filter((place) => !place.layer || layers[place.layer] !== false);
+  return shown.length === places.length ? places : shown;
+}
+
+/** The order the markers are given out in: where the reader is, then the rest in the order given, then the places whose name is `low`. */
+export const placeRank = (place: EarthPlace): number => (place.kind === "here" ? 0 : place.namePriority === "low" ? 2 : 1);
+
+/** The places in that order (the order given within each rank). */
+export const inMarkOrder = <T extends EarthPlace>(places: readonly T[]): T[] => [0, 1, 2].flatMap((rank) => places.filter((place) => placeRank(place) === rank));
+
+/**
+ * The fields beyond chikyu-earth's own that a place may carry (`layer`, `size`, `look`, `namePriority`), put back on the places its reader (older than them) made from the same text, so the views need no newer chikyu-earth. A place is found by its `id`
+ * (or, with none, its place in the list, as chikyu-earth gives it); a field that is not valid is left out.
+ */
+export function keepPlaceFields(value: string | null | undefined, places: EarthPlace[]): EarthPlace[] {
+  let raw: unknown;
+  try {
+    raw = typeof value === "string" ? JSON.parse(value) : null;
+  } catch {
+    return places;
+  }
+  if (!Array.isArray(raw)) return places;
+  const own = new Map<string, Partial<EarthPlace>>();
+  for (const [i, item] of raw.entries()) {
+    if (!isObject(item)) continue;
+    const fields: Partial<EarthPlace> = {};
+    if (typeof item["layer"] === "string" && item["layer"].trim()) fields.layer = item["layer"].trim().slice(0, 40);
+    if (item["size"] === "small") fields.size = "small";
+    if ((EARTH_PLACE_LOOKS as readonly unknown[]).includes(item["look"])) fields.look = item["look"] as EarthPlaceLook;
+    if (item["namePriority"] === "low") fields.namePriority = "low";
+    if (Object.keys(fields).length > 0) own.set(typeof item["id"] === "string" && item["id"] ? item["id"] : String(i), fields);
+  }
+  return own.size === 0 ? places : places.map((place) => (own.has(place.id) ? { ...place, ...own.get(place.id) } : place));
+}
+
+/**
+ * A layout that gives each place its own `size` and `look`: the places' markers are laid as beams (chikyu-earth knows one look for a whole list), then a `small` place's stick is cut to about half and its ring to 70 per cent, and a place whose look is `ring`
+ * (its own or the list's) has no stick, its name moving with the top of what is left. A list with no `size` or `look` of its own is laid as `layout` lays it, untouched.
+ */
+export function layWithOwn(layout: EarthPlacesLayout["layout"], places: readonly EarthPlace[], view: SpotView, look: EarthPlaceLook, options?: EarthPlaceLayoutOptions): EarthPlaceLayout {
+  if (!places.some((place) => place.size === "small" || place.look !== undefined)) return layout(places, view, look, options);
+  const plain = places.map((place) => {
+    const one = { ...place };
+    delete one.size;
+    delete one.look;
+    return one;
+  });
+  const laid = layout(plain, view, "beam", options);
+  const moved = new Map<number, { dx: number; dy: number }>();
+  for (const shape of laid.shapes) {
+    const place = places[shape.index]!;
+    const flat = (place.look ?? look) === "ring";
+    const small = place.size === "small";
+    const keep = flat ? 0 : small ? SMALL_LENGTH : 1;
+    if (keep === 1) continue;
+    const dx = (shape.tipX - shape.x) * (keep - 1);
+    const dy = (shape.tipY - shape.y) * (keep - 1);
+    shape.tipX += dx;
+    shape.tipY += dy;
+    shape.length *= keep;
+    if (small) shape.ring *= SMALL_RING;
+    moved.set(shape.index, { dx, dy });
+  }
+  for (const spot of laid.labels) {
+    const by = moved.get(spot.index);
+    if (by !== undefined) {
+      spot.left += by.dx;
+      spot.top += by.dy;
+    }
+  }
+  return laid;
 }
 
 /** The two things `@johnmorrisdotca/wakusei-planets/earth-places` hands the views: reading the attribute, and laying places on a picture. Both are chikyu-earth's. */
@@ -199,6 +355,44 @@ export interface EarthPlaceMark {
   body?: string;
 }
 
+/**
+ * What `wakusei-place-click` carries in `event.detail`: the place that was pressed (chikyu-earth's `chikyu-place-click` detail, with the `body` it is on, `earth` for the Earth's), and where the press was, in CSS pixels inside the element's box.
+ *
+ * @example
+ * ```ts
+ * import type { EarthPlaceClickDetail } from "@johnmorrisdotca/wakusei-planets/earth-places";
+ *
+ * const on = (event: Event): void => {
+ *   const { body, id, kind, layer } = (event as CustomEvent<EarthPlaceClickDetail>).detail;
+ *   console.log(body, id, kind, layer ?? "no layer");
+ * };
+ * console.log(typeof on);
+ * ```
+ */
+export interface EarthPlaceClickDetail {
+  /** The body the place is on: `earth`, `moon`, `mars` and so on. */
+  body: string;
+  id: string;
+  /** `here` or `favourite`. */
+  kind: EarthPlaceKind;
+  /** The place's `layer`, when it has one. */
+  layer?: string;
+  label?: string;
+  lon: number;
+  lat: number;
+  /** Where the press was, in CSS pixels inside the element's box. */
+  x: number;
+  y: number;
+}
+
+/** The detail of `wakusei-place-click` for a pressed place. */
+export function earthPlaceClick(body: string, place: EarthPlace, x: number, y: number): EarthPlaceClickDetail {
+  const detail: EarthPlaceClickDetail = { body, id: place.id, kind: place.kind === "here" ? "here" : "favourite", lon: place.lon, lat: place.lat, x, y };
+  if (place.layer) detail.layer = place.layer;
+  if (place.label) detail.label = place.label;
+  return detail;
+}
+
 /** The markers over one view. */
 export interface EarthPlaceLayerView {
   /** Draw the markers of a layout, moving the ones already there and hiding the rest. */
@@ -223,10 +417,10 @@ interface Item {
  * Make the layer of markers inside a view's shadow root, above its picture. It holds a handful of elements made once and kept; a draw only writes the numbers that changed.
  *
  * @param root - The view's shadow root.
- * @param options - `press`, called with the mark and the pointer event when a press that did not move ends over a drawn name or a foot ring (the layer itself takes no pointer: a press on it goes on to the view's controls, as a name on a body's surface does).
+ * @param options - `press`, called with the mark, the pointer event and the place when a press that did not move ends over a drawn name or a foot ring (the layer itself takes no pointer: a press on it goes on to the view's controls, as a name on a body's surface does).
  * @returns The layer.
  */
-export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark: EarthPlaceMark, event: PointerEvent) => void } = {}): EarthPlaceLayerView {
+export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark: EarthPlaceMark, event: PointerEvent, place: EarthPlace) => void } = {}): EarthPlaceLayerView {
   const style = document.createElement("style");
   style.textContent = STYLE;
   const box = document.createElement("div");
@@ -246,7 +440,7 @@ export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark
   const pool: Item[] = [];
   let shown: EarthPlaceMark[] = [];
   // what is on the screen to press: each drawn mark with its parts and how strongly it shows
-  let live: { mark: EarthPlaceMark; it: Item; opacity: number }[] = [];
+  let live: { mark: EarthPlaceMark; place: EarthPlace; it: Item; opacity: number }[] = [];
 
   const item = (i: number): Item => {
     let it = pool[i];
@@ -287,7 +481,7 @@ export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark
     const start = pressed;
     pressed = null;
     if (start === null || start.id !== event.pointerId || live.length === 0 || options.press === undefined || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return;
-    let best: { mark: EarthPlaceMark; away: number } | undefined;
+    let best: { mark: EarthPlaceMark; place: EarthPlace; away: number } | undefined;
     for (const entry of live) {
       if (entry.opacity < 0.2) continue;
       for (const part of [entry.it.name.hidden ? null : entry.it.name, entry.it.ring.style.display === "none" ? null : entry.it.ring]) {
@@ -296,10 +490,10 @@ export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark
         const pad = part === entry.it.name ? 0 : 6;
         if (event.clientX < r.left - pad || event.clientX > r.right + pad || event.clientY < r.top - pad || event.clientY > r.bottom + pad) continue;
         const away = Math.hypot(event.clientX - (r.left + r.right) / 2, event.clientY - (r.top + r.bottom) / 2);
-        if (best === undefined || away < best.away) best = { mark: entry.mark, away };
+        if (best === undefined || away < best.away) best = { mark: entry.mark, place: entry.place, away };
       }
     }
-    if (best !== undefined) options.press(best.mark, event);
+    if (best !== undefined) options.press(best.mark, event, best.place);
   };
   const cancel = (): void => {
     pressed = null;
@@ -330,16 +524,17 @@ export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark
         set(it.ring, "ry", n(shape.ring * shape.squash));
         set(it.ring, "transform", `rotate(${n(shape.ringAngle)})`);
         set(it.ring, "stroke-width", here ? "2" : "1.5");
-        const stick = look !== "ring";
+        const own = place.look ?? look;
+        const stick = own !== "ring";
         it.stick.style.display = stick ? "" : "none";
-        it.head.style.display = look === "pin" ? "" : "none";
+        it.head.style.display = own === "pin" ? "" : "none";
         if (stick) {
           set(it.stick, "x2", n(shape.tipX - shape.x));
           set(it.stick, "y2", n(shape.tipY - shape.y));
-          set(it.stick, "stroke-width", look === "beam" ? (here ? "3" : "2") : here ? "2" : "1.5");
-          set(it.stick, "stroke-opacity", look === "beam" ? "0.85" : "1");
+          set(it.stick, "stroke-width", own === "beam" ? (here ? "3" : "2") : here ? "2" : "1.5");
+          set(it.stick, "stroke-opacity", own === "beam" ? "0.85" : "1");
         }
-        if (look === "pin") {
+        if (own === "pin") {
           set(it.head, "cx", n(shape.tipX - shape.x));
           set(it.head, "cy", n(shape.tipY - shape.y));
           set(it.head, "r", here ? "5" : "3.5");
@@ -356,7 +551,7 @@ export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark
         const body = (place as { body?: string }).body;
         if (body !== undefined) mark.body = body;
         shown.push(mark);
-        live.push({ mark, it, opacity: shape.opacity * dim });
+        live.push({ mark, place, it, opacity: shape.opacity * dim });
       }
       for (let i = layout.shapes.length; i < pool.length; i += 1) {
         const it = pool[i]!;
