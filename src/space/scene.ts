@@ -524,6 +524,8 @@ export interface SpaceDeps {
   advance?: () => void;
   /** Where each body is on the screen, in CSS pixels in the box, or null when it is behind the camera. Called at each draw. */
   onLabels?: (places: Record<string, BodyPlace | null>) => void;
+  /** The places of the bodies at this draw while the names are off (`onLabels` is called with them while they are on): `placeOf` reads them. */
+  onPlaces?: (places: Record<string, BodyPlace | null>) => void;
   /** What the camera sees of each body at each draw, by id: the Sun, the planets and the other bodies of `SPACE_BODIES`, the moons of the body looked at, and any other moon drawn; with the picture's size and the point straight ahead of the camera. Not the body the camera rides on. */
   onSight?: (bodies: Record<string, SightInput>, frame: { width: number; height: number; axis: { x: number; y: number } }) => void;
   /** Whether `onSight` is wanted at this draw (left out, it always is): the page has asked for it. */
@@ -1600,7 +1602,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const range = mode === "true" ? ASTEROID_NAME_RANGE.true * AU_IN_EARTH_RADII : ASTEROID_NAME_RANGE.compressed;
             model.asteroidsDrawn = { placed: asteroidAts.length, named: Math.min(ASTEROID_NAMES, asteroidAts.filter((one) => one.away <= range).length), ms: performance.now() - began };
           } else if (model.asteroidsDrawn.placed !== 0) model.asteroidsDrawn = { placed: 0, named: 0, ms: 0 };
-          if (deps.onLabels && model.labels) {
+          if (deps.onLabels) {
             const places: Record<string, BodyPlace | null> = { ...moonPlaces };
             for (const id of SPACE_BODIES) {
               const at = id === hiddenBody || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
@@ -1630,25 +1632,32 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               places[craft.id] = spot ? { x: spot.x, y: spot.y, r: craft.px } : null;
               if (spot) moonDistances[craft.id] = Math.hypot(craft.at[0] - camera.position.x, craft.at[1] - camera.position.y, craft.at[2] - camera.position.z);
             }
-            // a body behind another: its place is inside a nearer body's disc
-            const entries: CoverEntry[] = [];
-            for (const [id, at] of Object.entries(places)) {
-              if (at === null) continue;
-              const distance = (SPACE_BODIES as readonly string[]).includes(id) ? Math.hypot(pos[id as SpaceBody][0] - camera.position.x, pos[id as SpaceBody][1] - camera.position.y, pos[id as SpaceBody][2] - camera.position.z) : moonDistances[id];
-              if (distance !== undefined) entries.push({ id, x: at.x, y: at.y, r: at.r, distance });
+            // with the names off the places are still made, for a page that asks `placeOf`; the discs that hide one name behind a nearer body are worked out with the names only
+            if (model.labels) {
+              // a body behind another: its place is inside a nearer body's disc
+              const entries: CoverEntry[] = [];
+              for (const [id, at] of Object.entries(places)) {
+                if (at === null) continue;
+                const distance = (SPACE_BODIES as readonly string[]).includes(id) ? Math.hypot(pos[id as SpaceBody][0] - camera.position.x, pos[id as SpaceBody][1] - camera.position.y, pos[id as SpaceBody][2] - camera.position.z) : moonDistances[id];
+                if (distance !== undefined) entries.push({ id, x: at.x, y: at.y, r: at.r, distance });
+              }
+              for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
+              // a point of the scene that a page labels (a belt's name at its anchor) is hidden by the same discs
+              model.discs = entries;
+              model.coverAt = (point) => {
+                // in front of the camera, whatever the far plane cuts: a belt's name is labelled far beyond what is drawn
+                projected.set(point[0] - origin[0], point[1] - origin[1], point[2] - origin[2]).applyMatrix4(camera.matrixWorldInverse);
+                if (!(projected.z < 0)) return null;
+                const distance = Math.hypot(projected.x, projected.y, projected.z);
+                projected.applyMatrix4(camera.projectionMatrix);
+                return coverOf({ x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height, distance }, entries);
+              };
+              deps.onLabels(places);
+            } else {
+              model.discs = [];
+              model.coverAt = () => null;
+              deps.onPlaces?.(places);
             }
-            for (const [id, cover] of coveredBy(entries)) places[id]!.behind = cover;
-            // a point of the scene that a page labels (a belt's name at its anchor) is hidden by the same discs
-            model.discs = entries;
-            model.coverAt = (point) => {
-              // in front of the camera, whatever the far plane cuts: a belt's name is labelled far beyond what is drawn
-              projected.set(point[0] - origin[0], point[1] - origin[1], point[2] - origin[2]).applyMatrix4(camera.matrixWorldInverse);
-              if (!(projected.z < 0)) return null;
-              const distance = Math.hypot(projected.x, projected.y, projected.z);
-              projected.applyMatrix4(camera.projectionMatrix);
-              return coverOf({ x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height, distance }, entries);
-            };
-            deps.onLabels(places);
           } else {
             model.discs = [];
             model.coverAt = () => null;
