@@ -276,7 +276,7 @@ const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;ove
 const MOON_DOT_HIT_PX = 9;
 /** How near an orbit line must be to the pointer to be lit by it, and to a press (a finger is less exact), in CSS pixels. */
 const LINE_HIT_PX = 6;
-const LINE_TOUCH_PX = 12;
+const LINE_TOUCH_PX = 8;
 
 const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value === "chosen" || value === "none" ? value : "all");
 

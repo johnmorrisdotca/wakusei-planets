@@ -836,7 +836,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         const m = new Float64Array(16);
         for (let c = 0; c < 4; c += 1) for (let r = 0; r < 4; r += 1) m[c * 4 + r] = a[r]! * b[c * 4]! + a[4 + r]! * b[c * 4 + 1]! + a[8 + r]! * b[c * 4 + 2]! + a[12 + r]! * b[c * 4 + 3]!;
         const out: ScreenLine[] = [];
-        const trace = (id: string, colour: string, positions: ArrayLike<number>, count: number, vertexAt: (k: number) => number, at: Vec3, scale: number): void => {
+        const trace = (id: string, colour: string, positions: ArrayLike<number>, count: number, vertexAt: (k: number) => number, at: Vec3, scale: number, fades?: ArrayLike<number>): void => {
           if (only !== undefined && only !== id) return;
           const xy = new Float32Array(count * 2);
           for (let k = 0; k < count; k += 1) {
@@ -846,7 +846,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const z = at[2] + positions[v + 2]! * scale;
             const w = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
             const depth = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
-            if (!(w > 1e-12) || depth > w || depth < -w) {
+            // a point of a line that has been let go near the close body is not there to be pointed at
+            if (!(w > 1e-12) || depth > w || depth < -w || (fades !== undefined && fades[k * 4 + 3]! < 0.1)) {
               xy[k * 2] = Number.NaN;
               xy[k * 2 + 1] = Number.NaN;
               continue;
@@ -859,7 +860,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         const origin0: Vec3 = [0, 0, 0];
         for (const id of ORBIT_BODIES) {
           const o = orbits.get(id)!;
-          if (o.line.visible) trace(id, orbitColour(id), o.positions, ORBIT_POINTS + 1, (k) => k, origin0, 1);
+          if (o.line.visible) trace(id, orbitColour(id), o.positions, ORBIT_POINTS + 1, (k) => k, origin0, 1, o.colours);
         }
         if (roadsterLine.visible) trace("roadster", "#e8705a", roadsterPositions, ORBIT_POINTS + 1, (k) => k, origin0, 1);
         for (const [id, drawing] of orbiterDrawings) if (drawing.line.visible) trace(id, "#9fd0ff", drawing.positions, ORBIT_POINTS + 1, (k) => k, [drawing.line.position.x, drawing.line.position.y, drawing.line.position.z], drawing.line.scale.x);
