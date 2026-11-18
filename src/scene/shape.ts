@@ -53,8 +53,36 @@ export function shapeRadii(table: ShapeTable): Float32Array {
   return out;
 }
 
+/** The steps of longitude and of latitude of the globe a shaped moon is drawn on: no coarser than this, whatever the table's own grid. */
+export const SHAPE_GLOBE: { readonly lon: number; readonly lat: number } = { lon: 192, lat: 96 };
+
+// A cubic through four values (Catmull-Rom): the curve passes through the middle two.
+const cubic = (a: number, b: number, c: number, d: number, t: number): number => b + 0.5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
+
+/**
+ * The radius of a table in the direction of a vertex of a finer globe, by a cubic through the table's radii (round in longitude, held at the poles).
+ * A table of 96 by 48 on a globe of 192 by 96 gives its own radius at every second vertex and the smooth curve between.
+ */
+function radiusAt(radii: Float32Array, lon: number, lat: number, u: number, v: number): number {
+  const x = u * lon;
+  const y = v * lat;
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const tx = x - x0;
+  const ty = y - y0;
+  const rows: number[] = [];
+  for (let dy = -1; dy <= 2; dy += 1) {
+    const row = Math.min(lat, Math.max(0, y0 + dy));
+    const at = (dx: number): number => radii[row * lon + ((((x0 + dx) % lon) + lon) % lon)] as number;
+    rows.push(cubic(at(-1), at(0), at(1), at(2), tx));
+  }
+  return cubic(rows[0] as number, rows[1] as number, rows[2] as number, rows[3] as number, ty);
+}
+
 /**
  * The globe moved to the moon's shape: positions in units of `meanKm` (1 is the moon's mean radius), normals from the moved mesh with the seam and the poles joined. The caller disposes it.
+ * The globe is `SHAPE_GLOBE` steps or the table's own, whichever is finer, with the table's radii carried to it by a smooth curve: the shader tips the surface by the difference between neighbouring pixels,
+ * which is right across a smooth mesh and draws a lattice along the edges of a coarse one.
  *
  * @param three - The parts of three.js the bodies use.
  * @param table - The moon's table.
@@ -62,14 +90,16 @@ export function shapeRadii(table: ShapeTable): Float32Array {
  * @returns The geometry.
  */
 export function shapeGeometry(three: Pick<ThreeParts, "SphereGeometry">, table: ShapeTable, meanKm: number): THREE.BufferGeometry {
-  const geometry = new three.SphereGeometry(1, table.lon, table.lat);
+  const lon = Math.max(table.lon, SHAPE_GLOBE.lon);
+  const lat = Math.max(table.lat, SHAPE_GLOBE.lat);
+  const geometry = new three.SphereGeometry(1, lon, lat);
   const radii = shapeRadii(table);
   const position = geometry.getAttribute("position");
-  const wide = table.lon + 1;
-  for (let row = 0; row <= table.lat; row += 1) {
-    for (let column = 0; column <= table.lon; column += 1) {
+  const wide = lon + 1;
+  for (let row = 0; row <= lat; row += 1) {
+    for (let column = 0; column <= lon; column += 1) {
       const i = row * wide + column;
-      const r = (radii[row * table.lon + (column % table.lon)] as number) / meanKm;
+      const r = radiusAt(radii, table.lon, table.lat, (column % lon) / lon, row / lat) / meanKm;
       position.setXYZ(i, position.getX(i) * r, position.getY(i) * r, position.getZ(i) * r);
     }
   }
@@ -80,23 +110,23 @@ export function shapeGeometry(three: Pick<ThreeParts, "SphereGeometry">, table: 
     normal.setXYZ(i, x / length, y / length, z / length);
   };
   // the seam: the first and the last vertex of a row are one point and take the one normal; a pole is one point, whose vertices take the sum of theirs
-  for (let row = 0; row <= table.lat; row += 1) {
+  for (let row = 0; row <= lat; row += 1) {
     const a = row * wide;
-    const b = a + table.lon;
+    const b = a + lon;
     set(a, normal.getX(a) + normal.getX(b), normal.getY(a) + normal.getY(b), normal.getZ(a) + normal.getZ(b));
     normal.setXYZ(b, normal.getX(a), normal.getY(a), normal.getZ(a));
   }
-  for (const row of [0, table.lat]) {
+  for (const row of [0, lat]) {
     let x = 0;
     let y = 0;
     let z = 0;
-    for (let column = 0; column < table.lon; column += 1) {
+    for (let column = 0; column < lon; column += 1) {
       const i = row * wide + column;
       x += normal.getX(i);
       y += normal.getY(i);
       z += normal.getZ(i);
     }
-    for (let column = 0; column <= table.lon; column += 1) set(row * wide + column, x, y, z);
+    for (let column = 0; column <= lon; column += 1) set(row * wide + column, x, y, z);
   }
   normal.needsUpdate = true;
   return geometry;

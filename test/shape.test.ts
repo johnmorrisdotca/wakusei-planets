@@ -95,26 +95,35 @@ test("a shape has no hole: every radius is positive, and the poles are one radiu
   }
 });
 
-test("the geometry is the globe moved to the radii, in units of the mean radius, with unit normals the seam and the poles share", () => {
-  const table = SHAPE_NIX;
+test("the geometry is the globe moved to the radii, in units of the mean radius, on a globe no coarser than 192 by 96, with unit normals the seam and the poles share", () => {
+  const table = SHAPE_NIX; // 96 by 48: the globe is twice as fine and passes through every radius of the table
   const mean = 18.6;
   const geometry = shapeGeometry(THREE, table, mean);
   const position = geometry.getAttribute("position");
   const normal = geometry.getAttribute("normal");
   const radii = shapeRadii(table);
-  const wide = table.lon + 1;
-  for (const [row, column] of [[10, 5], [24, 40], [47, 95]] as const) {
-    const i = row * wide + column;
-    assert.ok(Math.abs(Math.hypot(position.getX(i), position.getY(i), position.getZ(i)) - (radii[row * table.lon + column] as number) / mean) < 1e-5);
-  }
+  const lon = 192;
+  const lat = 96;
+  const wide = lon + 1;
+  assert.equal(position.count, (lon + 1) * (lat + 1));
+  const at = (row: number, column: number): number => Math.hypot(position.getX(row * wide + column), position.getY(row * wide + column), position.getZ(row * wide + column));
+  for (const [row, column] of [[5, 5], [12, 20], [23, 47]] as const) assert.ok(Math.abs(at(row * 2, column * 2) - (radii[row * table.lon + column] as number) / mean) < 1e-5, `${row},${column}`);
+  // between two radii of the table the globe is between them (a smooth curve may overshoot a little)
+  const a = radii[10 * table.lon + 30] as number;
+  const b = radii[10 * table.lon + 31] as number;
+  assert.ok(Math.abs(at(20, 61) * mean - (a + b) / 2) < Math.abs(a - b) / 2 + 0.3);
   for (let i = 0; i < normal.count; i += 1) assert.ok(Math.abs(Math.hypot(normal.getX(i), normal.getY(i), normal.getZ(i)) - 1) < 1e-4);
-  for (let row = 0; row <= table.lat; row += 1) {
-    const a = row * wide;
-    const b = a + table.lon;
-    assert.ok(Math.abs(normal.getX(a) - normal.getX(b)) + Math.abs(normal.getY(a) - normal.getY(b)) + Math.abs(normal.getZ(a) - normal.getZ(b)) < 1e-6, `seam of row ${row}`);
+  for (let row = 0; row <= lat; row += 1) {
+    const first = row * wide;
+    const last = first + lon;
+    assert.ok(Math.abs(normal.getX(first) - normal.getX(last)) + Math.abs(normal.getY(first) - normal.getY(last)) + Math.abs(normal.getZ(first) - normal.getZ(last)) < 1e-6, `seam of row ${row}`);
   }
-  for (let column = 1; column <= table.lon; column += 1) assert.ok(Math.abs(normal.getY(column) - normal.getY(0)) < 1e-6, "north pole");
+  for (let column = 1; column <= lon; column += 1) assert.ok(Math.abs(normal.getY(column) - normal.getY(0)) < 1e-6, "north pole");
   geometry.dispose();
+  // a table finer than the globe keeps its own grid
+  const fine = shapeGeometry(THREE, SHAPE_PHOBOS, 11.08);
+  assert.equal(fine.getAttribute("position").count, 193 * 97);
+  fine.dispose();
 });
 
 test("Phobos has Stickney: its crater is lower than the ground round it", () => {
