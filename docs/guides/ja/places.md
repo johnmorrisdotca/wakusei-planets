@@ -7,6 +7,8 @@ description: "33の天体の、すべての着陸地点・探査車・墜落・�
 
 `/places` は、天体の表面で何がどこにあるかを扱います。`/places/moon`、`/places/mars` と、さらに31の入口 (`/places/venus`、`/places/titan`、`/places/pluto`、`/places/67p` など) は、それぞれ1つの一覧です。探査機が表面に達した場所 (着陸した、走行した、墜落した、狙って衝突させた)、大気の中で失われた場所、そして名前のある地形 (海、山、谷、大きなクレーター) が入っています。各場所には、緯度と経度、英語と日本語の名前、出どころがあり、読者が知っているものには `famous` の印が付いて、最初に勧める候補の一覧になります。`/places` は、記録の形、一覧の検索、大円距離、そしてあわせて必要になる補助関数 (太陽直下点、明暗境界線、任意の時刻の地方太陽時) を持ちます。DOM も three.js も使わず、どこでも動き、ページが読み込むのは表示する天体の分だけです。どの表も別々の入口で、`loadPlaces("moon")` が必要なときに1つを取り込みます。
 
+ここにある一覧が持つのは、大きな場所 (月は80 km 以上のクレーター、金星は種類ごとに25件) です。IAU 地名辞典のすべての名前 (月の文字つきクレーターを含みます) と、それを探す検索は、[すべての天体のすべての場所を検索する](place-search.md) を見てください。
+
 ```ts
 import { PLACES_MOON } from "@johnmorrisdotca/wakusei-planets/places/moon";
 import { findPlace, isDaylight, localSolarTime, nearestPlace, placeDistanceKm } from "@johnmorrisdotca/wakusei-planets/places";
@@ -26,7 +28,7 @@ console.log("nearest visited place to 20 N, 30.7 E:", nearestPlace(PLACES_MOON, 
 |---|---|---|---|
 | `crewed` | 人が乗った着陸 (アポロの月着陸船6機) | 6 | 0 |
 | `landing` | 着陸後に動作した着陸機 | 22 | 12 |
-| `rover` | そこを走った探査車。地表に着いた地点 (走行経路ではありません) | 13 | 7 |
+| `rover` | そこを走った探査車。地表に着いた地点 (走行経路ではありません。HAKUTO-R ミッション1の衝突で壊れたラシードと SORA-Q も含みます) | 15 | 7 |
 | `impact` | 狙って表面に衝突させた探査機 | 14 | 0 |
 | `crash` | 表面にぶつかって失われた探査機 (使用後に落とした上昇段、寿命の終わりの周回機、上段ロケットも) | 35 | 6 |
 | `entry` | 大気の中で失われた探査機や周回機 (金星、木星、土星。下を参照) | 0 | 0 |
@@ -81,7 +83,7 @@ console.log("nearest visited place to 20 N, 30.7 E:", nearestPlace(PLACES_MOON, 
 
 **名前。** どの場所にも英語名があり、日本語名は、ある場合はその通称です。月の海、湖、入江、沼、大洋、主な山脈、読者が知っているクレーターと火星の地形 (月に126件、火星に38件。静かの海、嵐の大洋、アルプス谷、ティコ、オリンポス山、マリネリス峡谷、ヘラス平原) です。地形の名前は、よく知られたもの以外は IAU のラテン語名のままです。`findPlace` は、英語、日本語、ラテン語の形のどれでも見つけます (「Mare Tranquillitatis」も「静かの海」も)。
 
-**着陸の予定** (`kind: "planned"`) は、月に8件、火星に1件です。どれも各機関や運用会社自身のページから、2026-11-11 に人の手で入力しました (ニュースサイトは使いません)。Astrobotic の Griffin Mission One (Nobile)、Intuitive Machines の IM-3 (Reiner Gamma) と IM-4 (Mons Mouton)、Blue Origin の Blue Moon MK1 Endurance (Shackleton のそばの尾根)、NASA の VIPER (Mons Mouton)、Firefly の Blue Ghost ミッション2、3、4 (Nassau、Gruithuisen Domes、Haworth)、ESA の Rosalind Franklin 探査車 (Oxia Planum) です。着陸する点を書いたページはないので、どれもページが挙げた場所の中心 (IAU の地名集の値) に置き、`approximate` (おおよそ) の印を付けています。`planned` には、ページにある日付 (年)、`dateOf` (ほとんどは `launch` で、打ち上げの年です (NASA の予定のページが打ち上げの年を書いているため)。VIPER と Rosalind Franklin だけは `landing` で、着陸の年です)、`status` (機関自身のページで予定が遅れたものは `slipped`。Griffin、IM-3、Blue Ghost ミッション2)、`read` (読んだ日) があり、記録の `source.url` がそのページです。地名集に名前のある場所を挙げていないミッションは入れていません。嫦娥7号、チャンドラヤーン4号、LUPEX、アルテミス4号は地域しか書いておらず、嫦娥8号の Leibnitz-Beta Plateau は IAU が決めた名前ではありません。`node scripts/check-planned.ts` (`pnpm places:planned`) は、日付が過ぎたものと、読んでから40日を超えたものを出します。毎月の見直しに使います。
+**着陸の予定** (`kind: "planned"`) は、月に8件、火星に1件です。どれも各機関や運用会社自身のページから、2026-11-11 に人の手で入力し、2026-11-18 に読み直して変更がないことを確かめました (ニュースサイトは使いません)。Astrobotic の Griffin Mission One (Nobile)、Intuitive Machines の IM-3 (Reiner Gamma) と IM-4 (Mons Mouton)、Blue Origin の Blue Moon MK1 Endurance (Shackleton のそばの尾根)、NASA の VIPER (Mons Mouton)、Firefly の Blue Ghost ミッション2、3、4 (Nassau、Gruithuisen Domes、Haworth)、ESA の Rosalind Franklin 探査車 (Oxia Planum) です。着陸する点を書いたページはないので、どれもページが挙げた場所の中心 (IAU の地名集の値) に置き、`approximate` (おおよそ) の印を付けています。`planned` には、ページにある日付 (年)、`dateOf` (ほとんどは `launch` で、打ち上げの年です (NASA の予定のページが打ち上げの年を書いているため)。VIPER と Rosalind Franklin だけは `landing` で、着陸の年です)、`status` (機関自身のページで予定が遅れたものは `slipped`。Griffin、IM-3、Blue Ghost ミッション2)、`read` (読んだ日) があり、記録の `source.url` がそのページです。地名集に名前のある場所を挙げていないミッションは入れていません。嫦娥7号、チャンドラヤーン4号、LUPEX、アルテミス4号は地域しか書いておらず、嫦娥8号の Leibnitz-Beta Plateau は IAU が決めた名前ではありません。`node scripts/check-planned.ts` (`pnpm places:planned`) は、日付が過ぎたものと、読んでから40日を超えたものを出します。毎月の見直しに使います。
 
 ## 天体の上の印
 

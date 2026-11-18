@@ -152,7 +152,7 @@
     },
     "./roadster": {
       "en": "Starman and the Tesla Roadster: where it is on any date from 2018 to the start of 2036, its distances, speeds, orbit and the moments worth looking at (about 20 kB gzipped)",
-      "ja": "スターマンとテスラ・ロードスター: 2018年から2036年初めまでの任意の日の位置、距離、速さ、軌道、見どころの日時 (gzip で約20 kB)",
+      "ja": "スターマンとテスラ・ロードスター: 2018年から2036年初めまでの任意の日の位置、距離、速さ、軌道、場所の日時 (gzip で約20 kB)",
       "platform": "node"
     },
     "./comets": {
@@ -171,8 +171,8 @@
       "platform": "node"
     },
     "./places/moon": {
-      "en": "Every place on the Moon: 6 crewed landings, 22 landers, 13 rovers, 49 crash and impact sites and 768 named features, 126 with a Japanese name and the rest in the IAU's Latin (about 33 kB gzipped)",
-      "ja": "月のすべての場所: 有人着陸6件、着陸機22件、探査車13件、墜落・衝突地点49件、名前のある地形768件。よく知られた126件には日本語名があり、ほかは IAU のラテン語名のままです (gzip で約33 kB)",
+      "en": "Every place on the Moon: 6 crewed landings, 22 landers, 15 rovers, 49 crash and impact sites and 768 named features, 126 with a Japanese name and the rest in the IAU's Latin (about 33 kB gzipped)",
+      "ja": "月のすべての場所: 有人着陸6件、着陸機22件、探査車15件、墜落・衝突地点49件、名前のある地形768件。よく知られた126件には日本語名があり、ほかは IAU のラテン語名のままです (gzip で約33 kB)",
       "platform": "node"
     },
     "./places/mars": {
@@ -333,6 +333,276 @@
     "./places/saturn": {
       "en": "Every place on Saturn: 1 atmospheric entry; 1 marked famous (about 1 kB gzipped)",
       "ja": "土星のすべての場所: 大気圏突入地点1件。有名な場所の印は1件 (gzip で約1 kB)",
+      "platform": "node"
+    },
+    "./places/search": {
+      "en": "Search every point of interest on every body: a list for each of 52 bodies, fetched when asked for, the search over them in English and Japanese, ids that stay stable, and the page each name comes from (about 4 kB gzipped, a list on request)",
+      "ja": "すべての天体のすべての場所の検索: 52の天体それぞれの一覧を必要なときに取り寄せ、英語と日本語で検索します。IDは変わらず、各名前の出典ページも分かります (gzip で約4 kB。一覧は必要なときだけ)",
+      "platform": "node"
+    },
+    "./places/search/moon": {
+      "en": "Search list of the Moon: 2,133 points of interest (2,023 named features, 92 sites, 8 planned landings, 10 pieces of hardware) (about 41 kB gzipped)",
+      "ja": "月の検索用の一覧: 場所2,133件 (名前のある地形2,023件、地点92件、着陸予定8件、機器・部品10件) (gzip で約41 kB)",
+      "platform": "node"
+    },
+    "./places/search/mars": {
+      "en": "Search list of Mars: 2,146 points of interest (2,054 named features, 25 sites, 1 planned landings, 66 pieces of hardware) (about 38 kB gzipped)",
+      "ja": "火星の検索用の一覧: 場所2,146件 (名前のある地形2,054件、地点25件、着陸予定1件、機器・部品66件) (gzip で約38 kB)",
+      "platform": "node"
+    },
+    "./places/search/mercury": {
+      "en": "Search list of Mercury: 614 points of interest (613 named features, 1 sites) (about 13 kB gzipped)",
+      "ja": "水星の検索用の一覧: 場所614件 (名前のある地形613件、地点1件) (gzip で約13 kB)",
+      "platform": "node"
+    },
+    "./places/search/venus": {
+      "en": "Search list of Venus: 2,003 points of interest (1,985 named features, 18 sites) (about 30 kB gzipped)",
+      "ja": "金星の検索用の一覧: 場所2,003件 (名前のある地形1,985件、地点18件) (gzip で約30 kB)",
+      "platform": "node"
+    },
+    "./places/search/io": {
+      "en": "Search list of Io: 261 points of interest (261 named features) (about 7 kB gzipped)",
+      "ja": "イオの検索用の一覧: 場所261件 (名前のある地形261件) (gzip で約7 kB)",
+      "platform": "node"
+    },
+    "./places/search/europa": {
+      "en": "Search list of Europa: 129 points of interest (129 named features) (about 4 kB gzipped)",
+      "ja": "エウロパの検索用の一覧: 場所129件 (名前のある地形129件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/ganymede": {
+      "en": "Search list of Ganymede: 196 points of interest (196 named features) (about 6 kB gzipped)",
+      "ja": "ガニメデの検索用の一覧: 場所196件 (名前のある地形196件) (gzip で約6 kB)",
+      "platform": "node"
+    },
+    "./places/search/callisto": {
+      "en": "Search list of Callisto: 154 points of interest (154 named features) (about 4 kB gzipped)",
+      "ja": "カリストの検索用の一覧: 場所154件 (名前のある地形154件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/titan": {
+      "en": "Search list of Titan: 305 points of interest (304 named features, 1 sites) (about 7 kB gzipped)",
+      "ja": "タイタンの検索用の一覧: 場所305件 (名前のある地形304件、地点1件) (gzip で約7 kB)",
+      "platform": "node"
+    },
+    "./places/search/enceladus": {
+      "en": "Search list of Enceladus: 87 points of interest (87 named features) (about 4 kB gzipped)",
+      "ja": "エンケラドスの検索用の一覧: 場所87件 (名前のある地形87件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/mimas": {
+      "en": "Search list of Mimas: 42 points of interest (42 named features) (about 3 kB gzipped)",
+      "ja": "ミマスの検索用の一覧: 場所42件 (名前のある地形42件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/tethys": {
+      "en": "Search list of Tethys: 53 points of interest (53 named features) (about 3 kB gzipped)",
+      "ja": "テティスの検索用の一覧: 場所53件 (名前のある地形53件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/dione": {
+      "en": "Search list of Dione: 95 points of interest (95 named features) (about 4 kB gzipped)",
+      "ja": "ディオネの検索用の一覧: 場所95件 (名前のある地形95件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/rhea": {
+      "en": "Search list of Rhea: 144 points of interest (144 named features) (about 4 kB gzipped)",
+      "ja": "レアの検索用の一覧: 場所144件 (名前のある地形144件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/iapetus": {
+      "en": "Search list of Iapetus: 70 points of interest (70 named features) (about 3 kB gzipped)",
+      "ja": "イアペトゥスの検索用の一覧: 場所70件 (名前のある地形70件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/miranda": {
+      "en": "Search list of Miranda: 18 points of interest (18 named features) (about 3 kB gzipped)",
+      "ja": "ミランダの検索用の一覧: 場所18件 (名前のある地形18件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/ariel": {
+      "en": "Search list of Ariel: 26 points of interest (26 named features) (about 3 kB gzipped)",
+      "ja": "アリエルの検索用の一覧: 場所26件 (名前のある地形26件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/umbriel": {
+      "en": "Search list of Umbriel: 13 points of interest (13 named features) (about 2 kB gzipped)",
+      "ja": "ウンブリエルの検索用の一覧: 場所13件 (名前のある地形13件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/titania": {
+      "en": "Search list of Titania: 18 points of interest (18 named features) (about 3 kB gzipped)",
+      "ja": "ティタニアの検索用の一覧: 場所18件 (名前のある地形18件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/oberon": {
+      "en": "Search list of Oberon: 10 points of interest (10 named features) (about 2 kB gzipped)",
+      "ja": "オベロンの検索用の一覧: 場所10件 (名前のある地形10件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/triton": {
+      "en": "Search list of Triton: 63 points of interest (63 named features) (about 3 kB gzipped)",
+      "ja": "トリトンの検索用の一覧: 場所63件 (名前のある地形63件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/pluto": {
+      "en": "Search list of Pluto: 73 points of interest (73 named features) (about 4 kB gzipped)",
+      "ja": "冥王星の検索用の一覧: 場所73件 (名前のある地形73件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/charon": {
+      "en": "Search list of Charon: 15 points of interest (15 named features) (about 2 kB gzipped)",
+      "ja": "カロンの検索用の一覧: 場所15件 (名前のある地形15件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/ceres": {
+      "en": "Search list of Ceres: 149 points of interest (149 named features) (about 5 kB gzipped)",
+      "ja": "ケレスの検索用の一覧: 場所149件 (名前のある地形149件) (gzip で約5 kB)",
+      "platform": "node"
+    },
+    "./places/search/vesta": {
+      "en": "Search list of Vesta: 106 points of interest (106 named features) (about 4 kB gzipped)",
+      "ja": "ベスタの検索用の一覧: 場所106件 (名前のある地形106件) (gzip で約4 kB)",
+      "platform": "node"
+    },
+    "./places/search/eros": {
+      "en": "Search list of Eros: 42 points of interest (41 named features, 1 sites) (about 3 kB gzipped)",
+      "ja": "エロスの検索用の一覧: 場所42件 (名前のある地形41件、地点1件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/ryugu": {
+      "en": "Search list of Ryugu: 19 points of interest (13 named features, 4 sites, 2 pieces of hardware) (about 3 kB gzipped)",
+      "ja": "リュウグウの検索用の一覧: 場所19件 (名前のある地形13件、地点4件、機器・部品2件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/bennu": {
+      "en": "Search list of Bennu: 37 points of interest (36 named features, 1 sites) (about 3 kB gzipped)",
+      "ja": "ベンヌの検索用の一覧: 場所37件 (名前のある地形36件、地点1件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/dimorphos": {
+      "en": "Search list of Dimorphos: 12 points of interest (11 named features, 1 sites) (about 2 kB gzipped)",
+      "ja": "ディモルフォスの検索用の一覧: 場所12件 (名前のある地形11件、地点1件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/tempel-1": {
+      "en": "Search list of comet Tempel 1: 1 points of interest (1 sites) (about 2 kB gzipped)",
+      "ja": "テンペル第1彗星の検索用の一覧: 場所1件 (地点1件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/67p": {
+      "en": "Search list of comet 67P/Churyumov-Gerasimenko: 1 points of interest (1 sites) (about 2 kB gzipped)",
+      "ja": "チュリュモフ・ゲラシメンコ彗星の検索用の一覧: 場所1件 (地点1件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/jupiter": {
+      "en": "Search list of Jupiter: 2 points of interest (2 sites) (about 2 kB gzipped)",
+      "ja": "木星の検索用の一覧: 場所2件 (地点2件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/saturn": {
+      "en": "Search list of Saturn: 1 points of interest (1 sites) (about 2 kB gzipped)",
+      "ja": "土星の検索用の一覧: 場所1件 (地点1件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/amalthea": {
+      "en": "Search list of Amalthea: 4 points of interest (4 named features) (about 2 kB gzipped)",
+      "ja": "アマルテアの検索用の一覧: 場所4件 (名前のある地形4件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/dactyl": {
+      "en": "Search list of Dactyl: 2 points of interest (2 named features) (about 2 kB gzipped)",
+      "ja": "Dactylの検索用の一覧: 場所2件 (名前のある地形2件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/deimos": {
+      "en": "Search list of Deimos: 2 points of interest (2 named features) (about 2 kB gzipped)",
+      "ja": "ダイモスの検索用の一覧: 場所2件 (名前のある地形2件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/didymos": {
+      "en": "Search list of Didymos: 2 points of interest (2 named features) (about 2 kB gzipped)",
+      "ja": "ディディモスの検索用の一覧: 場所2件 (名前のある地形2件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/dinkinesh": {
+      "en": "Search list of Dinkinesh: 4 points of interest (4 named features) (about 2 kB gzipped)",
+      "ja": "ディンキネシュの検索用の一覧: 場所4件 (名前のある地形4件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/donaldjohanson": {
+      "en": "Search list of Donaldjohanson: 10 points of interest (10 named features) (about 2 kB gzipped)",
+      "ja": "ドナルドジョハンソンの検索用の一覧: 場所10件 (名前のある地形10件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/epimetheus": {
+      "en": "Search list of Epimetheus: 2 points of interest (2 named features) (about 2 kB gzipped)",
+      "ja": "エピメテウスの検索用の一覧: 場所2件 (名前のある地形2件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/gaspra": {
+      "en": "Search list of Gaspra: 34 points of interest (34 named features) (about 3 kB gzipped)",
+      "ja": "ガスプラの検索用の一覧: 場所34件 (名前のある地形34件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/hyperion": {
+      "en": "Search list of Hyperion: 5 points of interest (5 named features) (about 2 kB gzipped)",
+      "ja": "ハイペリオンの検索用の一覧: 場所5件 (名前のある地形5件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/ida": {
+      "en": "Search list of Ida: 25 points of interest (25 named features) (about 3 kB gzipped)",
+      "ja": "イダの検索用の一覧: 場所25件 (名前のある地形25件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/itokawa": {
+      "en": "Search list of Itokawa: 17 points of interest (17 named features) (about 2 kB gzipped)",
+      "ja": "イトカワの検索用の一覧: 場所17件 (名前のある地形17件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/janus": {
+      "en": "Search list of Janus: 4 points of interest (4 named features) (about 2 kB gzipped)",
+      "ja": "ヤヌスの検索用の一覧: 場所4件 (名前のある地形4件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/lutetia": {
+      "en": "Search list of Lutetia: 37 points of interest (37 named features) (about 3 kB gzipped)",
+      "ja": "ルテティアの検索用の一覧: 場所37件 (名前のある地形37件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/mathilde": {
+      "en": "Search list of Mathilde: 23 points of interest (23 named features) (about 3 kB gzipped)",
+      "ja": "マティルドの検索用の一覧: 場所23件 (名前のある地形23件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/phobos": {
+      "en": "Search list of Phobos: 20 points of interest (20 named features) (about 3 kB gzipped)",
+      "ja": "フォボスの検索用の一覧: 場所20件 (名前のある地形20件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/phoebe": {
+      "en": "Search list of Phoebe: 25 points of interest (25 named features) (about 3 kB gzipped)",
+      "ja": "フェーベの検索用の一覧: 場所25件 (名前のある地形25件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/proteus": {
+      "en": "Search list of Proteus: 1 points of interest (1 named features) (about 2 kB gzipped)",
+      "ja": "プロテウスの検索用の一覧: 場所1件 (名前のある地形1件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/steins": {
+      "en": "Search list of Steins: 24 points of interest (24 named features) (about 3 kB gzipped)",
+      "ja": "シュテインスの検索用の一覧: 場所24件 (名前のある地形24件) (gzip で約3 kB)",
+      "platform": "node"
+    },
+    "./places/search/thebe": {
+      "en": "Search list of Thebe: 1 points of interest (1 named features) (about 2 kB gzipped)",
+      "ja": "テーベの検索用の一覧: 場所1件 (名前のある地形1件) (gzip で約2 kB)",
+      "platform": "node"
+    },
+    "./places/search/moon-satellites": {
+      "en": "Search list of the Moon's lettered satellite craters: 7,064 craters named after a nearby named crater, such as Tycho A (about 98 kB gzipped)",
+      "ja": "月の付随クレーターの検索用の一覧: ティコAのように、近くの名前つきクレーターにちなんで文字を付けた7,064個 (gzip で約98 kB)",
       "platform": "node"
     },
     "./fact-sheets": {

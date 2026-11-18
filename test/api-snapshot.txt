@@ -728,7 +728,7 @@ const PLACE_BODIES: readonly ["moon", "mars", "mercury", "venus", "io", "europa"
 const PLACE_LAYERS: readonly ["landing", "crash", "planned", "feature"]
 export interface Place { id: string; kind: PlaceKind; name: { en: string; ja: string; }; lat: number; lon: number; date?: string; mission?: string; operator?: string; country?: string; outcome?: "crewed" | "soft" | "hard" | "impact" | "entry"; approximate?: true; gcatPosition?: readonly [ number, number ]; site?: string; note?: string; until?: string; gcatName?: string; famous?: true; origin?: string; feature?: { type: string; typeWord: { en: string; ja: string; }; diameterKm: number; approved: string; }; planned?: { date: string; dateOf: "launch" | "landing"; status: "announced" | "slipped" | "cancelled"; read: string; }; source: { id: "iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency" | "nasa-ntrs" | "pds-atmospheres" | "paper" | "announcement"; read: string; latitude?: "planetocentric" | "converted" | "not stated"; url?: string; frame?: string; }; }
 export type PlaceBody = (typeof PLACE_BODIES)[number];
-export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "entry" | "planned" | "feature";
+export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "entry" | "planned" | "feature" | "hardware";
 export type PlaceLayer = (typeof PLACE_LAYERS)[number];
 export interface PlaceMark { place: Place; layer: PlaceLayer; x: number; y: number; fade?: number; label?: boolean; nameOnly?: boolean; }
 export interface SpotView { width: number; height: number; radius: number; at(lon: number, lat: number, out: SurfaceSpot): boolean; }
@@ -823,6 +823,124 @@ const PLACES_67P: readonly Place[]
 const PLACES_JUPITER: readonly Place[]
 ## ./places/saturn
 const PLACES_SATURN: readonly Place[]
+## ./places/search
+const PLACE_KIND_WORDS: Readonly<Record<PlaceKind, { en: string; ja: string; }>>
+const PLACE_SEARCH_BODIES: readonly ["moon", "mars", "mercury", "venus", "io", "europa", "ganymede", "callisto", "titan", "enceladus", "mimas", "tethys", "dione", "rhea", "iapetus", "miranda", "ariel", "umbriel", "titania", "oberon", "triton", "pluto", "charon", "ceres", "vesta", "eros", "ryugu", "bennu", "dimorphos", "tempel-1", "67p", "jupiter", "saturn", "amalthea", "dactyl", "deimos", "didymos", "dinkinesh", "donaldjohanson", "epimetheus", "gaspra", "hyperion", "ida", "itokawa", "janus", "lutetia", "mathilde", "phobos", "phoebe", "proteus", "steins", "thebe"]
+export interface PlaceHit { id: string; body: string; kind: PlaceKind; name: { en: string; ja: string; }; typeWord: { en: string; ja: string; }; type?: string; lat: number; lon: number; diameterKm: number; date?: string; approximate?: true; source: { id: Place["source"]["id"]; read: string; ref?: number; }; }
+export type PlaceSearchBody = (typeof PLACE_SEARCH_BODIES)[number];
+const SEARCH_SOURCE_IDS: readonly ("iau-gazetteer" | "gcat-landercat" | "nssdca" | "pds-ode" | "nasa-mars24" | "agency" | "nasa-ntrs" | "pds-atmospheres" | "paper" | "announcement")[]
+function hitToPlace(hit: PlaceHit) => Place
+function loadPlaceSearch(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "vesta" | "moon" | "phobos" | "deimos" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "proteus" | "triton" | "charon" | "eros" | "ryugu" | "bennu" | "dimorphos" | "tempel-1" | "67p" | "amalthea" | "dactyl" | "didymos" | "dinkinesh" | "donaldjohanson" | "epimetheus" | "gaspra" | "hyperion" | "ida" | "itokawa" | "janus" | "lutetia" | "mathilde" | "phoebe" | "steins" | "thebe", options?: { satellites?: boolean | undefined; }) => Promise<readonly PlaceHit[]>
+function placeHitUrl(hit: PlaceHit) => string | undefined
+function readPlaceHits(body: string, text: string) => PlaceHit[]
+function resolvePlaceId(id: string) => string
+function searchPlaces(hits: readonly PlaceHit[], query: string, options?: { limit?: number | undefined; kinds?: readonly PlaceKind[] | undefined; }) => PlaceHit[]
+## ./places/search/moon
+const PLACE_HITS_MOON: readonly PlaceHit[]
+## ./places/search/mars
+const PLACE_HITS_MARS: readonly PlaceHit[]
+## ./places/search/mercury
+const PLACE_HITS_MERCURY: readonly PlaceHit[]
+## ./places/search/venus
+const PLACE_HITS_VENUS: readonly PlaceHit[]
+## ./places/search/io
+const PLACE_HITS_IO: readonly PlaceHit[]
+## ./places/search/europa
+const PLACE_HITS_EUROPA: readonly PlaceHit[]
+## ./places/search/ganymede
+const PLACE_HITS_GANYMEDE: readonly PlaceHit[]
+## ./places/search/callisto
+const PLACE_HITS_CALLISTO: readonly PlaceHit[]
+## ./places/search/titan
+const PLACE_HITS_TITAN: readonly PlaceHit[]
+## ./places/search/enceladus
+const PLACE_HITS_ENCELADUS: readonly PlaceHit[]
+## ./places/search/mimas
+const PLACE_HITS_MIMAS: readonly PlaceHit[]
+## ./places/search/tethys
+const PLACE_HITS_TETHYS: readonly PlaceHit[]
+## ./places/search/dione
+const PLACE_HITS_DIONE: readonly PlaceHit[]
+## ./places/search/rhea
+const PLACE_HITS_RHEA: readonly PlaceHit[]
+## ./places/search/iapetus
+const PLACE_HITS_IAPETUS: readonly PlaceHit[]
+## ./places/search/miranda
+const PLACE_HITS_MIRANDA: readonly PlaceHit[]
+## ./places/search/ariel
+const PLACE_HITS_ARIEL: readonly PlaceHit[]
+## ./places/search/umbriel
+const PLACE_HITS_UMBRIEL: readonly PlaceHit[]
+## ./places/search/titania
+const PLACE_HITS_TITANIA: readonly PlaceHit[]
+## ./places/search/oberon
+const PLACE_HITS_OBERON: readonly PlaceHit[]
+## ./places/search/triton
+const PLACE_HITS_TRITON: readonly PlaceHit[]
+## ./places/search/pluto
+const PLACE_HITS_PLUTO: readonly PlaceHit[]
+## ./places/search/charon
+const PLACE_HITS_CHARON: readonly PlaceHit[]
+## ./places/search/ceres
+const PLACE_HITS_CERES: readonly PlaceHit[]
+## ./places/search/vesta
+const PLACE_HITS_VESTA: readonly PlaceHit[]
+## ./places/search/eros
+const PLACE_HITS_EROS: readonly PlaceHit[]
+## ./places/search/ryugu
+const PLACE_HITS_RYUGU: readonly PlaceHit[]
+## ./places/search/bennu
+const PLACE_HITS_BENNU: readonly PlaceHit[]
+## ./places/search/dimorphos
+const PLACE_HITS_DIMORPHOS: readonly PlaceHit[]
+## ./places/search/tempel-1
+const PLACE_HITS_TEMPEL_1: readonly PlaceHit[]
+## ./places/search/67p
+const PLACE_HITS_67P: readonly PlaceHit[]
+## ./places/search/jupiter
+const PLACE_HITS_JUPITER: readonly PlaceHit[]
+## ./places/search/saturn
+const PLACE_HITS_SATURN: readonly PlaceHit[]
+## ./places/search/amalthea
+const PLACE_HITS_AMALTHEA: readonly PlaceHit[]
+## ./places/search/dactyl
+const PLACE_HITS_DACTYL: readonly PlaceHit[]
+## ./places/search/deimos
+const PLACE_HITS_DEIMOS: readonly PlaceHit[]
+## ./places/search/didymos
+const PLACE_HITS_DIDYMOS: readonly PlaceHit[]
+## ./places/search/dinkinesh
+const PLACE_HITS_DINKINESH: readonly PlaceHit[]
+## ./places/search/donaldjohanson
+const PLACE_HITS_DONALDJOHANSON: readonly PlaceHit[]
+## ./places/search/epimetheus
+const PLACE_HITS_EPIMETHEUS: readonly PlaceHit[]
+## ./places/search/gaspra
+const PLACE_HITS_GASPRA: readonly PlaceHit[]
+## ./places/search/hyperion
+const PLACE_HITS_HYPERION: readonly PlaceHit[]
+## ./places/search/ida
+const PLACE_HITS_IDA: readonly PlaceHit[]
+## ./places/search/itokawa
+const PLACE_HITS_ITOKAWA: readonly PlaceHit[]
+## ./places/search/janus
+const PLACE_HITS_JANUS: readonly PlaceHit[]
+## ./places/search/lutetia
+const PLACE_HITS_LUTETIA: readonly PlaceHit[]
+## ./places/search/mathilde
+const PLACE_HITS_MATHILDE: readonly PlaceHit[]
+## ./places/search/phobos
+const PLACE_HITS_PHOBOS: readonly PlaceHit[]
+## ./places/search/phoebe
+const PLACE_HITS_PHOEBE: readonly PlaceHit[]
+## ./places/search/proteus
+const PLACE_HITS_PROTEUS: readonly PlaceHit[]
+## ./places/search/steins
+const PLACE_HITS_STEINS: readonly PlaceHit[]
+## ./places/search/thebe
+const PLACE_HITS_THEBE: readonly PlaceHit[]
+## ./places/search/moon-satellites
+const PLACE_HITS_MOON_SATELLITES: readonly PlaceHit[]
 ## ./orbiters
 const ORBITER_DIM_SHARE: 0.02
 const ORBITER_FACTS: { readonly lro: { readonly name: { readonly en: "Lunar Reconnaissance Orbiter"; readonly ja: "ルナー・リコネサンス・オービター"; }; readonly short: { readonly en: "LRO"; readonly ja: "LRO"; }; readonly centre: "moon"; readonly operator: "NASA (Goddard Space Flight Center)"; readonly launch: { readonly date: "2009-06-18T09:32Z"; readonly vehicle: "Atlas V"; readonly site: "Cape Canaveral, launch complex 41"; }; readonly instruments: readonly [{ readonly name: "Cosmic Ray Telescope for the Effects of Radiation"; readonly short: "CRaTER"; }, { readonly name: "Diviner Lunar Radiometer Experiment"; readonly short: "DLRE"; }, { readonly name: "Lyman Alpha Mapping Project"; readonly short: "LAMP"; }, { readonly name: "Lunar Exploration Neutron Detector"; readonly short: "LEND"; }, { readonly name: "Lunar Orbiter Laser Altimeter"; readonly short: "LOLA"; }, { readonly name: "Lunar Reconnaissance Orbiter Camera"; readonly short: "LROC"; }, { readonly name: "Mini-RF Technology Demonstration"; readonly short: "Mini-RF"; }]; readonly about: { readonly en: "NASA's mapping orbiter since 2009: a global geodetic grid, day and night temperatures, high-resolution pictures and the hunt for water at the poles, now in a low-maintenance orbit as a relay and south-pole observer."; readonly ja: "2009年から月の地図づくりを続けるNASAの周回機です。全球の測地グリッド、昼夜の温度、高解像度の画像を作り、極の水を探してきました。いまは手のかからない軌道で、中継と南極の観測を続けています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -85; }; readonly "chandrayaan-2": { readonly name: { readonly en: "Chandrayaan-2 orbiter"; readonly ja: "チャンドラヤーン2号 オービター"; }; readonly short: { readonly en: "Chandrayaan-2"; readonly ja: "チャンドラヤーン2号"; }; readonly centre: "moon"; readonly operator: "ISRO"; readonly launch: { readonly date: "2019-07-22T09:13Z"; readonly vehicle: "GSLV Mk III"; readonly site: "Satish Dhawan Space Centre, Sriharikota"; }; readonly instruments: readonly []; readonly about: { readonly en: "India's lunar orbiter: it carried the Vikram lander and Pragyan rover, which were lost on landing in 2019, and goes on in a near-circular polar orbit about 100 km up, studying the surface, the exosphere and signs of water ice."; readonly ja: "インドの月周回機。2019年の着陸で失われたヴィクラム着陸機とプラギャン探査車を運び、いまは高度約100 kmのほぼ円形の極軌道で、表面、外気圏、水氷の兆候を調べています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -152; }; readonly danuri: { readonly name: { readonly en: "Danuri (KPLO)"; readonly ja: "ダヌリ (KPLO)"; }; readonly short: { readonly en: "Danuri"; readonly ja: "ダヌリ"; }; readonly centre: "moon"; readonly operator: "KARI (Korea Aerospace Research Institute)"; readonly launch: { readonly date: "2022-08-04T23:08Z"; readonly vehicle: "Falcon 9 Block 5"; readonly site: "Cape Canaveral, SLC-40"; }; readonly instruments: readonly [{ readonly name: "Lunar Terrain Imager"; readonly short: "LUTI"; }, { readonly name: "Wide-Angle Polarimetric Camera"; readonly short: "PolCam"; }, { readonly name: "KPLO Magnetometer"; readonly short: "KMAG"; }, { readonly name: "KPLO Gamma Ray Spectrometer"; readonly short: "KGRS"; }, { readonly name: "Disruption Tolerant Network experiment"; readonly short: "DTNPL"; }, { readonly name: "ShadowCam (NASA)"; readonly short: "ShadowCam"; }]; readonly about: { readonly en: "South Korea's first lunar mission: it reached the Moon by a ballistic transfer in December 2022 and images landing sites, maps minerals and the magnetic field, and looks into the permanently shadowed craters with NASA's ShadowCam."; readonly ja: "韓国初の月探査機。2022年12月に弾道月遷移軌道で月に着き、着陸地点の撮影、鉱物と磁場の地図づくり、NASAのShadowCamによる永久影のクレーターの観測をしています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -155; }; readonly "artemis-p1": { readonly name: { readonly en: "ARTEMIS P1"; readonly ja: "ARTEMIS P1"; }; readonly short: { readonly en: "ARTEMIS P1"; readonly ja: "ARTEMIS P1"; }; readonly centre: "moon"; readonly operator: "NASA (University of California, Berkeley)"; readonly launch: { readonly date: "2007-02-17T23:01Z"; readonly vehicle: "Delta II 7925-10C"; readonly site: "Cape Canaveral"; }; readonly instruments: readonly [{ readonly name: "Fluxgate Magnetometer"; readonly short: "FGM"; }, { readonly name: "Electrostatic Analyzer"; readonly short: "ESA"; }, { readonly name: "Solid-State Telescope"; readonly short: "SST"; }, { readonly name: "Search Coil Magnetometer"; readonly short: "SCM"; }, { readonly name: "Electric Field Instrument"; readonly short: "EFI"; }]; readonly about: { readonly en: "One of the five THEMIS satellites, sent on from Earth orbit in 2009 and the first craft to orbit an Earth-Moon Lagrange point; since 2011 it circles the Moon on a long, lopsided orbit (about 100 by 19,000 km, 26 hours) studying the solar wind and the lunar wake."; readonly ja: "THEMIS衛星5機のうちの1機。2009年に地球軌道から送り出され、地球と月のラグランジュ点を初めて周回した探査機です。2011年からは細長い月周回軌道 (約100 × 19,000 km、26時間) で太陽風と月の後流を調べています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -192; }; readonly "artemis-p2": { readonly name: { readonly en: "ARTEMIS P2"; readonly ja: "ARTEMIS P2"; }; readonly short: { readonly en: "ARTEMIS P2"; readonly ja: "ARTEMIS P2"; }; readonly centre: "moon"; readonly operator: "NASA (University of California, Berkeley)"; readonly launch: { readonly date: "2007-02-17T23:01Z"; readonly vehicle: "Delta II 7925-10C"; readonly site: "Cape Canaveral"; }; readonly instruments: readonly [{ readonly name: "Fluxgate Magnetometer"; readonly short: "FGM"; }, { readonly name: "Electrostatic Analyzer"; readonly short: "ESA"; }, { readonly name: "Solid-State Telescope"; readonly short: "SST"; }, { readonly name: "Search Coil Magnetometer"; readonly short: "SCM"; }, { readonly name: "Electric Field Instrument"; readonly short: "EFI"; }]; readonly about: { readonly en: "ARTEMIS P1's twin, the first craft to orbit the Earth-Moon L1 point; in a long lunar orbit since July 2011, measuring particles and fields where the Moon meets the solar wind."; readonly ja: "ARTEMIS P1の双子機で、地球と月のL1点を初めて周回しました。2011年7月から細長い月周回軌道で、月が太陽風と出会う場所の粒子と電磁場を測っています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -193; }; readonly capstone: { readonly name: { readonly en: "CAPSTONE"; readonly ja: "キャップストーン"; }; readonly short: { readonly en: "CAPSTONE"; readonly ja: "CAPSTONE"; }; readonly centre: "moon"; readonly operator: "NASA (Advanced Space)"; readonly launch: { readonly date: "2022-06-28T09:55:52Z"; readonly vehicle: "Electron (Rocket Lab)"; readonly site: "Mahia Peninsula, New Zealand"; }; readonly instruments: readonly []; readonly about: { readonly en: "A 25 kg CubeSat that flew the near-rectilinear halo orbit planned for the Gateway outpost, passing within about 1,600 km of one lunar pole and 70,000 km from the other every seven days, and tested navigation with LRO. Its halo orbit is no ellipse, so no path is drawn for it."; readonly ja: "ゲートウェイ拠点のために計画された近直線ハロー軌道を飛んだ25 kgのキューブサット。7日ごとに、月の一方の極の約1,600 km以内を通り、もう一方の極からは70,000 km離れ、LROとの航法の試験をしました。ハロー軌道は楕円ではないので、経路は描きません。"; }; readonly status: { readonly state: "ended"; readonly since: "2026-07"; readonly note: { readonly en: "Horizons' page says no further updates for this completed mission (note of 2026-07-28); its track ends 2026-08-14."; readonly ja: "Horizonsのページに、このミッションは完了したので今後の更新はない、とあります (2026-07-28の注記)。経路データは2026-08-14で終わります。"; }; }; readonly horizonsId: -1176; }; readonly mro: { readonly name: { readonly en: "Mars Reconnaissance Orbiter"; readonly ja: "マーズ・リコネサンス・オービター"; }; readonly short: { readonly en: "MRO"; readonly ja: "MRO"; }; readonly centre: "mars"; readonly operator: "NASA (JPL)"; readonly launch: { readonly date: "2005-08-12T11:43Z"; readonly vehicle: "Atlas V"; readonly site: "Cape Canaveral"; }; readonly instruments: readonly []; readonly about: { readonly en: "NASA's high-resolution eye on Mars since 2006, in a near-circular polar orbit of about 112 minutes after six months of aerobraking; it also relays the rovers' data."; readonly ja: "2006年から火星を高解像度で見つめるNASAの探査機です。6か月の大気制動のあと、周期約112分のほぼ円形の極軌道にあり、探査車のデータの中継もしています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -74; }; readonly odyssey: { readonly name: { readonly en: "2001 Mars Odyssey"; readonly ja: "2001マーズ・オデッセイ"; }; readonly short: { readonly en: "Odyssey"; readonly ja: "オデッセイ"; }; readonly centre: "mars"; readonly operator: "NASA (JPL)"; readonly launch: { readonly date: "2001-04-07T15:02Z"; readonly vehicle: "Delta II 7925"; }; readonly instruments: readonly [{ readonly name: "Thermal Emission Imaging System"; readonly short: "THEMIS"; }, { readonly name: "Gamma Ray Spectrometer"; readonly short: "GRS"; }, { readonly name: "Mars Radiation Environment Experiment"; readonly short: "MARIE"; }]; readonly about: { readonly en: "The longest-serving craft at Mars: it mapped the surface's elements and minerals, found water ice buried near the poles, measured radiation in orbit, and has relayed most of the rovers' data since 2004."; readonly ja: "火星で最も長く働く探査機。表面の元素と鉱物を地図にし、極の近くに埋まった水氷を見つけ、軌道上の放射線を測り、2004年から探査車のデータの大半を中継しています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -53; }; readonly maven: { readonly name: { readonly en: "MAVEN"; readonly ja: "メイブン"; }; readonly short: { readonly en: "MAVEN"; readonly ja: "MAVEN"; }; readonly centre: "mars"; readonly operator: "NASA (Goddard Space Flight Center)"; readonly launch: { readonly date: "2013-11-18T18:28Z"; readonly vehicle: "Atlas V 401"; readonly site: "Cape Canaveral, SLC-41"; }; readonly instruments: readonly [{ readonly name: "Particles and Fields Package"; readonly short: "PFP"; }, { readonly name: "Imaging Ultraviolet Spectrometer"; readonly short: "IUVS"; }, { readonly name: "Neutral Gas and Ion Mass Spectrometer"; readonly short: "NGIMS"; }]; readonly about: { readonly en: "The Mars Atmosphere and Volatile Evolution orbiter studied how the upper atmosphere is lost to space from a 150 by 6,200 km orbit; contact was lost in December 2025 and NASA said on 2026-06-03 that the mission had ended, so its last known orbit is shown as modelled."; readonly ja: "火星の上層大気がどう宇宙へ失われるかを、150 × 6,200 kmの軌道から調べた探査機。2025年12月に交信が途絶え、2026-06-03にNASAがミッションが終わったと発表したので、最後に分かっている軌道をモデルの軌道として示します。"; }; readonly status: { readonly state: "ended"; readonly since: "2025-12-06"; readonly note: { readonly en: "Horizons' page: no contact since 2025-12-06, with evidence of an unplanned change of velocity on 2025-12-04; its fit reaches 2025-12-04 and its track ends 2026-03-01. NASA's news release of 2026-06-03, \"NASA Says Farewell to MAVEN Mars Mission\", says the mission has ended."; readonly ja: "Horizonsのページ: 2025-12-06から交信がなく、2025-12-04に予定外の速度変化があった形跡があります。合わせた期間は2025-12-04まで、経路データは2026-03-01で終わります。NASAは2026-06-03の発表「NASA Says Farewell to MAVEN Mars Mission」で、ミッションが終わったと伝えました。"; }; }; readonly horizonsId: -202; }; readonly "mars-express": { readonly name: { readonly en: "Mars Express"; readonly ja: "マーズ・エクスプレス"; }; readonly short: { readonly en: "Mars Express"; readonly ja: "マーズ・エクスプレス"; }; readonly centre: "mars"; readonly operator: "ESA"; readonly launch: { readonly date: "2003-06-02"; readonly vehicle: "Soyuz-Fregat"; readonly site: "Baikonur"; }; readonly instruments: readonly []; readonly about: { readonly en: "Europe's first Mars orbiter, in a long elliptical orbit (about 258 by 11,560 km, 6 hours 43 minutes) since December 2003; its Beagle 2 lander was lost on arrival."; readonly ja: "ヨーロッパ初の火星周回機。2003年12月から細長い楕円軌道 (約258 × 11,560 km、6時間43分) にあります。運んだ着陸機ビーグル2は到着時に失われました。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -41; }; readonly tgo: { readonly name: { readonly en: "ExoMars Trace Gas Orbiter"; readonly ja: "エクソマーズ・トレース・ガス・オービター"; }; readonly short: { readonly en: "TGO"; readonly ja: "TGO"; }; readonly centre: "mars"; readonly operator: "ESA (with Roscosmos)"; readonly launch: { readonly date: "2016-03-14T09:31Z"; readonly vehicle: "Proton"; readonly site: "Baikonur"; }; readonly instruments: readonly [{ readonly name: "Atmospheric Chemistry Suite"; readonly short: "ACS"; }, { readonly name: "Colour and Stereo Surface Imaging System"; readonly short: "CaSSIS"; }, { readonly name: "Fine Resolution Epithermal Neutron Detector"; readonly short: "FREND"; }, { readonly name: "Nadir and Occultation for Mars Discovery"; readonly short: "NOMAD"; }]; readonly about: { readonly en: "ESA's orbiter hunting methane and other trace gases from a circular 400 km orbit inclined 74 degrees, reached by a year of aerobraking in 2017; the Schiaparelli lander it carried was destroyed on landing."; readonly ja: "メタンなどの微量ガスを探すESAの周回機。2017年に1年かけた大気制動で、軌道傾斜角74度、高度400 kmの円軌道に入りました。運んだ着陸機スキアパレッリは着陸時に壊れました。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -143; }; readonly hope: { readonly name: { readonly en: "Hope (Emirates Mars Mission)"; readonly ja: "ホープ (エミレーツ・マーズ・ミッション)"; }; readonly short: { readonly en: "Hope"; readonly ja: "ホープ"; }; readonly centre: "mars"; readonly operator: "Mohammed Bin Rashid Space Centre (United Arab Emirates)"; readonly launch: { readonly date: "2020-07-19T21:58:14Z"; readonly vehicle: "H-IIA 202"; readonly site: "Tanegashima, Japan"; }; readonly instruments: readonly [{ readonly name: "Emirates eXploration Imager"; readonly short: "EXI"; }, { readonly name: "Emirates Mars Ultraviolet Spectrometer"; readonly short: "EMUS"; }, { readonly name: "Emirates Mars Infrared Spectrometer"; readonly short: "EMIRS"; }]; readonly about: { readonly en: "The United Arab Emirates' weather satellite for Mars: from a high orbit of about 22,000 by 44,000 km (55 hours) it watches the whole atmosphere through the day and the year."; readonly ja: "アラブ首長国連邦の火星気象衛星。約22,000 × 44,000 km (55時間) の高い軌道から、一日と一年を通して大気全体を見ています。"; }; readonly status: { readonly state: "flying"; }; readonly horizonsId: -62; }; readonly "tianwen-1": { readonly name: { readonly en: "Tianwen-1 orbiter"; readonly ja: "天問1号 オービター"; }; readonly short: { readonly en: "Tianwen-1"; readonly ja: "天問1号"; }; readonly centre: "mars"; readonly operator: "CNSA"; readonly launch: { readonly date: "2020-07-23T04:41Z"; readonly vehicle: "Long March 5"; readonly site: "Wenchang, Hainan"; }; readonly instruments: readonly []; readonly about: { readonly en: "China's first Mars mission, an orbiter with seven instruments that carried the Zhurong rover to Utopia Planitia in 2021. Horizons holds only a volunteers' track of its cruise, ending at arrival, so no orbit is drawn for it."; readonly ja: "中国初の火星ミッション。7つの観測機器を持つ周回機で、2021年に探査車「祝融号」をユートピア平原へ運びました。Horizonsにはボランティアによる巡航の追跡しかなく、到着で終わるので、軌道は描きません。"; }; readonly status: { readonly state: "flying"; readonly note: { readonly en: "No public orbit track: Horizons' record is the cruise to Mars, from ground-based volunteers, ending 2021-02-10."; readonly ja: "公開された軌道データはありません。Horizonsの記録は地上のボランティアによる火星への巡航の追跡で、2021-02-10で終わります。"; }; }; readonly horizonsId: -9901491; }; }

@@ -3,7 +3,7 @@
 // The date is the year the page gives, and `planned.dateOf` says whether it is the launch or the landing. `node scripts/check-planned.ts` lists the ones whose date has passed, for the monthly look.
 import type { Place } from "../places.ts";
 
-const read = "2026-11-11";
+const read = "2026-11-18"; // every page was read again on this day: the dates and sites are as they were on 2026-11-11
 const nasa = "https://www.nasa.gov/event/";
 
 export const PLANNED_MOON: readonly Place[] = [
