@@ -139,7 +139,10 @@ The numbers are in `src/data/moon-osculating.ts`, as whole numbers (about 7 kB g
 <wakusei-space moons="major" moons-of="jupiter=all saturn=all" moon-colors="direction"></wakusei-space>
 ```
 
-```ts
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
 space.moons = "all";                 // every planet at once (the default for planets with no choice of their own)
 space.setMoons("all", "saturn");     // Saturn alone
 space.setMoons("major");             // every planet at once, and every planet's own choice is cleared

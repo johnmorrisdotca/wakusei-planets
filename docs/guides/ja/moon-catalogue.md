@@ -143,7 +143,10 @@ console.log(moonOrbitKey("direction").map((entry) => `${entry.names.ja}: ${entry
 <wakusei-space moons="major" moons-of="jupiter=all saturn=all" moon-colors="direction"></wakusei-space>
 ```
 
-```ts
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
 space.moons = "all";                 // すべての惑星に (自分の値がない惑星の初期値)
 space.setMoons("all", "saturn");     // 土星だけ
 space.setMoons("major");             // すべての惑星に。惑星ごとの値は消えます
