@@ -665,6 +665,7 @@ test("the standing view's drag goes to the turn while a descent is watched, not 
   assert.match(move, /this\.#landingFrame\(0, false\)/, "a paused descent is drawn again at once");
   const frame = source.slice(source.indexOf("#landingFrame(seconds"), source.indexOf("// the marker:"));
   assert.equal((frame.match(/watchedLook\(/g) ?? []).length, 2, "both cameras add the turn");
+});
 
 test("the Sun's march sees the made craters exactly where the point it starts from has them (MODULES-1547): in the quality of motion, which leaves them out of the march, the start leaves them out too", () => {
   const start = LIGHT.match(/P\.y = groundY\(([^;]*)\);/);
