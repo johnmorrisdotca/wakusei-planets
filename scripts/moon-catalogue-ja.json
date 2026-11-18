@@ -1,0 +1,905 @@
+{
+ "adrastea": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アドラステア",
+  "name": "Adrastea",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "aegaeon": {
+  "check": false,
+  "host": "saturn",
+  "ja": "アイガイオン",
+  "name": "Aegaeon",
+  "source": "ja Wikipedia (理科年表 list: エーゲオン)"
+ },
+ "aegir": {
+  "check": false,
+  "host": "saturn",
+  "ja": "エーギル",
+  "name": "Aegir",
+  "source": "ja Wikipedia (理科年表 list: アエギル)"
+ },
+ "aitne": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アイトネ",
+  "name": "Aitne",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "albiorix": {
+  "check": false,
+  "host": "saturn",
+  "ja": "アルビオリックス",
+  "name": "Albiorix",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "amalthea": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アマルテア",
+  "name": "Amalthea",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "ananke": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アナンケ",
+  "name": "Ananke",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "anthe": {
+  "check": false,
+  "host": "saturn",
+  "ja": "アンテ",
+  "name": "Anthe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "aoede": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アオエデ",
+  "name": "Aoede",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "arche": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アルケ",
+  "name": "Arche",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "atlas": {
+  "check": false,
+  "host": "saturn",
+  "ja": "アトラス",
+  "name": "Atlas",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "autonoe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "アウトノエ",
+  "name": "Autonoe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "bebhionn": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ベブヒオン",
+  "name": "Bebhionn",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "belinda": {
+  "check": false,
+  "host": "uranus",
+  "ja": "ベリンダ",
+  "name": "Belinda",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "bergelmir": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ベルゲルミル",
+  "name": "Bergelmir",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "bestla": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ベストラ",
+  "name": "Bestla",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "bianca": {
+  "check": false,
+  "host": "uranus",
+  "ja": "ビアンカ",
+  "name": "Bianca",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "caliban": {
+  "check": false,
+  "host": "uranus",
+  "ja": "キャリバン",
+  "name": "Caliban",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "callirrhoe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カリロエ",
+  "name": "Callirrhoe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "calypso": {
+  "check": false,
+  "host": "saturn",
+  "ja": "カリプソ",
+  "name": "Calypso",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "carme": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カルメ",
+  "name": "Carme",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "carpo": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カルポ",
+  "name": "Carpo",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "chaldene": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カルデネ",
+  "name": "Chaldene",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "cordelia": {
+  "check": false,
+  "host": "uranus",
+  "ja": "コーディリア",
+  "name": "Cordelia",
+  "source": "ja Wikipedia (理科年表 list: コーデリア)"
+ },
+ "cressida": {
+  "check": false,
+  "host": "uranus",
+  "ja": "クレシダ",
+  "name": "Cressida",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "cupid": {
+  "check": false,
+  "host": "uranus",
+  "ja": "キューピッド",
+  "name": "Cupid",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "cyllene": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "キレーネ",
+  "name": "Cyllene",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "daphnis": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ダフニス",
+  "name": "Daphnis",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "desdemona": {
+  "check": false,
+  "host": "uranus",
+  "ja": "デズデモーナ",
+  "name": "Desdemona",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "despina": {
+  "check": false,
+  "host": "neptune",
+  "ja": "デスピナ",
+  "name": "Despina",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "dia": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ディア",
+  "name": "Dia",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "elara": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "エララ",
+  "name": "Elara",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "epimetheus": {
+  "check": false,
+  "host": "saturn",
+  "ja": "エピメテウス",
+  "name": "Epimetheus",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "erinome": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "エリノメ",
+  "name": "Erinome",
+  "source": "ja Wikipedia (理科年表 list: エリノーメ)"
+ },
+ "erriapus": {
+  "check": true,
+  "host": "saturn",
+  "ja": "エリアポ",
+  "name": "Erriapus",
+  "source": "ja Wikipedia (理科年表 list: エッリアポ)"
+ },
+ "euanthe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "エウアンテ",
+  "name": "Euanthe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "eukelade": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "エウケラデ",
+  "name": "Eukelade",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "euporie": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "エウポリエ",
+  "name": "Euporie",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "eurydome": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "エウリドメ",
+  "name": "Eurydome",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "farbauti": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ファールバウティ",
+  "name": "Farbauti",
+  "source": "ja Wikipedia (理科年表 list: ファルバウチ)"
+ },
+ "fenrir": {
+  "check": false,
+  "host": "saturn",
+  "ja": "フェンリル",
+  "name": "Fenrir",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "ferdinand": {
+  "check": false,
+  "host": "uranus",
+  "ja": "フェルディナンド",
+  "name": "Ferdinand",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "fornjot": {
+  "check": false,
+  "host": "saturn",
+  "ja": "フォルニョート",
+  "name": "Fornjot",
+  "source": "ja Wikipedia (理科年表 list: フォルニョット)"
+ },
+ "francisco": {
+  "check": false,
+  "host": "uranus",
+  "ja": "フランシスコ",
+  "name": "Francisco",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "galatea": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ガラテア",
+  "name": "Galatea",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "greip": {
+  "check": false,
+  "host": "saturn",
+  "ja": "グレイプ",
+  "name": "Greip",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "halimede": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ハリメデ",
+  "name": "Halimede",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "harpalyke": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ハルパリケ",
+  "name": "Harpalyke",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "hati": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ハティ",
+  "name": "Hati",
+  "source": "ja Wikipedia (理科年表 list: ハチ)"
+ },
+ "hegemone": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ヘゲモネ",
+  "name": "Hegemone",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "helene": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ヘレネ",
+  "name": "Helene",
+  "source": "ja Wikipedia (理科年表 list: ヘレーネ)"
+ },
+ "helike": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ヘリケ",
+  "name": "Helike",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "hermippe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ヘルミッペ",
+  "name": "Hermippe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "herse": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ヘルセ",
+  "name": "Herse",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "himalia": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ヒマリア",
+  "name": "Himalia",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "hippocamp": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ヒッポカンプ",
+  "name": "Hippocamp",
+  "source": "ja Wikipedia only (not in the 2008 list)"
+ },
+ "hyperion": {
+  "check": true,
+  "host": "saturn",
+  "ja": "ハイペリオン",
+  "name": "Hyperion",
+  "source": "ja Wikipedia (理科年表 list: ヒュペリオン)"
+ },
+ "hyrrokkin": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ヒュロッキン",
+  "name": "Hyrrokkin",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "ijiraq": {
+  "check": false,
+  "host": "saturn",
+  "ja": "イジラク",
+  "name": "Ijiraq",
+  "source": "ja Wikipedia (理科年表 list: イジラック)"
+ },
+ "iocaste": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "イオカステ",
+  "name": "Iocaste",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "isonoe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "イソノエ",
+  "name": "Isonoe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "janus": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ヤヌス",
+  "name": "Janus",
+  "source": "ja Wikipedia (理科年表 list: ヤーヌス)"
+ },
+ "jarnsaxa": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ヤルンサクサ",
+  "name": "Jarnsaxa",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "juliet": {
+  "check": false,
+  "host": "uranus",
+  "ja": "ジュリエット",
+  "name": "Juliet",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "kale": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カレ",
+  "name": "Kale",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "kallichore": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カリコレ",
+  "name": "Kallichore",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "kalyke": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "カリュケ",
+  "name": "Kalyke",
+  "source": "ja Wikipedia (理科年表 list: カリケ)"
+ },
+ "kari": {
+  "check": false,
+  "host": "saturn",
+  "ja": "カーリ",
+  "name": "Kari",
+  "source": "ja Wikipedia (理科年表 list: カリ)"
+ },
+ "kerberos": {
+  "check": false,
+  "host": "pluto",
+  "ja": "ケルベロス",
+  "name": "Kerberos",
+  "source": "ja Wikipedia only (not in the 2008 list)"
+ },
+ "kiviuq": {
+  "check": false,
+  "host": "saturn",
+  "ja": "キビウク",
+  "name": "Kiviuq",
+  "source": "ja Wikipedia (理科年表 list: キビウック)"
+ },
+ "kore": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "コレ",
+  "name": "Kore",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "laomedeia": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ラオメデイア",
+  "name": "Laomedeia",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "larissa": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ラリッサ",
+  "name": "Larissa",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "leda": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "レダ",
+  "name": "Leda",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "loge": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ロゲ",
+  "name": "Loge",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "lysithea": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "リシテア",
+  "name": "Lysithea",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "mab": {
+  "check": false,
+  "host": "uranus",
+  "ja": "マブ",
+  "name": "Mab",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "margaret": {
+  "check": false,
+  "host": "uranus",
+  "ja": "マーガレット",
+  "name": "Margaret",
+  "source": "ja Wikipedia (理科年表 list: マルガレット)"
+ },
+ "megaclite": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "メガクリテ",
+  "name": "Megaclite",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "methone": {
+  "check": false,
+  "host": "saturn",
+  "ja": "メトネ",
+  "name": "Methone",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "metis": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "メティス",
+  "name": "Metis",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "mneme": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "ムネメ",
+  "name": "Mneme",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "mundilfari": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ムンディルファリ",
+  "name": "Mundilfari",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "naiad": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ナイアド",
+  "name": "Naiad",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "narvi": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ナルビ",
+  "name": "Narvi",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "neso": {
+  "check": false,
+  "host": "neptune",
+  "ja": "ネソ",
+  "name": "Neso",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "ophelia": {
+  "check": false,
+  "host": "uranus",
+  "ja": "オフィーリア",
+  "name": "Ophelia",
+  "source": "ja Wikipedia (理科年表 list: オフェーリア)"
+ },
+ "orthosie": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "オーソシエ",
+  "name": "Orthosie",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "paaliaq": {
+  "check": false,
+  "host": "saturn",
+  "ja": "パーリアク",
+  "name": "Paaliaq",
+  "source": "ja Wikipedia (理科年表 list: パーリアック)"
+ },
+ "pallene": {
+  "check": false,
+  "host": "saturn",
+  "ja": "パレネ",
+  "name": "Pallene",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "pan": {
+  "check": false,
+  "host": "saturn",
+  "ja": "パン",
+  "name": "Pan",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "pandora": {
+  "check": false,
+  "host": "saturn",
+  "ja": "パンドラ",
+  "name": "Pandora",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "pasiphae": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "パシファエ",
+  "name": "Pasiphae",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "pasithee": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "パシテー",
+  "name": "Pasithee",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "perdita": {
+  "check": true,
+  "host": "uranus",
+  "ja": "ペルディタ",
+  "name": "Perdita",
+  "source": "理科年表 list, Kahaku (ja Wikipedia: ペルディータ)"
+ },
+ "phoebe": {
+  "check": false,
+  "host": "saturn",
+  "ja": "フェーベ",
+  "name": "Phoebe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "polydeuces": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ポリデウケス",
+  "name": "Polydeuces",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "portia": {
+  "check": false,
+  "host": "uranus",
+  "ja": "ポーシャ",
+  "name": "Portia",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "praxidike": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "プラクシディケ",
+  "name": "Praxidike",
+  "source": "ja Wikipedia (理科年表 list: プラクシディーケ)"
+ },
+ "prometheus": {
+  "check": false,
+  "host": "saturn",
+  "ja": "プロメテウス",
+  "name": "Prometheus",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "prospero": {
+  "check": false,
+  "host": "uranus",
+  "ja": "プロスペロー",
+  "name": "Prospero",
+  "source": "ja Wikipedia (理科年表 list: プロスペロ)"
+ },
+ "psamathe": {
+  "check": false,
+  "host": "neptune",
+  "ja": "プサマテ",
+  "name": "Psamathe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "puck": {
+  "check": false,
+  "host": "uranus",
+  "ja": "パック",
+  "name": "Puck",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "rosalind": {
+  "check": false,
+  "host": "uranus",
+  "ja": "ロザリンド",
+  "name": "Rosalind",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "sao": {
+  "check": false,
+  "host": "neptune",
+  "ja": "サオ",
+  "name": "Sao",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "setebos": {
+  "check": true,
+  "host": "uranus",
+  "ja": "セテボス",
+  "name": "Setebos",
+  "source": "理科年表 list, Kahaku (ja Wikipedia: セティボス)"
+ },
+ "siarnaq": {
+  "check": true,
+  "host": "saturn",
+  "ja": "シアルナック",
+  "name": "Siarnaq",
+  "source": "理科年表 list, Kahaku (ja Wikipedia: シャルナク)"
+ },
+ "sinope": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "シノーペ",
+  "name": "Sinope",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "skathi": {
+  "check": false,
+  "host": "saturn",
+  "ja": "スカジ",
+  "name": "Skathi",
+  "source": "ja Wikipedia (理科年表 list: スカチ)"
+ },
+ "skoll": {
+  "check": false,
+  "host": "saturn",
+  "ja": "スコル",
+  "name": "Skoll",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "sponde": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "スポンデ",
+  "name": "Sponde",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "stephano": {
+  "check": false,
+  "host": "uranus",
+  "ja": "ステファノー",
+  "name": "Stephano",
+  "source": "ja Wikipedia (理科年表 list: ステファーノ)"
+ },
+ "styx": {
+  "check": false,
+  "host": "pluto",
+  "ja": "ステュクス",
+  "name": "Styx",
+  "source": "ja Wikipedia only (not in the 2008 list)"
+ },
+ "surtur": {
+  "check": false,
+  "host": "saturn",
+  "ja": "スルト",
+  "name": "Surtur",
+  "source": "ja Wikipedia (理科年表 list: スルツール)"
+ },
+ "suttungr": {
+  "check": true,
+  "host": "saturn",
+  "ja": "スットゥングル",
+  "name": "Suttungr",
+  "source": "ja Wikipedia (理科年表 list: スットング)"
+ },
+ "sycorax": {
+  "check": false,
+  "host": "uranus",
+  "ja": "シコラクス",
+  "name": "Sycorax",
+  "source": "ja Wikipedia (理科年表 list: シコラックス)"
+ },
+ "tarqeq": {
+  "check": true,
+  "host": "saturn",
+  "ja": "タルクェク",
+  "name": "Tarqeq",
+  "source": "ja Wikipedia (理科年表 list: タルケック)"
+ },
+ "tarvos": {
+  "check": false,
+  "host": "saturn",
+  "ja": "タルボス",
+  "name": "Tarvos",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "taygete": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "タイゲテ",
+  "name": "Taygete",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "telesto": {
+  "check": false,
+  "host": "saturn",
+  "ja": "テレスト",
+  "name": "Telesto",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "thalassa": {
+  "check": false,
+  "host": "neptune",
+  "ja": "タラッサ",
+  "name": "Thalassa",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "thebe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "テーベ",
+  "name": "Thebe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "thelxinoe": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "テルクシノエ",
+  "name": "Thelxinoe",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "themisto": {
+  "check": false,
+  "host": "jupiter",
+  "ja": "テミスト",
+  "name": "Themisto",
+  "source": "ja Wikipedia + 理科年表 list (Kahaku)"
+ },
+ "thrymr": {
+  "check": true,
+  "host": "saturn",
+  "ja": "スリュムル",
+  "name": "Thrymr",
+  "source": "ja Wikipedia (理科年表 list: トリム)"
+ },
+ "thyone": {
+  "check": true,
+  "host": "jupiter",
+  "ja": "チオネ",
+  "name": "Thyone",
+  "source": "理科年表 list, Kahaku (ja Wikipedia: スィオネ)"
+ },
+ "trinculo": {
+  "check": false,
+  "host": "uranus",
+  "ja": "トリンキュロー",
+  "name": "Trinculo",
+  "source": "ja Wikipedia (理科年表 list: トリンキュロ)"
+ },
+ "valetudo": {
+  "check": true,
+  "host": "jupiter",
+  "ja": "バレトゥードー",
+  "name": "Valetudo",
+  "source": "ja Wikipedia only (not in the 2008 list)"
+ },
+ "ymir": {
+  "check": false,
+  "host": "saturn",
+  "ja": "ユミル",
+  "name": "Ymir",
+  "source": "ja Wikipedia (理科年表 list: イミール)"
+ }
+}

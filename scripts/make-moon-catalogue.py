@@ -171,6 +171,18 @@ RAD = math.pi / 180
 UNIX_JD = 2440587.5
 
 
+# Japanese names of the moons the package does not draw in full (MODULES-1089): scripts/moon-catalogue-ja.json, each katakana with the published Japanese list it comes from (the
+# National Museum of Nature and Science's moon table, "mainly from the Rika Nenpyo", and the Japanese Wikipedia's articles, read 2026-11-18). A moon without an entry shows its English name.
+CATALOGUE_JA = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "moon-catalogue-ja.json")))
+
+
+def ja_of(ident, ja_names):
+    """The Japanese name of a moon: the package's own (facts.ts) for the 29 it draws in full, else the checked table's, else None."""
+    if ident in ja_names:
+        return ja_names[ident][1]
+    return CATALOGUE_JA.get(ident, {}).get("ja")
+
+
 def facts():
     """The package's own facts the table leans on: each host's pole (for the frame of a planet's equator) and the English and Japanese names of the moons the package draws in full."""
     text = open(os.path.join(ROOT, "src", "facts.ts")).read()
@@ -388,7 +400,7 @@ def build(elem, disc, phys, sb, rows, answers, near, fit):
         moon["errorDeg"] = round(max(e[1] for e in errors), 3) if errors else None
         moon["farDeg"] = round(max(far), 1) if far else None
         moon["full"] = ident in full_ids
-        moon["ja"] = ja_names[ident][1] if ident in ja_names else None
+        moon["ja"] = ja_of(ident, ja_names)
         moon["fixture"] = {str(jd): [round(x, 1) for x in v] for jd, v in sorted({**(vec or {}), **close}.items()) if jd != PHASE}
         moons.append(moon)
     for d in unmatched:
@@ -396,7 +408,7 @@ def build(elem, disc, phys, sb, rows, answers, near, fit):
         host = d["planet"].lower()
         ident = slug(d["name"] or d["designation"])
         moons.append({"id": ident, "name": d["name"], "designation": d["designation"], "number": d["number"], "host": host, "code": None, "year": d["year"], "by": d["by"], "reference": d["reference"],
-                      "orbit": None, "radius": None, "errorKm": None, "errorDeg": None, "group": "none", "full": ident in full_ids, "ja": ja_names.get(ident, (None, None))[1], "fixture": {}})
+                      "orbit": None, "radius": None, "errorKm": None, "errorDeg": None, "group": "none", "full": ident in full_ids, "ja": ja_of(ident, ja_names), "fixture": {}})
         notes.append(f"{d['name'] or d['designation']} ({d['planet']}) has no mean orbit on the element page")
     for host, answer in sb.items():
         for rec in answer.get("data", []) if isinstance(answer, dict) else []:
@@ -406,7 +418,7 @@ def build(elem, disc, phys, sb, rows, answers, near, fit):
             ident = slug(name or des)
             moons.append({"id": ident, "name": name, "designation": des, "number": ROMAN_OF.get(sat["iau_num"]) if sat["iau_num"] else None, "host": host, "code": None, "year": int(sat["prov_year"]),
                           "by": None, "reference": sat["ref"], "orbit": None, "radius": None, "errorKm": None, "errorDeg": None, "group": "none", "full": slug(name or "").replace("-", "") in full_ids,
-                          "ja": ja_names.get(slug(name or "").replace("-", ""), (None, None))[1], "fixture": {}, "confirmed": sat["confirmed"] == "Y"})
+                          "ja": ja_of(slug(name or "").replace("-", ""), ja_names), "fixture": {}, "confirmed": sat["confirmed"] == "Y"})
     majors = [m for m in moons if m["orbit"] is not None and (m.get("radius") or 0) >= 150 and not (m["orbit"]["frame"] == "ecliptic" and m["host"] != "earth")]
     for moon in moons:
         if moon["orbit"] is not None:
@@ -462,7 +474,7 @@ def row(m):
             orbit += o["pole"]
     source = {"jpl-phys": 0, "horizons": 1}.get(m.get("radiusFrom"))
     return [m["id"], m["name"], m["designation"], m["number"], m["host"], m["code"], m["year"], m["by"], m["reference"], orbit, m["radius"], m.get("radiusSigma"), source, m.get("albedo"),
-            m.get("magnitude"), m["errorKm"], m["errorDeg"], m.get("farDeg"), m["group"], m["ja"], 0 if m.get("confirmed") is False else 1]
+            m.get("magnitude"), m["errorKm"], m["errorDeg"], m.get("farDeg"), m["group"], m["ja"], 0 if m.get("confirmed") is False else 1, 1 if m["full"] else 0]
 
 
 HEADER = """// Made by scripts/make-moon-catalogue.py from NASA/JPL's Solar System Dynamics pages "Planetary Satellite Mean Elements", "Planetary Satellite Discovery Circumstances" and "Planetary Satellite Physical
@@ -473,9 +485,9 @@ import type { MoonGroup } from "../moon-catalogue.ts";
 /** frame (0 ecliptic, 1 equatorial, 2 laplace), epoch (JD TDB), a (km), e, w, M, i, node (degrees), period (days), apsis and node periods (years), ephemeris, and the plane's pole (RA, Dec) for 1 and 2. */
 export type MoonOrbitRow = [number, number, number, number, number, number, number, number, number, number | null, number | null, string, number?, number?];
 /** id, name, designation, IAU number, host, JPL code, year found, discoverers, announcement, orbit, radius (km), its sigma, its source (0 JPL's physical parameters, 1 the Horizons sheet), albedo, V(1,0),
- * worst error against Horizons near the phase day (km, degrees) and at the far dates (degrees), group, Japanese name (the package's own moons only), confirmed (0 or 1). */
+ * worst error against Horizons near the phase day (km, degrees) and at the far dates (degrees), group, Japanese name (scripts/moon-catalogue-ja.json: the package's own moons and the others it lists), confirmed (0 or 1), and full (1 for the package's own moons, drawn in full). */
 export type MoonRow = [string, string | null, string | null, string | null, HostId, number | null, number | null, string | null, string | null, MoonOrbitRow | null, number | null, number | null, 0 | 1 | null,
-  number | null, number | null, number | null, number | null, number | null, MoonGroup, string | null, 0 | 1];
+  number | null, number | null, number | null, number | null, number | null, MoonGroup, string | null, 0 | 1, 0 | 1];
 """
 
 

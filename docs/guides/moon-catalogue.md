@@ -44,7 +44,7 @@ A moon is "placed" when it has a mean orbit. Eight are not: S/2009 S 1, a moonle
 | Field | What it is |
 |---|---|
 | `id`, `label`, `name`, `designation`, `number` | the id ("himalia", "s-2003-j-18"), what to print (the name, else the designation), the IAU name, the provisional designation and the IAU number in Roman numerals |
-| `ja` | the Japanese name, only for the 29 moons the package draws in full (their katakana has been checked); `null` for the others, which a Japanese page shows by their English name or designation |
+| `ja` | the Japanese name in katakana: the 29 moons the package draws in full, and 129 more from `scripts/moon-catalogue-ja.json`, each taken from a published Japanese list that is written down beside it (the National Museum of Nature and Science's moon table, which is mainly from the Rika Nenpyo, and the Japanese Wikipedia); `null` for the 17 named moons that no Japanese list gives katakana for yet and for every designation, which a Japanese page shows by their English name or designation |
 | `host`, `code` | the planet or dwarf planet, and the JPL (NAIF) id Horizons knows the moon by (501 for Io) |
 | `discovery` | `year`, `by` (the discoverers or the spacecraft team, as JPL writes them) and `reference` (where it was announced: an IAU Circular, a Minor Planet Electronic Circular, a CBET, or "IAU WGPSN" for the long-named moons) |
 | `orbit` | the mean orbit: `a`, `e`, `w`, `m`, `i`, `node`, `periodDays` (as fitted to Horizons), how many years the periapsis and the node take to turn (`apsisYears`, `nodeYears`), the plane it is measured from (`frame`, with its `pole`), the epoch (2026-01-01) and the JPL ephemeris it was taken from |

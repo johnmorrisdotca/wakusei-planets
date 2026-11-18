@@ -213,7 +213,7 @@ const FRAMES = ["ecliptic", "equatorial", "laplace"] as const;
 const SIZE_FROM = ["measured", "sheet"] as const;
 
 function moonOf(row: MoonRow): CatalogueMoon {
-  const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed] = row;
+  const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed, drawn] = row;
   const orbit: MoonOrbit | null =
     o === null
       ? null
@@ -261,7 +261,7 @@ function moonOf(row: MoonRow): CatalogueMoon {
     magnitude,
     accuracy: worstKm === null || worstDegrees === null ? null : { worstKm, worstDegrees, farDegrees },
     grade,
-    full: ja !== null,
+    full: drawn !== 0,
   };
 }
 

@@ -44,7 +44,7 @@ console.log(catalogueMoonsOf("jupiter", "carme").length, "moons in Jupiter's Car
 | 項目 | 内容 |
 |---|---|
 | `id`、`label`、`name`、`designation`、`number` | id ("himalia"、"s-2003-j-18")、表示する文字 (名前、なければ仮符号)、IAU の名前、仮符号、ローマ数字の IAU 番号 |
-| `ja` | 日本語の名前。このパッケージがくわしく描く29個だけで、カタカナは確認ずみです。ほかの衛星は `null` で、日本語のページでも英語の名前か仮符号で表示します |
+| `ja` | 日本語の名前 (カタカナ)。このパッケージがくわしく描く29個の衛星と、`scripts/moon-catalogue-ja.json` に載っている129個の衛星の名前です。後者は、国立科学博物館の衛星表 (主に『理科年表』による) と日本語版ウィキペディアという、公表されている日本語の一覧に載っているカタカナを、出どころとともに書き留めたものです。日本語の一覧にまだカタカナがない、名前のある17個の衛星とすべての仮符号は `null` で、日本語のページでも英語の名前か仮符号で表示します |
 | `host`、`code` | まわる惑星か準惑星と、Horizons での JPL (NAIF) 番号 (イオは 501) |
 | `discovery` | `year`、`by` (JPL が書いているとおりの発見者か探査機のチーム)、`reference` (発表された場所: IAU 回報、小惑星電子回報 MPEC、CBET、古くから名前のある衛星は "IAU WGPSN") |
 | `orbit` | 平均軌道: `a`、`e`、`w`、`m`、`i`、`node`、`periodDays` (Horizons に合わせたもの)、近点と昇交点がひとまわりする年数 (`apsisYears`、`nodeYears`)、基準の面 (`frame` と `pole`)、元期 (2026-01-01)、もとにした JPL の暦 |

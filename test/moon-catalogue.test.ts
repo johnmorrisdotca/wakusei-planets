@@ -62,7 +62,20 @@ test("no id twice, and every moon the package draws in full is in the catalogue 
     assert.equal(moon.host, BODIES[id as keyof typeof BODIES].parent, `${id}: the same planet`);
   }
   assert.equal(MOON_CATALOGUE.filter((m) => m.full).length, own.length);
-  assert.ok(MOON_CATALOGUE.every((m) => m.full || m.ja === null), "no Japanese name that has not been checked");
+  // the other moons have a Japanese name only where scripts/moon-catalogue-ja.json lists one (MODULES-1089): in katakana, each from a published Japanese list, and no moon of the table is missing from the catalogue
+  const checked = JSON.parse(readFileSync(new URL("../scripts/moon-catalogue-ja.json", import.meta.url), "utf8")) as Record<string, { ja: string; host: string; source: string }>;
+  for (const m of MOON_CATALOGUE) {
+    if (m.full) continue;
+    const entry = checked[m.id];
+    assert.equal(m.ja, entry === undefined ? null : entry.ja, `${m.id}: the Japanese name is the checked table's, or none`);
+    if (entry !== undefined) {
+      assert.match(entry.ja, /^[ァ-ヶー]+$/, `${m.id}: katakana only`);
+      assert.equal(entry.host, m.host, `${m.id}: the same planet`);
+      assert.ok(entry.source.length > 0, `${m.id}: its source is written down`);
+    }
+  }
+  for (const id of Object.keys(checked)) assert.ok(findCatalogueMoon(id) !== undefined, `${id} of the checked table is in the catalogue`);
+  assert.equal(new Set(MOON_CATALOGUE.filter((m) => m.ja !== null).map((m) => `${m.host} ${m.ja}`)).size, MOON_CATALOGUE.filter((m) => m.ja !== null).length, "no two moons of one planet share a Japanese name");
 });
 
 test("every row is complete: a label, a planet, a year, an ellipse with a period, a group, and a grade that agrees with its accuracy", () => {
