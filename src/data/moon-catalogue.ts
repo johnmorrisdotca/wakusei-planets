@@ -10,7 +10,7 @@ export type MoonOrbitRow = [number, number, number, number, number, number, numb
 export type MoonRow = [string, string | null, string | null, string | null, HostId, number | null, number | null, string | null, string | null, MoonOrbitRow | null, number | null, number | null, 0 | 1 | null,
   number | null, number | null, number | null, number | null, number | null, MoonGroup, string | null, 0 | 1, 0 | 1, 0 | 1 | null];
 
-export const MOON_CATALOGUE_READ = "2026-11-11";
+export const MOON_CATALOGUE_READ = "2026-11-18";
 
 export const MOON_CATALOGUE_ROWS: readonly MoonRow[] = [
   ["moon","Moon",null,null,"earth",301,null,null,null,[0,2461041.5,384400.0,0.0554,78.9304,4.9838,5.16,341.8542,27.31243956,5.997,18.6,"DE405/LE405"],1737.4,0.1,0,0.12,0.21,20689,2.967,60.4,"major","月",1,1,0],
