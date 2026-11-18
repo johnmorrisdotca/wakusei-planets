@@ -21,7 +21,7 @@ const NOTE = {
 } as const;
 
 // The moons drawn with a measured shape (their looks carry `shape`), and whether a mission map is drawn on them too. test/shape.test.ts holds this table to the looks.
-const BASIS: Partial<Record<BodyId, ShapeBasis>> = { phobos: "shape-and-map", deimos: "shape-and-map", nix: "shape", hydra: "shape" };
+const BASIS: Partial<Record<BodyId, ShapeBasis>> = { phobos: "shape-and-map", deimos: "shape-and-map", nix: "shape", hydra: "shape", proteus: "shape" };
 
 /**
  * How the picture of a body rests on measurement, or `undefined` for a body drawn from its facts alone (a sphere or an ellipsoid).

@@ -1,11 +1,25 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as THREE from "three";
+import { SHAPE_JANUS } from "../src/data/shapes/janus.ts";
+import { SHAPE_EPIMETHEUS } from "../src/data/shapes/epimetheus.ts";
+import { SHAPE_PROMETHEUS } from "../src/data/shapes/prometheus.ts";
+import { SHAPE_PANDORA } from "../src/data/shapes/pandora.ts";
+import { SHAPE_ATLAS } from "../src/data/shapes/atlas.ts";
+import { SHAPE_PAN } from "../src/data/shapes/pan.ts";
+import { SHAPE_DAPHNIS } from "../src/data/shapes/daphnis.ts";
+import { SHAPE_HELENE } from "../src/data/shapes/helene.ts";
+import { SHAPE_TELESTO } from "../src/data/shapes/telesto.ts";
+import { SHAPE_CALYPSO } from "../src/data/shapes/calypso.ts";
+import { SHAPE_AMALTHEA } from "../src/data/shapes/amalthea.ts";
+import { SHAPE_THEBE } from "../src/data/shapes/thebe.ts";
+import { SHAPE_LARISSA } from "../src/data/shapes/larissa.ts";
 import { SHAPE_DEIMOS } from "../src/data/shapes/deimos.ts";
 import { SHAPE_HYDRA } from "../src/data/shapes/hydra.ts";
 import { SHAPE_HYPERION } from "../src/data/shapes/hyperion.ts";
 import { SHAPE_NIX } from "../src/data/shapes/nix.ts";
 import { SHAPE_PHOBOS } from "../src/data/shapes/phobos.ts";
+import { SHAPE_PROTEUS } from "../src/data/shapes/proteus.ts";
 import { SHAPE_PHOEBE } from "../src/data/shapes/phoebe.ts";
 import { BODY_IDS } from "../src/index.ts";
 import { lookOf } from "../src/scene/look.ts";
@@ -21,6 +35,20 @@ const SHAPES: Record<string, { table: ShapeTable; mean: number; within: number }
   hydra: { table: SHAPE_HYDRA, mean: 19.0, within: 0.06 },
   phoebe: { table: SHAPE_PHOEBE, mean: 106.5, within: 0.05 },
   hyperion: { table: SHAPE_HYPERION, mean: 135, within: 0.05 },
+  proteus: { table: SHAPE_PROTEUS, mean: 210, within: 0.06 },
+  janus: { table: SHAPE_JANUS, mean: 89.5, within: 0.09 },
+  epimetheus: { table: SHAPE_EPIMETHEUS, mean: 58.1, within: 0.09 },
+  prometheus: { table: SHAPE_PROMETHEUS, mean: 43.1, within: 0.09 },
+  pandora: { table: SHAPE_PANDORA, mean: 40.7, within: 0.09 },
+  atlas: { table: SHAPE_ATLAS, mean: 15.1, within: 0.09 },
+  pan: { table: SHAPE_PAN, mean: 14.1, within: 0.09 },
+  daphnis: { table: SHAPE_DAPHNIS, mean: 3.8, within: 0.09 },
+  helene: { table: SHAPE_HELENE, mean: 17.6, within: 0.09 },
+  telesto: { table: SHAPE_TELESTO, mean: 12.4, within: 0.09 },
+  calypso: { table: SHAPE_CALYPSO, mean: 9.5, within: 0.09 },
+  amalthea: { table: SHAPE_AMALTHEA, mean: 83.5, within: 0.09 },
+  thebe: { table: SHAPE_THEBE, mean: 49.3, within: 0.09 },
+  larissa: { table: SHAPE_LARISSA, mean: 97, within: 0.09 },
 };
 
 function volumeRadius(table: ShapeTable): number {
@@ -114,7 +142,7 @@ test("Phobos has Stickney: its crater is lower than the ground round it", () => 
 });
 
 test("the looks that carry a shape load it lazily, the same table", async () => {
-  for (const [id, table] of [["phobos", SHAPE_PHOBOS], ["deimos", SHAPE_DEIMOS], ["nix", SHAPE_NIX], ["hydra", SHAPE_HYDRA]] as const) {
+  for (const [id, table] of [["phobos", SHAPE_PHOBOS], ["deimos", SHAPE_DEIMOS], ["nix", SHAPE_NIX], ["hydra", SHAPE_HYDRA], ["proteus", SHAPE_PROTEUS]] as const) {
     const look = lookOf(id);
     assert.ok(look?.shape, id);
     assert.equal(await look.shape(), table);

@@ -19,19 +19,30 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "src", "data", "shapes")
 # the steps of longitude and of latitude of each moon's table: as many as the model has detail for (a smooth model needs few)
-GRID = {"phobos": (192, 96), "phoebe": (160, 80), "deimos": (96, 48), "hyperion": (128, 64), "nix": (96, 48), "hydra": (96, 48)}
+GRID = {"phobos": (192, 96), "phoebe": (160, 80), "deimos": (96, 48), "hyperion": (128, 64), "nix": (96, 48), "hydra": (96, 48), "atlas": (128, 64), "pan": (128, 64), "daphnis": (128, 64)}
+for _body in ("janus", "epimetheus", "prometheus", "pandora", "helene", "telesto", "calypso"):
+    GRID[_body] = (96, 48)  # Thomas's 30,000 plates
+for _body in ("amalthea", "thebe", "larissa", "proteus"):
+    GRID[_body] = (72, 36)  # Stooke's grids are 5 degrees
 
 # body -> (file, kind, scale to km, orientation, centre)
 MODELS = {
     "phobos": ("phobos_ver64q.tab.obj", "obj", 1.0, "iau", "box"),
     "phoebe": ("phoebe_ver64q.tab.obj", "obj", 1.0, "iau", "box"),
     "deimos": ("deimos.glb", "glb", None, "axes", "box"),
-    "hyperion": ("hyperion.glb", "glb", None, "axes", "box"),
+    "hyperion": ("hyperion_30k_plt.tab", "plt", 1.0, "axes", "box"),
     "nix": ("nix.stl.gz", "stl", 0.5, "axes", "box"),
     "hydra": ("hydra.stl.gz", "stl", 1.0, "axes", "box"),
+    # Thomas's Saturn small moons (PDS bundle saturn_satellite_shape_models V1.0, plate models in km): +X toward Saturn, +Y against the orbit, +Z north, which is longitude 0 in the middle and east to the right
+    **{b: (f"{b}_30k_plt.tab", "plt", 1.0, "iau", "box") for b in ("janus", "epimetheus", "prometheus", "pandora", "atlas", "pan", "daphnis", "helene", "telesto", "calypso")},
+    # Stooke's grids of radii (PDS bundle small_bodies.stooke.shape-models, doi 10.26033/yt84-5y91): longitude west, latitude, radius in km, about an origin that is not the centre of figure
+    "amalthea": ("j5amalthea.tab", "grid", 1.0, "iau", "box"),
+    "thebe": ("j14thebe.tab", "grid", 1.0, "iau", "box"),
+    "larissa": ("n7larissa.tab", "grid", 1.0, "iau", "box"),
+    "proteus": ("n8proteus.tab", "grid", 1.0, "iau", "box"),
 }
-# a glTF file states no unit: its model is scaled so that the sphere of its own volume has JPL's mean radius of the moon (JPL SSD planetary satellite physical parameters: Deimos 6.2 km, Hyperion 135 km)
-MEAN_KM = {"deimos": 6.2, "hyperion": 135.0}
+# a glTF file states no unit: its model is scaled so that the sphere of its own volume has JPL's mean radius of the moon (JPL SSD planetary satellite physical parameters: Deimos 6.2 km)
+MEAN_KM = {"deimos": 6.2}
 
 
 def read_obj(path):
@@ -43,6 +54,36 @@ def read_obj(path):
             fs.append([int(p.split("/")[0]) - 1 for p in line.split()[1:4]])
     v = np.array(vs, dtype=np.float64)
     return v[np.array(fs)]
+
+
+def read_plt(path):
+    """Thomas's plate model: a line with the number of vertices and of facets, the vertices (x y z, km), then the facets (three 1-based vertex numbers)."""
+    lines = [l.split() for l in open(path) if l.strip()]
+    nv, nf = int(lines[0][0]), int(lines[0][1])
+    v = np.array([[float(x) for x in l[:3]] for l in lines[1 : 1 + nv]], dtype=np.float64)
+    f = np.array([[int(x) - 1 for x in l[:3]] for l in lines[1 + nv : 1 + nv + nf]])
+    return v[f]
+
+
+def read_grid(path):
+    """Stooke's grid (longitude west in degrees, latitude, radius in km; 73 columns of 5 degrees by 37 rows) as a closed mesh of triangles, in the body-fixed frame (X toward longitude 0, Y east, Z north)."""
+    d = np.loadtxt(path)
+    lons, lats = np.unique(d[:, 0]), np.unique(d[:, 1])
+    grid = {(round(a), round(b)): r for a, b, r in d}
+    lon_e = np.radians(-lons[:-1])  # the last column (360) is the first again
+    pts = np.zeros((len(lats), len(lon_e), 3))
+    for i, la in enumerate(lats):
+        for j, lo in enumerate(lons[:-1]):
+            r = grid[(round(lo), round(la))]
+            c = math.cos(math.radians(la))
+            pts[i, j] = (r * c * math.cos(lon_e[j]), r * c * math.sin(lon_e[j]), r * math.sin(math.radians(la)))
+    tris = []
+    for i in range(len(lats) - 1):
+        for j in range(len(lon_e)):
+            k = (j + 1) % len(lon_e)
+            a, b, c, e = pts[i, j], pts[i, k], pts[i + 1, k], pts[i + 1, j]
+            tris += [[a, b, c], [a, c, e]]
+    return np.array(tris)
 
 
 def read_stl(path):
@@ -165,10 +206,15 @@ SOURCES = {
     "phobos": {"file": "phobos_ver64q.tab.obj", "source": "Gaskell Phobos Shape Model V1.0, NASA PDS Small Bodies Node, urn:nasa:pds:gaskell.phobos.shape-model::1.0, doi 10.26033/xzv5-bw95"},
     "phoebe": {"file": "phoebe_ver64q.tab.obj", "source": "Gaskell Phoebe Shape Model V2.0, NASA PDS Small Bodies Node, urn:nasa:pds:gaskell.phoebe.shape-model::1.0, doi 10.26033/ehkj-xj95"},
     "deimos": {"file": "24879_Deimos_1_1000.glb", "source": "NASA 3D Resources, Deimos, credit NASA/JPL-Caltech"},
-    "hyperion": {"file": "Hyperion_1_1000.glb", "source": "NASA 3D Resources, Hyperion, credit NASA Visualization Technology Applications and Development"},
+    "hyperion": {"file": "hyperion_30k_plt.tab", "source": "P. Thomas, Saturn Small Moon Shape Models V1.0, NASA PDS Small Bodies Node, urn:nasa:pds:saturn_satellite_shape_models::1.0, doi 10.26033/ewy3-jy61"},
     "nix": {"file": "nix_nrf1d3_hipoly.stl.gz", "source": "Simon Porter, Shape Model of Nix, figshare doi 10.6084/m9.figshare.12779948.v1, CC BY 4.0"},
     "hydra": {"file": "hydra_shf1k3_hipoly.stl.gz", "source": "Simon Porter, Shape Model of Hydra, figshare doi 10.6084/m9.figshare.12779975.v1, CC BY 4.0"},
 }
+
+for _body in ("janus", "epimetheus", "prometheus", "pandora", "atlas", "pan", "daphnis", "helene", "telesto", "calypso"):
+    SOURCES[_body] = {"file": f"{_body}_30k_plt.tab", "source": "P. Thomas, Saturn Small Moon Shape Models V1.0, NASA PDS Small Bodies Node, urn:nasa:pds:saturn_satellite_shape_models::1.0, doi 10.26033/ewy3-jy61"}
+for _body, _file in (("amalthea", "j5amalthea.tab"), ("thebe", "j14thebe.tab"), ("larissa", "n7larissa.tab"), ("proteus", "n8proteus.tab")):
+    SOURCES[_body] = {"file": _file, "source": "P. Stooke, Small Bodies Shape Models, NASA PDS Small Bodies Node, urn:nasa:pds:small_bodies.stooke.shape-models, doi 10.26033/yt84-5y91"}
 
 
 def render(r, path, size=360):
@@ -230,6 +276,10 @@ def main():
             tris = read_obj(path)
         elif kind == "stl":
             tris = read_stl(path)
+        elif kind == "plt":
+            tris = read_plt(path)
+        elif kind == "grid":
+            tris = read_grid(path)
         else:
             tris, uv, _ = read_glb(path)
         tris = tris * (scale if scale is not None else 1.0)
