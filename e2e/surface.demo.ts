@@ -508,6 +508,59 @@ test("drive-model draws NASA's Perseverance in place of the shapes: its wheels r
   expect(errors).toEqual([]);
 });
 
+type Driven = { stats: { vehicleDrawn: boolean }; driveFor(seconds: number, input: { throttle: number; steer: number }): boolean; driveModel?: { nodes: string[]; angles: Record<string, number>; rig: { track: number; wheelbase: number; wheelRadius: number; seat: number[] }; renders: number } };
+
+test("the vehicle is drawn at a site with nothing on the ground: Yutu's flat ground has its own shapes, and Perseverance's has its model", async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  // the Chang'e 3 site has no objects table: its rover used to be driven but never drawn
+  await open(page, "shadows=off detail=off drive=on site=chang-e-3");
+  expect(await read(page, (el) => (el as unknown as { objects: unknown[] }).objects.length), "the site has no things on the ground").toBe(0);
+  await read(page, (el) => (el as unknown as Driven).driveFor(0.5, { throttle: 1, steer: 0 }));
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).stats.vehicleDrawn), { timeout: 60_000 }).toBe(true);
+  await page.evaluate(() => document.querySelector("#test-surface")!.remove());
+  // the same with Perseverance's model: it is drawn by the scene, so its render count rises
+  await open(page, `shadows=off detail=off drive=on site=perseverance drive-model=${MODEL}`);
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).driveModel !== undefined), { timeout: 120_000 }).toBe(true);
+  await read(page, (el) => (el as unknown as Driven).driveFor(0.5, { throttle: 1, steer: 0.3 }));
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).driveModel!.renders), { timeout: 60_000 }).toBeGreaterThan(0);
+  expect(await read(page, (el) => (el as unknown as Driven).stats.vehicleDrawn)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+const LRV = "/wakusei-planets/models/apollo-lrv.glb";
+
+test("drive-model draws the Apollo lunar rover from the museum's model: four wheels in steering pivots that roll and steer with the drive, its seat eye is the seat view, and the drive takes its size", async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await open(page, `shadows=off detail=off drive=on drive-model=${LRV}`);
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).driveModel !== undefined), { timeout: 120_000 }).toBe(true);
+  const rolled = await read(page, (el) => {
+    const e = el as unknown as Driven & { vehicle: { steer: number; spin: number[] } };
+    e.driveFor(1.5, { throttle: 1, steer: 0.6 });
+    const model = e.driveModel!;
+    return { nodes: model.nodes, angles: model.angles, rig: model.rig, spin: e.vehicle.spin, steer: e.vehicle.steer };
+  });
+  for (const name of ["wheel-fl", "wheel-fr", "wheel-rl", "wheel-rr", "steer-fl", "steer-fr", "steer-rl", "steer-rr", "seat-commander"]) expect(rolled.nodes, name).toContain(name);
+  expect(rolled.nodes, "four wheels: no middle ones").not.toContain("wheel-ml");
+  expect(rolled.rig.wheelRadius, "the rover's wheels are about 0.37 m in radius (0.81 m across)").toBeGreaterThan(0.3);
+  expect(rolled.rig.wheelRadius).toBeLessThan(0.45);
+  expect(rolled.rig.wheelbase, "the wheelbase is the model's, about 1.9 m").toBeGreaterThan(1.6);
+  expect(rolled.rig.wheelbase).toBeLessThan(2.4);
+  expect(rolled.steer, "the steering has turned").toBeGreaterThan(0.1);
+  expect(rolled.angles["wheel-fl"]).toBeCloseTo(rolled.spin[0]!, 9);
+  expect(rolled.angles["wheel-rr"]).toBeCloseTo(rolled.spin[3]!, 9);
+  expect(rolled.angles["steer-fl"], "right is the model's -Y: the front pivots turn one way").toBeCloseTo(-rolled.steer, 9);
+  expect(rolled.angles["steer-rr"], "the rear the other").toBeCloseTo(rolled.steer, 9);
+  expect(rolled.rig.seat[1], "the commander's eye is 1.4 m up").toBeCloseTo(1.4, 1);
+  const renders = await read(page, (el) => (el as unknown as Driven).driveModel!.renders);
+  await read(page, (el) => (el as unknown as Driven).driveFor(0.5, { throttle: 1, steer: 0 }));
+  await expect.poll(() => read(page, (el) => (el as unknown as Driven).driveModel!.renders), { message: "the model is drawn by the scene" }).toBeGreaterThan(renders);
+  expect(errors).toEqual([]);
+});
+
 test("drive-model that cannot be loaded says so and the shapes are drawn: the drive goes on with the lunar rover's measures", async ({ page }) => {
   test.setTimeout(300_000);
   await open(page, "shadows=off detail=off drive=on");

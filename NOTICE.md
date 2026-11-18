@@ -276,12 +276,15 @@ The height tiles of `<wakusei-surface>` (`scripts/make-moon-terrain.py`; they ar
 
 ## Rover models
 
-Two rover models for `drive-model` on `<wakusei-surface>`, in `models/` (served beside the demo at `models/`, in no npm package; each is a GLB the page fetches only when it asks for it). Both are NASA 3D Resources, NASA content, public domain; each was prepared for this package (split into separate wheels and steering pivots, simplified, textures shrunk to WebP at 512 px, packed with meshopt) and nothing was repainted.
+Three rover models for `drive-model` on `<wakusei-surface>`, in `models/` (served beside the demo at `models/`, in no npm package; each is a GLB the page fetches only when it asks for it). Perseverance and Curiosity are NASA 3D Resources, NASA content, public domain; the Apollo rover is not NASA's and is under a different licence, below. Each was prepared for this package (split into separate wheels and steering pivots, simplified, textures shrunk to WebP at 512 px, packed with meshopt) and nothing was repainted.
 
 | File | Title | Author | Licence | Source | Size |
 |---|---|---|---|---|---|
 | `perseverance.glb` | Mars 2020 Perseverance Rover | NASA/Jet Propulsion Laboratory (JPL-Caltech) | Public domain (NASA 3D Resources; NASA content is not copyrighted) | https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/ | 1,020,496 bytes |
 | `curiosity.glb` | Curiosity Rover, 3D Model | NASA/JPL-Caltech | Public domain (NASA 3D Resources; NASA content is not copyrighted) | https://science.nasa.gov/resource/curiosity-rover-3d-model/ | 1,065,672 bytes |
+| `apollo-lrv.glb` | Mondfahrzeug (Lunar Rover), modified | Deutsches Museum \| Digital | **CC BY-SA 4.0** (http://creativecommons.org/licenses/by-sa/4.0/) | https://sketchfab.com/3d-models/mondfahrzeug-lunar-rover-acb3f8645a69493cb211a62b40d66aab | 1,040,476 bytes |
+
+**`models/apollo-lrv.glb` is under CC BY-SA 4.0, as a whole; the code around it stays MIT.** It is a museum replica scan of the Apollo Lunar Roving Vehicle by the Deutsches Museum, modified for this package: turned and scaled, trimmed (about 440,000 vertices to about 74,000), the four wheels split out into their own nodes inside steering pivots, two seat eye points added, the textures shrunk to WebP and the file packed with meshopt. Anything that adapts this one file must be shared under the same licence, and wherever it is shown or served it needs the credit line on the demo's surface page: the title, the author with the source link, the licence named with its link, and that it was modified. The file keeps the author, licence and source in its `asset.extras`; `models/apollo-lrv.CREDITS.md` repeats them. It is the one file in this repository under that licence, a named exception made for this model, and it is in no npm package.
 
 ## Interior cutaway
 
