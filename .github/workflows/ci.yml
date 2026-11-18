@@ -166,7 +166,7 @@ jobs:
       - uses: ./.github/actions/playwright
         with:
           browsers: chromium
-      - name: The soak, one minute (a longer one by hand: the soak_minutes input of a manual run, or ten minutes with pnpm test:soak)
+      - name: The soak, one minute (a longer one by hand with the soak_minutes input of a manual run, or ten minutes with pnpm test:soak)
         run: SOAK_MINUTES=${{ github.event.inputs.soak_minutes || 1 }} pnpm test:soak
   commits:
     # A pushed commit message never names an AI as author or co-author.
