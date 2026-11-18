@@ -264,6 +264,10 @@ The rows of `/moon-catalogue` (`src/data/moon-catalogue.ts`, made by `scripts/ma
 - **Groups** are this package's own sorting of the mean orbits by a stated rule (the guide "Every known moon"); the group names are the usual ones, each named after its largest member.
 - **Japanese names** are given only for the 29 moons the package draws in full, whose katakana was checked; the other moons keep their English names and designations.
 
+## Discovery facts
+
+The records of `/discovery` (`src/data/discovery.ts`, made by `scripts/make-discovery-data.py`, which fetches nothing) are facts, each with its source named in the data and in `docs/guides/discovery.md`. The Gazetteer of Planetary Nomenclature (the IAU Working Group for Planetary System Nomenclature, hosted by the USGS Astrogeology Science Center, a US government work, https://planetarynames.wr.usgs.gov/Page/Planets, read 2026-11-18) gives the days, places and discoverers and the account of each name, which is told in our own words and not copied. The JPL Small-Body Database API (https://ssd-api.jpl.nasa.gov/sbdb.api, discovery record, read 2026-11-18; NASA/JPL content is not subject to copyright in the United States) gives a minor planet's first designation, day, place and discoverers; its naming citations, which are the Minor Planet Center's, are not copied. JPL's Planetary Satellite Discovery Circumstances (read 2026-11-11, as above) gives a moon's designation and announcement. Wikidata (CC0, https://www.wikidata.org/, read 2026-11-18) gives the few facts the others do not. The `method` of each record is worked out here and says so.
+
 ## The Moon's ground (standing on the Moon)
 
 The height tiles of `<wakusei-surface>` (`scripts/make-moon-terrain.py`; they are made by the Pages workflow and are in no package and no repository), read on 2026-11-13. Only files from the NASA Planetary Data System archive are used, from the hosts `pds.lroc.im-ldi.com` (the LROC data node) and `pds-geosciences.wustl.edu` (the Geosciences node); the originals are kept outside the checkout.
