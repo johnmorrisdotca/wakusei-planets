@@ -83,19 +83,19 @@ MARS_MISSIONS = [  # (land date prefix as GCAT writes it, the name shown, its Ja
 ]
 # GCAT's name of a piece -> (the name shown, its Japanese name). A numbered piece ("EBMD 3") keeps its number.
 PIECES = [
-    (r"^(TDU Marsa-\d)$", "motor (TDU)", "ロケットモーター (TDU)"), (r"^DMP$", "motor (DMP)", "ロケットモーター (DMP)"), (r"^Teplovoy Ekran$", "heat shield", "ヒートシールド"),
+    (r"^(TDU Marsa-\d)$", "motor (TDU)", "推進装置 (TDU)"), (r"^DMP$", "motor (DMP)", "推進装置 (DMP)"), (r"^Teplovoy Ekran$", "heat shield", "ヒートシールド"),
     (r"^(?:[\w-]+ )*Heat Shield$", "heat shield", "ヒートシールド"), (r"^(?:[\w-]+ )*Back ?[Ss]hell$", "backshell", "バックシェル"), (r"^(?:[\w-]+ )*Parachute$", "parachute", "パラシュート"),
     (r"^(?:[\w-]+ )*Cruise Stage$", "cruise stage", "クルーズステージ"), (r"^(?:[\w-]+ )*Aeroshell Cover$", "aeroshell cover", "エアロシェルのカバー"), (r"^(?:[\w-]+ )*Aeroshell(?: Base)?$", "aeroshell", "エアロシェル"),
-    (r"^CBMD (\d)$", "cruise balance mass {0}", "巡航バランス質量{0}"), (r"^EBMD (\d)$", "entry balance mass {0}", "突入バランス質量{0}"), (r"^EXM-EDM Front Shield$", "front shield", "フロントシールド"),
-    (r"^EXM-EDM Back Cover$", "back cover", "バックカバー"), (r"^Ejectable Belly Pan$", "ejectable belly pan", "放出式ベリーパン"), (r"^MHDS Cover$", "helicopter delivery system cover", "ヘリコプター展開装置のカバー"),
+    (r"^CBMD (\d)$", "cruise balance mass {0}", "巡航バランスウェイト{0}"), (r"^EBMD (\d)$", "entry balance mass {0}", "突入バランスウェイト{0}"), (r"^EXM-EDM Front Shield$", "front shield", "フロントシールド"),
+    (r"^EXM-EDM Back Cover$", "back cover", "バックカバー"), (r"^Ejectable Belly Pan$", "ejectable belly pan", "投棄式ベリーパン"), (r"^MHDS Cover$", "helicopter delivery system cover", "ヘリコプター投下装置のカバー"),
 ]
 # The Moon and Ryugu, by GCAT's name: (the name shown, its Japanese name)
 MOON_HARDWARE = {
-    "EASEP PSEP": ("Apollo 11 passive seismic experiment (EASEP)", "アポロ11号 受動地震計 (EASEP)"), "EASEP LRRR": ("Apollo 11 laser reflector (EASEP)", "アポロ11号 レーザー反射鏡 (EASEP)"),
-    "Apollo 12 ALSEP": ("Apollo 12 experiment package (ALSEP)", "アポロ12号 月面科学実験装置 (ALSEP)"), "Apollo 14 ALSEP": ("Apollo 14 experiment package (ALSEP)", "アポロ14号 月面科学実験装置 (ALSEP)"),
-    "MET": ("Apollo 14 equipment cart (MET)", "アポロ14号 手押し車 (MET)"), "Apollo 15 ALSEP": ("Apollo 15 experiment package (ALSEP)", "アポロ15号 月面科学実験装置 (ALSEP)"),
-    "Apollo 16 ALSEP": ("Apollo 16 experiment package (ALSEP)", "アポロ16号 月面科学実験装置 (ALSEP)"), "Apollo 17 ALSEP": ("Apollo 17 experiment package (ALSEP)", "アポロ17号 月面科学実験装置 (ALSEP)"),
-    "EagleCam": ("EagleCam (IM-1)", "イーグルカム (IM-1)"), "Chang'e-6 Yidong Xiangji": ("Chang'e 6 ejected camera (Yidong Xiangji)", "嫦娥6号 放出カメラ"),
+    "EASEP PSEP": ("Apollo 11 passive seismic experiment (EASEP)", "アポロ11号 受動地震計 (EASEP)"), "EASEP LRRR": ("Apollo 11 laser reflector (EASEP)", "アポロ11号 レーザー反射器 (EASEP)"),
+    "Apollo 12 ALSEP": ("Apollo 12 experiment package (ALSEP)", "アポロ12号 月面科学実験装置群 (ALSEP)"), "Apollo 14 ALSEP": ("Apollo 14 experiment package (ALSEP)", "アポロ14号 月面科学実験装置群 (ALSEP)"),
+    "MET": ("Apollo 14 equipment cart (MET)", "アポロ14号 機材運搬用手押し車 (MET)"), "Apollo 15 ALSEP": ("Apollo 15 experiment package (ALSEP)", "アポロ15号 月面科学実験装置群 (ALSEP)"),
+    "Apollo 16 ALSEP": ("Apollo 16 experiment package (ALSEP)", "アポロ16号 月面科学実験装置群 (ALSEP)"), "Apollo 17 ALSEP": ("Apollo 17 experiment package (ALSEP)", "アポロ17号 月面科学実験装置群 (ALSEP)"),
+    "EagleCam": ("EagleCam (IM-1)", "イーグルカム (IM-1)"), "Chang'e-6 Yidong Xiangji": ("Chang'e 6 ejected camera (Yidong Xiangji)", "嫦娥6号 分離カメラ"),
 }
 RYUGU_HARDWARE = {"Target Marker A": ("Hayabusa2 target marker A", "はやぶさ2 ターゲットマーカーA"), "Target Marker B": ("Hayabusa2 target marker B", "はやぶさ2 ターゲットマーカーB")}
 
@@ -123,7 +123,7 @@ def hardware_rows(cache):
         elif world == "Ryugu" and name in RYUGU_HARDWARE:
             body, (en, ja) = "ryugu", RYUGU_HARDWARE[name]
         elif world == "Mars" and name == "Fenli xiangi":
-            body, en, ja = "mars", "Tianwen-1 ejected camera (Fenli)", "天問1号 放出カメラ"
+            body, en, ja = "mars", "Tianwen-1 ejected camera (Fenli)", "天問1号 分離カメラ"
         elif world == "Mars" and r["ltype"] == "C" and r["status"] == "I":
             mission = mars_mission(r["land"])
             if mission is None:

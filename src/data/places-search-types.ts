@@ -43,7 +43,7 @@ export const SEARCH_TYPES: readonly (readonly [string, string, string])[] = [["A
 ["Regio, regiones","region","領域"],
 ["Rima, rimae","rille","リル"],
 ["Rupes, rupēs","scarp","崖"],
-["Satellite Feature","satellite crater","衛星クレーター"],
+["Satellite Feature","satellite crater","付随クレーター"],
 ["Saxum, saxa","boulder","岩塊"],
 ["Scopulus, scopuli","scarp","崖"],
 ["Serpens, serpentes","serpent","蛇行地形"],

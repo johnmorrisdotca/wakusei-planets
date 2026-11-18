@@ -33,7 +33,7 @@ KIND_CODE = {"crewed": "c", "landing": "l", "rover": "r", "crash": "x", "impact"
 SOURCE_IDS = ["iau-gazetteer", "gcat-landercat", "nssdca", "pds-ode", "nasa-mars24", "agency", "nasa-ntrs", "pds-atmospheres", "paper", "announcement"]
 # The four plain words the 0.67 lists need that the package's tables did not have (Saxum is the 0.66 table's; it is repeated in the check below): (English, Japanese)
 TYPE_WORDS_NEW = {
-    "Satellite Feature": ("satellite crater", "衛星クレーター"),
+    "Satellite Feature": ("satellite crater", "付随クレーター"),
     "Lobus, lobi": ("lobe", "ローブ"),
     "Collum, colli": ("neck", "くびれ"),
 }
