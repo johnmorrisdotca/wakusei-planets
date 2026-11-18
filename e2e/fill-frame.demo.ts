@@ -1,5 +1,6 @@
 // Every 3D view of the demo fills its frame edge to edge, at any shape of window: no square box inside a wider frame, no letterbox, nothing cut off. The canvas of the space view, the portrait and the line-up is
 // measured against the frame that holds it, at a desk (1440), a phone (390) and a wide, short window, and the two boxes must agree to within a pixel. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
 test.use({ reducedMotion: "no-preference" });
@@ -46,8 +47,9 @@ for (const [name, url, frame, element] of PAGES) {
       test.setTimeout(120_000);
       await page.setViewportSize({ width, height });
       await page.goto(url);
-      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
+      // a view out of sight stays "loading" by design (nothing is drawn out of sight): on the phone the portrait's frame starts just below the fold, so bring it into sight first and then wait for it
       await page.locator(frame).scrollIntoViewIfNeeded();
+      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
       await page.waitForTimeout(1200);
       const seen = await boxes(page, frame, element);
       expect(seen.frame.width, "the frame has a size").toBeGreaterThan(100);
@@ -72,8 +74,8 @@ for (const [name, url, element] of [
       test.setTimeout(120_000);
       await page.setViewportSize({ width, height });
       await page.goto(url);
-      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
       await page.locator(element).scrollIntoViewIfNeeded();
+      await page.locator(`${element}[data-state=live]`).waitFor({ timeout: 90_000 });
       await page.waitForTimeout(1500);
       const seen = await page.evaluate((e) => {
         const el = document.querySelector(e)!;

@@ -1,4 +1,5 @@
 // The painted look draws from the pictures the package ships: Saturn's rings from the Cassini strip (and the table's strip when the look is realistic), and a moon from its map. Chromium, in software.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";

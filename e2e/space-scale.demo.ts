@@ -1,5 +1,6 @@
 // The scale of the space view and its marks (MODULES-856): it opens at true distances, the scale in use is always named on the view, a body too small to see has a ring and its name, and the Moon is never as big as the Earth.
 // Chromium, drawing in software.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { goTo, nameBoxes, openSpace, setOn, SPACE } from "./space-ui.ts";
 

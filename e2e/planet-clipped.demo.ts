@@ -1,3 +1,4 @@
+import "./load.ts";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 /** Sample the rendered stage, including the area beyond the old square view. */

@@ -1,4 +1,5 @@
 // Any body at the middle of the space view, a press that selects and a second press that goes there, and the hopper (MODULES-858). Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, goTo, openSpace, setOn, settle, SPACE, statsOf } from "./space-ui.ts";
 

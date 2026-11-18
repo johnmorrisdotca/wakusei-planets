@@ -1,5 +1,6 @@
 // kazoku-ui's shared gesture check on the other pages that carry the shared controls: the star page, and the embed page (a body, and a portrait, which is flat). The portrait page itself has its own
 // hands (`controls="none"`: bodies are chosen, dragged and sized one by one), so the shared check does not apply to it; its embed does, and is checked here.
+import "./load.ts";
 import { checkGestures, COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 

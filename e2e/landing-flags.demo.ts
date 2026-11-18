@@ -1,5 +1,6 @@
 // The landing sites with their country's flag: the Flags button on the body page and the space page, the flag in a place's tip, the site's name and flag written beside its dot once the body is close, the flag the real flag package draws,
 // and the page told which site a press was. Chromium, drawing in software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Locator } from "@playwright/test";
 
 test.use({ reducedMotion: "no-preference" });
@@ -68,7 +69,8 @@ test("the Flags button writes site-flags, names the landing sites with their fla
 });
 
 test("Mars on the space page: the landers carry the United States' and China's flags", async ({ page }) => {
-  await page.goto("/wakusei-planets/space.html?places=landing&flags=1");
+  // a page with no date opens playing, an hour a second (motion is allowed here): Viking 1 turns out of sight after the move, and the label goes with it. A date holds the clock, so the site stays under the camera.
+  await page.goto("/wakusei-planets/space.html?t=2026-11-11T12:00:00Z&places=landing&flags=1");
   const space = page.locator("wakusei-space");
   await expect(space).toHaveAttribute("site-flags", "");
   const result = await space.evaluate(async (el) => {

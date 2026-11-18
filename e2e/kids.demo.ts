@@ -1,5 +1,6 @@
 // The colouring sheets page in a real browser: pick a sheet and the paper, see the sheet as it prints, press Print / save PDF. Chromium also prints every sheet on every paper to a PDF (page.pdf),
 // and the PDF is read for its paper size and its page count: one page each.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
 const SHEETS = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "moon", "io", "europa", "ganymede", "callisto", "titan", "triton", "charon", "lineup"];

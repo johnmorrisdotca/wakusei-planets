@@ -2,6 +2,7 @@
 // along the line to the middle); the space view's field of view is 35 degrees from top to bottom, which in a wide window is 80 degrees across, so a body at its edge was a third as long again as it was wide. The bodies draw
 // themselves round (`scene/round.ts`). Here the painter's own bodies are drawn in a scene of their own at the left, top, right and bottom and at the corners of a wide, a tall and a square window, and each drawn disc is measured
 // from its pixels; then the space view itself is measured the same way. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { build } from "esbuild";
 

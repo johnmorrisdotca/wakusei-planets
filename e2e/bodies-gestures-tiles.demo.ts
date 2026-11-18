@@ -1,5 +1,6 @@
 // kazoku-ui's shared gesture check on the 3D views with the finer map tiles on the body: the space view at its ceiling and a portrait zoomed far past the 8x it used to stop at. Its own file, named to sort first, because
 // the demo is dealt out to CI jobs by file and these two are slow (software drawing, a window of tiles awaited before each picture): the job that had them after the other gesture checks ran out of its 25 minutes.
+import "./load.ts";
 import { checkGestures, COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { routeTiles } from "./tiles-fixture.ts";

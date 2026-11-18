@@ -1,4 +1,5 @@
 // `placeOf` says where a body is on the screen now, with the names off as well as on (MODULES-1401): the places were made only with the names on, so a page that switched them off was handed the last ones from before.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 type Space = HTMLElement & { placeOf(id: string): { x: number; y: number; r: number } | null; labels: boolean; goTo(id: string, options?: { smooth?: boolean }): boolean };

@@ -1,5 +1,6 @@
 // What a page can ask of the view's sight (MODULES-1220): every entry says how far off the line of sight the body is (`offAxis`) and how far away (`distance`, `distanceKm` in the true scale), `turnTo` turns the camera
 // where it stands until a body is in the picture, and an orbiter is an entry of its own with its own event. Chromium, drawing in software; the time is held by the page's `t` and every wait is on a draw.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { orbiterElements } from "../src/orbiters.ts";
 import { callCounted, callOn, drawnAfter, openSpace, quiet, SPACE, statsOf } from "./space-ui.ts";

@@ -1,6 +1,7 @@
 // Backing out from the Sun by stages: from the Sun, five steps out land on the inner planets, the asteroid belt, the outer planets, the Kuiper belt and the whole system in order, each with its farthest
 // bodies on the screen and its name shown in the corner; a step in comes back; a zoom-out gesture at a stage steps out; and the names are Japanese for a Japanese page. Both scales. Chromium, drawing in
 // software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, SPACE, statsOf } from "./space-ui.ts";
 

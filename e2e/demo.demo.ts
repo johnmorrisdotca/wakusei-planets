@@ -1,4 +1,5 @@
 // The demo page and the embed page, played in a browser at a phone's width and a desk's. They use the line look: the shaded looks are in freeze.demo.ts (Chromium, drawn in software).
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";

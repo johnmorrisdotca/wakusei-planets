@@ -1,5 +1,6 @@
 // The names of the space view never overlap (MODULES-855): at the inner and the solar-system zoom, in both scales, no two visible names have boxes that cross, and a moon gives way to its planet and a planet to the Sun.
 // Chromium, drawing in software.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { callOn, crossing, goTo, nameBoxes, openSpace, settle } from "./space-ui.ts";
 

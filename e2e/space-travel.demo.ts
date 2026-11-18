@@ -1,6 +1,7 @@
 // Travelling between bodies: the view moves along the travel path, and no frame of the move is empty. At every draw of a move at least one of the two bodies (or its marker) is on the screen; the body being
 // left stays on the screen through the turn (until the way on starts, which may be during it) and the destination from then on; the look direction turns one way only; a move arrives at the body; and a reader who asked for reduced motion gets a cut. In both
 // scales and for several pairs, Mercury to the Sun among them. Chromium, drawing in software; every reading is what the page reports at each draw.
+import "./load.ts";
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { callCounted, callOn, openSpace, SPACE, statsOf } from "./space-ui.ts";

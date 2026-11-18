@@ -1,5 +1,6 @@
 // The flat map page in a real browser: the Moon and Mars on a canvas, the orbiters moving with the time shown, nothing drawn at rest or out of sight, a pick by pointer, finger and keyboard, the body swapped from one control,
 // Japanese, and the phone's width. The map and the dots are 2D canvases, so there is no WebGL here and nothing to count but draws.
+import "./load.ts";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 type Flat = HTMLElement & {

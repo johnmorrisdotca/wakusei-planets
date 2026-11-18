@@ -1,5 +1,6 @@
 // Starman in the space view (MODULES-974): off by default and its table not fetched; on, the car is drawn where the table puts it, in the same mapping as the planets, with its name in the page's
 // language, and nothing outside its record. Chromium, drawing in software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { eclipticToScene, frameAt, placeAround, placeBodies } from "../src/space/index.ts";
 import { roadsterPositionAu } from "../src/roadster.ts";

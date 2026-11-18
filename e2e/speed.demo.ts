@@ -1,4 +1,5 @@
 // The family's replay bar and speed buttons in the demo: the orbits' time (Play, Back and multiples of real time) and a body's spin (0.5×, 1×, 2× of 14 degrees a second). The pages that run time ask for no-preference motion: the config's reduced motion is on, and the replay bar leaves Play off under it.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 const URL = "/wakusei-planets/";

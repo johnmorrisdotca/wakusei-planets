@@ -1,6 +1,7 @@
 // Far names and the system under the pointer, and where the bodies out of view are. The names of bodies outside the system in the middle are drawn at the far strength; a body under the mouse, a finger or the
 // keyboard's focus lights its own system and says so; `sight()` and `wakusei-sight` give the edge each body out of view lies beyond. None of it draws the picture again. Chromium, drawing in software; every wait
 // is on what the page reports.
+import "./load.ts";
 import { readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, drawn, NOV2, openSpace, SPACE } from "./space-ui.ts";

@@ -2,6 +2,7 @@
 // neighbouring pixels and tipped the surface by up to fifteen times that, so the wall of every crater a few pixels across turned right away from the light and drew a hard black ring, and the pixel-sized
 // ones a speck: over the whole disc, a grid of dark edges. (Not number precision: the scene is moved to the body looked at, so a moon 5 billion kilometres from the Sun is drawn within a few hundred
 // radii of the origin.) A picture test: lit from the camera's side, the middle of the disc holds little black (the real dark bowls: under 6 percent). Chromium, drawing in software. Every wait is on what the page reports.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { callOn, drawn, openSpace, SPACE } from "./space-ui.ts";

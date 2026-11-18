@@ -1,4 +1,5 @@
 // The orbit lines of the space view (MODULES-852): with Orbits on, the Earth's ring round the Sun and the Moon's ring round the Earth are drawn, and every body sits on its own ring. Chromium, in software.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { callOn, goTo, openSpace, setOn, settle, statsOf } from "./space-ui.ts";
 

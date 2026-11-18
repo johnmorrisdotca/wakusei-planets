@@ -1,5 +1,6 @@
 // The places marked on a body: on <wakusei-body> and on the body <wakusei-space> looks at, each layer by itself, only on the near side, the name on hover, the place's record on a click,
 // goToPlace bringing a place to the middle, the marks in the page's language, and nothing drawn by pointing at them. Chromium, drawing in software; every wait is on what the page reports.
+import "./load.ts";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { COUNT_SCRIPT, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";

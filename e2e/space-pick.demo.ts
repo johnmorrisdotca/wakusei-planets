@@ -1,5 +1,6 @@
 // Every body the package knows is offered by the space view (MODULES-741): all the planets, dwarf planets and moons can be gone to, with a compact picker (a kind, for a moon the planet it goes round, then the body, or a
 // search by name), each planet's system with its moons, and every body ridden. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, settle, SPACE, statsOf } from "./space-ui.ts";
 

@@ -1,4 +1,5 @@
 // A ride starts the space page's clock, and Off puts it back as it was: held if the ride started it, running at its own speed if it was already playing. Chromium, drawing in software.
+import "./load.ts";
 import { expect, type Page, test } from "@playwright/test";
 import { openSpace, SPACE, statsOf } from "./space-ui.ts";
 

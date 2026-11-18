@@ -1,4 +1,5 @@
 // Paint an orbiter's ground track on the Moon: the line grows while the clock runs, holds when the clock stops, Clear empties it, and another craft starts from empty.
+import "./load.ts";
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(({ page }, testInfo) => {

@@ -1,5 +1,6 @@
 // The finer map tiles, in a real browser (Chromium, drawn in software) with a made-up tile set (every tile a flat colour for its level): which tiles are asked for, that they are drawn over the body's
 // own map, that they and their decoded pictures are freed when the zoom drops, that a tile that cannot be had leaves the map as it was, and that the zoom range follows what the body has.
+import "./load.ts";
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { zoomLimit } from "../src/scene/reach.ts";
@@ -119,8 +120,16 @@ test("without a tile set the body keeps the zoom range its map allows, and asks 
 
 test("tiles=off asks for nothing, not even the manifest", async ({ page }) => {
   const log = await routeTiles(page);
+  // the element reads the manifest a moment after it starts, and not if `tiles` has been turned off by then. A call from the test comes when the machine pleases, so the page itself turns it off the moment
+  // the demo writes its own tile address (a watcher in the page runs before the page's next task, which is where the wait for the manifest ends).
+  await page.addInitScript(() => {
+    new MutationObserver(() => {
+      const el = document.querySelector("#main");
+      if (el !== null && el.getAttribute("tiles") !== "off") el.setAttribute("tiles", "off");
+    }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ["tiles"] });
+  });
   await page.goto(`${URL}?body=mars&look=realistic`);
-  await main(page).evaluate((el) => el.setAttribute("tiles", "off"));
+  await expect(main(page)).toHaveAttribute("tiles", "off");
   await main(page).hover();
   await expect(main(page)).toHaveAttribute("data-state", "live", { timeout: 90_000 });
   await setZoom(page, 20);

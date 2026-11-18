@@ -1,6 +1,7 @@
 // The Sun is a globe like the others in the turning view: its surface turns with the view and with its own spin, while its glow still faces the camera. A picture test: the Sun's pixels change when
 // the view turns (yaw, tilt and roll) and when days pass, in both looks and both scales, are the same when nothing has turned, and change too when the Sun is seen from another body. Chromium, drawing in
 // software. Every wait is on what the page reports: the draws the renderer counts.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, changedBetween, changedInside, drawn, openSpace, pictureOf, setOn, shot, SPACE } from "./space-ui.ts";
 

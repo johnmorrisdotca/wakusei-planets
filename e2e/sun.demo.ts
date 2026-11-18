@@ -1,5 +1,6 @@
 // The Sun's shaded looks (`realistic` and `painted` draw its map, `illustrated` its shader code) must draw the same as they did before the star look was added. The golden pictures in e2e/golden/ were drawn by the code before it (software WebGL, 200 px, no turn);
 // each frame is compared pixel by pixel in the page and may differ only by the renderer's noise. `UPDATE_GOLDEN=1 pnpm test:demo:one --project=chromium-desk e2e/sun.demo.ts` draws them again.
+import "./load.ts";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 

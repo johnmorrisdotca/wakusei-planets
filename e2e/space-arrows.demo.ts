@@ -1,5 +1,6 @@
 // The arrows of the space view (MODULES-857): small arrows on an orbit line point the way the body goes, whichever way the clock runs, and the help mode draws on the body looked at the line of its axis and a curved
 // arrow for the way it spins, right for the Earth, Venus and Uranus. Chromium, drawing in software.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { BODIES } from "../src/facts.ts";
 import { fromRaDec, toScene } from "./vec-scene.ts";

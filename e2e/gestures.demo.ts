@@ -1,6 +1,7 @@
 // The family's view gestures on the demo, as kazoku-ui's view-controls guide writes them: the wheel moves the view, Shift and the wheel moves it sideways, Ctrl, Command or Alt with the wheel zooms,
 // the middle button or Space with a drag moves it, Shift with a drag rolls it, and a plain drag turns it. The pictures are compared: whatever the controls say the view did, the picture did the same
 // (a pan is in CSS pixels, and the picture moves by as many). Real wheel, pointer and key events on the line drawing, which is an SVG, so the test needs no 3D.
+import "./load.ts";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { groundShift } from "./ground.mjs";
 
