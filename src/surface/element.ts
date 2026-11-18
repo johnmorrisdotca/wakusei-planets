@@ -217,11 +217,16 @@ export class WakuseiSurface extends HTMLElement {
     return { state: this.#state, draws: this.#draws, tiles: this.#progress, renderer: this.#renderer?.stats, mesh: scene?.mesh, quality: this.#quality(), scale: this.#drawScale, scaled: this.#scaled, landing: this.landing, vehicle: this.#vehicle === undefined ? undefined : { ...this.#vehicle, spin: [...this.#vehicle.spin] }, drawMs: scene?.drawMs ?? this.#drawMs, rocks: scene?.rocks ?? 0, vehicleDrawn: scene?.vehicleDrawn ?? false };
   }
 
+  /** Whether the draws are those of a view in motion: the view moved a moment ago, or the watched descent is running (its frames come every 33 ms, but a slow draw can leave the 160 ms of the last change behind: the frame after that was drawn at the quality of rest and the next at the quality of motion, and the ground flickered, MODULES-1547). */
+  #movingNow(): boolean {
+    return this.#moving || this.#landing?.playing === true;
+  }
+
   /** The quality of the next draw: the `quality` attribute, or in `auto` the quality of motion while the view moves and the machine's own quality of rest otherwise. */
   #quality(): "full" | "medium" | "fast" {
     const own = this.getAttribute("quality");
     if (own === "full" || own === "medium" || own === "fast") return own;
-    return this.#moving ? "fast" : this.#restQuality;
+    return this.#movingNow() ? "fast" : this.#restQuality;
   }
 
   connectedCallback(): void {
@@ -524,7 +529,8 @@ export class WakuseiSurface extends HTMLElement {
     // `auto`: a draw at rest is timed now and then, and a machine that takes too long at rest steps down (a card does a draw at full quality in a few milliseconds; a phone may not)
     const auto = this.getAttribute("quality") === null || this.getAttribute("quality") === "auto";
     const was = scene.drawMs;
-    if (auto && !this.#moving && was !== undefined && this.#measured > 0) {
+    const moving = this.#movingNow();
+    if (auto && !moving && was !== undefined && this.#measured > 0) {
       if (was > 120 && this.#restQuality === "full") this.#restQuality = "medium";
       else if (was > 250 && this.#restQuality === "medium") this.#restQuality = "fast";
     }
@@ -539,11 +545,11 @@ export class WakuseiSurface extends HTMLElement {
       }
     }
     const forced = scaleAttr === null || scaleAttr === "auto" ? undefined : Number(scaleAttr);
-    const timeMoving = auto && this.#moving && this.#movingTimes.length < 4 && forced === undefined;
+    const timeMoving = auto && moving && this.#movingTimes.length < 4 && forced === undefined;
     if (timeMoving) this.#movingPending = true;
-    this.#drawScale = forced !== undefined && Number.isFinite(forced) ? Math.min(1, Math.max(0.25, forced)) : this.#moving ? this.#moveScale : 1;
-    const measure = (auto && !this.#moving && this.#measured < 4) || timeMoving;
-    if (measure && !this.#moving) this.#measured += 1;
+    this.#drawScale = forced !== undefined && Number.isFinite(forced) ? Math.min(1, Math.max(0.25, forced)) : moving ? this.#moveScale : 1;
+    const measure = (auto && !moving && this.#measured < 4) || timeMoving;
+    if (measure && !moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
     scene.apply({ eye: { east: this.#at.east, north: this.#at.north, up: this.#eyeUp() }, look: this.#look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: !this.#noDetail(), exposure: num(this.getAttribute("exposure"), this.#site()?.body === "mars" ? 1.5 : 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();

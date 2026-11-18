@@ -267,7 +267,8 @@ float lit(vec3 P, float dist0) {
   float slope = uSun.y / max(length(uSun.xz), 1e-4);
   if (uHzOn > 0.5 && horizonAt(P.xz) - 0.3 > uSunDegrees) return 0.0;
   // the ground at the point from the heights themselves, not the mesh's slope between its corners, which can be a long way off on a far mountain
-  P.y = groundY(P.xz, dist0, true, 2.5 * dist0 * uPixel);
+  // the made craters are in the ground at the point only where they are in the march too (uNear.z is 0 in the quality of motion, which leaves them out of the march): a point set down in a made crater's floor and a ray over the ground without the crater put the whole floor under the ground's height, black
+  P.y = groundY(P.xz, dist0, true, uNear.z > 0.0 ? 2.5 * dist0 * uPixel : 99.0);
   float t = 0.5 * spacing(P.xz, dist0) + 0.25;
   if (uDetail > 0.5) t = min(t, 0.2 + 0.02 * dist0);
   // a pixel's own start along the ray: the edge of a rim's shadow is a line of steps, and a line of steps is jagged; with a start of its own each pixel it becomes a fine grain instead
