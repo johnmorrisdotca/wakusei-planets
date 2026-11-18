@@ -61,11 +61,17 @@ test("the panel draws Mars in Mollweide: the ellipse is filled, the corners are 
     const y = Number(canvas.dataset["sunY"]);
     const data = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
     const near = (dx: number, dy: number): number[] => [...data.slice(((y + dy) * canvas.width + x + dx) * 4, ((y + dy) * canvas.width + x + dx) * 4 + 3)];
-    return { x, y, centre: near(0, 0), east: near(8, 0), west: near(-8, 0), caption: document.querySelector("#pj-caption")!.textContent };
+    // The ring is 8 CSS px from the centre and 2.5 px wide, drawn about the Sun's exact place, with a canvas pixel for each CSS pixel at a device pixel ratio of 1 and two at 2 (WebKit's desk is 2). `sunX` and `sunY` are that place rounded, so a pixel at exactly 8 px can be half outside the stroke when the page's layout puts the place a fraction of a pixel off (as on CI's Linux). The ring is read as the yellowest pixel within 6 to 10 CSS px, east and west.
+    const ratio = canvas.width / canvas.clientWidth;
+    const yellow = (colour: number[]): number => Math.abs(colour[0]! - 255) + Math.abs(colour[1]! - 213) + Math.abs(colour[2]! - 74);
+    const reach = Array.from({ length: Math.round(10.5 * ratio) - Math.round(5.5 * ratio) + 1 }, (_, i) => Math.round(5.5 * ratio) + i);
+    const nearest = (side: 1 | -1): number => Math.min(...reach.map((dx) => yellow(near(side * dx, 0))));
+    return { x, y, centre: near(0, 0), east: nearest(1), west: nearest(-1), caption: document.querySelector("#pj-caption")!.textContent };
   });
   expect(ring.centre).toEqual([255, 213, 74]);
-  // the ring's edge is smoothed, so its colour is near the yellow, not exactly it
-  expect(Math.abs(ring.east[0]! - 255) + Math.abs(ring.east[1]! - 213) + Math.abs(ring.east[2]! - 74)).toBeLessThan(40);
+  // the ring's edge is smoothed, so its colour is near the yellow, not exactly it; both sides of the ring are on the map
+  expect(ring.east, "the ring's east side is yellow").toBeLessThan(40);
+  expect(ring.west, "the ring's west side is yellow").toBeLessThan(40);
   expect(ring.caption).toContain("Mars in the Mollweide projection");
   expect(await page.locator("#pj-lat-field").isHidden(), "the middle latitude is for the disc alone").toBe(true);
   expect(await page.locator(".projected-stage details").count()).toBe(0);
