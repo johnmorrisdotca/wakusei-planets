@@ -10,7 +10,7 @@ test.beforeEach(({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
 });
 
-type Marks = { marks: { body: string; id: string; kind: string; x: number; y: number; named: boolean }[]; omitted: number };
+type Marks = { marks: { body: string; id: string; kind: string; x: number; y: number; named: boolean }[]; omitted: number; hidden: number };
 const shown = (page: Page): Promise<Marks> => page.locator(SPACE).evaluate((el) => Reflect.get(el, "bodyPlacesShown") as Marks);
 /** The view over the Moon, close: the Moon's own radius on the screen is what says the move is done. */
 async function onMoon(page: Page): Promise<void> {
@@ -126,4 +126,28 @@ test("a still tap on a drawn name is wakusei-body-place with the body, id, kind 
   await page.mouse.click(here.x, here.y);
   await expect.poll(async () => (await beams(page)).length, { timeout: 10_000 }).toBe(1);
   expect((await beams(page))[0]).toMatchObject({ body: "earth", id: "me", kind: "here" });
+});
+
+test("a layer that is off leaves its places on the Moon out too, and the press says the place's layer", async ({ page }) => {
+  await onMoon(page);
+  await page.locator(SPACE).evaluate((el) => {
+    const heard: unknown[] = [];
+    (window as unknown as { clicks: unknown[] }).clicks = heard;
+    el.addEventListener("wakusei-place-click", (event) => heard.push((event as CustomEvent).detail));
+  });
+  const layered = ring.map((place, i) => ({ ...place, layer: i % 2 === 0 ? "even" : "odd" }));
+  await callOn(page, "setAttribute", "body-places", JSON.stringify(layered));
+  await expect.poll(async () => (await shown(page)).marks.length, { timeout: 60_000 }).toBeGreaterThan(2);
+  const evenOnly = async (): Promise<boolean> => (await shown(page)).marks.every((m) => Number(m.id.slice("moon/p".length)) % 2 === 0);
+  expect(await evenOnly()).toBe(false);
+  await callOn(page, "setEarthPlaceLayer", "odd", false);
+  await expect.poll(() => evenOnly()).toBe(true);
+  expect(await shown(page)).toMatchObject({ hidden: 12 });
+  await settle(page);
+  const spot = (await nameSpots(page))[0]!;
+  await page.mouse.click(spot.x, spot.y);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { clicks: unknown[] }).clicks.length), { timeout: 10_000 }).toBe(1);
+  const [one] = await page.evaluate(() => (window as unknown as { clicks: { body: string; id: string; layer: string }[] }).clicks);
+  expect(one).toMatchObject({ body: "moon", layer: "even" });
+  expect(one!.id).toMatch(/^moon\/p\d*[02468]$/);
 });

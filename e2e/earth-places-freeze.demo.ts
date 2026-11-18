@@ -1,4 +1,4 @@
-// The places on the space view's Earth ask nothing of the machine: nothing is drawn at rest with them on, no animation runs, they add no WebGL context, and changing them (the list, the look, the turn of the Earth, taking them away and back)
+// The places on the space view's Earth ask nothing of the machine: nothing is drawn at rest with them on, no animation runs, they add no WebGL context, and changing them (the list, the look, the layers, the turn of the Earth, taking them away and back)
 // gives back what it took. Played in headless Chromium, drawing WebGL in software. One test at a time, one page.
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
@@ -32,7 +32,7 @@ const PLACES = [
   { id: "me", lon: 10, lat: 20, label: "You are here", kind: "here" },
   { id: "a", lon: 30, lat: 25, label: "Alpha" },
   { id: "b", lon: -10, lat: 5, label: "Bravo" },
-  ...Array.from({ length: 50 }, (_, i) => ({ id: `p${i}`, lon: (i % 10) * 4 - 18, lat: Math.floor(i / 10) * 4 - 10 })),
+  ...Array.from({ length: 50 }, (_, i) => ({ id: `p${i}`, lon: (i % 10) * 4 - 18, lat: Math.floor(i / 10) * 4 - 10, layer: "rest" })),
 ];
 const marks = (page: Page) => page.locator(SPACE).evaluate((el) => (Reflect.get(el, "earthPlacesShown") as { marks: unknown[] }).marks.length);
 
@@ -54,6 +54,10 @@ test("the space view with places on the Earth draws nothing at rest, runs no ani
   const round = async (): Promise<void> => {
     for (const look of ["pin", "ring", "beam"]) {
       await callOn(page, "setAttribute", "earth-places-look", look);
+      await settle(page, 200);
+    }
+    for (const layers of ['{"rest":false}', "{}"]) {
+      await callOn(page, "setAttribute", "earth-place-layers", layers);
       await settle(page, 200);
     }
     for (const centre of ["100,0", "10,20"]) {
