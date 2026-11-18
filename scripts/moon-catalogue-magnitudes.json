@@ -1,0 +1,1438 @@
+{
+ "read": "2026-11-18",
+ "licence": "CC BY-SA 4.0",
+ "albedo": 0.04,
+ "pages": {
+  "jupiter": "https://en.wikipedia.org/wiki/Moons_of_Jupiter",
+  "saturn": "https://en.wikipedia.org/wiki/Moons_of_Saturn",
+  "uranus": "https://en.wikipedia.org/wiki/Moons_of_Uranus",
+  "neptune": "https://en.wikipedia.org/wiki/Moons_of_Neptune"
+ },
+ "note": "Absolute magnitudes of irregular satellites, which the tables take from the Minor Planet Center's Natural Satellites Ephemeris Service. One number a moon; the diameters of the tables are not kept.",
+ "moons": {
+  "aegir": {
+   "h": 15.5,
+   "page": "Moons of Saturn"
+  },
+  "albiorix": {
+   "h": 11.2,
+   "page": "Moons of Saturn"
+  },
+  "alvaldi": {
+   "h": 15.6,
+   "page": "Moons of Saturn"
+  },
+  "angrboda": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "aoede": {
+   "h": 15.5,
+   "page": "Moons of Jupiter"
+  },
+  "arche": {
+   "h": 16.2,
+   "page": "Moons of Jupiter"
+  },
+  "bebhionn": {
+   "h": 15.0,
+   "page": "Moons of Saturn"
+  },
+  "beli": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "bergelmir": {
+   "h": 15.2,
+   "page": "Moons of Saturn"
+  },
+  "bestla": {
+   "h": 14.6,
+   "page": "Moons of Saturn"
+  },
+  "carpo": {
+   "h": 16.2,
+   "page": "Moons of Jupiter"
+  },
+  "cyllene": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "dia": {
+   "h": 16.2,
+   "page": "Moons of Jupiter"
+  },
+  "eggther": {
+   "h": 15.4,
+   "page": "Moons of Saturn"
+  },
+  "eirene": {
+   "h": 15.8,
+   "page": "Moons of Jupiter"
+  },
+  "ersa": {
+   "h": 16.0,
+   "page": "Moons of Jupiter"
+  },
+  "eukelade": {
+   "h": 15.9,
+   "page": "Moons of Jupiter"
+  },
+  "eupheme": {
+   "h": 16.5,
+   "page": "Moons of Jupiter"
+  },
+  "euporie": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "farbauti": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "fenrir": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "ferdinand": {
+   "h": 12.4,
+   "page": "Moons of Uranus"
+  },
+  "fornjot": {
+   "h": 14.7,
+   "page": "Moons of Saturn"
+  },
+  "francisco": {
+   "h": 12.9,
+   "page": "Moons of Uranus"
+  },
+  "geirrod": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "gerd": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "greip": {
+   "h": 15.3,
+   "page": "Moons of Saturn"
+  },
+  "gridr": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "gunnlod": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "halimede": {
+   "h": 9.9,
+   "page": "Moons of Neptune"
+  },
+  "hati": {
+   "h": 15.4,
+   "page": "Moons of Saturn"
+  },
+  "hegemone": {
+   "h": 15.6,
+   "page": "Moons of Jupiter"
+  },
+  "helike": {
+   "h": 15.9,
+   "page": "Moons of Jupiter"
+  },
+  "herse": {
+   "h": 16.5,
+   "page": "Moons of Jupiter"
+  },
+  "hyrrokkin": {
+   "h": 14.3,
+   "page": "Moons of Saturn"
+  },
+  "jarnsaxa": {
+   "h": 15.6,
+   "page": "Moons of Saturn"
+  },
+  "kallichore": {
+   "h": 16.2,
+   "page": "Moons of Jupiter"
+  },
+  "kari": {
+   "h": 14.5,
+   "page": "Moons of Saturn"
+  },
+  "kore": {
+   "h": 16.6,
+   "page": "Moons of Jupiter"
+  },
+  "laomedeia": {
+   "h": 10.8,
+   "page": "Moons of Neptune"
+  },
+  "loge": {
+   "h": 15.4,
+   "page": "Moons of Saturn"
+  },
+  "margaret": {
+   "h": 12.7,
+   "page": "Moons of Uranus"
+  },
+  "mneme": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "mundilfari": {
+   "h": 14.5,
+   "page": "Moons of Saturn"
+  },
+  "narvi": {
+   "h": 14.5,
+   "page": "Moons of Saturn"
+  },
+  "neso": {
+   "h": 10.7,
+   "page": "Moons of Neptune"
+  },
+  "orthosie": {
+   "h": 16.6,
+   "page": "Moons of Jupiter"
+  },
+  "pandia": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "pasithee": {
+   "h": 16.8,
+   "page": "Moons of Jupiter"
+  },
+  "prospero": {
+   "h": 10.6,
+   "page": "Moons of Uranus"
+  },
+  "psamathe": {
+   "h": 10.8,
+   "page": "Moons of Neptune"
+  },
+  "s-2002-n-5": {
+   "h": 11.2,
+   "page": "Moons of Neptune"
+  },
+  "s-2003-j-10": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-12": {
+   "h": 17.1,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-16": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-18": {
+   "h": 16.4,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-19": {
+   "h": 16.6,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-2": {
+   "h": 16.7,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-23": {
+   "h": 16.7,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-24": {
+   "h": 16.6,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-4": {
+   "h": 16.7,
+   "page": "Moons of Jupiter"
+  },
+  "s-2003-j-9": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2004-s-12": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-13": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-17": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-21": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-24": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-26": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-28": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-29": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-31": {
+   "h": 15.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-34": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-36": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-37": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-39": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-40": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-41": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-42": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-43": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-44": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-45": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-46": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-47": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-48": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-49": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-50": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-51": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-52": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-53": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-54": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-55": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-56": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-57": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-58": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-59": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-60": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-61": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2004-s-7": {
+   "h": 15.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2005-s-4": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2005-s-5": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2005-s-6": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2005-s-7": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-1": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-10": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-11": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-12": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-13": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-14": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-15": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-16": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-17": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-18": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-19": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-20": {
+   "h": 15.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-21": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-22": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-23": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-24": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-25": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-26": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-27": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-28": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-29": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-3": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2006-s-9": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-10": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-11": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-2": {
+   "h": 15.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-3": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-5": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-6": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-7": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-8": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2007-s-9": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2010-j-1": {
+   "h": 16.5,
+   "page": "Moons of Jupiter"
+  },
+  "s-2010-j-2": {
+   "h": 17.4,
+   "page": "Moons of Jupiter"
+  },
+  "s-2010-j-3": {
+   "h": 17.2,
+   "page": "Moons of Jupiter"
+  },
+  "s-2010-j-4": {
+   "h": 17.2,
+   "page": "Moons of Jupiter"
+  },
+  "s-2010-j-5": {
+   "h": 17.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2010-j-6": {
+   "h": 16.5,
+   "page": "Moons of Jupiter"
+  },
+  "s-2011-j-1": {
+   "h": 16.8,
+   "page": "Moons of Jupiter"
+  },
+  "s-2011-j-2": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2011-j-3": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2011-j-4": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2011-j-5": {
+   "h": 17.2,
+   "page": "Moons of Jupiter"
+  },
+  "s-2011-j-6": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2016-j-1": {
+   "h": 17.0,
+   "page": "Moons of Jupiter"
+  },
+  "s-2016-j-3": {
+   "h": 16.7,
+   "page": "Moons of Jupiter"
+  },
+  "s-2016-j-4": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-1": {
+   "h": 16.8,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-10": {
+   "h": 17.0,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-11": {
+   "h": 17.1,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-12": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-13": {
+   "h": 17.0,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-14": {
+   "h": 17.0,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-15": {
+   "h": 17.1,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-16": {
+   "h": 17.2,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-17": {
+   "h": 17.2,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-18": {
+   "h": 16.8,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-2": {
+   "h": 16.8,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-3": {
+   "h": 16.7,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-5": {
+   "h": 16.6,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-6": {
+   "h": 16.4,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-7": {
+   "h": 16.6,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-8": {
+   "h": 17.1,
+   "page": "Moons of Jupiter"
+  },
+  "s-2017-j-9": {
+   "h": 16.1,
+   "page": "Moons of Jupiter"
+  },
+  "s-2018-j-2": {
+   "h": 16.5,
+   "page": "Moons of Jupiter"
+  },
+  "s-2018-j-3": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2018-j-4": {
+   "h": 16.7,
+   "page": "Moons of Jupiter"
+  },
+  "s-2018-j-5": {
+   "h": 17.1,
+   "page": "Moons of Jupiter"
+  },
+  "s-2019-s-1": {
+   "h": 15.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-10": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-11": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-12": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-13": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-14": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-15": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-16": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-17": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-18": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-19": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-2": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-20": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-21": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-22": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-23": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-24": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-25": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-26": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-27": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-28": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-29": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-3": {
+   "h": 16.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-30": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-31": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-32": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-33": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-34": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-35": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-36": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-37": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-38": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-39": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-4": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-40": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-41": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-42": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-43": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-44": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-5": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-6": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-7": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-8": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2019-s-9": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-1": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-10": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-11": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-12": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-13": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-14": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-15": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-16": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-17": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-18": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-19": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-2": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-20": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-21": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-22": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-23": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-24": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-25": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-26": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-27": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-28": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-29": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-3": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-30": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-31": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-32": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-33": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-34": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-35": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-36": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-37": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-38": {
+   "h": 16.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-39": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-4": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-40": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-41": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-42": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-43": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-44": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-45": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-46": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-47": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-48": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-49": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-5": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-6": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-7": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-8": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2020-s-9": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2021-j-1": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-2": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-3": {
+   "h": 17.2,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-4": {
+   "h": 17.4,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-5": {
+   "h": 16.8,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-6": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-7": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-j-8": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "s-2021-n-1": {
+   "h": 12.1,
+   "page": "Moons of Neptune"
+  },
+  "s-2022-j-1": {
+   "h": 17.0,
+   "page": "Moons of Jupiter"
+  },
+  "s-2022-j-2": {
+   "h": 17.5,
+   "page": "Moons of Jupiter"
+  },
+  "s-2022-j-3": {
+   "h": 17.3,
+   "page": "Moons of Jupiter"
+  },
+  "s-2023-s-1": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-10": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-11": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-12": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-13": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-14": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-15": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-16": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-17": {
+   "h": 17.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-18": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-19": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-2": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-20": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-21": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-22": {
+   "h": 16.3,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-23": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-24": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-25": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-26": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-27": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-28": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-29": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-3": {
+   "h": 16.5,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-30": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-31": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-32": {
+   "h": 17.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-33": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-34": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-35": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-36": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-37": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-38": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-39": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-4": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-40": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-41": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-42": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-43": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-44": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-45": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-46": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-47": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-48": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-49": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-5": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-50": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-51": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-52": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-53": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-54": {
+   "h": 17.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-55": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-56": {
+   "h": 17.1,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-57": {
+   "h": 17.2,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-58": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-59": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-6": {
+   "h": 16.4,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-60": {
+   "h": 16.8,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-61": {
+   "h": 16.6,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-62": {
+   "h": 16.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-63": {
+   "h": 16.0,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-7": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-8": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-s-9": {
+   "h": 16.7,
+   "page": "Moons of Saturn"
+  },
+  "s-2023-u-1": {
+   "h": 13.7,
+   "page": "Moons of Uranus"
+  },
+  "s-2024-j-1": {
+   "h": 16.9,
+   "page": "Moons of Jupiter"
+  },
+  "sao": {
+   "h": 11.0,
+   "page": "Moons of Neptune"
+  },
+  "setebos": {
+   "h": 10.6,
+   "page": "Moons of Uranus"
+  },
+  "siarnaq": {
+   "h": 10.6,
+   "page": "Moons of Saturn"
+  },
+  "skathi": {
+   "h": 14.3,
+   "page": "Moons of Saturn"
+  },
+  "skoll": {
+   "h": 15.4,
+   "page": "Moons of Saturn"
+  },
+  "skrymir": {
+   "h": 15.5,
+   "page": "Moons of Saturn"
+  },
+  "stephano": {
+   "h": 11.6,
+   "page": "Moons of Uranus"
+  },
+  "surtur": {
+   "h": 15.7,
+   "page": "Moons of Saturn"
+  },
+  "suttungr": {
+   "h": 14.5,
+   "page": "Moons of Saturn"
+  },
+  "tarqeq": {
+   "h": 14.8,
+   "page": "Moons of Saturn"
+  },
+  "thelxinoe": {
+   "h": 16.3,
+   "page": "Moons of Jupiter"
+  },
+  "thiazzi": {
+   "h": 15.9,
+   "page": "Moons of Saturn"
+  },
+  "thrymr": {
+   "h": 14.3,
+   "page": "Moons of Saturn"
+  },
+  "trinculo": {
+   "h": 12.7,
+   "page": "Moons of Uranus"
+  },
+  "valetudo": {
+   "h": 17.0,
+   "page": "Moons of Jupiter"
+  },
+  "ymir": {
+   "h": 12.2,
+   "page": "Moons of Saturn"
+  }
+ }
+}

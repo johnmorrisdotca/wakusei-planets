@@ -2,6 +2,7 @@
 // with how far that position was measured to be from JPL Horizons. The rows (scripts/make-moon-catalogue.py, src/data/moon-catalogue.ts) are imported by this entry point only, so a page that does not import
 // `/moon-catalogue` does not carry them. Positions are from the planet's centre, in kilometres, in the J2000 ecliptic frame (the axes `moonVector` gives). Pure: no DOM, no clock reads, no three.js.
 import { MOON_CATALOGUE_READ, MOON_CATALOGUE_ROWS, type MoonRow } from "./data/moon-catalogue.ts";
+import { MOON_OSCULATING, MOON_OSCULATING_EPOCH_JD as OSCULATING_EPOCH_JD } from "./data/moon-osculating.ts";
 import { toTerrestrialTime } from "./clock.ts";
 import { kepler } from "./ephemeris.ts";
 import type { HostId } from "./facts.ts";
@@ -57,6 +58,69 @@ export const MOON_GROUPS: readonly MoonGroup[] = ["inner", "major", "regular", "
  * ```
  */
 export type MoonGrade = "close" | "rough" | "loose" | "unmeasured" | "none";
+
+/**
+ * The osculating orbit of an irregular moon on one day: the two-body orbit that fits its place and speed that day (JPL Horizons), in the J2000 ecliptic frame, as `a` (km), `e`, `i`, `node`, `w` (the argument of periapsis)
+ * and `m` (the mean anomaly), all angles in degrees, at `epochJd` (a Julian date, TDB). A mean orbit cannot follow the Sun's pull on an irregular moon; this one does, for a few months either side of the day
+ * (`MOON_OSCULATING_DAYS`), and `catalogueMoonPosition` uses it there.
+ *
+ * @example
+ * ```ts
+ * import { findCatalogueMoon, type MoonOsculating } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const orbit: MoonOsculating | null = findCatalogueMoon("Himalia")!.osculating;
+ * console.log(orbit?.epochJd, Math.round(orbit?.a ?? 0), "km");
+ * ```
+ */
+export interface MoonOsculating {
+  epochJd: number;
+  a: number;
+  e: number;
+  i: number;
+  node: number;
+  w: number;
+  m: number;
+}
+
+/**
+ * The Julian date (TDB) of the day the osculating orbits are taken at (2026-12-01).
+ *
+ * @example
+ * ```ts
+ * import { MOON_OSCULATING_EPOCH_JD } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * console.log("osculating orbits taken at JD", MOON_OSCULATING_EPOCH_JD);
+ * ```
+ */
+export const MOON_OSCULATING_EPOCH_JD = OSCULATING_EPOCH_JD;
+
+/**
+ * The days either side of `MOON_OSCULATING_EPOCH_JD` inside which `catalogueMoonPosition` uses a moon's osculating orbit, and outside which it uses the mean orbit. Measured against Horizons on dates the orbit was not set
+ * from, the osculating orbit is within a degree of the moon for 95 moons in 100 and within 0.1 degrees for half of them over the 150 days (the worst, among Jupiter's moons, is about 7 degrees); the mean orbit of an irregular moon is tens of degrees off.
+ *
+ * @example
+ * ```ts
+ * import { MOON_OSCULATING_DAYS } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * console.log("irregular moons follow Horizons for", MOON_OSCULATING_DAYS, "days either side");
+ * ```
+ */
+export const MOON_OSCULATING_DAYS = 150;
+
+// the GM of the planet each osculating orbit goes round, km^3/s^2: the planet's system, from JPL's "Planetary Satellite Physical Parameters" (the same numbers the build script took the elements with)
+const HOST_GM: Readonly<Partial<Record<HostId, number>>> = { jupiter: 126_686_534.9, saturn: 37_931_207.8, uranus: 5_793_951.3, neptune: 6_835_099.5 };
+
+// the whole numbers of data/moon-osculating.ts go to the irregular moons of the giant planets that have a mean orbit, in the order of the rows (the build script writes them in that order, and a test holds the two to each other)
+const OSCULATING = new Map<string, MoonOsculating>();
+{
+  let at = 0;
+  for (const row of MOON_CATALOGUE_ROWS) {
+    if (row[9] === null || ["regular", "inner", "major", "none"].includes(row[18]) || HOST_GM[row[4]] === undefined) continue;
+    const [a, e, i, node, w, m] = MOON_OSCULATING.slice(at, at + 6) as [number, number, number, number, number, number];
+    OSCULATING.set(row[0], { epochJd: OSCULATING_EPOCH_JD, a: a * 100, e: e / 1e4, i: i / 100, node: node / 100, w: w / 100, m: m / 100 });
+    at += 6;
+  }
+}
 
 /**
  * A moon's mean orbit: JPL's "Planetary Satellite Mean Elements" (the ellipse, how fast its periapsis and node turn, and the plane it is measured from), carried at those rates to 2026-01-01 and with the mean anomaly set
@@ -123,7 +187,7 @@ export interface MoonDiscovery {
 
 /**
  * Where a moon's size comes from: `measured` (JPL's "Planetary Satellite Physical Parameters", with its uncertainty), `sheet` (the radius on the moon's JPL Horizons data sheet) or `derived` (worked out here from the
- * moon's V(1,0) magnitude and an albedo: the sheet's albedo where it gives one, else `ASSUMED_ALBEDO`, by D = 10^(3.1236 - 0.5 log10(albedo) - 0.2 V), the formula of NASA/JPL's asteroid size estimator).
+ * moon's magnitude and an albedo: the sheet's albedo where it gives one, else `ASSUMED_ALBEDO`, by D = 10^(3.1236 - 0.5 log10(albedo) - 0.2 V), the formula of NASA/JPL's asteroid size estimator).
  *
  * @example
  * ```ts
@@ -134,6 +198,51 @@ export interface MoonDiscovery {
  * ```
  */
 export type MoonSizeSource = "measured" | "sheet" | "derived";
+
+/**
+ * Where a moon's magnitude comes from: `sheet` (the V(1,0) magnitude on its JPL Horizons data sheet) or `wikipedia` (the absolute magnitude of English Wikipedia's table of the moons of its planet, which takes the irregular
+ * moons' from the Minor Planet Center's Natural Satellites Ephemeris Service; read on `MOON_MAGNITUDES_READ`, the page is in `MOON_MAGNITUDE_PAGES`). A size worked out from a `wikipedia` magnitude is an estimate: it assumes the
+ * albedo `ASSUMED_ALBEDO`, and `radiusFrom` says `derived`.
+ *
+ * @example
+ * ```ts
+ * import { findCatalogueMoon, type MoonMagnitudeSource } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const from: MoonMagnitudeSource | null = findCatalogueMoon("Ymir")!.magnitudeFrom;
+ * console.log(from);
+ * ```
+ */
+export type MoonMagnitudeSource = "sheet" | "wikipedia";
+
+/**
+ * The day the magnitudes marked `wikipedia` were read from English Wikipedia's tables (CC BY-SA 4.0): one request for each of the four pages.
+ *
+ * @example
+ * ```ts
+ * import { MOON_MAGNITUDES_READ } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * console.log("Wikipedia read on", MOON_MAGNITUDES_READ);
+ * ```
+ */
+export const MOON_MAGNITUDES_READ = "2026-11-18";
+
+/**
+ * The English Wikipedia page each host's `wikipedia` magnitudes were read from.
+ *
+ * @example
+ * ```ts
+ * import { findCatalogueMoon, MOON_MAGNITUDE_PAGES } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const moon = findCatalogueMoon("Ymir")!;
+ * if (moon.magnitudeFrom === "wikipedia") console.log(MOON_MAGNITUDE_PAGES[moon.host]);
+ * ```
+ */
+export const MOON_MAGNITUDE_PAGES: Readonly<Partial<Record<HostId, string>>> = {
+  jupiter: "https://en.wikipedia.org/wiki/Moons_of_Jupiter",
+  saturn: "https://en.wikipedia.org/wiki/Moons_of_Saturn",
+  uranus: "https://en.wikipedia.org/wiki/Moons_of_Uranus",
+  neptune: "https://en.wikipedia.org/wiki/Moons_of_Neptune",
+};
 
 /**
  * One moon of the catalogue. A number the sources do not give is `null`, never guessed.
@@ -171,6 +280,8 @@ export interface CatalogueMoon {
   discovery: MoonDiscovery;
   /** The mean orbit, or `null` when the source gives none. */
   orbit: MoonOrbit | null;
+  /** The osculating orbit on `MOON_OSCULATING_EPOCH_JD`, for an irregular moon of a giant planet; `null` for the others. */
+  osculating: MoonOsculating | null;
   /** Whether it goes round against its planet's turn (an inclination over 90 degrees), or `null` with no orbit. */
   retrograde: boolean | null;
   /** The dynamical group. */
@@ -183,8 +294,10 @@ export interface CatalogueMoon {
   radiusFrom: MoonSizeSource | null;
   /** The geometric albedo, where the Horizons sheet gives one. */
   albedo: number | null;
-  /** The V(1,0) magnitude (as bright as it would be 1 au from the Sun and from us), where the Horizons sheet gives one. */
+  /** The V(1,0) magnitude (as bright as it would be 1 au from the Sun and from us), where the Horizons sheet gives one, else, for an irregular moon with no size, the absolute magnitude of English Wikipedia's table (see `magnitudeFrom`). */
   magnitude: number | null;
+  /** Where `magnitude` comes from; `null` when there is none. */
+  magnitudeFrom: MoonMagnitudeSource | null;
   /**
    * How far `catalogueMoonPosition` was from JPL Horizons: the worst distance (km) and angle seen from the planet (degrees) on 2025-07-02, 2026-07-02 and 2027-07-02 (dates the orbit was not set from), and the worst angle
    * decades away (1990, 2000 and 2040; `null` where Horizons has none of them). `null` when not measured.
@@ -211,9 +324,10 @@ export const ASSUMED_ALBEDO = 0.04;
 
 const FRAMES = ["ecliptic", "equatorial", "laplace"] as const;
 const SIZE_FROM = ["measured", "sheet"] as const;
+const MAGNITUDE_FROM = ["sheet", "wikipedia"] as const;
 
 function moonOf(row: MoonRow): CatalogueMoon {
-  const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed] = row;
+  const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed, drawn, magnitudeSource] = row;
   const orbit: MoonOrbit | null =
     o === null
       ? null
@@ -252,6 +366,7 @@ function moonOf(row: MoonRow): CatalogueMoon {
     confirmed: confirmed !== 0,
     discovery: { year, by, reference },
     orbit,
+    osculating: OSCULATING.get(id) ?? null,
     retrograde: orbit === null ? null : orbit.i > 90,
     group,
     radiusKm,
@@ -259,9 +374,10 @@ function moonOf(row: MoonRow): CatalogueMoon {
     radiusFrom,
     albedo,
     magnitude,
+    magnitudeFrom: magnitudeSource === null ? null : MAGNITUDE_FROM[magnitudeSource]!,
     accuracy: worstKm === null || worstDegrees === null ? null : { worstKm, worstDegrees, farDegrees },
     grade,
-    full: ja !== null,
+    full: drawn !== 0,
   };
 }
 
@@ -398,6 +514,21 @@ function ratesOf(orbit: MoonOrbit): [number, number, number] {
   return [360 / orbit.periodDays - dw - dn, dw, dn];
 }
 
+/** A place on an ellipse of semi-major axis `a` (km) and eccentricity `e`, inclination `i`, node and argument of periapsis `w` (degrees), at mean anomaly `meanAnomaly` (radians), in the frame of the pole (the J2000 ecliptic for `null`). */
+function placed(a: number, e: number, i: number, nodeDeg: number, wDeg: number, meanAnomaly: number, pole: readonly [number, number] | null): Vec3 {
+  const w = wDeg * RAD;
+  const node = nodeDeg * RAD;
+  const E = kepler(meanAnomaly, e);
+  const x = a * (Math.cos(E) - e);
+  const y = a * Math.sqrt(1 - e * e) * Math.sin(E);
+  const [cw, sw, cn, sn, ci, si] = [Math.cos(w), Math.sin(w), Math.cos(node), Math.sin(node), Math.cos(i * RAD), Math.sin(i * RAD)];
+  const px = (cw * cn - sw * sn * ci) * x + (-sw * cn - cw * sn * ci) * y;
+  const py = (cw * sn + sw * cn * ci) * x + (-sw * sn + cw * cn * ci) * y;
+  const pz = sw * si * x + cw * si * y;
+  const [bx, by, bz] = basisOf(pole);
+  return [px * bx[0] + py * by[0] + pz * bz[0], px * bx[1] + py * by[1] + pz * bz[1], px * bx[2] + py * by[2] + pz * bz[2]];
+}
+
 /**
  * Where a moon is at a moment, from its planet's centre, in kilometres, in the J2000 ecliptic frame (the axes of `moonVector`): its mean orbit, turned for the precession of its periapsis and node, solved by Kepler's
  * equation. How close that is to the moon's real place near 2026 is the moon's `accuracy` and `grade`; decades away it drifts much further (`accuracy.farDegrees`). A moon the package draws in full is placed far better
@@ -420,17 +551,14 @@ export function catalogueMoonPosition(moon: CatalogueMoon | string | number, whe
   if (m === undefined) throw new RangeError(`unknown moon ${JSON.stringify(moon)}; look one up with findCatalogueMoon`);
   const orbit = m.orbit;
   if (orbit === null) return undefined;
+  const jd = toTerrestrialTime(moment(when)) / DAY_MS + UNIX_JD;
+  const osc = m.osculating;
+  if (osc !== null && Math.abs(jd - osc.epochJd) <= MOON_OSCULATING_DAYS) {
+    // inside the window an irregular moon follows its osculating orbit: a plain two-body step from the day it was taken
+    const meanMotion = Math.sqrt(HOST_GM[m.host]! / osc.a ** 3) * 86_400;
+    return placed(osc.a, osc.e, osc.i, osc.node, osc.w, osc.m * RAD + meanMotion * (jd - osc.epochJd), null);
+  }
   const [n, dw, dn] = ratesOf(orbit);
-  const dt = toTerrestrialTime(moment(when)) / DAY_MS + UNIX_JD - orbit.epochJd;
-  const w = (orbit.w + dw * dt) * RAD;
-  const node = (orbit.node + dn * dt) * RAD;
-  const E = kepler((orbit.m + n * dt) * RAD, orbit.e);
-  const x = orbit.a * (Math.cos(E) - orbit.e);
-  const y = orbit.a * Math.sqrt(1 - orbit.e * orbit.e) * Math.sin(E);
-  const [cw, sw, cn, sn, ci, si] = [Math.cos(w), Math.sin(w), Math.cos(node), Math.sin(node), Math.cos(orbit.i * RAD), Math.sin(orbit.i * RAD)];
-  const px = (cw * cn - sw * sn * ci) * x + (-sw * cn - cw * sn * ci) * y;
-  const py = (cw * sn + sw * cn * ci) * x + (-sw * sn + cw * cn * ci) * y;
-  const pz = sw * si * x + cw * si * y;
-  const [bx, by, bz] = basisOf(orbit.frame === "ecliptic" ? null : (orbit.pole ?? null));
-  return [px * bx[0] + py * by[0] + pz * bz[0], px * bx[1] + py * by[1] + pz * bz[1], px * bx[2] + py * by[2] + pz * bz[2]];
+  const dt = jd - orbit.epochJd;
+  return placed(orbit.a, orbit.e, orbit.i, orbit.node + dn * dt, orbit.w + dw * dt, (orbit.m + n * dt) * RAD, orbit.frame === "ecliptic" ? null : (orbit.pole ?? null));
 }
