@@ -27,7 +27,7 @@ export default defineConfig({
     // WebKit on a desktop viewport with touch: `isMobile` is Chromium's to honour.
     { name: "webkit-desk", testIgnore: others, use: { ...devices["Desktop Safari"], viewport: { width: 1280, height: 900 } } },
     { name: "webkit-phone", testIgnore: others, use: { ...devices["Desktop Safari"], viewport: phone.viewport, hasTouch: true } },
-    { name: "freeze", testMatch: ["freeze.demo.ts", "lineup-freeze.demo.ts", "earth-places-freeze.demo.ts", "surface-freeze.demo.ts", "flat-freeze.demo.ts", "flat-system-freeze.demo.ts"], use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, ...gl } },
+    { name: "freeze", fullyParallel: true, testMatch: ["freeze.demo.ts", "lineup-freeze.demo.ts", "earth-places-freeze.demo.ts", "surface-freeze.demo.ts", "flat-freeze.demo.ts", "flat-system-freeze.demo.ts"], use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, ...gl } },
     { name: "soak", testMatch: "soak.demo.ts", timeout: (Number(process.env.SOAK_MINUTES ?? 1) + 4) * 60_000, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, ...gl } },
   ],
 });
