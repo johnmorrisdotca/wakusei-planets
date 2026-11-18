@@ -1,5 +1,6 @@
 // The names of the deep-space craft give way (MODULES-1535): with every craft on, no craft's name lies over a body's, or over another craft's; a keep-out rectangle the page gives is written under by no name; `labelShort` writes a craft short and
 // leaves its full name for a screen reader; a favourite's name outlasts the others'. The layout itself is checked without a browser in test/space-craft-labels.test.ts.
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, quiet, SPACE } from "./space-ui.ts";
 

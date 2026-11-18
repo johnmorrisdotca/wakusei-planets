@@ -1,5 +1,6 @@
 // A press on a drawn name picks its body (MODULES-1510). The view's hover finds a body within 14 pixels of its place or else inside a name's box, and the press used to look at the 14 pixels only: a press on
 // the name of Oberon, 30 pixels from its dot, did nothing. Now the press asks the hover's own hit test. Chromium, drawing in software, on a desk and on a phone (a touch).
+import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, openSpace, quiet, SPACE, statsOf } from "./space-ui.ts";
 
