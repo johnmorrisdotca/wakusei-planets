@@ -2,6 +2,7 @@
 // ways between the attribute and the property, the look attribute shared with the Earth's, and the press: a still tap on a drawn name or a foot ring is `wakusei-body-place` (the Earth's places too), and the body under the tap is not pressed as well. Chromium, drawing in software.
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, goTo, openSpace, quiet, SPACE, settle } from "./space-ui.ts";
+import "./load.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {

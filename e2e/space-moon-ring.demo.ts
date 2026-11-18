@@ -2,6 +2,7 @@
 // that passes through nothing close, so it is not faded; the Earth's own line, which passes through the Earth, still is. The picture with the lines on and off differs only where the ring is, and is written to test-results/evidence/ for a person to look at.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
+import "./load.ts";
 import { callOn, openSpace, quiet, SPACE, setOn, statsOf } from "./space-ui.ts";
 
 test.beforeEach(({ page }, testInfo) => {
