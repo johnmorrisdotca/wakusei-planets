@@ -21,9 +21,9 @@ const count = (places: readonly Place[]): Record<string, number> => {
 test("the counts of each kind on each body are pinned", () => {
   assert.equal(PLACE_BODIES.length, 33);
   assert.deepEqual([...PLACE_BODIES].slice(0, 4), ["moon", "mars", "mercury", "venus"]);
-  assert.deepEqual(count(moon), { impact: 14, crash: 35, landing: 22, crewed: 6, rover: 13, planned: 8, feature: 768 });
+  assert.deepEqual(count(moon), { impact: 14, crash: 35, landing: 22, crewed: 6, rover: 15, planned: 8, feature: 768 });
   assert.deepEqual(count(mars), { crash: 6, landing: 12, rover: 7, planned: 1, feature: 914 });
-  assert.equal(moon.length, 866);
+  assert.equal(moon.length, 868);
   assert.equal(mars.length, 940);
 });
 
@@ -179,9 +179,9 @@ test("features with a Japanese name are found by it and by the Latin one; the re
 });
 
 test("places load by body on request, by kind, and an unknown body is refused", async () => {
-  assert.equal((await loadPlaces("moon")).length, 866);
+  assert.equal((await loadPlaces("moon")).length, 868);
   assert.equal((await loadPlaces("mars")).length, 940);
-  assert.equal((await listPlaces("moon")).length, 866);
+  assert.equal((await listPlaces("moon")).length, 868);
   assert.deepEqual((await listPlaces("moon", "crewed")).map((p) => p.name.en), ["Apollo 11 lunar module", "Apollo 12 lunar module", "Apollo 14 lunar module", "Apollo 15 lunar module", "Apollo 16 lunar module", "Apollo 17 lunar module"]);
   assert.deepEqual((await listPlaces("mars", "rover")).map((p) => p.name.en), ["PROP-M", "Sojourner", "Spirit", "Opportunity", "Curiosity", "Perseverance", "Zhurong"]);
   assert.equal((await listPlaces("mars", "crewed")).length, 0);

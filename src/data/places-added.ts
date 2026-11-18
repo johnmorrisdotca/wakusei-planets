@@ -1,0 +1,5 @@
+// Made by scripts/make-places-added-data.py. The places added to the Moon's list in 0.67: Rashid and SORA-Q, the two rovers destroyed in Hakuto-R Mission 1's impact. From GCAT, J. McDowell's lander catalogue (planet4589.org/space/gcat, CC BY 4.0, credited), updated 2026-11-18. Japanese names are ours. Do not edit by hand.
+import type { Place } from "../places.ts";
+
+export const ADDED_MOON: readonly Place[] = [{"id":"moon/rashid","kind":"rover","name":{"en":"Rashid","ja":"ラシード"},"gcatName":"Rashid","lat":47.581,"lon":44.094,"date":"2023-04-25T16:40Z","mission":"Rashid","operator":"MBRSC","country":"UAE","outcome":"hard","source":{"id":"gcat-landercat","read":"2026-11-18"},"note":"Rover, destroyed at impact"},
+{"id":"moon/sora-q","kind":"rover","name":{"en":"SORA-Q","ja":"SORA-Q"},"gcatName":"SORA-Q","lat":47.581,"lon":44.094,"date":"2023-04-25T16:40Z","mission":"SORA-Q","operator":"ISASJ","country":"J","outcome":"hard","source":{"id":"gcat-landercat","read":"2026-11-18"},"note":"Roller rover, destroyed at impact"}] as unknown as readonly Place[];

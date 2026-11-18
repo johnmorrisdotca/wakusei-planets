@@ -43,7 +43,7 @@ export type PlaceLayer = (typeof PLACE_LAYERS)[number];
  * ```
  */
 export function layerOf(kind: PlaceKind): PlaceLayer {
-  return kind === "crewed" || kind === "landing" || kind === "rover" ? "landing" : kind === "crash" || kind === "impact" || kind === "entry" ? "crash" : kind === "planned" ? "planned" : "feature";
+  return kind === "crewed" || kind === "landing" || kind === "rover" || kind === "hardware" ? "landing" : kind === "crash" || kind === "impact" || kind === "entry" ? "crash" : kind === "planned" ? "planned" : "feature";
 }
 
 /**

@@ -11,17 +11,18 @@ export { layerOf, MARK_RULES, PLACE_LAYERS, marksToShow, placeMarks, placeRank, 
 
 /**
  * What a place is: a `crewed` landing (an Apollo lunar module), a `landing` (a lander that worked after touchdown), a `rover` that drove there, a `crash` (a craft that hit the surface and was lost, by accident or at the end of its mission), an
- * `impact` (a craft sent to hit it on purpose), an `entry` (a probe or orbiter lost in the atmosphere of Venus, Jupiter or Saturn: no surface was reached or none is there), a `planned` landing (announced, not flown) or a named `feature` of the surface.
+ * `impact` (a craft sent to hit it on purpose), an `entry` (a probe or orbiter lost in the atmosphere of Venus, Jupiter or Saturn: no surface was reached or none is there), a `planned` landing (announced, not flown), a named `feature` of the surface or a piece of
+ * `hardware` (equipment left on a surface or hardware that fell to it: an Apollo experiment package, an ejected camera, a heat shield, a backshell, a parachute, a cruise stage). Hardware is held in the search lists of `/places/search` only.
  *
  * @example
  * ```ts
  * import type { PlaceKind } from "@johnmorrisdotca/wakusei-planets/places";
  *
- * const kinds: PlaceKind[] = ["crewed", "landing", "rover", "crash", "impact", "entry", "planned", "feature"];
+ * const kinds: PlaceKind[] = ["crewed", "landing", "rover", "crash", "impact", "entry", "planned", "feature", "hardware"];
  * console.log(kinds.length);
  * ```
  */
-export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "entry" | "planned" | "feature";
+export type PlaceKind = "crewed" | "landing" | "rover" | "crash" | "impact" | "entry" | "planned" | "feature" | "hardware";
 
 /**
  * One place on a body. Latitude and longitude are degrees, east positive, from -180 to 180 on every body: the Moon's in the mean Earth/polar axis frame, the others' in the IAU frame the Gazetteer or the source uses (Venus, Mars, Mercury and the moons 0 to 360 east,

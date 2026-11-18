@@ -36,6 +36,7 @@ const KIND_WORD: Record<Place["kind"], { en: string; ja: string }> = {
   entry: { en: "lost in the atmosphere", ja: "大気圏で消失" },
   planned: { en: "planned landing", ja: "着陸予定" },
   feature: { en: "feature", ja: "地形" },
+  hardware: { en: "hardware", ja: "機器・部品" },
 };
 
 /**
