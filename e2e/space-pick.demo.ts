@@ -46,7 +46,7 @@ test("the picker: a kind, then (for a moon) the planet it goes round, then the b
   const hosts = await page.locator("#hosts button").evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset["id"]));
   expect(hosts).toEqual(["earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "orcus", "haumea", "eris"]);
   await page.locator('#hosts button[data-id="saturn"]').dispatchEvent("click");
-  expect(await choices(page)).toEqual(["pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "mimas", "enceladus", "tethys", "telesto", "calypso", "dione", "helene", "rhea", "titan", "hyperion", "iapetus", "phoebe"]);
+  expect(await choices(page)).toEqual(["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe"]);
   await page.locator('#choices button[data-id="titan"]').dispatchEvent("click");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("titan");
 });

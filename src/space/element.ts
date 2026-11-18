@@ -50,6 +50,9 @@ export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceK
 export type { PlaceOnBody, PlaceOnBodyMark } from "../scene/body-places.ts";
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type Sight, type SightEdge, type SpaceBody, type SpaceLight };
 
+/** The small moons that came with their real shapes (Amalthea, Thebe, Saturn's small moons, Hyperion, Phoebe, Larissa): too small to be a companion that frames a move to their planet, so a move to Jupiter still keeps Io or another of the four and takes the side it always took. */
+const SMALL_MOONS: ReadonlySet<string> = new Set(["amalthea", "thebe", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe", "larissa"]);
+
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
 export type { BodyPlace };
 
@@ -2036,7 +2039,7 @@ export class WakuseiSpace extends HTMLElement {
     };
     const host = hostOf(id);
     if (host !== undefined) add(host, 1);
-    for (const moon of (MOONS_OF as Record<string, readonly BodyId[]>)[id] ?? []) add(moon, 1);
+    for (const moon of (MOONS_OF as Record<string, readonly BodyId[]>)[id] ?? []) if (!SMALL_MOONS.has(moon)) add(moon, 1);
     if (this.#arrivedFrom !== null) add(this.#arrivedFrom, 2);
     const here = this.#site(id).at;
     const from = sub(this.#model.camera.position, here);

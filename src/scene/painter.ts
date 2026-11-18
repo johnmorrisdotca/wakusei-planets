@@ -588,7 +588,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     look.shape().then(
       (table) => {
         if (gone) return;
-        const shaped = acquire(T, `shape:${id}`, () => shapeGeometry(T, table, facts.radiusKm));
+        const shaped = acquire(T, `shape:${id}`, () => shapeGeometry(T, table, facts.radiusKm, { lon: 96, lat: 48 }));
         releases.push(shaped.release);
         (mesh as unknown as THREE.Mesh).geometry = shaped.value;
         scaleX = 1;

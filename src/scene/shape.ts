@@ -57,9 +57,6 @@ export function shapeRadii(table: ShapeTable): Float32Array {
   return out;
 }
 
-/** The steps of longitude and of latitude of the globe a shaped moon is drawn on: no coarser than this, whatever the table's own grid. */
-export const SHAPE_GLOBE: { readonly lon: number; readonly lat: number } = { lon: 192, lat: 96 };
-
 // A cubic through four values (Catmull-Rom): the curve passes through the middle two.
 const cubic = (a: number, b: number, c: number, d: number, t: number): number => b + 0.5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
 
@@ -85,17 +82,18 @@ function radiusAt(radii: Float32Array, lon: number, lat: number, u: number, v: n
 
 /**
  * The globe moved to the moon's shape: positions in units of `meanKm` (1 is the moon's mean radius), normals from the moved mesh with the seam and the poles joined. The caller disposes it.
- * The globe is `SHAPE_GLOBE` steps or the table's own, whichever is finer, with the table's radii carried to it by a smooth curve: the shader tips the surface by the difference between neighbouring pixels,
- * which is right across a smooth mesh and draws a lattice along the edges of a coarse one.
+ * The globe has the table's own steps of longitude and of latitude, or `grid`'s where one is given, with the table's radii carried to it by a smooth curve: a finer globe for a big picture, a coarser one for a small picture
+ * and for the many moons of a page (a globe of 192 by 96 steps is 0.8 MB of arrays, which three.js keeps in the page after the card has it, and a page can hold a dozen).
  *
  * @param three - The parts of three.js the bodies use.
  * @param table - The moon's table.
  * @param meanKm - The moon's mean radius in kilometres, which the picture takes as 1.
+ * @param grid - The steps of longitude and of latitude of the globe, if not the table's.
  * @returns The geometry.
  */
-export function shapeGeometry(three: Pick<ThreeParts, "SphereGeometry">, table: ShapeTable, meanKm: number): THREE.BufferGeometry {
-  const lon = Math.max(table.lon, SHAPE_GLOBE.lon);
-  const lat = Math.max(table.lat, SHAPE_GLOBE.lat);
+export function shapeGeometry(three: Pick<ThreeParts, "SphereGeometry">, table: ShapeTable, meanKm: number, grid?: { readonly lon: number; readonly lat: number }): THREE.BufferGeometry {
+  const lon = grid?.lon ?? table.lon;
+  const lat = grid?.lat ?? table.lat;
   const geometry = new three.SphereGeometry(1, lon, lat);
   const radii = shapeRadii(table);
   const position = geometry.getAttribute("position");

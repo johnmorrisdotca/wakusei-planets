@@ -263,6 +263,10 @@ export function moonSizeFactor(mode: ScaleMode, host: SpacePlanet | SpaceDwarf, 
     if (ringOuter > 0 && moon.orbit > ringOuter + 0.05) cap = Math.min(cap, Math.max(moon.radius, moon.orbit - ringOuter - 0.05));
     for (const other of moons) {
       if (other === moon) continue;
+      // a moon more than ten times the size of the other, or less than a tenth of it, is not held by it: at the same distance from the planet they may be on opposite sides (Telesto and Calypso, a sixtieth of a turn ahead of and behind Tethys, Helene beside Dione) and a speck hidden by a big moon is no loss
+      if (other.radius > 0 && (other.radius > moon.radius * 10 || moon.radius > other.radius * 10)) continue;
+      // two at the same distance (within a fiftieth of a radius: Telesto and Calypso) are side by side on the circle, not one behind the other
+      if (Math.abs(moon.orbit - other.orbit) < 0.02) continue;
       cap = Math.min(cap, Math.max(moon.radius, Math.abs(moon.orbit - other.orbit) * 0.9));
     }
     factor = Math.min(factor, cap / moon.radius);

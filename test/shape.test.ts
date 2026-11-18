@@ -94,10 +94,10 @@ test("a shape has no hole: every radius is positive, and the poles are one radiu
   }
 });
 
-test("the geometry is the globe moved to the radii, in units of the mean radius, on a globe no coarser than 192 by 96, with unit normals the seam and the poles share", () => {
+test("the geometry is the globe moved to the radii, in units of the mean radius, on the globe asked for (the table's own, or finer by a smooth curve), with unit normals the seam and the poles share", () => {
   const table = SHAPE_NIX; // 96 by 48: the globe is twice as fine and passes through every radius of the table
   const mean = 18.6;
-  const geometry = shapeGeometry(THREE, table, mean);
+  const geometry = shapeGeometry(THREE, table, mean, { lon: 192, lat: 96 });
   const position = geometry.getAttribute("position");
   const normal = geometry.getAttribute("normal");
   const radii = shapeRadii(table);
@@ -119,10 +119,13 @@ test("the geometry is the globe moved to the radii, in units of the mean radius,
   }
   for (let column = 1; column <= lon; column += 1) assert.ok(Math.abs(normal.getY(column) - normal.getY(0)) < 1e-6, "north pole");
   geometry.dispose();
-  // a table finer than the globe keeps its own grid
-  const fine = shapeGeometry(THREE, SHAPE_PHOBOS, 11.08);
-  assert.equal(fine.getAttribute("position").count, 193 * 97);
-  fine.dispose();
+  // with no grid asked the globe has the table's own steps, and a coarser one is asked for by a small picture
+  const own = shapeGeometry(THREE, SHAPE_PHOBOS, 11.08);
+  assert.equal(own.getAttribute("position").count, 193 * 97);
+  own.dispose();
+  const small = shapeGeometry(THREE, SHAPE_PHOBOS, 11.08, { lon: 96, lat: 48 });
+  assert.equal(small.getAttribute("position").count, 97 * 49);
+  small.dispose();
 });
 
 test("Phobos has Stickney: its crater is lower than the ground round it", () => {

@@ -34,7 +34,7 @@ export const DWARF_IDS = ["ceres", "orcus", "haumea", "quaoar", "makemake", "gon
  */
 export const MINOR_IDS = ["vesta", "pallas", "chiron", "pholus", "halley"] as const;
 /**
- * The moons the package draws, by planet or dwarf planet.
+ * The moons the package draws, by planet or dwarf planet. The moons it drew first come first, from the nearest out, and the small ones that came later with their real shapes (Amalthea and Thebe, Saturn's small moons, Hyperion, Phoebe and Larissa) follow in the same order, so a page that takes the first moon of a planet, or goes through them one by one, still meets the big ones first.
  *
  * @example
  * ```ts
@@ -46,10 +46,10 @@ export const MINOR_IDS = ["vesta", "pallas", "chiron", "pholus", "halley"] as co
 export const MOONS_OF = {
   earth: ["moon"],
   mars: ["phobos", "deimos"],
-  jupiter: ["amalthea", "thebe", "io", "europa", "ganymede", "callisto"],
-  saturn: ["pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "mimas", "enceladus", "tethys", "telesto", "calypso", "dione", "helene", "rhea", "titan", "hyperion", "iapetus", "phoebe"],
+  jupiter: ["io", "europa", "ganymede", "callisto", "amalthea", "thebe"],
+  saturn: ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe"],
   uranus: ["miranda", "ariel", "umbriel", "titania", "oberon"],
-  neptune: ["larissa", "proteus", "triton", "nereid"],
+  neptune: ["proteus", "triton", "nereid", "larissa"],
   pluto: ["charon", "nix", "hydra"],
   orcus: ["vanth"],
   haumea: ["hiiaka", "namaka"],
