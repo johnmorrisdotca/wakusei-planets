@@ -24,7 +24,15 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy
+      # certifi: the downloads verify against its up-to-date list of roots (Mozilla's), not only the runner image's, which can be older than a root a site has moved to (svs.gsfc.nasa.gov chains to Let's Encrypt's root YR)
+      - run: python3 -m venv .cache/venv && .cache/venv/bin/pip install pillow numpy certifi
+      - name: TEMPORARY diagnostic of MODULES-1592 (removed before merge)
+        run: |
+          python3 --version; openssl version
+          .cache/venv/bin/python -c "import ssl,certifi; print(ssl.get_default_verify_paths()); print(certifi.__version__)"
+          ls /etc/ssl/certs | grep -i -E "isrg|root_yr|letsencrypt" || echo "no ISRG file in /etc/ssl/certs"
+          dpkg -l ca-certificates | tail -1
+          for h in svs.gsfc.nasa.gov assets.science.nasa.gov planetarymaps.usgs.gov upload.wikimedia.org; do echo "== $h"; echo | openssl s_client -connect $h:443 -servername $h 2>&1 | grep -E "Verify return|Verification|verify error" | head -3; echo | openssl s_client -connect $h:443 -servername $h -CAfile "$(.cache/venv/bin/python -c 'import certifi;print(certifi.where())')" 2>&1 | grep -E "Verification|verify error" | head -2; done
       - run: pnpm check
       - name: The body tiles, cut from the big public-domain maps (kept between runs while the script and the 2048 pictures are the same); pnpm site copies them to site/tiles
         uses: actions/cache@v6
@@ -32,6 +40,16 @@ jobs:
         with:
           path: .cache/body-tiles-out
           key: body-tiles-${{ hashFiles('scripts/make-body-tiles.py', 'textures/*-2048.webp') }}-${{ vars.WAKUSEI_SHARP_TILES }}
+      - name: The big source maps, kept between runs while the sources are the same (keyed on their SHA-256, so they are fetched again only when one is replaced in the script); they are verified against those hashes when used
+        if: steps.tiles.outputs.cache-hit != 'true'
+        id: sources-key
+        run: echo "key=$(.cache/venv/bin/python -I scripts/make-body-tiles.py key)" >> "$GITHUB_OUTPUT"
+      - name: The sources cache
+        if: steps.tiles.outputs.cache-hit != 'true'
+        uses: actions/cache@v6
+        with:
+          path: .cache/body-tiles
+          key: body-sources-${{ steps.sources-key.outputs.key }}
       - if: steps.tiles.outputs.cache-hit != 'true'
         run: pnpm tiles
       - name: Sharper Moon and Mars tiles (off until the repository variable WAKUSEI_SHARP_TILES is 1; the sources are not downloaded otherwise)
