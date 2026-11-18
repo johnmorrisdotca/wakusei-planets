@@ -514,11 +514,10 @@ function ratesOf(orbit: MoonOrbit): [number, number, number] {
   return [360 / orbit.periodDays - dw - dn, dw, dn];
 }
 
-/** A place on an ellipse of semi-major axis `a` (km) and eccentricity `e`, inclination `i`, node and argument of periapsis `w` (degrees), at mean anomaly `meanAnomaly` (radians), in the frame of the pole (the J2000 ecliptic for `null`). */
-function placed(a: number, e: number, i: number, nodeDeg: number, wDeg: number, meanAnomaly: number, pole: readonly [number, number] | null): Vec3 {
+/** A place on an ellipse of semi-major axis `a` (km) and eccentricity `e`, inclination `i`, node and argument of periapsis `w` (degrees), at eccentric anomaly `E` (radians), in the frame of the pole (the J2000 ecliptic for `null`). */
+function placedAt(a: number, e: number, i: number, nodeDeg: number, wDeg: number, E: number, pole: readonly [number, number] | null): Vec3 {
   const w = wDeg * RAD;
   const node = nodeDeg * RAD;
-  const E = kepler(meanAnomaly, e);
   const x = a * (Math.cos(E) - e);
   const y = a * Math.sqrt(1 - e * e) * Math.sin(E);
   const [cw, sw, cn, sn, ci, si] = [Math.cos(w), Math.sin(w), Math.cos(node), Math.sin(node), Math.cos(i * RAD), Math.sin(i * RAD)];
@@ -527,6 +526,11 @@ function placed(a: number, e: number, i: number, nodeDeg: number, wDeg: number, 
   const pz = sw * si * x + cw * si * y;
   const [bx, by, bz] = basisOf(pole);
   return [px * bx[0] + py * by[0] + pz * bz[0], px * bx[1] + py * by[1] + pz * bz[1], px * bx[2] + py * by[2] + pz * bz[2]];
+}
+
+/** The same at mean anomaly `meanAnomaly` (radians), solved by Kepler's equation. */
+function placed(a: number, e: number, i: number, nodeDeg: number, wDeg: number, meanAnomaly: number, pole: readonly [number, number] | null): Vec3 {
+  return placedAt(a, e, i, nodeDeg, wDeg, kepler(meanAnomaly, e), pole);
 }
 
 /**
@@ -561,4 +565,312 @@ export function catalogueMoonPosition(moon: CatalogueMoon | string | number, whe
   const [n, dw, dn] = ratesOf(orbit);
   const dt = jd - orbit.epochJd;
   return placed(orbit.a, orbit.e, orbit.i, orbit.node + dn * dt, orbit.w + dw * dt, (orbit.m + n * dt) * RAD, orbit.frame === "ecliptic" ? null : (orbit.pole ?? null));
+}
+
+/**
+ * The orbit a moon follows at a moment, as a closed line from its planet's centre, in kilometres, in the same frame as `catalogueMoonPosition`: the one that function places the moon on (its osculating orbit within
+ * `MOON_OSCULATING_DAYS` of `MOON_OSCULATING_EPOCH_JD`, else its mean orbit turned for the precession of its periapsis and node), sampled evenly in eccentric anomaly so a long ellipse keeps its sharp end. The line
+ * closes: its last point is its first. It is the shape at that moment; an irregular moon's orbit turns over years, so draw it again after a month or two of game time, not every frame.
+ *
+ * @param moon - A moon of the catalogue, or its id, name, designation or code.
+ * @param when - A `Date` or milliseconds since 1970 (UTC).
+ * @param points - How many points round the orbit, 8 to 720 (default 72). The line has one more, the first again.
+ * @returns The points, or `undefined` for a moon with no orbit.
+ *
+ * @example
+ * ```ts
+ * import { catalogueMoonOrbit } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const ring = catalogueMoonOrbit("Carme", new Date("2026-11-18T00:00:00Z"), 48)!;
+ * console.log(ring.length, "points, the first", ring[0]!.map((v) => Math.round(v / 1e6)).join(", "), "million km from Jupiter");
+ * ```
+ */
+export function catalogueMoonOrbit(moon: CatalogueMoon | string | number, when: When, points = 72): Vec3[] | undefined {
+  const m = typeof moon === "object" ? moon : findCatalogueMoon(moon);
+  if (m === undefined) throw new RangeError(`unknown moon ${JSON.stringify(moon)}; look one up with findCatalogueMoon`);
+  const orbit = m.orbit;
+  if (orbit === null) return undefined;
+  const count = Math.min(720, Math.max(8, Math.round(points)));
+  const jd = toTerrestrialTime(moment(when)) / DAY_MS + UNIX_JD;
+  const osc = m.osculating;
+  let shape: [number, number, number, number, number, readonly [number, number] | null];
+  if (osc !== null && Math.abs(jd - osc.epochJd) <= MOON_OSCULATING_DAYS) shape = [osc.a, osc.e, osc.i, osc.node, osc.w, null];
+  else {
+    const [, dw, dn] = ratesOf(orbit);
+    const dt = jd - orbit.epochJd;
+    shape = [orbit.a, orbit.e, orbit.i, orbit.node + dn * dt, orbit.w + dw * dt, orbit.frame === "ecliptic" ? null : (orbit.pole ?? null)];
+  }
+  const out: Vec3[] = [];
+  for (let k = 0; k < count; k += 1) out.push(placedAt(shape[0], shape[1], shape[2], shape[3], shape[4], (k / count) * 2 * Math.PI, shape[5]));
+  out.push(out[0]!);
+  return out;
+}
+
+/**
+ * A family of moons, as a planet's moons are sorted for a list: Jupiter's `galilean`, `inner`, `himalia`, `ananke`, `carme` and `pasiphae` groups and `other` irregular moons (Themisto, Carpo and Valetudo); Saturn's
+ * `inner` (its major and inner moons), `inuit`, `gallic` and `norse`; Uranus's and Neptune's `inner` and `irregular`; and `moons`, the one family of a host with too few to divide (Earth, Mars, Pluto and the dwarf
+ * planets). A family is `MoonGroup` regrouped by planet: it is a sorting for lists, not a second rule.
+ *
+ * @example
+ * ```ts
+ * import type { MoonFamilyId } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const family: MoonFamilyId = "norse";
+ * console.log(family);
+ * ```
+ */
+export type MoonFamilyId = "galilean" | "inner" | "himalia" | "ananke" | "carme" | "pasiphae" | "other" | "inuit" | "gallic" | "norse" | "irregular" | "moons";
+
+/**
+ * A name in English and Japanese.
+ *
+ * @example
+ * ```ts
+ * import { moonFamilies } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const names = moonFamilies("saturn")[0]!.names;
+ * console.log(names.en, names.ja);
+ * ```
+ */
+export interface MoonNames {
+  en: string;
+  ja: string;
+}
+
+/** The families of each host, in the order a list shows them, with the group each takes in, its names and the colour its orbits are drawn in by group. */
+const FAMILY_TABLE: Readonly<Record<MoonFamilyId, { names: MoonNames; color: string }>> = {
+  galilean: { names: { en: "Galilean moons", ja: "ガリレオ衛星" }, color: "#f2c14e" },
+  inner: { names: { en: "Inner and major moons", ja: "内側の衛星と大きな衛星" }, color: "#9bd1ff" },
+  himalia: { names: { en: "Himalia group", ja: "ヒマリア群" }, color: "#5fd38d" },
+  ananke: { names: { en: "Ananke group", ja: "アナンケ群" }, color: "#ff9f6b" },
+  carme: { names: { en: "Carme group", ja: "カルメ群" }, color: "#e0568a" },
+  pasiphae: { names: { en: "Pasiphae group", ja: "パシファエ群" }, color: "#b07cff" },
+  other: { names: { en: "Other irregular moons", ja: "その他の不規則衛星" }, color: "#c9cdd4" },
+  inuit: { names: { en: "Inuit group", ja: "イヌイット群" }, color: "#5fd38d" },
+  gallic: { names: { en: "Gallic group", ja: "ガリア群" }, color: "#5aa9ff" },
+  norse: { names: { en: "Norse group", ja: "北欧群" }, color: "#e0568a" },
+  irregular: { names: { en: "Irregular moons", ja: "不規則衛星" }, color: "#ff9f6b" },
+  moons: { names: { en: "Moons", ja: "衛星" }, color: "#c9cdd4" },
+};
+
+const FAMILIES_OF: Readonly<Partial<Record<HostId, readonly MoonFamilyId[]>>> = {
+  jupiter: ["galilean", "inner", "himalia", "ananke", "carme", "pasiphae", "other"],
+  saturn: ["inner", "inuit", "gallic", "norse"],
+  uranus: ["inner", "irregular"],
+  neptune: ["inner", "irregular"],
+};
+
+/** The family a moon is in. */
+function familyOf(moon: CatalogueMoon): MoonFamilyId {
+  const group = moon.group;
+  if (moon.host === "jupiter") {
+    if (group === "major") return "galilean";
+    if (group === "inner" || group === "regular") return "inner";
+    if (group === "himalia" || group === "ananke" || group === "carme" || group === "pasiphae") return group;
+    return "other";
+  }
+  if (moon.host === "saturn") return group === "inuit" || group === "gallic" || group === "norse" ? group : "inner";
+  if (moon.host === "uranus" || moon.host === "neptune") return group === "prograde" || group === "retrograde" ? "irregular" : "inner";
+  return "moons";
+}
+
+/**
+ * One moon of a family, with what a list prints.
+ *
+ * @example
+ * ```ts
+ * import { moonFamilies, type MoonFamilyMoon } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const first: MoonFamilyMoon = moonFamilies("jupiter")[0]!.moons[0]!;
+ * console.log(first.label, first.radiusKm, first.estimate);
+ * ```
+ */
+export interface MoonFamilyMoon {
+  /** Its id in the catalogue. */
+  id: string;
+  /** What to print: the name, else the designation. */
+  label: string;
+  /** The Japanese name, where one is written down. */
+  ja: string | null;
+  /** The mean radius in kilometres, or `null` when nothing gives it. */
+  radiusKm: number | null;
+  /** `true` when `radiusKm` is derived from a magnitude and an assumed albedo rather than measured: an estimate, to be shown as one. */
+  estimate: boolean;
+  /** Whether it goes round against its planet's turn, or `null` with no orbit. */
+  retrograde: boolean | null;
+  /** The catalogue's entry. */
+  moon: CatalogueMoon;
+}
+
+/**
+ * A planet's family of moons: how many, how many have a size, the largest and smallest sizes, and the moons nearest first.
+ *
+ * @example
+ * ```ts
+ * import { moonFamilies, type MoonFamily } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const norse: MoonFamily = moonFamilies("saturn").find((f) => f.id === "norse")!;
+ * console.log(norse.names.en, norse.count, "moons, the largest about", norse.largestKm, "km across its radius", norse.largestIsEstimate ? "(estimated)" : "");
+ * ```
+ */
+export interface MoonFamily {
+  id: MoonFamilyId;
+  host: HostId;
+  names: MoonNames;
+  /** The colour (`#rrggbb`) the family's orbits are drawn in when the view colours by group. */
+  color: string;
+  /** How many moons. */
+  count: number;
+  /** How many have an IAU name. */
+  named: number;
+  /** How many have a radius (measured, from a data sheet or estimated). */
+  sized: number;
+  /** How many of those radii are estimates. */
+  estimated: number;
+  /** The largest radius in kilometres, or `null` when none has one, and whether that one is an estimate. */
+  largestKm: number | null;
+  largestIsEstimate: boolean;
+  /** The smallest radius in kilometres, or `null`, and whether that one is an estimate. */
+  smallestKm: number | null;
+  smallestIsEstimate: boolean;
+  /** `"prograde"` or `"retrograde"` when every moon with an orbit goes one way, `"mixed"` when they do not, `null` when none has an orbit. */
+  direction: "prograde" | "retrograde" | "mixed" | null;
+  /** The moons, nearest first (a moon with no orbit last). */
+  moons: readonly MoonFamilyMoon[];
+}
+
+/**
+ * A planet's moons sorted into families for a list or a tab: Jupiter (Galilean, inner, Himalia, Ananke, Carme, Pasiphae, other irregular moons), Saturn (inner and major, Inuit, Gallic, Norse), Uranus and Neptune (inner
+ * and major, irregular), and one family `moons` for a host with too few to divide. Every moon of the host is in exactly one family. A size is the catalogue's `radiusKm`; `estimate` is true where it is derived
+ * (see `radiusFrom`), and a family says how many of its sizes are estimates, so a page can mark them.
+ *
+ * @param host - The planet or dwarf planet: "saturn".
+ * @returns The families, in the order a list shows them; an empty list for a host with no moon in the catalogue.
+ *
+ * @example
+ * ```ts
+ * import { moonFamilies } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * for (const family of moonFamilies("jupiter")) console.log(family.names.en, family.count, family.sized, "with a size,", family.estimated, "of them estimated");
+ * ```
+ */
+export function moonFamilies(host: HostId): readonly MoonFamily[] {
+  const own = catalogueMoonsOf(host);
+  if (own.length === 0) return [];
+  return (FAMILIES_OF[host] ?? (["moons"] as const)).map((id) => {
+    const moons: MoonFamilyMoon[] = own
+      .filter((m) => familyOf(m) === id)
+      .map((m) => ({ id: m.id, label: m.label, ja: m.ja, radiusKm: m.radiusKm, estimate: m.radiusFrom === "derived", retrograde: m.retrograde, moon: m }));
+    const sized = moons.filter((m) => m.radiusKm !== null);
+    const largest = sized.reduce<MoonFamilyMoon | undefined>((best, m) => (best === undefined || m.radiusKm! > best.radiusKm! ? m : best), undefined);
+    const smallest = sized.reduce<MoonFamilyMoon | undefined>((best, m) => (best === undefined || m.radiusKm! < best.radiusKm! ? m : best), undefined);
+    const ways = new Set(moons.filter((m) => m.retrograde !== null).map((m) => (m.retrograde ? "retrograde" : "prograde")));
+    return {
+      id,
+      host,
+      names: FAMILY_TABLE[id].names,
+      color: FAMILY_TABLE[id].color,
+      count: moons.length,
+      named: moons.filter((m) => m.moon.named).length,
+      sized: sized.length,
+      estimated: sized.filter((m) => m.estimate).length,
+      largestKm: largest?.radiusKm ?? null,
+      largestIsEstimate: largest?.estimate ?? false,
+      smallestKm: smallest?.radiusKm ?? null,
+      smallestIsEstimate: smallest?.estimate ?? false,
+      direction: ways.size === 0 ? null : ways.size === 2 ? "mixed" : ways.has("retrograde") ? "retrograde" : "prograde",
+      moons,
+    };
+  });
+}
+
+/**
+ * What an orbit's colour says: its moon's family (`group`), or the way it goes round (`direction`).
+ *
+ * @example
+ * ```ts
+ * import type { MoonColorBy } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const by: MoonColorBy = "direction";
+ * console.log(by);
+ * ```
+ */
+export type MoonColorBy = "group" | "direction";
+
+/**
+ * One line of a key: what a colour means, in both languages, and how many moons wear it.
+ *
+ * @example
+ * ```ts
+ * import { moonOrbitKey, type MoonKeyEntry } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * const entry: MoonKeyEntry = moonOrbitKey("direction")[0]!;
+ * console.log(entry.id, entry.color, entry.count);
+ * ```
+ */
+export interface MoonKeyEntry {
+  /** A family id (`norse`) when coloured by group, `prograde` or `retrograde` when by direction. */
+  id: string;
+  names: MoonNames;
+  /** `#rrggbb`. */
+  color: string;
+  /** How many moons of the hosts asked for wear it (only those with an orbit). */
+  count: number;
+}
+
+const DIRECTION_KEY: Readonly<Record<"prograde" | "retrograde", { names: MoonNames; color: string }>> = {
+  prograde: { names: { en: "Prograde (with the planet's turn)", ja: "順行（惑星の自転と同じ向き）" }, color: "#5aa9ff" },
+  retrograde: { names: { en: "Retrograde (against it)", ja: "逆行（惑星の自転と逆向き）" }, color: "#ff6b6b" },
+};
+
+/**
+ * The colour an orbit is drawn in, `#rrggbb`: by `group` the moon's family colour, by `direction` blue for prograde and red for retrograde. A moon with no orbit has none to draw; it gets the neutral grey.
+ *
+ * @param moon - A moon of the catalogue.
+ * @param by - What the colour says.
+ * @returns `#rrggbb`.
+ *
+ * @example
+ * ```ts
+ * import { findCatalogueMoon, moonOrbitColor } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * console.log(moonOrbitColor(findCatalogueMoon("Carme")!, "direction"));
+ * ```
+ */
+export function moonOrbitColor(moon: CatalogueMoon, by: MoonColorBy): string {
+  if (by === "direction") return moon.retrograde === null ? "#c9cdd4" : DIRECTION_KEY[moon.retrograde ? "retrograde" : "prograde"].color;
+  return FAMILY_TABLE[familyOf(moon)].color;
+}
+
+/**
+ * The key to the colours of the orbits drawn for some hosts, as data: one entry per colour in use, with its names (English and Japanese), its `#rrggbb` and how many moons wear it. A page draws it beside the view
+ * (the element's `moonKey` gives the key of what it is drawing).
+ *
+ * @param by - Coloured by `group` (the families) or `direction`.
+ * @param hosts - The planets or dwarf planets drawn; every host by default.
+ * @returns The entries, in the order the families are listed (prograde, then retrograde).
+ *
+ * @example
+ * ```ts
+ * import { moonOrbitKey } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * for (const entry of moonOrbitKey("group", ["saturn"])) console.log(entry.color, entry.names.en, entry.count);
+ * ```
+ */
+export function moonOrbitKey(by: MoonColorBy, hosts?: readonly HostId[]): readonly MoonKeyEntry[] {
+  const moons = MOON_CATALOGUE.filter((m) => m.orbit !== null && (hosts === undefined || hosts.includes(m.host)));
+  if (by === "direction") {
+    return (["prograde", "retrograde"] as const)
+      .map((id) => ({ id, names: DIRECTION_KEY[id].names, color: DIRECTION_KEY[id].color, count: moons.filter((m) => m.retrograde === (id === "retrograde")).length }))
+      .filter((entry) => entry.count > 0);
+  }
+  const out: MoonKeyEntry[] = [];
+  for (const m of moons) {
+    const id = familyOf(m);
+    const seen = out.find((entry) => entry.id === id);
+    if (seen === undefined) out.push({ id, names: FAMILY_TABLE[id].names, color: FAMILY_TABLE[id].color, count: 1 });
+    else seen.count += 1;
+  }
+  const order = Object.keys(FAMILY_TABLE);
+  return out.sort((x, y) => order.indexOf(x.id) - order.indexOf(y.id));
 }

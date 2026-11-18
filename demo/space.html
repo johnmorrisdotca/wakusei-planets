@@ -119,6 +119,10 @@
             <button type="button" class="fam-button" id="craft" aria-pressed="false" data-say="sp_deep">Deep-space craft</button>
             <button type="button" class="fam-button" id="orbiters" aria-pressed="false" data-say="sp_orbiters">Orbiters</button>
             <button type="button" class="fam-button" id="all-moons" aria-pressed="false" data-say="sp_all_moons">All moons</button>
+            <div class="group fam-seg" id="moon-colors" role="group" aria-label="Moon orbit colours" data-say-label="sp_moon_colors">
+              <button type="button" data-moon-colors="group" aria-pressed="true" data-say="sp_moon_colors_group">By family</button>
+              <button type="button" data-moon-colors="direction" aria-pressed="false" data-say="sp_moon_colors_direction">By direction</button>
+            </div>
             <button type="button" class="fam-button" id="belts" aria-pressed="true" data-say="sp_belts">Belts</button>
             <span class="fam-label" data-say="sp_spin">Spin arrow</span>
             <div class="group fam-seg" id="spin-place" role="group" aria-label="Spin arrow" data-say-label="sp_spin">
@@ -226,6 +230,7 @@
           <h2 id="moon-list-h" class="fam-label"></h2>
           <p class="fam-fine" id="moon-count" role="status"></p>
           <div class="group fam-seg" id="moon-groups" role="group" aria-label="Group" data-say-label="sp_moon_group"></div>
+          <p class="fam-fine moon-key" id="moon-key" role="note"></p>
           <div class="fam-table-box moon-table-box">
             <table>
               <thead>

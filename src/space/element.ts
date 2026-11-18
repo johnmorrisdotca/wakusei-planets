@@ -31,7 +31,8 @@ import { besideMoon } from "./beside.ts";
 import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
 import { controlsFor, readFrame, type FrameKind } from "./hold.ts";
-import type { MoonDot } from "./all-moons.ts";
+import type { MoonSource, MoonSpot } from "./all-moons.ts";
+import { catalogueMoonIdOf, catalogueMoonKey, hostsShowingAll, MOON_HOSTS, moonSourceOf, readMoonColors, readMoonsChoice, readMoonsOf, type MoonsChoice } from "./moon-settings.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
@@ -268,12 +269,15 @@ const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
 const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none;transition:opacity .35s ease}.sp-oort[data-covered]{opacity:0}@media (prefers-reduced-motion:reduce){.sp-oort{transition:none}}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p>`;
 
+/** A dot of a moon of the catalogue answers a press within this many CSS pixels: smaller than a body's, so a crowd of dots can be told apart, and more than the dot is wide. */
+const MOON_DOT_HIT_PX = 9;
+
 const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value === "chosen" || value === "none" ? value : "all");
 
 /**
  * The `<wakusei-space>` custom element: the Earth, the Moon, the Sun and the planets where they are at a date and time, drawn with three.js through the shared renderer. It takes `center`
  * (`"lon,lat"`), `time` (`now` or an ISO date), `speed` (1 is real time, 0 holds, 86400 is a day a second, negative runs backwards), `scale` (`compressed` or `true`), `look` (`realistic` or `painted`),
- * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), `all-moons` (every other known moon as a dot round its planet, from `/moon-catalogue`, fetched when first asked for), and `texture-base`, `texture-far-base`, `max-texture` and `tiles` (where the finer map tiles are, for a close zoom; `off` for none). Positions come from this package's own models. It draws
+ * `light` (`sun` or `lit`), `lang` (`en` or `ja`: the names), `labels` and `orbits` (`off` hides them), `moons` (`major`, the default, or `all`: every known moon of every planet as a pressable dot with its orbit, from `/moon-catalogue`, fetched when first asked for), `moons-of` (`"jupiter=all saturn=major"`: a planet's own choice) and `moon-colors` (`group` or `direction`: what the orbits' colours say), and `texture-base`, `texture-far-base`, `max-texture` and `tiles` (where the finer map tiles are, for a close zoom; `off` for none). Positions come from this package's own models. It draws
  * only when something changes, and nothing while it is out of sight.
  *
  * The names and markers of bodies outside the system in the middle of the view are drawn at half strength (`far-opacity`, 0 to 1). A body under the pointer, a finger or the keyboard's focus lights its own system instead and
@@ -303,11 +307,12 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "all-moons", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
-  #allMoons = false;
-  #catalogue: Promise<(ms: number) => readonly MoonDot[]> | undefined;
+  #moons: MoonsChoice = "major";
+  #moonsOf: Partial<Record<string, MoonsChoice>> = {};
+  #catalogue: Promise<MoonSource> | undefined;
   #clock: GameClock = createGameClock("now", 1);
   #view: View | undefined;
   #gate: Gate | undefined;
@@ -539,6 +544,9 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
     else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
+    else if (name === "moons") this.moons = readMoonsChoice(value);
+    else if (name === "moons-of") this.moonsOf = readMoonsOf(value);
+    else if (name === "moon-colors") this.moonColors = readMoonColors(value);
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
     else if (name === "far-opacity") this.#farStrength();
@@ -1432,29 +1440,76 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   /**
-   * Whether every other known moon is drawn as a small dot round its planet (the attribute `all-moons`): the moons of `/moon-catalogue` the view does not draw in full, each at its mean-orbit place. The catalogue is fetched,
-   * as a chunk of its own, the first time they are turned on; a view that never turns them on never loads it.
+   * What every planet shows by default (the attribute `moons`): `"major"`, the moons the view draws in full (today's default), or `"all"`, every moon of `/moon-catalogue` as a small pressable dot round its planet, with
+   * its orbit. A planet with a choice of its own (`moonsOf`, `setMoons`) keeps it. The catalogue is fetched, as a chunk of its own, the first time a planet is set to `all`; a view that never does never loads it.
+   */
+  get moons(): MoonsChoice {
+    return this.#moons;
+  }
+  set moons(value: MoonsChoice) {
+    this.#moons = value === "all" ? "all" : "major";
+    this.#moonsChanged();
+  }
+  /** The choices of single planets (the attribute `moons-of`, `"jupiter=all saturn=major"`): a planet named here shows what it says whatever `moons` says. A planet not named follows `moons`. */
+  get moonsOf(): Readonly<Partial<Record<string, MoonsChoice>>> {
+    return { ...this.#moonsOf };
+  }
+  set moonsOf(value: Readonly<Partial<Record<string, MoonsChoice>>>) {
+    this.#moonsOf = readMoonsOf(Object.entries(value).map(([host, choice]) => `${host}=${choice}`).join(" "));
+    this.#moonsChanged();
+  }
+  /** What a planet shows now: its own choice, else the default. */
+  moonsFor(host: string): MoonsChoice {
+    return this.#moonsOf[host] ?? this.#moons;
+  }
+  /**
+   * Sets what one planet shows (`setMoons("all", "saturn")`), or, with no planet, every planet at once: the default is set and every choice of a single planet is cleared, so the whole view is `major` or `all`.
+   *
+   * @param choice - `major` or `all`.
+   * @param host - A planet or dwarf planet of the view: `jupiter`, `pluto`.
+   */
+  setMoons(choice: MoonsChoice, host?: string): void {
+    if (host === undefined) {
+      this.#moons = choice === "all" ? "all" : "major";
+      this.#moonsOf = {};
+    } else if ((MOON_HOSTS as readonly string[]).includes(host)) this.#moonsOf = { ...this.#moonsOf, [host]: choice === "all" ? "all" : "major" };
+    else throw new RangeError(`unknown planet ${JSON.stringify(host)}; the view places ${MOON_HOSTS.join(", ")}`);
+    this.#moonsChanged();
+  }
+  /** What the orbits' colours say (the attribute `moon-colors`): `group` (the moon's family, the default) or `direction` (blue with the planet's turn, red against it). `moonOrbitKey` from `/moon-catalogue` is the key. */
+  get moonColors(): "group" | "direction" {
+    return this.#model.moonColors;
+  }
+  set moonColors(value: "group" | "direction") {
+    this.#model.moonColors = value === "direction" ? "direction" : "group";
+    this.#gate?.request();
+  }
+  /** The planets showing every moon now, in the view's order. */
+  get moonHosts(): readonly string[] {
+    return MOON_HOSTS.filter((host) => this.#model.moonHosts.has(host));
+  }
+  /**
+   * Whether every moon of every planet is shown, the old switch: the attribute `all-moons`, now `moons="all"` with a different name. Setting it is `setMoons`.
    */
   get allMoons(): boolean {
-    return this.#allMoons;
+    return this.#moons === "all" && Object.keys(this.#moonsOf).length === 0;
   }
   set allMoons(value: boolean) {
-    this.#allMoons = value;
-    if (!value) {
-      this.#model.allMoons = null;
+    this.setMoons(value ? "all" : "major");
+  }
+  #moonsChanged(): void {
+    const hosts = hostsShowingAll(this.#moons, this.#moonsOf);
+    this.#model.moonHosts = hosts;
+    if (hosts.size === 0) {
       this.#gate?.request();
       return;
     }
-    this.#catalogue ??= import("../moon-catalogue.ts").then(({ MOON_CATALOGUE, catalogueMoonPosition }) => {
-      const hosts: readonly string[] = [...SPACE_PLANETS, ...SPACE_DWARFS];
-      const shown = MOON_CATALOGUE.filter((m) => !m.full && m.orbit !== null && hosts.includes(m.host));
-      return (ms: number) => shown.map((m) => ({ host: m.host as SpacePlanet | SpaceDwarf, km: catalogueMoonPosition(m, ms)! }));
-    });
-    void this.#catalogue.then((dots) => {
-      if (!this.#allMoons) return;
-      this.#model.allMoons = dots;
+    this.#catalogue ??= import("../moon-catalogue.ts").then((catalogue) => moonSourceOf(catalogue));
+    void this.#catalogue.then((source) => {
+      this.#model.moonSource = source;
       this.#gate?.request();
     });
+    this.#gate?.request();
   }
 
   /** How many small arrowheads each orbit line carries to show which way the body goes: 2 by default, at most 4, 0 for none (the attribute `arrows` says the same). Anything else is made a whole number in that range. */
@@ -2388,8 +2443,8 @@ export class WakuseiSpace extends HTMLElement {
     region: { id: string; name: string; reach: number; distance: number } | null;
     /** The data door: the small bodies of a page's own sources in the one instanced draw (`points`), the package's own belts (`belts` bodies in `draws` instanced draws, one for each belt), and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
     door: { points: number; belts: number; draws: number; sources: ReturnType<DoorHost["book"]["stats"]> };
-    /** The catalogue's other moons (`all-moons`): whether they are asked for, whether the catalogue has loaded, and how many dots the last draw drew. */
-    allMoons: { on: boolean; loaded: boolean; dots: number };
+    /** The catalogue's moons of the planets set to `all` (`moons`): whether any is asked for, whether the catalogue has loaded, how many dots and orbits the last draw drew, and the planets showing them. */
+    allMoons: { on: boolean; loaded: boolean; dots: number; orbits: number; hosts: readonly string[] };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. */
     orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[] };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
@@ -2431,7 +2486,7 @@ export class WakuseiSpace extends HTMLElement {
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, belts: this.#model.door.belts, draws: this.#model.door.draws, sources: this.#door.book.stats() },
-      allMoons: { on: this.#allMoons, loaded: this.#model.allMoons !== null, dots: this.#model.moonDots },
+      allMoons: { on: this.#model.moonHosts.size > 0, loaded: this.#model.moonSource !== null, dots: this.#model.moonDots, orbits: this.#model.moonOrbits, hosts: this.moonHosts },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
@@ -2499,6 +2554,8 @@ export class WakuseiSpace extends HTMLElement {
     if (this.#model.craftIds.includes(id)) return this.#names[id] ?? this.#model.craftNames?.(id, lang) ?? id;
     if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) return this.#names[id] ?? this.#model.orbiterSet.name(id)[lang];
     if (this.#isAsteroid(id)) return this.#names[asteroidIdOf(id)!] ?? this.#model.asteroidSet!.name(asteroidIdOf(id)!)[lang];
+    const found = this.#catalogueMoon(id);
+    if (found !== undefined) return this.#names[found.id] ?? (lang === "ja" ? (found.ja ?? found.label) : found.label);
     return this.#names[id] ?? BODIES[id as BodyId].name[lang];
   }
 
@@ -2628,6 +2685,17 @@ export class WakuseiSpace extends HTMLElement {
     for (const arrow of this.#arrows.values()) mark(arrow, arrow.dataset["body"]);
   }
 
+  /** The moon of the catalogue a view key names (`moon:dia`), where the planet is showing every moon and the catalogue has loaded. */
+  #catalogueMoon(key: string): MoonSource["moons"][number] | undefined {
+    const id = catalogueMoonIdOf(key);
+    return id === undefined ? undefined : this.#model.moonSource?.moons.find((m) => m.id === id && this.#model.moonHosts.has(m.host));
+  }
+  /** The event detail for a moon of the catalogue. */
+  #moonDetail(key: string): { id: string; name: string; kind: "catalogue-moon"; host: string } {
+    const moon = this.#catalogueMoon(key)!;
+    return { id: moon.id, name: this.#nameOf(key), kind: "catalogue-moon", host: moon.host };
+  }
+
   /** A body comes under the pointer, a finger or the keyboard's focus (`wakusei-body-hover`, with its system), or none does (`wakusei-body-hover-end`). */
   #hover(id: BodyId | null, by: "pointer" | "focus"): void {
     if (id === this.#hovered) {
@@ -2638,10 +2706,11 @@ export class WakuseiSpace extends HTMLElement {
     this.#hovered = id;
     this.#hoverBy = by;
     this.#markFar();
-    if (id !== null && this.#isAsteroid(id)) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
+    if (id !== null && this.#catalogueMoon(id) !== undefined) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: this.#moonDetail(id), bubbles: true, composed: true }));
+    else if (id !== null && this.#isAsteroid(id)) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
     else if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
     else if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
-    else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: was }, bubbles: true, composed: true }));
+    else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: catalogueMoonIdOf(was) ?? was }, bubbles: true, composed: true }));
   }
 
   /** The body at a point of the element, in CSS pixels: on its disc (at least 14 pixels round its place) or on its name. A press (`#up`) and the hover (`#pointAt`) both ask this, so what lights up under the pointer is what a press picks. */
@@ -2660,7 +2729,17 @@ export class WakuseiSpace extends HTMLElement {
     }
     if (best !== null) return best;
     for (const box of this.#nameBoxes) if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) return box.id as BodyId;
-    return null;
+    // a dot of a moon of the catalogue (a planet set to `all`): the nearest within a finger's reach, after everything with a name
+    let dot: MoonSpot | null = null;
+    let dotD = MOON_DOT_HIT_PX;
+    for (const spot of this.#model.moonSpots) {
+      const d = Math.hypot(x - spot.x, y - spot.y);
+      if (d <= dotD) {
+        dot = spot;
+        dotD = d;
+      }
+    }
+    return dot === null ? null : (catalogueMoonKey(dot.id) as BodyId);
   }
 
   #pointAt(event: PointerEvent): BodyId | null {
@@ -2879,6 +2958,20 @@ export class WakuseiSpace extends HTMLElement {
    * the middle of the view (`goTo`), unless it already is, so a press never sends the view anywhere else.
    */
   #press(id: BodyId): void {
+    if (this.#catalogueMoon(id) !== undefined) {
+      // a moon of the catalogue is no body of the package: the press says which one, in the body event and in an event of its own; the first press selects it, and a second makes its planet the middle of the view
+      const detail = this.#moonDetail(id);
+      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("wakusei-moon-click", { detail, bubbles: true, composed: true }));
+      if (this.#selected === id) {
+        const host = detail.host as BodyId;
+        if (canCentre(host) && this.#model.focus !== host) this.goTo(host);
+        return;
+      }
+      this.#selected = id;
+      this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail, bubbles: true, composed: true }));
+      return;
+    }
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
     if (this.#isAsteroid(id)) {
       // an asteroid is no body of the package: the press says which one, in the body event and in an event of its own, and goes nowhere

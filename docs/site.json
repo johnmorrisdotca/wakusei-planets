@@ -498,8 +498,8 @@
       "platform": "node"
     },
     "./moon-catalogue": {
-      "en": "Every known moon of the planets and dwarf planets, 468 as JPL lists them on 2026-11-11: names, discovery, mean orbit, group, size where known, and where each is with its measured accuracy (about 35 kB gzipped)",
-      "ja": "惑星と準惑星の、知られている衛星すべて (JPL の 2026-11-11 時点で468個): 名前、発見、平均軌道、グループ、わかっている大きさ、位置とそのずれ (gzip で約35 kB)",
+      "en": "Every known moon of the planets and dwarf planets, 468 as JPL lists them on 2026-11-18: names, discovery, mean orbit, group, size where known, and where each is with its measured accuracy (about 35 kB gzipped)",
+      "ja": "惑星と準惑星の、知られている衛星すべて (JPL の 2026-11-18 時点で468個): 名前、発見、平均軌道、グループ、わかっている大きさ、位置とそのずれ (gzip で約35 kB)",
       "platform": "node"
     }
   }

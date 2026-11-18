@@ -54,6 +54,8 @@ const state = {
   paintLength: pick(address.get("paintlength"), ["1d", "1w", "1m"], "1d") as "1d" | "1w" | "1m",
   /** Every other known moon drawn as a dot, and the list of the planet's moons under the controls (`moons=all`). */
   allMoons: address.get("moons") === "all",
+  /** What the moons' orbit colours say: the moon's family, or the way it goes round (`mooncolors=direction`). */
+  moonColors: pick(address.get("mooncolors"), ["group", "direction"], "group") as "group" | "direction",
   /** The craft picked out, which orbit lines are drawn, and its ground track. */
   orbiter: address.get("orbiter") ?? "",
   orbiterLines: pick(address.get("olines"), ["all", "chosen", "none"], "all"),
@@ -103,6 +105,7 @@ function render(): void {
   const mars = space.body === "mars" || space.body === "phobos" || space.body === "deimos";
   space.paint = state.paint ? { id: state.orbiter || (mars ? "mro" : "lro"), length: state.paintLength } : null;
   space.allMoons = state.allMoons;
+  space.moonColors = state.moonColors;
   space.orbiter = state.orbiter || null;
   space.orbiterLines = state.orbiterLines;
   space.orbiterTrack = state.orbiterTrack;
@@ -154,6 +157,7 @@ function render(): void {
   pressed(document.querySelector<HTMLElement>("#paint")!, state.paint);
   for (const b of $$("#paint-lengths [data-paint-length]")) pressed(b, b.dataset["paintLength"] === state.paintLength);
   pressed(document.querySelector<HTMLElement>("#all-moons")!, state.allMoons);
+  for (const b of $$("#moon-colors [data-moon-colors]")) pressed(b, b.dataset["moonColors"] === state.moonColors);
   renderMoonList();
   renderOrbiters();
   renderBodyLabelRow(bodyLabel, space, address);
@@ -177,6 +181,7 @@ function render(): void {
   address.set("paint", state.paint ? "1" : null);
   address.set("paintlength", state.paintLength === "1d" ? null : state.paintLength);
   address.set("moons", state.allMoons ? "all" : null);
+  address.set("mooncolors", state.moonColors === "group" ? null : state.moonColors);
   address.set("orbiter", state.orbiters && state.orbiter ? state.orbiter : null);
   address.set("olines", state.orbiters && state.orbiterLines !== "all" ? state.orbiterLines : null);
   address.set("otrack", state.orbiters && state.orbiterTrack ? "1" : null);
@@ -240,6 +245,7 @@ document.querySelector("#paint")!.addEventListener("click", () => ((state.paint 
 document.querySelector("#paint-clear")!.addEventListener("click", () => ((state.paint = false), space.clearPaint(), render()));
 for (const b of $$("#paint-lengths [data-paint-length]")) b.addEventListener("click", () => ((state.paintLength = b.dataset["paintLength"] as typeof state.paintLength), render()));
 document.querySelector("#all-moons")!.addEventListener("click", () => ((state.allMoons = !state.allMoons), render()));
+for (const b of $$("#moon-colors [data-moon-colors]")) b.addEventListener("click", () => ((state.moonColors = b.dataset["moonColors"] as "group" | "direction"), render()));
 
 // The moons of the planet in view, from the catalogue (fetched the first time "All moons" is on): the counts, a row of its groups, and a table that scrolls in its own box.
 let catalogue: typeof import("../src/moon-catalogue.ts") | undefined;
@@ -259,20 +265,32 @@ function renderMoonList(): void {
   document.querySelector("#moon-list-h")!.textContent = say("sp_moons_of", { name: hostName });
   const named = all.filter((m) => m.named).length;
   document.querySelector("#moon-count")!.textContent = all.length === 0 ? say("sp_moons_none", { name: hostName }) : say("sp_moons_count", { count: all.length, named, date: catalogue.MOON_CATALOGUE_FETCHED });
-  const groups = [...new Set(all.map((m) => m.group))];
-  if (!groups.includes(moonGroup as never)) moonGroup = "";
+  const lang = chooser()?.lang ?? "en";
+  // the planet's moons by family (`moonFamilies`): a chip each with its count, an estimated size marked, and the key to the orbits' colours
+  const families = catalogue.moonFamilies(host as Parameters<typeof catalogue.moonFamilies>[0]);
+  if (!families.some((f) => f.id === moonGroup)) moonGroup = "";
   document.querySelector("#moon-groups")!.replaceChildren(
-    ...["", ...groups].map((g) => {
+    ...[{ id: "", label: `${say("sp_moon_group_all")} ${all.length}` }, ...families.map((f) => ({ id: f.id as string, label: `${f.names[lang]} ${f.count}` }))].map((choice) => {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = g === "" ? say("sp_moon_group_all") : say(`sp_group_${g}`);
-      pressed(button, g === moonGroup);
-      button.addEventListener("click", () => ((moonGroup = g), renderMoonList()));
+      button.textContent = choice.label;
+      pressed(button, choice.id === moonGroup);
+      button.addEventListener("click", () => ((moonGroup = choice.id), renderMoonList()));
       return button;
     }),
   );
-  const lang = chooser()?.lang ?? "en";
-  const rows = all.filter((m) => moonGroup === "" || m.group === moonGroup);
+  const keyed = catalogue.moonOrbitKey(state.moonColors, [host as Parameters<typeof catalogue.moonFamilies>[0]]);
+  document.querySelector("#moon-key")!.replaceChildren(
+    ...keyed.map((entry) => {
+      const item = document.createElement("span");
+      const swatch = Object.assign(document.createElement("span"), { className: "moon-swatch" });
+      swatch.style.background = entry.color;
+      item.append(swatch, ` ${entry.names[lang]} ${entry.count}`);
+      return item;
+    }),
+  );
+  const inFamily = new Set(moonGroup === "" ? [] : families.find((f) => f.id === moonGroup)!.moons.map((m) => m.id));
+  const rows = all.filter((m) => moonGroup === "" || inFamily.has(m.id));
   document.querySelector("#moon-rows")!.replaceChildren(
     ...rows.map((m) => {
       const tr = document.createElement("tr");
