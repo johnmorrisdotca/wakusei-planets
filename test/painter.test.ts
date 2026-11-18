@@ -112,7 +112,7 @@ test("a painter told to map every body asks for each body's picture in the reali
     const urls = asked(id, { look: "realistic", mapped: true });
     assert.ok(urls.some((url) => new RegExp(`/${map}-\\d+\\.webp$`).test(url)), `${id} asks for its map when told to map every body: ${urls.join(" ")}`);
   }
-  for (const id of ["phobos", "deimos", "miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
+  for (const id of ["miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
 });
 
 test("the Sun turns about its own pole with time, and the glow, not the globe, faces the camera", () => {

@@ -49,8 +49,8 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Pholus | 4096 | shader | 11x |  |  |
 | Halley | 4096 | shader | 11x |  |  |
 | Moon | 16384 | tiles | 44x |  |  |
-| Phobos | 4096 | shader | 11x |  |  |
-| Deimos | 4096 | shader | 11x |  |  |
+| Phobos | 2048 | map | 8x |  |  |
+| Deimos | 2048 | map | 8x |  |  |
 | Io | 8192 | tiles | 22x |  |  |
 | Europa | 1024 | map | 8x |  |  |
 | Ganymede | 2048 | map | 8x |  |  |
