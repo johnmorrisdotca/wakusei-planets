@@ -47,7 +47,7 @@ Each figure is an object: `value` and `unit`, `source` (`name`, `url`, `pageUpda
 
 ## Where the figures come from
 
-All of them are read from NASA's planetary fact sheets (the National Space Science Data Center, https://nssdc.gsfc.nasa.gov/planetary/factsheet/), one page for each body, on 2026-11-18. They are facts typed as a table, and none of the pages' text is copied. The sheets give the gas giants' gravity, density and temperature at the 1 bar level and no surface, so the pressure of a gas giant is the level itself: 100,000 Pa. Mercury's pressure is the sheet's upper limit (`bound` is `"below"`), the Moon's is the sheet's night-time figure, and Pluto's is its approximate 13 microbar. Where the sheets differ from other tables (the Earth's surface gravity is 9.820 m/s2 as the mean, not the standard 9.80665), this table has the sheet's figure.
+All of them are read from NASA's planetary fact sheets (the NASA Space Science Data Coordinated Archive, NSSDC, https://nssdc.gsfc.nasa.gov/planetary/factsheet/), one page for each body, on 2026-11-18. They are facts typed as a table, and none of the pages' text is copied. The sheets give the gas giants' gravity, density and temperature at the 1 bar level and no surface, so the pressure of a gas giant is the level itself: 100,000 Pa. Mercury's pressure is the sheet's upper limit (`bound` is `"below"`), the Moon's is the sheet's night-time figure, and Pluto's is its approximate 13 microbar. Where the sheets differ from other tables (the Earth's surface gravity is 9.820 m/s2 as the mean, not the standard 9.80665), this table has the sheet's figure.
 
 The GM here is the sheet's, to the digits it prints; the mass and escape speed of `/stops` use JPL's GM to more digits for the same bodies.
 
