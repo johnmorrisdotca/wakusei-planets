@@ -339,6 +339,11 @@
       "en": "A fact sheet for the Sun, the planets and Pluto (size, distance, year, day, moons, NASA page, a short description in English and Japanese)",
       "ja": "太陽、惑星、冥王星のファクトシート (大きさ、距離、1年、1日、衛星、NASAのページ、日本語と英語の短い説明) "
     },
+    "./sky": {
+      "en": "Sky events, experimental: the equinoxes and solstices (more to come), through astronomy-engine as an optional peer",
+      "ja": "空の出来事 (実験的): 春分・夏至・秋分・冬至 (これから増えます)。astronomy-engine を任意の peer として使います",
+      "platform": "node"
+    },
     "./suncalc": {
       "en": "The Sun and Moon from a place: position, sunrise and sunset, Moon rise, set and phase, with suncalc 2's names and a better engine",
       "ja": "場所から見た太陽と月: 位置、日の出と日の入り、月の出入りと月相。suncalc 2 と同じ名前で、より正確です",

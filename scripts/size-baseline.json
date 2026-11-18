@@ -65,6 +65,7 @@
     "./orbiters": 9586,
     "./ground-track": 685,
     "./sky-bodies": 34751,
+    "./sky": 33317,
     "./suncalc": 10037,
     "./suncalc/legacy": 10096,
     "./tables": 76246,
