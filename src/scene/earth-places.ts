@@ -195,6 +195,8 @@ export interface EarthPlaceMark {
   x: number;
   y: number;
   named: boolean;
+  /** For a place on a body other than the Earth (`body-places`): the body. */
+  body?: string;
 }
 
 /** The markers over one view. */
@@ -221,9 +223,10 @@ interface Item {
  * Make the layer of markers inside a view's shadow root, above its picture. It holds a handful of elements made once and kept; a draw only writes the numbers that changed.
  *
  * @param root - The view's shadow root.
+ * @param options - `press`, called with the mark and the pointer event when a press that did not move ends over a drawn name or a foot ring (the layer itself takes no pointer: a press on it goes on to the view's controls, as a name on a body's surface does).
  * @returns The layer.
  */
-export function createEarthPlaceLayer(root: ShadowRoot): EarthPlaceLayerView {
+export function createEarthPlaceLayer(root: ShadowRoot, options: { press?: (mark: EarthPlaceMark, event: PointerEvent) => void } = {}): EarthPlaceLayerView {
   const style = document.createElement("style");
   style.textContent = STYLE;
   const box = document.createElement("div");
@@ -242,6 +245,8 @@ export function createEarthPlaceLayer(root: ShadowRoot): EarthPlaceLayerView {
   let context: CanvasRenderingContext2D | null | undefined;
   const pool: Item[] = [];
   let shown: EarthPlaceMark[] = [];
+  // what is on the screen to press: each drawn mark with its parts and how strongly it shows
+  let live: { mark: EarthPlaceMark; it: Item; opacity: number }[] = [];
 
   const item = (i: number): Item => {
     let it = pool[i];
@@ -271,10 +276,45 @@ export function createEarthPlaceLayer(root: ShadowRoot): EarthPlaceLayerView {
   };
   const n = (value: number): string => String(Math.round(value * 10) / 10);
 
+  // press: the layer takes no pointer (a press on it goes on to the view's controls, which turn the view), so a press that did not move and ends over a drawn name or a foot ring is the mark's, found here as the marks of
+  // a body's surface find a written name. The nearest of the marks whose name's box or ring's box holds the point wins; a mark that is fading out (under a fifth of its strength) cannot be pressed.
+  const host = root.host;
+  let pressed: { x: number; y: number; id: number } | null = null;
+  const down = (event: PointerEvent): void => {
+    pressed = event.button === 0 && event.composedPath().includes(host) ? { x: event.clientX, y: event.clientY, id: event.pointerId } : null;
+  };
+  const up = (event: PointerEvent): void => {
+    const start = pressed;
+    pressed = null;
+    if (start === null || start.id !== event.pointerId || live.length === 0 || options.press === undefined || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 6) return;
+    let best: { mark: EarthPlaceMark; away: number } | undefined;
+    for (const entry of live) {
+      if (entry.opacity < 0.2) continue;
+      for (const part of [entry.it.name.hidden ? null : entry.it.name, entry.it.ring.style.display === "none" ? null : entry.it.ring]) {
+        if (part === null) continue;
+        const r = part.getBoundingClientRect();
+        const pad = part === entry.it.name ? 0 : 6;
+        if (event.clientX < r.left - pad || event.clientX > r.right + pad || event.clientY < r.top - pad || event.clientY > r.bottom + pad) continue;
+        const away = Math.hypot(event.clientX - (r.left + r.right) / 2, event.clientY - (r.top + r.bottom) / 2);
+        if (best === undefined || away < best.away) best = { mark: entry.mark, away };
+      }
+    }
+    if (best !== undefined) options.press(best.mark, event);
+  };
+  const cancel = (): void => {
+    pressed = null;
+  };
+  if (options.press !== undefined) {
+    window.addEventListener("pointerdown", down, true);
+    window.addEventListener("pointerup", up, true);
+    window.addEventListener("pointercancel", cancel, true);
+  }
+
   return {
     set(places, layout, look) {
       const named = new Map(layout.labels.map((spot) => [spot.index, spot]));
       shown = [];
+      live = [];
       for (const [i, shape] of layout.shapes.entries()) {
         const place = places[shape.index]!;
         const it = item(i);
@@ -312,7 +352,11 @@ export function createEarthPlaceLayer(root: ShadowRoot): EarthPlaceLayerView {
           it.name.style.opacity = n(shape.opacity * (1 - 0.3 * shape.night));
           it.name.style.transform = `translate(${n(spot.left)}px,${n(spot.top)}px)`;
         } else it.name.hidden = true;
-        shown.push({ id: place.id, kind: here ? "here" : "favourite", x: shape.x, y: shape.y, named: spot !== undefined });
+        const mark: EarthPlaceMark = { id: place.id, kind: here ? "here" : "favourite", x: shape.x, y: shape.y, named: spot !== undefined };
+        const body = (place as { body?: string }).body;
+        if (body !== undefined) mark.body = body;
+        shown.push(mark);
+        live.push({ mark, it, opacity: shape.opacity * dim });
       }
       for (let i = layout.shapes.length; i < pool.length; i += 1) {
         const it = pool[i]!;
@@ -326,6 +370,7 @@ export function createEarthPlaceLayer(root: ShadowRoot): EarthPlaceLayerView {
         it.name.hidden = true;
       }
       shown = [];
+      live = [];
     },
     width(text) {
       const known = widths.get(text);
@@ -343,10 +388,14 @@ export function createEarthPlaceLayer(root: ShadowRoot): EarthPlaceLayerView {
       return shown;
     },
     dispose() {
+      window.removeEventListener("pointerdown", down, true);
+      window.removeEventListener("pointerup", up, true);
+      window.removeEventListener("pointercancel", cancel, true);
       box.remove();
       style.remove();
       pool.length = 0;
       shown = [];
+      live = [];
     },
   };
 }

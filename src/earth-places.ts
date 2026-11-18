@@ -2,11 +2,12 @@
 // `import "@johnmorrisdotca/wakusei-planets/earth-places"`, and `<wakusei-space earth-places='[...]'>` draws them. A page that never imports it carries none of chikyu-earth, and the attribute draws nothing.
 import { layoutPlaces, readPlaces } from "@johnmorrisdotca/chikyu-earth/markers";
 import { spotView, type SurfaceView } from "./place-marks.ts";
+import { readBodyPlacesWith, type PlaceOnBody } from "./scene/body-places.ts";
 import { setEarthPlacesLayout, type EarthPlace, type EarthPlaceLayout, type EarthPlaceLayoutOptions, type EarthPlaceLook } from "./scene/earth-places.ts";
 
 setEarthPlacesLayout({ read: readPlaces, layout: layoutPlaces });
 
-export type { EarthPlace, EarthPlaceLayout, EarthPlaceLayoutOptions, EarthPlaceLook };
+export type { PlaceOnBody, EarthPlace, EarthPlaceLayout, EarthPlaceLayoutOptions, EarthPlaceLook };
 export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS } from "./scene/earth-places.ts";
 
 /**
@@ -49,4 +50,22 @@ export function readEarthPlaces(value: string | null | undefined): EarthPlace[] 
  */
 export function layEarthPlaces(places: readonly EarthPlace[], view: SurfaceView, look: EarthPlaceLook, options: EarthPlaceLayoutOptions = {}): EarthPlaceLayout {
   return layoutPlaces(places, spotView(view), look, options);
+}
+
+/**
+ * Read the text of the `body-places` attribute (a JSON array) as the list `<wakusei-space>` draws on bodies other than the Earth: each entry is an `earth-places` entry with the `body` it is on (lower case, not `earth`). They are grouped by body and each group is read by
+ * `readEarthPlaces`, so the same limits hold (a longitude from -180 to 180, a latitude from -90 to 90, a label of 80 letters, `here` or `favourite`, a safe colour, 5,000 at most). An entry without a valid `body` is left out.
+ *
+ * @param value - The attribute's text, or null.
+ * @returns The places to draw, the bodies in the order they first appear.
+ *
+ * @example
+ * ```ts
+ * import { readBodyPlaces } from "@johnmorrisdotca/wakusei-planets/earth-places";
+ *
+ * console.log(readBodyPlaces('[{"body":"moon","id":"a","lon":10,"lat":5},{"body":"earth","id":"b","lon":0,"lat":0},{"lon":1,"lat":1}]').map((place) => `${place.body}:${place.id}`));
+ * ```
+ */
+export function readBodyPlaces(value: string | null | undefined): PlaceOnBody[] {
+  return readBodyPlacesWith(value, readPlaces);
 }

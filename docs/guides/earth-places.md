@@ -50,7 +50,7 @@ npm install @johnmorrisdotca/wakusei-planets @johnmorrisdotca/chikyu-earth
 - **Names.** A place's `label` is shown at the top of its marker when there is room, `here` first and then in the order given. A name never overlaps another place's name or the name of a body (the Moon's, the Earth's own); one with no free room is left out and its marker is still drawn. Names are measured in the page's own font (`--wakusei-place-font`).
 - **Dimmer at night.** A place on the Earth's night side is drawn at half strength and its name a little dimmer, so it can still be read. With `light="lit"` nothing is dimmed.
 - **At most 32 markers.** The first 32 places in sight, `here` first and then in the order given, stand up. The rest of those in sight are counted in `earthPlacesShown.omitted`, not drawn: put the places that matter most first. A list is cut to 5,000, and a place with a longitude outside -180 to 180 or a latitude outside -90 to 90 is left out.
-- **Nothing at rest.** The markers are laid when the picture is drawn (the camera moved, the clock stepped, a setting changed) and not otherwise; they are a few SVG shapes and names kept from one draw to the next and only moved. There is no animation: the reader's place is the tallest and brightest, not the one that pulses. The markers are not buttons and take no pointer: a press goes through them to the view.
+- **Nothing at rest.** The markers are laid when the picture is drawn (the camera moved, the clock stepped, a setting changed) and not otherwise; they are a few SVG shapes and names kept from one draw to the next and only moved. There is no animation: the reader's place is the tallest and brightest, not the one that pulses. The markers are not buttons and take no pointer: a press goes through them to the view, and only a still tap that ends on a drawn name or a foot ring is the event `wakusei-body-place` (below).
 - **What it reports.** `space.earthPlacesShown` says what was laid at the last draw: `{ marks: [{ id, kind, x, y, named }], omitted }`, with each marker's foot in CSS pixels from the view's top left.
 
 ## The reader's own place
@@ -72,6 +72,28 @@ document.querySelector("#here").addEventListener("click", () => {
 - **Round it.** `nearby(point, km)` puts a place on a grid about `km` kilometres across (10 by default), so the marker never shows a street. Round before you draw it or keep it.
 - **Keep it on the device.** The element stores nothing and sends nothing. Do not put the reader's place in the page's address or send it to a server unless they choose to share it.
 - **Favourites** are any places without `kind: "here"`. The package has no list of its own and no picker: the page builds the reader's list and hands the whole list over each time it changes.
+
+## Places on the Moon, Mars and any other body
+
+`bodyPlaces` (the attribute `body-places`) is the same layer for every other body the view draws: a list of `{ body, id, lon, lat, label, kind, color }`, with `body` the id of the body (`moon`, `mars`, `ceres`, `io`) and the rest as `earthPlaces`. It needs the same import (`@johnmorrisdotca/wakusei-planets/earth-places`, chikyu-earth's layout: no new peer) and has the same look (`earth-places-look`), colours, names, limits and reading (`readBodyPlaces` of `/earth-places` groups the list by body and gives each group to `readEarthPlaces`). Each place stands on the ground of the body the camera looks at, or of any planet, the Moon or catalogue moon in sight at 40 CSS pixels of radius or more; it is hidden on the far side and under another body's disc, never over a body's name, and at most 32 stand up in all, the reader's `here` first. An entry for `earth` is not drawn: the Earth's places are `earthPlaces`. The standing view's sky has no beams yet.
+
+`space.bodyPlacesShown` says what was laid, `{ marks: [{ body, id, kind, x, y, named }], omitted }`.
+
+The rows of `/places/search` are the places. `loadPlaceHits(ids)` turns the ids a favourites page saved (this release's, or 0.66.0's: an old id is made current) into rows, fetching only the lists it needs, and `hitToBodyPlace(hit, { lang, kind, color })` makes a place of a row:
+
+```ts no-run
+import "@johnmorrisdotca/wakusei-planets/space/element";
+import "@johnmorrisdotca/wakusei-planets/earth-places";
+import { hitToBodyPlace, loadPlaceHits } from "@johnmorrisdotca/wakusei-planets/places/search";
+
+const saved = ["moon/tycho", "mars/olympus-mons", "moon/apollo-11-lunar-module"];
+const space = document.querySelector("wakusei-space")!;
+space.bodyPlaces = (await loadPlaceHits(saved)).map((hit) => hitToBodyPlace(hit, { lang: "en" }));
+```
+
+## Pressing a beam
+
+A still tap (it moved less than 6 pixels) that ends on a drawn name or a foot ring sends `wakusei-body-place` (bubbling, composed) with `detail: { body, id, kind, x, y }`: the body (`earth` for the Earth's places), the place's `id` as you gave it, its `kind` (`here` or `favourite`) and its foot in CSS pixels from the view's top left. Nothing else happens: what a press does is the page's to decide (select first, go on a second press, open the place). The layer itself takes no pointer, so a drag that starts on a name still turns the view, and a tap that is a beam's is not also a press on the body under it. The nearest of several marks under the tap wins; a mark fading out cannot be pressed. There is no keyboard press on a beam (they are drawn for the eye, hidden from assistive technology): offer the same places as a list of buttons. chikyu-earth's own `chikyu-place-click` has `id` and `kind` in the same way.
 
 ## The parts without a browser
 
