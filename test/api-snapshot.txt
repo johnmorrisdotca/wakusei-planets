@@ -654,6 +654,15 @@ export type FactSheetId = (typeof FACT_SHEET_IDS)[number];
 export interface Length { km: number; miles: number; }
 const MOONS_READ_ON: "2026-11-11"
 function factSheet(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto") => FactSheet
+## ./discovery
+const DISCOVERIES: readonly Discovery[]
+const DISCOVERY_IDS: readonly string[]
+const DISCOVERY_METHODS: readonly ["ancient", "visual", "calculation", "photographic", "electronic", "adaptive-optics", "space-telescope", "spacecraft"]
+const DISCOVERY_SOURCES: Readonly<Record<string, readonly [name: string, address: string, read: string]>>
+export interface Discovery { id: string; kind: "planet" | "dwarf-planet" | "moon"; ancient: boolean; date: DiscoveryFact<string> | null; place: DiscoveryFact<string> | null; by: DiscoveryFact<readonly string[]> | null; method: DiscoveryFact<DiscoveryMethod> | null; designation: DiscoveryFact<string> | null; number: DiscoveryFact<string> | null; announced: DiscoveryFact<string> | null; namedBy: DiscoveryFact<string> | null; nameOrigin: DiscoveryFact<string> | null; notes: readonly string[]; }
+export interface DiscoveryFact<T> { value: T; source: string; }
+export type DiscoveryMethod = (typeof DISCOVERY_METHODS)[number];
+function discoveryOf(id: string) => Discovery | undefined
 ## ./roadster
 const ROADSTER: { readonly name: { readonly en: "Starman"; readonly ja: "スターマン"; }; readonly car: { readonly en: "Tesla Roadster"; readonly ja: "テスラ・ロードスター"; }; readonly launch: number; readonly horizonsId: "-143205"; readonly record: { readonly start: number; readonly end: number; }; }
 const ROADSTER_ACCURACY: { readonly from: number; readonly to: number; readonly stepDays: 10; readonly interpolationKm: 755; readonly note: "Horizons' path was fitted to observations from February and March 2018 and is a prediction after that; sunlight's push is modelled only as one number fitted to those observations, so the real car drifts from the predicted path, and the further from 2018 the more. The interpolation error above is separate and small beside it."; }

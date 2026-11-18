@@ -339,6 +339,10 @@
       "en": "A fact sheet for the Sun, the planets and Pluto (size, distance, year, day, moons, NASA page, a short description in English and Japanese)",
       "ja": "太陽、惑星、冥王星のファクトシート (大きさ、距離、1年、1日、衛星、NASAのページ、日本語と英語の短い説明) "
     },
+    "./discovery": {
+      "en": "When, where, how and by whom each planet, dwarf planet and fully drawn moon was found, how it was designated and numbered, and where its name comes from, each fact with its source",
+      "ja": "各惑星、準惑星、くわしく描く衛星が、いつ、どこで、どのように、だれによって見つかったか、仮符号と番号、名前の由来 (事実ごとに出どころつき)"
+    },
     "./sky": {
       "en": "Sky events, experimental: seasons, Moon phases, eclipses (worldwide and from a place), rise, set and transit, conjunctions and oppositions, peak magnitude, libration, apsides, nodes and greatest elongation, through astronomy-engine as an optional peer",
       "ja": "空の出来事 (実験的): 季節、月相、食 (世界全体と観測地点ごと)、出・南中・入り、合と衝、最大光度、秤動、近地点・遠地点と交点、最大離角。astronomy-engine を任意の peer として使います",

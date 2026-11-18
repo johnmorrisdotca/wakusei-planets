@@ -241,6 +241,11 @@
       "import": "./dist/fact-sheets.js",
       "default": "./dist/fact-sheets.js"
     },
+    "./discovery": {
+      "types": "./dist/discovery.d.ts",
+      "import": "./dist/discovery.js",
+      "default": "./dist/discovery.js"
+    },
     "./roadster": {
       "types": "./dist/roadster.d.ts",
       "import": "./dist/roadster.js",
