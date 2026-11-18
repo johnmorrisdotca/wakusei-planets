@@ -2,6 +2,7 @@
 // Sources, each read on 2026-11-17 in one page and typed in by hand below (nothing saved or downloaded):
 //   solar: https://eclipse.gsfc.nasa.gov/SEdecade/SEdecade2021.html (22 eclipses: date, TD of greatest eclipse, type, magnitude)
 //   lunar: https://eclipse.gsfc.nasa.gov/LEdecade/LEdecade2021.html (22 eclipses: date, TD of greatest eclipse, type, umbral magnitude, negative for a penumbral eclipse)
+// The umbral magnitude is NASA's column of that name (negative for a penumbral eclipse).
 // NASA gives dynamical time (TD); the engine's moments are UT. TD is UT plus delta-T, taken as 69 seconds for the decade (the real figure is 69 to 70 and NASA's 2013 prediction is a little over 70).
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -45,6 +46,22 @@ for (const [type, table] of [["solar", rows(SOLAR)], ["lunar", rows(LUNAR)]] as 
     console.log(`${type} eclipses: worst miss against NASA ${worst.toFixed(1)} s over ${table.length}`);
   });
 }
+
+test("every lunar eclipse's umbral magnitude is within 0.01 of NASA's (negative for a penumbral eclipse), the worst miss is reported, and a solar eclipse has none", () => {
+  const table = rows(LUNAR);
+  const lunar = found.filter((eclipse) => eclipse.type === "lunar");
+  let worst = 0;
+  lunar.forEach((eclipse, i) => {
+    const want = table[i]!;
+    const miss = Math.abs(eclipse.magnitude! - want.magnitude);
+    worst = Math.max(worst, miss);
+    assert.ok(miss <= 0.01, `lunar ${eclipse.peak.toISOString()}: umbral magnitude ${eclipse.magnitude}, NASA ${want.magnitude}`);
+    assert.equal(eclipse.magnitude! < 0, eclipse.kind === "penumbral", `${eclipse.peak.toISOString()}: a penumbral eclipse is the one with a negative umbral magnitude`);
+    assert.equal(eclipse.magnitude! >= 1, eclipse.kind === "total", `${eclipse.peak.toISOString()}: a total eclipse is the one with the whole Moon in the umbra`);
+  });
+  for (const eclipse of found.filter((e) => e.type === "solar")) assert.equal(eclipse.magnitude, undefined);
+  console.log(`lunar umbral magnitude: worst miss against NASA ${worst.toFixed(4)} over ${lunar.length}`);
+});
 
 test("a solar eclipse's obscuration agrees with NASA's magnitude: 1 for a total one, about the magnitude squared for an annular one, and none for a partial one", () => {
   const table = rows(SOLAR);

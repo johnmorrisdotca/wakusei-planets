@@ -477,7 +477,7 @@ await step("sky-bodies-node", () => {
 
 await step("sky-node", () => {
   const out = execFileSync(process.execPath, [join(examples("sky"), "node.mjs")], { cwd: usage, encoding: "utf8" }).trim();
-  if (out !== "Spring equinox 2026-03-20T14:45Z\nSummer solstice 2026-06-21T08:25Z\nAutumn equinox 2026-09-23T00:05Z\nWinter solstice 2026-12-21T20:50Z") throw new Error(`unexpected output: ${out}`);
+  if (out !== "Spring equinox 2026-03-20T14:45Z\nSummer solstice 2026-06-21T08:25Z\nAutumn equinox 2026-09-23T00:05Z\nWinter solstice 2026-12-21T20:50Z\nSunrise 06:26, sunset 16:52\nJupiter opposition 2026-01-10T08:40Z") throw new Error(`unexpected output: ${out}`);
 });
 
 await step("plan-node", () => {

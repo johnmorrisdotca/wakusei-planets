@@ -817,25 +817,36 @@ export interface SkyHorizontal { azimuthDeg: number; altitudeDeg: number; appare
 function skyBodies(when: number | Date, observer?: Observer | undefined) => SkyBody[]
 function skyBody(id: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", when: number | Date, observer?: Observer | undefined) => SkyBody
 ## ./sky
+export type AlignmentKind = "conjunction" | "opposition" | "quadrature";
+export interface EclipseContact { time: Date; altitude: number; }
 export interface GreatestElongation { time: Date; elongation: number; side: "east" | "west"; }
+export interface LocalSolarEclipse { kind: "partial" | "annular" | "total"; obscuration: number; partialBegin: EclipseContact; centralBegin: EclipseContact | null; peak: EclipseContact; centralEnd: EclipseContact | null; partialEnd: EclipseContact; }
 export interface LunarApsis { kind: "perigee" | "apogee"; time: Date; distanceKm: number; }
 export interface LunarNode { kind: "ascending" | "descending"; time: Date; }
 export interface MoonLibration { longitude: number; latitude: number; distanceKm: number; angularDiameter: number; }
 export interface MoonPhaseEvent { phase: MoonPhaseName; time: Date; }
 export type MoonPhaseName = "new" | "firstQuarter" | "full" | "lastQuarter";
-export interface SkyEclipse { type: "solar" | "lunar"; kind: "penumbral" | "partial" | "annular" | "total"; peak: Date; obscuration?: number; }
+export interface PeakMagnitude { time: Date; magnitude: number; }
+export interface SkyAlignment { time: Date; kind: AlignmentKind; side: "east" | "west" | null; inferior: boolean | null; }
+export interface SkyEclipse { type: "solar" | "lunar"; kind: "penumbral" | "partial" | "annular" | "total"; peak: Date; obscuration?: number; magnitude?: number; }
 export interface SkyHorizonOptions { observer: Observer; within?: { days: number; }; }
+export interface SkyRiseSet { rise: Date | null; transit: Date | null; set: Date | null; horizon: "crosses" | "above" | "below"; }
+export interface SkyRiseSetOptions { observer: Observer; timeZone: string; }
 export interface SkySeasons { marchEquinox: Date; juneSolstice: Date; septemberEquinox: Date; decemberSolstice: Date; }
 function findEclipses(from: When, to: When) => SkyEclipse[]
+function localSolarEclipse(from: When, options: { observer: Observer; within?: { days: number; } | undefined; }) => LocalSolarEclipse | null
 function lunarApsides(from: When, to: When) => LunarApsis[]
 function lunarNodes(from: When, to: When) => LunarNode[]
 function moonLibration(when: When) => MoonLibration
 function moonPhases(from: When, to: When) => MoonPhaseEvent[]
+function nextAlignment(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: { kind: AlignmentKind; within?: { days: number; } | undefined; }) => SkyAlignment | null
 function nextGreatestElongation(body: "mercury" | "venus", from: When) => GreatestElongation
 function nextMoonPhase(from: When, options: { phase: MoonPhaseName; within?: { days: number; } | undefined; }) => Date | null
+function nextPeakMagnitude(body: "venus", from: When) => PeakMagnitude
 function nextRise(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: SkyHorizonOptions) => Date | null
 function nextSet(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: SkyHorizonOptions) => Date | null
 function nextTransit(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: SkyHorizonOptions) => Date | null
+function riseSetTimes(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", date: When, options: SkyRiseSetOptions) => SkyRiseSet
 function seasons(year: number) => SkySeasons
 ## ./suncalc
 export interface MoonIllumination { fraction: number; phase: number; angle: number; waxing: boolean; }
