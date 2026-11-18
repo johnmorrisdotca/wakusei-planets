@@ -34,7 +34,7 @@ const dots = (page: import("@playwright/test").Page, png: Buffer): Promise<numbe
     return dark / Math.max(1, lit);
   }, png.toString("base64"));
 
-for (const body of ["nereid", "nix", "hydra", "janus", "phobos"]) {
+for (const body of ["nereid", "nix", "hydra", "janus", "amalthea", "epimetheus", "calypso", "phobos"]) {
   test(`${body} in the realistic look has no lattice of dark dots on its lit side`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
     await page.setViewportSize({ width: 800, height: 900 });
