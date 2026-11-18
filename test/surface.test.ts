@@ -2,11 +2,12 @@
 // the made detail (craters and rocks: seeded, fixed to the place, many small and few large, fading by distance, their slope the slope of their height) and the rocks' mesh. The GLSL holds the same formulas as
 // src/surface/detail.ts; the pinned craters below are what both must give, so a change to one is a change to the other.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { apparent } from "../src/ephemeris.ts";
 import { driveParts, driveStep, driveView, ROVER, startDrive, type DriveState } from "../src/surface/drive.ts";
 import { DustField } from "../src/surface/dust.ts";
-import { calloutsBy, CALLOUTS, clockText, LANDING as DESCENT, landingAt } from "../src/surface/landing.ts";
+import { calloutsBy, CALLOUTS, clockText, LANDING as DESCENT, landingAt, turnedBy, watchedLook, WATCH_PITCH_LIMIT } from "../src/surface/landing.ts";
 import { keepAway, objectParts, objectsOf, partShadows, traverseOf } from "../src/surface/objects.ts";
 import { craterIn, craterProfile, setKeepOut, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
 import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
@@ -627,4 +628,40 @@ test("the events come in order, the report's times are the table's, and the alti
   assert.ok(Math.abs(landingAt(at("manual").t).altitude - 300 * 0.3048) < 3, "manual takeover just under 300 ft");
   assert.deepEqual(calloutsBy(600).map((c) => c.id), ["ignition", "full", "radar", "throttle", "high-gate", "redesignation"]);
   assert.equal(calloutsBy(725).length, CALLOUTS.length);
+});
+
+test("a drag turns the watched descent's view (MODULES-1546): right turns it right, down tips it up, and the pitch stops at the limit", () => {
+  const none = { azimuth: 0, pitch: 0 };
+  assert.deepEqual(turnedBy(none, 100, 0, 0.1), { azimuth: -10, pitch: 0 }, "a drag to the right adds a turn that clampLook reads as left of the camera's own azimuth, as in the standing view");
+  assert.deepEqual(turnedBy(none, -100, 0, 0.1), { azimuth: 10, pitch: 0 });
+  assert.deepEqual(turnedBy(none, 0, 50, 0.2), { azimuth: 0, pitch: 10 });
+  assert.equal(turnedBy(none, 0, 10_000, 1).pitch, WATCH_PITCH_LIMIT);
+  assert.equal(turnedBy(none, 0, -10_000, 1).pitch, -WATCH_PITCH_LIMIT);
+  // two drags add
+  assert.deepEqual(turnedBy(turnedBy(none, 30, 20, 0.5), 30, 20, 0.5), { azimuth: -30, pitch: 20 });
+});
+
+test("the watched view is where the camera points by itself plus the turn, at every frame of the descent: the turn survives the frames that follow it", () => {
+  const turn = turnedBy({ azimuth: 0, pitch: 0 }, -80, 30, 0.25);
+  for (const t of [240, 400, 600, 650, 700, 740]) {
+    const pose = landingAt(Math.min(t, DESCENT.duration));
+    const camera = { azimuth: pose.heading, pitch: pose.pitch };
+    const look = watchedLook(camera, turn);
+    assert.ok(Math.abs(((look.azimuth - camera.azimuth - turn.azimuth + 540) % 360) - 180) < 1e-9, `t=${t}: azimuth is the camera's plus the turn`);
+    assert.ok(look.azimuth >= 0 && look.azimuth < 360);
+    assert.equal(look.pitch, camera.pitch + turn.pitch, `t=${t}`);
+    // with no turn it is the camera's own
+    assert.equal(watchedLook(camera, { azimuth: 0, pitch: 0 }).pitch, camera.pitch);
+  }
+  assert.deepEqual(watchedLook({ azimuth: 350, pitch: 5 }, { azimuth: 20, pitch: -8 }), { azimuth: 10, pitch: -3 }, "the azimuth wraps");
+});
+
+test("the standing view's drag goes to the turn while a descent is watched, not into the look the next frame would overwrite", () => {
+  const source = readFileSync("src/surface/element.ts", "utf8");
+  const move = source.slice(source.indexOf("#onPointerMove = "), source.indexOf("#onPointerUp = "));
+  assert.match(move, /this\.#vehicle !== undefined \|\| this\.#landing !== undefined/, "the drag is a turn for the rover and for the watched landing");
+  assert.match(move, /turnedBy\(this\.#camOffset/);
+  assert.match(move, /this\.#landingFrame\(0, false\)/, "a paused descent is drawn again at once");
+  const frame = source.slice(source.indexOf("#landingFrame(seconds"), source.indexOf("// the marker:"));
+  assert.equal((frame.match(/watchedLook\(/g) ?? []).length, 2, "both cameras add the turn");
 });

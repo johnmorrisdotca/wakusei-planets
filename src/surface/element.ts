@@ -11,7 +11,7 @@ import { driveStep, driveView, ROVER, startDrive, toWorld, type DriveDrag, type 
 import { DustField } from "./dust.ts";
 import type { VehicleModel } from "./model.ts";
 import type { Rig } from "./rig.ts";
-import { calloutsBy, clockText, LANDING, landingAt, type Callout } from "./landing.ts";
+import { calloutsBy, clockText, LANDING, landingAt, turnedBy, watchedLook, type Callout } from "./landing.ts";
 import { drop, groundAt, type HeightLevel, type TerrainManifest } from "./height.ts";
 import { loadTerrain, type Terrain, type TerrainProgress } from "./load.ts";
 import { createSurfaceItem, type SurfaceScene } from "./scene.ts";
@@ -948,7 +948,7 @@ export class WakuseiSurface extends HTMLElement {
     if (l.camera === "lander") {
       this.#at = { east: lx, north: ly };
       this.#landingEyeUp = lz + pose.altitude + 4;
-      this.#look = clampLook({ azimuth: (((pose.heading + this.#camOffset.azimuth) % 360) + 360) % 360, pitch: pose.pitch + this.#camOffset.pitch, fov: this.#look.fov });
+      this.#look = clampLook({ ...watchedLook({ azimuth: pose.heading, pitch: pose.pitch }, this.#camOffset), fov: this.#look.fov });
     } else {
       const b = (l.from.bearing * Math.PI) / 180;
       const [ox, oy] = [td.east + Math.sin(b) * l.from.distance, td.north + Math.cos(b) * l.from.distance];
@@ -957,7 +957,7 @@ export class WakuseiSurface extends HTMLElement {
       const horizontal = Math.hypot(lx - ox, ly - oy) || 1;
       const azimuth = ((Math.atan2(lx - ox, ly - oy) * 180) / Math.PI + 360) % 360;
       const pitch = (Math.atan2(lz + pose.altitude + 3.4 - this.#landingEyeUp, horizontal) * 180) / Math.PI;
-      this.#look = clampLook({ azimuth: azimuth + this.#camOffset.azimuth, pitch: pitch + this.#camOffset.pitch, fov: this.#look.fov });
+      this.#look = clampLook({ ...watchedLook({ azimuth, pitch }, this.#camOffset), fov: this.#look.fov });
     }
     // the marker: while the stage is smaller than about 6 pixels in the ground camera a ring and its height mark where it is, fading out as it grows
     const ring = this.#root.getElementById("marker") as HTMLElement;
@@ -1204,10 +1204,13 @@ export class WakuseiSurface extends HTMLElement {
     }
     const box = this.getBoundingClientRect();
     const perPixel = this.#look.fov / Math.max(1, box.height);
-    if (this.#vehicle !== undefined) {
-      this.#camOffset = { azimuth: this.#camOffset.azimuth - (event.clientX - was.x) * perPixel, pitch: Math.max(-60, Math.min(60, this.#camOffset.pitch + (event.clientY - was.y) * perPixel)) };
-      this.#syncDriveCamera();
-      this.#changed();
+    if (this.#vehicle !== undefined || this.#landing !== undefined) {
+      // the rover's camera and the watched descent's point themselves at every frame: a drag adds to a turn kept beside them (MODULES-1546: it was written into the look, which the next frame of the descent put back)
+      this.#camOffset = turnedBy(this.#camOffset, event.clientX - was.x, event.clientY - was.y, perPixel);
+      if (this.#vehicle !== undefined) {
+        this.#syncDriveCamera();
+        this.#changed();
+      } else this.#landingFrame(0, false);
       return;
     }
     this.#look = clampLook({ ...this.#look, azimuth: this.#look.azimuth - (event.clientX - was.x) * perPixel, pitch: this.#look.pitch + (event.clientY - was.y) * perPixel });
