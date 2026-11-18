@@ -659,6 +659,13 @@ export type FactSheetId = (typeof FACT_SHEET_IDS)[number];
 export interface Length { km: number; miles: number; }
 const MOONS_READ_ON: "2026-11-11"
 function factSheet(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto") => FactSheet
+## ./body-physics
+export interface BodyPhysics { id: PhysicsId; mass: PhysicsReading | null; gm: PhysicsReading | null; surfaceGravity: PhysicsReading | null; airDensity: PhysicsReading | null; pressure: PhysicsReading | null; temperature: (Omit<PhysicsReading, "value"> & { value: number | null; }) | null; }
+const PHYSICS_IDS: readonly ["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
+export type PhysicsId = (typeof PHYSICS_IDS)[number];
+export interface PhysicsReading { value: number; unit: "kg" | "km3/s2" | "m/s2" | "kg/m3" | "Pa" | "K"; source: PhysicsSource; quoted?: string; bound?: "below" | "about"; uncertainty?: number; low?: number; high?: number; level?: string; note?: string; }
+export interface PhysicsSource { name: string; url: string; pageUpdated: string; read: string; }
+function bodyPhysics(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon") => BodyPhysics
 ## ./discovery
 const DISCOVERIES: readonly Discovery[]
 const DISCOVERY_IDS: readonly string[]

@@ -241,6 +241,11 @@
       "import": "./dist/fact-sheets.js",
       "default": "./dist/fact-sheets.js"
     },
+    "./body-physics": {
+      "types": "./dist/body-physics.d.ts",
+      "import": "./dist/body-physics.js",
+      "default": "./dist/body-physics.js"
+    },
     "./discovery": {
       "types": "./dist/discovery.d.ts",
       "import": "./dist/discovery.js",

@@ -1,7 +1,7 @@
 // Check the built package the way a consumer would: the entry files are there, and importing the built index draws every body.
 import { existsSync, readdirSync, statSync } from "node:fs";
 
-const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "earth-places", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "fact-sheets", "discovery", "comets", "data/comets", "places", "places/moon", "places/mars", "landing-sites", "asteroids", "data/asteroids", "approaches", "data/approaches", "moon-catalogue", "data/moon-catalogue", "plan/index", "plan/element", "flat/index", "flat/define", "flat/system", "flat/system-define", "orbiters", "orbiter-facts", "data/orbiters"];
+const entries = ["coordinates", "index", "element", "scene/look", "scene/painter", "door/index", "data-door", "space/index", "space/element", "bodies/all", "earth-places", "bodies/sun", "bodies/jupiter", "bodies/saturn", "bodies/moons-jupiter", "roadster", "data/roadster", "fact-sheets", "body-physics", "discovery", "comets", "data/comets", "places", "places/moon", "places/mars", "landing-sites", "asteroids", "data/asteroids", "approaches", "data/approaches", "moon-catalogue", "data/moon-catalogue", "plan/index", "plan/element", "flat/index", "flat/define", "flat/system", "flat/system-define", "orbiters", "orbiter-facts", "data/orbiters"];
 for (const entry of entries) for (const ext of ["js", "d.ts"]) if (!existsSync(new URL(`../dist/${entry}.${ext}`, import.meta.url))) throw new Error(`missing dist/${entry}.${ext}`);
 
 const mod = await import(new URL("../dist/index.js", import.meta.url).href);
