@@ -32,7 +32,7 @@ The output is:
 null null 95 390
 ```
 
-`bodyPhysics` takes `"sun"`, `"mercury"` to `"neptune"`, `"pluto"` or `"moon"` and gives a new object each call; any other id throws a `RangeError` that names it. The fields:
+`bodyPhysics` takes `"sun"`, `"mercury"` to `"neptune"`, `"pluto"` or `"moon"` and gives a new object each call; any other id gives `null`, so a page can leave its physics out for a body that has none. The fields:
 
 | Field | Meaning |
 |---|---|
@@ -53,4 +53,4 @@ The GM here is the sheet's, to the digits it prints; the mass and escape speed o
 
 ## Not here
 
-The dwarf planets and the moons other than ours have no fact sheet at NASA, so they have no entry: `bodyPhysics` throws for them. Their masses are in other sources that this package does not read yet.
+The dwarf planets and the moons other than ours have no fact sheet at NASA, so they have no entry: `bodyPhysics` gives `null` for them. Their masses are in other sources that this package does not read yet.

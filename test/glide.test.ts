@@ -1,4 +1,4 @@
-// The smooth move of the standing view's camera (MODULES-1561): the curve, the blend of two poses, and that the element starts one when the watched descent ends and when the rover starts, and not otherwise.
+// The smooth move of the standing view's camera (MODULES-1561): the curve, the blend of two poses, and that the element starts one when the watched descent ends, when the rover starts and when the watch's camera changes, and not otherwise.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
@@ -74,7 +74,9 @@ test("the element starts a move when the watched descent ends and when the rover
   assert.match(off, /this\.#beginGlide\(\);\s*this\.#changed\(\);\s*return;/, "the watch ends");
   const drive = source.slice(source.indexOf("#syncDrive(): void {"), source.indexOf("/** The vehicle's measures"));
   assert.match(drive, /this\.#syncDriveCamera\(\);\s*this\.#beginGlide\(\);/, "the rover starts");
-  assert.equal((source.match(/this\.#beginGlide\(\)/g) ?? []).length, 2, "and nowhere else");
+  const again = source.slice(source.indexOf("if (!again) return;"), source.indexOf("if (changed) this.#landingAnnounce();"));
+  assert.match(again, /const moved = changed \|\| this\.#landing\.from\.distance !== from\.distance \|\| this\.#landing\.from\.bearing !== from\.bearing;[\s\S]*?if \(moved\) this\.#beginGlide\(\);\s*this\.#landingFrame\(0, true\);/, "the watch's camera, or where the ground camera stands, changes");
+  assert.equal((source.match(/this\.#beginGlide\(\)/g) ?? []).length, 3, "and nowhere else");
   assert.match(source, /fromWatch: this\.#landing !== undefined \|\| this\.#glide !== undefined/, "a move from a move goes on from where that had got to");
   assert.match(source, /#onPointerDown = \(event: PointerEvent\): void => \{\s*this\.#glide = undefined;/, "a hand on the view ends the move");
   assert.match(source, /if \(this\.#glide !== undefined\) this\.#changed\(\);/, "the move draws frame after frame");

@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 });
 
 type Pose = { east: number; north: number; up: number; look: { azimuth: number; pitch: number; fov: number } };
-type Surface = HTMLElement & { objects: readonly { id: string; east: number; north: number }[]; camera?: Pose; stats: { gliding: boolean; renderer?: { draws: number } }; landingTime: number; pauseLanding(): void };
+type Surface = HTMLElement & { landing?: { camera: string }; objects: readonly { id: string; east: number; north: number }[]; camera?: Pose; stats: { gliding: boolean; renderer?: { draws: number } }; landingTime: number; pauseLanding(): void };
 
 const view = (page: Page) => page.locator("#test-surface");
 const read = <T>(page: Page, fn: (el: Surface) => T): Promise<T> => view(page).evaluate(fn as never) as Promise<T>;
@@ -87,6 +87,37 @@ test.describe("with motion allowed", () => {
     expect(biggest, `no step is most of the way (the biggest is ${biggest.toFixed(0)} of ${total.toFixed(0)} m)`).toBeLessThan(total * 0.6);
     expect(Math.abs(end.north - td.north), "it arrives at the touchdown point").toBeLessThan(5);
     expect(await read(page, (el) => el.stats.gliding)).toBe(false);
+  });
+
+  test("switching from the ground camera to the window glides too: no jump, and it arrives at the window", async ({ page }) => {
+    test.setTimeout(300_000);
+    const start = await watching(page, "6000");
+    await read(page, (el) => el.setAttribute("watch-camera", "lander"));
+    expect(await read(page, (el) => el.stats.gliding), "a move has begun").toBe(true);
+    const samples: Pose[] = [];
+    let lastDraws = -1;
+    await expect
+      .poll(
+        async () => {
+          const now = await draws(page);
+          if (now !== lastDraws) {
+            lastDraws = now;
+            const pose = await read(page, (el) => el.camera);
+            if (pose !== undefined) samples.push(pose);
+          }
+          return read(page, (el) => el.stats.gliding);
+        },
+        { timeout: 240_000, intervals: [150] },
+      )
+      .toBe(false);
+    const end = (await read(page, (el) => el.camera))!;
+    const total = gap(start, end);
+    expect(total, "the window is a long way from the ground camera").toBeGreaterThan(50);
+    expect(samples.length, "frames were drawn on the way").toBeGreaterThanOrEqual(4);
+    let biggest = gap(start, samples[0]!);
+    for (let i = 1; i < samples.length; i += 1) biggest = Math.max(biggest, gap(samples[i - 1]!, samples[i]!));
+    expect(biggest, `no step is most of the way (the biggest is ${biggest.toFixed(0)} of ${total.toFixed(0)} m)`).toBeLessThan(total * 0.6);
+    expect(await read(page, (el) => el.landing?.camera)).toBe("lander");
   });
 
   test("glide=off is the cut: the camera is at the standing view in the first frame, with no move", async ({ page }) => {

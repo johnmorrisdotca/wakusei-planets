@@ -579,7 +579,7 @@ export class WakuseiSurface extends HTMLElement {
   }
 
   /**
-   * Start a smooth move of the camera from where the last draw had it, when that was the watched descent's (or a move from it that has not arrived): to the standing view when the watch ends and to the rover when it starts to be driven.
+   * Start a smooth move of the camera from where the last draw had it, when that was the watched descent's (or a move from it that has not arrived): to the standing view when the watch ends, to the rover when it starts to be driven, and to the other camera when the watch's camera (or where the ground camera stands) changes.
    * The `glide` attribute is `off` for a cut, or the time in milliseconds (1100 by default); a reader who prefers reduced motion gets the cut.
    */
   #beginGlide(): void {
@@ -934,9 +934,12 @@ export class WakuseiSurface extends HTMLElement {
       if (!again) return;
       if (this.#landing.camera !== camera) this.#look = clampLook({ ...this.#look, fov: camera === "ground" ? 27 : 74 });
       const changed = this.#landing.camera !== camera;
+      // a change of camera, or of where the ground camera stands, is a move and not a cut (MODULES-1561)
+      const moved = changed || this.#landing.from.distance !== from.distance || this.#landing.from.bearing !== from.bearing;
       this.#landing.camera = camera;
       this.#landing.from = from;
       this.#camOffset = { azimuth: 0, pitch: 0 };
+      if (moved) this.#beginGlide();
       this.#landingFrame(0, true);
       if (changed) this.#landingAnnounce();
       return;

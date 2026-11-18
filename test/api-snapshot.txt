@@ -665,7 +665,7 @@ const PHYSICS_IDS: readonly ["sun", "mercury", "venus", "earth", "moon", "mars",
 export type PhysicsId = (typeof PHYSICS_IDS)[number];
 export interface PhysicsReading { value: number; unit: "kg" | "km3/s2" | "m/s2" | "kg/m3" | "Pa" | "K"; source: PhysicsSource; quoted?: string; bound?: "below" | "about"; uncertainty?: number; low?: number; high?: number; level?: string; note?: string; }
 export interface PhysicsSource { name: string; url: string; pageUpdated: string; read: string; }
-function bodyPhysics(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon") => BodyPhysics
+function bodyPhysics(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon") => BodyPhysics | (id: string) => BodyPhysics | null
 ## ./discovery
 const DISCOVERIES: readonly Discovery[]
 const DISCOVERY_IDS: readonly string[]

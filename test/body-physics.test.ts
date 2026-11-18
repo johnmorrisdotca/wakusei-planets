@@ -6,7 +6,9 @@ import { bodyPhysics, PHYSICS_IDS } from "../src/body-physics.ts";
 test("there is a sheet for the Sun, the eight planets, Pluto and the Moon, and none for anything else", () => {
   assert.equal(PHYSICS_IDS.length, 11);
   for (const id of PHYSICS_IDS) assert.equal(bodyPhysics(id).id, id);
-  assert.throws(() => bodyPhysics("ceres" as never), /no physics sheet for "ceres"/);
+  assert.equal(bodyPhysics("ceres"), null, "a dwarf planet has no sheet");
+  assert.equal(bodyPhysics("io"), null, "nor has another planet's moon");
+  assert.equal(bodyPhysics(""), null);
   assert.notEqual(bodyPhysics("earth"), bodyPhysics("earth"), "a new object each call");
 });
 

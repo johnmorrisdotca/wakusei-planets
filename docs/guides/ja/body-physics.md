@@ -32,7 +32,7 @@ console.log(moon.airDensity, moon.temperature?.value, moon.temperature?.low, moo
 null null 95 390
 ```
 
-`bodyPhysics` は `"sun"`、`"mercury"` から `"neptune"`、`"pluto"`、`"moon"` を受け取り、呼ぶたびに新しいオブジェクトを返します。それ以外の id は、その id を示す `RangeError` を投げます。項目は次のとおりです。
+`bodyPhysics` は `"sun"`、`"mercury"` から `"neptune"`、`"pluto"`、`"moon"` を受け取り、呼ぶたびに新しいオブジェクトを返します。それ以外の id では `null` を返すので、物理量のない天体はページ側で省けます。項目は次のとおりです。
 
 | 項目 | 意味 |
 |---|---|
@@ -53,4 +53,4 @@ GM はシートの値で、シートの桁数のままです。`/stops` の質�
 
 ## ないもの
 
-準惑星と、月以外の衛星には NASA のファクトシートがないのでデータがなく、`bodyPhysics` は例外を投げます。それらの質量はほかの出典にありますが、このパッケージはまだ読み取っていません。
+準惑星と、月以外の衛星には NASA のファクトシートがないのでデータがなく、`bodyPhysics` は `null` を返します。それらの質量はほかの出典にありますが、このパッケージはまだ読み取っていません。

@@ -230,9 +230,8 @@ const scaled = (value: number, factor: number): number => Number((value * factor
  * The physics of the Sun, a planet, Pluto or the Moon: its mass and GM, its surface gravity, the air at its surface and its surface temperature, each with the page and day it was read from, and `null` where the source has none (the Sun, Mercury, the Moon and Pluto have no air
  * density).
  *
- * @param id - `"sun"`, `"mercury"` to `"neptune"`, `"pluto"` or `"moon"`.
- * @returns The physics (a new object each call).
- * @throws {RangeError} For an id that has no physics sheet, naming it.
+ * @param id - `"sun"`, `"mercury"` to `"neptune"`, `"pluto"` or `"moon"`; any other id (a dwarf planet, another planet's moon) has no sheet.
+ * @returns The physics (a new object each call), or `null` for a body that has no sheet, so a page can leave its physics out for it.
  *
  * @example
  * ```ts
@@ -242,10 +241,13 @@ const scaled = (value: number, factor: number): number => Number((value * factor
  * console.log(jupiter.surfaceGravity?.value, jupiter.surfaceGravity?.level, jupiter.temperature?.value, jupiter.temperature?.source.read);
  * ```
  */
-export function bodyPhysics(id: PhysicsId): BodyPhysics {
-  if (!PHYSICS_IDS.includes(id)) throw new RangeError(`There is no physics sheet for "${String(id)}"; there is one for ${PHYSICS_IDS.join(", ")}.`);
-  const row = ROWS[id];
-  const source = (): PhysicsSource => ({ name: `NASA NSSDC Planetary Fact Sheet: ${NAME[id]}`, url: `${PAGE}${id}fact.html`, pageUpdated: UPDATED[id], read: READ });
+export function bodyPhysics(id: PhysicsId): BodyPhysics;
+export function bodyPhysics(id: string): BodyPhysics | null;
+export function bodyPhysics(id: string): BodyPhysics | null {
+  if (!(PHYSICS_IDS as readonly string[]).includes(id)) return null;
+  const body = id as PhysicsId;
+  const row = ROWS[body];
+  const source = (): PhysicsSource => ({ name: `NASA NSSDC Planetary Fact Sheet: ${NAME[body]}`, url: `${PAGE}${body}fact.html`, pageUpdated: UPDATED[body], read: READ });
   const mass: PhysicsReading = { value: scaled(row.mass, 1e24), unit: "kg", source: source() };
   const gm: PhysicsReading = { value: scaled(row.gm, 1e6), unit: "km3/s2", source: source() };
   const gravity: PhysicsReading = { value: row.gravity, unit: "m/s2", source: source(), ...(row.gravityLevel === undefined ? {} : { level: row.gravityLevel }), ...(row.gravityNote === undefined ? {} : { note: row.gravityNote }) };
@@ -253,7 +255,7 @@ export function bodyPhysics(id: PhysicsId): BodyPhysics {
   const p = row.pressure;
   const t = row.temperature;
   return {
-    id,
+    id: body,
     mass,
     gm,
     surfaceGravity: gravity,
