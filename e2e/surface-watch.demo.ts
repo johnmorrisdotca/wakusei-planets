@@ -154,8 +154,9 @@ test("two frames of the same moment of the playing descent match on the ground, 
   await read(page, (el) => {
     el.landingRate = 0.25;
   });
-  await drag(page, 0, -120);
-  expect(await pitch(page), "the view looks down at the ground").toBeLessThan(0);
+  // each drag up tips the view down by a few degrees (the pitch of the turn is kept within 60 degrees): drag until the lower half of the picture is ground
+  for (let n = 0; n < 6 && (await pitch(page)) > -6; n += 1) await drag(page, 0, -150);
+  expect(await pitch(page), "the view looks down at the ground").toBeLessThan(-4);
   await read(page, (el) => el.playLanding());
   mkdirSync("test-results/evidence", { recursive: true });
   const frames: { blocks: number[]; black: number; clock: number; quality: string }[] = [];
