@@ -5,6 +5,7 @@ import { carryControls, type ElementControls, type ViewController } from "@johnm
 import "../tables/minor.ts";
 import { BODIES, BODY_IDS, MOONS_OF, type BodyId, type MoonId } from "../facts.ts";
 import { createGate, frameCap, type Gate } from "../gate.ts";
+import { planAhead } from "./ahead.ts";
 import { arrowCount, readHelpPlace, type HelpPlace } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
@@ -523,6 +524,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#sightTimer = undefined;
     this.removeEventListener("wheel", this.#wheel, { capture: true });
     window.removeEventListener("pointerup", this.#up, true);
+    this.#aheadEnd();
     clearTimeout(this.#timer);
     this.#timer = undefined;
     this.#gate?.cancel();
@@ -1960,6 +1962,7 @@ export class WakuseiSpace extends HTMLElement {
       leavingReach,
       input: null,
       plan: null,
+      planned: null,
       origin: [0, 0, 0],
     };
   }
@@ -2545,7 +2548,9 @@ export class WakuseiSpace extends HTMLElement {
     tiles: { requested: number; loading: number; failed: number; shown: number | null };
     ride: { riding: boolean; lost: boolean; gliding: boolean };
     /** The camera's move at the last draw, or null when it is still: its kind and path, its stage, how far along it is (0 to 1), its length in milliseconds, and whether the body left and the one gone to are in the picture. */
-    travelling: { kind: string; path: string; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean } | null;
+    travelling: { kind: string; path: string; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean; ahead: boolean; planMs: number } | null;
+    /** The body a move is planned ahead for (a press is down on it, and a release would go there), or null: the plan waits for the click, and a press that is no click drops it. `travelling.ahead` says whether a move took it, and `planMs` what the first draw of the move spent on its path. */
+    ahead: string | null;
     /** The stage out from the Sun the view is framed on, or null: its id and name, how far it reaches from the Sun and how far back the camera stands, in Earth radii. */
     region: { id: string; name: string; reach: number; distance: number } | null;
     /** The data door: the small bodies of a page's own sources in the one instanced draw (`points`), the package's own belts (`belts` bodies in `draws` instanced draws, one for each belt), and what the sources have done (tile loads started, failed and refused, bytes held, records read). */
@@ -2596,6 +2601,7 @@ export class WakuseiSpace extends HTMLElement {
       allMoons: { on: this.#model.moonHosts.size > 0, loaded: this.#model.moonSource !== null, dots: this.#model.moonDots, orbits: this.#model.moonOrbits, hosts: this.moonHosts },
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
+      ahead: this.#model.ahead?.id ?? null,
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden], faded: [...this.#model.rings.faded] },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
@@ -3038,12 +3044,52 @@ export class WakuseiSpace extends HTMLElement {
     this.#downX = event.clientX;
     this.#downY = event.clientY;
     window.addEventListener("pointerup", this.#up, { capture: true, once: true });
+    this.#planAhead(event);
   };
   #lift = (event: PointerEvent): void => {
     if (event.pointerType !== "touch") return;
     window.removeEventListener("pointerup", this.#lift, true);
     window.removeEventListener("pointercancel", this.#lift, true);
     if (this.#hoverBy === "pointer") this.#hover(null, "pointer");
+  };
+  // A press on the body that is selected goes there if it counts as a click (`#press`). While it is down the move is worked out, once, one timer's turn later and with nothing drawn, told or moved, so the click's first draw finds the path made;
+  // a release that is no click, or a cancel, drops it. Only for a clock that holds: with it running the bodies are elsewhere by the time of the click.
+  #aheadTimer = 0;
+  #planAhead(event: PointerEvent): void {
+    const model = this.#model;
+    model.ahead = null;
+    if (event.ctrlKey || event.metaKey || model.speed !== 0 || model.frame !== "stars" || model.transition !== null || model.ride !== null || model.region !== null || !model.pose.valid || !this.#places) return;
+    const rect = this.getBoundingClientRect();
+    const id = this.#bodyAt(event.clientX - rect.left, event.clientY - rect.top, true);
+    if (id === null || id !== this.#selected || id === model.focus || !(BODY_IDS as readonly string[]).includes(id) || !canCentre(id)) return;
+    window.addEventListener("pointerup", this.#aheadEnd, { capture: true });
+    window.addEventListener("pointercancel", this.#aheadEnd, { capture: true });
+    this.#aheadTimer = window.setTimeout(() => this.#aheadWork(id), 0);
+  }
+  #aheadWork(id: BodyId): void {
+    const model = this.#model;
+    const kind = this.#moveKind({}, id);
+    if (kind === "cut" || model.transition !== null || model.focus === id) return;
+    const leaving = this.#leaving();
+    // the side the move arrives from is the one `goTo` would choose: chosen here with that call's own state, and put back as it was
+    const [wasFrom, wasCompanion] = [this.#arrivedFrom, model.companion];
+    this.#arrivedFrom = leaving;
+    const side = this.#faceApproach(id, kind === "turn-travel");
+    this.#arrivedFrom = wasFrom;
+    model.companion = wasCompanion;
+    if (side === null) return;
+    const here = this.#site(id);
+    const bias = model.holdBias !== null && model.holdBias.anchor === model.anchor ? model.holdBias : { yaw: 0, tilt: 0, up: [0, 1, 0] as Vec3 };
+    const aim = groundDirection(model.centre.lon - (side.yaw + bias.yaw), Math.max(-90, Math.min(90, model.centre.lat - (side.tilt + bias.tilt))), model.anchor ?? model.time);
+    const aspect = this.clientWidth > 0 && this.clientHeight > 0 ? this.clientWidth / this.clientHeight : 16 / 9;
+    const distance = Math.max(1.05 * here.radius, FIT_DISTANCE * here.radius * framedOf(id) * Math.max(1, 1 / aspect));
+    model.ahead = planAhead({ id, leaving, kind, pace: this.#travel.pace, mode: model.mode, time: model.time, aspect, bodies: SPACE_BODIES as readonly BodyId[], pose: model.pose, end: { aim, distance, up: bias.up, fov: model.pose.fov } });
+  }
+  #aheadEnd = (): void => {
+    window.clearTimeout(this.#aheadTimer);
+    window.removeEventListener("pointerup", this.#aheadEnd, true);
+    window.removeEventListener("pointercancel", this.#aheadEnd, true);
+    if (this.#model.transition === null) this.#model.ahead = null;
   };
   #up = (event: PointerEvent): void => {
     if (this.#beamPress === event) return;

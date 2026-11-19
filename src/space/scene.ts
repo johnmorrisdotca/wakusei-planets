@@ -32,6 +32,7 @@ import { ridePose, type RideLook } from "./ride.ts";
 import { fadesNearBody, isOwnLine, nearBodyKeep } from "./orbit-rules.ts";
 import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
+import { closeEnough, type Ahead } from "./ahead.ts";
 import { TRAVEL_BUDGET_MS, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
 import { bodyBasis, carry, controlsFor, directionBetween, hasRotation, keepClear, pairAxis, pairBasis, type FrameKind, type HoldBasis } from "./hold.ts";
 
@@ -348,8 +349,10 @@ export interface SpaceModel {
   rideLost: boolean;
   /** A camera move in progress from where the last draw left the camera to the view set up for the new target: see `SpaceTransition`. */
   transition: SpaceTransition | null;
-  /** What the move is doing at this draw, or null when the camera is still: the kind and path of the move, its stage, how far along it is (0 to 1), its length, and whether the body left and the one gone to are in the picture. */
-  travelling: { kind: Exclude<TravelKind, "auto">; path: TravelPlan["path"]; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean } | null;
+  /** What the move is doing at this draw, or null when the camera is still: the kind and path of the move, its stage, how far along it is (0 to 1), its length, whether the body left and the one gone to are in the picture, and how the path was got (`ahead`: worked out before the click; `planMs`: the milliseconds the first draw spent on it). */
+  travelling: { kind: Exclude<TravelKind, "auto">; path: TravelPlan["path"]; stage: "turn" | "travel" | "arrive"; progress: number; duration: number; leaving: boolean; destination: boolean; ahead: boolean; planMs: number } | null;
+  /** A move worked out while a press is down on the body that a release would go to, and the draw of that move takes it if it is still the move it would make (see `planAhead`); null otherwise. */
+  ahead: Ahead | null;
   /** The stage out from the Sun the view is framed on (`SUN_REGIONS`), or null for an ordinary view of the body looked at. */
   region: SunRegion | null;
   /** The region as the last draw framed it: how far out it reaches from the Sun and how far the camera stood back, in Earth radii. */
@@ -385,6 +388,8 @@ export interface SpaceTransition {
   leavingReach: number;
   input: TravelInput | null;
   plan: TravelPlan | null;
+  /** How the path was got at the first draw: whether it was worked out ahead, and the milliseconds that draw spent on it. */
+  planned: { ahead: boolean; ms: number } | null;
   /** The scene's origin (the place of the body looked at) when the path was worked out: the path is in places relative to it. */
   origin: Vec3;
 }
@@ -500,6 +505,7 @@ export const newSpaceModel = (): SpaceModel => ({
   rideLost: false,
   transition: null,
   travelling: null,
+  ahead: null,
   region: null,
   regionDrawn: null,
   pose: { p: [0, 0, 0], q: [0, 0, 0, 1], fov: FOV, valid: false },
@@ -1037,6 +1043,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const familyOf = (id: BodyId | null): BodyId | null => (id === null ? null : id === "moon" ? "earth" : (hostOf(id) as BodyId | undefined) ?? id);
               const family = familyOf(glide.leaving);
               const around = family !== null && family === familyOf(glide.destination) && (glide.leaving !== glide.destination) && (glide.leaving !== family || glide.destination !== family) ? family : null;
+              let ahead = false;
               const build = (ms: number): { input: TravelInput; plan: TravelPlan } => {
                 const later = ms === model.time ? pos : placeBodies(mode, frameAt(ms));
                 if (later !== pos) for (const id of Object.keys(later) as (keyof typeof later)[]) later[id] = minus(later[id], origin);
@@ -1059,9 +1066,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                 const others = (SPACE_BODIES as readonly BodyId[]).filter((id) => id !== glide.leaving && id !== glide.destination && id !== family).map((id) => bodyOf(id)!);
                 const input: TravelInput = { start, end, leaving, destination, others, aspect: size.width / Math.max(1, size.height), kind: glide.kind, pace: glide.pace, budget: { now: () => performance.now(), ms: TRAVEL_BUDGET_MS } };
                 if (around !== null) input.around = bodyOf(around)!;
+                // a move planned while the press was down is the same move when it is within a millionth of an Earth radius of this one
+                const early = model.ahead;
+                if (early !== null && early.id === glide.destination && closeEnough(early.input, input)) {
+                  ahead = true;
+                  return { input: early.input, plan: early.plan };
+                }
                 return { input, plan: travelPlan(input) };
               };
               // the length of the move is worked out for bodies that stand still, then the move is worked out again for where the clock takes them in that time (once: the length may change a little)
+              const began = performance.now();
               let built = build(model.time);
               if (model.speed !== 0) {
                 const duration = glide.duration > 0 ? glide.duration : built.plan.duration;
@@ -1069,6 +1083,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               }
               glide.input = built.input;
               glide.plan = built.plan;
+              glide.planned = { ahead, ms: performance.now() - began };
+              model.ahead = null;
               glide.origin = origin;
               if (glide.duration <= 0) glide.duration = glide.plan.duration;
             }
@@ -1081,7 +1097,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             target.set(camera.position.x + sample.forward[0], camera.position.y + sample.forward[1], camera.position.z + sample.forward[2]);
             camera.lookAt(target);
             fovNow = sample.fov;
-            model.travelling = { kind: glide.plan!.kind, path: glide.plan!.path, stage: sample.stage, progress: k, duration: glide.duration, leaving: sample.leaving.inside, destination: sample.destination.inside };
+            model.travelling = { kind: glide.plan!.kind, path: glide.plan!.path, stage: sample.stage, progress: k, duration: glide.duration, leaving: sample.leaving.inside, destination: sample.destination.inside, ahead: glide.planned!.ahead, planMs: glide.planned!.ms };
             // the move is over at its last draw: nothing is travelling after it
             if (k >= 1) {
               model.transition = null;
