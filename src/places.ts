@@ -3,6 +3,7 @@
 // themselves are the entry points `/places/<body>`, so a page pays only for the body it shows.
 import { apparent } from "./ephemeris.ts";
 import { BODIES, type BodyId } from "./facts.ts";
+import { PLACE_MEAN_RADII, shapeHalfRangeKm } from "./place-radii.ts";
 import { cross, dot, type Vec3 } from "./vec.ts";
 import { moment, type When } from "./when.ts";
 
@@ -308,9 +309,40 @@ export function nearestPlace(places: readonly Place[], lat: number, lon: number,
 }
 
 /**
- * The distance over the surface between two places on a body, in kilometres: the great circle on a sphere of the body's equatorial radius from `BODIES` (1737.4 km for the Moon, 3396.19 km for Mars; flattening is not allowed for, which is 0.6 per cent on Mars and nothing on the Moon). A body the package has no radius for (Eros, Ryugu, Bennu, Dimorphos and the two comets: their shapes are not spheres) is a `RangeError`.
+ * The distance over the surface between two points, and the shape bound on it.
  *
- * @param body - A body of `PLACE_BODIES` that has a radius in `BODIES`.
+ * `km` is the great circle. On a body in `BODIES` the sphere is the equatorial radius (1737.4 km for the Moon, 3396.19 km for Mars; flattening is not allowed for, which is 0.6 per cent on Mars and nothing on the Moon). On Eros, Ryugu, Bennu, Dimorphos, Tempel 1 and 67P the sphere is the volume-equivalent mean radius.
+ *
+ * `accuracyKm` is the shape bound: the same angle times half the spread of the published semi-axes. It is `null` when no shape bound is stated, which is a sphere in `BODIES`, and 67P (the source gives no extents; the 0.05 km uncertainty of its mean radius is a note, not this bound).
+ *
+ * @param body - A body of `PLACE_BODIES`.
+ * @param a - A place, or a latitude and east longitude.
+ * @param b - The other.
+ * @returns The kilometres, and the shape bound in kilometres, or `null` when none is stated.
+ *
+ * @example
+ * ```ts
+ * import { placeDistance } from "@johnmorrisdotca/wakusei-planets/places";
+ *
+ * const d = placeDistance("bennu", { lat: 0, lon: 0 }, { lat: 0, lon: 90 });
+ * console.log(d.km.toFixed(3), d.accuracyKm?.toFixed(3) ?? "not stated");
+ * ```
+ */
+export function placeDistance(body: PlaceBody, a: Place | { lat: number; lon: number }, b: Place | { lat: number; lon: number }): { km: number; accuracyKm: number | null } {
+  if (!PLACE_BODIES.includes(body)) throw new RangeError(`places are held for ${PLACE_BODIES.join(", ")}, not "${String(body)}"`);
+  const radians = angleBetween(a.lat, a.lon, b.lat, b.lon) * RAD;
+  const facts = (BODIES as Readonly<Record<string, { radiusKm: number } | undefined>>)[body];
+  if (facts !== undefined) return { km: radians * facts.radiusKm, accuracyKm: null };
+  const mean = PLACE_MEAN_RADII[body as keyof typeof PLACE_MEAN_RADII];
+  if (mean === undefined) throw new RangeError(`the package has no radius for ${body}`);
+  const accuracyKm = "axesKm" in mean ? radians * shapeHalfRangeKm(mean.axesKm) : null;
+  return { km: radians * mean.radiusKm, accuracyKm };
+}
+
+/**
+ * The distance over the surface between two places on a body, in kilometres: `placeDistance(body, a, b).km`.
+ *
+ * @param body - A body of `PLACE_BODIES`.
  * @param a - A place, or a latitude and east longitude.
  * @param b - The other.
  * @returns Kilometres.
@@ -326,10 +358,7 @@ export function nearestPlace(places: readonly Place[], lat: number, lon: number,
  * ```
  */
 export function placeDistanceKm(body: PlaceBody, a: Place | { lat: number; lon: number }, b: Place | { lat: number; lon: number }): number {
-  if (!PLACE_BODIES.includes(body)) throw new RangeError(`places are held for ${PLACE_BODIES.join(", ")}, not "${String(body)}"`);
-  const facts = (BODIES as Readonly<Record<string, { radiusKm: number } | undefined>>)[body];
-  if (facts === undefined) throw new RangeError(`the package has no radius for ${body}, an irregular body: no distance over a sphere is given`);
-  return (angleBetween(a.lat, a.lon, b.lat, b.lon) * RAD * facts.radiusKm);
+  return placeDistance(body, a, b).km;
 }
 
 /**

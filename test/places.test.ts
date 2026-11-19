@@ -5,7 +5,9 @@ import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
-import { angleBetween, findPlace, PLACES_CREDITS, isDaylight, listPlaces, loadPlaces, localSolarTime, nearestPlace, PLACE_BODIES, placeDistanceKm, placesNear, placesOfKind, subSolarPoint, terminator, type Place, type PlaceBody, type PlaceKind } from "../src/places.ts";
+import { angleBetween, findPlace, PLACES_CREDITS, isDaylight, listPlaces, loadPlaces, localSolarTime, nearestPlace, PLACE_BODIES, placeDistance, placeDistanceKm, placesNear, placesOfKind, subSolarPoint, terminator, type Place, type PlaceBody, type PlaceKind } from "../src/places.ts";
+import { BODIES } from "../src/facts.ts";
+import { PLACE_MEAN_RADII, shapeHalfRangeKm } from "../src/place-radii.ts";
 import { PLACES_MOON } from "../src/places/moon.ts";
 import { PLACES_MARS } from "../src/places/mars.ts";
 
@@ -201,10 +203,37 @@ test("a bad input says what is wrong", () => {
   assert.throws(() => angleBetween(Number.NaN, 0, 0, 0), RangeError);
   assert.throws(() => angleBetween(0, 0, 0, "1" as unknown as number), RangeError);
   assert.throws(() => placeDistanceKm("earth" as "moon", { lat: 0, lon: 0 }, { lat: 0, lon: 1 }), RangeError);
-  assert.throws(() => placeDistanceKm("eros", { lat: 0, lon: 0 }, { lat: 0, lon: 1 }), RangeError, "an irregular body has no radius to measure over");
+  assert.throws(() => placeDistance("earth" as "moon", { lat: 0, lon: 0 }, { lat: 0, lon: 1 }), RangeError);
   assert.equal(findPlace(moon, 5 as unknown as string), undefined);
   assert.equal(findPlace(moon, ""), undefined);
   assert.deepEqual(placesNear(moon, 0, 0, -1), []);
+});
+
+test("a distance on an irregular body is the circle on its mean radius, and the shape bound is stated only where extents are published", () => {
+  const quarter = { lat: 0, lon: 0 };
+  const east = { lat: 0, lon: 90 };
+  const right = Math.PI / 2;
+  for (const body of PLACE_BODIES) {
+    const distance = placeDistance(body, quarter, east);
+    assert.equal(placeDistanceKm(body, quarter, east), distance.km, body);
+    const facts = (BODIES as Readonly<Record<string, { radiusKm: number } | undefined>>)[body];
+    if (facts !== undefined) {
+      assert.equal(distance.accuracyKm, null, body);
+      continue;
+    }
+    const mean = PLACE_MEAN_RADII[body as keyof typeof PLACE_MEAN_RADII];
+    assert.ok(mean !== undefined, body);
+    assert.ok(Math.abs(distance.km - right * mean.radiusKm) < 1e-9, body);
+    if ("axesKm" in mean) assert.ok(Math.abs(distance.accuracyKm! - right * shapeHalfRangeKm(mean.axesKm)) < 1e-9, body);
+    else assert.equal(distance.accuracyKm, null, body);
+  }
+  assert.ok(Math.abs(placeDistance("eros", quarter, east).accuracyKm! - right * 5.8) < 1e-9);
+  assert.ok(Math.abs(placeDistance("ryugu", quarter, east).accuracyKm! - right * 0.032) < 1e-9);
+  assert.ok(Math.abs(placeDistance("bennu", quarter, east).accuracyKm! - right * 0.012) < 1e-9);
+  assert.ok(Math.abs(placeDistance("dimorphos", quarter, east).accuracyKm! - right * 0.01525) < 1e-9);
+  assert.ok(Math.abs(placeDistance("tempel-1", quarter, east).accuracyKm! - right * 0.675) < 1e-9);
+  assert.equal(placeDistance("67p", quarter, east).accuracyKm, null);
+  assert.match(PLACE_MEAN_RADII["67p"].note ?? "", /0\.05 km/);
 });
 
 test("the sub-solar point stays within the body's tilt, the terminator is 90 degrees from it all round, and the local solar time is noon under the Sun and midnight opposite", () => {

@@ -137,7 +137,7 @@ console.log(jezero.feature?.diameterKm, "km;", placesNear(PLACES_MARS, jezero.la
 console.log((await listPlaces("moon", "crash", "impact")).length, "crash and impact sites on the Moon");
 ```
 
-`findPlace(list, text)` は、id (`mars/perseverance`)、大文字小文字を区別しない英語名、日本語名のどれでも受け付けます。`placesOfKind(list, ...kinds)` は絞り込み、`placesNear(list, lat, lon, withinDeg)` はある角度以内の場所を近い順に返し、`nearestPlace(list, lat, lon, ...kinds)` は指定した種類のうち最も近いものを返します (アポロの地点のまわりには名前のある地形が多いので、着陸地点がほしいときは訪れた種類を指定してください)。`listPlaces(body, ...kinds)` と `loadPlaces(body)` は、必要なときに表を取り込みます。`placeDistanceKm(body, a, b)` は、その天体の赤道半径の球での地表上の大円距離です (a と b は、場所か `{ lat, lon }`)。
+`findPlace(list, text)` は、id (`mars/perseverance`)、大文字小文字を区別しない英語名、日本語名のどれでも受け付けます。`placesOfKind(list, ...kinds)` は絞り込み、`placesNear(list, lat, lon, withinDeg)` はある角度以内の場所を近い順に返し、`nearestPlace(list, lat, lon, ...kinds)` は指定した種類のうち最も近いものを返します (アポロの地点のまわりには名前のある地形が多いので、着陸地点がほしいときは訪れた種類を指定してください)。`listPlaces(body, ...kinds)` と `loadPlaces(body)` は、必要なときに表を取り込みます。`placeDistanceKm(body, a, b)` は、地表上の大円距離をキロメートルで返します (a と b は、場所か `{ lat, lon }`)。`BODIES` にある天体では赤道半径の球、エロス、リュウグウ、ベンヌ、ディモルフォス、テンペル第1彗星、67P では体積相当の平均半径の球です。`placeDistance(body, a, b)` は `{ km, accuracyKm }` を返します。`accuracyKm` は形の幅で、公表された差し渡しの半軸の広がりの半分に、その角度を掛けたものです。形の幅が示されていないときは `null` です。球と、差し渡しのない 67P がそれにあたります。
 
 ## 天体上の太陽
 
@@ -154,7 +154,7 @@ console.log(terminator("moon", day, 36).length, "points on the Moon's terminator
 
 ## 入力が正しくないとき
 
-`Date` でも数でもない `when` は `TypeError`、無効な値や有限でない値は `RangeError` です。有限の数でない緯度や経度は `RangeError` です。場所を持たない天体 (`loadPlaces("earth")`、`placeDistanceKm("earth", ...)`) は、持っている天体の名前を書いた `RangeError` です。`BODIES` に半径のない天体 (エロス、リュウグウ、ベンヌ、ディモルフォスと2つの彗星。球ではありません) の距離も `RangeError` です。`findPlace` は知らない名前に `undefined` を返し、`nearestPlace` は空の一覧に `undefined` を返します。
+`Date` でも数でもない `when` は `TypeError`、無効な値や有限でない値は `RangeError` です。有限の数でない緯度や経度は `RangeError` です。場所を持たない天体 (`loadPlaces("earth")`、`placeDistanceKm("earth", ...)`) は、持っている天体の名前を書いた `RangeError` です。`accuracyKm` が `null` なのは、形の幅が示されていないという意味です (`BODIES` の球では扁平を今までどおり含めず、67P は出典に差し渡しがありません)。`findPlace` は知らない名前に `undefined` を返し、`nearestPlace` は空の一覧に `undefined` を返します。
 
 ## 数値の出どころ
 

@@ -137,7 +137,7 @@ console.log(jezero.feature?.diameterKm, "km;", placesNear(PLACES_MARS, jezero.la
 console.log((await listPlaces("moon", "crash", "impact")).length, "crash and impact sites on the Moon");
 ```
 
-`findPlace(list, text)` takes an id (`mars/perseverance`), an English name in any case or a Japanese name; `placesOfKind(list, ...kinds)` filters; `placesNear(list, lat, lon, withinDeg)` gives the places within an angle, nearest first, and `nearestPlace(list, lat, lon, ...kinds)` the nearest of some kinds (the named features crowd the Apollo sites, so give the visited kinds when you want a landing). `listPlaces(body, ...kinds)` and `loadPlaces(body)` load the table on request. `placeDistanceKm(body, a, b)` is the great-circle distance over the surface on a sphere of the body's equatorial radius (a place or a `{ lat, lon }` each).
+`findPlace(list, text)` takes an id (`mars/perseverance`), an English name in any case or a Japanese name; `placesOfKind(list, ...kinds)` filters; `placesNear(list, lat, lon, withinDeg)` gives the places within an angle, nearest first, and `nearestPlace(list, lat, lon, ...kinds)` the nearest of some kinds (the named features crowd the Apollo sites, so give the visited kinds when you want a landing). `listPlaces(body, ...kinds)` and `loadPlaces(body)` load the table on request. `placeDistanceKm(body, a, b)` is the great-circle distance over the surface, in kilometres (a place or a `{ lat, lon }` each). On a body in `BODIES` the sphere is the equatorial radius. On Eros, Ryugu, Bennu, Dimorphos, Tempel 1 and 67P it is a volume-equivalent mean radius. `placeDistance(body, a, b)` returns `{ km, accuracyKm }`. `accuracyKm` is the shape bound, the same angle times half the spread of the published extents, or `null` when no shape bound is stated: a sphere, and 67P.
 
 ## The Sun on a body
 
@@ -154,7 +154,7 @@ console.log(terminator("moon", day, 36).length, "points on the Moon's terminator
 
 ## When the input is wrong
 
-A `when` that is not a `Date` or a number is a `TypeError`, an invalid or non-finite one a `RangeError`. A latitude or longitude that is not a finite number is a `RangeError`. A body that has no places (`loadPlaces("earth")`, `placeDistanceKm("earth", ...)`) is a `RangeError` that names the bodies that do, and so is a distance on a body with no radius in `BODIES` (Eros, Ryugu, Bennu, Dimorphos and the two comets: they are not spheres). `findPlace` gives `undefined` for a name it does not know, `nearestPlace` for an empty list.
+A `when` that is not a `Date` or a number is a `TypeError`, an invalid or non-finite one a `RangeError`. A latitude or longitude that is not a finite number is a `RangeError`. A body that has no places (`loadPlaces("earth")`, `placeDistanceKm("earth", ...)`) is a `RangeError` that names the bodies that do. `accuracyKm` is `null` when a shape bound is not stated (a sphere in `BODIES`, whose flattening is still left out, and 67P, whose source gives no extents). `findPlace` gives `undefined` for a name it does not know, `nearestPlace` for an empty list.
 
 ## Where the numbers come from
 
