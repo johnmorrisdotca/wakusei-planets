@@ -163,6 +163,17 @@ const io = planAt(Date.UTC(2026, 10, 11), { system: "jupiter", mark: "io", spaci
 console.log(io?.distance.toFixed(1), "Jupiter radii from Jupiter");
 ```
 
+## The moon pages of the giant planets
+
+`<wakusei-moon-pages planet="saturn">` is one giant planet's moons in four tabs: every orbit of `/moon-catalogue` drawn from above, at an angle or from the side with the prograde and retrograde ones in two colours, `<wakusei-plan>` and a portrait, a card for each moon drawn in full, and every moon in a table that sorts. Its numbers are worked out from the package's data when it is drawn, and its 3D parts load only when their tab opens. It never writes the page's address: a choice is reflected on its attributes (`tab`, `view`, `reach`, `colour`, `sort`, `order`) and sent as `wakusei-moon-pages-change`, for the page to keep. The demo's [Jupiter](https://johnmorrisdotca.github.io/wakusei-planets/jupiter.html), [Saturn](https://johnmorrisdotca.github.io/wakusei-planets/saturn.html), Uranus and Neptune pages are this element. The numbers alone need no browser:
+
+```ts
+import { moonPage } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+
+const saturn = moonPage("saturn");
+console.log(saturn.counts.total, "moons,", saturn.counts.retrograde, "going against Saturn's spin");
+```
+
 ## Flat maps of the Moon and Mars
 
 `<wakusei-flat body="moon" track>` is the Moon on a flat map (`body="mars"` is Mars): the body's own painted picture with day and night for the time shown, the landing, rover and crash sites marked, and the spacecraft in orbit as dots that move over it with their coverage circles and ground tracks. It is a canvas with no WebGL, takes `time`, `speed` and `paused`, sends `wakusei-flat-pick` when an orbiter or a mark is pressed, works by keyboard and touch, and has the same attributes and events as chikyu-earth's `<chikyu-flat>`, so one control can swap the Earth, the Moon and Mars. It draws five lunar orbiters (LRO, Chandrayaan-2, Danuri, ARTEMIS P1 and P2) and six Martian ones (MRO, Odyssey, MAVEN, Mars Express, TGO and Hope); CAPSTONE and Tianwen-1 have no public path and are not drawn.
@@ -471,6 +482,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../flat` | The flat maps' pure side: `flatSun`, `flatOrbiter`, `shadeNight`, `circleOutline`, `flatTrack`, the geometry and the words. `.../flat/define` is `<wakusei-flat>`, the Moon or Mars on a flat map, in a canvas with no WebGL. |
 | `.../flat/system` | The flat solar system's pure side: `systemMarks`, `systemBelts`, `systemOrbit`, `craftPath`, `squeezeAu`, the view and the words. `.../flat/system/define` is `<wakusei-flat-system>`, in a canvas with no WebGL. |
 | `.../plan` | The top-down plan: `planAt`, `planSvg`, `planText`. `.../plan/element` is `<wakusei-plan>`, in SVG with no WebGL. |
+| `.../moon-pages` | A giant planet's moon pages as numbers: `moonPage`, `MOON_PAGE_HOSTS`, `MOON_PAGE_TIME`. `.../moon-pages/element` is `<wakusei-moon-pages>`, the four tabs. |
 | `.../landing-sites` | The 39 soft landings on the Moon and Mars as plain data: `LANDING_SITES`, `landingSitesOf`, `findLandingSite`, `flagCodeOf`. No browser, no three.js. |
 | `.../nearest` | The bodies nearest to a body on a date (`nearest`, `within`), when two bodies come closest (`closestApproach`, `conjunctions`) and how far apart they are (`distance`, `distanceRange`). No browser. |
 | `.../sheets` | Printable colouring sheets for children: the Sun, the planets and the big moons in thick lines with the real colours and three facts, and all the planets at one scale, in English and Japanese (`kidsSvg`, `kidsSheet`, `kidsFacts`). |

@@ -9,96 +9,11 @@
     <main>
       <!--family:header-->
 
-      <section class="moons-top" aria-labelledby="moons-h">
-        <h1 id="moons-h" class="moons-title" data-testid="title"></h1>
-        <nav class="fam-seg moons-planets" id="planets" aria-label="Planet" data-say-label="mn_planets" data-testid="planets"><!--moons:planets--></nav>
-        <p class="fam-fine moons-lede" id="lede" data-testid="lede"></p>
-        <p class="fam-fine moons-short" id="short" data-testid="short"></p>
-      </section>
-
-      <div class="fam-panels moons-panels">
-        <div class="fam-tabs" role="tablist" id="tabs" aria-label="Views" data-say-label="mn_tabs">
-          <button type="button" role="tab" id="tab-orbits" aria-controls="panel-orbits" aria-selected="true" data-tab="orbits" data-say="mn_tab_orbits">Orbits</button>
-          <button type="button" role="tab" id="tab-views" aria-controls="panel-views" aria-selected="false" tabindex="-1" data-tab="views" data-say="mn_tab_views">Map and portrait</button>
-          <button type="button" role="tab" id="tab-cards" aria-controls="panel-cards" aria-selected="false" tabindex="-1" data-tab="cards" data-say="mn_tab_cards">Main moons</button>
-          <button type="button" role="tab" id="tab-table" aria-controls="panel-table" aria-selected="false" tabindex="-1" data-tab="table" data-say="mn_tab_table">Every moon</button>
-        </div>
-
-        <div class="fam-panel controls moons-panel" role="tabpanel" id="panel-orbits" aria-labelledby="tab-orbits">
-          <div class="fam-row moons-choices">
-            <div class="group fam-seg" id="view" role="group" aria-label="Seen from" data-say-label="mn_view">
-              <button type="button" data-view="above" data-say="mn_above">Above</button>
-              <button type="button" data-view="tilted" data-say="mn_tilted">At an angle</button>
-              <button type="button" data-view="side" data-say="mn_side">The side</button>
-            </div>
-            <div class="group fam-seg" id="reach" role="group" aria-label="Show" data-say-label="mn_reach">
-              <button type="button" data-reach="all" data-say="mn_all">Every moon</button>
-              <button type="button" data-reach="inner" data-say="mn_inner">Inner moons</button>
-            </div>
-            <div class="group fam-seg" id="colour" role="group" aria-label="Colour by" data-say-label="mn_colour">
-              <button type="button" data-colour="direction" data-say="mn_direction">Direction</button>
-              <button type="button" data-colour="group" data-say="mn_family">Family</button>
-            </div>
-          </div>
-          <div class="moons-orbit-stage">
-            <svg id="orbits" class="moons-orbits" role="img" data-testid="orbits" aria-labelledby="orbit-caption"></svg>
-            <div class="moons-orbit-side">
-              <ul class="moons-key" id="key" data-testid="key"></ul>
-              <p class="fam-fine moons-pick" id="pick" role="status" data-testid="pick"></p>
-              <p class="fam-fine" id="orbit-caption"></p>
-              <p class="fam-fine" data-say="mn_orbits_hint">Point at an orbit, or tap it, to see whose it is.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="fam-panel moons-panel" role="tabpanel" id="panel-views" aria-labelledby="tab-views" hidden>
-          <div class="moons-views">
-            <figure class="moons-fig moons-plan">
-              <div class="moons-light" id="plan-box" data-testid="plan-box"></div>
-              <figcaption class="fam-fine" id="plan-caption"></figcaption>
-            </figure>
-            <figure class="moons-fig moons-portrait">
-              <div class="moons-dark" id="portrait-box" data-testid="portrait-box"></div>
-              <figcaption class="fam-fine" id="portrait-caption"></figcaption>
-            </figure>
-          </div>
-        </div>
-
-        <div class="fam-panel moons-panel" role="tabpanel" id="panel-cards" aria-labelledby="tab-cards" hidden>
-          <p class="fam-fine" id="cards-intro"></p>
-          <ul class="moons-cards" id="cards" data-testid="cards"></ul>
-        </div>
-
-        <div class="fam-panel moons-panel" role="tabpanel" id="panel-table" aria-labelledby="tab-table" hidden>
-          <p class="fam-fine" id="table-intro" role="status" data-testid="table-intro"></p>
-          <div class="fam-table-box moons-table-box" tabindex="0" role="region" aria-labelledby="tab-table">
-            <table id="table" data-testid="table">
-              <thead>
-                <tr>
-                  <th scope="col" data-col="name"><button type="button" data-sort="name" data-say="mn_col_name">Name</button></th>
-                  <th scope="col" data-col="family"><button type="button" data-sort="family" data-say="mn_col_family">Family</button></th>
-                  <th scope="col" data-col="size" data-number="true"><button type="button" data-sort="size" data-say="mn_col_size">Diameter (km)</button></th>
-                  <th scope="col" data-col="distance" data-number="true"><button type="button" data-sort="distance" data-say="mn_col_distance">Distance (km)</button></th>
-                  <th scope="col" data-col="period" data-number="true"><button type="button" data-sort="period" data-say="mn_col_period">Period (days)</button></th>
-                  <th scope="col" data-col="year" data-number="true"><button type="button" data-sort="year" data-say="mn_col_year">Found</button></th>
-                  <th scope="col" data-col="where"><button type="button" data-sort="where" data-say="mn_col_where">Where</button></th>
-                  <th scope="col" data-col="by"><button type="button" data-sort="by" data-say="mn_col_by">By</button></th>
-                  <th scope="col" data-col="direction"><button type="button" data-sort="direction" data-say="mn_col_direction">Direction</button></th>
-                </tr>
-              </thead>
-              <tbody id="rows"></tbody>
-            </table>
-          </div>
-          <p class="fam-fine" data-say="mn_table_note">≈ marks a size worked out from the moon's brightness, not measured. — means no source gives it. The place of discovery is known here only for the moons drawn in full, which are in bold.</p>
-        </div>
-      </div>
-
-      <p class="fam-fine credits" id="credits"></p>
+      <wakusei-moon-pages id="moons" texture-base="textures/" data-testid="moon-pages"><nav slot="planets" class="fam-seg moons-planets" id="planets" aria-label="Planet" data-say-label="mn_planets" data-testid="planets"><!--moons:planets--></nav></wakusei-moon-pages>
 
       <!--family:unreviewed-->
       <!--family:footer-->
     </main>
-    <!--moons:data-->
     <!--family:scripts moons.js-->
   </body>
 </html>

@@ -50,6 +50,16 @@
       "ja": "<wakusei-plan> 要素 (太陽系、またはひとつの惑星の衛星を真上から、SVGで)",
       "platform": "browser"
     },
+    "./moon-pages": {
+      "en": "Every number a giant planet's moon pages show, from the package's data: the orbits seen from the pole, the moons for the table and the cards",
+      "ja": "巨大惑星の衛星ページに出る数字すべて。パッケージのデータから求めた、極から見た軌道、一覧とカードの衛星",
+      "platform": "node"
+    },
+    "./moon-pages/element": {
+      "en": "The <wakusei-moon-pages> element: one giant planet's moons in four tabs (orbits, map and portrait, main moons, every moon)",
+      "ja": "<wakusei-moon-pages> 要素 (ひとつの巨大惑星の衛星を4つのタブで。軌道、地図と集合写真、主な衛星、衛星の一覧)",
+      "platform": "browser"
+    },
     "./flat": {
       "en": "The flat map's pure parts: the Sun's place over the Moon or Mars, the orbiters over the ground, the night's shading, coverage circles, ground tracks, the map's geometry and words",
       "ja": "平面地図の計算部分: 月や火星の上の太陽の位置、周回機の真下の地点、夜の陰影、可視範囲の円、地上軌跡、地図の座標計算、言葉",

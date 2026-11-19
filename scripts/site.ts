@@ -3,7 +3,7 @@
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
-import { MOON_PAGE_HOSTS } from "./moon-pages.ts";
+import { MOON_PAGE_HOSTS } from "../src/moon-pages/data.ts";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
 import { renderCraft, renderEmbed, renderFlat, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface } from "./page.ts";
 

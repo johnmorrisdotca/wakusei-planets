@@ -95,6 +95,7 @@
     "./dist/lineup/element.js",
     "./dist/space/element.js",
     "./dist/plan/element.js",
+    "./dist/moon-pages/element.js",
     "./dist/flat/define.js",
     "./dist/flat/system-define.js",
     "./dist/surface/element.js",
@@ -108,6 +109,7 @@
     "./src/lineup/element.ts",
     "./src/space/element.ts",
     "./src/plan/element.ts",
+    "./src/moon-pages/element.ts",
     "./src/flat/define.ts",
     "./src/flat/system-define.ts",
     "./src/surface/element.ts",
@@ -160,6 +162,16 @@
       "types": "./dist/plan/element.d.ts",
       "import": "./dist/plan/element.js",
       "default": "./dist/plan/element.js"
+    },
+    "./moon-pages": {
+      "types": "./dist/moon-pages/index.d.ts",
+      "import": "./dist/moon-pages/index.js",
+      "default": "./dist/moon-pages/index.js"
+    },
+    "./moon-pages/element": {
+      "types": "./dist/moon-pages/element.d.ts",
+      "import": "./dist/moon-pages/element.js",
+      "default": "./dist/moon-pages/element.js"
     },
     "./flat": {
       "types": "./dist/flat/index.d.ts",
