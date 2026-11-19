@@ -155,6 +155,9 @@ export type Look = "line" | "realistic" | "painted" | "illustrated";
 export interface RingBand {
   from: number;
   to: number;
+  /** The band's normal optical depth, from NASA's NSSDCA ring fact sheets. */
+  tau: number;
+  /** The share of light it stops from above, from `tau` by `ringOpacity`. */
   alpha: number;
   tone: number;
 }
@@ -236,40 +239,60 @@ const bandsAt = (lats: readonly number[]): Feature[] => lats.map((lat) => ({ kin
 const dots = (list: readonly (readonly [number, number, number])[]): Feature[] => list.map(([lon, lat, radius]) => ({ kind: "circle", lon, lat, radius }));
 
 // The IAU north poles and prime meridians (J2000) are Archinal et al. 2018 (Celestial Mechanics and Dynamical Astronomy 130:22). A moon that keeps one face to its planet is oriented from the geometry, so its own pole is its planet's.
-const SATURN_RINGS: readonly RingBand[] = [
-  { from: 66900, to: 74510, alpha: 0.05, tone: 0.3 },
-  { from: 74658, to: 91975, alpha: 0.25, tone: 0.45 },
-  { from: 91975, to: 117507, alpha: 0.85, tone: 0.8 },
-  { from: 117507, to: 122340, alpha: 0.06, tone: 0.4 },
-  { from: 122340, to: 133570, alpha: 0.55, tone: 0.7 },
-  { from: 133610, to: 136775, alpha: 0.5, tone: 0.65 },
-  { from: 140100, to: 140260, alpha: 0.35, tone: 0.8 },
-];
-// Jupiter: the halo inside the main ring, the main ring, and the gossamer rings out to about 226,000 km (NASA). The halo and the gossamer are a hint; the main ring is the one that shows.
-const JUPITER_RINGS: readonly RingBand[] = [
-  { from: 92000, to: 122500, alpha: 0.012, tone: 0.25 },
-  { from: 122800, to: 129200, alpha: 0.55, tone: 0.7 },
-  { from: 129200, to: 181350, alpha: 0.018, tone: 0.3 },
-  { from: 181350, to: 226000, alpha: 0.01, tone: 0.25 },
-];
-// Neptune: Galle, Le Verrier, the Lassell sheet and Adams. The sheet is faint. Adams's arcs sit on that radius; a strip has no longitude, so they are the same band.
-const NEPTUNE_RINGS: readonly RingBand[] = [
-  { from: 40900, to: 42900, alpha: 0.08, tone: 0.35 },
-  { from: 53150, to: 53300, alpha: 0.5, tone: 0.55 },
-  { from: 53300, to: 57200, alpha: 0.006, tone: 0.25 },
-  { from: 62890, to: 62980, alpha: 0.6, tone: 0.65 },
-];
-const URANUS_RINGS: readonly RingBand[] = [
-  { from: 41800, to: 41880, alpha: 0.3, tone: 0.2 },
-  { from: 42200, to: 42270, alpha: 0.3, tone: 0.2 },
-  { from: 42540, to: 42610, alpha: 0.3, tone: 0.2 },
-  { from: 44680, to: 44760, alpha: 0.3, tone: 0.2 },
-  { from: 45620, to: 45700, alpha: 0.3, tone: 0.2 },
-  { from: 47140, to: 47210, alpha: 0.3, tone: 0.2 },
-  { from: 47590, to: 47660, alpha: 0.3, tone: 0.2 },
-  { from: 48260, to: 48340, alpha: 0.3, tone: 0.2 },
-  { from: 51100, to: 51200, alpha: 0.55, tone: 0.3 },
-];
+/**
+ * The share of light a ring band stops when it is seen from above, from its normal optical depth: 1 − exp(−tau). This is the opacity a band is drawn with, before the drawing's floor (`ringStrip` keeps a whole system just visible).
+ *
+ * @param tau - The band's normal optical depth.
+ * @returns The opacity, from 0 to 1.
+ *
+ * @example
+ * ```ts
+ * import { ringOpacity } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(ringOpacity(1.45).toFixed(2), ringOpacity(5e-6));
+ * ```
+ */
+export const ringOpacity = (tau: number): number => 1 - Math.exp(-tau);
+
+const ringSystem = (rows: readonly (readonly [number, number, number, number])[]): RingBand[] => rows.map(([from, to, tau, tone]) => ({ from, to, tau, alpha: ringOpacity(tau), tone }));
+
+// Each row is from (km), to (km), normal optical depth, tone. The optical depths are NASA NSSDCA's ring fact sheets (D. R. Williams; Jupiter, Saturn, Neptune, Uranus, read 2026-11-19), which send on to the PDS Ring-Moon Systems Node's
+// vital statistics; where the sheet gives a range the middle of it is used. Saturn: D 1e-5, C 0.05-0.35, B 0.4-2.5, Cassini Division 0-0.1, A 0.4-1.0, F 0.1.
+const SATURN_RINGS = ringSystem([
+  [66900, 74510, 1e-5, 0.3],
+  [74658, 91975, 0.2, 0.45],
+  [91975, 117507, 1.45, 0.8],
+  [117507, 122340, 0.05, 0.4],
+  [122340, 133570, 0.7, 0.7],
+  [133610, 136775, 0.7, 0.65],
+  [140100, 140260, 0.1, 0.8],
+]);
+// Jupiter: the halo inside the main ring, the main ring, and the gossamer rings out to about 226,000 km (NASA). Halo 3e-6, main ring 5e-6, Amalthea and Thebe rings 1e-7 on the sheet: the main ring is a thin dusty line.
+const JUPITER_RINGS = ringSystem([
+  [92000, 122500, 3e-6, 0.25],
+  [122800, 129200, 5e-6, 0.7],
+  [129200, 181350, 1e-7, 0.3],
+  [181350, 226000, 1e-7, 0.25],
+]);
+// Neptune: Galle 1e-4, Le Verrier 0.01, the Lassell sheet 1e-4 and Adams 0.01-0.1. Adams's arcs (0.12) sit on that radius; a strip has no longitude, so they are the same band.
+const NEPTUNE_RINGS = ringSystem([
+  [40900, 42900, 1e-4, 0.35],
+  [53150, 53300, 0.01, 0.55],
+  [53300, 57200, 1e-4, 0.25],
+  [62890, 62980, 0.055, 0.65],
+]);
+// Uranus: rings 6, 5, 4, alpha, beta, eta, gamma, delta (0.3 to 0.5) and epsilon (0.5-2.3).
+const URANUS_RINGS = ringSystem([
+  [41800, 41880, 0.3, 0.2],
+  [42200, 42270, 0.5, 0.2],
+  [42540, 42610, 0.3, 0.2],
+  [44680, 44760, 0.4, 0.2],
+  [45620, 45700, 0.3, 0.2],
+  [47140, 47210, 0.4, 0.2],
+  [47590, 47660, 0.3, 0.2],
+  [48260, 48340, 0.5, 0.2],
+  [51100, 51200, 1.4, 0.3],
+]);
 
 /**
  * Every body's facts, by name: sizes, flattening, axial tilt, poles and rotation from the IAU and NASA.

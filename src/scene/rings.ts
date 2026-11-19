@@ -26,6 +26,8 @@ const PALETTE: Record<string, readonly [readonly number[], readonly number[]]> =
   neptune: [[48, 56, 70], [140, 156, 176]],
 };
 
+const RING_FLOOR = 0.12;
+
 const hash = (n: number): number => {
   const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
   return s - Math.floor(s);
@@ -63,6 +65,8 @@ export function ringStrip(facts: BodyFacts, width = 1024): RingStrip | null {
   const [dark, light] = PALETTE[facts.id] ?? [[90, 90, 90], [170, 170, 170]];
   const data = new Uint8Array(width * 4);
   const km = (to - from) / width;
+  const alphas = new Float32Array(width);
+  const tones = new Float32Array(width);
   for (let x = 0; x < width; x += 1) {
     const r = from + (x + 0.5) * km;
     let alpha = 0;
@@ -77,8 +81,14 @@ export function ringStrip(facts: BodyFacts, width = 1024): RingStrip | null {
       tone += inside * band.tone * (0.9 + 0.2 * ripple(r / 650 + 7));
       weight += inside;
     }
-    const t = weight > 0 ? Math.min(1, tone / weight) : 0;
-    const a = Math.min(1, alpha);
+    alphas[x] = alpha;
+    tones[x] = weight > 0 ? Math.min(1, tone / weight) : 0;
+  }
+  // The floor is a drawing choice, not physics: a system whose most opaque point would come out under RING_FLOOR (Jupiter's, Neptune's) is scaled up together until that point reaches it, so it stays just visible and its parts keep their order.
+  const lift = Math.max(1, RING_FLOOR / Math.max(...alphas));
+  for (let x = 0; x < width; x += 1) {
+    const t = tones[x]!;
+    const a = Math.min(1, alphas[x]! * lift);
     // The colour is stored already multiplied by the opacity. A clear part of the strip is black, so it stays clear even when a sampler drops the alpha.
     data[x * 4] = Math.round((dark![0]! + (light![0]! - dark![0]!) * t) * a);
     data[x * 4 + 1] = Math.round((dark![1]! + (light![1]! - dark![1]!) * t) * a);
