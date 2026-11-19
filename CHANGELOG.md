@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **A move is planned before the click** (MODULES-1351). A press on the body that is selected works the move's path out while the button is down, once, with nothing drawn, told or moved, so the first draw of the move finds the path made. A release that is no click, a drag, a cancel, a Ctrl or Command press and reduced motion plan nothing or drop the plan; it is made only while the clock holds, and a draw takes it only if its own move is the same to a millionth of an Earth radius. `stats.ahead` names the body a plan waits for, and `stats.travelling` gains `ahead` and `planMs`. No other behaviour changes.
+- **Japanese:** one paragraph in the space-view guide.
+
 ## [0.69.0] - 2026-11-19
 
 - **Beams for places on any body: `bodyPlaces` / `body-places`** (MODULES-1568). `<wakusei-space>` drew a reader's places (`earth-places`) on the Earth only. A list `{ body, id, lon, lat, label, kind, color }` now stands them on the Moon, Mars, any planet or catalogue moon the view draws, as the same beam, pin or ring (`earth-places-look`), with the same colours, names, limits (32 markers in all, the reader's `here` first; nothing on a body under 40 CSS pixels of radius; hidden on the far side and under another body's disc; never over a body's name; 5,000 kept) and the same chikyu-earth layout and import (`/earth-places`: no new peer). `space.bodyPlacesShown` reads what was laid, `{ marks: [{ body, id, kind, x, y, named }], omitted }`; `readBodyPlaces` of `/earth-places` reads the attribute. `/places/search` makes the list from saved ids: `loadPlaceHits(ids)` (an old id is made current by `resolvePlaceId`; only the lists the ids need are fetched) and `hitToBodyPlace(hit, { lang, kind, color, label })`. The standing view's sky has no beams yet. `/space/element` grew by 1.7 kB gzipped (993,995 B, from 992,332 B), `/earth-places` by 205 B (2,463 B) and `/places/search` by 347 B; their baselines are updated.
