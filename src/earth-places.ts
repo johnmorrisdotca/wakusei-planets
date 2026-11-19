@@ -3,16 +3,20 @@
 import { layoutPlaces, readPlaces } from "@johnmorrisdotca/chikyu-earth/markers";
 import { spotView, type SurfaceView } from "./place-marks.ts";
 import { readBodyPlacesWith, type PlaceOnBody } from "./scene/body-places.ts";
-import { setEarthPlacesLayout, type EarthPlace, type EarthPlaceLayout, type EarthPlaceLayoutOptions, type EarthPlaceLook } from "./scene/earth-places.ts";
+import { keepPlaceFields, layWithOwn, setEarthPlacesLayout, type EarthPlace, type EarthPlaceClickDetail, type EarthPlaceLayout, type EarthPlaceLayoutOptions, type EarthPlaceLook, type EarthPlaceNamePriority, type EarthPlaceSize, type EarthPlacesLayout } from "./scene/earth-places.ts";
 
-setEarthPlacesLayout({ read: readPlaces, layout: layoutPlaces });
+const read = (value: string | null | undefined): EarthPlace[] => keepPlaceFields(value, readPlaces(value));
+const layout: EarthPlacesLayout["layout"] = (places, view, look, options) => layWithOwn(layoutPlaces, places, view, look, options);
 
-export type { PlaceOnBody, EarthPlace, EarthPlaceLayout, EarthPlaceLayoutOptions, EarthPlaceLook };
-export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS } from "./scene/earth-places.ts";
+setEarthPlacesLayout({ read, layout });
+
+export type { PlaceOnBody, EarthPlace, EarthPlaceClickDetail, EarthPlaceLayout, EarthPlaceLayoutOptions, EarthPlaceLook, EarthPlaceNamePriority, EarthPlaceSize };
+export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, readEarthPlaceLayers, shownEarthPlaces } from "./scene/earth-places.ts";
 
 /**
  * Read the text of the `earth-places` attribute (a JSON array) as the list the views draw: each place needs a longitude from -180 to 180 and a latitude from -90 to 90, one without an `id` is given its place in the list, a label is
- * cut to 80 letters, a kind that is not `here` is `favourite`, and a colour is kept only when it is a hex colour, `rgb()` or `hsl()` with numbers, or a colour's name. At most 5,000 are kept. chikyu-earth's `readPlaces`.
+ * cut to 80 letters, a kind that is not `here` is `favourite`, and a colour is kept only when it is a hex colour, `rgb()` or `hsl()` with numbers, or a colour's name. A `layer` is cut to 40 letters, a `size` is kept only when it is `small`, a `look` only
+ * when it is `beam`, `pin` or `ring` and a `namePriority` only when it is `low`. At most 5,000 are kept. chikyu-earth's `readPlaces`, with those four fields kept.
  *
  * @param value - The attribute's text, or null.
  * @returns The places to draw.
@@ -21,11 +25,11 @@ export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS } from "./scene/earth-places.ts";
  * ```ts
  * import { readEarthPlaces } from "@johnmorrisdotca/wakusei-planets/earth-places";
  *
- * console.log(readEarthPlaces('[{"id":"me","lon":-79.4,"lat":43.7,"kind":"here"},{"lon":500,"lat":0}]'));
+ * console.log(readEarthPlaces('[{"id":"me","lon":-79.4,"lat":43.7,"kind":"here"},{"id":"cavan","lon":-123.1,"lat":49.29,"layer":"harbours","size":"small"},{"lon":500,"lat":0}]'));
  * ```
  */
 export function readEarthPlaces(value: string | null | undefined): EarthPlace[] {
-  return readPlaces(value);
+  return read(value);
 }
 
 /**
@@ -34,7 +38,7 @@ export function readEarthPlaces(value: string | null | undefined): EarthPlace[] 
  *
  * @param places - The places, as `readEarthPlaces` makes them.
  * @param view - The body as drawn (`SurfaceView` from `/places`): the Earth's centre, radius, pole and prime meridian in the scene, the camera, and the projection to CSS pixels.
- * @param look - `beam`, `pin` or `ring`.
+ * @param look - `beam`, `pin` or `ring`, for each place that has no `look` of its own; a `small` place has a shorter stick and a smaller ring.
  * @param options - The size of each name, the boxes already used, the most names and where the Sun is overhead.
  * @returns The markers and where the names go.
  *
@@ -49,7 +53,7 @@ export function readEarthPlaces(value: string | null | undefined): EarthPlace[] 
  * ```
  */
 export function layEarthPlaces(places: readonly EarthPlace[], view: SurfaceView, look: EarthPlaceLook, options: EarthPlaceLayoutOptions = {}): EarthPlaceLayout {
-  return layoutPlaces(places, spotView(view), look, options);
+  return layout(places, spotView(view), look, options);
 }
 
 /**

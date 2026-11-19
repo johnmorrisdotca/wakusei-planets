@@ -4,7 +4,7 @@
 import { BODIES, type BodyId } from "../facts.ts";
 import { pointUnder, spotView, type SurfaceView } from "../place-marks.ts";
 import type { Vec3 } from "../vec.ts";
-import { EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, type EarthPlace, type EarthPlaceLayout, type EarthPlaceMark, type EarthPlaceLayoutOptions, type EarthPlaceLook, type EarthPlacesLayout } from "./earth-places.ts";
+import { EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, inMarkOrder, placeRank, type EarthPlace, type EarthPlaceLayout, type EarthPlaceMark, type EarthPlaceLayoutOptions, type EarthPlaceLook, type EarthPlacesLayout } from "./earth-places.ts";
 
 /**
  * One place for the `body-places` attribute or the `bodyPlaces` property of `<wakusei-space>`: an `EarthPlace` and the body it is on. `/places/search` makes them from the rows of a search list (`hitToBodyPlace`).
@@ -132,9 +132,8 @@ export function layBodyPlaces(places: readonly PlaceOnBody[], surfaces: readonly
     if (!(surface.radiusPx >= EARTH_PLACES_FROM_PX) || options.covered?.(surface.id) === true) continue;
     const scale = bodyScale(surface.id);
     if (scale === undefined) continue;
-    // the places that matter most first: where the reader is, then the rest in the order given
-    const here = places.filter((place) => place.body === surface.id);
-    const mine = [...here.filter((place) => place.kind === "here"), ...here.filter((place) => place.kind !== "here")];
+    // the places that matter most first: where the reader is, then the rest in the order given, then those whose name is low
+    const mine = inMarkOrder(places.filter((place) => place.body === surface.id));
     if (mine.length === 0) continue;
     const view = spotView({ ...surface, scale } as SurfaceView);
     const sun = surface.sun === null ? null : pointUnder(surface.sun, surface.pole, surface.meridian);
@@ -154,7 +153,7 @@ export function layBodyPlaces(places: readonly PlaceOnBody[], surfaces: readonly
     }
   }
   // the places of the reader come first on every body, then the others; the first few in sight stand up and the rest are counted, never silently left out
-  const rank = (shape: (typeof shapes)[number]): number => (merged[shape.index]?.kind === "here" ? 0 : 1);
+  const rank = (shape: (typeof shapes)[number]): number => placeRank(merged[shape.index]!);
   const ordered = shapes.map((shape, i) => ({ shape, i })).sort((a, b) => rank(a.shape) - rank(b.shape) || a.i - b.i).map((entry) => entry.shape);
   const limit = options.marks ?? EARTH_PLACE_MARKS;
   const kept = ordered.slice(0, limit);

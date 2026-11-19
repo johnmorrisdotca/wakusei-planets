@@ -37,7 +37,7 @@ import { catalogueMoonIdOf, catalogueMoonKey, hostsShowingAll, MOON_HOSTS, moonS
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
-import { createEarthPlaceLayer, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, onEarthPlacesLayout, readEarthPlaceLook, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
+import { createEarthPlaceLayer, earthPlaceClick, EARTH_PLACE_MARKS, EARTH_PLACES_FROM_PX, earthPlacesLayout, inMarkOrder, onEarthPlacesLayout, readEarthPlaceLayers, readEarthPlaceLook, shownEarthPlaces, type EarthPlace, type EarthPlaceLayerView, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
 import { layBodyPlaces, bodiesOf, readBodyPlacesWith, type BodySurface, type PlaceOnBody, type PlaceOnBodyMark } from "../scene/body-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
@@ -47,7 +47,7 @@ import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 export type { PaintSpec };
 
 export { setPlacesLoader } from "../scene/place-layer.ts";
-export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceKind, type EarthPlaceLook, type EarthPlaceMark } from "../scene/earth-places.ts";
+export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceClickDetail, type EarthPlaceKind, type EarthPlaceLook, type EarthPlaceMark, type EarthPlaceNamePriority, type EarthPlaceSize } from "../scene/earth-places.ts";
 export type { PlaceOnBody, PlaceOnBodyMark } from "../scene/body-places.ts";
 export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type Sight, type SightEdge, type SpaceBody, type SpaceLight };
 
@@ -313,7 +313,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #moons: MoonsChoice = "major";
@@ -595,8 +595,8 @@ export class WakuseiSpace extends HTMLElement {
       this.#relabel();
     } else if ((NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#relabel();
     if (name === "places" || name === "site-flags" || name === "lang" || name === "surface-names") this.#markSurface();
-    if (name === "earth-places" || name === "earth-places-look") this.#askEarthPlaces();
-    if (name === "body-places" || name === "earth-places-look") this.#askBodyPlaces();
+    if (name === "earth-places" || name === "earth-places-look" || name === "earth-place-layers") this.#askEarthPlaces();
+    if (name === "body-places" || name === "earth-places-look" || name === "earth-place-layers") this.#askBodyPlaces();
   }
 
   /**
@@ -675,9 +675,35 @@ export class WakuseiSpace extends HTMLElement {
     if (look === null) this.removeAttribute("earth-places-look");
     else this.setAttribute("earth-places-look", look);
   }
-  /** The markers laid on the Earth now, as the last draw left them: each place's id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`. */
-  get earthPlacesShown(): { marks: readonly EarthPlaceMark[]; omitted: number } {
-    return { marks: this.#earthLayer?.shown ?? [], omitted: this.#earthOmitted };
+  /**
+   * Which layers of places are shown (the attribute `earth-place-layers`, a JSON object of a layer's name to true or false), for `earthPlaces` and `bodyPlaces` alike: a place whose `layer` is named `false` is left out, with its name, and cannot be pressed; any other place,
+   * and any layer not named, is shown. The page hands over every place once and switches the layers, instead of building a list for each switch. Setting the property writes the attribute; an empty object takes it away. `earthPlacesShown.hidden` counts the places left out.
+   *
+   * @example
+   * ```ts no-run
+   * import "@johnmorrisdotca/wakusei-planets/earth-places";
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.earthPlaceLayers = { harbours: false };
+   * space.setEarthPlaceLayer("harbours", true);
+   * ```
+   */
+  get earthPlaceLayers(): Record<string, boolean> {
+    return readEarthPlaceLayers(this.getAttribute("earth-place-layers"));
+  }
+  set earthPlaceLayers(layers: Readonly<Record<string, boolean>> | null) {
+    if (layers === null || Object.keys(layers).length === 0) this.removeAttribute("earth-place-layers");
+    else this.setAttribute("earth-place-layers", JSON.stringify(layers));
+  }
+  /** Show or hide one layer of places and leave the others as they are: `earthPlaceLayers` with that layer changed. */
+  setEarthPlaceLayer(name: string, shown: boolean): void {
+    this.earthPlaceLayers = { ...this.earthPlaceLayers, [name]: shown };
+  }
+  /** The markers laid on the Earth now, as the last draw left them: each place's id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`, and `hidden` the places left out because their layer is off. */
+  get earthPlacesShown(): { marks: readonly EarthPlaceMark[]; omitted: number; hidden: number } {
+    const all = this.#readEarthPlaces();
+    return { marks: this.#earthLayer?.shown ?? [], omitted: this.#earthOmitted, hidden: all.length - shownEarthPlaces(all, this.earthPlaceLayers).length };
   }
 
   /**
@@ -703,9 +729,10 @@ export class WakuseiSpace extends HTMLElement {
     if (list === null || list.length === 0) this.removeAttribute("body-places");
     else this.setAttribute("body-places", JSON.stringify(list));
   }
-  /** The markers laid on the other bodies now, as the last draw left them: each place's body, id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`. */
-  get bodyPlacesShown(): { marks: readonly PlaceOnBodyMark[]; omitted: number } {
-    return { marks: (this.#bodyLayer?.shown ?? []) as readonly PlaceOnBodyMark[], omitted: this.#bodyOmitted };
+  /** The markers laid on the other bodies now, as the last draw left them: each place's body, id and kind, where its foot is in CSS pixels from the view's top left and whether its name is drawn; `omitted` counts the places in sight beyond the first `EARTH_PLACE_MARKS`, and `hidden` the places left out because their layer is off. */
+  get bodyPlacesShown(): { marks: readonly PlaceOnBodyMark[]; omitted: number; hidden: number } {
+    const all = this.#readBodyPlaces();
+    return { marks: (this.#bodyLayer?.shown ?? []) as readonly PlaceOnBodyMark[], omitted: this.#bodyOmitted, hidden: all.length - shownEarthPlaces(all, this.earthPlaceLayers).length };
   }
 
   /**
@@ -864,9 +891,8 @@ export class WakuseiSpace extends HTMLElement {
     const using = earthPlacesLayout();
     if (text === null || using === undefined) return [];
     if (this.#earthList?.text === text) return this.#earthList.list;
-    // the places that matter most first: where the reader is, then the rest in the order given
-    const list = using.read(text);
-    const ordered = [...list.filter((place) => place.kind === "here"), ...list.filter((place) => place.kind !== "here")];
+    // the places that matter most first: where the reader is, then the rest in the order given, then those whose name is low
+    const ordered = inMarkOrder(using.read(text));
     this.#earthList = { text, list: ordered };
     return ordered;
   }
@@ -895,9 +921,9 @@ export class WakuseiSpace extends HTMLElement {
     };
     if (surface !== null && this.#covered !== "name" && this.#places?.["earth"]?.behind !== undefined) return clear();
     if (surface === null || root === null || using === undefined || !this.hasAttribute("earth-places") || !(surface.radiusPx >= EARTH_PLACES_FROM_PX)) return clear();
-    const places = this.#readEarthPlaces();
+    const places = shownEarthPlaces(this.#readEarthPlaces(), this.earthPlaceLayers);
     if (places.length === 0) return clear();
-    this.#earthLayer ??= createEarthPlaceLayer(root, { press: (mark, event) => this.#pressBeam("earth", mark, event) });
+    this.#earthLayer ??= createEarthPlaceLayer(root, { press: (mark, event, place) => this.#pressBeam("earth", mark, event, place) });
     const layer = this.#earthLayer;
     const facts = BODIES.earth;
     const scale: Vec3 = [1, 1 - facts.flattening, 1];
@@ -955,9 +981,9 @@ export class WakuseiSpace extends HTMLElement {
       this.#bodyOmitted = 0;
     };
     if (root === null || using === undefined || !this.hasAttribute("body-places") || this.#bodySurfaces.length === 0) return clear();
-    const places = this.#readBodyPlaces();
+    const places = shownEarthPlaces(this.#readBodyPlaces(), this.earthPlaceLayers);
     if (places.length === 0) return clear();
-    this.#bodyLayer ??= createEarthPlaceLayer(root, { press: (mark, event) => this.#pressBeam(mark.body ?? "", mark, event) });
+    this.#bodyLayer ??= createEarthPlaceLayer(root, { press: (mark, event, place) => this.#pressBeam(mark.body ?? "", mark, event, place) });
     const layer = this.#bodyLayer;
     const look = this.earthPlacesLook;
     const laid = layBodyPlaces(places, this.#bodySurfaces, using, look, {
@@ -970,9 +996,14 @@ export class WakuseiSpace extends HTMLElement {
     layer.set(laid.places, laid.layout, look);
   }
 
-  /** A press on a beam's name or foot ring: the event `wakusei-body-place`, `{ body, id, kind, x, y }` (the same for the Earth's places, `body: "earth"`). The page decides what it does; the body under the press is not pressed as well. */
-  #pressBeam(body: string, mark: EarthPlaceMark, event: PointerEvent): void {
+  /**
+   * A press on a beam's name or foot ring: the event `wakusei-place-click`, `{ body, id, kind, layer, label, lon, lat, x, y }` (chikyu-earth's `chikyu-place-click` with the body; `x` and `y` are the press), and `wakusei-body-place`, `{ body, id, kind, x, y }` with the mark's foot
+   * (the same for the Earth's places, `body: "earth"`). The page decides what it does; the body under the press is not pressed as well.
+   */
+  #pressBeam(body: string, mark: EarthPlaceMark, event: PointerEvent, place: EarthPlace): void {
     this.#beamPress = event;
+    const box = this.getBoundingClientRect();
+    this.dispatchEvent(new CustomEvent("wakusei-place-click", { detail: earthPlaceClick(body, place, event.clientX - box.left, event.clientY - box.top), bubbles: true, composed: true }));
     this.dispatchEvent(new CustomEvent("wakusei-body-place", { detail: { body, id: mark.id, kind: mark.kind, x: mark.x, y: mark.y }, bubbles: true, composed: true }));
   }
 
