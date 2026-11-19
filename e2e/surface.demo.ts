@@ -16,7 +16,7 @@ type Surface = HTMLElement & {
   state: string;
   look: { azimuth: number; pitch: number; fov: number };
   position: { east: number; north: number; up: number };
-  sky: { sun: { altitude: number }; earth: { altitude: number } };
+  sky: { sun: { altitude: number }; earth: { altitude: number; azimuth: number }; earthDiameter: number };
   stats: { state: string; draws: number; quality: string; scale: number; scaled: number; tiles?: { done: number; total: number; first: number }; renderer?: { draws: number; contexts: number; canvas: { width: number; height: number; pixels: number } } };
   time: number;
   objects: readonly { id: string; east: number; north: number }[];
@@ -31,24 +31,24 @@ type Surface = HTMLElement & {
   driveFor(seconds: number, input?: { throttle: number; steer: number }): boolean;
 };
 
-const open = async (page: Page, attributes = "shadows=off detail=off", routed = false): Promise<void> => {
+const open = async (page: Page, attributes = "shadows=off detail=off", routed = false, width = 320): Promise<void> => {
   if (!routed) await routeSurface(page);
-  await page.setViewportSize({ width: 360, height: 300 });
+  await page.setViewportSize({ width: Math.max(360, width + 40), height: 300 });
   await page.goto("/wakusei-planets/surface.html");
   // the demo page's own element is replaced by one with the attributes this test wants, so the test does not depend on the page's choices
-  await page.evaluate((text) => {
+  await page.evaluate(([text, wide]) => {
     document.querySelector("#surface")?.remove();
     const el = document.createElement("wakusei-surface");
     el.id = "test-surface";
     el.setAttribute("site", "apollo-17");
     el.setAttribute("tiles", "/wakusei-planets/tiles/");
-    for (const pair of text.split(" ")) {
+    for (const pair of String(text).split(" ")) {
       const [k, v] = pair.split("=");
       if (k) el.setAttribute(k, v ?? "");
     }
-    el.style.cssText = "width: 320px";
+    el.style.cssText = `width: ${wide}px`;
     document.querySelector("main")!.prepend(el);
-  }, attributes);
+  }, [attributes, width] as const);
   await expect(page.locator("#test-surface")).toHaveAttribute("data-state", "live", { timeout: 120_000 });
   // at rest: the draws have stopped (the first, at the quality of motion, and the one a moment after it at the quality of rest, which a machine that is slow steps down), the same on three reads
   let held = "";
@@ -105,6 +105,68 @@ test("a drag turns the view and draws; a plus zooms (the field of view narrows);
   expect(sky.sun).toBeGreaterThan(12);
   expect(sky.sun).toBeLessThan(15);
   expect(sky.earth).toBeGreaterThan(40);
+});
+
+/** The red of every pixel of the view's picture, row by row (a screenshot decoded in the page). */
+const reds = async (page: Page): Promise<{ red: number[]; width: number; height: number }> => {
+  const shot = (await view(page).screenshot()).toString("base64");
+  return page.evaluate(async (data) => {
+    const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const g = canvas.getContext("2d")!;
+    g.drawImage(bitmap, 0, 0);
+    const px = g.getImageData(0, 0, bitmap.width, bitmap.height).data;
+    return { red: Array.from({ length: px.length / 4 }, (_, i) => px[i * 4]!), width: bitmap.width, height: bitmap.height };
+  }, shot);
+};
+
+/** The variance of a line of values about its straight-line trend: the light across the disc (the phase, the limb) is a trend, a band or a cloud is not. */
+const detrended = (line: number[]): number => {
+  const n = line.length;
+  const mean = line.reduce((a, b) => a + b, 0) / n;
+  const centre = (n - 1) / 2;
+  const slope = line.reduce((sum, v, i) => sum + (i - centre) * (v - mean), 0) / line.reduce((sum, _, i) => sum + (i - centre) ** 2, 0);
+  return line.reduce((sum, v, i) => sum + (v - mean - slope * (i - centre)) ** 2, 0) / n;
+};
+
+test("the Earth in the Moon's sky has clouds that run along no one direction: down a line is as busy as across it, not banded like a gas giant", async ({ page }) => {
+  // the view is turned to the Earth and narrowed, so its disc is a quarter of the picture's height
+  await open(page, "shadows=off detail=off heading=242 pitch=46 fov=8", false, 640);
+  const sky = await read(page, (el) => ({ azimuth: el.look.azimuth, pitch: el.look.pitch, earthAz: el.sky.earth.azimuth, earthAlt: el.sky.earth.altitude }));
+  expect(Math.abs(sky.earthAz - sky.azimuth), "the Earth is in the middle of the picture").toBeLessThan(1);
+  expect(Math.abs(sky.earthAlt - sky.pitch)).toBeLessThan(1);
+  const { red, width, height } = await reds(page);
+  // the disc's radius in pixels; a square of that side has its corners 0.7 of the radius from the middle, inside the disc
+  const { diameter, fov } = await read(page, (el) => ({ diameter: el.sky.earthDiameter, fov: el.look.fov }));
+  const side = Math.floor((Math.tan((diameter * Math.PI) / 360) / Math.tan((fov * Math.PI) / 360)) * (height / 2));
+  const left = Math.round((width - side) / 2);
+  const top = Math.round((height - side) / 2);
+  const inside = (x: number, y: number): number => red[(top + y) * width + left + x]!;
+  const at = [-0.4, -0.2, 0, 0.2, 0.4].map((f) => Math.round(side / 2 + f * side));
+  const mean = (v: number[]): number => v.reduce((a, b) => a + b, 0) / v.length;
+  const vertical = mean(at.map((x) => detrended(Array.from({ length: side }, (_, y) => inside(x, y)))));
+  const horizontal = mean(at.map((y) => detrended(Array.from({ length: side }, (_, x) => inside(x, y)))));
+  test.info().annotations.push({ type: "variance", description: `down ${vertical.toFixed(1)}, across ${horizontal.toFixed(1)}` });
+  expect(Math.min(vertical, horizontal), "the disc has clouds on it").toBeGreaterThan(2);
+  expect(Math.max(vertical, horizontal) / Math.min(vertical, horizontal), "bands put nearly all the variance on one of the two").toBeLessThan(2);
+});
+
+test("the dust's grain is not blocks where the Sun grazes the ground: across ground at the terminator the picture is as smooth as with no grain", async ({ page }) => {
+  // the made-up ground leans a little under 5 degrees away from the Sun, so with the Sun that high all the ground in view is at the terminator, as the dark oval at the real site was
+  await open(page, "shadows=off heading=232 pitch=-6 fov=40 time=1972-12-11T01:24:00Z", false, 640);
+  const { red, width, height } = await reds(page);
+  // the ground between the horizon and the page's line at the bottom, a row at a time: how far a pixel is, on average, from the line through its neighbours three pixels either side; the middle row's, so a rock or a crater does not count
+  const rows: number[] = [];
+  for (let y = Math.round(height * 0.7); y < Math.round(height * 0.85); y += 1) {
+    let sum = 0;
+    for (let x = 3; x < width - 3; x += 1) sum += Math.abs(red[y * width + x - 3]! + red[y * width + x + 3]! - 2 * red[y * width + x]!);
+    rows.push(sum / (width - 6));
+  }
+  const grain = rows.sort((a, b) => a - b)[Math.floor(rows.length / 2)]!;
+  test.info().annotations.push({ type: "grain", description: grain.toFixed(2) });
+  expect(grain, "the grain in grey levels: blocks of it measure over 1, smooth ground about 0.2").toBeLessThan(0.6);
 });
 
 test("a held key walks over the ground at a walking pace, and the eyes follow the ground: forward is where the view looks", async ({ page }) => {

@@ -10,7 +10,7 @@ import { DustField } from "../src/surface/dust.ts";
 import { calloutsBy, CALLOUTS, clockText, LANDING as DESCENT, landingAt, turnedBy, watchedLook, WATCH_PITCH_LIMIT } from "../src/surface/landing.ts";
 import { keepAway, objectParts, objectsOf, partShadows, traverseOf } from "../src/surface/objects.ts";
 import { craterIn, craterProfile, setKeepOut, madeGround, occupancy, OCTAVES, pcg2d, rimBoost, rocksAround, ROCK_MIN } from "../src/surface/detail.ts";
-import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
+import { decodeHeight, drop, emptyLevel, fillFromCoarser, groundAt, joinCredits, placeTile, sampleLevel, tileAddress, type TerrainManifest } from "../src/surface/height.ts";
 import { loadPlan } from "../src/surface/load.ts";
 import { rockMesh, ROCK_VERTICES } from "../src/surface/rocks.ts";
 import { moonSky, localFrame } from "../src/surface/sky.ts";
@@ -680,4 +680,15 @@ test("while the descent plays, every frame is drawn at the quality of motion: a 
   assert.match(source, /return this\.#movingNow\(\) \? "fast" : this\.#restQuality;/, "the quality");
   const draw = source.slice(source.indexOf("  #draw(): void {"), source.indexOf("// --- driving the rover"));
   assert.equal(/this\.#moving\b/.test(draw), false, "the draw's scale, timing and measuring read the same answer, not #moving");
+});
+
+test("the credit line names each credit once, in the order met, and keeps a comma inside brackets", () => {
+  const heights = "NASA/GSFC/Arizona State University (LROC), LOLA Team (NASA/GSFC)";
+  const picture = "NASA/GSFC/Arizona State University (LROC)";
+  assert.equal(joinCredits(heights, picture), heights, "the picture's credit is the heights' first name");
+  assert.equal(joinCredits(picture, heights), heights, "met in the other order, each is still said once");
+  assert.equal(joinCredits(heights, undefined), heights, "no picture, no change");
+  assert.equal(joinCredits(heights, "Someone Else (A, B)"), `${heights}, Someone Else (A, B)`, "a new name is added, its bracket kept whole");
+  assert.equal(joinCredits(undefined, ""), "", "nothing to say");
+  assert.match(readFileSync("src/surface/element.ts", "utf8"), /joinCredits\(m\.credit, m\.picture\?\.credit\)/, "the page's line is made of the heights' and the picture's credits through it");
 });

@@ -108,6 +108,17 @@ export function tileAddress(base: string, manifest: Pick<TerrainManifest, "body"
 }
 
 /**
+ * Credits joined into one line, each name once: a credit is a list of names, and the heights and the ground picture of a site often name the same one.
+ *
+ * @param credits - The credits, each a list of names split by commas (a comma inside brackets stays in its name); `undefined` is skipped.
+ * @returns The names in the order first met, split by commas.
+ */
+export function joinCredits(...credits: readonly (string | undefined)[]): string {
+  const names = credits.flatMap((credit) => (credit ?? "").split(/,\s*(?![^(]*\))/).map((name) => name.trim()));
+  return [...new Set(names.filter((name) => name !== ""))].join(", ");
+}
+
+/**
  * An empty level, ready to be filled tile by tile: every height the lowest the encoding holds until a tile says otherwise.
  *
  * @param info - The level as the manifest says it.
