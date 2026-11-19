@@ -153,6 +153,22 @@ test("the Earth in the Moon's sky has clouds that run along no one direction: do
   expect(Math.max(vertical, horizontal) / Math.min(vertical, horizontal), "bands put nearly all the variance on one of the two").toBeLessThan(2);
 });
 
+test("the dust's grain is not blocks where the Sun grazes the ground: across ground at the terminator the picture is as smooth as with no grain", async ({ page }) => {
+  // the made-up ground leans a little under 5 degrees away from the Sun, so with the Sun that high all the ground in view is at the terminator, as the dark oval at the real site was
+  await open(page, "shadows=off heading=232 pitch=-6 fov=40 time=1972-12-11T01:24:00Z", false, 640);
+  const { red, width, height } = await reds(page);
+  // the ground between the horizon and the page's line at the bottom, a row at a time: how far a pixel is, on average, from the line through its neighbours three pixels either side; the middle row's, so a rock or a crater does not count
+  const rows: number[] = [];
+  for (let y = Math.round(height * 0.7); y < Math.round(height * 0.85); y += 1) {
+    let sum = 0;
+    for (let x = 3; x < width - 3; x += 1) sum += Math.abs(red[y * width + x - 3]! + red[y * width + x + 3]! - 2 * red[y * width + x]!);
+    rows.push(sum / (width - 6));
+  }
+  const grain = rows.sort((a, b) => a - b)[Math.floor(rows.length / 2)]!;
+  test.info().annotations.push({ type: "grain", description: grain.toFixed(2) });
+  expect(grain, "the grain in grey levels: blocks of it measure over 1, smooth ground about 0.2").toBeLessThan(0.6);
+});
+
 test("a held key walks over the ground at a walking pace, and the eyes follow the ground: forward is where the view looks", async ({ page }) => {
   await open(page, "shadows=off detail=off heading=0");
   await view(page).focus();

@@ -309,7 +309,8 @@ void main() {
   vec2 slope = vec2((hE - hW) / (2.0 * e), (hN - hS) / (2.0 * e));
   if (uDetail > 0.5) {
     if (fromD < 24.0) slope += madeGround(vP.xz, fromD).yz;
-    slope += roughness(vP.xz, dist * uPixel);
+    // the dust's grain only where the Sun is well on the ground: where it grazes, a grain a degree off lights or darkens each cell and the grain reads as blocks
+    slope += roughness(vP.xz, dist * uPixel) * smoothstep(0.0, 0.12, dot(normalize(vec3(-slope.x, 1.0, -slope.y)), uSun));
   }
   vec3 n = normalize(vec3(-slope.x, 1.0, -slope.y));
   float mu0 = dot(n, uSun);
