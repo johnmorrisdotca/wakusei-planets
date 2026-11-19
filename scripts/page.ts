@@ -33,7 +33,11 @@ function render(file: string, title: string, description: string): string {
 }
 
 /** The demo's page. */
-export const renderIndex = (): string => render("index.html", TITLE, DESCRIPTION);
+/** The demo's page, with a card for each giant planet's moon page (its count of moons from the moon list). */
+export const renderIndex = (): string =>
+  render("index.html", TITLE, DESCRIPTION).replace("<!--moons:index-->", () =>
+    MOON_PAGE_HOSTS.map((host) => `<li><a class="giant" href="${host}.html" data-host="${host}"><b data-say="gi_${host}">${BODIES[host].name.en}</b><span><span>${moonPage(host).counts.total}</span><span data-say="gi_count"></span></span></a></li>`).join(""),
+  );
 
 /** The portrait builder's page. */
 export const renderPortrait = (): string =>
@@ -64,7 +68,7 @@ export const renderLineup = (): string =>
 
 /** The plan page. */
 export const renderPlan = (): string =>
-  render("plan.html", "Wakusei Planets 惑星: the top-down plan", "A small plan of the solar system from above, or of one planet's moons from above its pole, with one body marked, for any date: squeezed with a logarithm so the inner planets show, or to scale. SVG, no WebGL, light enough for an inset.");
+  moonLinks(render("plan.html", "Wakusei Planets 惑星: the top-down plan", "A small plan of the solar system from above, or of one planet's moons from above its pole, with one body marked, for any date: squeezed with a logarithm so the inner planets show, or to scale. SVG, no WebGL, light enough for an inset."));
 
 /** The flat map page. */
 export const renderFlat = (): string =>
@@ -77,6 +81,9 @@ export const renderSystem = (): string =>
 /** The standing page. */
 export const renderSurface = (): string =>
   render("surface.html", "Wakusei Planets 惑星: standing on the Moon", "A person at the Apollo 17 landing site, drawn from the measured ground, with the Sun and the Earth where they are, hard shadows, and made detail that says it is made.");
+
+/** A link to each giant planet's moon page, by the planet's name. */
+const moonLinks = (html: string): string => html.replace("<!--moons:links-->", () => MOON_PAGE_HOSTS.map((host) => `<a href="${host}.html" data-host="${host}" data-say="gi_${host}">${BODIES[host].name.en}</a>`).join(""));
 
 /** A giant planet's moon page: demo/moons.html with the planet's numbers, worked out now from the package's data, in the page as JSON. */
 export function renderMoons(host: MoonPageHost): string {

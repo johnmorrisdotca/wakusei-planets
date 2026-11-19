@@ -148,3 +148,38 @@ test("the map, the portrait and the cards: made when their tab opens, with the m
   await expect(page.locator('#cards .moons-card[data-id="amalthea"]')).toContainText("shape measured");
   expect(errors).toEqual([]);
 });
+
+test("on a phone the family header is one line, the tabs start in the first screen, and each tab fits one screen from the tabs down", async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const host of HOSTS) {
+    const errors = await open(page, host);
+    const header = (await page.locator("header").boundingBox())!;
+    expect(header.height, `${host}: the header is one line`).toBeLessThan(60);
+    const tabs = (await page.locator("#tabs").boundingBox())!;
+    expect(tabs.y + tabs.height, `${host}: the tabs are in the first screen`).toBeLessThan(844 / 2);
+    await expect(page.locator("#short")).toContainText(`${moonCounts()[host]!.total} moons`);
+    for (const tab of TABS) {
+      if ((tab === "views" || tab === "cards") && !drawsGl(browserName)) continue;
+      await page.locator(`#tab-${tab}`).click();
+      const top = (await page.locator("#tabs").boundingBox())!.y;
+      const panel = (await page.locator(`#panel-${tab}`).boundingBox())!;
+      expect(panel.y + panel.height - top, `${host} ${tab}: the tabs and the tab fit one screen`).toBeLessThanOrEqual(844);
+    }
+    expect(errors).toEqual([]);
+  }
+});
+
+test("the ways in: a card on the demo's first page and a link on each giant planet's name on the plan page", async ({ page }) => {
+  await page.goto("/wakusei-planets/");
+  const cards = page.locator("#giants a.giant");
+  await expect(cards).toHaveCount(4);
+  for (const host of HOSTS) {
+    await expect(page.locator(`#giants a[data-host="${host}"]`)).toHaveAttribute("href", `${host}.html`);
+    await expect(page.locator(`#giants a[data-host="${host}"]`)).toContainText(`${moonCounts()[host]!.total} known moons`);
+  }
+  await page.goto("/wakusei-planets/plan.html?lang=ja");
+  await expect(page.locator('#moon-pages a[data-host="saturn"]')).toHaveText("土星");
+  await page.locator('#moon-pages a[data-host="saturn"]').click();
+  await expect(page).toHaveURL(/saturn\.html$/);
+  await expect(page.locator("body")).toHaveAttribute("data-ready", "true");
+});

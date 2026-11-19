@@ -410,6 +410,7 @@ function render(): void {
   for (const link of $$<HTMLAnchorElement>("#planets a")) link.textContent = BODIES[link.dataset["host"] as BodyId].name[lang()];
   const c = data.counts;
   $("#lede").textContent = say("mn_lede", { total: number(c.total), named: number(c.named), prograde: number(c.prograde), retrograde: number(c.retrograde), planet, featured: number(c.featured) });
+  $("#short").textContent = say("mn_short", { total: number(c.total), named: number(c.named), retrograde: number(c.retrograde) });
   $("#credits").textContent = say("mn_credits", { fetched: new Date(`${data.fetched}T00:00:00Z`).toLocaleDateString(lang() === "ja" ? "ja-JP" : "en-CA", { dateStyle: "long", timeZone: "UTC" }) });
   for (const b of $$("#view [data-view]")) pressed(b, b.dataset["view"] === state.view);
   for (const b of $$("#reach [data-reach]")) pressed(b, b.dataset["reach"] === state.reach);
