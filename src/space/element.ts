@@ -32,6 +32,7 @@ import { SUN_REGIONS, type SunRegion } from "./regions.ts";
 import { travelArrival, type TravelKind } from "./travel.ts";
 import { controlsFor, readFrame, type FrameKind } from "./hold.ts";
 import type { MoonSource, MoonSpot } from "./all-moons.ts";
+import { nearestLine, type ScreenLine } from "./orbit-lines.ts";
 import { catalogueMoonIdOf, catalogueMoonKey, hostsShowingAll, MOON_HOSTS, moonSourceOf, readMoonColors, readMoonsChoice, readMoonsOf, type MoonsChoice } from "./moon-settings.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
@@ -269,10 +270,13 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none;transition:opacity .35s ease}.sp-oort[data-covered]{opacity:0}@media (prefers-reduced-motion:reduce){.sp-oort{transition:none}}</style><div id="stage"></div><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none;transition:opacity .35s ease}.sp-oort[data-covered]{opacity:0}@media (prefers-reduced-motion:reduce){.sp-oort{transition:none}}.sp-line{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none}.sp-line[hidden],.sp-linename[hidden]{display:none}.sp-line path{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.sp-linename{position:absolute;left:0;top:0;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}</style><div id="stage"></div><svg class="sp-line" part="line" aria-hidden="true" hidden><path/></svg><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p><p class="sp-linename" part="line-name" hidden></p>`;
 
 /** A dot of a moon of the catalogue answers a press within this many CSS pixels: smaller than a body's, so a crowd of dots can be told apart, and more than the dot is wide. */
 const MOON_DOT_HIT_PX = 9;
+/** How near an orbit line must be to the pointer to be lit by it, and to a press (a finger is less exact), in CSS pixels. */
+const LINE_HIT_PX = 6;
+const LINE_TOUCH_PX = 8;
 
 const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value === "chosen" || value === "none" ? value : "all");
 
@@ -336,6 +340,8 @@ export class WakuseiSpace extends HTMLElement {
   #scaleLine: HTMLElement | undefined;
   #noteLine: HTMLElement | undefined;
   #oortLabel: HTMLElement | undefined;
+  #lineLayer: SVGElement | undefined;
+  #lineName: HTMLElement | undefined;
   /** The belt the camera is flying through, and the point it flies on (the ride's target, to know the ride is still this one). */
   #flight: { belt: BeltId; point: ReturnType<typeof beltFlight> } | null = null;
   #spacing = new Map<BeltId, { known: number; drawn: number }>();
@@ -429,6 +435,8 @@ export class WakuseiSpace extends HTMLElement {
     this.#regionLine = root.getElementById("region")!;
     this.#noteLine = root.querySelector<HTMLElement>(".sp-note")!;
     this.#oortLabel = root.querySelector<HTMLElement>(".sp-oort")!;
+    this.#lineLayer = root.querySelector<SVGElement>(".sp-line")!;
+    this.#lineName = root.querySelector<HTMLElement>(".sp-linename")!;
     this.#nameScale();
     this.#showRegion();
     this.#pool.clear();
@@ -519,6 +527,7 @@ export class WakuseiSpace extends HTMLElement {
     window.removeEventListener("pointerup", this.#lift, true);
     window.removeEventListener("pointercancel", this.#lift, true);
     if (this.#hovered !== null) this.#hover(null, this.#hoverBy);
+    this.#lineKey = null;
     clearTimeout(this.#sightTimer);
     this.#sightTimer = undefined;
     this.removeEventListener("wheel", this.#wheel, { capture: true });
@@ -2553,7 +2562,7 @@ export class WakuseiSpace extends HTMLElement {
     /** The catalogue's moons of the planets set to `all` (`moons`): whether any is asked for, whether the catalogue has loaded, how many dots and orbits the last draw drew, and the planets showing them. */
     allMoons: { on: boolean; loaded: boolean; dots: number; orbits: number; hosts: readonly string[] };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. `hidden` are the lines left out because a body is close, and `faded` the lines whose part near the close body is let go (only a line that passes through it). */
-    orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[] };
+    orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[]; fade: { crowd: number; outness: number; opacity: number } };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
     arrows: Record<string, { position: [number, number, number]; direction: [number, number, number] }[]>;
     /** How long an arrowhead on an orbit line is on the screen at the last draw, in CSS pixels (0 when none is drawn): the same at every zoom. */
@@ -2597,7 +2606,7 @@ export class WakuseiSpace extends HTMLElement {
       ride: { riding: this.#model.ride !== null, lost: this.#model.rideLost, gliding: this.#model.transition !== null },
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
-      orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden], faded: [...this.#model.rings.faded] },
+      orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden], faded: [...this.#model.rings.faded], fade: { ...this.#model.rings.fade } },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
@@ -2760,6 +2769,7 @@ export class WakuseiSpace extends HTMLElement {
       if (spot.small) ring.style.transform = `translate(${Math.round(places[id]!.x)}px,${Math.round(places[id]!.y)}px)`;
     }
     this.#placeArrows(places);
+    this.#followLine();
     this.#markFar();
     // the names written on the body keep off the names and dots just placed
     this.#markSurface();
@@ -2815,7 +2825,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#markFar();
     if (id !== null && this.#catalogueMoon(id) !== undefined) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: this.#moonDetail(id), bubbles: true, composed: true }));
     else if (id !== null && this.#isAsteroid(id)) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
-    else if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id))) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
+    else if (id !== null && ((id as string) === "roadster" || this.#model.craftIds.includes(id) || this.#model.orbiterSet?.ids.includes(id) === true)) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
     else if (id !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover", { detail: { ...this.bodyInfo(id), system: systemOf(id) } satisfies BodyHover, bubbles: true, composed: true }));
     else if (was !== null) this.dispatchEvent(new CustomEvent("wakusei-body-hover-end", { detail: { id: catalogueMoonIdOf(was) ?? was }, bubbles: true, composed: true }));
   }
@@ -2858,11 +2868,85 @@ export class WakuseiSpace extends HTMLElement {
   #move = (event: PointerEvent): void => {
     if (event.pointerType === "touch" || event.buttons !== 0) return;
     if (this.#hoverBy === "focus" && this.#hovered !== null) return;
-    this.#hover(this.#pointAt(event), "pointer");
+    const rect = this.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    // a body is under the pointer before a line is; with the names off nothing is lit
+    const body = this.#bodyAt(x, y);
+    const line = body === null && this.#model.labels && this.#model.orbits ? this.#lineAt(x, y, false) : null;
+    this.#hover(body ?? (line?.id as BodyId | undefined) ?? null, "pointer");
+    this.#lightLine(line, x, y);
   };
   #leave = (event: PointerEvent): void => {
-    if (event.pointerType !== "touch" && this.#hoverBy === "pointer") this.#hover(null, "pointer");
+    if (event.pointerType !== "touch" && this.#hoverBy === "pointer") {
+      this.#hover(null, "pointer");
+      this.#lightLine(null);
+    }
   };
+
+  // --- the orbit line under the pointer ----------------------------------------------------------------------------------------------------------------
+  /** The key of the orbit line lit by the pointer, which is the key of its body, or null. */
+  #lineKey: string | null = null;
+  #lineNameWidth = 0;
+
+  /** The orbit line nearest a point of the element, in CSS pixels, within the reach of a pointer or of a finger. Worked out when asked, never at a draw. */
+  #lineAt(x: number, y: number, touch: boolean): ScreenLine | null {
+    return nearestLine(this.#model.orbitPaths(), { x, y }, touch ? LINE_TOUCH_PX : LINE_HIT_PX);
+  }
+
+  /**
+   * Light an orbit line: its path in full strength over the picture, in a layer of the view's own, so that lighting a line draws nothing; and the name of its body beside the pointer. `null` puts both away.
+   * The lit line is kept up with the pictures that follow (`#followLine`).
+   */
+  #lightLine(line: ScreenLine | null, x = 0, y = 0): void {
+    const layer = this.#lineLayer;
+    const name = this.#lineName;
+    if (layer === undefined || name === undefined) return;
+    if (line === null) {
+      this.#lineKey = null;
+      if (!layer.hasAttribute("hidden")) layer.setAttribute("hidden", "");
+      if (!name.hidden) name.hidden = true;
+      return;
+    }
+    if (line.id !== this.#lineKey) {
+      this.#lineKey = line.id;
+      layer.removeAttribute("hidden");
+      layer.querySelector("path")!.setAttribute("stroke", line.colour);
+      name.textContent = this.#nameOf(line.id);
+      name.hidden = false;
+      this.#lineNameWidth = name.offsetWidth;
+    }
+    this.#drawLine(line);
+    // beside the pointer, on the side that stays inside the view
+    const left = x + 14 + this.#lineNameWidth > this.clientWidth ? x - 14 - this.#lineNameWidth : x + 14;
+    name.style.transform = `translate(${Math.round(Math.max(0, left))}px,${Math.round(Math.max(0, y - 20))}px)`;
+  }
+
+  /** The line's points as the path of the lit layer: a gap where the line is behind the camera. */
+  #drawLine(line: ScreenLine): void {
+    let d = "";
+    let drawing = false;
+    for (let i = 0; i + 1 < line.xy.length; i += 2) {
+      const x = line.xy[i]!;
+      if (x !== x) {
+        drawing = false;
+        continue;
+      }
+      d += `${drawing ? "L" : "M"}${x.toFixed(1)} ${line.xy[i + 1]!.toFixed(1)}`;
+      drawing = true;
+    }
+    this.#lineLayer!.querySelector("path")!.setAttribute("d", d);
+  }
+
+  /** After a draw: the lit line is where the draw put it, or gone (its body's line is no longer drawn). Only the lit line is worked out. */
+  #followLine(): void {
+    if (this.#lineKey === null) return;
+    const line = this.#model.orbitPaths(this.#lineKey)[0];
+    if (line === undefined) {
+      if (this.#hovered === (this.#lineKey as BodyId)) this.#hover(null, "pointer");
+      this.#lightLine(null);
+    } else this.#drawLine(line);
+  }
   #labelBlur = (event: FocusEvent): void => {
     const next = event.relatedTarget as HTMLElement | null;
     if (this.#hoverBy === "focus" && !(next && this.#labelBox?.contains(next))) this.#hover(null, "focus");
@@ -3051,8 +3135,16 @@ export class WakuseiSpace extends HTMLElement {
     if (!this.#places) return;
     const rect = this.getBoundingClientRect();
     // the one hit test the hover uses: a body's disc (14 pixels at least) or, failing that, a drawn name's box, so a press on a name picks its body
-    const best = this.#bodyAt(event.clientX - rect.left, event.clientY - rect.top, true);
-    if (best) this.#press(best);
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const best = this.#bodyAt(x, y, true);
+    if (best) {
+      this.#press(best);
+      return;
+    }
+    // failing a body, an orbit line is a press on its body; Ctrl or Command goes there at once
+    const line = this.#model.orbits ? this.#lineAt(x, y, event.pointerType === "touch") : null;
+    if (line !== null) this.#press(line.id as BodyId, event.ctrlKey || event.metaKey);
   };
   #labelClick = (event: Event): void => {
     const target = event.target as HTMLElement | null;
@@ -3069,21 +3161,21 @@ export class WakuseiSpace extends HTMLElement {
 
   /**
    * A press on a body or its name. `wakusei-body-click` tells the page every time. The first press on a body selects it (`wakusei-body-select`, for the page's card); a second press on the body that is selected makes it
-   * the middle of the view (`goTo`), unless it already is, so a press never sends the view anywhere else.
+   * the middle of the view (`goTo`), unless it already is, so a press never sends the view anywhere else. With `teleport` (Ctrl or Command held on an orbit line) the press selects and goes there at once, without the glide.
    */
-  #press(id: BodyId): void {
+  #press(id: BodyId, teleport = false): void {
     if (this.#catalogueMoon(id) !== undefined) {
       // a moon of the catalogue is no body of the package: the press says which one, in the body event and in an event of its own; the first press selects it, and a second makes its planet the middle of the view
       const detail = this.#moonDetail(id);
       this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail, bubbles: true, composed: true }));
       this.dispatchEvent(new CustomEvent("wakusei-moon-click", { detail, bubbles: true, composed: true }));
-      if (this.#selected === id) {
-        const host = detail.host as BodyId;
-        if (canCentre(host) && this.#model.focus !== host) this.goTo(host);
-        return;
+      const first = this.#selected !== id;
+      if (first) {
+        this.#selected = id;
+        this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail, bubbles: true, composed: true }));
       }
-      this.#selected = id;
-      this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail, bubbles: true, composed: true }));
+      const host = detail.host as BodyId;
+      if ((!first || teleport) && canCentre(host) && this.#model.focus !== host) this.goTo(host, teleport ? { smooth: false } : {});
       return;
     }
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
@@ -3100,12 +3192,12 @@ export class WakuseiSpace extends HTMLElement {
       return;
     }
     this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
-    if (this.#selected === id) {
-      if (canCentre(id) && this.#model.focus !== id) this.goTo(id);
-      return;
+    const first = this.#selected !== id;
+    if (first) {
+      this.#selected = id;
+      this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
     }
-    this.#selected = id;
-    this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    if ((!first || teleport) && canCentre(id) && this.#model.focus !== id) this.goTo(id, teleport ? { smooth: false } : {});
   }
   #labelFocus = (event: Event): void => {
     const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;

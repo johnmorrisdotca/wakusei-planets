@@ -78,10 +78,32 @@ test("a press on a moon's name, away from its dot, picks that moon; a press on e
     expect(await heard(page), `a press on the name of ${one.id}: ${JSON.stringify(one)}`).toContain(one.id);
     expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "selected")), `${one.id} is selected`).toBe(one.id);
   }
-  // 40 pixels above a name and clear of every disc: the empty sky
+  // above or below a name, clear of every disc and with no orbit line within a finger's reach (proved by moving the pointer over every point of a square round it and seeing no body hovered and no line lit): the empty sky
   const first = shown[0]!;
+  const sky = await page.locator(SPACE).evaluate(
+    (el, [x, y]) => {
+      const box = el.getBoundingClientRect();
+      let hovered = 0;
+      el.addEventListener("wakusei-body-hover", () => (hovered += 1));
+      const bare = (cx: number, cy: number): boolean => {
+        hovered = 0;
+        for (let dy = -20; dy <= 20; dy += 4) {
+          for (let dx = -20; dx <= 20; dx += 4) {
+            el.dispatchEvent(new PointerEvent("pointermove", { clientX: box.left + cx + dx, clientY: box.top + cy + dy, pointerType: "mouse", buttons: 0, bubbles: true, composed: true }));
+            if (hovered > 0 || !el.shadowRoot!.querySelector(".sp-line")!.hasAttribute("hidden")) return false;
+          }
+        }
+        return true;
+      };
+      const found = [-40, -60, -80, 40, 60, 80].map((up) => ({ x: x!, y: y! + up })).find((p) => p.y > 24 && p.y < box.height - 24 && bare(p.x, p.y));
+      el.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse", bubbles: false, composed: true }));
+      return found ?? null;
+    },
+    [first.right - 4, first.top] as const,
+  );
+  expect(sky, "a place beside the name with no body, name or orbit line near").not.toBeNull();
   await page.locator(SPACE).evaluate(() => Reflect.set(window, "__clicks", []));
-  await tap(page, first.right - 4, first.top - 40);
+  await tap(page, sky!.x, sky!.y);
   expect(await heard(page), "a press on the sky beside a name picks nothing").toEqual([]);
 });
 

@@ -9,7 +9,7 @@ import type { SourceBook } from "../door/book.ts";
 import { createSmallBodyPoints, smallBodyPlace, type PointsThree } from "../door/points.ts";
 import { asteroidKey } from "./asteroid-ids.ts";
 import type { SmallBody } from "../door/small-bodies.ts";
-import { createMoonLayer, type DotsThree, type MoonColorChoice, type MoonSource, type MoonSpot } from "./all-moons.ts";
+import { createMoonLayer, MOON_ORBIT_OPACITY, type DotsThree, type MoonColorChoice, type MoonSource, type MoonSpot } from "./all-moons.ts";
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
@@ -29,7 +29,9 @@ import { createPaintOverlay } from "./paint-overlay.ts";
 import { createPaintTrail, groundUnder, paintMinute, type PaintSpec, type PaintTrail } from "../paint/trail.ts";
 import { BALL_FRAGMENT, VERTEX } from "../scene/glsl.ts";
 import { ridePose, type RideLook } from "./ride.ts";
+import { lineAlpha, linesInView, outnessOf, type ScreenLine } from "./orbit-lines.ts";
 import { fadesNearBody, isOwnLine, nearBodyKeep } from "./orbit-rules.ts";
+import { catalogueMoonKey } from "./moon-settings.ts";
 import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, placeMoon, radiusIn, type ScaleMode } from "./scale.ts";
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
 import { TRAVEL_BUDGET_MS, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
@@ -44,9 +46,13 @@ const RAD = Math.PI / 180;
 export const FIT_DISTANCE = 4.1;
 const FOV = 35;
 const ORBIT_POINTS = 96;
+/** The opacity of a planet's, a dwarf planet's, a minor body's or the Moon's orbit line, and of the Roadster's, when few lines are drawn and the view is near. */
+const LINE_OPACITY = 0.55;
 const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, ...SPACE_MINORS, "moon"] as const;
 /** A dwarf planet or a minor body is drawn once it is this many CSS pixels across its radius, or when it is the body looked at: Sedna at true scale is never anything but a speck, and its picture is not made for it. */
 const DWARF_MIN_PX = 0.4;
+/** The colour of a body's orbit line, `#rrggbb`. */
+const orbitColour = (id: OrbitBody): string => (id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
 /** A colour as three numbers from 0 to 1, from `#rrggbb`. */
 const rgb = (hex: string): [number, number, number] => [parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255];
 /** How long each arrowhead on an orbit line is, in CSS pixels: small, so it reads at every zoom and never hides a body. */
@@ -265,7 +271,9 @@ export interface SpaceModel {
   /** What the windows of finer map tiles on the bodies are doing, summed at the last draw: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
   tiles: { requested: number; loading: number; failed: number; shown: number | null };
   /** The orbit lines drawn at the last draw, and how far each body is from its own line as a fraction of the line's radius (0 when it is on it). */
-  rings: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[] };
+  rings: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[]; fade: { crowd: number; outness: number; opacity: number } };
+  /** The orbit lines on the screen as the last draw left them (every kind, the catalogue moons' too), for a hover and a press; with `only`, the one line of that key. */
+  orbitPaths: (only?: string) => ScreenLine[];
   /** The arrowheads on the orbit lines at the last draw, by line: where each is and the way it points. */
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
@@ -456,7 +464,8 @@ export const newSpaceModel = (): SpaceModel => ({
   drawn: null,
   painted: { bodies: 0, moons: 0, held: 0 },
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
-  rings: { drawn: [], miss: {}, hidden: [], faded: [] },
+  rings: { drawn: [], miss: {}, hidden: [], faded: [], fade: { crowd: 0, outness: 0, opacity: LINE_OPACITY } },
+  orbitPaths: () => [],
   arrows: {},
   help: false,
   helpThrough: false,
@@ -696,12 +705,12 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       for (const id of ORBIT_BODIES) {
         const positions = new Float32Array((ORBIT_POINTS + 1) * 3);
         const colours = new Float32Array((ORBIT_POINTS + 1) * 4);
-        const base = rgb(id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
+        const base = rgb(orbitColour(id));
         for (let i = 0; i <= ORBIT_POINTS; i += 1) colours.set([base[0], base[1], base[2], 1], i * 4);
         const geometry = new three.BufferGeometry();
         geometry.setAttribute("position", new three.BufferAttribute(positions, 3));
         geometry.setAttribute("color", new three.BufferAttribute(colours, 4));
-        const line = new three.Line(geometry, new three.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.55 }));
+        const line = new three.Line(geometry, new three.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: LINE_OPACITY }));
         line.frustumCulled = false;
         scene.add(line);
         orbits.set(id, { line, positions, colours, faded: false, samples: [], epoch: Number.NaN });
@@ -717,7 +726,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       arrowLines.frustumCulled = false;
       scene.add(arrowLines);
       ORBIT_BODIES.forEach((id, k) => {
-        const c = rgb(id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
+        const c = rgb(orbitColour(id));
         for (let v = 0; v < MAX_ARROWS_PER_ORBIT * 4; v += 1) arrowColours.set(c, (k * MAX_ARROWS_PER_ORBIT * 4 + v) * 3);
       });
       const HELP_SEGMENTS = 28;
@@ -750,7 +759,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const roadsterPositions = new Float32Array((ORBIT_POINTS + 1) * 3);
       const roadsterLineGeometry = new three.BufferGeometry();
       roadsterLineGeometry.setAttribute("position", new three.BufferAttribute(roadsterPositions, 3));
-      const roadsterLine = new three.Line(roadsterLineGeometry, new three.LineBasicMaterial({ color: 0xe8705a, transparent: true, opacity: 0.55 }));
+      const roadsterLine = new three.Line(roadsterLineGeometry, new three.LineBasicMaterial({ color: 0xe8705a, transparent: true, opacity: LINE_OPACITY }));
       roadsterLine.visible = false;
       roadsterLine.frustumCulled = false;
       scene.add(roadsterLine);
@@ -777,6 +786,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         lineMaterial: THREE.LineBasicMaterial;
         positions: Float32Array;
         epoch: number;
+        /** The line's own opacity at the last draw, and whether the craft is the one chosen. */
+        base: number;
+        chosen: boolean;
       }
       const orbiterDrawings = new Map<string, OrbiterDrawing>();
       const orbiterGeometry = new three.SphereGeometry(1, 16, 8);
@@ -794,7 +806,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         const line = new three.Line(geometry, lineMaterial);
         line.frustumCulled = false;
         scene.add(line);
-        drawing = { mesh, material, line, lineMaterial, positions, epoch: Number.NaN };
+        drawing = { mesh, material, line, lineMaterial, positions, epoch: Number.NaN, base: 0.4, chosen: false };
         orbiterDrawings.set(id, drawing);
         return drawing;
       };
@@ -814,6 +826,62 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         if (projected.z > 1 || projected.z < -1) return null;
         return { x: ((projected.x + 1) / 2) * size.width, y: ((1 - projected.y) / 2) * size.height };
       };
+
+      // The orbit lines of every kind as the screen shows them, for a hover and a press: worked out when asked (a pointer move, a press), from the places the last draw left. A draw works out the planets' and craft's own (a
+      // few thousand points) to count the lines in the picture, never the catalogue moons'. A line is broken
+      // where it is behind the camera or outside its depth range; the catalogue moons' lines are cut from their planet's one object, a moon a line.
+      const pathsOf = (which: "base" | "all", only?: string): ScreenLine[] => {
+        const a = camera.projectionMatrix.elements;
+        const b = camera.matrixWorldInverse.elements;
+        const m = new Float64Array(16);
+        for (let c = 0; c < 4; c += 1) for (let r = 0; r < 4; r += 1) m[c * 4 + r] = a[r]! * b[c * 4]! + a[4 + r]! * b[c * 4 + 1]! + a[8 + r]! * b[c * 4 + 2]! + a[12 + r]! * b[c * 4 + 3]!;
+        const out: ScreenLine[] = [];
+        const trace = (id: string, colour: string, positions: ArrayLike<number>, count: number, vertexAt: (k: number) => number, at: Vec3, scale: number, fades?: ArrayLike<number>): void => {
+          if (only !== undefined && only !== id) return;
+          const xy = new Float32Array(count * 2);
+          for (let k = 0; k < count; k += 1) {
+            const v = vertexAt(k) * 3;
+            const x = at[0] + positions[v]! * scale;
+            const y = at[1] + positions[v + 1]! * scale;
+            const z = at[2] + positions[v + 2]! * scale;
+            const w = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
+            const depth = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
+            // a point of a line that has been let go near the close body is not there to be pointed at
+            if (!(w > 1e-12) || depth > w || depth < -w || (fades !== undefined && fades[k * 4 + 3]! < 0.1)) {
+              xy[k * 2] = Number.NaN;
+              xy[k * 2 + 1] = Number.NaN;
+              continue;
+            }
+            xy[k * 2] = (((m[0]! * x + m[4]! * y + m[8]! * z + m[12]!) / w + 1) / 2) * size.width;
+            xy[k * 2 + 1] = ((1 - (m[1]! * x + m[5]! * y + m[9]! * z + m[13]!) / w) / 2) * size.height;
+          }
+          out.push({ id, colour, xy });
+        };
+        const origin0: Vec3 = [0, 0, 0];
+        for (const id of ORBIT_BODIES) {
+          const o = orbits.get(id)!;
+          if (o.line.visible) trace(id, orbitColour(id), o.positions, ORBIT_POINTS + 1, (k) => k, origin0, 1, o.colours);
+        }
+        if (roadsterLine.visible) trace("roadster", "#e8705a", roadsterPositions, ORBIT_POINTS + 1, (k) => k, origin0, 1);
+        for (const [id, drawing] of orbiterDrawings) if (drawing.line.visible) trace(id, "#9fd0ff", drawing.positions, ORBIT_POINTS + 1, (k) => k, [drawing.line.position.x, drawing.line.position.y, drawing.line.position.z], drawing.line.scale.x);
+        if (which === "all" && moonLayer !== undefined) {
+          for (const host of model.moonHosts) {
+            const object = moonLayer.orbitObject(host);
+            if (object === undefined || !object.visible) continue;
+            const positions = object.geometry.getAttribute("position").array;
+            const at: Vec3 = [object.position.x, object.position.y, object.position.z];
+            let first = 0;
+            for (const moon of moonLayer.orbitMoons(host)) {
+              const start = first;
+              first += moon.segments;
+              // a segment is two vertices: the first of each, then the last of the last
+              trace(catalogueMoonKey(moon.id), moon.colour, positions, moon.segments + 1, (k) => (k < moon.segments ? 2 * (start + k) : 2 * (start + moon.segments - 1) + 1), at, object.scale.x);
+            }
+          }
+        }
+        return out;
+      };
+      model.orbitPaths = (only) => pathsOf("all", only);
 
       return {
         scene,
@@ -1273,7 +1341,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             drawnRings.push(id);
             miss[id] = distanceToLine(pos[id as SpaceBody], line) / radius;
           }
-          model.rings = { drawn: drawnRings, miss, hidden: hiddenRings, faded: fadedRings };
+          model.rings = { drawn: drawnRings, miss, hidden: hiddenRings, faded: fadedRings, fade: model.rings.fade };
 
           // Starman and the Roadster: where the table puts the car, in the same mapping as the planets, as a dot a few pixels across, on its orbit line (about one trip round the Sun, from the table, worked out again every month)
           const path = model.roadster ? model.roadsterPath : null;
@@ -1388,7 +1456,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               // the line is in the body's radii round the origin: placed and scaled with the body
               drawing.line.position.set(pos[centre][0], pos[centre][1], pos[centre][2]);
               drawing.line.scale.setScalar(hostRadius);
-              drawing.lineMaterial.opacity = chosen ? (dim ? 0.5 : 0.85) : dim ? 0.2 : 0.4;
+              drawing.base = chosen ? (dim ? 0.5 : 0.85) : dim ? 0.2 : 0.4;
+              drawing.chosen = chosen;
               drawing.line.visible = model.orbiterLines === "all" || (model.orbiterLines === "chosen" && chosen);
               if (drawing.line.visible) linesDrawn += 1;
               orbiterPlaces[id] = { at: place, px: dotPx };
@@ -1427,6 +1496,20 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             }
           }
           if (trackDrawn === 0) trackLine.visible = false;
+          // every orbit line is fainter the more are drawn and the farther out the view is (the orbiter chosen keeps its own)
+          // (the lines with some of their length in the picture, and a planet's moon lines once the planet is big enough for its moons to be told from it)
+          let crowd = linesInView(pathsOf("base"), size.width, size.height);
+          if (moonLayer !== undefined && model.orbits) {
+            for (const host of model.moonHosts) if (moonLayer.orbitObject(host)?.visible && px[host as SpaceBody] >= MOON_MIN_PLANET_PX) crowd += moonLayer.orbitMoons(host).length;
+          }
+          const crowding = { crowd, outness: outnessOf(distance / Math.max(1e-9, focusRadius)) };
+          const faint = (base: number): number => lineAlpha({ base, ...crowding });
+          for (const o of orbits.values()) (o.line.material as THREE.LineBasicMaterial).opacity = faint(LINE_OPACITY);
+          (roadsterLine.material as THREE.LineBasicMaterial).opacity = faint(LINE_OPACITY);
+          for (const drawing of orbiterDrawings.values()) drawing.lineMaterial.opacity = drawing.chosen ? drawing.base : faint(drawing.base);
+          moonLayer?.setOrbitOpacity(faint(MOON_ORBIT_OPACITY));
+          (arrowLines.material as THREE.LineBasicMaterial).opacity = faint(0.95);
+          model.rings.fade = { crowd, outness: crowding.outness, opacity: faint(LINE_OPACITY) };
           model.orbitersDrawn = { count: Object.keys(orbiterPlaces).length, status: orbiterStatus, dim: orbitersDim, lines: linesDrawn, track: trackDrawn };
           // the painted trail: stepped and uploaded only while the painted craft's body is drawn, and only when the shown moment moved
           const paintedCraft = model.paint;
