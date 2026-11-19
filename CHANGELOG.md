@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **A distance on Eros, Ryugu, Bennu, Dimorphos, Tempel 1 and 67P** (MODULES-1045). `placeDistanceKm` is the great circle on a volume-equivalent mean radius. `placeDistance` returns `{ km, accuracyKm }`. `accuracyKm` is the shape bound from the published extents, or `null` when none is stated (a sphere in `BODIES`, and 67P).
+- **A distance on Eros, Ryugu, Bennu, Dimorphos, Tempel 1 and 67P** (MODULES-1045). `placeDistanceKm` is the great circle on a volume-equivalent mean radius. `placeDistance` returns `{ km, accuracyKm }`. `accuracyKm` is the shape bound from the published extents, or `null` when none is stated (a sphere in `BODIES`, and 67P). `placeDistance` is on the API snapshot.
 
 ## [0.71.0] - 2026-11-19
 
