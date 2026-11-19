@@ -1,20 +1,60 @@
-// The numbers of a giant planet's moon page, worked out when the site is built (site.ts) from the package's own data, so nothing on the page is typed by hand: every orbit of /moon-catalogue
-// as points seen from the planet's pole, where each moon is on the page's day, the key to the orbit colours, every catalogue moon for the table and the moons drawn in full for the cards.
-import { discoveryOf } from "../src/discovery.ts";
-import { BODIES, MOONS_OF, type BodyId } from "../src/facts.ts";
-import { catalogueMoonOrbit, catalogueMoonPosition, catalogueMoonsOf, findCatalogueMoon, moonFamilies, moonOrbitColor, moonOrbitKey, MOON_CATALOGUE_FETCHED, MOON_OSCULATING_EPOCH_JD, type MoonKeyEntry, type MoonNames } from "../src/moon-catalogue.ts";
-import { shapeBasis, shapeNote } from "../src/shape-basis.ts";
-import { cross, dot, fromRaDec, toEcliptic, type Vec3 } from "../src/vec.ts";
+// The numbers of a giant planet's moon pages, worked out from the package's own data when they are asked for, so nothing is typed by hand: every orbit of /moon-catalogue as points seen from the
+// planet's pole, where each moon is on the pages' day, the key to the orbit colours, every catalogue moon for the table and the moons drawn in full for the cards. Pure: no DOM, no clock reads, no three.js.
+import { discoveryOf } from "../discovery.ts";
+import { BODIES, MOONS_OF, type BodyId } from "../facts.ts";
+import { catalogueMoonOrbit, catalogueMoonPosition, catalogueMoonsOf, findCatalogueMoon, moonFamilies, moonOrbitColor, moonOrbitKey, MOON_CATALOGUE_FETCHED, MOON_OSCULATING_EPOCH_JD, type MoonKeyEntry, type MoonNames } from "../moon-catalogue.ts";
+import { shapeBasis, shapeNote } from "../shape-basis.ts";
+import { cross, dot, fromRaDec, toEcliptic, type Vec3 } from "../vec.ts";
 
-/** The planets that have a page. */
+/**
+ * The planets that have moon pages: the four giant planets.
+ *
+ * @example
+ * ```ts
+ * import { MOON_PAGE_HOSTS } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * console.log(MOON_PAGE_HOSTS.join(", "));
+ * ```
+ */
 export const MOON_PAGE_HOSTS = ["jupiter", "saturn", "uranus", "neptune"] as const;
+/**
+ * One of the four giant planets: `jupiter`, `saturn`, `uranus` or `neptune`.
+ *
+ * @example
+ * ```ts
+ * import type { MoonPageHost } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * const host: MoonPageHost = "saturn";
+ * console.log(host);
+ * ```
+ */
 export type MoonPageHost = (typeof MOON_PAGE_HOSTS)[number];
 
-/** The page's day: the day the irregular moons' osculating orbits were taken, where the catalogue places them best. */
+/**
+ * The pages' day, in milliseconds since 1970: 2026-12-01, the day the irregular moons' osculating orbits were taken (`MOON_OSCULATING_EPOCH_JD`), where the catalogue places them best.
+ *
+ * @example
+ * ```ts
+ * import { MOON_PAGE_TIME } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * console.log(new Date(MOON_PAGE_TIME).toISOString());
+ * ```
+ */
 export const MOON_PAGE_TIME = (MOON_OSCULATING_EPOCH_JD - 2440587.5) * 86_400_000;
 const POINTS = 48;
 
-/** One moon of the catalogue as the page uses it. Distances are in the page's `unit` of kilometres, rounded. */
+/**
+ * One moon of the catalogue as the pages use it: its names, family, radius (`est` when it is worked out from the brightness), semi-major axis and period, direction, discovery, colours, and its orbit and place seen from
+ * above the planet's north pole, in the page's `unit` of kilometres, rounded.
+ *
+ * @example
+ * ```ts
+ * import { moonPage, type PageMoon } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * const carme: PageMoon = moonPage("jupiter").moons.find((m) => m.id === "carme")!;
+ * console.log(carme.en, carme.retro === 1 ? "retrograde" : "prograde", carme.year);
+ * ```
+ */
 export interface PageMoon {
   id: string;
   en: string;
@@ -39,7 +79,17 @@ export interface PageMoon {
   at: [number, number, number] | null;
 }
 
-/** A moon drawn in full, for a card. */
+/**
+ * A moon the package draws in full, for a card: its names, radius and axes, orbit, discovery and the line about its measured shape (null for a body drawn from its facts).
+ *
+ * @example
+ * ```ts
+ * import { moonPage, type PageCard } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * const first: PageCard = moonPage("saturn").cards[0]!;
+ * console.log(first.name.en, first.axesKm?.join(" x "), first.shape?.en);
+ * ```
+ */
 export interface PageCard {
   id: string;
   name: MoonNames;
@@ -54,6 +104,17 @@ export interface PageCard {
   shape: { en: string; ja: string } | null;
 }
 
+/**
+ * Everything one planet's moon pages show: the planet, the day, the unit of the orbit points, the reach of its regular moons, its families, the colour keys, every catalogue moon, the moons drawn in full and the counts.
+ *
+ * @example
+ * ```ts
+ * import { moonPage, type MoonPage } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * const page: MoonPage = moonPage("neptune");
+ * console.log(page.counts.total, "moons,", page.counts.retrograde, "retrograde");
+ * ```
+ */
 export interface MoonPage {
   host: MoonPageHost;
   name: MoonNames;
@@ -79,8 +140,25 @@ function poleBasis(host: MoonPageHost): [Vec3, Vec3, Vec3] {
   return [x, cross(z, x), z];
 }
 
-/** The page of one planet. */
+const made = new Map<MoonPageHost, MoonPage>();
+
+/**
+ * Work out one giant planet's moon pages from the package's data (`/moon-catalogue`, the discovery records and the facts). It takes a few milliseconds and the same planet gives the same object again.
+ *
+ * @param host - `jupiter`, `saturn`, `uranus` or `neptune`.
+ * @returns The pages' numbers.
+ *
+ * @example
+ * ```ts
+ * import { moonPage } from "@johnmorrisdotca/wakusei-planets/moon-pages";
+ *
+ * const saturn = moonPage("saturn");
+ * console.log(saturn.counts.total, "moons of Saturn,", saturn.moons.filter((m) => m.orbit !== null).length, "orbits drawn");
+ * ```
+ */
 export function moonPage(host: MoonPageHost): MoonPage {
+  const held = made.get(host);
+  if (held !== undefined) return held;
   const catalogue = catalogueMoonsOf(host);
   const basis = poleBasis(host);
   const smallest = Math.min(...catalogue.flatMap((m) => (m.orbit === null ? [] : [m.orbit.a])));
@@ -135,7 +213,7 @@ export function moonPage(host: MoonPageHost): MoonPage {
       };
     });
   const direction = moonOrbitKey("direction", [host]);
-  return {
+  const page: MoonPage = {
     host,
     name: BODIES[host].name,
     radiusKm: BODIES[host].radiusKm,
@@ -158,4 +236,6 @@ export function moonPage(host: MoonPageHost): MoonPage {
       shaped: cards.filter((c) => c.shape !== null).length,
     },
   };
+  made.set(host, page);
+  return page;
 }

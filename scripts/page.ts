@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 import { WORDS } from "../demo/words.js";
 import { BODIES } from "../src/facts.ts";
-import { MOON_PAGE_HOSTS, moonPage, type MoonPageHost } from "./moon-pages.ts";
+import { MOON_PAGE_HOSTS, moonPage, type MoonPageHost } from "../src/moon-pages/data.ts";
 import { FAMILY_SCRIPT, familyFooter, familyHead, familyHeader, familyUnreviewed } from "./family-template.mjs";
 
 const id = "wakusei-planets";
@@ -85,15 +85,15 @@ export const renderSurface = (): string =>
 /** A link to each giant planet's moon page, by the planet's name. */
 const moonLinks = (html: string): string => html.replace("<!--moons:links-->", () => MOON_PAGE_HOSTS.map((host) => `<a href="${host}.html" data-host="${host}" data-say="gi_${host}">${BODIES[host].name.en}</a>`).join(""));
 
-/** A giant planet's moon page: demo/moons.html with the planet's numbers, worked out now from the package's data, in the page as JSON. */
+/** A giant planet's moon page: demo/moons.html with <wakusei-moon-pages> set to the planet, and the row of links to the four. */
 export function renderMoons(host: MoonPageHost): string {
   const data = moonPage(host);
-  const planets = MOON_PAGE_HOSTS.map((one) => `<a href="${one}.html" data-host="${one}"${one === host ? ' aria-current="page"' : ""}>${BODIES[one].name.en}</a>`).join("");
+  const planets = MOON_PAGE_HOSTS.map((one) => `<a href="${one}.html" data-host="${one}" data-en="${BODIES[one].name.en}" data-ja="${BODIES[one].name.ja}"${one === host ? ' aria-current="page"' : ""}>${BODIES[one].name.en}</a>`).join("");
   const title = `Wakusei Planets 惑星: ${data.name.en} and its ${data.counts.total} moons`;
   const description = `Every known moon of ${data.name.en}, ${data.counts.total} of them: their orbits drawn with the prograde and retrograde ones in two colours, a map from above and a family portrait, the ${data.counts.featured} moons drawn in full, and a table to sort by size, distance, period and discovery. English and Japanese.`;
   return render("moons.html", title, description)
-    .replace("<!--moons:planets-->", () => planets)
-    .replace("<!--moons:data-->", () => `<script type="application/json" id="moon-data">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`);
+    .replace('<wakusei-moon-pages id="moons"', `<wakusei-moon-pages id="moons" planet="${host}"`)
+    .replace("<!--moons:planets-->", () => planets);
 }
 
 /** demo/embed.html, the frame a page puts in an iframe: plain, no family blocks. */
