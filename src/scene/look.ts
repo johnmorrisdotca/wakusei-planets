@@ -1,6 +1,9 @@
 // What a body needs to be drawn with three.js: the surface as shader code, how bright it glows, its atmosphere and its painted map. Each body's own entry point registers its look here;
 // the element finds it by name. Pure data and strings, so it imports on a server.
 import type { BodyId } from "../facts.ts";
+import type { ShapeTable } from "./shape.ts";
+
+export { shapeRadii, type ShapeTable } from "./shape.ts";
 
 /**
  * A rim of air: the colour it scatters (0 to 1 each), how strong it is and how thin the rim is.
@@ -88,6 +91,11 @@ export interface BodyLook {
    */
   detail?: { amount?: number; stretch?: number };
   painted?: PaintedMap;
+  /**
+   * The real shape of a small moon: a function that fetches its table of radii (a chunk of its own, made from a published shape model), so that the body is drawn as the globe moved to those radii, with this look's shader, map and light, instead of the
+   * ellipsoid of `axesKm`. Until it arrives the ellipsoid is drawn.
+   */
+  shape?: () => Promise<ShapeTable>;
   /** Draw the painted map in the realistic look too: for a body with no honest drawing from numbers (the Earth's continents). */
   mapped?: boolean;
 }

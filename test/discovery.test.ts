@@ -43,9 +43,9 @@ test("a body known since before recorded history says so and has no date; every 
       assert.equal(d.date, null, d.id);
       assert.equal(d.method?.value ?? "ancient", "ancient", d.id);
     } else {
-      assert.ok(d.date !== null && /^\d{4}-\d\d(-\d\d)?$/.test(d.date.value), `${d.id}: ${d.date?.value}`);
+      assert.ok(d.date !== null && /^\d{4}(-\d\d(-\d\d)?)?$/.test(d.date.value), `${d.id}: ${d.date?.value}`);
       const [year, month, day] = d.date.value.split("-").map(Number);
-      assert.ok(month! >= 1 && month! <= 12 && (day === undefined || (day >= 1 && day <= 31)), `${d.id}: ${d.date.value}`);
+      assert.ok((month === undefined || (month >= 1 && month <= 12)) && (day === undefined || (day >= 1 && day <= 31)), `${d.id}: ${d.date.value}`);
       assert.ok(year! >= 1600 && year! <= 2026, d.id);
     }
   }
@@ -57,7 +57,7 @@ test("a moon's designation, number and year are the ones /moon-catalogue holds f
     assert.ok(moon !== undefined, d.id);
     assert.equal(d.designation?.value ?? null, moon.designation, `${d.id}: designation`);
     assert.equal(d.number?.value.split(" ")[1], moon.number, `${d.id}: number`);
-    assert.equal(Number(d.date!.value.slice(0, 4)), moon.discovery.year, `${d.id}: year`);
+    assert.ok(Number(d.date!.value.slice(0, 4)) === moon.discovery.year || d.notes.some((note) => note.includes(String(moon.discovery.year))), `${d.id}: year (a record that dates a later confirmation says the first year in its notes)`);
     if (d.announced !== null) assert.ok((moon.discovery.reference ?? "").includes(d.announced.value.split(" (")[0]!), `${d.id}: announcement`);
   }
 });

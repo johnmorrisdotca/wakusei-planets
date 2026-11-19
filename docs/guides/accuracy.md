@@ -103,7 +103,7 @@ Outside those years each is a plain ellipse from Horizons' osculating elements o
 Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both; the web component fetches each only when it draws that planet's moons, as a chunk of its own, so a page that shows one planet does not grow):
 
 - **Io, Europa, Ganymede and Callisto**: L1.2 (Lainey, Duriez and Vienne 2006, IMCCE), cut to 140 terms with a Chebyshev polynomial for the slowest swings (`tables/galilean`, about 5 kB gzipped). Valid from 1130 to 2760.
-- **Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus**: TASS1.7 (Vienne and Duriez 1995, IMCCE), cut to 316 terms (`tables/saturn-moons`, about 7 kB gzipped). Hyperion is not in the package.
+- **Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus**: TASS1.7 (Vienne and Duriez 1995, IMCCE), cut to 316 terms (`tables/saturn-moons`, about 7 kB gzipped). Hyperion and Saturn's small moons are fitted instead (below).
 
 ```ts
 import { system } from "@johnmorrisdotca/wakusei-planets";
@@ -150,6 +150,36 @@ On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engin
 - **Nix and Hydra** are measured from the Pluto system's barycentre, which they go round. Pluto's centre is about 2,000 km from it, so seen from Pluto's centre they can be up to about 2.5° further off.
 - **Miranda** and **Mimas** are the loosest of the regular moons: both have small swings the fitted orbit does not carry.
 - The dwarf planets' moons other than Pluto's (Eris, Haumea, Makemake, Orcus, Quaoar and the rest) come from the papers named in `src/data/dwarf.ts`, and are not part of this check.
+
+### The moons added with their shape models
+
+Fifteen more moons are drawn in full, each with the shape a spacecraft measured: Amalthea and Thebe (Jupiter), Pan, Daphnis, Atlas, Prometheus, Pandora, Epimetheus, Janus, Telesto, Calypso, Helene, Hyperion and Phoebe (Saturn) and Larissa (Neptune). Each orbit is fitted the same way, one fit to Horizons' positions for the years Horizons has an ephemeris for the moon (the table says which: Janus, Epimetheus, Atlas, Prometheus, Pandora and Pan only from 1949-12-27 to 2050-01-06, Daphnis only from 1990-06-15 to 2018-01-14), and the line is carried on outside those years, where it is not checked. Where the mean orbit cannot follow a moon, the worst error is large, and the limit says so:
+
+| Body | Fitted to Horizons for | Worst of the test dates | Held to |
+|---|---|---|---|
+| Amalthea | 1800 to 2199 | 0.82° | 1.2° |
+| Thebe | 1800 to 2199 | 0.15° | 0.25° |
+| Hyperion | 1800 to 2199 | 12.9° | 20° |
+| Phoebe | 1800 to 2199 | 1.85° | 2.8° |
+| Janus | 1949 to 2050 | 5.9° | 9° |
+| Epimetheus | 1949 to 2050 | 20.5° | 31° |
+| Helene | 1800 to 2199 | 14.4° | 22° |
+| Telesto | 1800 to 2199 | 2.3° | 3.5° |
+| Calypso | 1800 to 2199 | 4.9° | 7.5° |
+| Atlas | 1949 to 2050 | 7.9° | 12° |
+| Prometheus | 1949 to 2050 | 14.1° | 22° |
+| Pandora | 1949 to 2050 | 26.3° | 40° |
+| Pan | 1949 to 2050 | 0.58° | 0.9° |
+| Daphnis | 1990 to 2018 | 0.54° | 0.8° |
+| Larissa | 1800 to 2199 | 0.25° | 0.4° |
+
+These are measured on 5 to 7 dates inside each moon's years (`test/data/horizons-more-moons.json`, made by `scripts/fetch-horizons-reference.py more-moons`), not on 60, and the limits are about half as much again as the worst. A moon off by 10° is off by about 25,000 km at Saturn, and the loose ones are the ones a straight line and one wave cannot follow:
+
+- **Janus and Epimetheus** swap their orbits every four years (each moves out a little as the other moves in), so neither goes round at one rate.
+- **Prometheus, Pandora and Atlas** pull on one another and on Saturn's rings and sit in resonances with Mimas; the fit leaves 4 to 7° of scatter.
+- **Helene** swings (librates) round Dione's leading Trojan point, over tens of degrees, and **Telesto and Calypso** do the same round Tethys's, over about 10.
+- **Hyperion**'s orbit is locked to Titan's in a 4 to 3 resonance and turns its periapsis in a way a line cannot follow.
+- **Pan, Daphnis, Amalthea, Thebe, Phoebe and Larissa** are close, within a degree or two.
 
 ## What it is good for
 

@@ -60,6 +60,18 @@ const GM: Partial<Record<BodyId, number>> = {
   charon: 106.1,
   nix: 0.0015,
   hydra: 0.002,
+  // JPL "Planetary Satellite Physical Parameters", read 2026-11-18, for the moons added with their shape models. Telesto, Calypso and Daphnis print no GM, and Larissa's (0.25484) has an uncertainty of 3.1, larger than itself, so it is left empty.
+  amalthea: 0.16456,
+  thebe: 0.03015,
+  hyperion: 0.37049,
+  phoebe: 0.55479,
+  janus: 0.12662,
+  epimetheus: 0.03514,
+  helene: 0.00048,
+  atlas: 0.00037,
+  prometheus: 0.01071,
+  pandora: 0.00926,
+  pan: 0.00028,
 };
 
 /** Escape speed in km/s, where a page prints one. Anything else is worked out from GM and the radius. */

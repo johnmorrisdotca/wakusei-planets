@@ -28,3 +28,5 @@ registerLook({
   painted: { map: "ganymede", widths: [512, 1024, 2048], far: 2048 },
 });
 registerLook({ id: "callisto", surface: rock({ dark: "#3f3832", light: "#7d7265", craters: 1.8, contrast: 0.9, seed: 21, patches: 3.2, extra: "col += vec3(0.4, 0.4, 0.42) * smoothstep(0.05, 0.22, -h);" }), relief: 0.9, ambient: 0.02, painted: { map: "callisto", widths: [512, 1024, 2048], far: 2048 } });
+registerLook({ id: "amalthea", surface: rock({ dark: "#5f3d30", light: "#9d6b55", craters: 1.2, contrast: 0.8, seed: 52 }), relief: 0.8, ambient: 0.02, shape: () => import("../data/shapes/amalthea.ts").then((m) => m.SHAPE_AMALTHEA) });
+registerLook({ id: "thebe", surface: rock({ dark: "#56423a", light: "#8a6c5c", craters: 1.1, contrast: 0.8, seed: 53 }), relief: 0.8, ambient: 0.02, shape: () => import("../data/shapes/thebe.ts").then((m) => m.SHAPE_THEBE) });

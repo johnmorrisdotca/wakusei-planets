@@ -55,7 +55,7 @@ test("moons go round their planet in orbit order when the moons are automatic, a
 
 test("a planet's moons are added in orbit order, once", () => {
   const p = addMoons(withBodies("saturn"), "saturn");
-  assert.equal(p.items.length, 8);
+  assert.equal(p.items.length, 20);
   assert.equal(addMoons(p, "saturn"), p);
   const m = addMoons(setPortrait(withBodies("jupiter"), { layout: "manual" }), "jupiter");
   const jupiter = m.items.find((i) => i.body === "jupiter")!;

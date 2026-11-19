@@ -33,6 +33,8 @@ const MOON_DEGREES: Readonly<Record<string, number>> = {
   mimas: 2.1, enceladus: 0.72, tethys: 0.27, dione: 0.23, rhea: 0.27, titan: 0.06, iapetus: 0.04,
   miranda: 3, ariel: 0.3, umbriel: 0.28, titania: 0.52, oberon: 0.6,
   triton: 0.17, nereid: 6.3, proteus: 0.17, charon: 0.06, nix: 2.6, hydra: 2.1,
+  // the moons added with their shape models: the limits of test/accuracy.test.ts (their dates are the years Horizons has an ephemeris for)
+  amalthea: 1.2, thebe: 0.25, hyperion: 20, phoebe: 2.8, janus: 9, epimetheus: 31, helene: 22, telesto: 3.5, calypso: 7.5, atlas: 12, prometheus: 22, pandora: 40, pan: 0.9, daphnis: 0.8, larissa: 0.4,
 };
 /** The same for the moons of Jupiter and Saturn when `tables` has not been imported and their fitted orbits answer. */
 const FITTED_MOON_DEGREES: Readonly<Record<string, number>> = { io: 0.15, europa: 0.18, ganymede: 0.6, callisto: 0.09, mimas: 7.5, enceladus: 0.72, tethys: 0.45, dione: 0.23, rhea: 0.27, titan: 0.08, iapetus: 0.72 };

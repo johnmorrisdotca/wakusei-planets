@@ -48,7 +48,7 @@ test("the page: two insets of a size to sit beside another, choices in rows of c
   expect(await sun(page).locator("g[data-id]").count()).toBe(10);
   expect(await marked(sun(page))).toBe("mars");
   await expect(dot(sun(page), "mars")).toHaveAttribute("data-marked", "");
-  expect(await moons(page).locator("g[data-id]").count()).toBe(5);
+  expect(await moons(page).locator("g[data-id]").count()).toBe(7);
   expect(await marked(moons(page))).toBe("io");
   await expect(page.locator("#cap-sun")).toHaveText("The solar system from above, Mars marked");
   await expect(page.locator("#cap-moons")).toHaveText("Jupiter's moons from above its north pole, Io marked");

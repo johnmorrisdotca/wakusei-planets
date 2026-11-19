@@ -169,7 +169,7 @@ test("the options filter, count and cut", () => {
   assert.ok(inside.length > 0 && inside.every((row) => row.angle <= 2));
   assert.deepEqual(inside.map((row) => row.id), nearest("jupiter", { date, within: 2 }).map((row) => row.id));
   assert.equal(nearest("jupiter", { date, within: 2, count: 1 }).length, 1);
-  assert.deepEqual(within("jupiter", 1e6, { by: "space", kind: "moon", date }).map((row) => row.id).sort(), ["callisto", "europa", "ganymede", "io"].filter((id) => within("jupiter", 1e6, { by: "space", kind: "moon", date }).some((row) => row.id === id)));
+  assert.deepEqual(within("jupiter", 1e6, { by: "space", kind: "moon", date }).map((row) => row.id).sort(), ["amalthea", "callisto", "europa", "ganymede", "io", "thebe"].filter((id) => within("jupiter", 1e6, { by: "space", kind: "moon", date }).some((row) => row.id === id)));
   assert.ok(within("jupiter", 3e6, { by: "space", kind: "moon", date }).length >= 3);
   assert.deepEqual(nearest("mars", { bodies: ["venus", "jupiter"], date }).map((row) => row.id).sort(), ["jupiter", "venus"]);
   const dateObject = new Date(date);

@@ -40,6 +40,17 @@ float craters(vec3 p, float freq, float amp, float seed) {
   }
   return h;
 }
+// How much of a crater layer's height the relief may use (MODULES-1639). The relief is the difference between neighbouring pixels (1 to 2 pixels apart, and the screen works in blocks of 2 by 2), and it tips the surface all
+// the way wherever there is any slope, so a crater a few pixels across is read as noise: a lattice of dark dots over the lit side. The layer's mean crater (0.24 of a cell, a cell being 1 / freq of a radian) is about
+// 0.24 / (freq * pixel) pixels across its radius: under RELIEF_FROM of them the layer has no share, over RELIEF_FULL all of it, and the share rises as the eighth power of the ramp, so a layer part way up (the ramp gives a
+// tail of a few thousandths, which the tilt would still turn all the way) is not seen. The colour of the same crater is drawn whatever the share.
+const float RELIEF_FROM = 8.0;
+const float RELIEF_FULL = 16.0;
+float reliefShare(vec3 p, float freq) {
+  float w = smoothstep(RELIEF_FROM, RELIEF_FULL, 0.24 / (freq * max(length(fwidth(p)), 1e-6)));
+  float w2 = w * w; float w4 = w2 * w2;
+  return w4 * w4;
+}
 float lon(vec3 p) { return atan(p.y, p.x); }
 float lat(vec3 p) { return asin(clamp(p.z, -1.0, 1.0)); }
 float wrapPi(float a) { return a - 6.2831853 * floor((a + 3.1415927) / 6.2831853); }

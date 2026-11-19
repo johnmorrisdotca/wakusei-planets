@@ -77,13 +77,13 @@ test("every body can be made, in both looks, and let go: nothing is held after d
   assert.throws(() => painter.make(THREE, "nibiru"), /no body called/);
 });
 
-test("the moons of a planet: the Galilean four for Jupiter, none for the Earth, nearest first, in the planet's radii", () => {
+test("the moons of a planet: the Galilean four and Amalthea and Thebe for Jupiter, none for the Earth, nearest first, in the planet's radii", () => {
   const moons = painter.moons("Jupiter", ms);
-  assert.deepEqual(moons.map((m) => m.name), ["Io", "Europa", "Ganymede", "Callisto"]);
-  assert.ok(moons[0]!.offset.every(Number.isFinite));
-  const io = length(moons[0]!.offset);
+  assert.deepEqual(moons.map((m) => m.name), ["Amalthea", "Thebe", "Io", "Europa", "Ganymede", "Callisto"]);
+  assert.ok(moons[2]!.offset.every(Number.isFinite));
+  const io = length(moons[2]!.offset);
   assert.ok(io > 5.5 && io < 6.3, String(io));
-  assert.ok(Math.abs(moons[2]!.radius - 2634.1 / 71492) < 0.005);
+  assert.ok(Math.abs(moons[4]!.radius - 2634.1 / 71492) < 0.005);
   assert.deepEqual(painter.moons("Earth", ms), []);
   assert.equal(painter.moons("Mercury", ms).length, 0);
   assert.equal(painter.moons("Pluto", ms).length, 3);
@@ -112,7 +112,7 @@ test("a painter told to map every body asks for each body's picture in the reali
     const urls = asked(id, { look: "realistic", mapped: true });
     assert.ok(urls.some((url) => new RegExp(`/${map}-\\d+\\.webp$`).test(url)), `${id} asks for its map when told to map every body: ${urls.join(" ")}`);
   }
-  for (const id of ["phobos", "deimos", "miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
+  for (const id of ["miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
 });
 
 test("the Sun turns about its own pole with time, and the glow, not the globe, faces the camera", () => {

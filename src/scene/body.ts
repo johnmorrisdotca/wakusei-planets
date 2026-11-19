@@ -8,6 +8,7 @@ import { silhouette } from "../pose.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
 import { detailOf, lookOf, type BodyLook } from "./look.ts";
+import { shapeGeometry } from "./shape.ts";
 import type { SourceBook } from "../door/book.ts";
 import type { BodyMapSource } from "../door/map.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
@@ -159,7 +160,11 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
       const look = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
       const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
-      const geometry = assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 192, 96), (g) => g.dispose());
+      // a moon with a published shape model is the globe moved to its radii (its table is a chunk of its own, waited for here), and then needs no stretching to an ellipsoid
+      const shapeTable = look.shape === undefined ? undefined : await look.shape().catch(() => undefined);
+      // a big picture gets a globe of 192 by 96 steps (as the unshaped sphere has), a tile or a card one of 96 by 48: a page can hold a dozen moons, and the arrays of a globe stay in the page
+      const grid = Math.min(width, height) >= 300 ? { lon: 192, lat: 96 } : { lon: 96, lat: 48 };
+      const geometry = shapeTable === undefined ? assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 192, 96), (g) => g.dispose()) : assets.acquire(`wk:shape:${held}:${grid.lon}`, () => shapeGeometry(T, shapeTable, facts.radiusKm, grid), (g) => g.dispose());
       const shader = assets.acquire(`wk:body:${held}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
 
@@ -362,10 +367,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const orient = (state: SceneState): void => {
         const { pole, meridian } = state.pose;
         const east = cross(pole, meridian);
-        const ax = facts.axesKm;
+        const ax = shapeTable === undefined ? facts.axesKm : undefined;
         const mean = facts.radiusKm;
         const scaleX = ax ? ax[1] / mean : 1;
-        const scaleY = ax ? ax[2] / mean : 1 - facts.flattening;
+        const scaleY = ax ? ax[2] / mean : shapeTable === undefined ? 1 - facts.flattening : 1;
         const scaleZ = ax ? ax[0] / mean : 1;
         setBasis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
         if (cut !== undefined) setBasis(cut, east, pole, meridian, scaleX, scaleY, scaleZ);
@@ -542,11 +547,11 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (label !== undefined) label.update(camera, ((aspect >= 1 ? viewHeight : viewWidth) / 2) * (state.zoom / state.extent), state.pose.light);
         if (detail !== undefined && textureWidth > 0) {
           const east = cross(state.pose.pole, state.pose.meridian);
-          const ax = facts.axesKm;
+          const ax = shapeTable === undefined ? facts.axesKm : undefined;
           const mean = facts.radiusKm;
           detail.sync(
             { left: camera.left, right: camera.right, bottom: camera.bottom, top: camera.top },
-            { east, pole: state.pose.pole, meridian: state.pose.meridian, scale: [ax ? ax[1] / mean : 1, ax ? ax[2] / mean : 1 - facts.flattening, ax ? ax[0] / mean : 1] },
+            { east, pole: state.pose.pole, meridian: state.pose.meridian, scale: [ax ? ax[1] / mean : 1, ax ? ax[2] / mean : shapeTable === undefined ? 1 - facts.flattening : 1, ax ? ax[0] / mean : 1] },
             viewWidth,
           );
         }

@@ -5,8 +5,11 @@ positions and velocities (https://ssd.jpl.nasa.gov/api/horizons.api, ICRF equato
 a straight line through the mean longitude, the longitude of the periapsis and the node, and, where a line leaves more than 0.3 degrees, an acceleration (Phobos)
 or one wave (Mimas and Tethys, in resonance). The page's own phase angles do not reproduce Horizons' positions for most of the Saturn, Uranus and Neptune moons.
 Usage: python3 -I scripts/make-moon-data.py [saved-page.html]   (fetches the page when none is given; needs the network for Horizons either way)
+       python3 -I scripts/make-moon-data.py --add phoebe,janus,... [--cache DIR] [saved-page.html]
+           fits only the moons named (they must be in MOONS) and puts their rows into src/data/orbits.ts after the moons already there, leaving every other row as it is; with --cache the page and each Horizons answer are kept in DIR
+           (outside the repository) and read from there when it is run again, and every request is written to DIR/request-log.txt: one request at a time, at least a second apart.
 The sidereal periods are written here, from the IAU / JPL physical-parameter tables, and only used to count whole turns between samples."""
-import html, json, math, re, sys, time, urllib.parse, urllib.request
+import datetime, html, json, math, os, re, sys, time, urllib.parse, urllib.request
 
 D = math.pi / 180
 # id: (sidereal period in days; parent; row name on the page; Horizons code; Horizons centre; GM of that centre in km^3/s^2)
@@ -25,6 +28,14 @@ MOONS = {
     "triton": (5.876854, "neptune", "Triton", "801", "899", 6835099.5), "nereid": (360.1362, "neptune", "Nereid", "802", "899", 6835099.5),
     "proteus": (1.122315, "neptune", "Proteus", "808", "899", 6835099.5),
     "charon": (6.38723, "pluto", "Charon", "901", "999", 975.5), "nix": (24.8546, "pluto", "Nix", "902", "9", 975.5), "hydra": (38.20177, "pluto", "Hydra", "903", "9", 975.5),
+    # added with their shape models (MODULES-1601): the sidereal periods are the ones of JPL's Planetary Satellite Mean Elements page
+    "amalthea": (0.4981787091, "jupiter", "Amalthea", "505", "599", 126686534.0), "thebe": (0.6745369506, "jupiter", "Thebe", "514", "599", 126686534.0),
+    "hyperion": (21.276658, "saturn", "Hyperion", "607", "699", 37931207.7), "phoebe": (550.30391, "saturn", "Phoebe", "609", "699", 37931207.7),
+    "janus": (0.694623434, "saturn", "Janus", "610", "699", 37931207.7), "epimetheus": (0.6944899503, "saturn", "Epimetheus", "611", "699", 37931207.7),
+    "helene": (2.734503194, "saturn", "Helene", "612", "699", 37931207.7), "telesto": (1.887856052, "saturn", "Telesto", "613", "699", 37931207.7), "calypso": (1.887776349, "saturn", "Calypso", "614", "699", 37931207.7),
+    "atlas": (0.60168366, "saturn", "Atlas", "615", "699", 37931207.7), "prometheus": (0.6129858712, "saturn", "Prometheus", "616", "699", 37931207.7), "pandora": (0.628516474, "saturn", "Pandora", "617", "699", 37931207.7),
+    "pan": (0.5750507271, "saturn", "Pan", "618", "699", 37931207.7), "daphnis": (0.59408, "saturn", "Daphnis", "635", "699", 37931207.7),
+    "larissa": (0.5546525676, "neptune", "Larissa", "807", "899", 6835099.5),
 }
 # the IAU poles (right ascension, declination, degrees) of the planets whose moons the page gives in the planet's equator
 PLANET_POLE = {"uranus": (257.311, -15.175), "neptune": (299.36, 43.46), "pluto": (132.993, -6.163)}
@@ -45,19 +56,48 @@ def num(text):
         return 0.0
 
 
-def horizons(code, centre):
+CACHE = sys.argv[sys.argv.index("--cache") + 1] if "--cache" in sys.argv else None
+ADD = sys.argv[sys.argv.index("--add") + 1].split(",") if "--add" in sys.argv else None
+
+
+def get(url, name):
+    """One request at a time, a second apart, written to the log; the answer is kept in the cache and read from it next time."""
+    if CACHE is not None:
+        path = os.path.join(CACHE, name)
+        if os.path.exists(path):
+            return open(path, encoding="utf8").read()
+    time.sleep(1.2)
+    text = urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "wakusei-planets data script (johnmorrisdotca/wakusei-planets)"}), timeout=120).read().decode("utf8", "ignore")
+    if CACHE is not None:
+        os.makedirs(CACHE, exist_ok=True)
+        open(os.path.join(CACHE, name), "w", encoding="utf8").write(text)
+        open(os.path.join(CACHE, "request-log.txt"), "a").write(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} GET {url} -> {name} ({len(text)} bytes)\n")
+    return text
+
+
+MONTHS = {m: i + 1 for i, m in enumerate("JAN FEB MAR APR MAY JUN JUL AUG SEP OCT NOV DEC".split())}
+
+
+def horizons(code, centre, start=None, stop=None):
+    """The state of the moon every STEP_HOURS from START to STOP. Where Horizons' ephemeris of the moon does not reach so far (Janus and the other small moons of Saturn begin in 1949) the range is cut to what it has: the answer says where."""
+    start, stop = start or START, stop or STOP
     query = urllib.parse.urlencode({
         "format": "json", "COMMAND": f"'{code}'", "OBJ_DATA": "'NO'", "MAKE_EPHEM": "'YES'", "EPHEM_TYPE": "'VECTORS'", "CENTER": f"'500@{centre}'",
         "REF_PLANE": "'FRAME'", "REF_SYSTEM": "'ICRF'", "OUT_UNITS": "'KM-S'", "VEC_TABLE": "'2'", "CSV_FORMAT": "'YES'", "TIME_TYPE": "'UT'",
-        "START_TIME": f"'{START}'", "STOP_TIME": f"'{STOP}'", "STEP_SIZE": f"'{STEP_HOURS} h'"})
+        "START_TIME": f"'{start}'", "STOP_TIME": f"'{stop}'", "STEP_SIZE": f"'{STEP_HOURS} h'"})
     for _ in range(4):
-        text = json.load(urllib.request.urlopen(f"https://ssd.jpl.nasa.gov/api/horizons.api?{query}", timeout=120)).get("result", "")
+        text = json.loads(get(f"https://ssd.jpl.nasa.gov/api/horizons.api?{query}", f"horizons-{code}-{centre}-{start}-{stop}.json")).get("result", "")
         if "$$SOE" in text:
             rows = []
             for line in text.split("$$SOE")[1].split("$$EOE")[0].strip().split("\n"):
                 p = line.split(",")
                 rows.append((float(p[0]) - 2451545.0, [float(x) for x in p[2:5]], [float(x) for x in p[5:8]]))
             return rows
+        cut = re.search(r'(prior to|after) A\.D\. (\d{4})-([A-Z]{3})-(\d+)', text)
+        if cut:
+            when = datetime.date(int(cut.group(2)), MONTHS[cut.group(3)], int(cut.group(4))) + datetime.timedelta(days=1 if cut.group(1) == "prior to" else -2)
+            print(f"{code}: Horizons has the moon {'from' if cut.group(1) == 'prior to' else 'to'} {when}", file=sys.stderr)
+            return horizons(code, centre, str(when) if cut.group(1) == "prior to" else start, str(when) if cut.group(1) == "after" else stop)
         time.sleep(4)
     sys.exit(f"Horizons gave nothing for {code}@{centre}: {text[:200]}")
 
@@ -157,8 +197,8 @@ def fit(pole, period, code, centre, mu):
             "w": wrap(peri0 - node0), "dw": peri_rate - node_rate, "m": wrap(lon0 - peri0), "sid": known + extra, "acc": acc, "wave": wave, "scatter": left}
 
 
-src = sys.argv[1] if len(sys.argv) > 1 else None
-page = open(src, encoding="utf8", errors="ignore").read() if src else urllib.request.urlopen("https://ssd.jpl.nasa.gov/sats/elem/", timeout=60).read().decode("utf8", "ignore")
+src = next((a for a in sys.argv[1:] if a.endswith(".html")), None)
+page = open(src, encoding="utf8", errors="ignore").read() if src else get("https://ssd.jpl.nasa.gov/sats/elem/", "sats-elem.html")
 rows = {}
 for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page, re.S):
     cells = [re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", c))).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, re.S)]
@@ -180,7 +220,10 @@ lines = ["// Made by scripts/make-moon-data.py: the Moon from JPL's Planetary Sa
          "  /** A swing in the mean longitude: its amplitude in degrees, its period in days and its phase in degrees (Mimas and Tethys, in resonance). */", "  wave?: [number, number, number];",
          "}", "",
          "export const ORBITS: Record<string, OrbitElements> = {"]
+new_rows = []
 for key, (period, parent, name, code, centre, mu) in MOONS.items():
+    if ADD is not None and key not in ADD:
+        continue
     c = rows[name]
     if code is None:
         a, e, w, m, i, node = (num(c[k]) for k in (7, 8, 9, 10, 11, 12))
@@ -196,9 +239,16 @@ for key, (period, parent, name, code, centre, mu) in MOONS.items():
     pole = PLANET_POLE.get(parent) if c[5] == "equatorial" else (num(c[16]), num(c[17])) if c[5] == "Laplace" else None
     f = fit(pole, period, code, centre, mu)
     extra = (f", acc: {f['acc']:.4e}" if f["acc"] else "") + (f", wave: [{f['wave'][0]:.3f}, {f['wave'][1]:.1f}, {f['wave'][2]:.2f}]" if f["wave"] else "")
-    lines.append(f'  {key}: {{ parent: "{parent}", frame: "laplace", pole: [{f["pole"][0]:.4f}, {f["pole"][1]:.4f}], epoch: {EPOCH_MS}, a: {f["a"]:.0f}, e: {f["e"]:.6f}, w: {f["w"]:.4f}, m: {f["m"]:.4f}, i: {f["i"]:.4f}, node: {f["node"]:.4f}, sid: {f["sid"]:.7f}, dw: {f["dw"]:.6f}, dn: {f["dn"]:.6f}{extra} }},')
+    (new_rows if ADD is not None else lines).append(f'  {key}: {{ parent: "{parent}", frame: "laplace", pole: [{f["pole"][0]:.4f}, {f["pole"][1]:.4f}], epoch: {EPOCH_MS}, a: {f["a"]:.0f}, e: {f["e"]:.6f}, w: {f["w"]:.4f}, m: {f["m"]:.4f}, i: {f["i"]:.4f}, node: {f["node"]:.4f}, sid: {f["sid"]:.7f}, dw: {f["dw"]:.6f}, dn: {f["dn"]:.6f}{extra} }},')
     print(f"{key:10s} scatter {f['scatter']:.3f} deg", flush=True)
-    time.sleep(0.8)
+if ADD is not None:
+    path = "src/data/orbits.ts"
+    text = open(path).read()
+    marker = "  ...DWARF_MOON_ORBITS,"
+    assert marker in text and not any(f"  {k}: {{" in text for k in ADD), "a moon to add is already in orbits.ts"
+    open(path, "w").write(text.replace(marker, "\n".join(new_rows) + "\n" + marker))
+    print("added", len(new_rows), "orbits to src/data/orbits.ts")
+    sys.exit(0)
 lines.append("  ...DWARF_MOON_ORBITS,")
 lines.append("};")
 open("src/data/orbits.ts", "w").write("\n".join(lines) + "\n")

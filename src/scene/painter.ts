@@ -15,6 +15,7 @@ import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURF
 import { fallbackLook } from "./fallback.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import { detailOf, lookOf } from "./look.ts";
+import { shapeGeometry } from "./shape.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
@@ -579,9 +580,25 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
         });
 
   const axes = facts.axesKm;
-  const scaleX = axes ? axes[1] / facts.radiusKm : 1;
-  const scaleY = axes ? axes[2] / facts.radiusKm : 1 - facts.flattening;
-  const scaleZ = axes ? axes[0] / facts.radiusKm : 1;
+  let scaleX = axes ? axes[1] / facts.radiusKm : 1;
+  let scaleY = axes ? axes[2] / facts.radiusKm : 1 - facts.flattening;
+  let scaleZ = axes ? axes[0] / facts.radiusKm : 1;
+  // a moon with a published shape model: the globe moved to its radii takes the ellipsoid's place when its table (a chunk of its own) arrives, and needs no stretching
+  if (look.shape !== undefined) {
+    look.shape().then(
+      (table) => {
+        if (gone) return;
+        const shaped = acquire(T, `shape:${id}`, () => shapeGeometry(T, table, facts.radiusKm, { lon: 96, lat: 48 }));
+        releases.push(shaped.release);
+        (mesh as unknown as THREE.Mesh).geometry = shaped.value;
+        scaleX = 1;
+        scaleY = 1;
+        scaleZ = 1;
+        redraw();
+      },
+      () => undefined,
+    );
+  }
   const light = new T.Vector3();
   const poleVec = new T.Vector3();
 

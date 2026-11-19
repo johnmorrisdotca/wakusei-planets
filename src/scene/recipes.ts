@@ -67,13 +67,17 @@ export function rock(options: RockOptions): string {
   const seed = (options.seed ?? 0).toFixed(1);
   return `
 vec4 surface(vec3 p) {
-  float h = craters(p, 3.0, ${(c * 1.0).toFixed(2)}, ${seed}) + craters(p, 8.0, ${(c * 0.7).toFixed(2)}, ${seed} + 7.0) * 0.6 + craters(p, 20.0, ${(c * 0.6).toFixed(2)}, ${seed} + 3.0) * 0.3;
+  float h1 = craters(p, 3.0, ${(c * 1.0).toFixed(2)}, ${seed});
+  float h2 = craters(p, 8.0, ${(c * 0.7).toFixed(2)}, ${seed} + 7.0) * 0.6;
+  float h3 = craters(p, 20.0, ${(c * 0.6).toFixed(2)}, ${seed} + 3.0) * 0.3;
+  float h = h1 + h2 + h3;
+  float hr = h1 * reliefShare(p, 3.0) + h2 * reliefShare(p, 8.0) + h3 * reliefShare(p, 20.0);
   float tone = fbm(p * ${(options.patches ?? 2.3).toFixed(2)} + ${seed});
   vec3 col = mix(${vec(options.dark)}, ${vec(options.light)}, smoothstep(0.25, 0.75, tone));
   col *= 1.0 + ${(options.contrast ?? 1).toFixed(2)} * 1.15 * h;
   col *= 0.94 + 0.12 * fbm(p * 60.0);
   ${options.extra ?? ""}
-  return vec4(col, h);
+  return vec4(col, hr);
 }`;
 }
 

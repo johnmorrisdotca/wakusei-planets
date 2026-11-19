@@ -48,7 +48,7 @@ export interface DiscoveryFact<T> {
 
 /**
  * What the sources say of one body's discovery. A field is `null` where the sources read give nothing (a body known since before recorded history has no date, place or discoverer; the one who found Haumea is not named
- * by the Gazetteer or JPL). `date` is an ISO day, or a month where the source gives only that (`1989-06`); `place` and `by` are as the source writes them; `designation` is the first provisional designation (`1930 BM`,
+ * by the Gazetteer or JPL). `date` is an ISO day, or a month where the source gives only that (`1989-06`), or a year (`1990`); `place` and `by` are as the source writes them; `designation` is the first provisional designation (`1930 BM`,
  * `S/1978 P 1`); `number` is the minor planet number (`(134340)`) or the moon's number round its planet (`Saturn VI`); `announced` is the circular that announced a moon; `nameOrigin` is where the name comes from, told in our
  * own words. `notes` lists where another source gives a different day or credit, and what a field leaves out.
  *

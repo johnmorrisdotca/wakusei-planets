@@ -12,7 +12,7 @@ test("the sky is worked out in full about once a second, and carried forward bet
   let last = live.at(r, 0);
   for (let t = 33; t < 3000; t += 33) last = live.at(r, t);
   assert.ok(live.anchors >= 3 && live.anchors <= 4, String(live.anchors));
-  assert.equal(last.moons.length, 4);
+  assert.equal(last.moons.length, 6);
 });
 
 test("a moon keeps its distance from the planet as it is carried forward", () => {

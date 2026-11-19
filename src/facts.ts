@@ -34,7 +34,7 @@ export const DWARF_IDS = ["ceres", "orcus", "haumea", "quaoar", "makemake", "gon
  */
 export const MINOR_IDS = ["vesta", "pallas", "chiron", "pholus", "halley"] as const;
 /**
- * The moons the package draws, by planet or dwarf planet.
+ * The moons the package draws, by planet or dwarf planet. The moons it drew first come first, from the nearest out, and the small ones that came later with their real shapes (Amalthea and Thebe, Saturn's small moons, Hyperion, Phoebe and Larissa) follow in the same order, so a page that takes the first moon of a planet, or goes through them one by one, still meets the big ones first.
  *
  * @example
  * ```ts
@@ -46,10 +46,10 @@ export const MINOR_IDS = ["vesta", "pallas", "chiron", "pholus", "halley"] as co
 export const MOONS_OF = {
   earth: ["moon"],
   mars: ["phobos", "deimos"],
-  jupiter: ["io", "europa", "ganymede", "callisto"],
-  saturn: ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus"],
+  jupiter: ["io", "europa", "ganymede", "callisto", "amalthea", "thebe"],
+  saturn: ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe"],
   uranus: ["miranda", "ariel", "umbriel", "titania", "oberon"],
-  neptune: ["proteus", "triton", "nereid"],
+  neptune: ["proteus", "triton", "nereid", "larissa"],
   pluto: ["charon", "nix", "hydra"],
   orcus: ["vanth"],
   haumea: ["hiiaka", "namaka"],
@@ -380,6 +380,8 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   europa: f("europa", "moon", "Europa", "エウロパ", 1560.8, 0, 0, 268.08, 64.51, 36.022, 101.3747235, 85.23, "#dcd2c0", { parent: "jupiter", synchronous: true, features: [{ kind: "line", points: [[-120, -10], [-60, 8], [0, -4], [50, 16], [110, 4]] }, { kind: "line", points: [[-90, 40], [-30, 24], [40, 36], [100, 20]] }, { kind: "line", points: [[-100, -40], [-40, -26], [30, -42], [90, -30]] }, { kind: "line", points: [[20, 60], [30, 20], [10, -20], [30, -60]] }, { kind: "circle", lon: -70, lat: -10, radius: 7 }] }),
   ganymede: f("ganymede", "moon", "Ganymede", "ガニメデ", 2634.1, 0, 0, 268.2, 64.57, 44.064, 50.3176081, 171.7, "#a09484", { parent: "jupiter", synchronous: true, features: [{ kind: "oval", lon: -140, lat: 20, rx: 40, ry: 55, fill: true }, { kind: "oval", lon: 20, lat: 25, rx: 25, ry: 30, fill: true }, { kind: "oval", lon: 60, lat: -35, rx: 20, ry: 16, fill: true }, { kind: "circle", lon: 128, lat: -22, radius: 6 }, ...bandsAt([62, -62])] }),
   callisto: f("callisto", "moon", "Callisto", "カリスト", 2410.3, 0, 0, 268.72, 64.83, 259.51, 21.5710715, 400.5, "#70675d", { parent: "jupiter", synchronous: true, features: [{ kind: "circle", lon: 55, lat: 15, radius: 8 }, { kind: "circle", lon: 55, lat: 15, radius: 16 }, { kind: "circle", lon: 55, lat: 15, radius: 26 }, ...dots([[-40, 30, 4], [-70, -20, 5], [0, -40, 4], [-20, 5, 3], [100, -30, 4], [-100, 40, 3]])] }),
+  amalthea: f("amalthea", "moon", "Amalthea", "アマルテア", 83.5, 0.488, 0, 268.05, 64.49, 231.67, 722.631456, 11.9563, "#8c5f4d", { parent: "jupiter", synchronous: true, axesKm: [125, 73, 64], features: dots([[-40, 10, 14], [70, -20, 10]]) }),
+  thebe: f("thebe", "moon", "Thebe", "テーベ", 49.3, 0.276, 0, 268.05, 64.49, 8.56, 533.70041, 16.1889, "#745a4b", { parent: "jupiter", synchronous: true, axesKm: [58, 49, 42], features: dots([[30, 15, 12]]) }),
   mimas: f("mimas", "moon", "Mimas", "ミマス", 198.2, 0.02, 0, 40.66, 83.52, 333.46, 381.994555, 22.6, "#bdbab4", { parent: "saturn", synchronous: true, features: [{ kind: "circle", lon: -60, lat: 0, radius: 33 }, ...dots([[30, 30, 12], [60, -25, 10], [-130, 40, 9], [120, 5, 10], [10, -50, 9]])] }),
   enceladus: f("enceladus", "moon", "Enceladus", "エンケラドス", 252.1, 0.003, 0, 40.66, 83.52, 6.32, 262.7318996, 32.9, "#f1f4f6", { parent: "saturn", synchronous: true, features: [{ kind: "line", points: [[-40, -72], [-20, -76], [0, -78], [20, -76], [40, -72]] }, { kind: "line", points: [[-30, -66], [-10, -70], [10, -70], [30, -66]] }, ...dots([[-60, 20, 8], [60, 30, 7], [110, -10, 6]])] }),
   tethys: f("tethys", "moon", "Tethys", "テティス", 531.1, 0.001, 0, 40.66, 83.52, 8.95, 190.6979085, 45.3, "#d6d3ce", { parent: "saturn", synchronous: true, features: [{ kind: "circle", lon: 140, lat: 10, radius: 22 }, { kind: "line", points: [[-180, 0], [-120, 4], [-60, -2], [0, 3], [60, -3]] }, ...dots([[-40, 30, 7], [30, -30, 6], [70, 40, 5]])] }),
@@ -387,12 +389,25 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   rhea: f("rhea", "moon", "Rhea", "レア", 763.8, 0.001, 0, 40.38, 83.55, 235.16, 79.6900478, 108.4, "#c7c4be", { parent: "saturn", synchronous: true, features: [...dots([[-60, 15, 10], [20, -30, 9], [60, 40, 8], [110, -10, 9], [-20, 50, 7], [-100, -25, 8], [160, 20, 7]])] }),
   titan: f("titan", "moon", "Titan", "タイタン", 2574.7, 0, 0, 36.41, 83.94, 189.64, 22.5769768, 382.69, "#dba84a", { parent: "saturn", synchronous: true, features: [...bandsAt([60, 30, 0, -30, -60]), { kind: "oval", lon: 0, lat: 85, rx: 60, ry: 6 }] }),
   iapetus: f("iapetus", "moon", "Iapetus", "イアペトゥス", 734.3, 0.02, 0, 318.16, 75.03, 355.2, 4.5379572, 1903.7, "#a89f93", { parent: "saturn", synchronous: true, features: [{ kind: "line", points: [[-90, -85], [-90, -40], [-90, 0], [-90, 40], [-90, 85]] }, { kind: "line", points: [[90, -85], [90, -40], [90, 0], [90, 40], [90, 85]] }, { kind: "oval", lon: 0, lat: 0, rx: 100, ry: 25, fill: true }, { kind: "line", points: [[-180, 0], [-120, 0], [-60, 0], [0, 0], [60, 0], [120, 0]], close: true }] }),
+  hyperion: f("hyperion", "moon", "Hyperion", "ハイペリオン", 135, 0.43, 0, 40.6, 83.5, 0, 0, 0, "#a8947f", { parent: "saturn", axesKm: [180.1, 133, 102.7], features: dots([[-30, 20, 30], [60, -10, 22], [120, 30, 18]]) }),
+  phoebe: f("phoebe", "moon", "Phoebe", "フェーベ", 106.5, 0.069, 23.7, 356.9, 77.8, 178.58, 931.639, 9.274, "#5d5a57", { parent: "saturn", axesKm: [109.4, 108.5, 101.8], features: dots([[-30, 10, 14], [80, -25, 11], [160, 35, 9]]) }),
+  janus: f("janus", "moon", "Janus", "ヤヌス", 89.5, 0.25, 0, 40.58, 83.52, 58.83, 518.2359876, 16.6719, "#c1bdb5", { parent: "saturn", synchronous: true, axesKm: [101.7, 93, 76.3], features: dots([[-30, 20, 14], [70, -30, 12]]) }),
+  epimetheus: f("epimetheus", "moon", "Epimetheus", "エピメテウス", 58.1, 0.183, 0, 40.58, 83.52, 293.87, 518.4907239, 16.6638, "#c3bfb8", { parent: "saturn", synchronous: true, axesKm: [64.9, 57.3, 53], features: dots([[40, 10, 14], [-80, -20, 11]]) }),
+  prometheus: f("prometheus", "moon", "Prometheus", "プロメテウス", 43.1, 0.587, 0, 40.58, 83.53, 296.14, 587.289, 14.7117, "#cbc8c2", { parent: "saturn", synchronous: true, axesKm: [68.2, 41.6, 28.2], features: dots([[30, 10, 9]]) }),
+  pandora: f("pandora", "moon", "Pandora", "パンドラ", 40.7, 0.397, 0, 40.58, 83.53, 162.92, 572.7891, 15.0841, "#c9c6c0", { parent: "saturn", synchronous: true, axesKm: [52.2, 40.8, 31.5], features: dots([[-50, 15, 10]]) }),
+  atlas: f("atlas", "moon", "Atlas", "アトラス", 15.1, 0.541, 0, 40.58, 83.53, 137.88, 598.306, 14.4408, "#cfccc6", { parent: "saturn", synchronous: true, axesKm: [20.5, 17.8, 9.4] }),
+  pan: f("pan", "moon", "Pan", "パン", 14.1, 0.395, 0, 40.6, 83.5, 48.8, 626.044, 13.8009, "#d0cdc7", { parent: "saturn", synchronous: true, axesKm: [17.2, 15.4, 10.4] }),
+  daphnis: f("daphnis", "moon", "Daphnis", "ダフニス", 3.8, 0.391, 0, 40.6, 83.5, 0, 0, 0, "#d0cdc7", { parent: "saturn", axesKm: [4.6, 4.5, 2.8] }),
+  helene: f("helene", "moon", "Helene", "ヘレネ", 17.6, 0.409, 0, 40.85, 83.34, 245.12, 131.6174056, 65.6448, "#cdcac5", { parent: "saturn", synchronous: true, axesKm: [22.5, 19.6, 13.3], features: dots([[20, 10, 8]]) }),
+  telesto: f("telesto", "moon", "Telesto", "テレスト", 12.4, 0.399, 0, 50.51, 84.06, 56.88, 190.6979332, 45.3073, "#e2e0dc", { parent: "saturn", synchronous: true, axesKm: [16.3, 11.8, 9.8] }),
+  calypso: f("calypso", "moon", "Calypso", "カリプソ", 9.5, 0.588, 0, 36.41, 85.04, 153.51, 190.6742373, 45.3129, "#d9d7d3", { parent: "saturn", synchronous: true, axesKm: [15.3, 9.3, 6.3] }),
   miranda: f("miranda", "moon", "Miranda", "ミランダ", 235.8, 0, 0, 257.43, -15.08, 30.7, 254.6906924, 33.9, "#b8b5b0", { parent: "uranus", synchronous: true, features: [{ kind: "oval", lon: 30, lat: -60, rx: 40, ry: 20, fill: true }, { kind: "circle", lon: -30, lat: 10, radius: 20 }, { kind: "line", points: [[60, 30], [75, 5], [80, -20]] }, ...dots([[-80, -30, 8], [100, 40, 7]])] }),
   ariel: f("ariel", "moon", "Ariel", "アリエル", 578.9, 0, 0, 257.43, -15.1, 156.22, 142.8356681, 60.5, "#bcb9b3", { parent: "uranus", synchronous: true, features: [{ kind: "line", points: [[-80, 20], [-50, 8], [-20, 26], [10, 10]] }, { kind: "line", points: [[40, -20], [70, -34], [100, -20]] }, { kind: "oval", lon: -10, lat: -30, rx: 30, ry: 12, fill: true }, ...dots([[60, 30, 7], [-100, 0, 6]])] }),
   umbriel: f("umbriel", "moon", "Umbriel", "ウンブリエル", 584.7, 0, 0, 257.43, -15.1, 108.05, 86.8688923, 99.5, "#807d79", { parent: "uranus", synchronous: true, features: [{ kind: "circle", lon: 50, lat: 85, radius: 8 }, { kind: "circle", lon: 80, lat: 80, radius: 14, fill: false }, ...dots([[-70, 20, 8], [20, -30, 9], [-20, 40, 7], [110, -10, 7]])] }),
   titania: f("titania", "moon", "Titania", "ティタニア", 788.9, 0, 0, 257.43, -15.1, 77.74, 41.3514246, 208.9, "#aaa59d", { parent: "uranus", synchronous: true, features: [{ kind: "line", points: [[-120, -10], [-80, -30], [-40, -10], [0, -34]] }, { kind: "line", points: [[-60, 36], [-20, 20], [20, 40]] }, ...dots([[40, 20, 9], [80, -25, 8], [-100, 30, 7]])] }),
   oberon: f("oberon", "moon", "Oberon", "オベロン", 761.4, 0, 0, 257.43, -15.1, 6.77, 26.7394932, 323.1, "#918981", { parent: "uranus", synchronous: true, features: [{ kind: "circle", lon: 40, lat: -15, radius: 12 }, ...dots([[-60, 20, 9], [90, 30, 8], [-110, -25, 8], [10, 45, 7]])] }),
   proteus: f("proteus", "moon", "Proteus", "プロテウス", 210, 0.1, 0, 299.36, 43.36, 93.38, 320.7654228, 26.9, "#6e6c6a", { parent: "neptune", synchronous: true, axesKm: [218, 208, 201], features: [{ kind: "circle", lon: 0, lat: -5, radius: 28 }, ...dots([[60, 30, 10], [-70, 20, 9], [110, -20, 8]])] }),
+  larissa: f("larissa", "moon", "Larissa", "ラリッサ", 97, 0.114, 0, 299.36, 43.41, 179.41, 649.053447, 13.3117, "#7e7c7a", { parent: "neptune", synchronous: true, axesKm: [100.5, 96, 89], features: dots([[0, 10, 14], [100, -20, 10]]) }),
   triton: f("triton", "moon", "Triton", "トリトン", 1353.4, 0, 0, 299.36, 41.17, 296.53, -61.2572638, -141.04, "#cdbbac", { parent: "neptune", synchronous: true, features: [{ kind: "band", lat: -30 }, { kind: "oval", lon: 20, lat: -70, rx: 80, ry: 25, fill: true }, ...dots([[-40, -40, 3], [10, -45, 3], [50, -35, 3], [100, -42, 3]])] }),
   nereid: f("nereid", "moon", "Nereid", "ネレイド", 178.5, 0, 0, 299.36, 43.46, 0, 0, 0, "#9b9b9b", { parent: "neptune", features: dots([[-40, 20, 12], [50, -20, 10]]) }),
   charon: f("charon", "moon", "Charon", "カロン", 606, 0, 0, 132.993, -6.163, 122.695, 56.3625225, 153.2935, "#9c9189", { parent: "pluto", synchronous: true, features: [{ kind: "oval", lon: 0, lat: 76, rx: 90, ry: 14, fill: true }, { kind: "circle", lon: 40, lat: -15, radius: 12 }, ...dots([[-60, 10, 8], [120, 30, 7]])] }),

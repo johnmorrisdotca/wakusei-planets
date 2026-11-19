@@ -29,6 +29,17 @@ const MOON_DEGREES: Record<string, number> = {
   triton: 0.1, nereid: 3.6, proteus: 0.15, charon: 0.05, nix: 2.4, hydra: 2.4,
 };
 
+/**
+ * The same for the moons added with their shape models (MODULES-1601), on the dates inside the years Horizons has an ephemeris for each (test/data/horizons-more-moons.json, made by
+ * `scripts/fetch-horizons-reference.py more-moons`): about half as much again as the worst measured. A fit of a mean orbit cannot follow the resonances of Saturn's small moons,
+ * so those are the loose ones: Janus and Epimetheus swap their orbits every four years, Pandora, Prometheus and Atlas are pulled by one another and by Mimas's resonances, Helene librates round
+ * Dione's leading Trojan point, and Hyperion's orbit is locked to Titan's.
+ */
+const MORE_MOON_DEGREES: Record<string, number> = {
+  amalthea: 1.2, thebe: 0.25, hyperion: 20, phoebe: 2.8, janus: 9, epimetheus: 31, helene: 22, telesto: 3.5, calypso: 7.5, atlas: 12, prometheus: 22, pandora: 40, pan: 0.9, daphnis: 0.8, larissa: 0.4,
+};
+const moreMoons = JSON.parse(readFileSync(new URL("./data/horizons-more-moons.json", import.meta.url), "utf8")) as { moons: Record<string, { dates: string[]; vectors: Vec3[] }> };
+
 const degreesBetween = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (length(a) * length(b))))) / RAD;
 
 test("every planet is where JPL Horizons puts it, within its limit, on every date from 1800 to 2050", () => {
@@ -91,7 +102,18 @@ test("the Moon and every moon are where JPL Horizons puts them, within their lim
   }
 });
 
+test("the moons added with their shape models are where JPL Horizons puts them, within their limits, on every date inside the years it has for each", () => {
+  assert.deepEqual(Object.keys(MORE_MOON_DEGREES).sort(), Object.keys(moreMoons.moons).sort());
+  for (const [name, limit] of Object.entries(MORE_MOON_DEGREES)) {
+    const { dates, vectors } = moreMoons.moons[name]!;
+    vectors.forEach((horizons, i) => {
+      const degrees = degreesBetween(moonVector(name as Parameters<typeof moonVector>[0], Date.parse(dates[i]!)), horizons);
+      assert.ok(degrees <= limit, `${name} on ${dates[i]} is ${degrees.toFixed(2)} degrees from Horizons, the limit is ${limit}`);
+    });
+  }
+});
+
 test("every moon with an orbit in the table is measured, and no limit is for a body the package does not have", () => {
-  for (const name of Object.keys(ORBITS)) if (name in MOON_DEGREES === false && name in reference.moons === false) assert.ok(["dysnomia", "hiiaka", "namaka", "vanth"].includes(name), `${name} has no accuracy limit`);
+  for (const name of Object.keys(ORBITS)) if (name in MOON_DEGREES === false && name in reference.moons === false && name in MORE_MOON_DEGREES === false) assert.ok(["dysnomia", "hiiaka", "namaka", "vanth"].includes(name), `${name} has no accuracy limit`);
   for (const name of [...Object.keys(MOON_DEGREES), ...Object.keys(PLANET_ARCSEC), ...Object.keys(DWARF_ARCSEC)]) assert.ok(name in reference.moons || name in reference.planets || name in reference.dwarfs, name);
 });
