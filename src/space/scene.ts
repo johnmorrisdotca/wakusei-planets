@@ -51,6 +51,8 @@ const LINE_OPACITY = 0.55;
 const ORBIT_BODIES = ["earth", ...SPACE_PLANETS, ...SPACE_DWARFS, ...SPACE_MINORS, "moon"] as const;
 /** A dwarf planet or a minor body is drawn once it is this many CSS pixels across its radius, or when it is the body looked at: Sedna at true scale is never anything but a speck, and its picture is not made for it. */
 const DWARF_MIN_PX = 0.4;
+/** The most moons made for the first time (or made again after a change of look) in one draw. A moon's shader is compiled at the first draw it is in, and a rock moon's takes a good part of a second on a software renderer: Saturn's nineteen moons in one draw were a pause of five seconds on the Linux software renderers the tests run on (the page answered nothing meanwhile), so the moons come a few at a time, the moons the package drew first (the bigger ones) first, and the view asks for one more draw until they are all there. */
+const MOON_MAKES_PER_DRAW = 3;
 /** The colour of a body's orbit line, `#rrggbb`. */
 const orbitColour = (id: OrbitBody): string => (id === "earth" ? "#6aa8ff" : id === "moon" ? "#c5cdd9" : BODIES[id].colour);
 /** A colour as three numbers from 0 to 1, from `#rrggbb`. */
@@ -1607,6 +1609,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const now = performance.now();
           const seen = new Set<string>();
           const moonPlaces: Record<string, BodyPlace> = {};
+          let moonsMade = 0;
+          let moonsLeft = false;
           const moonDistances: Record<string, number> = {};
           for (const id of [...SPACE_PLANETS, ...SPACE_DWARFS]) {
             const planet = slotOf(id).drawing;
@@ -1628,6 +1632,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const key = site.name;
               if (key === hiddenMoon) continue;
               let held = moonSlots.get(key);
+              // a moon not yet made, or made with another look, is made in this draw only if there is room for it in the draw (the moon looked at always is)
+              if ((held === undefined || (held.slot.look !== model.look && !held.slot.failed)) && moonsMade >= MOON_MAKES_PER_DRAW && key !== model.focus) {
+                moonsLeft = true;
+                if (held !== undefined) {
+                  held.seen = now;
+                  seen.add(key);
+                }
+                continue;
+              }
+              if (held === undefined || (held.slot.look !== model.look && !held.slot.failed)) moonsMade += 1;
               if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false, labelled: -1 }, seen: now }));
               held.seen = now;
               seen.add(key);
@@ -1653,6 +1667,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               }
             }
           }
+          // moons left for the next draw: ask for it (the view at rest draws nothing)
+          if (moonsLeft) deps.invalidate();
           let soonest = Number.POSITIVE_INFINITY;
           for (const [key, held] of moonSlots) {
             if (seen.has(key)) continue;

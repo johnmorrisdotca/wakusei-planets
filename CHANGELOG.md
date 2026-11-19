@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The moons of a planet come a few to a draw** (MODULES-1601, found by CI). A moon's shader is compiled at the first draw it is in, and a rock moon's takes a good part of a second on a software renderer. Saturn has nineteen moons now (it had seven), and all of them in one draw were a pause of about five seconds (2.8 s before 0.70.0, measured with SwiftShader), in which the page answers nothing: `e2e/moon-size.demo.ts` timed out on WebKit waiting for `body` after `goTo("saturn")`. The view now makes at most three moons for the first time in a draw, the ones it had first (the bigger ones) first, the moon looked at at once, and asks for one more draw until they are all there; a view at rest still draws nothing. `e2e/space-moon-makes.demo.ts` holds it.
+
 ## [0.70.0] - 2026-11-19
 
 - **Orbit lines fade as they crowd, light up under the pointer and can be pressed.** Every line of the space view (planets, dwarf planets, minor bodies, the Moon, every catalogue moon, the orbiters and the Roadster) is fainter the more lines are in the picture and the farther out the view is, never under a sixth of its opacity (`stats.orbits.fade`). With the names on, a line under the pointer is drawn at full strength with its body's name (a layer of the view's own: nothing is drawn, nothing runs at rest) and `wakusei-body-hover` fires for the body. A press on a line is a press on its body: the first selects it and the camera stays, the second goes there, Ctrl or Command goes there at once. A pointer move over Saturn's 293 catalogue orbits takes under a millisecond. `stats.orbits.fade` is new (the API snapshot is updated for it); the pure `orbit-lines.ts` (`lineKeep`, `lineAlpha`, `outnessOf`, `linesInView`, `nearestLine`).
