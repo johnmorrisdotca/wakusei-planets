@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BODY_IDS, lineSvg, mix, ringStrip, BODIES, portrait } from "../src/index.ts";
+import { BODY_IDS, lineSvg, mix, ringOpacity, ringStrip, BODIES, portrait } from "../src/index.ts";
 
 test("every body draws as one SVG with a title, in both languages", () => {
   for (const id of BODY_IDS) {
@@ -50,4 +50,21 @@ test("a ring strip has soft, gapped bands: opaque in the B ring, clear in the Ca
   assert.ok(alphaAt(105000) > 150);
   assert.ok(alphaAt(119800) < 40);
   assert.equal(ringStrip(BODIES.mars, 64), null);
+});
+
+test("a ring band's opacity is 1 - exp(-tau), and a thin system is lifted to a floor in its strip", () => {
+  assert.equal(ringOpacity(0), 0);
+  assert.ok(Math.abs(ringOpacity(1) - 0.6321) < 1e-4 && Math.abs(ringOpacity(1e-6) - 1e-6) < 1e-12);
+  for (const id of ["jupiter", "saturn", "uranus", "neptune"] as const) {
+    const bands = BODIES[id].rings!;
+    assert.deepEqual(bands.map((band) => band.alpha), bands.map((band) => ringOpacity(band.tau)), id);
+    assert.ok(bands.every((band) => band.tau > 0 && band.alpha >= 0 && band.alpha < 1), id);
+  }
+  const peak = (id: "jupiter" | "saturn" | "uranus" | "neptune"): number => Math.max(...ringStrip(BODIES[id], 1024)!.data.filter((_, i) => i % 4 === 3)) / 255;
+  assert.ok(Math.abs(peak("jupiter") - 0.12) < 0.005, "Jupiter's ring is lifted to the floor, and no further");
+  assert.ok(Math.abs(peak("neptune") - 0.12) < 0.005, "so is Neptune's");
+  assert.ok(peak("saturn") > 0.7 && peak("uranus") > 0.3, "a system above the floor is not changed");
+  const jupiter = ringStrip(BODIES.jupiter, 1024)!;
+  const alphaAt = (km: number): number => jupiter.data[Math.floor(((km / BODIES.jupiter.radiusKm - jupiter.inner) / (jupiter.outer - jupiter.inner)) * jupiter.width) * 4 + 3]!;
+  assert.ok(alphaAt(125000) > 3 * alphaAt(150000) && alphaAt(150000) < 2, "and its dust and gossamer stay fainter than the main ring");
 });

@@ -20,6 +20,19 @@ description: The looks, each body's own entry point, three.js, pictures and the 
 
 ![Venus in the realistic look, from its cloud map.](../images/hero-venus-realistic.png)
 
+## Rings
+
+Jupiter, Saturn, Uranus and Neptune have rings, and each band of a ring has a normal optical depth, `tau`, in `BODIES.<planet>.rings` (how much light the band stops when it is seen from above; a dusty ring and Saturn's B ring are worlds apart). The values are from NASA's NSSDCA ring fact sheets, which send on to the PDS Ring-Moon Systems Node; NOTICE.md names each page and the day it was read. Where a sheet gives a range, the middle of it is used.
+
+| Ring | tau |
+|---|---|
+| Jupiter's main ring | 5 x 10^-6 |
+| Saturn's B ring, A ring | 1.45, 0.7 |
+| Uranus's epsilon ring | 1.4 |
+| Neptune's Adams ring | 0.055 |
+
+One rule turns `tau` into the opacity a band is drawn with: `ringOpacity(tau)` is 1 - exp(-tau), the share of light a ring stops when it is seen from above. It is the same for every body; no number is set by hand for a planet. Then one floor: when the most opaque point of a system's rings would come out under 0.12, `ringStrip` scales the whole system up until that point reaches 0.12, so it stays just visible and its parts keep their order. The floor is a drawing choice, not physics. Jupiter's ring is a faint line at the floor, with its dust and gossamer fainter still; Saturn is above the floor and is not changed.
+
 ## Each body is its own entry point
 
 A shaded look is code and data for one body, so each has its own import: `@johnmorrisdotca/wakusei-planets/saturn`, and `/moons-jupiter` for the Galilean moons. `/all` imports every one. A body whose entry has not been imported is drawn as a plain lit ball in its colour.

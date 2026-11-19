@@ -560,7 +560,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 - **Nothing is guessed.** A fact with no source is left out. [Accuracy](docs/guides/accuracy.md) has each body's number and how to run the check yourself.
 - `realistic` and `painted` are the photo maps (`painted` is the same maps, so an older page still works). `illustrated` is the shaded drawing from the numbers, and it is not a default. Venus, Saturn, Neptune and the Sun use Solar System Scope's maps (CC BY 4.0). Mercury uses the natural grey 8K map (Shady Tex and Solar System Scope, CC BY 4.0). Mars stays on the Viking mosaic, graded toward a butterscotch ochre, with the frost in Hellas toned to the basin and the polar ice left. Jupiter and Uranus use Nestaeric's maps (CC BY 4.0), and Saturn's poles use Nestaeric's caps (CC BY 4.0). The Earth and the Moon stay on their NASA maps until those have been compared. The rest are the public-domain maps in `NOTICE.md`.
 - A shaded look needs WebGL. Without it the line drawing is drawn.
-- Jupiter, Saturn, Uranus and Neptune have their rings drawn.
+- Jupiter, Saturn, Uranus and Neptune have their rings drawn, each band's opacity from its sourced optical depth (`BodyFacts.rings[].tau`, NASA NSSDCA): Jupiter's is a faint line, Saturn's is bold. [Looks and bodies](docs/guides/looks-and-bodies.md) has the rule and its floor.
 - A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. A picture with a date keeps that orientation and adds the same turn. `turn="0"` stays still.
 - Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
 

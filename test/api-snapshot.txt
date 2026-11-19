@@ -51,7 +51,7 @@ export interface Preset { id: string; name: { en: string; ja: string; }; scene: 
 export interface Pose { pole: Vec3; meridian: Vec3; light: Vec3; }
 export type RadiusBasis = "defined" | "angle" | "weak-distance" | "luminosity";
 export interface RadiusRow { id: string; name: { en: string; ja: string; }; radiusSun: number; minus: number; plus: number; basis: RadiusBasis; how: "paper" | "worked-out"; method: { en: string; ja: string; }; thetaMas?: number; distancePc?: number; cite: string; bibcodes: readonly string[]; read: string; note?: { en: string; ja: string; }; others?: readonly { radiusSun: number; cite: string; why: { en: string; ja: string; }; }[]; look: Omit<StarNumbers, "radiusSun" | "name" | "estimated">; temperatureFrom: string; }
-export interface RingBand { from: number; to: number; alpha: number; tone: number; }
+export interface RingBand { from: number; to: number; tau: number; alpha: number; tone: number; }
 export interface RingStrip { data: Uint8Array; width: number; inner: number; outer: number; }
 const STAR_SUN: StarNumbers
 export interface StarLook { numbers: StarNumbers; name: string; temperatureK: number; radiusSun: number; radiusKm: number; quality: "full" | "low"; luminosityClass: LuminosityClass; rotationDays: number | undefined; activity: number; oblateness: number; corona: number; colour: string; tone: string; look: BodyLook; facts: BodyFacts; turn: { degreesPerSecond: number; speedUp: number | undefined; }; parts: readonly StarPart[]; disclaimer: { en: string; ja: string; }; key: string; }
@@ -96,6 +96,7 @@ function picturesCredit(bodies: readonly string[], lang: "en" | "ja") => string
 function placeLineup(bodies: readonly LineupBody[], layout?: "row" | "stack") => LineupPlace[]
 function portrait(id: BodyId, options?: PortraitOptions) => Pose
 function portraitCode(options: PortraitEmbed, kind?: "html" | "module" | "react" | "vue" | "angular" | "svelte" | "iframe", settings?: EmbedSettings) => string
+const ringOpacity: (tau: number) => number
 const ringReach: (facts: BodyFacts) => number
 function ringStrip(facts: BodyFacts, width?: number) => RingStrip | null
 function starLineSvg(star: StarNumbers | StarLook, options?: LineOptions) => string
