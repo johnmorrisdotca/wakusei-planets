@@ -33,7 +33,7 @@ Wakusei Planets runs in the browser of a phone, a tablet or a computer: nothing 
 
 **Learn:** **[Colouring sheets to print](https://johnmorrisdotca.github.io/wakusei-planets/kids.html)** · **[Saturn's sheet](https://johnmorrisdotca.github.io/wakusei-planets/kids.html?sheet=saturn)** · **[The size line-up, the Sun to the largest stars](https://johnmorrisdotca.github.io/wakusei-planets/lineup.html)**
 
-**Look:** **[Saturn, painted](https://johnmorrisdotca.github.io/wakusei-planets/?body=saturn&look=painted)** · **[Jupiter and its moons now](https://johnmorrisdotca.github.io/wakusei-planets/?body=jupiter&sky=real&moons=1)** · **[The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html)** · **[A star from its numbers: Vega](https://johnmorrisdotca.github.io/wakusei-planets/star.html?star=vega)**
+**Look:** **[Saturn, painted](https://johnmorrisdotca.github.io/wakusei-planets/?body=saturn&look=painted)** · **[Jupiter and its moons now](https://johnmorrisdotca.github.io/wakusei-planets/?body=jupiter&sky=real&moons=1)** · **[The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html)** · **[Every moon of Jupiter](https://johnmorrisdotca.github.io/wakusei-planets/jupiter.html)** · **[Every moon of Saturn](https://johnmorrisdotca.github.io/wakusei-planets/saturn.html)** · **[A star from its numbers: Vega](https://johnmorrisdotca.github.io/wakusei-planets/star.html?star=vega)**
 
 **Make:** **[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html)** · **[The code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html)**
 
