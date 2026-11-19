@@ -410,6 +410,16 @@ uniform vec3 uRightEnu;
 uniform vec3 uUpEnu;
 uniform float uExposure;
 varying vec2 vUv;
+float hash3(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+float vnoise3(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(
+    mix(mix(hash3(i), hash3(i + vec3(1.0, 0.0, 0.0)), f.x), mix(hash3(i + vec3(0.0, 1.0, 0.0)), hash3(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+    mix(mix(hash3(i + vec3(0.0, 0.0, 1.0)), hash3(i + vec3(1.0, 0.0, 1.0)), f.x), mix(hash3(i + vec3(0.0, 1.0, 1.0)), hash3(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+    f.z);
+}
 void main() {
   float r2 = dot(vUv, vUv);
   if (r2 > 1.0) discard;
@@ -420,8 +430,9 @@ void main() {
   float day = smoothstep(-0.02, 0.06, d);
   vec3 ocean = vec3(0.10, 0.27, 0.62);
   vec3 cloud = vec3(0.85, 0.88, 0.92);
-  float band = 0.5 + 0.5 * sin(nrm.z * 9.0 + nrm.x * 5.0);
-  vec3 c = mix(ocean, cloud, smoothstep(0.55, 0.95, band) * 0.6);
+  // clouds as noise in all three directions: a sine along one axis is a band, and with the sky's vertical as that axis it reads as a gas giant's
+  float blotch = 0.65 * vnoise3(nrm * 4.0) + 0.35 * vnoise3(nrm * 9.0);
+  vec3 c = mix(ocean, cloud, smoothstep(0.5, 0.8, blotch) * 0.6);
   float limb = 1.0 - 0.35 * r2;
   vec3 colour = c * (0.04 + 0.96 * max(d, 0.0)) * day * limb;
   colour += c * 0.012; // the night side's own faint light
