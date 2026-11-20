@@ -253,4 +253,4 @@ a.count[data-most="true"] { box-shadow: inset 0 0 0 2px #f2d48a; }
 .chart-legend li { display: flex; align-items: center; gap: 6px; }
 .chart-legend i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 #chart svg { width: 100%; height: auto; display: block; background: #070b14; border-radius: 12px; }
-#chart text { fill: #f4efe4; font-size: 10px; font-family: system-ui, sans-serif; }
+#chart text { fill: #f4efe4; font-family: system-ui, sans-serif; }

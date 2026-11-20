@@ -29,7 +29,7 @@ function draw(lang: "en" | "ja"): void {
       const swatch = document.createElement("i");
       swatch.style.background = entry.color;
       const text = document.createElement("span");
-      text.textContent = `${lang === "ja" ? entry.names.ja : entry.names.en} ${entry.count}`;
+      text.textContent = fill(words.jc_legend, { name: lang === "ja" ? entry.names.ja : entry.names.en, n: entry.count });
       item.append(swatch, text);
       return item;
     }));
@@ -43,25 +43,30 @@ function picture(data: JupiterChart, lang: "en" | "ja"): SVGSVGElement {
   svg.setAttribute("viewBox", `0 0 ${data.width} ${data.height}`);
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-labelledby", "chart-h");
+  const drawn = document.querySelector("#chart")?.clientWidth ?? 0;
+  const font = (11 * data.width) / (drawn > 0 ? drawn : 360);
+  svg.setAttribute("font-size", String(Math.round(font * 10) / 10));
+  const words = WORDS[lang];
   const planet = document.createElementNS(SVG, "circle");
   planet.setAttribute("cx", String(data.planet.x));
   planet.setAttribute("cy", String(data.planet.y));
   planet.setAttribute("r", String(data.planet.r));
   planet.setAttribute("fill", data.planet.color);
   const planetName = document.createElementNS(SVG, "text");
+  const planetLabel = lang === "ja" ? data.planet.ja : data.planet.en;
   planetName.setAttribute("x", String(data.planet.x));
-  planetName.setAttribute("y", String(data.planet.y + data.planet.r + 16));
+  planetName.setAttribute("y", String(data.planet.y + data.planet.r + font));
   planetName.setAttribute("text-anchor", "middle");
-  planetName.textContent = lang === "ja" ? data.planet.ja : data.planet.en;
+  planetName.textContent = planetLabel;
   svg.append(planet, planetName);
   const labels: { x: number; y: number; w: number }[] = [];
-  labelFits(labels, data.planet.x, data.planet.y + data.planet.r + 16, (lang === "ja" ? data.planet.ja : data.planet.en).length * 6);
+  labelFits(labels, data.planet.x, data.planet.y + data.planet.r + font, textWidth(planetLabel, lang, font), font);
   for (const dot of data.dots) {
     const group = document.createElementNS(SVG, "g");
     const family = lang === "ja" ? dot.family.ja : dot.family.en;
     const km = Math.round(dot.diameterKm).toLocaleString("en-CA");
     const tip = document.createElementNS(SVG, "title");
-    tip.textContent = `${nameOf(dot, lang)}, ${family}, ${dot.year ?? ""}, ${km} km`;
+    tip.textContent = tipOf(words.jc_tip, lang, nameOf(dot, lang), family, dot.year, km);
     const circle = document.createElementNS(SVG, "circle");
     circle.setAttribute("cx", String(dot.x));
     circle.setAttribute("cy", String(dot.y));
@@ -69,11 +74,12 @@ function picture(data: JupiterChart, lang: "en" | "ja"): SVGSVGElement {
     circle.setAttribute("fill", dot.color);
     circle.setAttribute("data-moon", dot.id);
     const big = dot.r >= 14;
-    const caption = big ? nameOf(dot, lang) : `${dot.year ?? ""}${dot.estimated ? "*" : ""}`;
-    if (caption !== "" && caption !== "*" && labelFits(labels, dot.x, big ? dot.y + dot.r + 11 : dot.y - dot.r - 3, caption.length * 5.4)) {
+    const caption = big ? nameOf(dot, lang) : yearCaption(dot, lang);
+    const y = big ? dot.y + dot.r + font * 0.9 : dot.y - dot.r - font * 0.25;
+    if (caption !== "" && caption !== "*" && labelFits(labels, dot.x, y, textWidth(caption, lang, font), font)) {
       const text = document.createElementNS(SVG, "text");
       text.setAttribute("x", String(dot.x));
-      text.setAttribute("y", String(big ? dot.y + dot.r + 11 : dot.y - dot.r - 3));
+      text.setAttribute("y", String(y));
       text.setAttribute("text-anchor", "middle");
       text.textContent = caption;
       group.append(circle, tip, text);
@@ -83,10 +89,26 @@ function picture(data: JupiterChart, lang: "en" | "ja"): SVGSVGElement {
   return svg;
 }
 
+/** The tooltip word, with the year left out when the moon has none, so no empty comma remains. */
+function tipOf(pattern: string, lang: "en" | "ja", name: string, family: string, year: number | null, km: string): string {
+  const text = year === null ? (lang === "ja" ? pattern.replace("、{year}年", "") : pattern.replace(", {year}", "")) : pattern;
+  return fill(text, { name, family, year: year ?? "", km });
+}
+
+function yearCaption(dot: ChartDot, lang: "en" | "ja"): string {
+  const year = dot.year === null ? "" : lang === "ja" ? `${dot.year}年` : String(dot.year);
+  return `${year}${dot.estimated ? "*" : ""}`;
+}
+
+/** A Japanese glyph is about twice a Latin letter at the same size. The 5.4 is the Latin width at a 10-unit font. */
+function textWidth(text: string, lang: "en" | "ja", font: number): number {
+  return text.length * (lang === "ja" ? 10.8 : 5.4) * (font / 10);
+}
+
 /** A label is drawn only when its line does not cross one already placed. */
-function labelFits(placed: { x: number; y: number; w: number }[], x: number, y: number, width: number): boolean {
+function labelFits(placed: { x: number; y: number; w: number }[], x: number, y: number, width: number, line: number): boolean {
   const box = { x, y, w: width };
-  const hit = placed.some((other) => Math.abs(other.y - y) < 11 && Math.abs(other.x - x) < (other.w + width) / 2 + 4);
+  const hit = placed.some((other) => Math.abs(other.y - y) < line && Math.abs(other.x - x) < (other.w + width) / 2 + 4);
   if (!hit) placed.push(box);
   return !hit;
 }
@@ -96,3 +118,4 @@ window.addEventListener("wakusei-language", (event) => {
   const lang = (event as CustomEvent<{ lang?: string }>).detail?.lang;
   draw(lang === "ja" ? "ja" : "en");
 });
+window.addEventListener("resize", () => draw(language()));

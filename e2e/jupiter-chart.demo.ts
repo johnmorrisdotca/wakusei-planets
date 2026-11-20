@@ -7,7 +7,7 @@ test("every moon of Jupiter is a circle, and the page does not scroll sideways a
   const circles = page.locator("#chart circle[data-moon]");
   await expect(circles.first()).toBeVisible();
   const legend = await page.locator("#chart-legend li").allTextContents();
-  const named = legend.reduce((sum, text) => sum + Number(text.match(/(\d+)\s*$/)?.[1] ?? 0), 0);
+  const named = legend.reduce((sum, text) => sum + Number(text.match(/(\d+)/)?.[1] ?? 0), 0);
   await expect(circles).toHaveCount(named);
   const radii = await circles.evaluateAll((nodes) => nodes.map((node) => ({ id: node.getAttribute("data-moon"), r: Number(node.getAttribute("r")) })));
   const ganymede = radii.find((dot) => dot.id === "ganymede")!;
@@ -17,4 +17,12 @@ test("every moon of Jupiter is a circle, and the page does not scroll sideways a
   await page.setViewportSize({ width: 390, height: 844 });
   const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(extra).toBeLessThanOrEqual(1);
+  const label = await page.locator("#chart text").first().boundingBox();
+  expect(label?.height ?? 0).toBeGreaterThanOrEqual(11);
+  await page.goto("/wakusei-planets/chart.html?lang=ja");
+  await expect(page.locator("#chart-legend")).toContainText("ヒマリア群（");
+  await expect(page.locator("#chart-source")).toContainText("図は衛星カタログ");
+  const tip = await page.locator("#chart title").first().textContent();
+  expect(tip ?? "").not.toMatch(/、、|, ,/);
+  expect(tip ?? "").toMatch(/年|直径/);
 });
