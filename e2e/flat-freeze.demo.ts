@@ -2,6 +2,7 @@
 // the orbiters need and no faster (at most once a second at 1x and once a frame at the fastest), and taking the element out of the page stops its timer and its frames. Played in headless Chromium, one page at a time.
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Page, test } from "@playwright/test";
+import { atMostOnePerRefresh, drawsAgainstRefresh } from "./refresh-bound.ts";
 
 type Flat = HTMLElement & { stats: { draws: number; mapDraws: number; running: boolean; canvases: { width: number; height: number }[]; averageDrawMs: number; maxDrawMs: number } };
 
@@ -95,9 +96,10 @@ test("a running clock draws at the pace of the orbiters, not faster: about once 
   expect(slow).toBeLessThanOrEqual(8);
   await set(page, { speed: "86400" });
   await page.waitForTimeout(300);
-  const fast = await frames(page, 2000);
+  // the window is timed in the page and the screen's refreshes are counted in it: at most one draw a refresh, and one for the frame that straddles the start (a fixed 2 x 61 was over by one on a runner)
+  const { draws: fast, refreshes } = await drawsAgainstRefresh(flat(page), 2000);
   expect(fast).toBeGreaterThan(20);
-  expect(fast).toBeLessThanOrEqual(2 * 61);
+  expect(atMostOnePerRefresh(fast, refreshes), `${fast} draws in a window of ${refreshes} refreshes`).toBe(true);
   // a draw is cheap: the average stays well under a frame, even with the footprints and the tracks on
   await set(page, { footprint: "", track: "", speed: "600" });
   await page.waitForTimeout(1500);
