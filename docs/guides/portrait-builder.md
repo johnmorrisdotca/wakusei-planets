@@ -11,7 +11,7 @@ description: Put any bodies of the solar system in one picture, arrange them, li
 
 ## Choosing and arranging
 
-Pick bodies on the **Bodies** tab (a button for each; press it again to take the body out), or start from a preset: a family photo, the gas giants, Jupiter and the Galileans, the Earth and the Moon to scale. A chosen body is drawn at the front and has its own controls under the picture: its place in the order (front to back), its size, its lean and how far you look over its pole, and whether it turns by itself.
+Pick bodies on the **Bodies** tab (a button for each; press it again to take the body out), or start from a preset: a family photo, the gas giants, Jupiter and the Galileans, the Earth and the Moon to scale, a giant planet's edge with its main moons in an arc, or every drawn moon beside its planet. A chosen body is drawn at the front and has its own controls under the picture: its place in the order (front to back), its size, its lean and how far you look over its pole, and whether it turns by itself.
 
 The **Arrange** tab has two layouts.
 

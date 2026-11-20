@@ -1,6 +1,7 @@
 // The portrait builder's scene: the layout, the camera, hit tests, snapping, order, undo and the text kept in the address. All pure, so all here.
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { MOONS_OF } from "../src/facts.ts";
 import { BODIES } from "../src/index.ts";
 import { addBody, addMoons, auto, centreCamera, createHistory, decodeScene, defaultPortrait, encodeScene, fitAll, freeze, hitTest, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, sizesFor, snap, toScreen, fromScreen, type Portrait } from "../src/portrait/model.ts";
 import { shapesOf, shapesSvg } from "../src/portrait/overlay.ts";
@@ -187,7 +188,7 @@ test("any text gives a scene: unknown bodies and fields are dropped, numbers are
 });
 
 test("every preset is a real scene that lays out inside its camera and survives the address", () => {
-  assert.deepEqual(PRESETS.map((p) => p.id), ["family", "giants", "galileans", "earthmoon", "marsmoons", "orrery"]);
+  assert.deepEqual(PRESETS.map((p) => p.id), ["family", "giants", "galileans", "earthmoon", "marsmoons", "orrery", "jupiter-edge", "saturn-edge", "uranus-edge", "neptune-edge", "moons-by-planet"]);
   for (const preset of PRESETS) {
     assert.ok(preset.scene.items.length >= 2, preset.id);
     assert.match(preset.name.ja, /\S/);
@@ -198,6 +199,38 @@ test("every preset is a real scene that lays out inside its camera and survives 
   const family = PRESETS.find((p) => p.id === "family")!.scene;
   assert.equal(family.items.length, 10);
   assert.deepEqual(PRESETS.find((p) => p.id === "galileans")!.scene.items.map((i) => i.body), ["jupiter", "io", "europa", "ganymede", "callisto"]);
+});
+
+test("a poster edge keeps the planet at the right and the farthest moon at the top", () => {
+  const edge = PRESETS.find((p) => p.id === "jupiter-edge")!.scene;
+  assert.equal(edge.layout, "manual");
+  const planet = edge.items[0]!;
+  const moons = edge.items.slice(1);
+  assert.deepEqual(moons.map((moon) => moon.body), ["callisto", "ganymede", "europa", "io"]);
+  assert.ok(moons[0]!.y > moons.at(-1)!.y);
+  assert.ok(moons.every((moon) => moon.x + moon.r < planet.x - planet.r));
+  const saturn = PRESETS.find((p) => p.id === "saturn-edge")!.scene;
+  const byName = Object.fromEntries(saturn.items.map((item) => [item.body, item]));
+  assert.ok(byName["titan"]!.r >= byName["rhea"]!.r);
+  assert.ok(byName["iapetus"]!.y - byName["titan"]!.y > byName["titan"]!.y - byName["rhea"]!.y);
+  assert.equal(byName["saturn"]!.pitch, 22);
+  const saturnMoons = saturn.items.slice(1);
+  for (let i = 1; i < saturnMoons.length; i += 1) {
+    const above = saturnMoons[i - 1]!;
+    const below = saturnMoons[i]!;
+    assert.ok(above.y - below.y > above.r + below.r, `${above.body} covers ${below.body}`);
+  }
+  assert.ok(saturnMoons.at(-1)!.y - saturnMoons.at(-1)!.r > -1);
+  const groups = PRESETS.find((p) => p.id === "moons-by-planet")!.scene;
+  const hosts = ["jupiter", "saturn", "uranus", "neptune"] as const;
+  assert.equal(groups.items.length, hosts.reduce((n, host) => n + 1 + MOONS_OF[host].length, 0));
+  const { placed } = resolve(groups);
+  const halfW = groups.camera.h * groups.aspect;
+  for (const item of placed) {
+    const span = item.body === "saturn" ? item.reach : item.r;
+    assert.ok(Math.abs(item.x - groups.camera.x) + span <= halfW + 0.02, item.body);
+    assert.ok(Math.abs(item.y - groups.camera.y) + span <= groups.camera.h + 0.02, item.body);
+  }
 });
 
 test("the light comes from the chosen side: from the left, the left of a body is lit", () => {
