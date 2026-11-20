@@ -136,7 +136,8 @@ test("in Japanese: the title, the tabs and the table's words", async ({ page }) 
 test("the map, the portrait and the cards: made when their tab opens, with the moons drawn in full", async ({ page, browserName }, testInfo) => {
   test.skip(browserName !== "chromium" || testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
   const errors = await open(page, "jupiter");
-  await expect(page.locator("wakusei-plan, wakusei-portrait, wakusei-body")).toHaveCount(0);
+  await expect(page.locator("wakusei-plan, wakusei-portrait")).toHaveCount(0);
+  await expect(page.locator("#hero wakusei-body")).toHaveCount(1 + 4 + 2, { timeout: 30_000 });
   await page.locator("#tab-views").click();
   const plan = page.locator("wakusei-plan");
   await expect(plan).toHaveAttribute("data-state", "ready");
@@ -155,8 +156,9 @@ test("on a phone the family header is one line, the tabs start in the first scre
     const errors = await open(page, host);
     const header = (await page.locator("header").boundingBox())!;
     expect(header.height, `${host}: the header is one line`).toBeLessThan(60);
-    const tabs = (await page.locator("#tabs").boundingBox())!;
-    expect(tabs.y + tabs.height, `${host}: the tabs are in the first screen`).toBeLessThan(844 / 2);
+    const hero = (await page.locator("#hero").boundingBox())!;
+    expect(hero.y, `${host}: the hero starts on the first screen`).toBeLessThan(844 / 2);
+    expect(hero.height, `${host}: the hero is the picture`).toBeGreaterThan(400);
     await expect(page.locator("#short")).toContainText(`${moonCounts()[host]!.total} moons`);
     for (const tab of TABS) {
       if ((tab === "views" || tab === "cards") && !drawsGl(browserName)) continue;

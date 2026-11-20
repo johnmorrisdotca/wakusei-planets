@@ -1,10 +1,11 @@
 // <wakusei-moon-pages>: one giant planet's moons in four tabs, each one screen. Orbits: every orbit of /moon-catalogue in SVG, from above, at an angle or from the side, coloured by direction or by family.
 // Map and portrait: <wakusei-plan> and <wakusei-portrait>. Main moons: a card with a picture for each moon drawn in full. Every moon: the whole list in a table that sorts. Every number is worked out from the
-// package's data (moonPage). The WebGL parts and the bodies' looks are fetched only when their tab is first opened. Nothing runs on a timer; it never writes the page's address: a choice is reflected on its
+// package's data (moonPage). The hero above the tabs draws the planet and its main moons as soon as the element connects. The other WebGL parts are fetched when their tab is first opened. Nothing runs on a timer; it never writes the page's address: a choice is reflected on its
 // own attributes and sent as `wakusei-moon-pages-change`, for the page to keep where it likes.
 import { MOONS_OF, type BodyId } from "../facts.ts";
 import { addBody, addMoons, defaultPortrait, encodeScene } from "../portrait/model.ts";
 import { moonPage, MOON_PAGE_HOSTS, type MoonPage, type MoonPageHost, type PageMoon } from "./data.ts";
+import { HERO_POSE, heroMoons, heroScale, heroSmall, heroZoom } from "./hero.ts";
 import { MOON_PAGE_WORDS } from "./words.ts";
 
 type Lang = "en" | "ja";
@@ -129,11 +130,37 @@ tbody th { font-weight: 400; }
 td:nth-child(7), td:nth-child(8) { white-space: normal; min-width: 9rem; max-width: 16rem; }
 tr:last-child > * { border-bottom: 0; }
 .credits { margin-top: 20px; }
+.hero-wrap { display: grid; gap: 8px; margin: 0 0 14px; }
+.hero { position: relative; overflow: hidden; height: min(78vh, 720px); min-height: 520px; background: #000; border-radius: 16px; }
+.hero:fullscreen { width: 100%; height: 100%; min-height: 0; border-radius: 0; }
+.hero-planet { position: absolute; z-index: 1; top: 50%; right: -70%; width: 124%; aspect-ratio: 1; transform: translateY(-50%); pointer-events: none; }
+.hero-planet wakusei-body, .hero-disc wakusei-body { --wakusei-size: 100%; width: 100%; height: 100%; display: block; }
+.hero-moons { position: absolute; inset: 0; z-index: 2; }
+.hero-moon { position: absolute; transform: translate(-50%, -50%); display: block; margin: 0; padding: 0; border: 0; background: none; color: #fff; touch-action: manipulation; }
+.hero-disc { display: block; width: calc(var(--disc) * 1px); aspect-ratio: 1; border-radius: 50%; }
+.hero-disc wakusei-body { pointer-events: none; }
+.hero-name { position: absolute; left: calc(100% + 6px); top: 50%; transform: translateY(-50%); font-size: 13px; font-weight: 650; line-height: 1.2; text-shadow: 0 1px 2px #000, 0 0 4px #000; white-space: nowrap; }
+.hero-moon:hover .hero-disc, .hero-moon:focus-visible .hero-disc, .hero-moon[aria-pressed="true"] .hero-disc { outline: 2px solid #fff; outline-offset: 3px; }
+.hero-small { position: absolute; z-index: 2; left: 10px; bottom: 8px; display: flex; flex-wrap: wrap; gap: 4px; align-items: end; max-width: 52%; }
+.hero-small .hero-moon { position: static; transform: none; display: grid; justify-items: center; gap: 1px; min-width: 36px; min-height: 44px; }
+.hero-small .hero-name, .hero-small .hero-est { position: static; transform: none; left: auto; top: auto; font-size: 9px; line-height: 1.1; }
+.hero-est { color: #d7d2c6; font-weight: 500; }
+.hero-scale { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: end; margin: 0; }
+.scale-moon { display: grid; justify-items: center; align-content: end; gap: 2px; min-width: 44px; min-height: 44px; margin: 0; padding: 2px; border: 0; border-radius: 8px; background: none; color: inherit; font: 600 11px/1.2 system-ui, sans-serif; }
+.scale-moon svg { display: block; }
+.scale-moon:hover, .scale-moon:focus-visible, .scale-moon[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 2px; }
+.fs { position: absolute; z-index: 3; top: 10px; left: 10px; min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.45); color: #fff; font: 600 14px/1 system-ui, sans-serif; }
+.hero-fact { margin: 0; min-height: 1.4em; font-size: .9rem; }
 @media (max-width: 600px) {
   .top { gap: 6px; margin-bottom: 8px; }
   h2 { font-size: 1.2rem; }
   .lede { display: none; }
   .short { display: block; }
+  .hero { height: min(68vh, 640px); min-height: 420px; border-radius: 12px; }
+  .hero-disc { width: calc(var(--disc) * 0.78px); }
+  .hero-name { font-size: 12px; }
+  .hero-small { max-width: 62%; }
+  .hero-small .hero-moon { min-width: 28px; }
 }
 </style>
 <section class="top" part="top">
@@ -141,6 +168,16 @@ tr:last-child > * { border-bottom: 0; }
   <slot name="planets"></slot>
   <p class="fine lede" id="lede"></p>
   <p class="fine short" id="short"></p>
+</section>
+<section class="hero-wrap" part="hero">
+  <div class="hero" id="hero">
+    <button type="button" class="fs" id="full-screen"></button>
+    <div class="hero-planet" id="hero-planet"></div>
+    <div class="hero-moons" id="hero-moons" data-w-label="hero_moons"></div>
+    <div class="hero-small" id="hero-small"></div>
+  </div>
+  <p class="hero-fact" id="hero-fact" role="status"></p>
+  <div class="hero-scale" id="hero-scale" data-w-label="hero_scale"></div>
 </section>
 <div class="panels" part="panels">
   <div class="tabs" role="tablist" id="tabs" data-w-label="tabs">
@@ -210,7 +247,7 @@ tr:last-child > * { border-bottom: 0; }
  *
  * It never writes the page's address. A choice made in it is reflected on its attribute and sent as `wakusei-moon-pages-change` (bubbling, composed) with `detail` the whole `MoonPagesState`; a page that keeps its
  * address writes the detail there and sets the attributes back from it when it loads. Setting an attribute sends no event. The numbers are `moonPage(planet)`'s, worked out in a few milliseconds. The plan, the
- * portrait, the cards' bodies and the planet's looks are fetched only when their tab is first opened, so a page that shows only the orbits and the table loads no WebGL. Nothing runs on a timer; the orbits are drawn
+ * portrait and the cards' bodies are fetched only when their tab is first opened. The hero above the tabs is always there: the planet cropped at the right and its main moons in an arc, each a painted sphere, and it loads those looks when the element connects. Nothing runs on a timer; the orbits are drawn
  * again only when a choice, the language or the element's width changes. `data-state` is `ready` once it has drawn.
  *
  * @example
@@ -239,6 +276,9 @@ export class WakuseiMoonPages extends HTMLElement {
   #plan: HTMLElement | undefined;
   #portrait: HTMLElement | undefined;
   #cardsFor: MoonPageHost | undefined;
+  #heroHost: MoonPageHost | undefined;
+  #heroMoon: string | null = null;
+  #onFull: (() => void) | undefined;
   #watch: MutationObserver | undefined;
   #resize: ResizeObserver | undefined;
   #reflecting = false;
@@ -273,12 +313,15 @@ export class WakuseiMoonPages extends HTMLElement {
       });
       this.#resize.observe(this);
     }
+    this.#onFull = () => this.#paintFullscreen();
+    document.addEventListener("fullscreenchange", this.#onFull);
     this.#render();
   }
 
   disconnectedCallback(): void {
     this.#watch?.disconnect();
     this.#resize?.disconnect();
+    if (this.#onFull !== undefined) document.removeEventListener("fullscreenchange", this.#onFull);
   }
 
   attributeChangedCallback(name: string, before: string | null, after: string | null): void {
@@ -294,7 +337,11 @@ export class WakuseiMoonPages extends HTMLElement {
       const value = this.getAttribute(key);
       if (value !== null && ALLOWED[key].includes(value)) (next as Record<string, string>)[key] = value;
     }
-    if (next.planet !== this.#state.planet) this.#picked = null;
+    if (next.planet !== this.#state.planet) {
+      this.#picked = null;
+      this.#heroMoon = null;
+      this.#heroHost = undefined;
+    }
     this.#state = next;
   }
 
@@ -384,6 +431,18 @@ export class WakuseiMoonPages extends HTMLElement {
       if (event.pointerType === "mouse") this.#light(this.#nearest(event.clientX, event.clientY));
     });
     svg.addEventListener("pointerdown", (event) => this.#light(this.#nearest(event.clientX, event.clientY)));
+    this.#$("#full-screen").addEventListener("click", () => {
+      const hero = this.#$("#hero");
+      if (document.fullscreenElement === hero) void document.exitFullscreen();
+      else void hero.requestFullscreen();
+    });
+    this.#$(".hero-wrap").addEventListener("click", (event) => {
+      const button = (event.target as Element | null)?.closest<HTMLButtonElement>("[data-moon]");
+      if (button === null || button === undefined) return;
+      this.#heroMoon = button.dataset["moon"] ?? null;
+      this.#paintHero();
+      this.dispatchEvent(new CustomEvent<MoonPagesState & { moon: string | null }>("wakusei-moon-pages-change", { detail: { ...this.state, moon: this.#heroMoon }, bubbles: true, composed: true }));
+    });
   }
 
   // --- drawing -------------------------------------------------------------------------------------------------------------------------------------------
@@ -415,7 +474,127 @@ export class WakuseiMoonPages extends HTMLElement {
     if (this.#state.tab === "views") this.#mountViews();
     if (this.#state.tab === "cards") this.#drawCards();
     if (this.#state.tab === "table") this.#drawTable();
+    this.#mountHero();
+    this.#paintFullscreen();
     this.setAttribute("data-state", "ready");
+  }
+
+  /** The planet's edge and the arc. The spheres are made once a planet; a later draw only renames them. */
+  #mountHero(): void {
+    const host = this.#page().host;
+    if (this.#heroHost !== host) {
+      this.#heroHost = host;
+      this.#heroMoon = null;
+      void this.#loadHero(host);
+      return;
+    }
+    this.#paintHero();
+  }
+
+  async #loadHero(host: MoonPageHost): Promise<void> {
+    await LOOKS[host]();
+    await import("../element.ts");
+    if (!this.isConnected || this.#heroHost !== host) return;
+    const pose = HERO_POSE[host];
+    const planet = document.createElement("wakusei-body");
+    planet.setAttribute("body", host);
+    planet.setAttribute("look", "painted");
+    planet.setAttribute("live", "off");
+    planet.setAttribute("fit", "tight");
+    planet.setAttribute("labels", "off");
+    planet.setAttribute("meridian", String(pose.meridian));
+    planet.setAttribute("tilt", String(pose.tilt));
+    this.#textures(planet);
+    this.#$("#hero-planet").replaceChildren(planet);
+    const zoom = heroZoom(host);
+    if (zoom !== 1) (planet as HTMLElement & { setView(view: { zoom: number }): void }).setView({ zoom });
+    const cards = this.#page().cards;
+    const moons = heroMoons(cards, host, this.#lang());
+    const discButton = (id: string, px: number, look: "painted" | "illustrated"): HTMLButtonElement => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "hero-moon";
+      button.dataset["moon"] = id;
+      const disc = document.createElement("span");
+      disc.className = "hero-disc";
+      disc.style.setProperty("--disc", String(px));
+      const body = document.createElement("wakusei-body");
+      body.setAttribute("body", id);
+      body.setAttribute("look", look);
+      body.setAttribute("live", "off");
+      body.setAttribute("fit", "tight");
+      body.setAttribute("labels", "off");
+      this.#textures(body);
+      const name = document.createElement("span");
+      name.className = "hero-name";
+      disc.append(body);
+      button.append(disc, name);
+      if (look === "illustrated") {
+        const mark = document.createElement("span");
+        mark.className = "hero-est";
+        button.append(mark);
+      }
+      return button;
+    };
+    this.#$("#hero-moons").replaceChildren(...moons.map((moon) => {
+      const button = discButton(moon.id, moon.px, "painted");
+      button.style.left = `${moon.left}%`;
+      button.style.top = `${moon.top}%`;
+      return button;
+    }));
+    this.#$("#hero-small").replaceChildren(...heroSmall(cards, host, this.#lang()).map((moon) => discButton(moon.id, moon.px, "illustrated")));
+    this.#$("#hero-scale").replaceChildren(...heroScale(cards, host).map((circle) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "scale-moon";
+      button.dataset["moon"] = circle.id;
+      const r = Math.max(1.5, (circle.px / 56) * 26);
+      button.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="${r}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="scale-km"></span>`;
+      return button;
+    }));
+    this.#paintHero();
+  }
+
+  #paintHero(): void {
+    const page = this.#page();
+    const lang = this.#lang();
+    const named = new Map([...heroMoons(page.cards, page.host, lang), ...heroSmall(page.cards, page.host, lang)].map((moon) => [moon.id, moon.name]));
+    for (const button of this.#$$<HTMLButtonElement>("[data-moon]")) {
+      const id = button.dataset["moon"] ?? "";
+      button.setAttribute("aria-pressed", String(id === this.#heroMoon));
+      const name = button.querySelector(".hero-name");
+      if (name !== null && named.has(id)) name.textContent = named.get(id) ?? "";
+      const mark = button.querySelector(".hero-est");
+      if (mark !== null) mark.textContent = this.#say("hero_estimated");
+      const km = button.querySelector(".scale-km");
+      if (km !== null) {
+        const card = page.cards.find((item) => item.id === id);
+        if (card !== undefined) km.textContent = `${this.#diameter(card.radiusKm)} km`;
+      }
+      button.querySelector("wakusei-body")?.setAttribute("lang", lang);
+    }
+    this.#$("#hero-planet").querySelector("wakusei-body")?.setAttribute("lang", lang);
+    this.#paintFact();
+    this.#paintFullscreen();
+  }
+
+  #paintFact(): void {
+    const card = this.#page().cards.find((item) => item.id === this.#heroMoon);
+    const fact = this.#$("#hero-fact");
+    if (card === undefined) {
+      fact.textContent = "";
+      return;
+    }
+    const name = this.#lang() === "ja" ? card.name.ja : card.name.en;
+    fact.textContent = this.#say("hero_fact", { name, diameter: this.#diameter(card.radiusKm), distance: card.a === null ? NONE : this.#number(card.a), planet: this.#planetName(), found: card.date ?? NONE });
+  }
+
+  #paintFullscreen(): void {
+    if (this.#root === undefined) return;
+    const on = document.fullscreenElement === this.#$("#hero");
+    const button = this.#$("#full-screen");
+    button.textContent = this.#say(on ? "leave_full_screen" : "full_screen");
+    button.setAttribute("aria-pressed", String(on));
   }
 
   #drawOrbits(): void {
