@@ -25,6 +25,8 @@ test("Jupiter's hero keeps the Galileans in an arc, and a press names the moon",
   expect(io.x + io.width, "Io stays clear of the planet").toBeLessThan(limb.x - 4);
   await expect(page.locator("#full-screen")).toHaveText("Full screen");
   const planet = page.locator("#hero-planet wakusei-body");
+  await expect(planet).toHaveAttribute("data-still-size", "960");
+  await expect(page.locator("#hero-moons wakusei-body").first()).not.toHaveAttribute("data-still-size");
   await expect(planet).toHaveAttribute("data-state", /still|live|line/, { timeout: 30_000 });
 });
 

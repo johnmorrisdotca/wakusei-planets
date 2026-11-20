@@ -35,10 +35,10 @@ export function takeRenderer(onContext: (state: ContextState) => void): { render
   listeners.add(onContext);
   shared ??= createSharedRenderer<ThreeParts>({
     load: () => loader(),
-    // A hero planet is wider than 480 CSS pixels. A still whose long side is 480, drawn at one pixel per sample, looks soft and the ring edges stair-step. 960 is two device pixels of a 480-wide view, and the renderer still caps the live ratio at 2. The byte budget holds that size for a planet and the moons beside it.
-    stillSize: 960,
+    // 160 holds every moon of Saturn (293) with the planet. A hero planet sets data-still-size="960" on its own element, so a grid tile stays at 160. One 960 still is about 3.7 MB, so the budget is the 32 MB of small stills plus that one picture.
+    stillSize: 160,
     antialias: true,
-    stillBytes: 80 * 1024 * 1024,
+    stillBytes: 36 * 1024 * 1024,
     onContext: (state) => {
       for (const listener of listeners) listener(state);
     },

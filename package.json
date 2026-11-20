@@ -1034,6 +1034,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ]
+    ],
+    "patchedDependencies": {
+      "@johnmorrisdotca/kazoku-ui@0.41.0": "patches/@johnmorrisdotca__kazoku-ui@0.41.0.patch"
+    }
   }
 }

@@ -503,6 +503,7 @@ export class WakuseiMoonPages extends HTMLElement {
     const pose = HERO_POSE[host];
     const planet = document.createElement("wakusei-body");
     planet.setAttribute("body", host);
+    planet.setAttribute("data-still-size", "960");
     planet.setAttribute("look", "painted");
     planet.setAttribute("live", "off");
     planet.setAttribute("fit", "tight");
