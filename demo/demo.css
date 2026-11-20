@@ -188,3 +188,16 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .giants ul li > a.giant { width: 100%; min-height: 44px; text-decoration: none; color: inherit; border: 1px solid var(--rule); border-radius: 12px; padding: 8px 12px; display: grid; gap: 2px; }
 .giants ul li > a.giant:hover { border-color: var(--ink); }
 .giants ul li > a.giant > span { color: var(--muted); font-size: .85rem; }
+
+/* The planet on top, then every moon in a family. Tiles stay small so a screen of stills fits the still budget. */
+.groups-planets { margin: 12px 0; }
+.groups-legend { color: var(--muted); margin: 0 0 8px; }
+.group-planet { height: min(42vh, 360px); background: #070b14; border-radius: 16px; overflow: hidden; }
+.group-planet wakusei-body { display: block; width: min(100%, 420px); height: 100%; margin: 0 auto; --wakusei-size: 100%; }
+.group-planet.clip-disc wakusei-body { border-radius: 50%; overflow: hidden; }
+.moon-group { margin-top: 1.4rem; }
+.moon-group h3 { margin: 0 0 8px; font-size: 1.05rem; }
+.group-moons { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px 10px; align-items: start; }
+.group-moon { margin: 0; min-width: 0; }
+.group-moon wakusei-body { display: block; width: 100%; aspect-ratio: 1; --wakusei-size: 100%; color: transparent; }
+.group-moon figcaption { min-height: 2.6em; font-size: .8rem; text-align: center; overflow-wrap: anywhere; }
