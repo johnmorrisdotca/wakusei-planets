@@ -15,7 +15,7 @@ const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOT
 const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"></span>', `<span><span data-say="foot"></span> <a href="${NOTICE}" data-say="creditsAll"></a></span>`);
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "groups.html", say: "pageGroups" }, { href: "all.html", say: "pageAll" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "groups.html", say: "pageGroups" }, { href: "all.html", say: "pageAll" }, { href: "counts.html", say: "pageCounts" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -85,6 +85,10 @@ export const renderGroups = (): string =>
 /** Mercury through Pluto, with the catalogue's moon count and a few moons drawn. */
 export const renderAll = (): string =>
   render("all.html", "Wakusei Planets 惑星: all the moons", "Mercury through Pluto, each with the moons the catalogue gives it, and a few of those moons drawn. English and Japanese.");
+
+/** The moon-count grid: nine painted planets and the catalogue's count for each. */
+export const renderCounts = (): string =>
+  render("counts.html", "Wakusei Planets 惑星: who has the most moons", "Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto, each painted, with how many moons the catalogue gives it. English and Japanese.");
 
 /** The standing page. */
 export const renderSurface = (): string =>

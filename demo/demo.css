@@ -219,3 +219,15 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
   .all-planet { width: 64px; height: 64px; }
   .all-moon { width: 64px; }
 }
+/* Who has the most moons: nine painted planets, three across, two on a phone. */
+.counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; list-style: none; margin: 16px 0 0; padding: 0; }
+@media (max-width: 600px) { .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+a.count { display: grid; justify-items: center; align-content: start; gap: 4px; min-width: 0; padding: 10px 8px 12px; border: 1px solid var(--rule); border-radius: 16px; background: #070b14; color: #fff; text-decoration: none; overflow: hidden; }
+a.count[data-most="true"] { box-shadow: inset 0 0 0 2px #f2d48a; }
+.count-globe { width: min(100%, 220px); aspect-ratio: 1; }
+.count-globe.clip-disc { border-radius: 50%; overflow: hidden; }
+.counts-source { margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
+.count-globe wakusei-body { display: block; width: 100%; height: 100%; --wakusei-size: 100%; }
+.count-name { font-size: 1rem; }
+.count-n { color: #d7d2c6; font-size: .95rem; }
+.count-most { color: #f2d48a; font-size: .8rem; }
