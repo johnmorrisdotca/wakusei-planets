@@ -1,5 +1,6 @@
 // The standing page's site row: choosing a site names it on Land, points the orbit view at that body, and says which rover will be driven. It does not come down; the descent is surface-land.demo.ts.
 import { expect, test } from "@playwright/test";
+import "./load.ts";
 
 test("choosing a site names it on Land and says which rover that site drives", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "the site row is the page's own control");

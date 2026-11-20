@@ -124,6 +124,15 @@ function paint(options?: { hint?: boolean }): void {
   note.hidden = apollo;
   if (!apollo) word(note, DRIVE_MODEL[site.id] ? "sf_rover_nasa" : "sf_rover_shapes");
   word($("#ground-words"), site.ground === "measured" ? "sf_credits" : "sf_flat");
+  const line = $("#ground-line");
+  if (view !== undefined && site.ground === "flat") {
+    line.hidden = false;
+    word(line, "sf_flat");
+    view.setAttribute("line-below", "");
+  } else {
+    line.hidden = true;
+    view?.removeAttribute("line-below");
+  }
   word(driveButton, driving ? "sf_stop_drive" : "sf_drive");
   driveButton.hidden = view === undefined;
   if (options?.hint !== false && !busy) standingHint();

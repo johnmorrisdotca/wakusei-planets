@@ -155,8 +155,10 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .surface-stage .fam-seg { background: rgba(0, 0, 0, 0.28); border-color: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
 .surface-stage .fam-seg button { color: var(--felt-ink); }
 .surface-stage .fam-seg button[aria-pressed="true"] { background: var(--felt-ink); color: var(--felt-deep); }
+#ground-line { display: none; }
 @media (max-width: 520px) {
-  .surface-stage > .fam-row:first-of-type { flex-direction: column; align-items: flex-start; }
+  #ground-line:not([hidden]) { display: block; margin: 12px 2px 0; }
+  .surface-stage > .fam-row:first-of-type { flex-direction: column; align-items: flex-start; margin-top: 12px; gap: 6px; }
 }
 
 /* The flat map page: the map on the felt, then the rows of choices and the card of the one chosen. */

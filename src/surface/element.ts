@@ -44,7 +44,7 @@ const TEMPLATE = `<style>
 :host([data-dragging]) { cursor: grabbing; }
 #stage { position: absolute; inset: 0; }
 #note { position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; font: 400 11px/1.35 system-ui, sans-serif; color: #c8ccd4; text-shadow: 0 1px 2px #000; pointer-events: none; }
-@media (max-width: 520px) { #stage { bottom: 38px; } #note { bottom: 4px; max-height: 34px; overflow: hidden; } }
+@media (max-width: 520px) { :host([line-below]) #note { display: none; } }
 #status { position: absolute; inset: 0; display: grid; place-items: center; font: 500 13px system-ui, sans-serif; color: #c8ccd4; pointer-events: none; }
 #status[hidden] { display: none; }
 #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
