@@ -52,12 +52,17 @@ test("a drive with a model's rig uses its size: the wheels turn by the distance 
   assert.ok(Math.abs(eye.east - -0.2) < 1e-9, "heading east: 0.2 m behind the middle is 0.2 m west, and the model's right (0.5 m) is south");
 });
 
-test("the shadow of a model is a box the size of its body, placed where the vehicle is", () => {
-  const rig = rigOf({ ...nodes, at: inDrive(nodes.at) })!;
-  const [part] = modelShadowParts({ east: 10, north: 20, heading: 0, pitch: 0, roll: 0, y: 5 }, rig, 1.2);
-  const xs = part!.position.filter((_, i) => i % 3 === 0);
-  const zs = part!.position.filter((_, i) => i % 3 === 2);
-  assert.ok(Math.abs(Math.max(...xs) - Math.min(...xs) - 2.2 * 0.8) < 1e-9);
+test("the shadow of a model follows the meshes' points, placed where the vehicle is", () => {
+  const clouds = [
+    [[-0.4, 0.5, 0.6], [0.4, 0.5, 0.6], [0.4, 0.5, -0.6], [-0.4, 0.5, -0.6]] as [number, number, number][],
+    [[-1.1, 0.3, 0.8], [1.1, 0.3, 0.8], [-1.1, 0.3, -0.8]] as [number, number, number][],
+  ];
+  const parts = modelShadowParts({ east: 10, north: 20, heading: 0, pitch: 0, roll: 0, y: 5 }, clouds);
+  assert.equal(parts.length, 2, "each mesh keeps its own shadow");
+  const xs = parts[0]!.position.filter((_, i) => i % 3 === 0);
+  const zs = parts[0]!.position.filter((_, i) => i % 3 === 2);
+  assert.ok(Math.abs(Math.max(...xs) - Math.min(...xs) - 0.8) < 1e-9, "the chassis cloud stays 0.8 m across, the width of its points");
   assert.ok(Math.abs((Math.max(...zs) + Math.min(...zs)) / 2 - 20) < 1e-9);
-  assert.ok(Math.min(...part!.position.filter((_, i) => i % 3 === 1)) >= 5 + rig.wheelRadius - 1e-9, "above the wheels' axles");
+  assert.ok(Math.min(...parts[0]!.position.filter((_, i) => i % 3 === 1)) >= 5.4, "the points keep their height over the ground");
+  assert.equal(modelShadowParts({ east: 0, north: 0, heading: 0, pitch: 0, roll: 0, y: 0 }, [[[0, 0, 0], [1, 0, 0]]]).length, 0, "fewer than three points casts nothing");
 });

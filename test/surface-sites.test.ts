@@ -39,7 +39,7 @@ test("a flat stand-in is the datum everywhere, with nothing to fetch, and says s
   assert.equal(terrain.pictures.length, 0);
   assert.equal(terrain.levels.length, 4);
   for (const [east, north] of [[0, 0], [123.4, -56.7], [4000, 4000], [-60_000, 20_000], [200_000, -200_000]] as const) assert.equal(groundAt(terrain.levels, terrain.manifest.height, east, north), 0, `${east} ${north}`);
-  assert.match(flatManifest(siteById("curiosity")!).accuracy, /flat stand-in until a DTM is added/);
+  assert.match(flatManifest(siteById("curiosity")!).accuracy, /flat stand-in until height data is added/);
 });
 
 test("Mars's gravity is 3.71: a free-falling rover and a thrown grain fall 2.29 times as fast as on the Moon", () => {

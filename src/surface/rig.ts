@@ -1,7 +1,7 @@
 // A rover model's rig, without a DOM and without three.js: the names of the nodes a model (a GLB) must give, the measures a drive step needs read from where those nodes are, and the angles the wheels and
 // steering pivots are turned to for a drive state. The loader (`model.ts`) finds the nodes; this decides what the numbers mean, so it is tested in node.
 import { ROVER, toWorld, type DriveState } from "./drive.ts";
-import { box, type Part, type V3 } from "./shapes.ts";
+import type { Part, V3 } from "./shapes.ts";
 
 /**
  * The nodes a rover model may name: `wheel-fl`, `wheel-fr`, `wheel-ml`, `wheel-mr`, `wheel-rl` and `wheel-rr` roll about X (their origin is the wheel's centre), `steer-fl`, `steer-fr`, `steer-rl` and `steer-rr`
@@ -127,27 +127,30 @@ export function modelPose(state: Pick<DriveState, "spin" | "steer">): { roll: Re
 export const fromModelFrame = (p: readonly [number, number, number]): V3 => [-p[0], p[1], p[2]];
 
 /**
- * The shadow of a model: one box the size of its body, placed as the drive state puts the vehicle (a shadow is the hull of a part's corners, so a box is its footprint).
+ * The shadow of a model: the points of its meshes, placed as the drive state puts the vehicle. One cloud is one mesh, in the drive frame at rest (x right, y up, z forward). `partShadows` takes the hull of each cloud, so the shadow follows the rover.
  *
  * @param state - The vehicle.
- * @param rig - The model's rig.
- * @param height - The model's height over the ground, metres.
- * @returns One part, to hand to `partShadows`.
+ * @param clouds - The meshes' points, as `VehicleModel.shadowClouds` keeps them.
+ * @returns One part a mesh, to hand to `partShadows`.
  *
  * @example
  * ```ts
- * import { modelShadowParts, partShadows, startDrive, ROVER } from "@johnmorrisdotca/wakusei-planets/surface";
+ * import { modelShadowParts, partShadows, startDrive } from "@johnmorrisdotca/wakusei-planets/surface";
  *
- * const parts = modelShadowParts(startDrive(0, 0, 0, 0), ROVER, 1.5);
+ * const parts = modelShadowParts(startDrive(0, 0, 0, 0), [[[-0.4, 0.5, 0.8], [0.4, 0.5, 0.8], [0, 1.2, 0]]]);
  * console.log(partShadows(parts, 0, 90, 20).length / 9, "triangles of shadow");
  * ```
  */
-export function modelShadowParts(state: Pick<DriveState, "east" | "north" | "heading" | "pitch" | "roll" | "y">, rig: Rig, height: number): Part[] {
-  const part = box([0, height / 2 + rig.wheelRadius, 0], [rig.track * 0.8, height, rig.length * 0.85], 0, 1);
-  const position: number[] = [];
-  for (let i = 0; i < part.position.length; i += 3) {
-    const w = toWorld(state, [part.position[i]!, part.position[i + 1]!, part.position[i + 2]!]);
-    position.push(w[0], w[1], w[2]);
+export function modelShadowParts(state: Pick<DriveState, "east" | "north" | "heading" | "pitch" | "roll" | "y">, clouds: readonly (readonly V3[])[]): Part[] {
+  const out: Part[] = [];
+  for (const cloud of clouds) {
+    if (cloud.length < 3) continue;
+    const position: number[] = [];
+    for (const p of cloud) {
+      const w = toWorld(state, [p[0], p[1], p[2]]);
+      position.push(w[0], w[1], w[2]);
+    }
+    out.push({ position, normal: [], tone: 1 });
   }
-  return [{ ...part, position, normal: part.normal }];
+  return out;
 }

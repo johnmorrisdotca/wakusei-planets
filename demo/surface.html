@@ -12,8 +12,22 @@
       <section class="fam-felt surface-stage" aria-labelledby="stage-h">
         <h2 id="stage-h" class="fam-sr" data-say="sf_stage">Standing on the Moon</h2>
         <wakusei-space id="orbit" tabindex="0" speed="0" look="realistic" controls="none" texture-base="textures/" tiles="tiles/" data-testid="orbit"></wakusei-space>
+        <p class="fam-fine" id="ground-line" hidden></p>
+        <div class="fam-row">
+          <span class="fam-label" data-say="sf_sites">Site</span>
+          <div class="group fam-seg" id="sites" role="group" aria-label="Site" data-say-label="sf_sites">
+            <button type="button" data-site="apollo-17" aria-pressed="true" data-say="sf_site_a17" data-testid="site-apollo-17">Apollo 17</button>
+            <button type="button" data-site="perseverance" aria-pressed="false" data-say="sf_site_percy" data-testid="site-perseverance">Perseverance</button>
+            <button type="button" data-site="curiosity" aria-pressed="false" data-say="sf_site_curio" data-testid="site-curiosity">Curiosity</button>
+            <button type="button" data-site="apollo-15" aria-pressed="false" data-say="sf_site_a15" data-testid="site-apollo-15">Apollo 15</button>
+            <button type="button" data-site="apollo-16" aria-pressed="false" data-say="sf_site_a16" data-testid="site-apollo-16">Apollo 16</button>
+            <button type="button" data-site="chang-e-3" aria-pressed="false" data-say="sf_site_ce3" data-testid="site-chang-e-3">Chang'e 3</button>
+            <button type="button" data-site="chang-e-4" aria-pressed="false" data-say="sf_site_ce4" data-testid="site-chang-e-4">Chang'e 4</button>
+          </div>
+        </div>
         <div class="fam-row landing-row">
           <button type="button" class="fam-button" id="land" data-say="sf_land" data-testid="land">Land at Apollo 17</button>
+          <button type="button" class="fam-button" id="drive" data-say="sf_drive" data-testid="drive" hidden>Drive</button>
           <button type="button" class="fam-button" id="leave" data-say="sf_leave" data-testid="leave" hidden>Go back up</button>
           <button type="button" class="fam-button" id="watch" data-say="sf_watch" data-testid="watch" hidden>Watch the landing</button>
         </div>
@@ -46,7 +60,7 @@
               <button type="button" disabled data-days="6" aria-pressed="false" data-say="sf_high">High (6 days later)</button>
             </div>
           </div>
-          <div class="fam-row">
+          <div class="fam-row" id="detail-row">
             <span class="fam-label" data-say="sf_detail">Detail</span>
             <div class="group fam-seg" id="details" role="group" aria-label="Detail" data-say-label="sf_detail">
               <button type="button" disabled data-detail="on" aria-pressed="true" data-say="sf_made">Measured and made</button>
@@ -56,8 +70,9 @@
         </div>
       </div>
 
-      <p class="fam-fine credits" data-testid="rover-credit"><span data-say="sf_rover_lead">The Apollo rover model this site serves (models/apollo-lrv.glb):</span> <a href="https://sketchfab.com/3d-models/mondfahrzeug-lunar-rover-acb3f8645a69493cb211a62b40d66aab">"Mondfahrzeug (Lunar Rover)"</a> <span data-say="sf_rover_by">by</span> <a href="https://sketchfab.com/deutsches-museum">Deutsches Museum | Digital</a>, <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a><span data-say="sf_rover_tail">, modified. This one file is CC BY-SA 4.0, and anything that adapts it must be shared under the same licence; the code around it is MIT.</span></p>
-      <p class="fam-fine credits"><span data-say="sf_credits">The heights are the narrow angle camera's and the laser altimeter's of NASA's Lunar Reconnaissance Orbiter, from the Planetary Data System (public domain): NASA/GSFC/Arizona State University and the LOLA Team. Everything smaller than the 5 m grid is made by this package, not measured.</span></p>
+      <p class="fam-fine credits" id="rover-credit" data-testid="rover-credit"><span data-say="sf_rover_lead">The Apollo rover model this site serves (models/apollo-lrv.glb):</span> <a href="https://sketchfab.com/3d-models/mondfahrzeug-lunar-rover-acb3f8645a69493cb211a62b40d66aab">"Mondfahrzeug (Lunar Rover)"</a> <span data-say="sf_rover_by">by</span> <a href="https://sketchfab.com/deutsches-museum">Deutsches Museum | Digital</a>, <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a><span data-say="sf_rover_tail">, modified. This one file is CC BY-SA 4.0, and anything that adapts it must be shared under the same licence; the code around it is MIT.</span></p>
+      <p class="fam-fine credits" id="rover-note" data-testid="rover-note" hidden></p>
+      <p class="fam-fine credits" id="ground-credit"><span id="ground-words" data-say="sf_credits">The heights are the narrow angle camera's and the laser altimeter's of NASA's Lunar Reconnaissance Orbiter, from the Planetary Data System (public domain): NASA/GSFC/Arizona State University and the LOLA Team. Everything smaller than the 5 m grid is made by this package, not measured.</span></p>
 
       <!--family:unreviewed-->
       <!--family:footer-->

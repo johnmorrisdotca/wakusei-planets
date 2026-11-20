@@ -1,12 +1,11 @@
-// The standing page: <wakusei-surface> at the Apollo 17 landing site with a few choices: where to look, how high the Sun is (days after the landing), and whether the made detail is shown. A choice sets
-// an attribute; nothing here runs on a timer. The page's tiles are the Pages build's `tiles/` folder.
+// The standing page: a row of the seven sites, then Land. Apollo 17 is the one that starts chosen, and the only one whose descent can be watched. Drive, once down, uses that site's rover model where the package has one. A choice sets an attribute; nothing here runs on a timer.
 import "../src/space/element.ts";
 import "../src/surface/element.ts";
 import type { WakuseiSpace } from "../src/space/element.ts";
 import { land, leave } from "../src/surface/land.ts";
 import type { WakuseiSurface } from "../src/surface/element.ts";
-import { moonSky } from "../src/surface/sky.ts";
-import { siteById } from "../src/surface/site.ts";
+import { standSky } from "../src/surface/sky.ts";
+import { siteById, type SurfaceSite } from "../src/surface/site.ts";
 import { WORDS } from "./words.js";
 
 const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined } | undefined => Reflect.get(globalThis, "wakuseiLanguage") as { lang: "en" | "ja"; word(key: string): string | undefined } | undefined;
@@ -14,30 +13,71 @@ const say = (key: string, values: Record<string, string | number> = {}): string 
 const $ = <T extends HTMLElement = HTMLElement>(selector: string): T => document.querySelector<T>(selector)!;
 const $$ = (selector: string): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>(selector)];
 const pressed = (button: Element, on: boolean): void => button.setAttribute("aria-pressed", String(on));
+const lang = (): "en" | "ja" => chooser()?.lang ?? "en";
+
+/** A real rover file, served beside the page. Chang'e 3 and Chang'e 4 have none: NASA's catalogue has no Yutu model, so those two drive the package's shapes. */
+const DRIVE_MODEL: Record<string, string> = {
+  perseverance: "models/perseverance.glb",
+  curiosity: "models/curiosity.glb",
+  "apollo-17": "models/apollo-lrv.glb",
+  "apollo-15": "models/apollo-lrv.glb",
+  "apollo-16": "models/apollo-lrv.glb",
+};
 
 const orbit = $<WakuseiSpace>("#orbit");
-const site = siteById("apollo-17")!;
+let site: SurfaceSite = siteById("apollo-17")!;
 /** The standing view while landed: the choices below act on it, and are off while in orbit. */
 let view: WakuseiSurface | undefined;
-const LOOKS: Record<string, { heading: number; pitch: number; fov: number }> = {
-  massif: { heading: site.look.azimuth, pitch: site.look.pitch, fov: site.look.fov },
-  sun: { heading: 62, pitch: 7, fov: 66 },
-  feet: { heading: site.look.azimuth, pitch: -50, fov: 75 },
-};
+/** True while a descent is in flight, so a language change does not replace its line. */
+let busy = false;
+let driving = false;
+let lookKey = "massif";
 const DAY = 86_400_000;
 let days = 0;
+
+const landButton = $<HTMLButtonElement>("#land");
+const driveButton = $<HTMLButtonElement>("#drive");
+const leaveButton = $<HTMLButtonElement>("#leave");
+const watchButton = $<HTMLButtonElement>("#watch");
+const watching = $("#watching");
+
+function word(el: HTMLElement, key: string, values?: Record<string, string | number>): void {
+  if (values) delete el.dataset["say"];
+  else el.dataset["say"] = key;
+  el.textContent = say(key, values);
+}
+
+function place(): string {
+  return site.name[lang()];
+}
 
 function caption(): void {
   if (view === undefined) {
     $("#caption").textContent = "";
     return;
   }
-  const sky = moonSky(site.lat, site.lon, site.time + days * DAY);
-  $("#caption").textContent = say("sf_caption", { sun: sky.sun.altitude.toFixed(0), earth: sky.earth.altitude.toFixed(0), lit: (100 * sky.earthIllumination).toFixed(0) });
+  const sky = standSky(site.body, site.lat, site.lon, site.time + days * DAY);
+  const sun = sky.sun.altitude.toFixed(0);
+  const earthUp = sky.earth.altitude > 0;
+  const earth = sky.earth.altitude.toFixed(0);
+  const lit = (100 * sky.earthIllumination).toFixed(0);
+  if (site.body === "mars") $("#caption").textContent = say("sf_caption_mars", { place: place(), sun });
+  else if (!earthUp) $("#caption").textContent = say("sf_caption_down", { place: place(), sun });
+  else if (site.id === "apollo-17") $("#caption").textContent = say("sf_caption", { sun, earth, lit });
+  else $("#caption").textContent = say("sf_caption_place", { place: place(), sun, earth, lit });
+}
+
+function pose(key: string): { heading: number; pitch: number; fov: number } {
+  if (key === "sun" && site.id === "apollo-17") return { heading: 62, pitch: 7, fov: 66 };
+  const sky = standSky(site.body, site.lat, site.lon, site.time + days * DAY);
+  if (key === "sun") return { heading: sky.sun.azimuth, pitch: Math.max(2, sky.sun.altitude), fov: 66 };
+  if (key === "feet") return { heading: site.look.azimuth, pitch: -50, fov: 75 };
+  return { heading: site.look.azimuth, pitch: site.look.pitch, fov: site.look.fov };
 }
 
 function look(key: string): void {
-  const l = LOOKS[key]!;
+  lookKey = key;
+  const l = pose(key);
   view?.setAttribute("heading", String(l.heading));
   view?.setAttribute("pitch", String(l.pitch));
   view?.setAttribute("fov", String(l.fov));
@@ -48,8 +88,85 @@ function time(next: number): void {
   days = next;
   view?.setAttribute("time", new Date(site.time + days * DAY).toISOString());
   for (const button of $$("#times button")) pressed(button, Number(button.dataset["days"]) === days);
+  if (lookKey === "sun") look("sun");
   caption();
 }
+
+function hint(key: string, values?: Record<string, string | number>): void {
+  const el = $("#hint");
+  if (values) delete el.dataset["say"];
+  else el.dataset["say"] = key;
+  el.textContent = say(key, values);
+}
+
+/** The line under the picture, and the body the orbit view shows, for the site now chosen. */
+function standingHint(): void {
+  if (driving) hint("sf_hint_drive");
+  else if (view !== undefined) hint(site.ground === "measured" ? "sf_hint" : "sf_hint_flat");
+  else if (site.id === "apollo-17") hint("sf_orbit");
+  else hint("sf_orbit_at", { body: say(site.body === "mars" ? "sf_body_mars" : "sf_body_moon"), place: place() });
+  if (view === undefined) {
+    orbit.body = site.body;
+    orbit.time = site.time;
+  }
+}
+
+function paint(options?: { hint?: boolean }): void {
+  for (const button of $$("#sites button")) pressed(button, button.dataset["site"] === site.id);
+  word($("#stage-h"), site.body === "mars" ? "sf_stage_mars" : "sf_stage");
+  if (site.id === "apollo-17") word(landButton, "sf_land");
+  else word(landButton, "sf_land_at", { place: place() });
+  word($("#looks button[data-look=massif]")!, site.id === "apollo-17" ? "sf_massif" : "sf_view");
+  $("#detail-row").hidden = site.ground !== "measured";
+  const apollo = site.id.startsWith("apollo");
+  $("#rover-credit").hidden = !apollo;
+  const note = $("#rover-note");
+  note.hidden = apollo;
+  if (!apollo) word(note, DRIVE_MODEL[site.id] ? "sf_rover_nasa" : "sf_rover_shapes");
+  word($("#ground-words"), site.ground === "measured" ? "sf_credits" : "sf_flat");
+  const line = $("#ground-line");
+  if (view !== undefined && site.ground === "flat") {
+    line.hidden = false;
+    word(line, "sf_flat");
+    view.setAttribute("line-below", "");
+  } else {
+    line.hidden = true;
+    view?.removeAttribute("line-below");
+  }
+  word(driveButton, driving ? "sf_stop_drive" : "sf_drive");
+  driveButton.hidden = view === undefined;
+  if (options?.hint !== false && !busy) standingHint();
+  caption();
+}
+
+function setDrive(on: boolean): void {
+  if (view === undefined) return;
+  driving = on;
+  if (on) {
+    view.removeAttribute("watch");
+    watching.hidden = true;
+    watchButton.hidden = site.id !== "apollo-17";
+    view.setAttribute("drive", "on");
+    const model = DRIVE_MODEL[site.id];
+    if (model) view.setAttribute("drive-model", model);
+    else view.removeAttribute("drive-model");
+  } else {
+    view.removeAttribute("drive");
+    view.removeAttribute("drive-model");
+  }
+  paint();
+}
+
+const choices = (on: boolean): void => {
+  for (const button of $$("#looks button, #times button, #details button")) button.disabled = !on;
+};
+const sites = (on: boolean): void => {
+  for (const button of $$("#sites button")) button.disabled = !on;
+};
+const watchOn = (on: boolean): void => {
+  watching.hidden = !on;
+  watchButton.hidden = on || view === undefined || site.id !== "apollo-17";
+};
 
 for (const button of $$("#looks button")) button.addEventListener("click", () => look(button.dataset["look"]!));
 for (const button of $$("#times button")) button.addEventListener("click", () => time(Number(button.dataset["days"])));
@@ -61,56 +178,53 @@ for (const button of $$("#details button")) {
     for (const other of $$("#details button")) pressed(other, other === button);
   });
 }
-const choices = (on: boolean): void => {
-  for (const button of $$("#looks button, #times button, #details button")) button.disabled = !on;
-};
-const orbitHint = (key: string): void => {
-  $("#hint").dataset["say"] = key;
-  $("#hint").textContent = say(key);
-};
-const landButton = $<HTMLButtonElement>("#land");
-const leaveButton = $<HTMLButtonElement>("#leave");
+for (const button of $$("#sites button")) {
+  button.addEventListener("click", () => {
+    const next = siteById(button.dataset["site"] ?? "");
+    if (!next || next.id === site.id || button.disabled) return;
+    site = next;
+    look("massif");
+    paint();
+  });
+}
 
-orbit.time = site.time;
-orbit.body = "moon";
 landButton.addEventListener("click", () => {
+  busy = true;
   landButton.disabled = true;
-  orbitHint("sf_landing");
+  sites(false);
+  if (site.id === "apollo-17") hint("sf_landing");
+  else hint("sf_landing_at", { place: place() });
   void land(orbit, site.id, { tiles: "tiles/", time: site.time + days * DAY }).then(
     (surface) => {
+      busy = false;
+      driving = false;
       view = surface as WakuseiSurface;
       landButton.hidden = true;
       leaveButton.hidden = false;
-      watchButton.hidden = false;
       choices(true);
+      sites(false);
       look("massif");
-      orbitHint("sf_hint");
-      caption();
+      watchOn(false);
+      paint();
     },
     () => {
+      busy = false;
       landButton.disabled = false;
-      orbitHint("sf_failed");
+      sites(true);
+      hint("sf_failed");
     },
   );
 });
 leaveButton.addEventListener("click", () => void leave(orbit));
+driveButton.addEventListener("click", () => setDrive(!driving));
+
 // watching the descent: the standing view runs Apollo 17's powered descent when its `watch` is `landing`
-const watchButton = $<HTMLButtonElement>("#watch");
-const watching = $("#watching");
 const scrub = $<HTMLInputElement>("#watch-scrub");
 const playButton = $<HTMLButtonElement>("#watch-play");
 const cameraButton = $<HTMLButtonElement>("#watch-camera");
 const rateButton = $<HTMLButtonElement>("#watch-rate");
-const word = (button: HTMLElement, key: string): void => {
-  button.dataset["say"] = key;
-  button.textContent = say(key);
-};
-const watchOn = (on: boolean): void => {
-  watching.hidden = !on;
-  watchButton.hidden = on || view === undefined;
-};
 watchButton.addEventListener("click", () => {
-  if (view === undefined) return;
+  if (view === undefined || site.id !== "apollo-17") return;
   view.setAttribute("watch-camera", "lander");
   view.setAttribute("watch", "landing");
   word(cameraButton, "sf_camera_ground");
@@ -152,21 +266,22 @@ orbit.addEventListener("wakusei-landing-clock", (event) => {
   if (!detail.playing && detail.t >= 725) word(playButton, "sf_play");
 });
 orbit.addEventListener("wakusei-left", () => {
+  busy = false;
+  driving = false;
   view = undefined;
   landButton.hidden = false;
   landButton.disabled = false;
   leaveButton.hidden = true;
-  watchButton.hidden = true;
-  watching.hidden = true;
+  watchOn(false);
   choices(false);
-  orbitHint("sf_orbit");
-  caption();
+  sites(true);
+  paint();
 });
 window.addEventListener("wakusei-language", () => {
-  const lang = chooser()?.lang ?? "en";
-  orbit.setAttribute("lang", lang);
-  view?.setAttribute("lang", lang);
-  caption();
+  const next = lang();
+  orbit.setAttribute("lang", next);
+  view?.setAttribute("lang", next);
+  paint();
 });
-orbit.setAttribute("lang", chooser()?.lang ?? "en");
-caption();
+orbit.setAttribute("lang", lang());
+paint();
