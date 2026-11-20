@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Who has the most moons** (MODULES-1725). `counts.html` on the demo draws Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto, each already painted, with the count of moons `moonCounts()` gives that host (a host the catalogue does not list shows none). The planet with the highest count is marked. Jupiter, Uranus and Neptune are zoomed so their faint rings do not shrink the globe in the tile; Saturn keeps its rings in the frame. English and Japanese. Linked from the first page and the header. `test/moon-counts.test.ts` checks the rows against the catalogue, and `e2e/moon-counts.demo.ts` checks the page.
+
 ## [0.71.0] - 2026-11-19
 
 - **`<wakusei-moon-pages>`: the moon pages as an element** (`./moon-pages/element`). `<wakusei-moon-pages planet="saturn">` is the demo's moon page in one element: the four tabs (Orbits, Map and portrait, Main moons, Every moon), in English and Japanese (`lang`, or the nearest `lang` up the page, followed as it changes), with the plan, the portrait, the cards' bodies and the planet's looks fetched only when their tab first opens. A change of `planet` draws the other planet. It never writes the page's address: the choices are the attributes `tab`, `view`, `reach`, `colour`, `sort` and `order`, a choice made in it is reflected on them and sent as `wakusei-moon-pages-change` (`detail`: the whole `MoonPagesState`), and a slot named `planets` takes a page's own links to the other planets. `texture-base` and `texture-far-base` are handed to the bodies it draws. `MOON_PAGE_TABS` lists the tabs.

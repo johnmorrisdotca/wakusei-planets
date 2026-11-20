@@ -5,14 +5,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { MOON_PAGE_HOSTS } from "../src/moon-pages/data.ts";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
-import { renderCraft, renderEmbed, renderFlat, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface } from "./page.ts";
+import { renderCounts, renderCraft, renderEmbed, renderFlat, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
 
 await rm(at("site/"), { recursive: true, force: true });
 await mkdir(at("site/"), { recursive: true });
 await build({
-  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts"), at("demo/flat.ts"), at("demo/system.ts"), at("demo/moons.ts")],
+  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts"), at("demo/flat.ts"), at("demo/system.ts"), at("demo/moons.ts"), at("demo/counts.ts")],
   bundle: true,
   splitting: true,
   format: "esm",
@@ -54,5 +54,6 @@ await writeFile(at("site/flat.html"), renderFlat(), "utf8");
 await writeFile(at("site/system.html"), renderSystem(), "utf8");
 await writeFile(at("site/surface.html"), renderSurface(), "utf8");
 for (const host of MOON_PAGE_HOSTS) await writeFile(at(`site/${host}.html`), renderMoons(host), "utf8");
+await writeFile(at("site/counts.html"), renderCounts(), "utf8");
 await cp(at("demo/builder.html"), at("site/builder.html"));
-console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, system.html, jupiter.html, saturn.html, uranus.html, neptune.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
+console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, system.html, jupiter.html, saturn.html, uranus.html, neptune.html, counts.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");

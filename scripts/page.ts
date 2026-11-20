@@ -15,7 +15,7 @@ const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOT
 const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"></span>', `<span><span data-say="foot"></span> <a href="${NOTICE}" data-say="creditsAll"></a></span>`);
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "counts.html", say: "pageCounts" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -77,6 +77,10 @@ export const renderFlat = (): string =>
 /** The flat solar system page. */
 export const renderSystem = (): string =>
   render("system.html", "Wakusei Planets 惑星: the flat solar system", "The Sun, the planets, the belts, the comets and our spacecraft, the Tesla Roadster among them, from above for any time, with squeezed distances so the inner planets show. English and Japanese, no WebGL.");
+
+/** The moon-count grid: nine painted planets and the catalogue's count for each. */
+export const renderCounts = (): string =>
+  render("counts.html", "Wakusei Planets 惑星: who has the most moons", "Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto, each painted, with how many moons the catalogue gives it. English and Japanese.");
 
 /** The standing page. */
 export const renderSurface = (): string =>
