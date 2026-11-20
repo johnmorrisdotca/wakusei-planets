@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Every moon is named on the orbit picture** (MODULES-1728). From above, at an angle, or from the side, each moon's name is written beside the dot where it is that day, in English or Japanese. A name that would sit on another steps aside. The picture is the width of the page, and Full screen fills the screen with it. Pointing at an orbit still says whose it is. The recorded shape of the moon-pages element changes with those names and the Full screen button.
+
 ## [0.72.0] - 2026-11-20
 
 - **The copy-paste snippet names the current package** (MODULES-1719). `VERSION` in `src/version.ts` had stayed at 0.54.0 while releases bumped `package.json` only, so a copied snippet asked for `@0.54.0`. It is 0.71.0, the same as `package.json`, and `test/version.test.ts` fails when the two disagree. The texture address types in `test/api-snapshot.txt` name 0.71.0 as well.
