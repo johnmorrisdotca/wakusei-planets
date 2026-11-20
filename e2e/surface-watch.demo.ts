@@ -89,7 +89,7 @@ for (const camera of ["lander", "ground"] as const) {
       const box = (await view(page).boundingBox())!;
       const fov = await read(page, (el) => el.look.fov);
       const perPixel = fov / box.height;
-      const before = { azimuth: await azimuth(page), pitch: await pitch(page), draws: await draws(page) };
+      const before = { azimuth: await azimuth(page), draws: await draws(page) };
       // a hand drags to the right: the view turns to the left, as in the standing view; and down, which tips it up
       await drag(page, 100, 0);
       const after = { azimuth: await azimuth(page), draws: await draws(page) };
@@ -102,10 +102,11 @@ for (const camera of ["lander", "ground"] as const) {
       else await page.waitForTimeout(800);
       const later = await azimuth(page);
       expect(Math.abs(turn(after.azimuth, later)), "the turn stays").toBeLessThan(3);
-      // and a drag down tips the view up, and it stays too
+      // a drag down tips the view up, and it stays too. The pitch is read here, not from `before`: while the descent plays, the ground camera looks up at a lander that is falling, so its own pitch falls by several degrees across the azimuth drag and the frames that follow. Counting that fall made a 6 degree tip look like less than 2 on a slow run (MODULES-1748).
+      const pitchBefore = await pitch(page);
       await drag(page, 0, 40);
       const tipped = await pitch(page);
-      expect(tipped - before.pitch, "dragging down tips the view up").toBeGreaterThan(2);
+      expect(tipped - pitchBefore, "dragging down tips the view up").toBeGreaterThan(2);
       if (playing) await expect.poll(() => draws(page), { timeout: 120_000 }).toBeGreaterThanOrEqual((await draws(page)) + 3);
       expect(Math.abs((await pitch(page)) - tipped), "the tip stays").toBeLessThan(3);
     });
