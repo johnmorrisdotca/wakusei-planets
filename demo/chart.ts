@@ -59,9 +59,12 @@ function picture(data: JupiterChart, lang: "en" | "ja"): SVGSVGElement {
   planetName.setAttribute("text-anchor", "middle");
   planetName.textContent = planetLabel;
   svg.append(planet, planetName);
-  const labels: { x: number; y: number; w: number }[] = [];
-  labelFits(labels, data.planet.x, data.planet.y + data.planet.r + font, textWidth(planetLabel, lang, font), font);
-  for (const dot of data.dots) {
+  const labels: { x: number; y: number; w: number; h: number }[] = [];
+  const planetCircle = { x: data.planet.x, y: data.planet.y, r: data.planet.r };
+  const moonCircles = data.dots.map((dot) => ({ x: dot.x, y: dot.y, r: dot.r }));
+  const circles = [planetCircle, ...moonCircles];
+  labelFits(labels, circles, planetCircle, data.planet.x, data.planet.y + data.planet.r + font, textWidth(planetLabel, lang, font), font, false);
+  for (const [index, dot] of data.dots.entries()) {
     const group = document.createElementNS(SVG, "g");
     const family = lang === "ja" ? dot.family.ja : dot.family.en;
     const km = Math.round(dot.diameterKm).toLocaleString("en-CA");
@@ -75,8 +78,8 @@ function picture(data: JupiterChart, lang: "en" | "ja"): SVGSVGElement {
     circle.setAttribute("data-moon", dot.id);
     const big = dot.r >= 14;
     const caption = big ? nameOf(dot, lang) : yearCaption(dot, lang);
-    const y = big ? dot.y + dot.r + font * 0.9 : dot.y - dot.r - font * 0.25;
-    if (caption !== "" && caption !== "*" && labelFits(labels, dot.x, y, textWidth(caption, lang, font), font)) {
+    const y = big ? dot.y + dot.r + font + 8 : dot.y - dot.r - font * 0.45 - 8;
+    if (caption !== "" && caption !== "*" && labelFits(labels, circles, moonCircles[index]!, dot.x, y, textWidth(caption, lang, font), font, !big)) {
       const text = document.createElementNS(SVG, "text");
       text.setAttribute("x", String(dot.x));
       text.setAttribute("y", String(y));
@@ -102,20 +105,45 @@ function yearCaption(dot: ChartDot, lang: "en" | "ja"): string {
 
 /** A Japanese glyph is about twice a Latin letter at the same size. The 5.4 is the Latin width at a 10-unit font. */
 function textWidth(text: string, lang: "en" | "ja", font: number): number {
-  return text.length * (lang === "ja" ? 10.8 : 5.4) * (font / 10);
+  return text.length * (lang === "ja" ? 12 : 5.4) * (font / 10);
 }
 
-/** A label is drawn only when its line does not cross one already placed. */
-function labelFits(placed: { x: number; y: number; w: number }[], x: number, y: number, width: number, line: number): boolean {
-  const box = { x, y, w: width };
-  const hit = placed.some((other) => Math.abs(other.y - y) < line && Math.abs(other.x - x) < (other.w + width) / 2 + 4);
-  if (!hit) placed.push(box);
-  return !hit;
+/** A label is drawn only when it touches neither another label nor a circle. A year that would sit across a row of moons is left off. */
+function labelFits(placed: { x: number; y: number; w: number; h: number }[], circles: { x: number; y: number; r: number }[], own: { x: number; y: number; r: number }, x: number, y: number, width: number, line: number, year: boolean): boolean {
+  const top = y - line * 0.9;
+  const bottom = y + line * 0.25;
+  const left = x - width / 2;
+  const right = x + width / 2;
+  const pad = year ? line * 0.85 : 4;
+  const hitsLabel = placed.some((other) => Math.abs(other.y - y) < (other.h + line) / 2 && Math.abs(other.x - x) < (other.w + width) / 2 + 6);
+  const hitsCircle = circles.some((circle) => {
+    if (circle === own) return false;
+    const nearestX = Math.min(Math.max(circle.x, left), right);
+    const nearestY = Math.min(Math.max(circle.y, top), bottom);
+    return (nearestX - circle.x) ** 2 + (nearestY - circle.y) ** 2 < (circle.r + pad) ** 2;
+  });
+  if (hitsLabel || hitsCircle) return false;
+  placed.push({ x, y, w: width, h: line });
+  return true;
 }
 
-draw(language());
+let drawnWidth = -1;
+function paint(): void {
+  const width = document.querySelector("#chart")?.clientWidth ?? 0;
+  drawnWidth = width;
+  draw(language());
+}
+paint();
 window.addEventListener("wakusei-language", (event) => {
   const lang = (event as CustomEvent<{ lang?: string }>).detail?.lang;
+  drawnWidth = -1;
   draw(lang === "ja" ? "ja" : "en");
 });
-window.addEventListener("resize", () => draw(language()));
+const chartBox = document.querySelector("#chart");
+if (chartBox) {
+  new ResizeObserver(() => {
+    const width = chartBox.clientWidth;
+    if (width === drawnWidth) return;
+    paint();
+  }).observe(chartBox);
+}

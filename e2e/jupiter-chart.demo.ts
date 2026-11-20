@@ -19,7 +19,9 @@ test("every moon of Jupiter is a circle, and the page does not scroll sideways a
   expect(extra).toBeLessThanOrEqual(1);
   const label = await page.locator("#chart text").first().boundingBox();
   expect(label?.height ?? 0).toBeGreaterThanOrEqual(11);
+  await expect(page.locator("#chart text", { hasText: "Ganymede" })).toBeVisible();
   await page.goto("/wakusei-planets/chart.html?lang=ja");
+  await expect(page.locator("#chart text", { hasText: "ガニメデ" })).toBeVisible();
   await expect(page.locator("#chart-legend")).toContainText("ヒマリア群（");
   await expect(page.locator("#chart-source")).toContainText("図は衛星カタログ");
   const tip = await page.locator("#chart title").first().textContent();

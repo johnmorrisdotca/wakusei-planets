@@ -3,7 +3,7 @@ import { BODIES } from "./facts.ts";
 import { catalogueMoonsOf, moonFamilies, moonOrbitColor, MOON_CATALOGUE_FETCHED, type CatalogueMoon } from "./moon-catalogue.ts";
 
 export const CHART_W = 1000;
-export const CHART_H = 720;
+export const CHART_H = 1300;
 
 export interface ChartDot {
   id: string;
@@ -37,47 +37,98 @@ export interface JupiterChart {
   dots: ChartDot[];
 }
 
-const PLANET = { x: 500, y: 640, r: 22 };
+const PLANET = { x: 500, y: 1220, r: 34 };
+const INNER_KM = 3_000_000;
 
-function fits(x: number, y: number, r: number, placed: readonly ChartDot[]): boolean {
-  if (x - r < 8 || x + r > CHART_W - 8 || y - r < 36 || y + r > PLANET.y - PLANET.r - 10) return false;
-  if (Math.hypot(x - PLANET.x, y - PLANET.y) < r + PLANET.r + 8) return false;
-  return placed.every((dot) => Math.hypot(x - dot.x, y - dot.y) >= r + dot.r + 3);
+type Pending = { moon: CatalogueMoon; family: { en: string; ja: string }; familyId: string; diameter: number; distance: number | null; r: number };
+
+/** Rows that stay inside the width. A row is one distance band, so a group is not piled onto the next. */
+function rowsOf(items: Pending[]): Pending[][] {
+  const rows: Pending[][] = [];
+  let row: Pending[] = [];
+  let width = 0;
+  for (const item of items) {
+    const need = item.r * 2 + 8;
+    if (row.length > 0 && width + need > CHART_W - 24) {
+      rows.push(row);
+      row = [];
+      width = 0;
+    }
+    row.push(item);
+    width += need;
+  }
+  if (row.length > 0) rows.push(row);
+  return rows;
 }
 
-/** Every moon of Jupiter in the catalogue, packed into one picture. A circle's area follows the moon's diameter, and its height follows its distance. */
+function layRow(items: Pending[], y: number): ChartDot[] {
+  const gap = 8;
+  const width = items.reduce((sum, item) => sum + item.r * 2 + gap, -gap);
+  let x = (CHART_W - width) / 2;
+  return items.map((item) => {
+    x += item.r;
+    const dot = dotOf(item.moon, item.family, item.diameter, item.distance, Math.round(x * 10) / 10, Math.round(y * 10) / 10, item.r);
+    x += item.r + gap;
+    return dot;
+  });
+}
+
+/** Every moon of Jupiter in the catalogue, packed into one picture. A circle's area follows the moon's diameter. Each outer group has its own rows, farthest at the top, and the empty gap between the inner moons and those rows is shortened. */
 export function jupiterMoonChart(): JupiterChart {
   const moons = catalogueMoonsOf("jupiter");
   const families = moonFamilies("jupiter");
-  const familyOf = new Map<string, { en: string; ja: string }>();
-  for (const family of families) for (const moon of family.moons) familyOf.set(moon.id, family.names);
-  const distances = moons.flatMap((moon) => (moon.orbit === null ? [] : [moon.orbit.a]));
-  const logMin = Math.log(Math.min(...distances));
-  const logMax = Math.log(Math.max(...distances));
+  const familyOf = new Map<string, { id: string; en: string; ja: string }>();
+  for (const family of families) for (const moon of family.moons) familyOf.set(moon.id, { id: family.id, ...family.names });
   const maxD = Math.max(...moons.map((moon) => (moon.radiusKm ?? 0.5) * 2));
-  const ordered = [...moons].sort((a, b) => (a.orbit?.a ?? Infinity) - (b.orbit?.a ?? Infinity));
-  const dots: ChartDot[] = [];
-  for (const moon of ordered) {
+  const pending: Pending[] = moons.map((moon) => {
+    const known = familyOf.get(moon.id);
     const diameter = (moon.radiusKm ?? 0.5) * 2;
-    const r = Math.round((5 + 29 * Math.sqrt(diameter / maxD)) * 10) / 10;
-    const distance = moon.orbit?.a ?? null;
-    const t = distance === null ? 1 : (Math.log(distance) - logMin) / (logMax - logMin || 1);
-    const y0 = 86 + (1 - t) * 500;
-    let spot = { x: PLANET.x, y: y0 };
-    let found = false;
-    for (let n = 0; n < 420 && !found; n++) {
-      const row = Math.floor(n / 36);
-      const col = n % 36;
-      const y = y0 - row * 4;
-      const side = col === 0 ? 0 : (col % 2 === 0 ? 1 : -1) * Math.ceil(col / 2);
-      const x = PLANET.x + side * (r * 2 + 4);
-      if (fits(x, y, r, dots)) {
-        spot = { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
-        found = true;
-      }
-    }
-    dots.push(dotOf(moon, familyOf.get(moon.id) ?? { en: "", ja: "" }, diameter, distance, spot.x, spot.y, r));
+    return {
+      moon,
+      family: { en: known?.en ?? "", ja: known?.ja ?? "" },
+      familyId: known?.id ?? "",
+      diameter,
+      distance: moon.orbit?.a ?? null,
+      r: Math.round((11 + 23 * Math.sqrt(diameter / maxD)) * 10) / 10,
+    };
+  });
+  const byDistance = (a: Pending, b: Pending) => (a.distance ?? Infinity) - (b.distance ?? Infinity);
+  const inner = pending.filter((item) => (item.distance ?? Infinity) < INNER_KM).sort(byDistance);
+  const outer = pending.filter((item) => (item.distance ?? Infinity) >= INNER_KM);
+  const groups = new Map<string, Pending[]>();
+  for (const item of outer) {
+    const list = groups.get(item.familyId) ?? [];
+    list.push(item);
+    groups.set(item.familyId, list);
   }
+  const outerGroups = [...groups.values()].map((items) => items.sort(byDistance)).sort((a, b) => {
+    const mid = (items: Pending[]) => items.reduce((sum, item) => sum + (item.distance ?? 0), 0) / items.length;
+    return mid(b) - mid(a);
+  });
+
+  const small = inner.filter((item) => item.r < 14);
+  const big = inner.filter((item) => item.r >= 14);
+  let y = PLANET.y - PLANET.r - 36;
+  const dots: ChartDot[] = [];
+  if (small.length > 0) {
+    y -= Math.max(...small.map((item) => item.r));
+    dots.push(...layRow(small, y));
+    y -= Math.max(...small.map((item) => item.r)) + 28;
+  }
+  for (const item of big) {
+    y -= item.r;
+    dots.push(...layRow([item], y));
+    y -= item.r + 64;
+  }
+  const outerBottom = y - 70;
+  const outerRows = outerGroups.flatMap((items) => rowsOf(items));
+  const span = Math.max(outerBottom - 56, outerRows.length * 36);
+  const step = span / Math.max(outerRows.length, 1);
+  outerRows.forEach((row, index) => {
+    const band = 48 + index * step;
+    const lift = Math.max(...row.map((item) => item.r));
+    dots.push(...layRow(row, Math.round((band + lift) * 10) / 10));
+  });
   return {
     width: CHART_W,
     height: CHART_H,
