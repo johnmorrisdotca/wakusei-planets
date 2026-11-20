@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **Who has the most moons** (MODULES-1725). `counts.html` on the demo draws Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto, each already painted, with the count of moons `moonCounts()` gives that host (a host the catalogue does not list shows none). The planet with the highest count is marked. Jupiter, Uranus and Neptune are zoomed so their faint rings do not shrink the globe in the tile; Saturn keeps its rings in the frame. English and Japanese. Linked from the first page and the header. `test/moon-counts.test.ts` checks the rows against the catalogue, and `e2e/moon-counts.demo.ts` checks the page.
+- **Who has the most moons** (MODULES-1725). `counts.html` on the demo draws Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto, each already painted, with the count of moons `moonCounts()` gives that host (a host the catalogue does not list shows none). The planet with the highest count is marked. Jupiter, Saturn, Uranus and Neptune are zoomed so the globe fills the tile and the rings run to its edge, where the tile crops them. Jupiter's globe is clipped to a circle so its faint ring plane does not show as a rectangle beside the disc. A line under the grid names the moon catalogue and the day it was read. A giant planet's tile opens its moon page; the others open that body on the demo. English and Japanese. Linked from the first page and the header. `test/moon-counts.test.ts` checks the rows against the catalogue, and `e2e/moon-counts.demo.ts` checks the page.
 
 ## [0.71.0] - 2026-11-19
 

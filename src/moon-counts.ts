@@ -1,6 +1,7 @@
 // Who has the most moons: the planets the package already paints, Mercury through Pluto, with each one's count taken from the moon catalogue. A host the catalogue does not list has none. No DOM.
 import { BODIES } from "./facts.ts";
-import { moonCounts, type HostId } from "./moon-catalogue.ts";
+import { MOON_CATALOGUE_FETCHED, moonCounts, type HostId } from "./moon-catalogue.ts";
+import { MOON_PAGE_HOSTS } from "./moon-pages/data.ts";
 
 /** The nine the count grid draws, in solar-system order. Pluto is last, as on the poster. */
 export const MOON_COUNT_IDS = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"] as const;
@@ -27,3 +28,11 @@ export function moonCountGrid(): MoonCountRow[] {
   const max = Math.max(...rows.map((row) => row.total));
   return rows.map((row) => ({ ...row, most: max > 0 && row.total === max }));
 }
+
+/** Where a tile goes. A giant planet opens its moon page. The others have no moon page, so the tile opens that body on the demo. */
+export function moonCountHref(id: MoonCountId): string {
+  return (MOON_PAGE_HOSTS as readonly string[]).includes(id) ? `${id}.html` : `index.html?body=${id}`;
+}
+
+/** The day the moon catalogue was read. The grid says so, because the counts change. */
+export const MOON_COUNT_READ = MOON_CATALOGUE_FETCHED;

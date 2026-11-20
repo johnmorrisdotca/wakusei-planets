@@ -2,7 +2,7 @@
 import "./load.ts";
 import { expect, test } from "@playwright/test";
 import { moonCounts } from "../src/moon-catalogue.ts";
-import { MOON_COUNT_IDS } from "../src/moon-counts.ts";
+import { MOON_COUNT_IDS, MOON_COUNT_READ } from "../src/moon-counts.ts";
 
 test("nine planets, catalogue counts, Saturn marked as the most", async ({ page, browserName }) => {
   test.skip(browserName === "webkit" && process.env["CI"] === undefined, "painted spheres draw in Chromium");
@@ -16,6 +16,9 @@ test("nine planets, catalogue counts, Saturn marked as the most", async ({ page,
   await expect(page.locator('[data-host="mercury"] .count-n')).toHaveText("No moons");
   await expect(page.locator('[data-host="venus"] .count-n')).toHaveText("No moons");
   await expect(page.locator('[data-most="true"]')).toHaveAttribute("data-host", "saturn");
+  await expect(page.locator('[data-host="saturn"]')).toHaveAttribute("href", "saturn.html");
+  await expect(page.locator('[data-host="mercury"]')).toHaveAttribute("href", "index.html?body=mercury");
+  await expect(page.locator("#counts-source")).toContainText(MOON_COUNT_READ);
   await expect(page.locator("#counts wakusei-body")).toHaveCount(9);
   if (browserName === "chromium") {
     await page.locator('[data-host="saturn"]').scrollIntoViewIfNeeded();

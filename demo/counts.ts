@@ -12,7 +12,7 @@ import "../src/bodies/uranus.ts";
 import "../src/bodies/neptune.ts";
 import "../src/bodies/pluto.ts";
 import { BODIES, ringReach } from "../src/facts.ts";
-import { moonCountGrid, type MoonCountRow } from "../src/moon-counts.ts";
+import { MOON_COUNT_READ, moonCountGrid, moonCountHref, type MoonCountRow } from "../src/moon-counts.ts";
 
 setThreeLoader(() => import("./three-subset.ts"));
 
@@ -38,11 +38,13 @@ function countText(total: number): string {
 
 function card(row: MoonCountRow): HTMLLIElement {
   const item = document.createElement("li");
-  item.className = "count";
-  item.dataset.host = row.id;
-  if (row.most) item.dataset.most = "true";
+  const link = document.createElement("a");
+  link.className = "count";
+  link.href = moonCountHref(row.id);
+  link.dataset.host = row.id;
+  if (row.most) link.dataset.most = "true";
   const globe = document.createElement("div");
-  globe.className = "count-globe";
+  globe.className = row.id === "jupiter" ? "count-globe clip-disc" : "count-globe";
   const body = document.createElement("wakusei-body") as WakuseiBody;
   body.setAttribute("body", row.id);
   body.setAttribute("look", "painted");
@@ -55,12 +57,13 @@ function card(row: MoonCountRow): HTMLLIElement {
   name.className = "count-name";
   const total = document.createElement("span");
   total.className = "count-n";
-  item.append(globe, name, total);
+  link.append(globe, name, total);
   if (row.most) {
     const mark = document.createElement("span");
     mark.className = "count-most";
-    item.append(mark);
+    link.append(mark);
   }
+  item.append(link);
   return item;
 }
 
@@ -68,8 +71,8 @@ const rows = moonCountGrid();
 list.replaceChildren(...rows.map(card));
 for (const body of list.querySelectorAll<WakuseiBody>("wakusei-body")) {
   const id = body.getAttribute("body");
-  // Saturn's rings are the picture. Jupiter, Uranus and Neptune have faint rings that would shrink the globe to a speck in the tile, so those three fill the tile.
-  if (id === "jupiter" || id === "uranus" || id === "neptune") body.setView({ zoom: Math.max(1.06, ringReach(BODIES[id]) * 1.04) });
+  // The globe fills the tile. Rings run to the tile's edge and the tile crops them. Jupiter's ring plane is a faint rectangle beside the disc, so that one globe is clipped to a circle.
+  if (id === "jupiter" || id === "saturn" || id === "uranus" || id === "neptune") body.setView({ zoom: Math.max(1.06, ringReach(BODIES[id]) * 1.04) });
 }
 
 function paint(): void {
@@ -81,6 +84,8 @@ function paint(): void {
     const mark = item.querySelector(".count-most");
     if (mark !== null) mark.textContent = phrase("ct_most");
   }
+  const source = document.querySelector("#counts-source");
+  if (source !== null) source.textContent = phrase("ct_source", { date: MOON_COUNT_READ });
   document.body.dataset.ready = "true";
 }
 
