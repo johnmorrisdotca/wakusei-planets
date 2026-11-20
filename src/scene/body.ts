@@ -239,8 +239,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         ringTexture = assets.acquire(`wk:ringtex:${ringKey}`, () => {
           if (photoTexture !== undefined) {
             photoTexture.magFilter = T.LinearFilter;
-            photoTexture.minFilter = T.LinearFilter;
-            photoTexture.generateMipmaps = false;
+            photoTexture.minFilter = 1008; // LinearMipmapLinearFilter: the ring is drawn smaller than its picture, and a linear sample of the full picture stair-steps the edges
+            photoTexture.generateMipmaps = true;
             photoTexture.wrapS = T.ClampToEdgeWrapping;
             photoTexture.colorSpace = T.NoColorSpace;
             return photoTexture;
