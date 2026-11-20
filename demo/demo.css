@@ -188,3 +188,22 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .giants ul li > a.giant { width: 100%; min-height: 44px; text-decoration: none; color: inherit; border: 1px solid var(--rule); border-radius: 12px; padding: 8px 12px; display: grid; gap: 2px; }
 .giants ul li > a.giant:hover { border-color: var(--ink); }
 .giants ul li > a.giant > span { color: var(--muted); font-size: .85rem; }
+
+/* Mercury through Pluto, the catalogue count, and a few moons. Tiles stay small so the stills fit. */
+.all-legend, .all-source, .all-note, .all-more { color: var(--muted); }
+.all-row { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 4px 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--rule); }
+.all-row h3 { margin: 0; }
+.all-planet { width: 88px; height: 88px; background: #070b14; border-radius: 12px; overflow: hidden; }
+.all-planet.clip-disc wakusei-body { border-radius: 50%; overflow: hidden; }
+.all-planet wakusei-body { display: block; width: 100%; height: 100%; --wakusei-size: 100%; }
+.all-count { margin: 0; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.all-moons { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 6px; }
+.all-moon { width: 72px; margin: 0; }
+.all-moon wakusei-body { display: block; width: 100%; aspect-ratio: 1; --wakusei-size: 100%; color: transparent; }
+.all-moon figcaption { font-size: .75rem; text-align: center; overflow-wrap: anywhere; }
+.all-note, .all-source { margin: 4px 0 0; font-size: .85rem; }
+@media (max-width: 600px) {
+  .all-row { grid-template-columns: 64px minmax(0, 1fr); }
+  .all-planet { width: 64px; height: 64px; }
+  .all-moon { width: 64px; }
+}
