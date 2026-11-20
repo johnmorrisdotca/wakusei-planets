@@ -18,10 +18,10 @@ export const HERO_SMALL: Record<MoonPageHost, readonly string[]> = {
   neptune: [],
 };
 
-/** Where the painted face is turned, in degrees, so the familiar side of the planet meets the moons. Jupiter's longitude is the package's best-known side, turned so the Great Red Spot sits in the visible half. Saturn's pitch looks under the pole, so the near half of the rings crosses the lower part of the globe. */
+/** Where the painted face is turned, in degrees, so the familiar side of the planet meets the moons. Jupiter's longitude is the package's best-known side, turned so the Great Red Spot sits in the visible half. Saturn's pitch looks over the pole: the near half of the rings, the one drawn in front of the globe, then crosses the lower part of the globe. A negative pitch puts that half on the upper globe and the far half, which the globe hides, on the lower. */
 export const HERO_POSE: Record<MoonPageHost, { meridian: number; tilt: number; pitch?: number }> = {
   jupiter: { meridian: 70, tilt: 14 },
-  saturn: { meridian: 30, tilt: 26.73, pitch: -22 },
+  saturn: { meridian: 30, tilt: 26.73, pitch: 22 },
   uranus: { meridian: 10, tilt: 16 },
   neptune: { meridian: 20, tilt: 16 },
 };
@@ -54,13 +54,15 @@ export function heroMoons(cards: readonly PageCard[], host: MoonPageHost, lang: 
   const count = chosen.length;
   const largest = count <= 4 ? 132 : count <= 5 ? 120 : 112;
   return chosen.map((card, index) => {
-    const t = count <= 1 ? 0 : index / (count - 1);
+    const even = count <= 1 ? 0 : index / (count - 1);
+    // Saturn's first two discs are the large ones. A shared step sets Iapetus on Titan, so the first step is longer.
+    const t = host === "saturn" && count > 2 ? (index === 0 ? 0 : 0.34 + 0.66 * ((index - 1) / (count - 2))) : even;
     const share = card.radiusKm / max;
     return {
       id: card.id,
       name: lang === "ja" ? card.name.ja : card.name.en,
       px: Math.max(64, Math.round(largest * share)),
-      left: Math.round((16 + t * 12) * 10) / 10,
+      left: Math.round((16 + even * 12) * 10) / 10,
       top: Math.round((10 + t * 62) * 10) / 10,
     };
   });

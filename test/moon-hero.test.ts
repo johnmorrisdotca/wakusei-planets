@@ -25,6 +25,7 @@ test("the hero arc is the main moons, farthest first, and the biggest moon has t
   assert.ok(heroZoom("jupiter") > 2);
   assert.ok(saturn.every((moon) => moon.px >= 64), "a medium moon stays large enough to see");
   assert.ok(saturn[0]!.top < 14 && saturn.at(-1)!.top > 70, "the arc uses the height of the hero");
+  assert.ok(saturn[1]!.top - saturn[0]!.top > 18, "Iapetus stays clear of Titan");
   const small = heroSmall(moonPage("saturn").cards, "saturn", "en");
   assert.deepEqual(small.map((moon) => moon.id), [...HERO_SMALL.saturn]);
   assert.equal(small[0]!.name, "Pan*");
