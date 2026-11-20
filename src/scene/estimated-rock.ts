@@ -286,26 +286,48 @@ export function estimatedRock(query: string): EstimatedRock | null {
 }
 
 /**
- * The line drawing of an estimated rock: the equator of its guessed shape, filled with its colour. Not a body's line drawing.
+ * The line drawing of an estimated rock: a smooth outline of its guessed shape, lighter on one side. Not a body's line drawing.
  *
  * @param rock - The rock.
  * @param size - The picture's width in pixels.
  * @returns The SVG.
  */
+const shade = (hex: string, toward: number, amount: number): string => {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const channel = (shift: number): number => {
+    const value = (n >> shift) & 255;
+    return Math.round(value + (toward - value) * amount);
+  };
+  return `#${((channel(16) << 16) | (channel(8) << 8) | channel(0)).toString(16).padStart(6, "0")}`;
+};
+
 export function estimatedRockLine(rock: EstimatedRock, size: number): string {
   const span = Math.max(32, Math.round(size));
   const radii = shapeRadii(rock.table);
   const row = rock.table.lat / 2;
+  const lon = rock.table.lon;
+  const steps = 96;
   const cx = span / 2;
   const cy = span / 2;
   const reach = span * 0.36;
+  const radiusAt = (t: number): number => {
+    const x = (((t % 1) + 1) % 1) * lon;
+    const i = Math.floor(x) % lon;
+    const f = x - Math.floor(x);
+    const smooth = f * f * (3 - 2 * f);
+    const a = (radii[row * lon + i] as number) / rock.radiusKm;
+    const b = (radii[row * lon + ((i + 1) % lon)] as number) / rock.radiusKm;
+    return a + (b - a) * smooth;
+  };
   let d = "";
-  for (let column = 0; column < rock.table.lon; column += 1) {
-    const radius = (radii[row * rock.table.lon + column] as number) / rock.radiusKm;
-    const theta = (2 * Math.PI * column) / rock.table.lon;
+  for (let k = 0; k < steps; k += 1) {
+    const t = k / steps;
+    const radius = radiusAt(t);
+    const theta = 2 * Math.PI * t;
     const x = cx + Math.cos(theta) * reach * radius;
     const y = cy + Math.sin(theta) * reach * radius;
-    d += `${column === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
+    d += `${k === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${span} ${span}" role="presentation"><path d="${d}Z" fill="${rock.colour}"/></svg>`;
+  const id = `rock-${rock.id}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${span} ${span}" role="presentation"><defs><radialGradient id="${id}" cx="36%" cy="32%" r="78%"><stop offset="0" stop-color="${shade(rock.colour, 255, 0.45)}"/><stop offset="1" stop-color="${shade(rock.colour, 0, 0.5)}"/></radialGradient></defs><path d="${d}Z" fill="url(#${id})"/></svg>`;
 }

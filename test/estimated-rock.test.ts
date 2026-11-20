@@ -83,7 +83,8 @@ test("the shape depends on the id and the line drawing uses that rock's colour",
   assert.notEqual(himalia.look.rock?.seed, elara.look.rock?.seed);
   const line = estimatedRockLine(himalia, 480);
   assert.match(line, /^<svg/);
-  assert.match(line, new RegExp(`fill="${himalia.colour}"`));
+  assert.match(line, /fill="url\(#rock-himalia\)"/);
+  assert.equal(line.split("L").length - 1, 95);
   assert.match(estimatedRockLine(himalia, 10), /viewBox="0 0 32 32"/);
   const named = estimatedRock("S/2003 J 18");
   assert.equal(named?.id, "s-2003-j-18");
