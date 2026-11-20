@@ -29,8 +29,10 @@ export interface EstimatedRock {
   look: BodyLook;
   /** The words under the picture: the shape is always a guess, and a derived or unknown size says so. */
   note: { en: string; ja: string };
-  /** The short line drawn on the picture. The longer `note` is the accessible name. */
+  /** The short line drawn on the picture: the catalogue name and a star. The longer `note` is the accessible name. */
   line: { en: string; ja: string };
+  /** One line for a picture that shows estimated moons: what the star means. */
+  legend: { en: string; ja: string };
   /** The guessed shape. The same object every time for this rock. */
   table: ShapeTable;
 }
@@ -38,8 +40,8 @@ export interface EstimatedRock {
 const SIZES = ["measured", "sheet", "derived", "unknown"] as const;
 
 const TONES: Record<AlbedoTone, { colour: string; dark: readonly [number, number, number]; light: readonly [number, number, number] }> = {
-  grey: { colour: "#8b8f96", dark: [0.42, 0.44, 0.47], light: [0.66, 0.68, 0.72] },
-  dark: { colour: "#4a4e55", dark: [0.18, 0.19, 0.22], light: [0.38, 0.4, 0.44] },
+  grey: { colour: "#6e7278", dark: [0.28, 0.29, 0.31], light: [0.46, 0.48, 0.51] },
+  dark: { colour: "#3a342e", dark: [0.08, 0.07, 0.06], light: [0.2, 0.18, 0.16] },
   mid: { colour: "#8a8174", dark: [0.38, 0.34, 0.28], light: [0.62, 0.58, 0.5] },
   bright: { colour: "#d5d8dc", dark: [0.72, 0.74, 0.77], light: [0.94, 0.95, 0.97] },
 };
@@ -106,6 +108,24 @@ function noise(seed: number, x: number, y: number, z: number): number {
 
 const clampLump = (value: number): number => Math.min(1.7, Math.max(0.45, value));
 
+/** Turn a direction by this rock's seed, so the long axis does not point the same way on every moon. */
+function spin(seed: number, x: number, y: number, z: number): [number, number, number] {
+  const yaw = hash01(seed, 8, 31) * Math.PI * 2;
+  const pitch = (hash01(seed, 9, 32) - 0.5) * Math.PI;
+  const roll = hash01(seed, 10, 33) * Math.PI * 2;
+  const cy = Math.cos(yaw);
+  const sy = Math.sin(yaw);
+  const x1 = cy * x + sy * z;
+  const z1 = -sy * x + cy * z;
+  const cp = Math.cos(pitch);
+  const sp = Math.sin(pitch);
+  const y2 = cp * y - sp * z1;
+  const z2 = sp * y + cp * z1;
+  const cr = Math.cos(roll);
+  const sr = Math.sin(roll);
+  return [cr * x1 - sr * y2, sr * x1 + cr * y2, z2];
+}
+
 /** How round the rock is: 0 is a potato (under 100 km), 1 is a globe (200 km and up), and the sizes between blend. */
 function roundness(radiusKm: number): number {
   if (radiusKm >= 200) return 1;
@@ -142,7 +162,10 @@ function shapeOf(seed: number, radiusKm: number): ShapeTable {
   const axes = axesOf(seed, radiusKm);
   const lump = 0.35 * (1 - roundness(radiusKm));
   const raw: number[] = [];
-  const at = (x: number, y: number, z: number): number => clampLump(1 + lump * noise(seed, x, y, z)) * ellipsoid(x, y, z, axes);
+  const at = (x: number, y: number, z: number): number => {
+    const [rx, ry, rz] = spin(seed, x, y, z);
+    return clampLump(1 + lump * noise(seed, rx, ry, rz)) * ellipsoid(rx, ry, rz, axes);
+  };
   for (let row = 0; row < rows; row += 1) {
     const phi = (Math.PI * row) / lat;
     const st = Math.sin(phi);
@@ -225,8 +248,8 @@ function build(row: EstimatedMoonRow): EstimatedRock {
     radiusKm,
     flattening: 0,
     tiltDeg: 0,
-    pole: { ra: 0, dec: 90 },
-    prime: { w0: 0, rate: 360 },
+    pole: { ra: hash01(seed, 3, 41) * 360, dec: 30 + hash01(seed, 4, 42) * 60 },
+    prime: { w0: hash01(seed, 5, 43) * 360, rate: 360 },
     rotationHours: 24,
     colour: paint.colour,
   };
@@ -240,7 +263,7 @@ function build(row: EstimatedMoonRow): EstimatedRock {
     rock: { seed: (seed % 10000) / 100, dark: paint.dark, light: paint.light },
     shape: () => Promise.resolve(table),
   };
-  return { id, host, label, radiusKm, sizeFrom, albedo, tone, colour: paint.colour, seed, facts, look, note: notes(sizeFrom), line: { en: "Shape estimated.", ja: "形は推定" }, table };
+  return { id, host, label, radiusKm, sizeFrom, albedo, tone, colour: paint.colour, seed, facts, look, note: notes(sizeFrom), line: { en: `${label}*`, ja: `${label}*` }, legend: { en: "* shape or size estimated", ja: "* 形や大きさは推定" }, table };
 }
 
 /**

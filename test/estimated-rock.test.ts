@@ -21,6 +21,9 @@ test("a catalogue moon the package does not draw in full is a rock, and a full m
   assert.equal(himalia.sizeFrom, "measured");
   assert.equal(himalia.note.en, "Shape estimated.");
   assert.equal(himalia.note.ja, "形は推定");
+  assert.equal(himalia.line.en, "Himalia*");
+  assert.equal(himalia.legend.en, "* shape or size estimated");
+  assert.equal(himalia.legend.ja, "* 形や大きさは推定");
   const again = estimatedRock("himalia");
   assert.equal(again, himalia);
   assert.equal(again?.table, himalia.table);
@@ -104,4 +107,18 @@ test("albedo classes: dark, mid, bright and grey", () => {
   assert.equal(albedoTone(0.63), "bright");
   assert.equal(estimatedRock("adrastea")?.tone, "mid");
   assert.equal(estimatedRock("philophrosyne")?.sizeFrom, "unknown");
+  const lum = (colour: string): number => {
+    const n = Number.parseInt(colour.slice(1), 16);
+    return ((n >> 16) & 255) + ((n >> 8) & 255) + (n & 255);
+  };
+  const rocks = catalogueMoonsOf("jupiter").map((moon) => estimatedRock(moon.id)).filter((rock) => rock !== null);
+  const dark = rocks.find((rock) => rock.tone === "dark");
+  const grey = rocks.find((rock) => rock.tone === "grey");
+  assert.ok(dark && grey);
+  assert.ok(lum(dark.colour) < lum(grey.colour), `${dark.colour} should be darker than ${grey.colour}`);
+  const radii = (id: string): Float32Array => shapeRadii(estimatedRock(id)!.table);
+  const himaliaRadii = radii("himalia");
+  const elaraRadii = radii("elara");
+  assert.ok(himaliaRadii.some((value, i) => value !== elaraRadii[i]), "two rocks face different ways");
+  assert.notEqual(estimatedRock("himalia")?.facts.pole.ra, estimatedRock("elara")?.facts.pole.ra);
 });

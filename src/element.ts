@@ -1047,6 +1047,7 @@ export class WakuseiBody extends HTMLElement {
     if (note instanceof HTMLElement) {
       note.hidden = false;
       note.textContent = this.getAttribute("lang") === "ja" ? rock.line.ja : rock.line.en;
+      note.title = this.getAttribute("lang") === "ja" ? rock.legend.ja : rock.legend.en;
     }
   }
 
