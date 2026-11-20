@@ -157,7 +157,7 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .surface-stage .fam-seg button[aria-pressed="true"] { background: var(--felt-ink); color: var(--felt-deep); }
 #ground-line { display: none; }
 @media (max-width: 520px) {
-  #ground-line:not([hidden]) { display: block; margin: 12px 2px 0; }
+  #ground-line:not([hidden]) { display: block; margin: 12px 2px 0; color: var(--felt-ink); }
   .surface-stage > .fam-row:first-of-type { flex-direction: column; align-items: flex-start; margin-top: 12px; gap: 6px; }
 }
 
