@@ -188,3 +188,21 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .giants ul li > a.giant { width: 100%; min-height: 44px; text-decoration: none; color: inherit; border: 1px solid var(--rule); border-radius: 12px; padding: 8px 12px; display: grid; gap: 2px; }
 .giants ul li > a.giant:hover { border-color: var(--ink); }
 .giants ul li > a.giant > span { color: var(--muted); font-size: .85rem; }
+
+/* A planet's edge and a column of dots sized by diameter. The panel is paper-coloured so the dots read as on the reference. */
+.dots-planets { margin: 12px 0; }
+.edge { display: grid; grid-template-columns: minmax(96px, 30%) 1fr; background: #f4efe4; color: #1c140c; border-radius: 16px; overflow: hidden; }
+.edge-planet { position: relative; min-height: 100%; background: #120c08; overflow: hidden; }
+.edge-planet wakusei-body { display: block; position: absolute; top: 50%; right: 0; height: 140%; width: auto; aspect-ratio: 1; transform: translateY(-50%); --wakusei-size: 100%; }
+.dots { list-style: none; margin: 0; padding: 16px 12px; display: grid; gap: 8px; }
+.dot-row { display: grid; grid-template-columns: 28px 80px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 36px; }
+.dot-n { font-variant-numeric: tabular-nums; color: #5c5146; }
+.dot { justify-self: center; border-radius: 50%; background: #1a120c; }
+.dot[data-unknown="true"] { background: transparent; box-shadow: inset 0 0 0 1.5px #1a120c; }
+.dot-name { font-weight: 650; }
+.dot-est { font-weight: 450; color: #5c5146; font-size: .85rem; }
+@media (max-width: 600px) {
+  .edge { grid-template-columns: minmax(0, 42%) 1fr; }
+  .dot-row { grid-template-columns: 22px 52px minmax(0, 1fr); gap: 6px; }
+  .dot { width: min(var(--px), 48px) !important; height: min(var(--px), 48px) !important; }
+}

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Moons by distance, as dots** (MODULES-1726). `dots.html` on the demo shows a giant planet's painted edge and the moons numbered I to XVI as dots sized by diameter, nearest at the top. The moons are not photographs. Jupiter's column is Metis through Sinope. A moon whose size is estimated says so, and one with no size is an open circle. English and Japanese. `test/moon-dots.test.ts` and `e2e/moon-dots.demo.ts`.
+
 ## [0.71.0] - 2026-11-19
 
 - **`<wakusei-moon-pages>`: the moon pages as an element** (`./moon-pages/element`). `<wakusei-moon-pages planet="saturn">` is the demo's moon page in one element: the four tabs (Orbits, Map and portrait, Main moons, Every moon), in English and Japanese (`lang`, or the nearest `lang` up the page, followed as it changes), with the plan, the portrait, the cards' bodies and the planet's looks fetched only when their tab first opens. A change of `planet` draws the other planet. It never writes the page's address: the choices are the attributes `tab`, `view`, `reach`, `colour`, `sort` and `order`, a choice made in it is reflected on them and sent as `wakusei-moon-pages-change` (`detail`: the whole `MoonPagesState`), and a slot named `planets` takes a page's own links to the other planets. `texture-base` and `texture-far-base` are handed to the bodies it draws. `MOON_PAGE_TABS` lists the tabs.
