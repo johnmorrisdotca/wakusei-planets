@@ -203,7 +203,6 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .groups-legend { color: var(--muted); margin: 0 0 8px; }
 .group-planet { height: min(42vh, 360px); background: #070b14; border-radius: 16px; overflow: hidden; }
 .group-planet wakusei-body { display: block; width: min(100%, 420px); height: 100%; margin: 0 auto; --wakusei-size: 100%; }
-.group-planet.clip-disc wakusei-body { border-radius: 50%; overflow: hidden; }
 .moon-group { margin-top: 1.4rem; }
 .moon-group h3 { margin: 0 0 8px; font-size: 1.05rem; }
 .group-moons { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px 10px; align-items: start; }
@@ -234,7 +233,6 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 a.count { display: grid; justify-items: center; align-content: start; gap: 4px; min-width: 0; padding: 10px 8px 12px; border: 1px solid var(--rule); border-radius: 16px; background: #070b14; color: #fff; text-decoration: none; overflow: hidden; }
 a.count[data-most="true"] { box-shadow: inset 0 0 0 2px #f2d48a; }
 .count-globe { width: min(100%, 220px); aspect-ratio: 1; }
-.count-globe.clip-disc { border-radius: 50%; overflow: hidden; }
 .counts-source { margin: 12px 0 0; color: var(--muted); font-size: .9rem; }
 .count-globe wakusei-body { display: block; width: 100%; height: 100%; --wakusei-size: 100%; }
 .count-name { font-size: 1rem; }

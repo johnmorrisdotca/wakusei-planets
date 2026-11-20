@@ -44,7 +44,7 @@ function card(row: MoonCountRow): HTMLLIElement {
   link.dataset.host = row.id;
   if (row.most) link.dataset.most = "true";
   const globe = document.createElement("div");
-  globe.className = row.id === "jupiter" ? "count-globe clip-disc" : "count-globe";
+  globe.className = "count-globe";
   const body = document.createElement("wakusei-body") as WakuseiBody;
   body.setAttribute("body", row.id);
   body.setAttribute("look", "painted");
@@ -71,8 +71,8 @@ const rows = moonCountGrid();
 list.replaceChildren(...rows.map(card));
 for (const body of list.querySelectorAll<WakuseiBody>("wakusei-body")) {
   const id = body.getAttribute("body");
-  // The globe fills the tile. Rings run to the tile's edge and the tile crops them. Jupiter's ring plane is a faint rectangle beside the disc, so that one globe is clipped to a circle.
-  if (id === "jupiter" || id === "saturn" || id === "uranus" || id === "neptune") body.setView({ zoom: Math.max(1.06, ringReach(BODIES[id]) * 1.04) });
+  // The globe fills the tile and the rings run to its edge. Jupiter stays at 1: zooming it made the wide faint ring the rectangle of the tile.
+  if (id === "saturn" || id === "uranus" || id === "neptune") body.setView({ zoom: Math.max(1.06, ringReach(BODIES[id]) * 1.04) });
 }
 
 function paint(): void {

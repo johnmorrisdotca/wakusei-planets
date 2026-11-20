@@ -95,9 +95,9 @@ function paint(): void {
     return button;
   }));
   const globe = bodyOf(host);
-  planet.classList.toggle("clip-disc", host === "jupiter");
   planet.replaceChildren(globe);
-  globe.setView({ zoom: Math.max(1.06, ringReach(BODIES[host]) * 1.04) });
+  // Jupiter stays at 1 so its ring is the ellipse. The others are zoomed until the globe fills the frame and the rings run to the edge.
+  globe.setView({ zoom: host === "jupiter" ? 1 : Math.max(1.06, ringReach(BODIES[host]) * 1.04) });
   groups.replaceChildren(...moonGroupPoster(host).map(groupOf));
   for (const body of groups.querySelectorAll("wakusei-body")) {
     if (body.getAttribute("data-shape") === "estimated") (body as WakuseiBody).setView({ zoom: 0.72 });

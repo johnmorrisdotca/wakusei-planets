@@ -1,5 +1,4 @@
 // The hero above a moon page's tabs: the planet's edge, and its main moons in an arc, farthest at the top. Disc sizes follow the moons' own diameters, squeezed so a small moon stays visible. No DOM.
-import { BODIES, ringReach } from "../facts.ts";
 import type { MoonPageHost, PageCard } from "./data.ts";
 
 /** The moons in the hero's arc, farthest from the planet first. Jupiter's four are the Galileans. Saturn's seven are the large named moons. */
@@ -18,20 +17,19 @@ export const HERO_SMALL: Record<MoonPageHost, readonly string[]> = {
   neptune: [],
 };
 
-/** Where the painted face is turned, in degrees, so the familiar side of the planet meets the moons. Jupiter's longitude is the package's best-known side, turned so the Great Red Spot sits in the visible half. Saturn's pitch looks over the pole: the near half of the rings, the one drawn in front of the globe, then crosses the lower part of the globe. A negative pitch puts that half on the upper globe and the far half, which the globe hides, on the lower. */
+/** Where the painted face is turned, in degrees, so the familiar side of the planet meets the moons. Jupiter's longitude is the package's best-known side, turned so the Great Red Spot sits in the visible half. Jupiter's and Saturn's pitch looks over the pole: the near half of the rings, the one drawn in front of the globe, then crosses the lower part of the globe, and the ring is an ellipse. A negative pitch puts that half on the upper globe and the far half, which the globe hides, on the lower. */
 export const HERO_POSE: Record<MoonPageHost, { meridian: number; tilt: number; pitch?: number }> = {
-  jupiter: { meridian: 70, tilt: 14 },
+  jupiter: { meridian: 70, tilt: 14, pitch: 22 },
   saturn: { meridian: 30, tilt: 26.73, pitch: 22 },
   uranus: { meridian: 10, tilt: 16 },
   neptune: { meridian: 20, tilt: 16 },
 };
 
-/**
- * How far a hero planet is zoomed. A tight portrait fits the rings, and Jupiter's faint rings would shrink the globe to a third of the frame, so Jupiter is zoomed until the globe fills it. Saturn's rings are the picture, and stay at 1.
- */
+/** How far a hero planet is zoomed. 1 frames the globe and its rings, so the ring is the ellipse of the ring plane. Zooming in until the globe filled the frame made Jupiter's wide faint ring the rectangle of the picture. */
+const HERO_ZOOM: Record<MoonPageHost, number> = { jupiter: 1, saturn: 1, uranus: 1, neptune: 1 };
+
 export function heroZoom(host: MoonPageHost): number {
-  if (host !== "jupiter") return 1;
-  return Math.max(1.06, ringReach(BODIES[host]) * 1.04);
+  return HERO_ZOOM[host];
 }
 
 /** One moon of the hero: its name, the disc's width in pixels, and the centre as a percent of the hero. */

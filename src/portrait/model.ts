@@ -838,9 +838,9 @@ const POSTER_ARC: Record<PosterHost, readonly BodyId[]> = {
   neptune: ["nereid", "triton", "proteus"],
 };
 
-/** The turn that puts the familiar face toward the moons. Saturn looks over the pole so the near half of the rings crosses the lower globe. */
+/** The turn that puts the familiar face toward the moons. Jupiter and Saturn look over the pole so the near half of the rings crosses the lower globe and the ring is an ellipse. */
 const POSTER_POSE: Record<PosterHost, { spin: number; tilt: number; pitch?: number }> = {
-  jupiter: { spin: 70, tilt: 14 },
+  jupiter: { spin: 70, tilt: 14, pitch: 22 },
   saturn: { spin: 30, tilt: 26.73, pitch: 22 },
   uranus: { spin: 10, tilt: 16 },
   neptune: { spin: 20, tilt: 16 },
@@ -854,7 +854,7 @@ function posterEdge(host: PosterHost): Portrait {
   const sized = sizesFor(moons, "readable");
   const moonScale = (count <= 4 ? 0.2 : 0.13) / Math.max(...sized);
   const pose = POSTER_POSE[host];
-  const planetR = host === "jupiter" ? 0.72 : 0.82 / reachOf(host);
+  const planetR = 0.82 / reachOf(host);
   const planet: Item = {
     body: host,
     x: aspect * 0.92 - planetR * 0.15,

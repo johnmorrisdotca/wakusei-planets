@@ -134,7 +134,6 @@ tr:last-child > * { border-bottom: 0; }
 .hero { position: relative; overflow: hidden; height: min(78vh, 720px); min-height: 520px; background: #000; border-radius: 16px; }
 .hero:fullscreen { width: 100%; height: 100%; min-height: 0; border-radius: 0; }
 .hero-planet { position: absolute; z-index: 1; top: 50%; right: -70%; width: 124%; aspect-ratio: 1; transform: translateY(-50%); pointer-events: none; }
-.hero-planet.clip-disc { width: 52%; right: 4%; border-radius: 50%; overflow: hidden; }
 .hero-planet wakusei-body, .hero-disc wakusei-body { --wakusei-size: 100%; width: 100%; height: 100%; display: block; }
 .hero-moons { position: absolute; inset: 0; z-index: 2; }
 .hero-moon { position: absolute; transform: translate(-50%, -50%); display: block; margin: 0; padding: 0; border: 0; background: none; color: #fff; touch-action: manipulation; }
@@ -513,7 +512,6 @@ export class WakuseiMoonPages extends HTMLElement {
     if (pose.pitch !== undefined) planet.setAttribute("pitch", String(pose.pitch));
     this.#textures(planet);
     const frame = this.#$("#hero-planet");
-    frame.classList.toggle("clip-disc", host === "jupiter");
     frame.replaceChildren(planet);
     const zoom = heroZoom(host);
     if (zoom !== 1) (planet as HTMLElement & { setView(view: { zoom: number }): void }).setView({ zoom });

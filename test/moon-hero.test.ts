@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { moonPage } from "../src/moon-pages/index.ts";
-import { HERO_ARC, HERO_SMALL, heroMoons, heroScale, heroSmall, heroZoom } from "../src/moon-pages/hero.ts";
+import { HERO_ARC, HERO_POSE, HERO_SMALL, heroMoons, heroScale, heroSmall, heroZoom } from "../src/moon-pages/hero.ts";
 
 test("the hero arc is the main moons, farthest first, and the biggest moon has the biggest disc", () => {
   const jupiter = heroMoons(moonPage("jupiter").cards, "jupiter", "en");
@@ -22,7 +22,8 @@ test("the hero arc is the main moons, farthest first, and the biggest moon has t
   assert.deepEqual(japanese.map((moon) => moon.name), ["カリスト", "ガニメデ", "エウロパ", "イオ"]);
 
   assert.ok(jupiter[3]!.left <= 30, "Io stays left of the planet's limb");
-  assert.ok(heroZoom("jupiter") > 2);
+  assert.equal(heroZoom("jupiter"), 1, "Jupiter is framed with its rings, so the ring is an ellipse");
+  assert.equal(HERO_POSE.jupiter.pitch, 22);
   assert.ok(saturn.every((moon) => moon.px >= 64), "a medium moon stays large enough to see");
   assert.ok(saturn[0]!.top < 14 && saturn.at(-1)!.top > 70, "the arc uses the height of the hero");
   assert.ok(saturn[1]!.top - saturn[0]!.top > 18, "Iapetus stays clear of Titan");
