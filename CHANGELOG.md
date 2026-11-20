@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.74.0] - 2026-11-20
+
 - **Every moon, by group** (MODULES-1723). `groups.html` puts a giant planet on top and every moon of the catalogue below it, in the families `moonFamilies` already uses, numbered in that order. A moon the package draws in full keeps that picture. The rest are the estimated rocks, pulled back so a turned rock stays inside its tile, named with the star those rocks already carry (`Himalia*`), and the page shows that star's one legend line. Jupiter's globe is clipped to a circle. English and Japanese.
 
 - **All the moons** (MODULES-1724). `all.html` lists Mercury through Pluto with the moon catalogue's count for each, and draws a few of that world's moons. The rest are a number, never a picture the package does not have. Kerberos and Styx are the estimated rocks. Saturn, which has the most, is marked. English and Japanese.
