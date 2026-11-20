@@ -15,7 +15,7 @@ const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOT
 const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"></span>', `<span><span data-say="foot"></span> <a href="${NOTICE}" data-say="creditsAll"></a></span>`);
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "groups.html", say: "pageGroups" }, { href: "all.html", say: "pageAll" }, { href: "counts.html", say: "pageCounts" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "groups.html", say: "pageGroups" }, { href: "all.html", say: "pageAll" }, { href: "counts.html", say: "pageCounts" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }, { href: "dots.html", say: "pageDots" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -89,6 +89,9 @@ export const renderAll = (): string =>
 /** The moon-count grid: nine painted planets and the catalogue's count for each. */
 export const renderCounts = (): string =>
   render("counts.html", "Wakusei Planets 惑星: who has the most moons", "Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto, each painted, with how many moons the catalogue gives it. English and Japanese.");
+/** The planet's edge with its moons I to XVI as dots sized by diameter. */
+export const renderDots = (): string =>
+  render("dots.html", "Wakusei Planets 惑星: moons by distance", "A giant planet's edge, and the moons numbered I to XVI as dots sized by their diameters, nearest at the top. English and Japanese. The moons are not photographs.");
 
 /** The standing page. */
 export const renderSurface = (): string =>
