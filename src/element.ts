@@ -26,6 +26,7 @@ import { viewPose } from "./scene/tumble.ts";
 import type { DetailStats } from "./scene/detail.ts";
 import type { TileLevel } from "./scene/tiles.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
+import { estimatedRock, estimatedRockLine } from "./scene/estimated-rock.ts";
 import { NAME_LABEL_ATTRIBUTES, nameLabelKey, nameLabelText, readNameLabel, type NameLabelOptions } from "./scene/name-label.ts";
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
@@ -98,7 +99,10 @@ const TEMPLATE = `<style>
 #cutaway li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 8px; align-items: baseline; }
 #cutaway [data-swatch] { width: 12px; height: 12px; }
 #stage svg { display: block; width: 100%; height: 100%; }
-</style><div id="stage"></div><ol id="cutaway" hidden></ol>`;
+#estimate { position: absolute; z-index: 2; left: 2px; right: 2px; bottom: 1px; margin: 0; max-height: 2.4em; overflow: hidden; text-align: center; font: 10px/1.2 system-ui, sans-serif; color: inherit; pointer-events: none; }
+#estimate[hidden] { display: none; }
+:host([data-shape="estimated"]) #stage { bottom: 22px; }
+</style><div id="stage"></div><p id="estimate" hidden></p><ol id="cutaway" hidden></ol>`;
 
 /**
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
@@ -106,6 +110,7 @@ const TEMPLATE = `<style>
  * Attributes: `body` (a name, such as `jupiter`), `look` (`line`, `realistic` or `painted`), `size` (pixels across), `time` (`now` or an ISO date: the body as the Earth sees it then; leave it out for a portrait),
  * `tilt`, `pitch`, `phase` and `meridian` (a portrait's pose, degrees), `turn` (a portrait turns this many degrees a second; left out, 12 a second, backwards when the body is, and a date keeps its orientation and adds this turn; `live="off"` stays still unless this is set; `0` stays still; reduced motion keeps a quarter of it), `rate` (simulated seconds for each real second), `moons` (draw the planet's moons on their orbits),
  * `range` (planet radii the moons picture reaches), `scale-to` (draw to scale with another body), `span-km` (draw to scale: the half-width of the picture in kilometres, the same in every picture of a lineup), `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` (where the surface pictures are) and `lang` (`en` or `ja`).
+ * A `body` that names a catalogue moon the package does not draw in full (such as `himalia`, or `S/2003 J 18`) is an estimated rock: the size is the catalogue radius, the shape is a guess from that id, and the picture says the shape is estimated. A size worked out from the brightness says so. Any other unknown name stays the Earth.
  *
  * It carries the shared view controls itself: a drag turns the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), the arrow keys, + and - and 0 work once it is focused.
  * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
@@ -687,9 +692,17 @@ export class WakuseiBody extends HTMLElement {
     return this.#starMade;
   }
 
-  /** The facts of what is drawn: the body's, or the star's (the Sun's with its own size, shape and outlines). */
+  /** A catalogue moon this element draws as an estimated rock, or `null` when `body` is a body the package draws in full (or not a moon). */
+  #estimate() {
+    if (this.hasAttribute("star")) return null;
+    const id = this.getAttribute("body");
+    if (id === null || id in BODIES) return null;
+    return estimatedRock(id);
+  }
+
+  /** The facts of what is drawn: the body's, the star's (the Sun's with its own size, shape and outlines), or an estimated rock's. */
   #facts(): BodyFacts {
-    return this.#star()?.facts ?? BODIES[this.body];
+    return this.#star()?.facts ?? this.#estimate()?.facts ?? BODIES[this.body];
   }
 
   // --- the clock ------------------------------------------------------------------------------------------------------------------------------------
@@ -799,7 +812,7 @@ export class WakuseiBody extends HTMLElement {
    */
   #limits(): { zoomMin: number; zoomMax: number; tiltMax: number } {
     if (this.look === "line") return LINE_LIMITS;
-    if (this.hasAttribute("star")) return { zoomMin: 0.1, zoomMax: zoomLimit(1, 0, false), tiltMax: 90 };
+    if (this.hasAttribute("star") || this.#estimate() !== null) return { zoomMin: 0.1, zoomMax: zoomLimit(1, 0, false), tiltMax: 90 };
     const moons = this.hasAttribute("moons");
     const look = lookOf(this.body);
     const painted = this.look !== "illustrated" && look?.painted !== undefined;
@@ -904,7 +917,7 @@ export class WakuseiBody extends HTMLElement {
 
   /** The picture's identity: a new one disposes the view and builds it again, so a cutaway gives its shells back when it is turned off. */
   #signature(): string {
-    return `${this.#star()?.key ?? this.body}|${this.look}|${this.#cutawayOn() ? "cut" : "whole"}`;
+    return `${this.#star()?.key ?? this.#estimate()?.id ?? this.body}|${this.look}|${this.#cutawayOn() ? "cut" : "whole"}`;
   }
 
   #cutawayOn(): boolean {
@@ -957,6 +970,7 @@ export class WakuseiBody extends HTMLElement {
   async #refresh(): Promise<void> {
     if (!this.isConnected) return;
     this.#syncLegend();
+    this.#syncEstimate();
     this.setAttribute("aria-label", this.#label());
     if (this.hasAttribute("size")) this.style.setProperty("--wakusei-size", `${num(this.getAttribute("size"), 320)}px`);
     if (this.hasAttribute("star") && this.#star() === undefined) {
@@ -965,7 +979,7 @@ export class WakuseiBody extends HTMLElement {
       this.#set("line");
       return;
     }
-    const delegate = this.look === "line" ? delegates.get(this.body) : undefined;
+    const delegate = this.#estimate() === null && this.look === "line" ? delegates.get(this.body) : undefined;
     if (delegate !== undefined && (await this.#delegated(delegate))) return;
     const undelegated = this.#delegateEl !== undefined;
     if (this.#delegateEl !== undefined) {
@@ -1014,9 +1028,36 @@ export class WakuseiBody extends HTMLElement {
     }
   }
 
+  #syncEstimate(): void {
+    const rock = this.#estimate();
+    const note = this.shadowRoot?.querySelector("#estimate");
+    if (rock === null) {
+      this.removeAttribute("data-shape");
+      this.removeAttribute("data-size");
+      this.removeAttribute("data-estimated");
+      if (note instanceof HTMLElement) {
+        note.hidden = true;
+        note.textContent = "";
+      }
+      return;
+    }
+    this.dataset.shape = "estimated";
+    this.dataset.size = rock.sizeFrom;
+    this.dataset.estimated = rock.id;
+    if (note instanceof HTMLElement) {
+      note.hidden = false;
+      note.textContent = this.getAttribute("lang") === "ja" ? rock.line.ja : rock.line.en;
+    }
+  }
+
   #label(): string {
     const star = this.#star();
     const ja = this.getAttribute("lang") === "ja";
+    const rock = this.#estimate();
+    if (rock !== null) {
+      const note = ja ? rock.note.ja : rock.note.en;
+      return ja ? `${rock.label}。${note}` : `${rock.label}. ${note}`;
+    }
     if (star !== undefined) return this.look === "line" ? (ja ? `${star.facts.name.ja}の線画。${star.disclaimer.ja}` : `${star.facts.name.en}, line drawing. ${star.disclaimer.en}`) : ja ? `${star.facts.name.ja}の陰影つきの絵。${star.disclaimer.ja}` : `${star.facts.name.en}, shaded star. ${star.disclaimer.en}`;
     const f = BODIES[this.body];
     const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "イラスト" : "illustrated drawing" } as const;
@@ -1024,6 +1065,11 @@ export class WakuseiBody extends HTMLElement {
   }
 
   #drawLine(): void {
+    const rock = this.#estimate();
+    if (rock !== null) {
+      this.#stage.innerHTML = estimatedRockLine(rock, 480);
+      return;
+    }
     const r = this.#request();
     const frame = this.#frameNow();
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
@@ -1049,7 +1095,7 @@ export class WakuseiBody extends HTMLElement {
 
   #key(state: SceneState): string {
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
-    return `${this.#star()?.key ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}`;
+    return `${this.#star()?.key ?? this.#estimate()?.id ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.
@@ -1083,11 +1129,12 @@ export class WakuseiBody extends HTMLElement {
     this.#stilled = false;
     this.#stage.innerHTML = "";
     const star = this.#star();
+    const rock = this.#estimate();
     const item = createBodyItem({
       id: this.body,
-      ...(star === undefined ? {} : { shaded: star.look, facts: star.facts, assetKey: `star:${star.key}` }),
+      ...(star !== undefined ? { shaded: star.look, facts: star.facts, assetKey: `star:${star.key}` } : rock === null ? {} : { shaded: rock.look, facts: rock.facts, assetKey: `rock:${rock.id}`, coarse: true }),
       look: this.look === "illustrated" ? "realistic" : "painted",
-      cutaway: this.#cutawayOn(),
+      cutaway: rock === null && this.#cutawayOn(),
       onShells: (count) => {
         this.dataset.shells = String(count);
       },

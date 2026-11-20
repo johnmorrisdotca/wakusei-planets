@@ -96,6 +96,11 @@ export interface BodyLook {
    * ellipsoid of `axesKm`. Until it arrives the ellipsoid is drawn.
    */
   shape?: () => Promise<ShapeTable>;
+  /**
+   * An estimated rock shares one surface shader. These uniforms are that moon's own: a seed so the craters differ, and the dark and light colours of its albedo class.
+   * Only a look whose `surface` reads `uRockSeed`, `uRockDark` and `uRockLight` sets this.
+   */
+  rock?: { seed: number; dark: readonly [number, number, number]; light: readonly [number, number, number] };
   /** Draw the painted map in the realistic look too: for a body with no honest drawing from numbers (the Earth's continents). */
   mapped?: boolean;
 }

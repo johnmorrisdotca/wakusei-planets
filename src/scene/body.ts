@@ -78,6 +78,8 @@ export interface BodyItemOptions {
   facts?: BodyFacts;
   /** What the renderer keeps this body's materials under, instead of `id`: a star's key, so two stars do not share a program. */
   assetKey?: string;
+  /** A coarse globe for an estimated rock: 48 by 24 on a large picture, 24 by 12 on a card, 12 by 6 when it is small. A page may hold every moon of a planet. */
+  coarse?: boolean;
   look: "realistic" | "painted";
   /** A key that changes whenever the picture would: the renderer keeps one still for each key. */
   key: string;
@@ -134,6 +136,13 @@ export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean
       uRingOn: { value: 0 },
       uRingTex: { value: null },
       uMap: { value: null },
+      ...(look.rock === undefined
+        ? {}
+        : {
+            uRockSeed: { value: look.rock.seed },
+            uRockDark: { value: new T.Vector3(...look.rock.dark) },
+            uRockLight: { value: new T.Vector3(...look.rock.light) },
+          }),
     },
   });
 }
@@ -162,8 +171,11 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
       // a moon with a published shape model is the globe moved to its radii (its table is a chunk of its own, waited for here), and then needs no stretching to an ellipsoid
       const shapeTable = look.shape === undefined ? undefined : await look.shape().catch(() => undefined);
-      // a big picture gets a globe of 192 by 96 steps (as the unshaped sphere has), a tile or a card one of 96 by 48: a page can hold a dozen moons, and the arrays of a globe stay in the page
-      const grid = Math.min(width, height) >= 300 ? { lon: 192, lat: 96 } : { lon: 96, lat: 48 };
+      // a big picture gets a globe of 192 by 96 steps (as the unshaped sphere has), a tile or a card one of 96 by 48: a page can hold a dozen moons, and the arrays of a globe stay in the page.
+      // an estimated rock is coarser: 48 by 24 on a large picture, 24 by 12 on a card, 12 by 6 when it is small, so a page can hold every moon of Jupiter
+      const grid = options.coarse === true
+        ? (Math.min(width, height) >= 280 ? { lon: 48, lat: 24 } : Math.min(width, height) >= 140 ? { lon: 24, lat: 12 } : { lon: 12, lat: 6 })
+        : (Math.min(width, height) >= 300 ? { lon: 192, lat: 96 } : { lon: 96, lat: 48 });
       const geometry = shapeTable === undefined ? assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 192, 96), (g) => g.dispose()) : assets.acquire(`wk:shape:${held}:${grid.lon}`, () => shapeGeometry(T, shapeTable, facts.radiusKm, grid), (g) => g.dispose());
       const shader = assets.acquire(`wk:body:${held}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;

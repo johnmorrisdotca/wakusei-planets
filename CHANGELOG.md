@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **An irregular moon is an estimated rock** (MODULES-1720). `<wakusei-body body="himalia">`, or a designation such as `S/2003 J 18`, draws a coarse rock sized from the catalogue and coloured from its albedo (dark, mid, bright, or grey when the albedo is unknown). The shape is a guess from the id and the same id always matches. Under 100 km it is a potato (axes about 1 : 0.6–0.9 : 0.5–0.8, plus lumps); from 200 km it stays nearly round; between, the two blend. The picture says the shape is estimated. A size worked out from the brightness says so in the accessible name (`data-size="derived"`); a moon with no size is drawn at 1 km and marked `unknown`. The moons drawn in full are unchanged, and any other unknown name stays the Earth. One surface shader is shared. Stills are 160 pixels on a side so a whole family fits in the 32 MB still budget: a 480-pixel still of every moon of Jupiter was dropped, and the view showed a broken image.
+
 ## [0.72.0] - 2026-11-20
 
 - **The copy-paste snippet names the current package** (MODULES-1719). `VERSION` in `src/version.ts` had stayed at 0.54.0 while releases bumped `package.json` only, so a copied snippet asked for `@0.54.0`. It is 0.71.0, the same as `package.json`, and `test/version.test.ts` fails when the two disagree. The texture address types in `test/api-snapshot.txt` name 0.71.0 as well.

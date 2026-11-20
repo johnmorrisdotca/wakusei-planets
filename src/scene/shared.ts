@@ -35,7 +35,9 @@ export function takeRenderer(onContext: (state: ContextState) => void): { render
   listeners.add(onContext);
   shared ??= createSharedRenderer<ThreeParts>({
     load: () => loader(),
-    stillSize: 480,
+    // A still is this many pixels on its long side, and the page keeps 32 MB of them. A square still is that side squared, times four bytes.
+    // 160 holds every moon of Saturn (293) with the planet, which a 480-pixel still cannot: those are about 0.9 MB each, and past the budget the picture is dropped and the view shows a broken image.
+    stillSize: 160,
     onContext: (state) => {
       for (const listener of listeners) listener(state);
     },
