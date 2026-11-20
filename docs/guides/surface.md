@@ -44,7 +44,7 @@ const sky = moonSky(20.1911, 30.7723, Date.UTC(1972, 11, 11, 19, 54));
 console.log(`the Sun ${sky.sun.altitude.toFixed(0)} degrees up, the Earth ${sky.earth.altitude.toFixed(0)} degrees up and ${(100 * sky.earthIllumination).toFixed(0)}% lit`);
 ```
 
-Shadows are hard and come in two parts. The measured ground's shadows are baked: the script walks the heights once and keeps, for every point of the 5, 20 and 80 m levels, how high the horizon stands in each of eighteen directions (a horizon map, a picture of the same size, 4.4 MB for the site). The shader reads the horizon in the Sun's direction and compares it with the Sun's height, so a mountain's shadow costs one read. Only what is made is marched, a short walk of a fixed number of steps toward the Sun over the heights and the nearby made craters, so a crater's rim and a stone throw crisp shadows near the feet.
+On Mars the sky fills a shadow, so the shade is dark brown-grey. The Moon has no air, so a shadow there stays black. Shadows are hard and come in two parts. The measured ground's shadows are baked: the script walks the heights once and keeps, for every point of the 5, 20 and 80 m levels, how high the horizon stands in each of eighteen directions (a horizon map, a picture of the same size, 4.4 MB for the site). The shader reads the horizon in the Sun's direction and compares it with the Sun's height, so a mountain's shadow costs one read. Only what is made is marched, a short walk of a fixed number of steps toward the Sun over the heights and the nearby made craters, so a crater's rim and a stone throw crisp shadows near the feet.
 
 ## Things at the site
 

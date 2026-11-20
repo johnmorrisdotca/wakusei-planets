@@ -432,7 +432,7 @@ export interface Rock { x: number; y: number; size: number; shape: number; turn:
 export interface RockMesh { position: Float32Array; normal: Float32Array; tone: Float32Array; count: number; shadowPosition: Float32Array; shadowUv: Float32Array; shadowIndex: Uint32Array; }
 const SURFACE_SITES: readonly SurfaceSite[]
 export interface SiteObject { id: string; kind: "lander" | "rover" | "flag" | "station" | "instrument"; name: { en: string; ja: string; }; east: number; north: number; heading?: number; lat?: number; lon?: number; }
-export interface SkyAir { daylight: number; horizon: Rgb; zenith: Rgb; glow: Rgb; glowSize: number; ambient: number; tint: Rgb; }
+export interface SkyAir { daylight: number; horizon: Rgb; zenith: Rgb; glow: Rgb; glowSize: number; ambient: number; shade: Rgb; tint: Rgb; }
 export interface SkyDirection { enu: Vec3; azimuth: number; altitude: number; }
 export interface StandSky extends MoonSky { body: "moon" | "mars"; air: SkyAir | null; earthDisc: boolean; }
 export interface SurfaceSite { id: string; body: "moon" | "mars"; ground: "measured" | "flat"; gravity: number; name: { en: string; ja: string; }; lat: number; lon: number; place: string; time: number; look: Look; }

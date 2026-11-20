@@ -1,7 +1,7 @@
 // The shaders of the standing view. The ground is one mesh of rings and rays round the viewer's feet, its heights read in the vertex shader from the levels of the height pyramid (the finest
 // that holds the point and is near enough), its normal worked out from the same heights in the fragment shader, and its light from the Sun's direction: Lommel-Seeliger, the law the Moon's
 // dust follows, and a hard shadow found by walking from the point toward the Sun over the same heights (a horizon-angle march) rather than from a shadow map, which cannot hold a
-// stone's shadow and a mountain's at once. No air: no haze, a black sky, and what the Sun does not reach is black.
+// stone's shadow and a mountain's at once. The Moon has no air: no haze, a black sky, and a black shadow. On Mars the sky fills a shadow, dark brown-grey.
 // The scene's frame is x east, y up, z south; the maths here is in the site's own plane (east, up, north), so a z is flipped on the way to the screen.
 
 /** The uniforms of the pyramid every shader reads, and the one function that reads it: `terrainY(point, distance)`, metres over the site's ground, the Moon's curve taken off. */
@@ -372,13 +372,14 @@ void main() {
 export const SHADOW_FRAGMENT = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
+uniform vec3 uShade; // the sky's light in a shadow: dark brown-grey on Mars, black on the Moon
 void main() {
   float u = vUv.x;
   float across = smoothstep(1.0, 0.5, abs(vUv.y));
   float along = smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.78, 1.0, u));
-  float a = across * along * 0.85;
+  float a = across * along * 0.92;
   if (a < 0.01) discard;
-  gl_FragColor = vec4(0.0, 0.0, 0.0, a);
+  gl_FragColor = vec4(uShade, a);
 }
 `;
 

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Mars shadows are lit by the sky** (MODULES-1749). A shadow on Mars is dark brown-grey, the ground lit by the sky, by day and black at night. A shadow on the Moon stays black. `SkyAir.shade` is that colour, which is why the public snapshot changed.
+
 - **The standing page lands at every site and drives that site's rover** (MODULES-1482). A row of the seven sites chooses where Land goes. Drive uses NASA's Perseverance at Jezero, NASA's Curiosity at Gale and a lunar rover model based on the Deutsches Museum replica at Apollo 15, 16 and 17. Chang'e 3 and Chang'e 4 drive this package's shapes: NASA's catalogue has no Yutu or Yutu-2 model, and the page says so. Watching the descent stays on Apollo 17. The six newer sites still stand on a flat stand-in. The page's name is Standing on the surface. A driven model's shadow follows the points of its meshes. On the far side the Earth is below the horizon, and it is not drawn. The ground line says the ground is a flat stand-in until height data is added, and that nothing on it is measured. On a phone that line sits under the picture in the felt's own ink, and the site label sits above the row.
 
 ## [0.73.0] - 2026-11-20

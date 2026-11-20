@@ -288,7 +288,8 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       scene.add(skyMesh, sun.mesh, earth.mesh, ground);
       // the rocks and their shadows, made again when the eyes have walked a while or the Sun has moved
       const rockMaterial = new T.ShaderMaterial({ vertexShader: ROCK_VERTEX, fragmentShader: ROCK_FRAGMENT, uniforms });
-      const shadowMaterial = new T.ShaderMaterial({ vertexShader: SHADOW_VERTEX, fragmentShader: SHADOW_FRAGMENT, uniforms: { uVP: uniforms.uVP }, transparent: true, depthWrite: false });
+      const shadowShade = new T.Vector3(0, 0, 0);
+      const shadowMaterial = new T.ShaderMaterial({ vertexShader: SHADOW_VERTEX, fragmentShader: SHADOW_FRAGMENT, uniforms: { uVP: uniforms.uVP, uShade: { value: shadowShade } }, transparent: true, depthWrite: false });
       shadowMaterial.polygonOffset = true;
       shadowMaterial.polygonOffsetFactor = -2;
       shadowMaterial.polygonOffsetUnits = -2;
@@ -741,6 +742,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const air = sky.air ?? null;
         uniforms.uExposure.value = state.exposure ?? (air === null ? 4.5 : 3.2);
         uniforms.uEarthshine.value = air === null ? 0.05 : air.ambient;
+        shadowShade.set(air?.shade[0] ?? 0, air?.shade[1] ?? 0, air?.shade[2] ?? 0);
         uniforms.uTint.value.set(air?.tint[0] ?? 1, air?.tint[1] ?? 1, air?.tint[2] ?? 1);
         uniforms.uAlbedo.value = state.albedo ?? 0.14;
         uniforms.uShadows.value = state.shadows === false ? 0 : 1;

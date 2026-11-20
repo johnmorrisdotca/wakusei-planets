@@ -141,6 +141,8 @@ export interface SkyAir {
   glowSize: number;
   /** The share of a lit slope's light the shade gets from the sky (the ground's `uEarthshine`); 0.05 on the Moon. */
   ambient: number;
+  /** A shadow as it is drawn, 0 to 1: dark brown-grey by day, black at night. The Moon draws black instead, because it has no air. */
+  shade: Rgb;
   /** The ground's colour over its grey. */
   tint: Rgb;
 }
@@ -179,7 +181,8 @@ export function marsAir(sunAltitude: number): SkyAir {
     zenith: k(zenith),
     glow: k(mix(tan, blue, low)),
     glowSize: 0.12 + 0.2 * (1 - low),
-    ambient: 0.05 + 0.22 * day,
+    ambient: 0.05 + 0.4 * day,
+    shade: [0.34 * day, 0.26 * day, 0.2 * day],
     tint: [1.0, 0.72, 0.5],
   };
 }

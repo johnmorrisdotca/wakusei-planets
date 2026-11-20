@@ -99,4 +99,6 @@ test("the Moon's sky has no air and keeps the Earth as a disc; Mars's air is but
   const night = marsAir(-30);
   assert.deepEqual([night.daylight, ...night.zenith, ...night.horizon], [0, 0, 0, 0, 0, 0, 0]);
   assert.ok(night.ambient < noon.ambient);
+  assert.ok(noon.shade[0] > 0.25 && noon.shade[0] < 0.45 && noon.shade[0] > noon.shade[2], "a day shadow is dark brown-grey, not black");
+  assert.deepEqual([...night.shade], [0, 0, 0]);
 });
