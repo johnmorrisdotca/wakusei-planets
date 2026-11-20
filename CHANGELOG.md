@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The moon-page hero is sharper and reads in one line** (MODULES-1722). The still is 960 pixels on its long side, with antialiasing, so a planet this large is not a soft 480-pixel picture. Jupiter's globe is clipped to a circle, which drops the dark strip of its faint rings beside the limb. Saturn is pitched so the near half of the rings crosses the lower part of the globe. The arc uses the height of the picture, and a moon of 1,000 km is drawn large enough to see its map; the circles under the picture stay the true diameters, each named, in the same order as the picture, on one line. A moon with no photo map is named with a star, and the line under the picture says what the star means.
+
 - **The moon page opens on the planet's edge** (MODULES-1722). Above the four tabs, the planet is drawn huge and cropped at the right, and its main moons sit in an arc down the open side, farthest at the top, each a painted sphere at a size that follows its diameter, with a gap between the nearest moon and the planet. Jupiter's arc is Callisto, Ganymede, Europa and Io, and the globe is turned so the Great Red Spot faces them. Saturn's is Iapetus, Titan, Rhea, Dione, Tethys, Enceladus and Mimas, with the rings as the planet draws them and the moons clear of the rings. A smaller row under the arc holds the other named moons the package draws (Saturn's small moons, and Jupiter's Thebe and Amalthea), each marked estimated because it has no photo map. Methone is not in that row. Under the picture, the same moons are outline circles at their true diameters. Every disc and every circle is a button: it names the moon's diameter, distance and discovery. Full screen fills the picture. English and Japanese.
 
 ## [0.71.0] - 2026-11-19

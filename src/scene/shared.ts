@@ -35,7 +35,10 @@ export function takeRenderer(onContext: (state: ContextState) => void): { render
   listeners.add(onContext);
   shared ??= createSharedRenderer<ThreeParts>({
     load: () => loader(),
-    stillSize: 480,
+    // A hero planet is wider than 480 CSS pixels. A still whose long side is 480, drawn at one pixel per sample, looks soft and the ring edges stair-step. 960 is two device pixels of a 480-wide view, and the renderer still caps the live ratio at 2. The byte budget holds that size for a planet and the moons beside it.
+    stillSize: 960,
+    antialias: true,
+    stillBytes: 80 * 1024 * 1024,
     onContext: (state) => {
       for (const listener of listeners) listener(state);
     },

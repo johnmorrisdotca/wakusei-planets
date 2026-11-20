@@ -134,6 +134,7 @@ tr:last-child > * { border-bottom: 0; }
 .hero { position: relative; overflow: hidden; height: min(78vh, 720px); min-height: 520px; background: #000; border-radius: 16px; }
 .hero:fullscreen { width: 100%; height: 100%; min-height: 0; border-radius: 0; }
 .hero-planet { position: absolute; z-index: 1; top: 50%; right: -70%; width: 124%; aspect-ratio: 1; transform: translateY(-50%); pointer-events: none; }
+.hero-planet.clip-disc { border-radius: 50%; overflow: hidden; }
 .hero-planet wakusei-body, .hero-disc wakusei-body { --wakusei-size: 100%; width: 100%; height: 100%; display: block; }
 .hero-moons { position: absolute; inset: 0; z-index: 2; }
 .hero-moon { position: absolute; transform: translate(-50%, -50%); display: block; margin: 0; padding: 0; border: 0; background: none; color: #fff; touch-action: manipulation; }
@@ -145,7 +146,9 @@ tr:last-child > * { border-bottom: 0; }
 .hero-small .hero-moon { position: static; transform: none; display: grid; justify-items: center; gap: 1px; min-width: 36px; min-height: 44px; }
 .hero-small .hero-name, .hero-small .hero-est { position: static; transform: none; left: auto; top: auto; font-size: 9px; line-height: 1.1; }
 .hero-est { color: #d7d2c6; font-weight: 500; }
-.hero-scale { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: end; margin: 0; }
+.hero-scale { display: flex; flex-wrap: nowrap; gap: 4px 10px; align-items: end; margin: 0; overflow-x: auto; }
+.hero-note { margin: 4px 0 0; }
+.scale-name { display: block; font-size: 11px; font-weight: 650; white-space: nowrap; }
 .scale-moon { display: grid; justify-items: center; align-content: end; gap: 2px; min-width: 44px; min-height: 44px; margin: 0; padding: 2px; border: 0; border-radius: 8px; background: none; color: inherit; font: 600 11px/1.2 system-ui, sans-serif; }
 .scale-moon svg { display: block; }
 .scale-moon:hover, .scale-moon:focus-visible, .scale-moon[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 2px; }
@@ -157,6 +160,7 @@ tr:last-child > * { border-bottom: 0; }
   .lede { display: none; }
   .short { display: block; }
   .hero { height: min(68vh, 640px); min-height: 420px; border-radius: 12px; }
+  .hero-moons { bottom: 6.5rem; }
   .hero-disc { width: calc(var(--disc) * 0.78px); }
   .hero-name { font-size: 12px; }
   .hero-small { max-width: 62%; }
@@ -177,6 +181,7 @@ tr:last-child > * { border-bottom: 0; }
     <div class="hero-small" id="hero-small"></div>
   </div>
   <p class="hero-fact" id="hero-fact" role="status"></p>
+  <p class="fine hero-note" id="hero-note"></p>
   <div class="hero-scale" id="hero-scale" data-w-label="hero_scale"></div>
 </section>
 <div class="panels" part="panels">
@@ -504,8 +509,11 @@ export class WakuseiMoonPages extends HTMLElement {
     planet.setAttribute("labels", "off");
     planet.setAttribute("meridian", String(pose.meridian));
     planet.setAttribute("tilt", String(pose.tilt));
+    if (pose.pitch !== undefined) planet.setAttribute("pitch", String(pose.pitch));
     this.#textures(planet);
-    this.#$("#hero-planet").replaceChildren(planet);
+    const frame = this.#$("#hero-planet");
+    frame.classList.toggle("clip-disc", host === "jupiter");
+    frame.replaceChildren(planet);
     const zoom = heroZoom(host);
     if (zoom !== 1) (planet as HTMLElement & { setView(view: { zoom: number }): void }).setView({ zoom });
     const cards = this.#page().cards;
@@ -529,11 +537,6 @@ export class WakuseiMoonPages extends HTMLElement {
       name.className = "hero-name";
       disc.append(body);
       button.append(disc, name);
-      if (look === "illustrated") {
-        const mark = document.createElement("span");
-        mark.className = "hero-est";
-        button.append(mark);
-      }
       return button;
     };
     this.#$("#hero-moons").replaceChildren(...moons.map((moon) => {
@@ -549,7 +552,7 @@ export class WakuseiMoonPages extends HTMLElement {
       button.className = "scale-moon";
       button.dataset["moon"] = circle.id;
       const r = Math.max(1.5, (circle.px / 56) * 26);
-      button.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="${r}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="scale-km"></span>`;
+      button.innerHTML = `<svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="${r}" fill="none" stroke="currentColor" stroke-width="1.5"/></svg><span class="scale-name"></span><span class="scale-km"></span>`;
       return button;
     }));
     this.#paintHero();
@@ -564,8 +567,9 @@ export class WakuseiMoonPages extends HTMLElement {
       button.setAttribute("aria-pressed", String(id === this.#heroMoon));
       const name = button.querySelector(".hero-name");
       if (name !== null && named.has(id)) name.textContent = named.get(id) ?? "";
-      const mark = button.querySelector(".hero-est");
-      if (mark !== null) mark.textContent = this.#say("hero_estimated");
+      if (button.closest("#hero-small") !== null) button.title = this.#say("hero_estimated");
+      const scaleName = button.querySelector(".scale-name");
+      if (scaleName !== null) scaleName.textContent = named.get(id) ?? "";
       const km = button.querySelector(".scale-km");
       if (km !== null) {
         const card = page.cards.find((item) => item.id === id);
@@ -574,6 +578,7 @@ export class WakuseiMoonPages extends HTMLElement {
       button.querySelector("wakusei-body")?.setAttribute("lang", lang);
     }
     this.#$("#hero-planet").querySelector("wakusei-body")?.setAttribute("lang", lang);
+    this.#$("#hero-note").textContent = `${this.#say("hero_scale")} ${this.#say("hero_estimated")}`;
     this.#paintFact();
     this.#paintFullscreen();
   }

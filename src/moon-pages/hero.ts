@@ -18,10 +18,10 @@ export const HERO_SMALL: Record<MoonPageHost, readonly string[]> = {
   neptune: [],
 };
 
-/** Where the painted face is turned, in degrees, so the familiar side of the planet meets the moons. Jupiter's longitude is the package's best-known side, turned so the Great Red Spot sits in the visible half. */
-export const HERO_POSE: Record<MoonPageHost, { meridian: number; tilt: number }> = {
+/** Where the painted face is turned, in degrees, so the familiar side of the planet meets the moons. Jupiter's longitude is the package's best-known side, turned so the Great Red Spot sits in the visible half. Saturn's pitch looks under the pole, so the near half of the rings crosses the lower part of the globe. */
+export const HERO_POSE: Record<MoonPageHost, { meridian: number; tilt: number; pitch?: number }> = {
   jupiter: { meridian: 70, tilt: 14 },
-  saturn: { meridian: 30, tilt: 24 },
+  saturn: { meridian: 30, tilt: 26.73, pitch: -22 },
   uranus: { meridian: 10, tilt: 16 },
   neptune: { meridian: 20, tilt: 16 },
 };
@@ -52,16 +52,16 @@ export function heroMoons(cards: readonly PageCard[], host: MoonPageHost, lang: 
   });
   const max = Math.max(1, ...chosen.map((card) => card.radiusKm));
   const count = chosen.length;
-  const largest = count <= 4 ? 132 : count <= 5 ? 108 : 84;
+  const largest = count <= 4 ? 132 : count <= 5 ? 120 : 112;
   return chosen.map((card, index) => {
     const t = count <= 1 ? 0 : index / (count - 1);
     const share = card.radiusKm / max;
     return {
       id: card.id,
       name: lang === "ja" ? card.name.ja : card.name.en,
-      px: Math.round(largest * Math.max(0.28, share)),
+      px: Math.max(64, Math.round(largest * share)),
       left: Math.round((16 + t * 12) * 10) / 10,
-      top: Math.round((14 + t * 56) * 10) / 10,
+      top: Math.round((10 + t * 62) * 10) / 10,
     };
   });
 }
@@ -76,7 +76,7 @@ export function heroSmall(cards: readonly PageCard[], host: MoonPageHost, lang: 
   const max = Math.max(1, ...chosen.map((card) => card.radiusKm));
   return chosen.map((card) => ({
     id: card.id,
-    name: lang === "ja" ? card.name.ja : card.name.en,
+    name: `${lang === "ja" ? card.name.ja : card.name.en}*`,
     px: Math.round(28 * Math.max(0.45, card.radiusKm / max)),
     left: 0,
     top: 0,

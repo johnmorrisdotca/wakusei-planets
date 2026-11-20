@@ -61,8 +61,8 @@ export const MOON_PAGE_WORDS = {
     full_screen: "Full screen",
     leave_full_screen: "Leave full screen",
     hero_fact: "{name}: {diameter} km across, {distance} km from {planet}. Found {found}.",
-    hero_estimated: "estimated",
-    hero_scale: "To scale",
+    hero_estimated: "* shape or size estimated",
+    hero_scale: "The circles are the true sizes. The moons above are drawn large enough to see.",
   },
   ja: {
     tabs: "表示",
@@ -123,7 +123,7 @@ export const MOON_PAGE_WORDS = {
     full_screen: "全画面",
     leave_full_screen: "全画面をやめる",
     hero_fact: "{name}：直径 {diameter} km、{planet}から {distance} km。発見は{found}。",
-    hero_estimated: "推定",
-    hero_scale: "同じ縮尺",
+    hero_estimated: "* 形や大きさは推定",
+    hero_scale: "円が実際の大きさです。上の衛星は見える大きさに描いています。",
   },
 } as const;

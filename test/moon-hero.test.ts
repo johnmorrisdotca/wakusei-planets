@@ -23,10 +23,14 @@ test("the hero arc is the main moons, farthest first, and the biggest moon has t
 
   assert.ok(jupiter[3]!.left <= 30, "Io stays left of the planet's limb");
   assert.ok(heroZoom("jupiter") > 2);
+  assert.ok(saturn.every((moon) => moon.px >= 64), "a medium moon stays large enough to see");
+  assert.ok(saturn[0]!.top < 14 && saturn.at(-1)!.top > 70, "the arc uses the height of the hero");
   const small = heroSmall(moonPage("saturn").cards, "saturn", "en");
   assert.deepEqual(small.map((moon) => moon.id), [...HERO_SMALL.saturn]);
+  assert.equal(small[0]!.name, "Pan*");
   assert.ok(!small.some((moon) => moon.id === "methone"));
   const scale = heroScale(moonPage("saturn").cards, "saturn");
+  assert.deepEqual(scale.map((moon) => moon.id), [...HERO_ARC.saturn, ...HERO_SMALL.saturn]);
   const titanPx = scale.find((moon) => moon.id === "titan")!.px;
   const panPx = scale.find((moon) => moon.id === "pan")!.px;
   assert.ok(titanPx > panPx * 4);
