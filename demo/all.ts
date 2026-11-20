@@ -27,7 +27,7 @@ setThreeLoader(() => import("./three-subset.ts"));
 const rows = document.querySelector<HTMLElement>("#all-rows")!;
 const legend = document.querySelector<HTMLElement>("#all-legend")!;
 const source = document.querySelector<HTMLElement>("#all-source")!;
-const CLIP = new Set(["jupiter", "uranus", "neptune"]);
+const CLIP = new Set(["uranus", "neptune"]);
 
 function lang(): "en" | "ja" {
   return document.documentElement.lang === "ja" ? "ja" : "en";

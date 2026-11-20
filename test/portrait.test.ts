@@ -1,7 +1,7 @@
 // The portrait builder's scene: the layout, the camera, hit tests, snapping, order, undo and the text kept in the address. All pure, so all here.
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { MOONS_OF } from "../src/facts.ts";
+import { MOONS_OF, ringReach } from "../src/facts.ts";
 import { BODIES } from "../src/index.ts";
 import { addBody, addMoons, auto, centreCamera, createHistory, decodeScene, defaultPortrait, encodeScene, fitAll, freeze, hitTest, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, sizesFor, snap, toScreen, fromScreen, type Portrait } from "../src/portrait/model.ts";
 import { shapesOf, shapesSvg } from "../src/portrait/overlay.ts";
@@ -205,6 +205,8 @@ test("a poster edge keeps the planet at the right and the farthest moon at the t
   const edge = PRESETS.find((p) => p.id === "jupiter-edge")!.scene;
   assert.equal(edge.layout, "manual");
   const planet = edge.items[0]!;
+  assert.equal(planet.pitch, 22);
+  assert.ok(planet.r * ringReach(BODIES.jupiter) < 1, "Jupiter's ring fits the poster, so the ellipse is the ring");
   const moons = edge.items.slice(1);
   assert.deepEqual(moons.map((moon) => moon.body), ["callisto", "ganymede", "europa", "io"]);
   assert.ok(moons[0]!.y > moons.at(-1)!.y);
