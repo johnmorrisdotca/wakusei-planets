@@ -828,8 +828,90 @@ export interface Preset {
 
 const fromList = (ids: readonly BodyId[], change: Partial<Omit<Portrait, "items">> = {}): Portrait => ids.reduce((p, id) => addBody(p, id), { ...defaultPortrait(), ...change });
 
+type PosterHost = "jupiter" | "saturn" | "uranus" | "neptune";
+
+/** The poster arc, farthest from the planet first. These are the moons the package draws. */
+const POSTER_ARC: Record<PosterHost, readonly BodyId[]> = {
+  jupiter: ["callisto", "ganymede", "europa", "io"],
+  saturn: ["iapetus", "titan", "rhea", "dione", "tethys", "enceladus", "mimas"],
+  uranus: ["oberon", "titania", "umbriel", "ariel", "miranda"],
+  neptune: ["nereid", "triton", "proteus"],
+};
+
+/** The turn that puts the familiar face toward the moons. Saturn looks over the pole so the near half of the rings crosses the lower globe. */
+const POSTER_POSE: Record<PosterHost, { spin: number; tilt: number; pitch?: number }> = {
+  jupiter: { spin: 70, tilt: 14 },
+  saturn: { spin: 30, tilt: 26.73, pitch: 22 },
+  uranus: { spin: 10, tilt: 16 },
+  neptune: { spin: 20, tilt: 16 },
+};
+
+/** A manual scene of one poster: the planet large at the right, its main moons in an arc, farthest at the top. Saturn's first step is longer, so Iapetus sits clear of Titan. */
+function posterEdge(host: PosterHost): Portrait {
+  const moons = POSTER_ARC[host];
+  const aspect = 16 / 9;
+  const count = moons.length;
+  const sized = sizesFor(moons, "readable");
+  const moonScale = (count <= 4 ? 0.2 : 0.13) / Math.max(...sized);
+  const pose = POSTER_POSE[host];
+  const planetR = host === "jupiter" ? 0.72 : 0.82 / reachOf(host);
+  const planet: Item = {
+    body: host,
+    x: aspect * 0.92 - planetR * 0.15,
+    y: 0,
+    r: planetR,
+    spin: pose.spin,
+    tilt: pose.tilt,
+    turn: 0,
+    ...(pose.pitch !== undefined ? { pitch: pose.pitch } : {}),
+  };
+  let y = 0.78;
+  let previous = 0;
+  const items: Item[] = [
+    planet,
+    ...moons.map((id, index): Item => {
+      const even = count <= 1 ? 0 : index / (count - 1);
+      const r = sized[index]! * moonScale;
+      if (index > 0) y -= previous + r + (host === "saturn" && index === 1 ? 0.16 : 0.04);
+      previous = r;
+      return { body: id, x: -aspect + (0.16 + even * 0.14) * 2 * aspect, y, r, spin: BODIES[id].showLon ?? 0, turn: 0 };
+    }),
+  ];
+  return { ...defaultPortrait(), items, layout: "manual", arrange: "arc", scale: "readable", moons: "manual", orbits: false, labels: true, aspect, camera: { x: 0, y: 0, h: 1 } };
+}
+
+/** A manual scene of the groups poster: each giant planet with the moons the package draws, in a row beside it. */
+function posterGroups(): Portrait {
+  const hosts: readonly PosterHost[] = ["jupiter", "saturn", "uranus", "neptune"];
+  const aspect = 16 / 9;
+  const rows = hosts.map((host) => {
+    const ids: BodyId[] = [host, ...[...MOONS_OF[host]].sort(byDistance)];
+    const sized = sizesFor(ids, "readable");
+    const scale = 0.22 / Math.max(...sized);
+    return ids.map((id, index) => {
+      const r = Math.max(0.04, sized[index]! * scale);
+      return { id, r, span: r * (id === "saturn" ? reachOf(id) : 1.15) };
+    });
+  });
+  const gap = 0.1;
+  const heights = rows.map((row) => Math.max(...row.map((body) => body.span)) * 2);
+  let yCursor = heights.reduce((sum, height) => sum + height, 0) / 2 + (gap * (rows.length - 1)) / 2;
+  const items: Item[] = [];
+  rows.forEach((row, index) => {
+    const y = yCursor - heights[index]! / 2;
+    yCursor -= heights[index]! + gap;
+    let x = 0;
+    row.forEach((body, place) => {
+      x += body.span;
+      items.push({ body: body.id, x, y, r: body.r, spin: BODIES[body.id].showLon ?? 0, turn: 0 });
+      x += body.span + (place === 0 ? 0.12 : 0.04);
+    });
+  });
+  return fitAll({ ...defaultPortrait(), items, layout: "manual", arrange: "row", scale: "readable", moons: "manual", orbits: false, labels: false, aspect, camera: { x: 0, y: 0, h: 1 } });
+}
+
 /**
- * Ready-made scenes to start from: a family photo of the Sun and the planets, the gas giants to scale, Jupiter and the Galileans, the Earth and the Moon to scale (size and distance), Mars and its moons at their true distance, and the inner planets round the Sun.
+ * Ready-made scenes to start from: a family photo of the Sun and the planets, the gas giants to scale, Jupiter and the Galileans, the Earth and the Moon to scale (size and distance), Mars and its moons at their true distance, the inner planets round the Sun, a giant planet's edge with its main moons in an arc, and every drawn moon beside its planet.
  *
  * @example
  * ```ts
@@ -845,4 +927,9 @@ export const PRESETS: readonly Preset[] = [
   { id: "earthmoon", name: { en: "Earth and Moon to scale", ja: "地球と月 (大きさと距離の比)" }, scene: fromList(["earth", "moon"], { arrange: "orbit", scale: "true", moons: "auto", orbits: true }) },
   { id: "marsmoons", name: { en: "Mars and its moons at true distance", ja: "火星と衛星 (本当の距離)" }, scene: fromList(["mars", "phobos", "deimos"], { arrange: "orbit", scale: "readable", moons: "auto", orbits: true }) },
   { id: "orrery", name: { en: "The inner planets round the Sun", ja: "太陽と内側の惑星 (本当の距離)" }, scene: fromList(["sun", "mercury", "venus", "earth", "mars"], { arrange: "orbit", scale: "readable", moons: "auto", orbits: true, bg: "black" }) },
+  { id: "jupiter-edge", name: { en: "Jupiter's edge", ja: "木星の縁" }, scene: posterEdge("jupiter") },
+  { id: "saturn-edge", name: { en: "Saturn's edge", ja: "土星の縁" }, scene: posterEdge("saturn") },
+  { id: "uranus-edge", name: { en: "Uranus's edge", ja: "天王星の縁" }, scene: posterEdge("uranus") },
+  { id: "neptune-edge", name: { en: "Neptune's edge", ja: "海王星の縁" }, scene: posterEdge("neptune") },
+  { id: "moons-by-planet", name: { en: "Moons beside their planet", ja: "惑星のそばの衛星" }, scene: posterGroups() },
 ];
