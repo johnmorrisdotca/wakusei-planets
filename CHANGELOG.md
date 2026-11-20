@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.72.0] - 2026-11-20
+
 - **The copy-paste snippet names the current package** (MODULES-1719). `VERSION` in `src/version.ts` had stayed at 0.54.0 while releases bumped `package.json` only, so a copied snippet asked for `@0.54.0`. It is 0.71.0, the same as `package.json`, and `test/version.test.ts` fails when the two disagree. The texture address types in `test/api-snapshot.txt` name 0.71.0 as well.
 
 - **A distance on Eros, Ryugu, Bennu, Dimorphos, Tempel 1 and 67P** (MODULES-1045). `placeDistanceKm` is the great circle on a volume-equivalent mean radius. `placeDistance` returns `{ km, accuracyKm }`. `accuracyKm` is the shape bound from the published extents, or `null` when none is stated (a sphere in `BODIES`, and 67P). `placeDistance` is on the API snapshot.
