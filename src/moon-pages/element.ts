@@ -1,10 +1,11 @@
-// <wakusei-moon-pages>: one giant planet's moons in four tabs, each one screen. Orbits: every orbit of /moon-catalogue in SVG, from above, at an angle or from the side, coloured by direction or by family.
+// <wakusei-moon-pages>: one giant planet's moons in four tabs, each one screen. Orbits: every orbit of /moon-catalogue in SVG, from above, at an angle or from the side, every moon named beside its dot, coloured by direction or by family. The picture is the width of the page, and Full screen fills the screen with it.
 // Map and portrait: <wakusei-plan> and <wakusei-portrait>. Main moons: a card with a picture for each moon drawn in full. Every moon: the whole list in a table that sorts. Every number is worked out from the
 // package's data (moonPage). The WebGL parts and the bodies' looks are fetched only when their tab is first opened. Nothing runs on a timer; it never writes the page's address: a choice is reflected on its
 // own attributes and sent as `wakusei-moon-pages-change`, for the page to keep where it likes.
 import { MOONS_OF, type BodyId } from "../facts.ts";
 import { addBody, addMoons, defaultPortrait, encodeScene } from "../portrait/model.ts";
 import { moonPage, MOON_PAGE_HOSTS, type MoonPage, type MoonPageHost, type PageMoon } from "./data.ts";
+import { placeOrbitNames } from "./names.ts";
 import { MOON_PAGE_WORDS } from "./words.ts";
 
 type Lang = "en" | "ja";
@@ -88,9 +89,13 @@ h2 { margin: 0; font-size: 1.5rem; }
 .seg { display: inline-flex; flex-wrap: wrap; gap: 4px; background: ${ink("surface", "#fbf8f1", "#1d201e")}; border: 1px solid ${ink("rule", "#ddd6c6", "#3a3d38")}; border-radius: 26px; padding: 3px; }
 .seg button { border: 0; background: transparent; border-radius: 999px; min-width: 48px; min-height: 48px; padding: 0 10px; font-weight: 600; }
 .seg button[aria-pressed="true"] { background: ${ink("ink", "#1f2320", "#ece8dc")}; color: ${ink("surface", "#fbf8f1", "#1d201e")}; }
+#full { min-height: 48px; padding: 0 14px; border-radius: 999px; border: 1px solid ${ink("rule", "#ddd6c6", "#3a3d38")}; background: transparent; color: inherit; font: inherit; font-weight: 600; }
 button:focus-visible, [tabindex]:focus-visible { outline: 3px solid ${ink("accent", "#b5452c", "#b5452c")}; outline-offset: 2px; }
-.stage { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
-svg.orbits { flex: 0 1 auto; width: min(100%, 640px, calc(60vh * var(--ratio, 1))); aspect-ratio: var(--ratio, 1); display: block; border-radius: 12px; background: #06080d; color: #c9d4e3; touch-action: manipulation; }
+.stage { display: grid; gap: 14px; align-items: start; }
+svg.orbits { width: 100%; aspect-ratio: var(--ratio, 1.6); display: block; border-radius: 12px; background: #06080d; color: #e8eef6; touch-action: manipulation; }
+svg.orbits .names { pointer-events: none; }
+.stage:fullscreen { box-sizing: border-box; width: 100%; height: 100%; padding: 12px; background: #06080d; color: #e8eef6; }
+.stage:fullscreen svg.orbits { max-height: calc(100% - 8rem); }
 svg.orbits path { vector-effect: non-scaling-stroke; stroke-opacity: var(--line, .6); }
 svg.orbits path[data-full] { stroke-opacity: .9; }
 svg.orbits .lit path { stroke-opacity: 1; }
@@ -154,6 +159,7 @@ tr:last-child > * { border-bottom: 0; }
       <div class="seg" id="view" role="group" data-w-label="view"><button type="button" data-view="above" data-w="above"></button><button type="button" data-view="tilted" data-w="tilted"></button><button type="button" data-view="side" data-w="side"></button></div>
       <div class="seg" id="reach" role="group" data-w-label="reach"><button type="button" data-reach="all" data-w="all"></button><button type="button" data-reach="inner" data-w="inner"></button></div>
       <div class="seg" id="colour" role="group" data-w-label="colour"><button type="button" data-colour="direction" data-w="direction"></button><button type="button" data-colour="group" data-w="family"></button></div>
+      <button type="button" id="full" data-w="full_screen"></button>
     </div>
     <div class="stage">
       <svg id="orbits" class="orbits" role="img" aria-labelledby="orbit-caption"></svg>
@@ -373,6 +379,17 @@ export class WakuseiMoonPages extends HTMLElement {
     for (const b of this.#$$("#view [data-view]")) b.addEventListener("click", () => this.#choose({ view: b.dataset["view"] as MoonPagesState["view"] }));
     for (const b of this.#$$("#reach [data-reach]")) b.addEventListener("click", () => this.#choose({ reach: b.dataset["reach"] as MoonPagesState["reach"] }));
     for (const b of this.#$$("#colour [data-colour]")) b.addEventListener("click", () => this.#choose({ colour: b.dataset["colour"] as MoonPagesState["colour"] }));
+    const stage = this.#$(".stage");
+    const full = this.#$("#full");
+    full.addEventListener("click", () => {
+      const done = document.fullscreenElement === stage ? document.exitFullscreen() : stage.requestFullscreen();
+      void done.catch(() => undefined);
+    });
+    stage.addEventListener("fullscreenchange", () => {
+      const on = document.fullscreenElement === stage;
+      full.dataset["w"] = on ? "leave_full_screen" : "full_screen";
+      full.textContent = this.#say(full.dataset["w"] as Word);
+    });
     for (const b of this.#$$("thead button[data-sort]")) {
       b.addEventListener("click", () => {
         const column = b.dataset["sort"] as MoonPagesState["sort"];
@@ -485,13 +502,16 @@ export class WakuseiMoonPages extends HTMLElement {
     }
     const dots: string[] = [];
     const names: string[] = [];
+    const spots: { id: string; x: number; y: number; text: string }[] = [];
     for (const moon of placed) {
       if (moon.at === null) continue;
       const [sx, sy] = project(moon.at[0], moon.at[1], moon.at[2]);
       if (Math.abs(sx) > extent || Math.abs(sy) > tall) continue;
       dots.push(`<circle cx="${sx}" cy="${-sy}" r="${(moon.full ? 1.4 : 1) * 2.6 * px}" fill="${colourOf(moon)}" data-id="${moon.id}"/>`);
-      if (moon.full && (this.#state.reach === "inner" || (moon.a ?? 0) / data.unit > extent / 8)) names.push(`<text x="${sx + 5 * px}" y="${-sy - 5 * px}" font-size="${12 * px}">${escape(this.#moonName(moon))}</text>`);
+      spots.push({ id: moon.id, x: sx, y: -sy, text: this.#moonName(moon) });
     }
+    const font = 11 * px;
+    for (const name of placeOrbitNames(spots, font)) names.push(`<text x="${name.x}" y="${name.y}" font-size="${font}" data-id="${name.id}">${escape(name.text)}</text>`);
     const planetR = Math.max(data.radiusKm / data.unit, 4 * px);
     const title = this.#say(`view_${this.#state.view}`, { planet: this.#planetName() });
     svg.innerHTML = `<title>${escape(title)}</title><g class="lines" fill="none" stroke-linejoin="round">${back.join("")}</g><circle class="planet" cx="0" cy="0" r="${planetR}" fill="${data.colour}"/><g class="lines" fill="none" stroke-linejoin="round">${front.join("")}</g><g class="dots">${dots.join("")}</g><g class="names" fill="currentColor">${names.join("")}</g><g class="lit" fill="none"></g>`;
