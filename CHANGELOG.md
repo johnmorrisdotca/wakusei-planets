@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.74.1] - 2026-11-20
+
 - **The moons of Jupiter, as circles** (MODULES-1731). `chart.html` draws every moon the catalogue gives Jupiter. A larger circle is a larger moon and a higher circle is farther from Jupiter. The circles are drawn larger than true so a small moon can be seen. Colour is the family. A size worked out from the brightness is marked with a star. Each outer group has its own rows, farthest at the top, the gap between the inner moons and those rows is shortened, and neither that spacing nor Jupiter is to scale. Labels stay at least 11 pixels on a phone. The link sits with the other moon pages on the home page, not in the header. English and Japanese.
 
 ## [0.74.0] - 2026-11-20
