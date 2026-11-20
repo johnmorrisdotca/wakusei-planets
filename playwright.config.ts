@@ -19,7 +19,7 @@ export default defineConfig({
   workers: 1,
   timeout: process.env.CI ? 180_000 : 120_000,
   reporter: "list",
-  use: { baseURL: `http://127.0.0.1:${port}`, reducedMotion: "reduce", locale: "en-US" },
+  use: { baseURL: `http://127.0.0.1:${port}`, reducedMotion: "reduce", locale: "en-US", trace: "retain-on-failure" },
   webServer: { command: "node scripts/dev.ts", env: { PORT: String(port) }, url: `http://127.0.0.1:${port}/wakusei-planets/`, reuseExistingServer: false },
   projects: [
     { name: "chromium-desk", testIgnore: others, use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 900 }, ...gl } },
