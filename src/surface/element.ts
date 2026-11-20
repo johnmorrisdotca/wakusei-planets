@@ -44,6 +44,7 @@ const TEMPLATE = `<style>
 :host([data-dragging]) { cursor: grabbing; }
 #stage { position: absolute; inset: 0; }
 #note { position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; font: 400 11px/1.35 system-ui, sans-serif; color: #c8ccd4; text-shadow: 0 1px 2px #000; pointer-events: none; }
+@media (max-width: 520px) { #stage { bottom: 38px; } #note { bottom: 4px; max-height: 34px; overflow: hidden; } }
 #status { position: absolute; inset: 0; display: grid; place-items: center; font: 500 13px system-ui, sans-serif; color: #c8ccd4; pointer-events: none; }
 #status[hidden] { display: none; }
 #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -495,7 +496,7 @@ export class WakuseiSurface extends HTMLElement {
   #noteText(): string {
     const m = this.#terrain?.manifest;
     if (m === undefined) return "";
-    if (this.#site()?.ground === "flat") return this.#lang() === "ja" ? "地面: 高さのデータが追加されるまでの平らな代用です。ここには、実測した起伏も作った起伏もありません。太陽、空、重力は、この場所と時刻の実際のとおりです。" : "Ground: flat stand-in until a DTM is added. There is no relief here, measured or made. The Sun, sky and gravity are the real ones for this place and time.";
+    if (this.#site()?.ground === "flat") return this.#lang() === "ja" ? "ここの地面は、高さのデータが追加されるまでの平らな代用です。実測した起伏はありません。" : "The ground here is a flat stand-in until height data is added. Nothing on it is measured.";
     const made = this.#noDetail() ? "" : this.#lang() === "ja" ? "5 m より細かい地形（小さなクレーター、砂塵、岩）は計算で作ったもので、実測ではありません。" : "Detail finer than the 5 m grid (small craters, dust, rocks) is made, not measured.";
     const things = this.#objects.length === 0 ? "" : this.#lang() === "ja" ? " 地面の物は、公表された座標の位置にこのパッケージが置いたもので、形は簡単な絵です。" : " The things on the ground are placed by this package at published positions, as plain drawings.";
     const credit = joinCredits(m.credit, m.picture?.credit);

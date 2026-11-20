@@ -46,7 +46,7 @@ export function flatManifest(site: SurfaceSite): TerrainManifest {
     picture: null,
     horizon: null,
     credit: "no height model for this site yet",
-    accuracy: "ground: flat stand-in until a DTM is added; there is no relief here, measured or made",
+    accuracy: "ground: flat stand-in until height data is added; nothing on it is measured",
   };
 }
 

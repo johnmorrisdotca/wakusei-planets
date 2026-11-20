@@ -3,6 +3,7 @@
 // come from the page's `three` (the model option needs the whole of it, not the small part the bodies use), and arrive when a model is first asked for, so a page that does not use it loads none of it.
 import type * as THREE from "three";
 import { toWorld, type DriveState } from "./drive.ts";
+import type { V3 } from "./shapes.ts";
 import { MODEL_NODES, fromModelFrame, modelPose, rigOf, type ModelNodes, type Rig } from "./rig.ts";
 
 /**
@@ -24,6 +25,8 @@ export interface VehicleModel {
   readonly nodes: readonly string[];
   /** The model's height over the ground, metres. */
   readonly height: number;
+  /** Triangles of each mesh, in the drive frame at rest. Each casts on its own, so the shadow follows the rover. */
+  readonly shadowClouds: readonly (readonly V3[])[];
   /** Put the model where the drive state is, with the wheels rolled and steered, lit from `sun` (a direction in the scene's frame, east, up, minus north) at `strength` (0 to 1). */
   place(state: DriveState, sun: readonly [number, number, number], strength: number): void;
   /** Draw it with the page's renderer over what is drawn, with the ground's view-projection matrix. */
@@ -115,10 +118,12 @@ function makeModel(T: typeof THREE, root: THREE.Object3D): VehicleModel {
   let renders = 0;
   const [ax, ay] = [new T.Vector3(1, 0, 0), new T.Vector3(0, 1, 0)];
   const turn = new T.Quaternion();
+  const shadowClouds = shadowCloudsOf(T, root);
   return {
     rig,
     nodes: names,
     height: size.y,
+    shadowClouds,
     angles,
     get renders() {
       return renders;
@@ -166,6 +171,49 @@ function makeModel(T: typeof THREE, root: THREE.Object3D): VehicleModel {
       disposeAll(root);
     },
   };
+}
+
+/**
+ * Triangles of each mesh, strided so a dense file stays a few hundred. One hull of a whole mesh is the body's box, which is the slab. A triangle casts on its own.
+ */
+function shadowCloudsOf(T: typeof THREE, root: THREE.Object3D): V3[][] {
+  root.updateMatrixWorld(true);
+  const v = new T.Vector3();
+  const clouds: V3[][] = [];
+  const cap = 500;
+  root.traverse((node) => {
+    const mesh = node as THREE.Mesh;
+    if (mesh.isMesh !== true) return;
+    const geom = mesh.geometry;
+    const attr = geom?.getAttribute?.("position");
+    if (attr === undefined || attr.count < 3) return;
+    const index = geom.getIndex?.() ?? null;
+    const triCount = index === null ? Math.floor(attr.count / 3) : Math.floor(index.count / 3);
+    if (triCount < 1) return;
+    const step = Math.max(1, Math.ceil(triCount / cap));
+    const at = (i: number): V3 => {
+      v.fromBufferAttribute(attr as THREE.BufferAttribute, i).applyMatrix4(mesh.matrixWorld);
+      return fromModelFrame([v.x, v.y, v.z]);
+    };
+    for (let t = 0; t < triCount; t += step) {
+      const base = t * 3;
+      const pa = at(index === null ? base : index.getX(base));
+      const pb = at(index === null ? base + 1 : index.getX(base + 1));
+      const pc = at(index === null ? base + 2 : index.getX(base + 2));
+      const abx = pb[0] - pa[0];
+      const aby = pb[1] - pa[1];
+      const abz = pb[2] - pa[2];
+      const acx = pc[0] - pa[0];
+      const acy = pc[1] - pa[1];
+      const acz = pc[2] - pa[2];
+      const cx = aby * acz - abz * acy;
+      const cy = abz * acx - abx * acz;
+      const cz = abx * acy - aby * acx;
+      if (cx * cx + cy * cy + cz * cz < 1e-6) continue;
+      clouds.push([pa, pb, pc]);
+    }
+  });
+  return clouds;
 }
 
 function disposeAll(root: THREE.Object3D): void {

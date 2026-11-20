@@ -460,12 +460,12 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
           return;
         }
         if (state.model !== undefined) {
-          // a model draws itself (in its own pass, after the ground); the shapes are hidden and its shadow is a box the size of its body
+          // a model draws itself (in its own pass, after the ground); the shapes are hidden and its shadow follows the points of its meshes
           if (vehicleMesh !== undefined) vehicleMesh.visible = false;
           const sun = state.sky.sun;
           state.model.place(v, [sun.enu[0], sun.enu[2], -sun.enu[1]], Math.max(0, Math.min(1, sun.altitude / 8)));
           modelDrawn = state.model;
-          makeVehicleShadow(state, modelShadowParts(v, state.model.rig, state.model.height));
+          makeVehicleShadow(state, modelShadowParts(v, state.model.shadowClouds));
           return;
         }
         modelDrawn = undefined;
@@ -777,7 +777,7 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         (earth.uniforms.uHalf as { value: number }).value = Math.tan((sky.earthDiameter * Math.PI) / 360);
         (sun.uniforms.uHalf as { value: number }).value = Math.tan((sky.sunDiameter * Math.PI) / 360);
         sun.mesh.visible = sky.sun.altitude > -1;
-        earth.mesh.visible = sky.earthDisc !== false && sky.earth.altitude > -1;
+        earth.mesh.visible = sky.earthDisc !== false && sky.earth.altitude > 0;
         skyMesh.visible = air !== null;
         if (air !== null) {
           const e = toEnu(axes.forward);

@@ -58,10 +58,12 @@ function caption(): void {
   }
   const sky = standSky(site.body, site.lat, site.lon, site.time + days * DAY);
   const sun = sky.sun.altitude.toFixed(0);
+  const earthUp = sky.earth.altitude > 0;
   const earth = sky.earth.altitude.toFixed(0);
   const lit = (100 * sky.earthIllumination).toFixed(0);
-  if (site.id === "apollo-17") $("#caption").textContent = say("sf_caption", { sun, earth, lit });
-  else if (site.body === "mars") $("#caption").textContent = say("sf_caption_mars", { place: place(), sun });
+  if (site.body === "mars") $("#caption").textContent = say("sf_caption_mars", { place: place(), sun });
+  else if (!earthUp) $("#caption").textContent = say("sf_caption_down", { place: place(), sun });
+  else if (site.id === "apollo-17") $("#caption").textContent = say("sf_caption", { sun, earth, lit });
   else $("#caption").textContent = say("sf_caption_place", { place: place(), sun, earth, lit });
 }
 
