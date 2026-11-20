@@ -188,3 +188,10 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .giants ul li > a.giant { width: 100%; min-height: 44px; text-decoration: none; color: inherit; border: 1px solid var(--rule); border-radius: 12px; padding: 8px 12px; display: grid; gap: 2px; }
 .giants ul li > a.giant:hover { border-color: var(--ink); }
 .giants ul li > a.giant > span { color: var(--muted); font-size: .85rem; }
+
+.chart-page { display: grid; gap: 8px; }
+.chart-legend { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 0; }
+.chart-legend li { display: flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+#chart svg { width: 100%; height: auto; display: block; background: #070b14; border-radius: 12px; }
+#chart text { fill: #f4efe4; font-size: 10px; font-family: system-ui, sans-serif; }
