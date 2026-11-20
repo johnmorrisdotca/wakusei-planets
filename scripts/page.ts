@@ -15,8 +15,8 @@ const NOTICE = "https://github.com/johnmorrisdotca/wakusei-planets/blob/main/NOT
 const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"></span>', `<span><span data-say="foot"></span> <a href="${NOTICE}" data-say="creditsAll"></a></span>`);
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
-// No header link to the moon pages (the groups, all, counts and dots pages are linked from the home page's moons section): a header of more rows on a phone pushes the first picture below the first screen.
-const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+// The groups, all, counts and dots pages stay off the header (they are on the home page): a header of more rows on a phone pushes the first picture below the first screen. The Jupiter chart is in the header as well, which is how that page shipped.
+const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "chart.html", say: "pageChart" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -93,6 +93,10 @@ export const renderCounts = (): string =>
 /** The planet's edge with its moons I to XVI as dots sized by diameter. */
 export const renderDots = (): string =>
   render("dots.html", "Wakusei Planets 惑星: moons by distance", "A giant planet's edge, and the moons numbered I to XVI as dots sized by their diameters, nearest at the top. English and Japanese. The moons are not photographs.");
+
+/** Every moon of Jupiter as a circle: larger for a larger moon, higher for one farther out. */
+export const renderChart = (): string =>
+  render("chart.html", "Wakusei Planets 惑星: the moons of Jupiter", "Every moon of Jupiter in the catalogue, as a circle. A larger circle is a larger moon, and a higher circle is farther from Jupiter. English and Japanese.");
 
 /** The standing page. */
 export const renderSurface = (): string =>

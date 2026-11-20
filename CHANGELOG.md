@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The moons of Jupiter, as circles** (MODULES-1731). `chart.html` draws every moon the catalogue gives Jupiter. A larger circle is a larger moon and a higher circle is farther from Jupiter. The circles are enlarged so a small moon can be seen, and Jupiter at the bottom is not on that scale. Colour is the family. A size worked out from the brightness is marked with a star. English and Japanese.
+
 ## [0.74.0] - 2026-11-20
 
 - **Every moon, by group** (MODULES-1723). `groups.html` puts a giant planet on top and every moon of the catalogue below it, in the families `moonFamilies` already uses, numbered in that order. A moon the package draws in full keeps that picture. The rest are the estimated rocks, pulled back so a turned rock stays inside its tile, named with the star those rocks already carry (`Himalia*`), and the page shows that star's one legend line. Jupiter's globe is clipped to a circle. English and Japanese.
