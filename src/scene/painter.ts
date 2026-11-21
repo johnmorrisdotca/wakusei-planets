@@ -435,13 +435,31 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           ringTexture = t;
           ringInner = photo.from / facts.radiusKm;
           ringOuter = photo.to / facts.radiusKm;
-          ringMesh!.geometry.dispose();
+          const stripGeometry = ringMesh!.geometry;
+          const stripAt = disposables.indexOf(stripGeometry);
+          if (stripAt >= 0) disposables.splice(stripAt, 1);
+          stripGeometry.dispose();
           ringMesh!.geometry = new T.RingGeometry(ringInner, ringOuter, 256, 1);
           disposables.push(ringMesh!.geometry);
-          ringMaterial!.premultipliedAlpha = false;
-          ringMaterial!.needsUpdate = true;
-          ringMaterial!.uniforms.uRingTex!.value = t;
-          ringMaterial!.uniforms.uRingR!.value.set(ringInner, ringOuter);
+          // the picture is not premultiplied and the strip was. three.js keeps every program a material has compiled, so changing the flag would leave the strip's program and its vertex array on the card: the strip's material is let go and a new one is made
+          const stripMaterial = ringMaterial!;
+          stripMaterial.uniforms.uRingTex!.value = t;
+          stripMaterial.uniforms.uRingR!.value.set(ringInner, ringOuter);
+          const photoMaterial = new T.ShaderMaterial({
+            vertexShader: RING_VERTEX_WORLD,
+            fragmentShader: RING_FRAGMENT_WORLD,
+            side: T.DoubleSide,
+            transparent: true,
+            premultipliedAlpha: false,
+            depthWrite: false,
+            uniforms: stripMaterial.uniforms,
+          });
+          ringMesh!.material = photoMaterial;
+          const materialAt = disposables.indexOf(stripMaterial);
+          if (materialAt >= 0) disposables.splice(materialAt, 1);
+          stripMaterial.dispose();
+          disposables.push(photoMaterial);
+          ringMaterial = photoMaterial;
           for (const m of materials) {
             m.uniforms.uRingTex!.value = t;
             m.uniforms.uRingR!.value.set(ringInner, ringOuter);

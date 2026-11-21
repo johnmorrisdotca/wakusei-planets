@@ -46,6 +46,34 @@ test("a moon that keeps one face to its planet shows it: the meridian points at 
   assert.ok(away > 0.99, String(away));
 });
 
+test("Saturn's ring picture lets the strip's program go", async () => {
+  class Loader {
+    setCrossOrigin(): void {}
+    load(url: string, onLoad?: (texture: THREE.Texture) => void): void {
+      if (url.includes("saturn-ring")) onLoad?.(new THREE.Texture());
+    }
+  }
+  const saturn = painter.make({ ...THREE, TextureLoader: Loader } as unknown as typeof THREE, "saturn", { look: "painted" });
+  const ring = saturn.object.children[1] as THREE.Mesh;
+  const strip = ring.material as THREE.ShaderMaterial;
+  const stripGeometry = ring.geometry;
+  assert.equal(strip.premultipliedAlpha, true);
+  let released = 0;
+  strip.addEventListener("dispose", () => (released += 1));
+  stripGeometry.addEventListener("dispose", () => (released += 1));
+  await Promise.resolve();
+  const photo = ring.material as THREE.ShaderMaterial;
+  assert.equal(released, 2);
+  assert.notEqual(photo, strip);
+  assert.equal(photo.premultipliedAlpha, false);
+  assert.notEqual(ring.geometry, stripGeometry);
+  assert.equal((photo.uniforms.uRingTex!.value as THREE.Texture).isTexture, true);
+  let photoReleased = 0;
+  photo.addEventListener("dispose", () => (photoReleased += 1));
+  saturn.dispose();
+  assert.equal(photoReleased, 1);
+});
+
 test("the Sun is a globe with a glow and no ring; Saturn has a ring that the light and the pole reach", () => {
   const sun = painter.make(THREE, "sun");
   assert.equal(sun.billboard, undefined, "the object is not turned to the camera: the globe keeps its own orientation");
