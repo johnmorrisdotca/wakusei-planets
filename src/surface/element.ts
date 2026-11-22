@@ -192,10 +192,11 @@ export class WakuseiSurface extends HTMLElement {
     this.#changed();
   }
 
-  /** Where the eyes are: metres east and north of the site, and metres over the ground under them. Standing, that is a person's height; while the rover is driven or the landing watched, it is the height of the view being drawn (the seat, the chase camera). */
+  /** Where the eyes are: metres east and north of the site, and metres over the ground under them. Standing, that is a person's height; while the rover is driven or the landing watched, it is the height of the view being drawn (the seat, the chase camera); in a glide from one view to another, the eyes on the way. */
   get position(): { east: number; north: number; up: number } {
-    if (this.#terrain === undefined || (this.#vehicle === undefined && this.#landing === undefined)) return { ...this.#at, up: EYE_HEIGHT };
-    return { ...this.#at, up: this.#eyeUp() - this.#groundAt(this.#at.east, this.#at.north) };
+    if (this.#terrain === undefined) return { ...this.#at, up: EYE_HEIGHT };
+    const pose = this.#pose();
+    return { east: pose.east, north: pose.north, up: pose.up - this.#groundAt(pose.east, pose.north) };
   }
 
   /** The sky now: the Sun and the Earth in it. */
@@ -518,6 +519,15 @@ export class WakuseiSurface extends HTMLElement {
     return this.#groundAt(this.#at.east, this.#at.north) + EYE_HEIGHT;
   }
 
+  /** The camera now: where the view puts it, or on the way to there from where the watched descent had it. */
+  #pose(): Pose {
+    const pose: Pose = { east: this.#at.east, north: this.#at.north, up: this.#eyeUp(), look: this.#look };
+    const glide = this.#glide;
+    if (glide === undefined) return pose;
+    const k = (performance.now() - glide.at) / glide.ms;
+    return k >= 1 ? pose : blendPose(glide.from, pose, easeInOut(k), (east, north) => this.#groundAt(east, north));
+  }
+
   /** Ask for a draw. A change of the view (`moving`, the default) is drawn at the quality of motion and followed, a moment after the last, by one at the quality of rest. */
   #changed(moving = true): void {
     if (!this.#view?.live) return;
@@ -564,12 +574,8 @@ export class WakuseiSurface extends HTMLElement {
     if (measure && !moving) this.#measured += 1;
     if (this.#drawScale < 1) this.#scaled += 1;
     // the camera: where the view puts it, or on the way to there from where the watched descent had it (a move, not a cut)
-    let pose: Pose = { east: this.#at.east, north: this.#at.north, up: this.#eyeUp(), look: this.#look };
-    if (this.#glide !== undefined) {
-      const k = (performance.now() - this.#glide.at) / this.#glide.ms;
-      if (k >= 1) this.#glide = undefined;
-      else pose = blendPose(this.#glide.from, pose, easeInOut(k), (east, north) => this.#groundAt(east, north));
-    }
+    const pose = this.#pose();
+    if (this.#glide !== undefined && performance.now() - this.#glide.at >= this.#glide.ms) this.#glide = undefined;
     this.#lastPose = { pose, fromWatch: this.#landing !== undefined || this.#glide !== undefined };
     scene.apply({ eye: { east: pose.east, north: pose.north, up: pose.up }, look: pose.look, sky: this.#sky, shadows: this.getAttribute("shadows") !== "off", detail: !this.#noDetail(), exposure: num(this.getAttribute("exposure"), this.#site()?.body === "mars" ? 1.5 : 1.6), quality: this.#quality(), scale: this.#drawScale, objects: this.#objects.length > 0, ...(this.#vehicle === undefined ? {} : { vehicle: this.#vehicle, ...(this.#model === undefined ? {} : { model: this.#model }), trail: this.#trail, dust: this.#dust.position }), ...(this.#landing === undefined ? {} : { lander: this.#landerState(), dust: this.#dust.position }), measure: measure || this.getAttribute("measure") !== null });
     this.#view!.invalidate();

@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }, testInfo) => {
 });
 
 type Pose = { east: number; north: number; up: number; look: { azimuth: number; pitch: number; fov: number } };
-type Surface = HTMLElement & { landing?: { camera: string }; objects: readonly { id: string; east: number; north: number }[]; camera?: Pose; stats: { gliding: boolean; renderer?: { draws: number } }; landingTime: number; pauseLanding(): void };
+type Surface = HTMLElement & { landing?: { camera: string }; position: { east: number; north: number; up: number }; objects: readonly { id: string; east: number; north: number }[]; camera?: Pose; stats: { gliding: boolean; renderer?: { draws: number } }; landingTime: number; pauseLanding(): void };
 
 const view = (page: Page) => page.locator("#test-surface");
 const read = <T>(page: Page, fn: (el: Surface) => T): Promise<T> => view(page).evaluate(fn as never) as Promise<T>;
@@ -60,6 +60,8 @@ test.describe("with motion allowed", () => {
     expect(start.north - td.north, "the ground camera stands 150 m north of the touchdown point").toBeGreaterThan(100);
     await read(page, (el) => el.removeAttribute("watch"));
     expect(await read(page, (el) => el.stats.gliding), "a move has begun").toBe(true);
+    const onTheWay = await read(page, (el) => el.position);
+    expect(onTheWay.north - td.north, "position is the eyes on the way, still far north of the touchdown point").toBeGreaterThan(60);
     const samples: Pose[] = [];
     let lastDraws = -1;
     await expect
@@ -87,6 +89,9 @@ test.describe("with motion allowed", () => {
     expect(biggest, `no step is most of the way (the biggest is ${biggest.toFixed(0)} of ${total.toFixed(0)} m)`).toBeLessThan(total * 0.6);
     expect(Math.abs(end.north - td.north), "it arrives at the touchdown point").toBeLessThan(5);
     expect(await read(page, (el) => el.stats.gliding)).toBe(false);
+    const arrived = await read(page, (el) => el.position);
+    expect(Math.abs(arrived.north - td.north), "position has arrived too").toBeLessThan(5);
+    expect(arrived.up, "and is a person's height over the ground").toBeCloseTo(1.7, 2);
   });
 
   test("switching from the ground camera to the window glides too: no jump, and it arrives at the window", async ({ page }) => {

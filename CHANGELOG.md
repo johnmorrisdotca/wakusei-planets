@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`<wakusei-surface>` `position` follows the view through a glide** (MODULES-1487). While driving or watching the landing `position.up` already followed the view; during the move from the watched descent to the standing view, the rover or the other camera (the `glide`), `position` still gave the standing place at 1.7 m. It now gives the eyes on the way: east, north and the height over the ground under them, ending at the standing place and 1.7 m. Standing, driving and watching are unchanged.
+
 ## [0.74.1] - 2026-11-20
 
 - **Saturn's ring picture lets the strip's program go.** The painted ring kept the strip's graphics program, and the vertex array that went with it, after the picture arrived. The space view's long run still held them on every other walk (148 objects against a start of 146) until the body was made again.
