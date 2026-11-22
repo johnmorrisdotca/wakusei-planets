@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Ceres's size and pole are credited to the papers, not to a Wikipedia article** (MODULES-1484). `NOTICE.md` named Ermakov et al. 2017 "as listed in Wikipedia's Ceres article"; it now names the paper itself (authors, year, journal, DOI) for the 966.2 x 962.0 x 891.8 km size and JPL SBDB's value from Park et al. 2016 for the pole. No number changed.
+
 ## [0.74.1] - 2026-11-20
 
 - **Saturn's ring picture lets the strip's program go.** The painted ring kept the strip's graphics program, and the vertex array that went with it, after the picture arrived. The space view's long run still held them on every other walk (148 objects against a start of 146) until the body was made again.
