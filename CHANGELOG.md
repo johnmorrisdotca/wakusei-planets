@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - **`<wakusei-surface>` `position` follows the view through a glide** (MODULES-1487). While driving or watching the landing `position.up` already followed the view; during the move from the watched descent to the standing view, the rover or the other camera (the `glide`), `position` still gave the standing place at 1.7 m. It now gives the eyes on the way: east, north and the height over the ground under them, ending at the standing place and 1.7 m. Standing, driving and watching are unchanged.
+- **Ceres's size and pole are credited to the papers, not to a Wikipedia article** (MODULES-1484). `NOTICE.md` named Ermakov et al. 2017 "as listed in Wikipedia's Ceres article"; it now names the paper itself (authors, year, journal, DOI) for the 966.2 x 962.0 x 891.8 km size and JPL SBDB's value from Park et al. 2016 for the pole. No number changed.
 
 ## [0.74.1] - 2026-11-20
 
