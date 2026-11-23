@@ -84,6 +84,8 @@ test("turnTo brings a body into the picture without moving the camera, and says 
     return [before, view.turnTo("mars", { smooth: false })] as const;
   });
   expect(turned).toBe(true);
+  // the view looks at Mars, and the camera is still at the body it stood at
+  expect(await page.locator(SPACE).evaluate((el) => [(el as unknown as { body: string }).body, (el as unknown as { at: string }).at])).toEqual(["mars", "earth"]);
   await drawnAfter(page, drawsBefore, "the turn");
   await quiet(page);
   const after = await sightOf(page);
@@ -98,6 +100,9 @@ test("turnTo brings a body into the picture without moving the camera, and says 
   expect(await callOn(page, "turnTo", "nowhere")).toBe(false);
   await quiet(page);
   expect((await statsOf(page)).draws, "a call that does not turn draws nothing").toBe(draws);
+  // going to a body is travelling: the camera is at it, and `at` follows `body`
+  expect(await callOn(page, "goTo", "venus", { smooth: false })).toBe(true);
+  expect(await page.locator(SPACE).evaluate((el) => [(el as unknown as { body: string }).body, (el as unknown as { at: string }).at])).toEqual(["venus", "venus"]);
 });
 
 test("a gliding turn ends with the body in the picture and the camera where it was, and nothing is drawn after it", async ({ page }) => {
