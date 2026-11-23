@@ -14,6 +14,7 @@ import { flatBody, isFlatBody, orbiterColour, orbiterName, type FlatBodyId, type
 import { MAX_ZOOM, clampView, pixelsPerDegree, projectFlat, wrapLongitude, zoomAbout, type FlatView } from "./geometry.ts";
 import { MAP_LAND, MAP_LINE, MAP_SEA, creditLicence, creditWho, pictureWidth, readLook, toneMap, toneRamp, type FlatLook, type Tone } from "./look.ts";
 import { markName, readMarks, type FlatMark, type HeldMark } from "./marks.ts";
+import { readerMarks } from "./reader-places.ts";
 import { circleOutline, flatMoonTrackHalf, flatMoonTracks, flatMoons, flatOrbiter, flatSun, flatSunRate, flatTrack, moonsOfBody, shadeNight, sunriseLine, trackPieces, type FlatOrbiter } from "./scene.ts";
 import { coordinateText, gridText, say, type FlatLang } from "./words.ts";
 import type { OrbiterStatus } from "../orbiters.ts";
@@ -243,7 +244,8 @@ function picture(url: string): Promise<HTMLImageElement> {
  * `paused` (same: hold the clock and keep the speed; nothing is drawn while it is held), `time` (same: `now`, an ISO date or milliseconds since 1970; live when absent), `speed` (same: 1 is real time, 0 holds, 86400 is a day a second, negative runs backwards),
  * `selected` (same: the chosen orbiter's id such as `lro`, or a place's id such as `moon/apollo-11-lunar-module`), `shade` (same: `off` for no night), `dot-size` (same: pixels), `controls` (same: `none`, or any of `centre zoom footprint track chips key look`: the buttons, filter chips, key and Map / Photo pair shown; all but `look` by default), `lang` (same: `en` or `ja`; the page's language by default),
  * `orbiters` (`all`, the default, `off`, or some ids with commas: the orbiters drawn), `places` (the kinds of place marked, from `landing` (crewed, landing and rover sites), `crash` (crashes and impacts), `planned` and `feature` (named craters, seas and mountains); `landing` by default and in the photo look, `landing` and `feature` in the map look, `all` for every kind, `off` for none),
- * `names` (`off` for no names beside the marks, or the most names to show), `site-flags` (the landing sites carry their country's flag: `<hata-flag>` beside the name on the map and in the tip; the page imports `@johnmorrisdotca/hata`, and without it the name stands alone), `texture-base` and `texture-far-base` (where the body's pictures are: the package's folder on jsDelivr by default).
+ * `names` (`off` for no names beside the marks, or the most names to show), `site-flags` (the landing sites carry their country's flag: `<hata-flag>` beside the name on the map and in the tip; the page imports `@johnmorrisdotca/hata`, and without it the name stands alone), `texture-base` and `texture-far-base` (where the body's pictures are: the package's folder on jsDelivr by default),
+ * `earth-places` (the same JSON list as the globe, drawn on the Earth only: where the reader is, as a star, and the places they keep, as rings; an airport is a small blue dot and a harbour a small green square), `body-places` (the same list on the body shown; an entry named `earth` is not drawn here) and `earth-place-layers` (the same switches as the globe: a layer set to false is left out).
  *
  * Events (the same names as chikyu's with `wakusei-` for `chikyu-`): `wakusei-flat-pick` (an orbiter, a place of the tables (a landing, a rover, a crash, a crater, a mountain), a landing site or a mark the page added, under the pointer, tapped, or reached by the keyboard: a `FlatPick` with `kind`, `id`, `name`, `via` and, for a place, `place` (its record) and `site` (the landing site, where it is one), for a mark `mark` (its record, with the page's `data`); `detail.id` is null when a tap lands on nothing and clears the choice), `wakusei-flat-filter` (a chip changed what is shown: `{ orbiters, layers }`),
  * `wakusei-flat-look` (the look or how it stands changed: `{ look, state }`), `wakusei-flat-view` (the reader panned or zoomed: `{ center, zoom }`) and `wakusei-timechange` (`{ time, running, paused }`, at most four a second while time runs; the name the space view uses).
@@ -263,7 +265,7 @@ function picture(url: string): Promise<HTMLImageElement> {
  * ```
  */
 export class WakuseiFlat extends HTMLElement {
-  static observedAttributes = ["body", "look", "moons", "center", "home-lon", "home-lat", "time", "speed", "paused", "footprint", "track", "footprint-elevation", "selected", "shade", "dot-size", "controls", "lang", "orbiters", "places", "names", "site-flags", "texture-base", "texture-far-base"];
+  static observedAttributes = ["body", "look", "moons", "center", "home-lon", "home-lat", "time", "speed", "paused", "footprint", "track", "footprint-elevation", "selected", "shade", "dot-size", "controls", "lang", "orbiters", "places", "names", "site-flags", "texture-base", "texture-far-base", "earth-places", "body-places", "earth-place-layers"];
 
   #body: FlatBodyId = "moon";
   #info: FlatBodyInfo = flatBody("moon");
@@ -280,6 +282,7 @@ export class WakuseiFlat extends HTMLElement {
   #showMoons = false;
   #moonIds: MoonId[] = [];
   #moonMarks: HeldMark[] = [];
+  #readerMarks: HeldMark[] = [];
   #moonTracks: MoonTracks | undefined;
   #orbiterIds: OrbiterId[] = [];
   #footprint = false;
@@ -413,7 +416,8 @@ export class WakuseiFlat extends HTMLElement {
 
   /** The page's marks and the moons the element places itself (`moons`), in one list: what is drawn, hit, reached by the keyboard and read aloud. */
   #allMarks(): readonly HeldMark[] {
-    return this.#moonMarks.length === 0 ? this.marks : [...this.marks, ...this.#moonMarks];
+    const extra = [...this.#moonMarks, ...this.#readerMarks];
+    return extra.length === 0 ? this.marks : [...this.marks, ...extra];
   }
 
   #marksChanged(): void {
@@ -593,6 +597,7 @@ export class WakuseiFlat extends HTMLElement {
   attributeChangedCallback(name: string, old: string | null, value: string | null): void {
     if (!this.#connected || old === value) return;
     this.#read(name);
+    if (name === "body" || name === "earth-places" || name === "body-places" || name === "earth-place-layers") this.#layReader();
     if (name === "lang" || name === "controls" || name === "home-lon" || name === "home-lat" || name === "body" || name === "orbiters" || name === "places" || name === "look") this.#words();
     this.#syncLegend();
     this.#sync();
@@ -623,6 +628,17 @@ export class WakuseiFlat extends HTMLElement {
   #readAll(): void {
     this.#read("body");
     for (const name of WakuseiFlat.observedAttributes) if (name !== "body") this.#read(name);
+    this.#layReader();
+  }
+
+  /** The reader's places for the body now shown (`earth-places` on the Earth, `body-places` on any other). A choice that named one that has gone is cleared. */
+  #layReader(): void {
+    this.#readerMarks = readerMarks(this.#body, this.getAttribute("earth-places"), this.getAttribute("body-places"), this.getAttribute("earth-place-layers"));
+    const gone = (chosen: { kind: string; id: string } | null): boolean => chosen?.kind === "mark" && chosen.id.startsWith("place:") && !this.#readerMarks.some((mark) => mark.id === chosen.id);
+    if (gone(this.#selected)) this.#selected = null;
+    if (gone(this.#hover)) this.#hover = null;
+    if (gone(this.#cursor)) this.#cursor = null;
+    this.#legendKey = "";
   }
 
   /** Take in one attribute. A change to one never undoes what the reader did with another (a chosen orbiter, the pan). */
@@ -1946,6 +1962,7 @@ export class WakuseiFlat extends HTMLElement {
     if (this.#footprint && this.#orbs.some((o) => o.on)) entries.push({ glyph: "footprint", text: say(lang, "keyFootprint") });
     if (this.#track && this.#orbs.some((o) => o.on)) entries.push({ glyph: "track", text: say(lang, "keyTrack") });
     if (this.#moonMarks.length > 0) entries.push({ glyph: "custom", text: say(lang, "keyMoon"), colour: this.#moonMarks[0]!.colour ?? "#ffffff" });
+    if (this.#readerMarks.length > 0) entries.push({ glyph: "custom", text: say(lang, "keyReader"), colour: this.#readerMarks[0]!.colour ?? "#ffffff" });
     if (this.#track && this.#moonMarks.length > 0) entries.push({ glyph: "track", text: say(lang, "keyMoonTrack") });
     for (const layer of this.#layers) if (this.#marks.some((m) => m.layer === layer)) entries.push({ glyph: layer, text: say(lang, layer) });
     for (const [group, held] of this.#groups) entries.push({ glyph: "custom", text: markName(held.label ?? group, lang), colour: held.marks[0]?.colour ?? "#ffffff" });
