@@ -174,9 +174,9 @@ const saturn = moonPage("saturn");
 console.log(saturn.counts.total, "moons,", saturn.counts.retrograde, "going against Saturn's spin");
 ```
 
-## Flat maps of the Moon and Mars
+## Flat maps of any planet or moon
 
-`<wakusei-flat body="moon" track>` is the Moon on a flat map (`body="mars"` is Mars): the body's own painted picture with day and night for the time shown, the landing, rover and crash sites marked, and the spacecraft in orbit as dots that move over it with their coverage circles and ground tracks. It is a canvas with no WebGL, takes `time`, `speed` and `paused`, sends `wakusei-flat-pick` when an orbiter or a mark is pressed, works by keyboard and touch, and has the same attributes and events as chikyu-earth's `<chikyu-flat>`, so one control can swap the Earth, the Moon and Mars. It draws five lunar orbiters (LRO, Chandrayaan-2, Danuri, ARTEMIS P1 and P2) and six Martian ones (MRO, Odyssey, MAVEN, Mars Express, TGO and Hope); CAPSTONE and Tianwen-1 have no public path and are not drawn.
+`<wakusei-flat body="mars">` is any of the 28 planets, dwarf planets and moons the package has a picture of on a flat map (`body="moon"`, `"jupiter"`, `"titan"`, `"pluto"` and the rest): in two looks, `look="photo"` (the body's own painted picture, the default) and `look="map"` (a line map drawn from the same picture: dark tones, a line where one meets the next, a grid with its degrees, the named features), with an optional Map / Photo control (`controls="centre look zoom key"`). It shows day and night for the time shown with the sunrise and sunset line and the Sun's mark, the landing, rover and crash sites and named features where the package has them, a key under the map and the picture's credit in one small line. Round the Moon and Mars it draws the spacecraft in orbit as dots that move over it with their coverage circles and ground tracks, and for any body a page can add marks of its own (`setMarks`). It is a canvas with no WebGL, takes `time`, `speed` and `paused`, sends `wakusei-flat-pick` when an orbiter, a mark or a place is pressed, works by keyboard and touch, and has the same attributes, key and events as chikyu-earth's `<chikyu-flat>`, so one control can swap the Earth, the Moon and Mars. It draws five lunar orbiters (LRO, Chandrayaan-2, Danuri, ARTEMIS P1 and P2) and six Martian ones (MRO, Odyssey, MAVEN, Mars Express, TGO and Hope); CAPSTONE and Tianwen-1 have no public path and are not drawn.
 
 ```ts
 import { flatOrbiter } from "@johnmorrisdotca/wakusei-planets/flat";
@@ -479,7 +479,7 @@ The reference is a site, made from the source's own doc comments: every export h
 | `.../portrait` | `<wakusei-portrait>`: many bodies in one scene. The scene model (`addBody`, `layoutPortrait`, `encodeScene`, `decodeScene`) is in the main entry. |
 | `.../space` | Where the Sun, the Moon and the planets are for a date, in two scales, and where a camera riding along looks: `frameAt`, `createTrack`, `placeSun`, `placeAround`, `ridePose`. No browser. |
 | `.../space/element` | `<wakusei-space>`: the Earth, the Moon, the Sun and the planets in their places. |
-| `.../flat` | The flat maps' pure side: `flatSun`, `flatOrbiter`, `shadeNight`, `circleOutline`, `flatTrack`, the geometry and the words. `.../flat/define` is `<wakusei-flat>`, the Moon or Mars on a flat map, in a canvas with no WebGL. |
+| `.../flat` | The flat maps' pure side: `flatSun`, `sunriseLine`, `flatOrbiter`, `shadeNight`, `circleOutline`, `flatTrack`, the line map's `toneMap`, the marks' `readMarks`, the geometry and the words. `.../flat/define` is `<wakusei-flat>`, any planet or moon on a flat map, as a photo or a line map, in a canvas with no WebGL. |
 | `.../flat/system` | The flat solar system's pure side: `systemMarks`, `systemBelts`, `systemOrbit`, `craftPath`, `squeezeAu`, the view and the words. `.../flat/system/define` is `<wakusei-flat-system>`, in a canvas with no WebGL. |
 | `.../plan` | The top-down plan: `planAt`, `planSvg`, `planText`. `.../plan/element` is `<wakusei-plan>`, in SVG with no WebGL. |
 | `.../moon-pages` | A giant planet's moon pages as numbers: `moonPage`, `MOON_PAGE_HOSTS`, `MOON_PAGE_TIME`. `.../moon-pages/element` is `<wakusei-moon-pages>`, the four tabs. |
@@ -517,7 +517,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [The space view](docs/guides/space-view.md) | The Earth, Moon, Sun and planets in their places; two scales; time both ways |
 | [A star from its numbers](docs/guides/star-look.md) | Any star in 3D or as lines, what is measured and what is drawn, every way to put it in a page |
 | [The size line-up](docs/guides/size-lineup.md) | The Sun and the largest stars at true relative size, with each radius, its error and its paper, where the papers disagree, every way to put it in a page |
-| [Flat maps of the Moon and Mars](docs/guides/flat.md) | The Moon or Mars on a flat map: day and night, the sites, the orbiters moving with their coverage and ground tracks, the same attributes and events as the Earth's flat map |
+| [Flat maps of any planet or moon](docs/guides/flat.md) | Any planet or moon on a flat map, as a photo or a line map: day and night with the sunrise line, the sites and named features, the Moon's and Mars's orbiters moving with their coverage and ground tracks, marks of your own, the same attributes, key and events as the Earth's flat map |
 | [The flat solar system](docs/guides/flat-system.md) | The Sun, planets, belts, comets and spacecraft (the Tesla Roadster) from above on a flat map: squeezed or true distances, the same attributes and events as the flat maps |
 | [The top-down plan](docs/guides/plan.md) | The solar system or one planet's moons from above, with one body marked: squeezed or to-scale distances, drawing only on change |
 | [Zoom and pan](docs/guides/zoom-and-pan.md) | Every view zooms and moves by itself: the range of each and why it ends there, the bar, the embed page |

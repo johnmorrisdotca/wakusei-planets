@@ -61,13 +61,13 @@
       "platform": "browser"
     },
     "./flat": {
-      "en": "The flat map's pure parts: the Sun's place over the Moon or Mars, the orbiters over the ground, the night's shading, coverage circles, ground tracks, the map's geometry and words",
-      "ja": "平面地図の計算部分: 月や火星の上の太陽の位置、周回機の真下の地点、夜の陰影、可視範囲の円、地上軌跡、地図の座標計算、言葉",
+      "en": "The flat map's pure parts: the Sun's place over any body, the sunrise line, the orbiters over the ground, the night's shading, the two looks, the marks a page adds, coverage circles, ground tracks, the map's geometry and words",
+      "ja": "平面地図の計算部分: どの天体の上でも太陽の位置、日の出・日の入りの線、周回機の真下の地点、夜の陰影、二つの見た目、ページが足す印、可視範囲の円、地上軌跡、地図の座標計算、言葉",
       "platform": "node"
     },
     "./flat/define": {
-      "en": "The <wakusei-flat> element: the Moon or Mars on a flat map, with day and night, the sites and the orbiters moving over it",
-      "ja": "<wakusei-flat> 要素 (月や火星の平面地図。昼と夜、着陸地点、その上を動く周回機)",
+      "en": "The <wakusei-flat> element: any planet or moon on a flat map, as a photo or a line map, with day and night, the sunrise line, the sites and the orbiters moving over it",
+      "ja": "<wakusei-flat> 要素 (どの惑星や衛星も平面地図に。写真か線の地図で、昼と夜、日の出・日の入りの線、着陸地点、その上を動く周回機)",
       "platform": "browser"
     },
     "./flat/system": {
