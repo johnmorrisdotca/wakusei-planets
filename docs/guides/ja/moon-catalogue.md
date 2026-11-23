@@ -49,7 +49,7 @@ console.log(catalogueMoonsOf("jupiter", "carme").length, "moons in Jupiter's Car
 | `discovery` | `year`、`by` (JPL が書いているとおりの発見者か探査機のチーム)、`reference` (発表された場所: IAU 回報、小惑星電子回報 MPEC、CBET、古くから名前のある衛星は "IAU WGPSN") |
 | `orbit` | 平均軌道: `a`、`e`、`w`、`m`、`i`、`node`、`periodDays` (Horizons に合わせたもの)、近点と昇交点がひとまわりする年数 (`apsisYears`、`nodeYears`)、基準の面 (`frame` と `pole`)、元期 (2026-01-01)、もとにした JPL の暦 |
 | `retrograde`、`group` | 惑星の自転と逆向きにまわるかどうかと、グループ (下で説明) |
-| `radiusKm`、`radiusSigmaKm`、`radiusFrom`、`albedo`、`magnitude`、`magnitudeFrom` | 大きさとその出どころ (下で説明)、JPL が示すアルベド、等級 (JPL のデータの V(1,0) 等級、またはウィキペディアの表の絶対等級) と、そのどちらなのか (`sheet` か `wikipedia`) |
+| `radiusKm`、`radiusSigmaKm`、`radiusFrom`、`albedo`、`magnitude`、`magnitudeFrom` | 大きさとその出どころ (下で説明)、JPL が示すアルベド、等級 (JPL のデータの V(1,0) 等級、または米国海軍天文台の表の V(1,0) 等級) と、そのどちらなのか (`sheet` か `usno`) |
 | `accuracy`、`grade` | `catalogueMoonPosition` が JPL Horizons からどれだけずれていたかと、その段階 (下で説明) |
 | `full` | このパッケージがくわしく描く44個は `true`。それらはメインの入口の `moonVector` と `system` のほうがずっと正確です |
 
@@ -129,11 +129,11 @@ console.log(moonOrbitKey("direction").map((entry) => `${entry.names.ja}: ${entry
 
 ## 大きさ
 
-`radiusFrom` は半径の出どころです。`measured` は JPL の「Planetary Satellite Physical Parameters」にある46個 (不確かさは `radiusSigmaKm`)、`sheet` は Horizons のデータに半径がある19個、`derived` は382個です。その内訳は、V(1,0) 等級だけがデータにある26個と、ほかのどこにも大きさがない不規則衛星356個で、後者の等級は、英語版ウィキペディアの木星、土星、天王星、海王星の衛星の表にある絶対等級です (`magnitudeFrom` が `sheet` か `wikipedia` かを示します。`wikipedia` のときは、ページが `MOON_MAGNITUDE_PAGES[host]`、読んだ日 (2026-11-18) が `MOON_MAGNITUDES_READ` です)。それらの表は、不規則衛星の等級を小惑星センターの Natural Satellites Ephemeris Service から取っています。使っているのはその等級ひとつだけで、表の直径やほかの列は使っていません。
+`radiusFrom` は半径の出どころです。`measured` は JPL の「Planetary Satellite Physical Parameters」にある46個 (不確かさは `radiusSigmaKm`)、`sheet` は Horizons のデータに半径がある19個、`derived` は50個です。その内訳は、V(1,0) 等級だけがデータにある26個と、米国海軍天文台の衛星表の V(1,0) の列に数字がある不規則衛星24個です (`magnitudeFrom` が `sheet` か `usno` かを示します。`usno` のときは、ファイルが `MOON_MAGNITUDE_PAGES[host]`、読んだ日 (2026-11-23) が `MOON_MAGNITUDES_READ` です)。使っているのはその等級ひとつだけです。
 
-等級は `scripts/moon-catalogue-magnitudes.json` に入れてあり、`scripts/make-moon-magnitudes.py` が作ります (4つのページに、1ページ1回ずつアクセスします)。ビルドスクリプトがこのファイルを読むので、`--refresh` でも残ります。小惑星センター自身の発見の回報を読むのが最初の案でしたが、同センターの robots.txt はプログラムによる読み取りを許していません。
+等級は `scripts/moon-catalogue-magnitudes.json` に入れてあり、`scripts/make-moon-magnitudes.py` が作ります (1回の読み取りです)。ビルドスクリプトがこのファイルを読むので、`--refresh` でも残ります。その列が空欄の衛星は、ここでも空欄のままです。小惑星センターのサービスは、robots.txt がプログラムによる読み取りを許していません。
 
-`derived` の半径は、NASA/JPL の小惑星の大きさの計算と同じ式 D = 10^(3.1236 − 0.5 log10(アルベド) − 0.2 V) の半分で、アルベドは Horizons のデータにあればその値、なければ `ASSUMED_ALBEDO` (0.04、ヒマリアのデータの値) を使います。382個のどれにもデータにアルベドがないので、どれも、この暗さと仮定した見積もりです。表の直径と比べると、木星の暗い衛星28個では、差が2倍を超えます (こちらのほうが約2.2倍から2.8倍大きくなります)。そのため、いちばん小さい衛星の大きさは、数倍の誤差を含む見積もりです。なお、土星の表には、直径は0.04を仮定したものだと注記されていますが、木星の表は、こうした暗い衛星の直径をシェパード本人のページから取っています。絶対等級 H が17ほどのとき、表の1 kmになるにはアルベドが0.3ほど必要ですが、こちらは、こうした衛星に多い暗さの0.04を仮定しています。1 kmとした根拠は、表に示されていません。残りの21個には大きさがありません。内訳は、冥王星以外の準惑星の衛星7個 (データにも表にも、大きさも等級もありません)、表の等級が直径から計算されている `inner` と `regular` の規則衛星13個 (その等級を使うと堂々めぐりになります)、そして表に載っていないフィロフロシネです。
+`derived` の半径は、NASA/JPL の小惑星の大きさの計算と同じ式 D = 10^(3.1236 − 0.5 log10(アルベド) − 0.2 V) の半分で、アルベドは Horizons のデータにあればその値、なければ `ASSUMED_ALBEDO` (0.04、ヒマリアのデータの値) を使います。見積もりです。残り353個には大きさがありません。内訳は、冥王星以外の準惑星の衛星7個、JPL が大きさを載せていない規則衛星と内側の衛星、そして米国海軍天文台の表が V(1,0) を空欄にしている不規則衛星です。
 
 ## 宇宙の表示で
 
