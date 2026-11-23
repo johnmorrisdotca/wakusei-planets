@@ -4,6 +4,8 @@
 
 ## [0.75.1] - 2026-11-23
 
+- **Ceres's radius matches JPL's extent** (MODULES-1761). The drawn radius was 481.05 km and the flattening 0.0731. JPL's Small-Body Database, read 2026-11-23, gives the extent 964.4 x 964.2 x 891.8 km (Park et al. 2016, sigma 0.2 km). The radius is now 482.15 km, the mean of the equatorial axes, and the flattening 0.075184, which puts the pole at 445.9 km. The 966.2 x 962.0 x 891.8 km figure is not used: the Ermakov et al. 2017 page did not open, and that paper's abstract gives about 470 km, the volume-equivalent size (the database's diameter 939.4 km). The pole and the spin are unchanged. MODULES-1484 had changed the citation only.
+
 - **The Jupiter chart's phone test waits for the redraw** (MODULES-1802). Narrowing the page paints the chart again. The test reads a label's box only after that paint, and the box still has to be at least 11 pixels tall.
 
 - **A body's name is drawn whole, in front of the body** (MODULES-1797). On a lumpy moon (Thebe, Amalthea and the like) the name is a band on a sphere of radius 1, and the shape stands out past that sphere, so letters sat inside the surface. The band is now written on the shell that clears the shape's highest point (`stats.label.shell`: 1 on a smooth globe, more on a lumpy one). On a smooth globe the same band turns with the body, so a long name such as Jupiter's runs off the limb and the planet cuts the letters. The name now slides about the pole, only as far as it needs, until every letter is on the near side; a name already on the front still turns with the body, and `body-label-facing` is unchanged. `e2e/name-shell.demo.ts` checks the shell.
