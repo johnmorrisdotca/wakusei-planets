@@ -313,33 +313,156 @@ def tint(img, dark, light, contrast):
     return np.asarray(dark, dtype=np.float32) * (1 - g) + np.asarray(light, dtype=np.float32) * g
 
 
-def fill_unseen_plain(img, darker=0.85, soft=0.08):
-    """The south of a map that was never imaged (the black rows of New Horizons' mosaic, the polar night), made a plain tone with no edge to it. The tone is the mapped
-    ground's own average (each row weighted by the width of its circle of latitude, so the poles do not count for more than they are), `darker` times it, so the part
-    never seen reads as not yet mapped and not as a fault. Where the picture ends, which is ragged, the mapped detail does not stop: it fades into the tone over
-    `soft` of the height, along an edge made smooth by taking the least of the rows nearby, so none of the black reaches the picture."""
+def gblur(a, sigma):
+    """A Gaussian blur by the Fourier transform: wrapped round the map's width (longitude is a circle) and mirrored at the top and bottom."""
+    h = a.shape[0]
+    pad = int(min(h // 2, 4 * sigma))
+    b = np.concatenate([a[:pad][::-1], a, a[-pad:][::-1]], axis=0) if pad > 0 else a
+    fy = np.fft.fftfreq(b.shape[0])[:, None]
+    fx = np.fft.rfftfreq(b.shape[1])[None, :]
+    k = np.exp(-2 * (np.pi * sigma) ** 2 * (fx ** 2 + fy ** 2))
+    out = np.fft.irfft2(np.fft.rfft2(b, axes=(0, 1)) * k, s=b.shape, axes=(0, 1))
+    return (out[pad : pad + h] if pad > 0 else out).astype(np.float32)
+
+
+def _hash3(ix, iy, iz, seed):
+    # a lattice point below zero is turned to a whole number first: a negative float turned straight to an unsigned one is not defined, and turned every point below zero into the same one
+    ix, iy, iz = (np.asarray(v).astype(np.int64).astype(np.uint32) for v in (ix, iy, iz))
+    n = (ix * np.uint32(73856093)) ^ (iy * np.uint32(19349663)) ^ (iz * np.uint32(83492791)) ^ np.uint32(seed * 2654435761 % 2**32)
+    n ^= n >> np.uint32(13)
+    n *= np.uint32(0x5BD1E995)
+    n ^= n >> np.uint32(15)
+    return (n & np.uint32(0xFFFFFF)).astype(np.float32) / np.float32(0xFFFFFF)
+
+
+def noise3(x, y, z, seed):
+    """Smooth value noise in three dimensions, 0 to 1. Noise of a point on a sphere has no seam and no pinching at the poles."""
+    ix, iy, iz = np.floor(x), np.floor(y), np.floor(z)
+    fx, fy, fz = x - ix, y - iy, z - iz
+    fx, fy, fz = fx * fx * (3 - 2 * fx), fy * fy * (3 - 2 * fy), fz * fz * (3 - 2 * fz)
+    out = 0
+    for dx in (0, 1):
+        for dy in (0, 1):
+            for dz in (0, 1):
+                v = _hash3(ix + dx, iy + dy, iz + dz, seed)
+                out = out + v * (fx if dx else 1 - fx) * (fy if dy else 1 - fy) * (fz if dz else 1 - fz)
+    return out
+
+
+def sphere_fbm(h0, h1, w, seed, base, octaves, warp=0.35, gain=0.55):
+    """Fractal noise on the sphere for rows h0 to h1 of an equirectangular map h rows tall (h = w / 2): `base` is the lowest frequency, in cycles round the sphere. The point is moved by a noise of its own first, which turns blobs into flowing, ragged shapes."""
+    h = w // 2
+    lat = (0.5 - (np.arange(h0, h1) + 0.5) / h) * np.pi
+    lon = ((np.arange(w) + 0.5) / w - 0.5) * 2 * np.pi
+    cl = np.cos(lat)[:, None]
+    x = (cl * np.cos(lon)[None, :]).astype(np.float32)
+    y = (cl * np.sin(lon)[None, :]).astype(np.float32)
+    z = np.broadcast_to(np.sin(lat)[:, None], x.shape).astype(np.float32)
+    if warp:
+        f = base * 0.8
+        x, y, z = (x + warp * (noise3(x * f + 5, y * f, z * f, seed + 11) - 0.5), y + warp * (noise3(x * f, y * f + 7, z * f, seed + 12) - 0.5), z + warp * (noise3(x * f, y * f, z * f + 9, seed + 13) - 0.5))
+    total, amp, norm, f = 0, 1.0, 0.0, base
+    for o in range(octaves):
+        total = total + amp * noise3(x * f, y * f, z * f, seed + o)
+        norm += amp
+        amp *= gain
+        f *= 2.03
+    return (total / norm).astype(np.float32)
+
+
+def craters(rows, w, top, seed, density=0.0007, rmin=2.5, rmax=26.0):
+    """The height of ground pocked with craters, for rows `top` to `rows` of a map `w` wide: bowls with raised rims, many small and a few large (the number larger than a radius goes as one over its square, as a surface of one age does). A crater is as wide in pixels across a circle of latitude as it is tall, so it is stretched by one over the cosine of its latitude."""
+    rng = np.random.default_rng(seed)
+    h = w // 2
+    height = np.zeros((rows - top, w), dtype=np.float32)
+    lat_of = lambda y: (0.5 - (y + 0.5) / h) * np.pi
+    area = float(((rows - top) * w) * np.mean(np.cos(lat_of(np.arange(top, rows)))))
+    count = int(density * area * (4.0 / rmin) ** 2 * 0.1) + 1
+    radii = np.minimum(rmax, rmin / np.sqrt(rng.random(count)))
+    cy = rng.integers(top, rows, count)
+    cx = rng.integers(0, w, count)
+    for r, y, x in zip(radii, cy, cx):
+        cos = max(0.08, np.cos(lat_of(y)))
+        rx = r / cos
+        reach = 2.1
+        y0, y1 = int(max(top, y - reach * r)), int(min(rows, y + reach * r + 1))
+        xs = np.arange(int(x - min(reach * rx, w / 2)), int(x + min(reach * rx, w / 2)) + 1)
+        yy = np.arange(y0, y1)
+        q = np.hypot(((xs[None, :] - x) * cos) / r, (yy[:, None] - y) / r)
+        bowl = np.where(q < 1, -(1 - q * q), 0.0) * 0.55
+        rim = 0.28 * np.exp(-(((q - 1.0) / 0.2) ** 2))
+        height[y0 - top : y1 - top][:, xs % w] += (r * (bowl + rim)).astype(np.float32)
+    return height
+
+
+def generate_unseen(img, seed=1798, reach=0.16):
+    """The south of Pluto that New Horizons never saw (the black rows of its mosaic, in the polar night), made up and made to belong. The mapped ground is carried on past its ragged edge as a smooth continuation of its own colours; farther on the ground is new but of the
+    same kind: fractal noise on the sphere (no seam at the date line, none squeezed at the pole) read through the colours of the mapped band just north of the edge, in the same shares (as dark, as red and as bright in as many places), with craters and a fine grain of
+    the same strength as the mapped ground's laid over it, lit from the upper left as the mapped craters are. Over `reach` of the map's height from the edge, along an edge that wanders, the colours change from the continuation to the new ground's own and the detail grows from
+    a trace to its full strength (the photographs are blurred towards their edge), so no line shows where they end. Nothing is copied: no crater or ridge of the mapped half is found twice."""
     h, w, _ = img.shape
     lum = img.mean(axis=2)
-    # the first row, below the middle, from which 12 rows are black: dark terrain is not the end of the map
     black = (lum < 0.04).astype(np.int32)
     run = np.stack([black[r : r + 12].sum(axis=0) for r in range(h - 12)])
-    edge = np.array([next((r for r in range(h // 2, h - 12) if run[r, c] == 12), h - 12) for c in range(w)])
-    # a column or two that is dark early (a thin dark line, one crater) is not the end of the map: the median of 31 columns drops it, and the least of the columns nearby keeps the black out
+    edge = np.array([next((r for r in range(h // 2, h - 12) if run[r, c] == 12), h - 12) for c in range(w)], dtype=np.float32)
     pad = np.pad(edge, 15, mode="wrap")
     edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 31), axis=1)
     half = w // 64
     pad = np.pad(edge, half, mode="wrap")
-    low = np.lib.stride_tricks.sliding_window_view(pad, 2 * half + 1).min(axis=1)
-    pad = np.pad(low, half, mode="wrap")
-    edge = np.convolve(pad, np.ones(2 * half + 1) / (2 * half + 1), mode="valid")[:w]
+    edge = np.lib.stride_tricks.sliding_window_view(pad, 2 * half + 1).min(axis=1)
+    # the photographs fade towards their edge: the last stretch is not trusted, and the mapped ground used is what lies above it
+    edge = (gblur(edge[None, :].repeat(3, 0), w * 0.004)[1] - w * 0.012).astype(np.float32)
     rows = np.arange(h, dtype=np.float32)[:, None]
-    real = rows < edge[None, :]
-    weight = (np.cos(np.radians(90 - (np.arange(h) + 0.5) / h * 180))[:, None] * real)[..., None]
-    tone = (img * weight).sum(axis=(0, 1)) / weight.sum() * darker
-    span = h * soft
-    t = np.clip((rows - (edge[None, :] - span)) / span, 0, 1)
+    valid = (rows < edge[None, :]).astype(np.float32)
+    # 1. a smooth continuation of the mapped colours into the hole: down each column, the average of the mapped ground just above the edge, eased towards the whole band's average the farther it goes, and smoothed across the columns
+    soft5 = np.stack([gblur(img[..., c], 5) for c in range(3)], axis=-1)
+    near = np.zeros((w, 3), dtype=np.float32)
+    for x in range(w):
+        e = int(edge[x])
+        near[x] = soft5[max(0, e - int(h * 0.05)) : max(1, e - 2), x].mean(axis=0)
+    near = np.stack([gblur(np.repeat(near[None, :, c], 3, axis=0), w * 0.012)[1] for c in range(3)], axis=-1)
+    average = near.mean(axis=0)
+    away = np.clip((rows - edge[None, :]) / (h * 0.18), 0, 1)[..., None]
+    fill = near[None, :, :] * (1 - away) + average[None, None, :] * away
+    # 2. the colours the new ground is read through: the mapped band above the edge, smoothed so grain is not read as colour, from darkest to brightest in 256 steps of equal share
+    band = (rows >= edge[None, :] - h * 0.22) & (rows < edge[None, :] - h * 0.02) & (lum > 0.04)
+    soft = soft5
+    order = np.argsort(soft.mean(axis=2)[band])
+    colours = np.stack([soft[..., c][band][order] for c in range(3)], axis=1)
+    lut = np.stack([colours[i * len(colours) // 256 : (i + 1) * len(colours) // 256].mean(axis=0) for i in range(256)])
+    # 3. the new ground: its broad colours
+    top = int(edge.min()) - int(h * 0.04)
+    n = sphere_fbm(top, h, w, seed, base=2.4, octaves=7, warp=0.45, gain=0.62)
+    rank = np.empty(n.size, dtype=np.float32)
+    rank[np.argsort(n, axis=None)] = np.linspace(0, 1, n.size, dtype=np.float32)
+    broad = lut[np.minimum(255, (rank.reshape(n.shape) * 256).astype(int))].astype(np.float32)
+    # 4. the new ground's detail: craters and ridged grain, lit from the upper left, as a brightness that is multiplied in; its strength is that of the mapped ground where the photographs are sharp (the equatorial band)
+    relief = craters(h, w, top, seed + 1) + 6.0 * sphere_fbm(top, h, w, seed + 2, base=70.0, octaves=3, warp=0, gain=0.5)
+    gy, gx = np.gradient(relief)
+    shade = np.clip(-(gx * 0.7 + gy * 0.7), -4, 4)
+    grain = (sphere_fbm(top, h, w, seed + 3, base=160.0, octaves=3, warp=0, gain=0.6) - 0.5) * 2
+    detail = shade / max(shade.std(), 1e-4) * 0.7 + grain / max(grain.std(), 1e-4) * 0.45
+    sharp = (rows >= h * 0.28) & (rows < h * 0.42) & (valid > 0)
+    mapped = np.stack([img[..., c] - gblur(img[..., c], 4) for c in range(3)], axis=-1).mean(axis=2)
+    strength = float(mapped[sharp].std() / max(soft.mean(axis=2)[sharp].mean(), 1e-3))
+    detail = detail / max(detail.std(), 1e-4) * strength
+    # 5. the join: continuation colours near the edge and the new ground's own farther on; the detail comes up from a trace
+    wob = (sphere_fbm(top, h, w, seed + 100, base=7.0, octaves=4, warp=0) - 0.5) * 2 * h * 0.035
+    d = (rows[top:] - edge[None, :] + wob) / (h * reach)
+    t = np.clip(d, 0, 1)
     t = (t * t * (3 - 2 * t))[..., None]
-    return img * (1 - t) + tone[None, None, :] * t
+    ramp = 0.3 + 0.7 * t ** 1.2
+    low = np.stack([gblur(broad[..., c], 10) for c in range(3)], axis=-1)
+    base = fill[top:] * (1 - t) + low * t
+    # the detail multiplies the colours, and a little of it is added as well so dark ground is not left smooth
+    south = base * (1 + detail[..., None] * ramp) + (detail[..., None] * ramp) * 0.035
+    # where the photographs end the new ground is brought in over a short feather, so the real pixels are kept up to it
+    feather = int(w * 0.006)
+    a = np.clip((rows[top:] - (edge[None, :] - feather)) / (2 * feather), 0, 1)
+    a = (a * a * (3 - 2 * a))[..., None]
+    out = img.copy()
+    out[top:] = img[top:] * (1 - a) + south * a
+    return np.clip(out, 0, 1)
 
 
 def make(body):
@@ -355,7 +478,7 @@ def make(body):
         pass
     elif body == "pluto":
         img = roll(img, 0.5)
-        img = fill_unseen_plain(img)
+        img = generate_unseen(img)
     elif body == "saturn":
         cx, cy, r = disc_of(img, 0.09)
         r = ((img.mean(axis=2) > 0.09).sum(axis=1) > img.shape[1] * 0.02).nonzero()[0]
