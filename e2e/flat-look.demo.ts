@@ -138,13 +138,19 @@ test("a body with no orbiters has no orbiter chip and no footprint or track butt
   await page.locator('#bodies button[data-value="jupiter"]').click();
   await expect.poll(async () => (await stats(page)).mapLoaded).toBe(true);
   await settled(page);
-  await expect(flat(page).locator('button[data-act="track"]')).toHaveCount(0);
+  // Jupiter has moons, whose tracks the track button draws, but no footprint
+  await expect(flat(page).locator('button[data-act="track"]')).toHaveCount(1);
   await expect(flat(page).locator('button[data-act="footprint"]')).toHaveCount(0);
   await expect(flat(page).locator('.chip[data-layer="orbiters"]')).toHaveCount(0);
   await expect(page.locator("#orbiters-row")).toBeHidden();
   expect((await stats(page)).dots).toBe(0);
   await page.locator('#moons button[data-value="titan"]').click();
   await expect(flat(page)).toHaveAttribute("body", "titan");
+  // a body with no orbiters and no moons has neither button
+  await page.locator('#bodies button[data-value="mercury"]').click();
+  await expect(flat(page)).toHaveAttribute("body", "mercury");
+  await expect(flat(page).locator('button[data-act="track"]')).toHaveCount(0);
+  await expect(flat(page).locator('.chip[data-layer="moons"]')).toHaveCount(0);
   await expect.poll(() => flat(page).locator(".chip").count()).toBeGreaterThan(0);
   await page.locator('#bodies button[data-value="mars"]').click();
   await expect.poll(async () => (await stats(page)).dots).toBe(6);
