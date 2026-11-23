@@ -42,6 +42,8 @@ let speedAt = 0;
 let chosen: FlatPick | null = null;
 flat.setAttribute("body", body);
 if (readLook(address.get("look")) === "map") flat.setAttribute("look", "map");
+if (address.get("moons") === "1") flat.setAttribute("moons", "");
+flat.addEventListener("wakusei-flat-filter", (event) => address.set("moons", (event as CustomEvent<{ moons: boolean }>).detail.moons ? "1" : null));
 flat.addEventListener("wakusei-flat-look", (event) => address.set("look", (event as CustomEvent<{ look: string }>).detail.look === "map" ? "map" : null));
 
 // ----- the rows of buttons --------------------------------------------------------------------------------------------------------------------------------------------------
@@ -202,6 +204,18 @@ function card(): void {
     $("#card-about").textContent = f.about[l];
     button.hidden = true;
     $("#card-source").hidden = true;
+    return;
+  }
+  if (chosen.kind === "mark" && chosen.mark !== undefined) {
+    // a moon over the planet's ground: its name, its place and how far it is from the centre
+    const moon = chosen.mark;
+    $("#card-name").textContent = chosen.name;
+    fact(facts, "fl_c_kind", say("fl_kind_moon", { body: bodyName() }));
+    fact(facts, "fl_c_where", `${coordinateText(l, "lat", moon.lat)}, ${coordinateText(l, "lon", moon.lon)}`);
+    const km = (moon.data as { distanceKm?: number } | undefined)?.distanceKm;
+    if (km !== undefined) fact(facts, "fl_c_distance", `${number(km)} km`);
+    $("#card-about").textContent = say("fl_moon_about");
+    button.hidden = true;
     return;
   }
   const place = places.find((p) => p.id === chosen!.id);
