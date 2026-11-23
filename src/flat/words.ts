@@ -1,5 +1,5 @@
 // The flat map's own words, in English and Japanese. The names of the bodies, the orbiters and the places come from the package's own tables (`BODIES`, `ORBITER_FACTS`, each place's `name`), not from here.
-// The keys that chikyu-earth's flat map also has (`map`, `controls`, `myPlace`, `footprint`, `groundTrack`, `zoomIn`, `zoomOut`, `all`, `help`) say the same thing in the same words, so a page that swaps one map for the other keeps its wording.
+// The keys that chikyu-earth's flat map also has (`map`, `controls`, `myPlace`, `footprint`, `groundTrack`, `zoomIn`, `zoomOut`, `all`, `help`, `lookGroup`, `lookMap`, `lookPhoto`, `key`, `keyShow`, `keyHide`, `keyMarks`) say the same thing in the same words, so a page that swaps one map for the other keeps its wording.
 
 /**
  * The two languages the flat map's words come in.
@@ -66,6 +66,27 @@ export const FLAT_WORDS: Readonly<Record<FlatLang, Readonly<Record<string, strin
     nothing: "Nothing to show.",
     help: "Arrow keys move from one orbiter or mark to the next, Enter chooses it, plus and minus zoom.",
     shown: "{orbiters} orbiters and {places} places shown",
+    oppositeMeridian: "Opposite side",
+    lookGroup: "Look of the map",
+    lookMap: "Map",
+    lookPhoto: "Photo",
+    key: "Key",
+    keyShow: "Show the key to the map",
+    keyHide: "Hide the key to the map",
+    keyMarks: "What the marks on the map are",
+    keySun: "The Sun is overhead",
+    keyNight: "The night side, darker",
+    keySunrise: "Sunrise or sunset line: the Sun is on the horizon",
+    keyHome: "My place",
+    keyOrbiter: "An orbiter",
+    keyOrbiterApprox: "An orbiter whose position is approximate",
+    keyRing: "What you chose",
+    keyFootprint: "Footprint: the area that can see the orbiter",
+    keyTrack: "Ground track: dashed behind the orbiter, solid ahead",
+    creditShort: "{body}: {who}",
+    creditWide: "{body}: {who} ({licence})",
+    announceMark: "{name}, {lat}, {lon}",
+    kind_mark: "mark",
   },
   ja: {
     map: "{body}の平面地図",
@@ -108,6 +129,27 @@ export const FLAT_WORDS: Readonly<Record<FlatLang, Readonly<Record<string, strin
     nothing: "表示するものがありません。",
     help: "矢印キーで次の周回機や印へ移り、Enter キーで選びます。プラスとマイナスのキーで拡大・縮小します。",
     shown: "周回機{orbiters}機と地点{places}か所を表示中",
+    oppositeMeridian: "反対側",
+    lookGroup: "地図の見た目",
+    lookMap: "地図",
+    lookPhoto: "写真",
+    key: "凡例",
+    keyShow: "地図の凡例を表示する",
+    keyHide: "地図の凡例を閉じる",
+    keyMarks: "地図の印が表すもの",
+    keySun: "太陽が真上にある場所",
+    keyNight: "夜の側：暗くなっています",
+    keySunrise: "日の出・日の入りの線：太陽が地平線にあるところ",
+    keyHome: "自分の場所",
+    keyOrbiter: "周回機",
+    keyOrbiterApprox: "位置がおおよその周回機",
+    keyRing: "選んだもの",
+    keyFootprint: "可視範囲：その周回機が見える範囲",
+    keyTrack: "地上軌跡：周回機の後ろは点線、前は実線",
+    creditShort: "{body}：{who}",
+    creditWide: "{body}：{who}（{licence}）",
+    announceMark: "{name}、{lat}、{lon}",
+    kind_mark: "印",
   },
 };
 
@@ -148,4 +190,26 @@ export function coordinateText(lang: FlatLang, axis: "lat" | "lon", degrees: num
   const value = Math.abs(degrees).toFixed(2);
   if (lang === "ja") return `${axis === "lat" ? (degrees < 0 ? "南緯" : "北緯") : degrees < 0 ? "西経" : "東経"}${value}°`;
   return `${value}° ${axis === "lat" ? (degrees < 0 ? "S" : "N") : degrees < 0 ? "W" : "E"}`;
+}
+
+/**
+ * A latitude or longitude as a short label for the map's grid: `30°N` and `60°W`, or `北緯30°` and `西経60°`; `0°` for the equator and the prime meridian, and `180°` for the opposite meridian.
+ *
+ * @param lang - `en` or `ja`.
+ * @param axis - `lat` or `lon`.
+ * @param degrees - Degrees, north and east positive.
+ * @returns The label.
+ *
+ * @example
+ * ```ts
+ * import { gridText } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * console.log(gridText("en", "lat", 30), gridText("en", "lon", -60), gridText("ja", "lat", -30), gridText("en", "lon", 0));
+ * ```
+ */
+export function gridText(lang: FlatLang, axis: "lat" | "lon", degrees: number): string {
+  const value = Math.abs(Math.round(degrees));
+  if (value === 0 || (axis === "lon" && value === 180)) return `${value}°`;
+  if (lang === "ja") return `${axis === "lat" ? (degrees < 0 ? "南緯" : "北緯") : degrees < 0 ? "西経" : "東経"}${value}°`;
+  return `${value}°${axis === "lat" ? (degrees < 0 ? "S" : "N") : degrees < 0 ? "W" : "E"}`;
 }

@@ -153,7 +153,7 @@ try {
 }
 if (!noBody) throw new Error("places does not refuse a body it does not hold");
 
-// The flat map through package resolution: the pure entry computes where the Sun is over the Moon at the Apollo 11 landing and where an orbiter is over the ground, and it refuses a body it does not draw.
+// The flat map through package resolution: the pure entry computes where the Sun is over the Moon at the Apollo 11 landing and where an orbiter is over the ground, draws any planet or moon, and refuses a body it does not draw.
 const flatEntry = "@johnmorrisdotca/wakusei-planets/flat";
 const flat = await import(flatEntry);
 const landing = flat.flatSun("moon", Date.UTC(1969, 6, 20, 20, 17, 40));
@@ -163,11 +163,13 @@ if (overLro === undefined || Math.abs(overLro.lat) > 90 || overLro.altitudeKm < 
 if (flat.flatOrbiter("tianwen-1", Date.UTC(2026, 10, 12)) !== undefined) throw new Error("flat: an orbiter with no public path is drawn");
 let flatRefused = false;
 try {
-  flat.flatBody("venus");
+  flat.flatBody("sun");
 } catch (error) {
   flatRefused = error instanceof RangeError;
 }
 if (!flatRefused) throw new Error("flat does not refuse a body it does not draw");
+const overVenus = flat.flatSun("venus", Date.UTC(2026, 10, 12));
+if (Math.abs(overVenus.lat) > 4 || flat.sunriseLine(overVenus, 8).length !== 9 || flat.flatBody("titan").orbiters.length !== 0) throw new Error("flat: the map does not draw Venus and Titan");
 
 // The flat solar system through package resolution: the Earth is about a au from the Sun on the map, squeezed is the plan's scale, and a body that is not on the list has no name.
 const systemEntry = "@johnmorrisdotca/wakusei-planets/flat/system";

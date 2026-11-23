@@ -11,7 +11,7 @@ const RAD = Math.PI / 180;
 /**
  * Where the Sun is overhead on a body: latitude and east longitude in degrees, from the package's own ephemeris and the body's IAU pole and prime meridian. The longitude is in -180 up to 180, like the map's.
  *
- * @param body - `moon` or `mars`.
+ * @param body - Any body the flat map draws.
  * @param ms - Milliseconds since 1970 (UTC).
  * @returns The point.
  *
@@ -27,6 +27,43 @@ export function flatSun(body: FlatBodyId, ms: number): GroundPoint {
   const sun = subSolarPoint(flatBody(body).id, ms);
   return { lat: sun.lat, lon: wrapLongitude(sun.lon) };
 }
+
+/**
+ * How fast the Sun moves across a body's ground, in degrees of longitude a second at a moment: about 0.0042 on the Earth and Mars, 0.00014 on the Moon, 0.00002 on Mercury. It sets how often a running clock needs to draw the night.
+ *
+ * @param body - Any body the flat map draws.
+ * @param ms - Milliseconds since 1970 (UTC).
+ * @returns Degrees a second, always positive.
+ *
+ * @example
+ * ```ts
+ * import { flatSunRate } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * console.log(flatSunRate("mars", Date.UTC(2026, 10, 12)).toFixed(4), flatSunRate("moon", Date.UTC(2026, 10, 12)).toFixed(5));
+ * ```
+ */
+export function flatSunRate(body: FlatBodyId, ms: number): number {
+  const a = flatSun(body, ms);
+  const b = flatSun(body, ms + 60_000);
+  return Math.abs(wrapLongitude(b.lon - a.lon)) / 60;
+}
+
+/**
+ * The sunrise and sunset line: the circle of the body's surface where the Sun is on the horizon, as longitude and latitude with the longitude carried on without a jump (so a flat map draws it again a world to the left and right). It is the circle 90 degrees from the point where the Sun is overhead.
+ *
+ * @param sun - Where the Sun is overhead (`flatSun`).
+ * @param steps - How many steps round it.
+ * @returns The points; the last is a whole turn of longitude from the first.
+ *
+ * @example
+ * ```ts
+ * import { flatSun, sunriseLine } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * const line = sunriseLine(flatSun("mars", Date.UTC(2026, 10, 12)), 8);
+ * console.log(line.length, Math.abs(line[8]![0] - line[0]![0]));
+ * ```
+ */
+export const sunriseLine = (sun: GroundPoint, steps = 144): [number, number][] => circleOutline(sun.lat, sun.lon, 90, steps).points;
 
 /**
  * One orbiter as the flat map shows it at a moment.
@@ -104,7 +141,7 @@ const smooth = (a: number, b: number, x: number): number => {
  * @param cell - The cell's side in pixels of the view.
  * @param view - The map's view.
  * @param sun - Where the Sun is overhead.
- * @param body - `moon` or `mars`: the night's colour and the twilight's width.
+ * @param body - Any body the flat map draws: the night's colour and the twilight's width.
  *
  * @example
  * ```ts
