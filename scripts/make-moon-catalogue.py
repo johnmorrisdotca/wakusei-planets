@@ -171,8 +171,8 @@ RAD = math.pi / 180
 UNIX_JD = 2440587.5
 
 
-# Japanese names of the moons the package does not draw in full (MODULES-1089): scripts/moon-catalogue-ja.json, each katakana with the published Japanese list it comes from (the
-# National Museum of Nature and Science's moon table, "mainly from the Rika Nenpyo", and the Japanese Wikipedia's articles, read 2026-11-18). A moon without an entry shows its English name.
+# Japanese names of the moons the package does not draw in full (MODULES-1089, MODULES-1762): scripts/moon-catalogue-ja.json, each katakana from the
+# National Museum of Nature and Science's moon table (the Rika Nenpyo list). A moon without an entry shows its English name.
 CATALOGUE_JA = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "moon-catalogue-ja.json")))
 
 
@@ -183,7 +183,7 @@ def ja_of(ident, ja_names):
     return CATALOGUE_JA.get(ident, {}).get("ja")
 
 
-# Absolute magnitudes for the irregular moons that have no size (MODULES-1090): scripts/moon-catalogue-magnitudes.json, made by scripts/make-moon-magnitudes.py from English Wikipedia's tables of the moons of the giant planets.
+# Absolute magnitudes for the irregular moons that have no size (MODULES-1762): scripts/moon-catalogue-magnitudes.json, made by scripts/make-moon-magnitudes.py from the U.S. Naval Observatory's V(1,0) column.
 MAGNITUDES = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "moon-catalogue-magnitudes.json")))["moons"]
 
 
@@ -477,7 +477,7 @@ def row(m):
         if o.get("pole"):
             orbit += o["pole"]
     source = {"jpl-phys": 0, "horizons": 1}.get(m.get("radiusFrom"))
-    # the magnitude: the moon's Horizons sheet's (0), else, for an irregular moon with no size at all, the absolute magnitude of English Wikipedia's tables (1, scripts/moon-catalogue-magnitudes.json: MODULES-1090)
+    # the magnitude: the moon's Horizons sheet's (0), else, for an irregular moon with no size at all, the Almanac V(1,0) (1, scripts/moon-catalogue-magnitudes.json: MODULES-1762)
     magnitude, magnitude_from = m.get("magnitude"), (0 if m.get("magnitude") is not None else None)
     if magnitude is None and m["radius"] is None and m["id"] in MAGNITUDES:
         magnitude, magnitude_from = MAGNITUDES[m["id"]]["h"], 1
@@ -493,7 +493,7 @@ import type { MoonGroup } from "../moon-catalogue.ts";
 /** frame (0 ecliptic, 1 equatorial, 2 laplace), epoch (JD TDB), a (km), e, w, M, i, node (degrees), period (days), apsis and node periods (years), ephemeris, and the plane's pole (RA, Dec) for 1 and 2. */
 export type MoonOrbitRow = [number, number, number, number, number, number, number, number, number, number | null, number | null, string, number?, number?];
 /** id, name, designation, IAU number, host, JPL code, year found, discoverers, announcement, orbit, radius (km), its sigma, its source (0 JPL's physical parameters, 1 the Horizons sheet), albedo, V(1,0),
- * worst error against Horizons near the phase day (km, degrees) and at the far dates (degrees), group, Japanese name (scripts/moon-catalogue-ja.json: the package's own moons and the others it lists), confirmed (0 or 1), full (1 for the package's own moons, drawn in full), and where the V(1,0) magnitude comes from (0 the Horizons sheet, 1 English Wikipedia's tables, null none). */
+ * worst error against Horizons near the phase day (km, degrees) and at the far dates (degrees), group, Japanese name (scripts/moon-catalogue-ja.json: the package's own moons and the others it lists), confirmed (0 or 1), full (1 for the package's own moons, drawn in full), and where the V(1,0) magnitude comes from (0 the Horizons sheet, 1 the USNO Almanac V(1,0) column, null none). */
 export type MoonRow = [string, string | null, string | null, string | null, HostId, number | null, number | null, string | null, string | null, MoonOrbitRow | null, number | null, number | null, 0 | 1 | null,
   number | null, number | null, number | null, number | null, number | null, MoonGroup, string | null, 0 | 1, 0 | 1, 0 | 1 | null];
 """

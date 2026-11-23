@@ -200,8 +200,8 @@ export interface MoonDiscovery {
 export type MoonSizeSource = "measured" | "sheet" | "derived";
 
 /**
- * Where a moon's magnitude comes from: `sheet` (the V(1,0) magnitude on its JPL Horizons data sheet) or `wikipedia` (the absolute magnitude of English Wikipedia's table of the moons of its planet, which takes the irregular
- * moons' from the Minor Planet Center's Natural Satellites Ephemeris Service; read on `MOON_MAGNITUDES_READ`, the page is in `MOON_MAGNITUDE_PAGES`). A size worked out from a `wikipedia` magnitude is an estimate: it assumes the
+ * Where a moon's magnitude comes from: `sheet` (the V(1,0) magnitude on its JPL Horizons data sheet) or `usno` (the V(1,0) column of the U.S. Naval Observatory's satellite table for The Astronomical Almanac, read on
+ * `MOON_MAGNITUDES_READ`; the file is in `MOON_MAGNITUDE_PAGES`). A size worked out from a `usno` magnitude is an estimate: it assumes the
  * albedo `ASSUMED_ALBEDO`, and `radiusFrom` says `derived`.
  *
  * @example
@@ -212,36 +212,38 @@ export type MoonSizeSource = "measured" | "sheet" | "derived";
  * console.log(from);
  * ```
  */
-export type MoonMagnitudeSource = "sheet" | "wikipedia";
+export type MoonMagnitudeSource = "sheet" | "usno";
 
 /**
- * The day the magnitudes marked `wikipedia` were read from English Wikipedia's tables (CC BY-SA 4.0): one request for each of the four pages.
+ * The day the magnitudes marked `usno` were read from the U.S. Naval Observatory's satellite table (a US government work): one request.
  *
  * @example
  * ```ts
  * import { MOON_MAGNITUDES_READ } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
  *
- * console.log("Wikipedia read on", MOON_MAGNITUDES_READ);
+ * console.log("Almanac read on", MOON_MAGNITUDES_READ);
  * ```
  */
-export const MOON_MAGNITUDES_READ = "2026-11-18";
+export const MOON_MAGNITUDES_READ = "2026-11-23";
+
+const ALMANAC = "https://aa.usno.navy.mil/downloads/publications/Satellite_data_web_b_2024_2.txt";
 
 /**
- * The English Wikipedia page each host's `wikipedia` magnitudes were read from.
+ * The U.S. Naval Observatory file each host's `usno` magnitudes were read from.
  *
  * @example
  * ```ts
  * import { findCatalogueMoon, MOON_MAGNITUDE_PAGES } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
  *
  * const moon = findCatalogueMoon("Ymir")!;
- * if (moon.magnitudeFrom === "wikipedia") console.log(MOON_MAGNITUDE_PAGES[moon.host]);
+ * if (moon.magnitudeFrom === "usno") console.log(MOON_MAGNITUDE_PAGES[moon.host]);
  * ```
  */
 export const MOON_MAGNITUDE_PAGES: Readonly<Partial<Record<HostId, string>>> = {
-  jupiter: "https://en.wikipedia.org/wiki/Moons_of_Jupiter",
-  saturn: "https://en.wikipedia.org/wiki/Moons_of_Saturn",
-  uranus: "https://en.wikipedia.org/wiki/Moons_of_Uranus",
-  neptune: "https://en.wikipedia.org/wiki/Moons_of_Neptune",
+  jupiter: ALMANAC,
+  saturn: ALMANAC,
+  uranus: ALMANAC,
+  neptune: ALMANAC,
 };
 
 /**
@@ -294,7 +296,7 @@ export interface CatalogueMoon {
   radiusFrom: MoonSizeSource | null;
   /** The geometric albedo, where the Horizons sheet gives one. */
   albedo: number | null;
-  /** The V(1,0) magnitude (as bright as it would be 1 au from the Sun and from us), where the Horizons sheet gives one, else, for an irregular moon with no size, the absolute magnitude of English Wikipedia's table (see `magnitudeFrom`). */
+  /** The V(1,0) magnitude (as bright as it would be 1 au from the Sun and from us), where the Horizons sheet gives one, else, for an irregular moon with no size, the Almanac's V(1,0) where that column prints one (see `magnitudeFrom`). */
   magnitude: number | null;
   /** Where `magnitude` comes from; `null` when there is none. */
   magnitudeFrom: MoonMagnitudeSource | null;
@@ -324,7 +326,7 @@ export const ASSUMED_ALBEDO = 0.04;
 
 const FRAMES = ["ecliptic", "equatorial", "laplace"] as const;
 const SIZE_FROM = ["measured", "sheet"] as const;
-const MAGNITUDE_FROM = ["sheet", "wikipedia"] as const;
+const MAGNITUDE_FROM = ["sheet", "usno"] as const;
 
 function moonOf(row: MoonRow): CatalogueMoon {
   const [id, name, designation, number, host, code, year, by, reference, o, radius, sigma, from, albedo, magnitude, worstKm, worstDegrees, farDegrees, group, ja, confirmed, drawn, magnitudeSource] = row;
