@@ -1,4 +1,4 @@
-// The flat maps of the Moon and Mars: the geometry shared with the Earth's flat map, the Sun's place, the orbiters over the ground, the night's shading, coverage circles, ground tracks and the words.
+// The flat maps: the geometry shared with the Earth's flat map, the Sun's place, the orbiters over the ground, the night's shading, coverage circles, ground tracks and the words.
 // The element is played in a real browser (e2e/flat.demo.ts); here is everything that is numbers.
 import assert from "node:assert/strict";
 import { test } from "node:test";
@@ -32,13 +32,16 @@ import { angleBetween, isDaylight } from "../src/places.ts";
 
 const T = Date.UTC(2026, 10, 12, 12);
 
-test("the bodies: the Moon and Mars, case does not matter, anything else is refused by name", () => {
-  assert.deepEqual([...FLAT_BODIES], ["moon", "mars"]);
+test("the bodies: every planet and moon with a painted picture, case does not matter, anything else is refused by name", () => {
+  assert.equal(FLAT_BODIES.length, 28);
+  for (const id of ["mercury", "venus", "earth", "moon", "mars", "ceres", "jupiter", "saturn", "uranus", "neptune", "pluto", "io", "titan", "charon"]) assert.equal(isFlatBody(id), true, id);
   assert.equal(isFlatBody("Mars"), true);
-  assert.equal(isFlatBody("venus"), false);
+  assert.equal(isFlatBody("sun"), false);
+  assert.equal(isFlatBody("halley"), false);
   assert.equal(isFlatBody(null), false);
   assert.equal(flatBody("MOON").radiusKm, 1737.4);
-  assert.throws(() => flatBody("venus"), /moon and mars, not "venus"/);
+  assert.equal(flatBody("mars").radiusKm, 3389.5);
+  assert.throws(() => flatBody("sun"), /not "sun"/);
 });
 
 test("every orbiter of the package goes round a body the map draws, and the lists agree", () => {
@@ -106,7 +109,7 @@ test("an orbiter's latitude never passes its orbit's tilt, and it goes round in 
 
 test("the night: dark where the Sun is down, clear where it is up, sharp on the Moon and soft on Mars", () => {
   const view = { width: 36, height: 18, centerLon: 0, centerLat: 0, zoom: 1 };
-  const grid = (body: "moon" | "mars"): Uint8ClampedArray => {
+  const grid = (body: (typeof FLAT_BODIES)[number]): Uint8ClampedArray => {
     const out = new Uint8ClampedArray(36 * 18 * 4);
     shadeNight(out, 36, 18, 1, view, { lat: 0, lon: 0 }, body);
     return out;

@@ -29,6 +29,7 @@ const open = async (page: Page, query = "", ready = true): Promise<string[]> => 
   await page.goto(`/wakusei-planets/flat.html${query}`);
   if (ready) await expect(flat(page)).toHaveAttribute("data-state", "ready");
   await expect.poll(async () => (await stats(page)).draws).toBeGreaterThan(0);
+  await flat(page).locator(".dots").scrollIntoViewIfNeeded();
   return errors;
 };
 /** Hold the map where it is: a held clock draws nothing, and the test sets the moment. */
