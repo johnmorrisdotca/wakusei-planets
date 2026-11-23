@@ -934,7 +934,7 @@ export class WakuseiFlat extends HTMLElement {
     const credit = this.#credit;
     if (!credit) return;
     const lang = this.language;
-    const words = { body: this.#nameOfBody(lang), who: creditWho(this.#body), licence: creditLicence(this.#body, lang) };
+    const words = { body: this.#nameOfBody(lang), who: creditWho(this.#body, lang), licence: creditLicence(this.#body, lang) };
     const line = this.#creditText();
     credit.hidden = line === "" || this.lookState === "failed";
     if (credit.hidden) return;

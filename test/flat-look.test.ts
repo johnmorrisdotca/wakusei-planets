@@ -41,8 +41,9 @@ test("every body the map draws has its picture in the package, its credit row an
     for (const width of pictureWidths(id)) assert.ok(existsSync(new URL(`${id}-${width}.webp`, textures)), `${id}-${width}.webp`);
     const row = PICTURE_CREDITS.find((one) => one.id === id);
     assert.ok(row, `${id} has a credit row`);
-    // the short credit names only people the row names
-    for (const name of creditWho(id).split(" / ")) assert.ok(row.credit.en.toLowerCase().includes(name.toLowerCase()), `${id}: ${name} is in "${row.credit.en}"`);
+    // the short credit names only what the credit line says (its changes included: Pluto's south side is generated)
+    const line = picturesCredit([id], "en");
+    for (const name of creditWho(id).split(" / ")) assert.ok(line.toLowerCase().includes(name.toLowerCase()), `${id}: ${name} is in "${line}"`);
     assert.equal(creditLicence(id, "en"), row.licence === "CC BY 4.0" ? "CC BY 4.0" : "public domain");
     assert.ok(picturesCredit([id], "en").length > 20 && picturesCredit([id], "ja").length > 10);
     const info = flatBody(id);
@@ -221,6 +222,14 @@ test("the grid's labels: degrees with their hemisphere, in both languages, the e
   assert.equal(gridText("en", "lat", 0), "0°");
   assert.equal(gridText("en", "lon", 0), "0°");
   assert.equal(gridText("en", "lon", -180), "180°");
+});
+
+test("Pluto's credit line says its south side is generated, in both languages, and no other body's does", () => {
+  assert.equal(creditWho("pluto"), "NASA / south side generated");
+  assert.equal(creditWho("pluto", "ja"), "NASA / 南側は生成画像");
+  assert.equal(say("en", "creditWide", { body: "Pluto", who: creditWho("pluto"), licence: creditLicence("pluto", "en") }), "Pluto: NASA / south side generated (public domain)");
+  assert.equal(say("ja", "creditShort", { body: "冥王星", who: creditWho("pluto", "ja") }), "冥王星：NASA / 南側は生成画像");
+  for (const id of FLAT_BODIES) if (id !== "pluto") assert.doesNotMatch(creditWho(id, "ja") + creditWho(id), /generated|生成/, id);
 });
 
 test("the words of the look, the key and the credit: both languages, the same keys as chikyu-earth's flat map where it has them", () => {

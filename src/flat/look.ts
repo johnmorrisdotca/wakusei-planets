@@ -107,24 +107,29 @@ const WHO: Readonly<Record<FlatBodyId, string>> = {
   uranus: "NestaEric",
   neptune: "Solar System Scope",
   triton: "NASA",
-  pluto: "NASA",
+  pluto: "NASA / south side generated",
   charon: "NASA",
 };
 
 /**
  * Whose picture a body's map is, in a few words for one small line: `NASA / USGS` for Mars, `Nestaeric` for Jupiter. The whole credit is `picturesCredit`.
  *
+ * Pluto's line adds that its south side is generated: New Horizons did not photograph it.
+ *
  * @param body - The body.
+ * @param lang - `en` (the default) or `ja`; only Pluto's line has Japanese words in it.
  * @returns The names.
  *
  * @example
  * ```ts
  * import { creditWho } from "@johnmorrisdotca/wakusei-planets/flat";
  *
- * console.log(creditWho("mars"), "|", creditWho("jupiter"));
+ * console.log(creditWho("mars"), "|", creditWho("jupiter"), "|", creditWho("pluto"), "|", creditWho("pluto", "ja"));
  * ```
  */
-export const creditWho = (body: FlatBodyId): string => WHO[body];
+export function creditWho(body: FlatBodyId, lang: "en" | "ja" = "en"): string {
+  return body === "pluto" && lang === "ja" ? "NASA / 南側は生成画像" : WHO[body];
+}
 
 /** The bodies whose picture is CC BY 4.0, as `NOTICE.md` has it (the unit tests hold this to `PICTURE_CREDITS`); every other picture is public domain. */
 const CC_BY: readonly FlatBodyId[] = ["mercury", "venus", "jupiter", "saturn", "uranus", "neptune"];
