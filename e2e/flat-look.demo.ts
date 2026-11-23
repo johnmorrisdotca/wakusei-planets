@@ -60,12 +60,18 @@ const setLook = async (page: Page, look: "map" | "photo"): Promise<void> => {
   await settled(page);
 };
 /** The map canvas read back: red, green and blue of each pixel at its own size. */
-const pixels = (page: Page): Promise<{ width: number; height: number; data: number[] }> =>
-  flat(page).locator(".map").evaluate((canvas: HTMLCanvasElement) => {
-    const ctx = canvas.getContext("2d")!;
-    return { width: canvas.width, height: canvas.height, data: Array.from(ctx.getImageData(0, 0, canvas.width, canvas.height).data) };
+type Picture = { width: number; height: number; data: Uint8Array };
+const pixels = async (page: Page): Promise<Picture> => {
+  // sent as base64: the map's pixels are millions of numbers, and a list of them is far slower to send than a string
+  const sent = await flat(page).locator(".map").evaluate((canvas: HTMLCanvasElement) => {
+    const data = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+    let text = "";
+    for (let i = 0; i < data.length; i += 0x8000) text += String.fromCharCode(...data.subarray(i, i + 0x8000));
+    return { width: canvas.width, height: canvas.height, base64: btoa(text) };
   });
-const luminance = (image: { width: number; data: number[] }, x: number, y: number, half = 6): number => {
+  return { width: sent.width, height: sent.height, data: Uint8Array.from(Buffer.from(sent.base64, "base64")) };
+};
+const luminance = (image: { width: number; data: Uint8Array }, x: number, y: number, half = 6): number => {
   let sum = 0;
   let n = 0;
   for (let dy = -half; dy <= half; dy += 1) {
@@ -78,7 +84,7 @@ const luminance = (image: { width: number; data: number[] }, x: number, y: numbe
   return sum / n;
 };
 /** The share of the picture whose blue is above its red. */
-const cool = (image: { width: number; height: number; data: number[] }): number => {
+const cool = (image: Picture): number => {
   let n = 0;
   let blue = 0;
   for (let i = 0; i < image.data.length; i += 16) {
@@ -87,7 +93,7 @@ const cool = (image: { width: number; height: number; data: number[] }): number 
   }
   return blue / n;
 };
-const colours = (image: { width: number; height: number; data: number[] }): number => {
+const colours = (image: Picture): number => {
   const seen = new Set<number>();
   for (let y = 0; y < image.height; y += 3) for (let x = 0; x < image.width; x += 3) seen.add(((image.data[(y * image.width + x) * 4]! >> 2) << 16) | ((image.data[(y * image.width + x) * 4 + 1]! >> 2) << 8) | (image.data[(y * image.width + x) * 4 + 2]! >> 2));
   return seen.size;
