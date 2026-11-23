@@ -13,7 +13,7 @@ description: パッケージに絵のあるどの惑星・準惑星・衛星も�
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>The Moon and Mars on flat maps, from jsDelivr</title>
+    <title>Flat maps of the Moon, Mars and Jupiter, from jsDelivr</title>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/flat/define/+esm"></script>
   </head>
   <body>

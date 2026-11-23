@@ -541,11 +541,13 @@ await step("flat-cdn", async () => {
     });
     await page.route("https://page.test/**", (route) => route.fulfill({ body: pageOf(join(examples("flat"), "cdn.html")), contentType: "text/html" }));
     await page.goto("https://page.test/");
-    await page.waitForFunction(() => document.querySelectorAll("wakusei-flat[data-state=ready]").length === 2, undefined, { timeout: 20_000 });
+    await page.waitForFunction(() => document.querySelectorAll("wakusei-flat[data-state=ready]").length === 3, undefined, { timeout: 20_000 });
     const labels = await page.locator("wakusei-flat").evaluateAll((all) => all.map((el) => el.shadowRoot?.querySelector(".dots")?.getAttribute("aria-label")));
-    if (labels[0] !== "Flat map of Moon" || labels[1] !== "Flat map of Mars") throw new Error(`the maps' labels are wrong: ${labels.join(" | ")}`);
+    if (labels[0] !== "Flat map of Moon" || labels[1] !== "Flat map of Mars" || labels[2] !== "Flat map of Jupiter") throw new Error(`the maps' labels are wrong: ${labels.join(" | ")}`);
     const drawn = await page.locator("wakusei-flat").evaluateAll((all) => all.map((el) => (el as unknown as { stats: { dots: number; mapLoaded: boolean } }).stats));
     if (!drawn[0]!.mapLoaded || drawn[0]!.dots < 1 || drawn[1]!.dots < 1) throw new Error(`the maps drew no orbiter: ${JSON.stringify(drawn)}`);
+    const looks = await page.locator("wakusei-flat").evaluateAll((all) => all.map((el) => (el as unknown as { look: string; lookState: string }).look + "/" + (el as unknown as { lookState: string }).lookState));
+    if (looks.join(" ") !== "photo/photo photo/photo map/map") throw new Error(`the maps' looks are wrong: ${looks.join(" ")}`);
   });
 });
 
