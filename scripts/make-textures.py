@@ -395,11 +395,11 @@ def craters(rows, w, top, seed, density=0.0007, rmin=2.5, rmax=26.0):
     return height
 
 
-def generate_unseen(img, seed=1798, reach=0.16):
-    """The south of Pluto that New Horizons never saw (the black rows of its mosaic, in the polar night), made up and made to belong. The mapped ground is carried on past its ragged edge as a smooth continuation of its own colours; farther on the ground is new but of the
-    same kind: fractal noise on the sphere (no seam at the date line, none squeezed at the pole) read through the colours of the mapped band just north of the edge, in the same shares (as dark, as red and as bright in as many places), with craters and a fine grain of
-    the same strength as the mapped ground's laid over it, lit from the upper left as the mapped craters are. Over `reach` of the map's height from the edge, along an edge that wanders, the colours change from the continuation to the new ground's own and the detail grows from
-    a trace to its full strength (the photographs are blurred towards their edge), so no line shows where they end. Nothing is copied: no crater or ridge of the mapped half is found twice."""
+def generate_unseen(img, seed=1798, reach=0.14):
+    """The south of Pluto that New Horizons never saw (the black rows of its mosaic, in the polar night), made up and made to belong. The new ground is fractal noise on the sphere (no seam at the date line, none squeezed at the pole) read through the colours of the
+    mapped band just north of the edge, in the same shares (as dark, as red and as bright in as many places), with craters and a fine grain of the same strength as the mapped ground's laid over it, lit from the upper left as the mapped craters are. Its broad colours
+    are nudged by a slowly changing offset until they meet the mapped colours at the edge, and it is faded in over the last few degrees of the photographs by a soft mask that follows their ragged edge, so no line shows where they end and no detail is stretched
+    across the join. Nothing is copied: no crater or ridge of the mapped half is found twice."""
     h, w, _ = img.shape
     lum = img.mean(axis=2)
     black = (lum < 0.04).astype(np.int32)
@@ -414,29 +414,28 @@ def generate_unseen(img, seed=1798, reach=0.16):
     edge = (gblur(edge[None, :].repeat(3, 0), w * 0.004)[1] - w * 0.012).astype(np.float32)
     rows = np.arange(h, dtype=np.float32)[:, None]
     valid = (rows < edge[None, :]).astype(np.float32)
-    # 1. a smooth continuation of the mapped colours into the hole: down each column, the average of the mapped ground just above the edge, eased towards the whole band's average the farther it goes, and smoothed across the columns
-    soft5 = np.stack([gblur(img[..., c], 5) for c in range(3)], axis=-1)
-    near = np.zeros((w, 3), dtype=np.float32)
-    for x in range(w):
-        e = int(edge[x])
-        near[x] = soft5[max(0, e - int(h * 0.05)) : max(1, e - 2), x].mean(axis=0)
-    near = np.stack([gblur(np.repeat(near[None, :, c], 3, axis=0), w * 0.012)[1] for c in range(3)], axis=-1)
-    average = near.mean(axis=0)
-    away = np.clip((rows - edge[None, :]) / (h * 0.18), 0, 1)[..., None]
-    fill = near[None, :, :] * (1 - away) + average[None, None, :] * away
-    # 2. the colours the new ground is read through: the mapped band above the edge, smoothed so grain is not read as colour, from darkest to brightest in 256 steps of equal share
+    # 1. the colours the new ground is read through: the mapped band above the edge, smoothed so grain is not read as colour, from darkest to brightest in 256 steps of equal share
+    soft = np.stack([gblur(img[..., c], 5) for c in range(3)], axis=-1)
     band = (rows >= edge[None, :] - h * 0.22) & (rows < edge[None, :] - h * 0.02) & (lum > 0.04)
-    soft = soft5
     order = np.argsort(soft.mean(axis=2)[band])
     colours = np.stack([soft[..., c][band][order] for c in range(3)], axis=1)
     lut = np.stack([colours[i * len(colours) // 256 : (i + 1) * len(colours) // 256].mean(axis=0) for i in range(256)])
-    # 3. the new ground: its broad colours
-    top = int(edge.min()) - int(h * 0.04)
+    # 2. the new ground: its broad colours, for the rows from a little above the edge (it is faded in over the last of the photographs) to the pole
+    blend = h * 0.045
+    top = max(0, int(edge.min() - blend - h * 0.03))
     n = sphere_fbm(top, h, w, seed, base=2.4, octaves=7, warp=0.45, gain=0.62)
     rank = np.empty(n.size, dtype=np.float32)
     rank[np.argsort(n, axis=None)] = np.linspace(0, 1, n.size, dtype=np.float32)
     broad = lut[np.minimum(255, (rank.reshape(n.shape) * 256).astype(int))].astype(np.float32)
-    # 4. the new ground's detail: craters and ridged grain, lit from the upper left, as a brightness that is multiplied in; its strength is that of the mapped ground where the photographs are sharp (the equatorial band)
+    low = np.stack([gblur(broad[..., c], 10) for c in range(3)], axis=-1)
+    # the broad colours are nudged, a little at a time and by an amount that changes slowly along the edge, until they meet the mapped colours there: an offset with no detail in it, so nothing is stretched
+    columns = np.arange(w)
+    def mean_rows(a, lo, hi):
+        return np.stack([a[max(0, int(e + lo)) : max(1, int(e + hi)), x].mean(axis=0) for x, e in zip(columns, edge)])
+    real_edge = mean_rows(soft, -h * 0.06, -h * 0.02)
+    new_edge = mean_rows(np.concatenate([np.zeros((top, w, 3), dtype=np.float32), low]), h * 0.0, h * 0.03)
+    offset = np.stack([gblur(np.repeat((real_edge - new_edge)[None, :, c], 3, axis=0), w * 0.02)[1] for c in range(3)], axis=-1)
+    # 3. the new ground's detail: craters and ridged grain, lit from the upper left, as a brightness that is multiplied in; its strength is that of the mapped ground where the photographs are sharp (the equatorial band)
     relief = craters(h, w, top, seed + 1) + 6.0 * sphere_fbm(top, h, w, seed + 2, base=70.0, octaves=3, warp=0, gain=0.5)
     gy, gx = np.gradient(relief)
     shade = np.clip(-(gx * 0.7 + gy * 0.7), -4, 4)
@@ -446,24 +445,19 @@ def generate_unseen(img, seed=1798, reach=0.16):
     mapped = np.stack([img[..., c] - gblur(img[..., c], 4) for c in range(3)], axis=-1).mean(axis=2)
     strength = float(mapped[sharp].std() / max(soft.mean(axis=2)[sharp].mean(), 1e-3))
     detail = detail / max(detail.std(), 1e-4) * strength
-    # 5. the join: continuation colours near the edge and the new ground's own farther on; the detail comes up from a trace
-    wob = (sphere_fbm(top, h, w, seed + 100, base=7.0, octaves=4, warp=0) - 0.5) * 2 * h * 0.035
-    d = (rows[top:] - edge[None, :] + wob) / (h * reach)
-    t = np.clip(d, 0, 1)
-    t = (t * t * (3 - 2 * t))[..., None]
-    ramp = 0.3 + 0.7 * t ** 1.2
-    low = np.stack([gblur(broad[..., c], 10) for c in range(3)], axis=-1)
-    base = fill[top:] * (1 - t) + low * t
-    # the detail multiplies the colours, and a little of it is added as well so dark ground is not left smooth
-    south = base * (1 + detail[..., None] * ramp) + (detail[..., None] * ramp) * 0.035
-    # where the photographs end the new ground is brought in over a short feather, so the real pixels are kept up to it
-    feather = int(w * 0.006)
-    a = np.clip((rows[top:] - (edge[None, :] - feather)) / (2 * feather), 0, 1)
+    # 4. the join: the new ground, detail and all, faded in over the last few degrees of the photographs by a soft mask that follows their ragged edge (it wanders), so no detail is ever stretched; the offset that meets the colours dies away over `reach` of the height south of it
+    wob = (sphere_fbm(top, h, w, seed + 100, base=7.0, octaves=4, warp=0) - 0.5) * 2 * h * 0.03
+    dd = rows[top:] - edge[None, :] + wob
+    t = np.clip(dd / (h * reach), 0, 1)
+    meet = (1 - t * t * (3 - 2 * t))[..., None]
+    base = low + offset[None, :, :] * meet
+    south = base * (1 + detail[..., None]) + detail[..., None] * 0.035
+    feather = w * 0.006
+    a = np.clip((dd + blend) / (blend + feather), 0, 1)
     a = (a * a * (3 - 2 * a))[..., None]
     out = img.copy()
     out[top:] = img[top:] * (1 - a) + south * a
     return np.clip(out, 0, 1)
-
 
 def make(body):
     img = fetch(body)
