@@ -1,8 +1,11 @@
 // What the flat map shows at a moment, as numbers: where the Sun is overhead, where each orbiter is over the ground, the shading of the night side, a craft's coverage circle and its ground track cut for a flat map.
 // Pure: no DOM, no clock reads (the moment is always given).
 import { splitTrail, type GroundPoint } from "../ground-track.ts";
+import { system } from "../ephemeris.ts";
+import { BODIES, MOONS_OF, type HostId, type MoonId } from "../facts.ts";
 import { orbiterElements, orbiterGround, orbiterGroundTrack, orbiterNumbers, orbiterDim, type OrbiterId, type OrbiterStatus } from "../orbiters.ts";
 import { subSolarPoint } from "../places.ts";
+import { cross, dot } from "../vec.ts";
 import { flatBody, type FlatBodyId } from "./bodies.ts";
 import { pixelsPerDegree, wrapLongitude, type FlatView } from "./geometry.ts";
 
@@ -257,3 +260,117 @@ export function trackPieces(points: readonly GroundPoint[]): [GroundPoint, Groun
   for (let i = 1; i < points.length; i += 1) out.push(...splitTrail(points[i - 1]!, points[i]!));
   return out;
 }
+
+/**
+ * The moons the package places round a body: their ids, in the package's order. Empty for a body with none (Mercury, Venus, the moons themselves).
+ *
+ * @param body - Any body the flat map draws.
+ * @returns The moons' ids.
+ *
+ * @example
+ * ```ts
+ * import { moonsOfBody } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * console.log(moonsOfBody("mars").join(", "), moonsOfBody("venus").length);
+ * ```
+ */
+export const moonsOfBody = (body: FlatBodyId): readonly MoonId[] => (Object.prototype.hasOwnProperty.call(MOONS_OF, body) ? MOONS_OF[body as keyof typeof MOONS_OF] : []);
+
+/**
+ * One moon as the flat map of its planet shows it at a moment: the place on the planet's ground that it is straight above, and how far it is from the planet's centre.
+ *
+ * @example
+ * ```ts
+ * import { flatMoons, type FlatMoon } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * const io: FlatMoon = flatMoons("jupiter", Date.UTC(2026, 10, 23)).find((moon) => moon.id === "io")!;
+ * console.log(io.lat.toFixed(1), io.distanceKm > 400_000);
+ * ```
+ */
+export interface FlatMoon {
+  id: MoonId;
+  /** The latitude of the point on the planet with the moon straight overhead, degrees. */
+  lat: number;
+  /** Its longitude in -180 up to 180, degrees east. */
+  lon: number;
+  /** The distance from the planet's centre, in kilometres. */
+  distanceKm: number;
+}
+
+/** The ground point under each moon of a planet, from the planet's pole and prime meridian and the moon's place in the same frame. */
+function groundPoints(host: FlatBodyId, ms: number): FlatMoon[] {
+  const { planet, moons } = system(host as HostId, ms);
+  const radius = BODIES[host].radiusKm;
+  const east = cross(planet.pole, planet.meridian);
+  return moons.map((moon) => {
+    const along = [moon.x / moon.distance, moon.y / moon.distance, moon.z / moon.distance] as const;
+    const lat = Math.asin(Math.max(-1, Math.min(1, dot(along, planet.pole)))) / RAD;
+    const lon = Math.atan2(dot(along, east), dot(along, planet.meridian)) / RAD;
+    return { id: moon.id, lat, lon: wrapLongitude(lon), distanceKm: moon.distance * radius };
+  });
+}
+
+/**
+ * Where each moon of a body is overhead at a moment: the point on the body's ground with the moon straight above it, for a flat map of the moons' planet. The Earth has the Moon, Mars two, Jupiter six, Saturn nineteen, Uranus five, Neptune four, Pluto three; a body with none gives an empty list.
+ *
+ * @param host - Any body the flat map draws.
+ * @param ms - Milliseconds since 1970 (UTC).
+ * @returns The moons, nearest first.
+ *
+ * @example
+ * ```ts
+ * import { flatMoons } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * const moons = flatMoons("mars", Date.UTC(2026, 10, 23, 12));
+ * console.log(moons.map((moon) => `${moon.id} ${moon.lat.toFixed(0)}, ${moon.lon.toFixed(0)}`).join("; "));
+ * ```
+ */
+export function flatMoons(host: FlatBodyId, ms: number): FlatMoon[] {
+  return moonsOfBody(host).length === 0 ? [] : groundPoints(host, ms);
+}
+
+/**
+ * The track of each moon over its planet's ground: where it is overhead from before the moment to after it, half a turn of the planet either way (at least one hour, at most two days), as points with their moments. The planet turns under the moon, so a close moon of a fast planet draws a long path round the map.
+ *
+ * @param host - Any body the flat map draws.
+ * @param ms - Milliseconds since 1970 (UTC): the moment at the track's middle.
+ * @param points - How many steps along the track.
+ * @returns For each moon, its points (longitude in -180 up to 180), or an empty map for a body with no moons.
+ *
+ * @example
+ * ```ts
+ * import { flatMoonTracks } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * const tracks = flatMoonTracks("jupiter", Date.UTC(2026, 10, 23), 20);
+ * console.log(tracks.get("io")?.length, tracks.size);
+ * ```
+ */
+export function flatMoonTracks(host: FlatBodyId, ms: number, points = 48): Map<MoonId, { lat: number; lon: number; ms: number }[]> {
+  const out = new Map<MoonId, { lat: number; lon: number; ms: number }[]>();
+  if (moonsOfBody(host).length === 0) return out;
+  const half = flatMoonTrackHalf(host);
+  for (let i = 0; i <= points; i += 1) {
+    const at = ms - half + (2 * half * i) / points;
+    for (const moon of groundPoints(host, at)) {
+      let list = out.get(moon.id);
+      if (list === undefined) out.set(moon.id, (list = []));
+      list.push({ lat: moon.lat, lon: moon.lon, ms: at });
+    }
+  }
+  return out;
+}
+
+/**
+ * How long a track of the moons of a planet is, either side of the moment, in milliseconds: half a turn of the planet, at least an hour and at most two days.
+ *
+ * @param host - Any body the flat map draws.
+ * @returns Milliseconds.
+ *
+ * @example
+ * ```ts
+ * import { flatMoonTrackHalf } from "@johnmorrisdotca/wakusei-planets/flat";
+ *
+ * console.log(flatMoonTrackHalf("jupiter") / 3_600_000);
+ * ```
+ */
+export const flatMoonTrackHalf = (host: FlatBodyId): number => Math.min(48, Math.max(1, Math.abs(BODIES[host].rotationHours) / 2)) * 3_600_000;

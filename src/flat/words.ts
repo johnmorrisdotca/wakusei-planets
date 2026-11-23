@@ -87,6 +87,10 @@ export const FLAT_WORDS: Readonly<Record<FlatLang, Readonly<Record<string, strin
     creditWide: "{body}: {who} ({licence})",
     announceMark: "{name}, {lat}, {lon}",
     kind_mark: "mark",
+    moons: "Moons",
+    keyMoon: "A moon, over the place on the ground it is straight above",
+    keyMoonTrack: "A moon's track over the ground: dashed behind it, solid ahead",
+    announceMoon: "{name}, a moon of {body}, straight above {lat}, {lon}, {km} km from the centre",
   },
   ja: {
     map: "{body}の平面地図",
@@ -150,6 +154,10 @@ export const FLAT_WORDS: Readonly<Record<FlatLang, Readonly<Record<string, strin
     creditWide: "{body}：{who}（{licence}）",
     announceMark: "{name}、{lat}、{lon}",
     kind_mark: "印",
+    moons: "衛星",
+    keyMoon: "衛星：その真下にある地表の場所に描きます",
+    keyMoonTrack: "衛星の地上軌跡：後ろは点線、前は実線",
+    announceMoon: "{name}、{body}の衛星、真下は{lat}、{lon}、中心から {km} km",
   },
 };
 
