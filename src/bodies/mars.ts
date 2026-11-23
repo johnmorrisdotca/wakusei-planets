@@ -19,7 +19,7 @@ vec4 surface(vec3 p) {
   col = mix(col, vec3(0.96, 0.96, 0.98), cap);
   return vec4(col, h);
 }`,
-  atmosphere: { colour: [0.85, 0.6, 0.45], strength: 0.16, power: 4 },
+  atmosphere: { colour: [0.85, 0.6, 0.45], strength: 1, power: 4 },
   relief: 0.7,
   ambient: 0.03,
   painted: { map: "mars", widths: [512, 1024, 2048], far: 2048 },

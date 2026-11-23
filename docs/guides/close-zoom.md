@@ -88,6 +88,8 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Charon | 4096 | tiles | 11x |  |  |
 | Nix | 4096 | shader | 11x |  |  |
 | Hydra | 4096 | shader | 11x |  |  |
+| Styx | 4096 | shader | 11x |  |  |
+| Kerberos | 4096 | shader | 11x |  |  |
 | Vanth | 4096 | shader | 11x |  |  |
 | Hiʻiaka | 4096 | shader | 11x |  |  |
 | Namaka | 4096 | shader | 11x |  |  |

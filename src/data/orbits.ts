@@ -46,6 +46,9 @@ export const ORBITS: Record<string, OrbitElements> = {
   charon: { parent: "pluto", frame: "laplace", pole: [132.9930, -6.1630], epoch: 946728000000, a: 19594, e: 0.000170, w: 145.5839, m: 148.8112, i: 0.0832, node: 9.7573, sid: 56.3625307, dw: -0.000061, dn: 0.000064 },
   nix: { parent: "pluto", frame: "laplace", pole: [132.9930, -6.1630], epoch: 946728000000, a: 49331, e: 0.015290, w: 307.1081, m: 135.3103, i: 0.0847, node: 9.7013, sid: 14.4841691, dw: -0.574755, dn: 0.000064 },
   hydra: { parent: "pluto", frame: "laplace", pole: [132.9930, -6.1630], epoch: 946728000000, a: 65177, e: 0.008508, w: 152.6898, m: 325.4937, i: 0.2857, node: 114.7977, sid: 9.4235842, dw: 3.910425, dn: -0.070598 },
+  // the moon catalogue's mean elements (JPL Planetary Satellite Mean Elements, ephemeris PLU060, epoch JD 2461041.5 = 2026-01-01), not a Horizons fit. The catalogue gives no apsis rate, so dw and dn are 0.
+  styx: { parent: "pluto", frame: "laplace", pole: [132.9930, -6.1630], epoch: 1767225600000, a: 43200, e: 0.025, w: 322.5, m: 236.1894, i: 0, node: 0, sid: 17.7626192, dw: 0, dn: 0 },
+  kerberos: { parent: "pluto", frame: "laplace", pole: [132.9930, -6.1630], epoch: 1767225600000, a: 58300, e: 0.01, w: 32.1, m: 317.7946, i: 0.4, node: 354.3, sid: 11.2139054, dw: 0, dn: 0 },
   amalthea: { parent: "jupiter", frame: "laplace", pole: [268.1000, 64.5000], epoch: 946728000000, a: 181993, e: 0.004296, w: 46.8101, m: 84.2641, i: 0.3765, node: 282.8314, sid: 722.6317267, dw: 3.400548, dn: -2.504860 },
   thebe: { parent: "jupiter", frame: "laplace", pole: [268.1000, 64.5000], epoch: 946728000000, a: 222399, e: 0.017625, w: 26.6213, m: 182.3500, i: 1.0681, node: 340.3485, sid: 533.7002763, dw: 2.474866, dn: -1.236316 },
   hyperion: { parent: "saturn", frame: "laplace", pole: [40.2000, 83.6000], epoch: 946728000000, a: 1481519, e: 0.104281, w: 230.0620, m: 55.0746, i: 0.7997, node: 4.4314, sid: 16.9199504, dw: -0.048079, dn: -0.003045 },

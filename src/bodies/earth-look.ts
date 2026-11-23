@@ -11,7 +11,7 @@ vec4 surface(vec3 p) {
   float ice = smoothstep(radians(66.0), radians(76.0), abs(lat(p)));
   return vec4(mix(mix(sea, ground, land), vec3(0.93, 0.96, 0.98), ice), 0.0);
 }`,
-  atmosphere: { colour: [0.32, 0.52, 0.95], strength: 0.5, power: 3 },
+  atmosphere: { colour: [0.32, 0.52, 0.95], strength: 1, power: 3 },
   wrap: 0.12,
   limb: 0.12,
   mapped: true,

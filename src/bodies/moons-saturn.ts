@@ -15,7 +15,7 @@ registerLook({ id: "rhea", surface: rock({ dark: "#8a8883", light: "#cac8c2", cr
 registerLook({
   id: "titan",
   surface: cloud({ light: "#ecbe6c", dark: "#b8802f", swirl: 0.7 }),
-  atmosphere: { colour: [0.92, 0.66, 0.3], strength: 0.65, power: 2.3 },
+  atmosphere: { colour: [0.92, 0.66, 0.3], strength: 1, power: 2.3 },
   limb: 0.3,
   ambient: 0.06,
   painted: { map: "titan", widths: [512, 1024, 2048], far: 2048 },

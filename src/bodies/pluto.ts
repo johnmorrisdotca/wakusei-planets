@@ -17,6 +17,7 @@ registerLook({
     h *= 1.0 - heart;`,
   }),
   atmosphere: { colour: [0.6, 0.7, 0.9], strength: 0.12, power: 5 },
+  wrap: 0.55,
   relief: 0.4,
   ambient: 0.025,
   painted: { map: "pluto", widths: [512, 1024, 2048], far: 2048 },

@@ -114,6 +114,6 @@ test("the moons added with their shape models are where JPL Horizons puts them, 
 });
 
 test("every moon with an orbit in the table is measured, and no limit is for a body the package does not have", () => {
-  for (const name of Object.keys(ORBITS)) if (name in MOON_DEGREES === false && name in reference.moons === false && name in MORE_MOON_DEGREES === false) assert.ok(["dysnomia", "hiiaka", "namaka", "vanth"].includes(name), `${name} has no accuracy limit`);
+  for (const name of Object.keys(ORBITS)) if (name in MOON_DEGREES === false && name in reference.moons === false && name in MORE_MOON_DEGREES === false) assert.ok(["dysnomia", "hiiaka", "namaka", "vanth", "styx", "kerberos"].includes(name), `${name} has no accuracy limit`);
   for (const name of [...Object.keys(MOON_DEGREES), ...Object.keys(PLANET_ARCSEC), ...Object.keys(DWARF_ARCSEC)]) assert.ok(name in reference.moons || name in reference.planets || name in reference.dwarfs, name);
 });

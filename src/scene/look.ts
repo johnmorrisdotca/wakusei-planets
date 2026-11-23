@@ -19,6 +19,7 @@ export { shapeRadii, type ShapeTable } from "./shape.ts";
  */
 export interface Atmosphere {
   colour: readonly [number, number, number];
+  /** How much of `colour` the limb adds, from 0 to 1. The shader draws `colour` times this. */
   strength: number;
   /** How thin the rim is: higher is thinner. Default 3. */
   power?: number;
@@ -137,6 +138,25 @@ export function detailOf(look: BodyLook): { amount: number; stretch: number } {
   if (look.emissive === true) return { amount: 0, stretch: 1 };
   const own = SMOOTH[look.id];
   return { amount: look.detail?.amount ?? own?.amount ?? 0.32, stretch: look.detail?.stretch ?? own?.stretch ?? 1 };
+}
+
+/**
+ * The haze colour a body is drawn with: its atmosphere colour at `strength`, or black when it has none.
+ *
+ * @param atmosphere - The body's atmosphere, if it has one.
+ * @returns The colour the limb adds, each channel from 0 to 1.
+ *
+ * @example
+ * ```ts
+ * import { atmosphereTint } from "@johnmorrisdotca/wakusei-planets/look";
+ *
+ * console.log(atmosphereTint({ colour: [0.6, 0.7, 0.9], strength: 0.12 }));
+ * ```
+ */
+export function atmosphereTint(atmosphere: Atmosphere | undefined): [number, number, number] {
+  if (atmosphere === undefined) return [0, 0, 0];
+  const strength = atmosphere.strength;
+  return [atmosphere.colour[0] * strength, atmosphere.colour[1] * strength, atmosphere.colour[2] * strength];
 }
 
 /**

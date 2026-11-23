@@ -14,7 +14,7 @@ import type { ThreeParts } from "./body.ts";
 import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
 import { fallbackLook } from "./fallback.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
-import { detailOf, lookOf } from "./look.ts";
+import { atmosphereTint, detailOf, lookOf } from "./look.ts";
 import { shapeGeometry } from "./shape.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
@@ -358,7 +358,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       uAmbient: { value: look.ambient ?? 0.04 },
       uLimb: { value: look.limb ?? 0 },
       uWrap: { value: look.wrap ?? (a === undefined ? 0.04 : 0.3) },
-      uAtmos: { value: new T.Vector3(...(a?.colour ?? [0, 0, 0])) },
+      uAtmos: { value: new T.Vector3(...atmosphereTint(a)) },
       uAtmosPow: { value: a?.power ?? 3 },
       uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },

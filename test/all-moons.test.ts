@@ -21,8 +21,8 @@ describe("allMoonPoster", () => {
     const pluto = rows.find((row) => row.id === "pluto")!;
     assert.equal(pluto.more, 0);
     const kerberos = pluto.shown.find((moon) => moon.id === "kerberos")!;
-    assert.equal(kerberos.estimated, true);
-    assert.equal(kerberos.line.en, estimatedRock("kerberos")!.line.en);
+    assert.equal(kerberos.estimated, false);
+    assert.equal(kerberos.line.en, "Kerberos");
     for (const row of rows) {
       for (const moon of row.shown) {
         assert.ok(catalogueMoonsOf(row.id).some((item) => item.id === moon.id), moon.id);

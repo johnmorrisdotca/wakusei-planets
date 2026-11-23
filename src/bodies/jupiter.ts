@@ -17,7 +17,7 @@ registerLook({
     float oval2 = oval(p, -70.0, -33.0, 3.0, 2.2, 0.5);
     col = mix(col, vec3(0.93, 0.88, 0.80), oval2 * 0.8);`,
   }),
-  atmosphere: { colour: [0.75, 0.7, 0.62], strength: 0.12, power: 3.5 },
+  atmosphere: { colour: [0.75, 0.7, 0.62], strength: 1, power: 3.5 },
   limb: 0.45,
   painted: { map: "jupiter", widths: [512, 1024, 2048], far: 2048, relief: 0 },
 });

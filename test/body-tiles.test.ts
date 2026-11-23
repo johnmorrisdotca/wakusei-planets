@@ -3,7 +3,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { test } from "node:test";
 import { bodyFragment, MICRO_DETAIL, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT, RING_FRAGMENT_DETAIL } from "../src/scene/glsl.ts";
-import { detailOf } from "../src/scene/look.ts";
+import { atmosphereTint, detailOf, lookOf } from "../src/scene/look.ts";
+import "../src/bodies/pluto.ts";
 import { tilesBase, TILES_BASE } from "../src/scene/textures.ts";
 
 const root = new URL("../", import.meta.url).pathname;
@@ -26,6 +27,18 @@ test("a glowing body's shader is the program it always was, and a body's own tak
   assert.ok(MICRO_DETAIL.includes("fwidth") && MICRO_DETAIL.includes("uDetailAmp"));
   const shaded = bodyFragment("vec4 surface(vec3 p) { return vec4(p, 0.0); }", false, false, undefined, true);
   assert.ok(shaded.includes("gTexel = uTexel;") && shaded.includes("s.rgb *= microDetail(p);"));
+});
+
+test("the haze stops at the terminator, and Pluto's is a faint wide edge", () => {
+  const shaded = bodyFragment("vec4 surface(vec3 p) { return vec4(p, 0.0); }", false);
+  assert.match(shaded, /smoothstep\(-0\.02, 0\.08, dg\)/);
+  assert.deepEqual(atmosphereTint(undefined), [0, 0, 0]);
+  assert.deepEqual(atmosphereTint({ colour: [1, 0, 0], strength: 0.5 }), [0.5, 0, 0]);
+  const pluto = lookOf("pluto");
+  assert.equal(pluto?.wrap, 0.55);
+  assert.equal(pluto?.atmosphere?.strength, 0.12);
+  const tint = atmosphereTint(pluto?.atmosphere);
+  pluto!.atmosphere!.colour.forEach((channel, i) => assert.ok(Math.abs(tint[i]! - channel * 0.12) < 1e-12));
 });
 
 test("the ring's detail shader adds ringlets to the ring's shader and leaves the one that others use alone", () => {
