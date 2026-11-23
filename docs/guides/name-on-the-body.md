@@ -13,7 +13,7 @@ description: Write a body's name on its own globe, like a title laid over the th
 <wakusei-space time="2026-11-02T14:00Z" body-label="etched" body-label-repeat="both" lang="ja"></wakusei-space>
 ```
 
-The default when it is on is John's pick: **Michroma, painted, at half strength, the name once, on the equator, turning with the body**.
+The default when it is on is John's pick: **Michroma, painted, at half strength, the name once, on the equator, turning with the body**. A name that would run off the limb slides about the pole, only as far as it needs, so every letter stays on the near side. On a lumpy moon the band sits on the shell that clears the shape's highest point, so no letter is hidden inside the surface.
 
 ## The attributes
 

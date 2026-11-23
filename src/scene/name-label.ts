@@ -317,6 +317,7 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
   let disposed = false;
   let ready = false;
   const light = new T.Vector3(0, 0, 1);
+  const eye = new T.Vector3();
   const able = hasLabelParts(T) && canDraw();
   if (!able && !warned && canDraw()) {
     warned = true;
@@ -355,7 +356,19 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
         u.uLight.value.copy(light);
         u.uOpacity.value = m.opacity;
       }
-      return label.update((camera ?? FAR_EYE) as never, radiusPx);
+      const changed = label.update((camera ?? FAR_EYE) as never, radiusPx);
+      // a name that turns with the body runs off the limb and the planet cuts the letters: slide it, only as far as it needs, so the whole word stays on the near side
+      if (wanted.options.facing || camera === undefined) return changed;
+      const mesh = label.object as unknown as THREE.Object3D;
+      const parent = mesh.parent;
+      if (parent === null) return changed;
+      camera.getWorldPosition(eye);
+      parent.updateWorldMatrix(true, false);
+      parent.worldToLocal(eye);
+      const yaw = nameClearYaw(eye.x, eye.y, eye.z, label.layout.latitude, label.layout.height, label.layout.spans);
+      if (Math.abs(mesh.rotation.y - yaw) <= 1e-4) return changed;
+      mesh.rotation.y = yaw;
+      return true;
     },
     set(nextText, next) {
       wanted = { text: nextText, options: shared(next) };
@@ -385,6 +398,69 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
 
 function withoutUndefined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
+}
+
+/** How far inside the limb a letter must stay, as a dot with the direction to the camera: about 56 degrees from the centre of the disc, so a letter is read face-on and not shaved off at the edge. */
+const NAME_CLEAR = 0.55;
+
+const pointOnBand = (latitude: number, longitude: number): [number, number, number] => {
+  const lat = (latitude * Math.PI) / 180;
+  const lon = (longitude * Math.PI) / 180;
+  const ring = Math.cos(lat);
+  return [ring * Math.cos(lon), Math.sin(lat), -ring * Math.sin(lon)];
+};
+
+const turnedAboutPole = (point: [number, number, number], yaw: number): [number, number, number] => {
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  return [point[0] * c + point[2] * s, point[1], -point[0] * s + point[2] * c];
+};
+
+/** The smallest dot a name's four corners make with the camera, after a turn `yaw` about the pole. */
+const nameCornerDot = (camera: [number, number, number], latitude: number, centre: number, halfWidth: number, halfHeight: number, yaw: number): number => {
+  let least = Infinity;
+  for (const longitude of [centre - halfWidth, centre + halfWidth]) {
+    for (const band of [latitude - halfHeight, latitude + halfHeight]) {
+      const point = turnedAboutPole(pointOnBand(band, longitude), yaw);
+      least = Math.min(least, point[0] * camera[0] + point[1] * camera[1] + point[2] * camera[2]);
+    }
+  }
+  return least;
+};
+
+/**
+ * The turn about the pole, in radians, that keeps a whole name on the side facing the camera. Zero when it is already clear of the limb. The name that faces the camera best is the one that moves,
+ * and only as far as its corners need, so a name that sits on the front still turns with the body. `camera` is in the shared label's frame (longitude 0 along +x, east towards -z).
+ */
+export function nameClearYaw(x: number, y: number, z: number, latitude: number, height: number, spans: readonly { centre: number; width: number }[]): number {
+  const length = Math.hypot(x, y, z);
+  if (length < 1e-8 || spans.length === 0) return 0;
+  const camera: [number, number, number] = [x / length, y / length, z / length];
+  let span = spans[0]!;
+  let facingDot = -Infinity;
+  for (const one of spans) {
+    const point = pointOnBand(latitude, one.centre);
+    const dot = point[0] * camera[0] + point[1] * camera[1] + point[2] * camera[2];
+    if (dot > facingDot) {
+      facingDot = dot;
+      span = one;
+    }
+  }
+  const halfWidth = span.width / 2;
+  const halfHeight = height / 2;
+  if (nameCornerDot(camera, latitude, span.centre, halfWidth, halfHeight, 0) >= NAME_CLEAR) return 0;
+  const cameraLongitude = Math.atan2(-camera[2], camera[0]);
+  const toward = cameraLongitude - (span.centre * Math.PI) / 180;
+  const facing = Math.atan2(Math.sin(toward), Math.cos(toward));
+  if (nameCornerDot(camera, latitude, span.centre, halfWidth, halfHeight, facing) < NAME_CLEAR) return facing;
+  let near = 0;
+  let far = 1;
+  for (let step = 0; step < 16; step += 1) {
+    const mid = (near + far) / 2;
+    if (nameCornerDot(camera, latitude, span.centre, halfWidth, halfHeight, mid * facing) >= NAME_CLEAR) far = mid;
+    else near = mid;
+  }
+  return far * facing;
 }
 
 const reaches = new WeakMap<THREE.BufferGeometry, number>();

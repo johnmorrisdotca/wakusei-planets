@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **A name written on a lumpy moon is no longer hidden inside it** (MODULES-1797, the part that is wakusei's). The name is a band on a sphere of radius 1 round the body; a moon drawn from a shape (Thebe, Amalthea and the like) stands out past that sphere in places, so letters sat inside the surface and showed as a stray letter behind the lump. The band is now written on the shell that clears the shape's highest point (`stats.label.shell`: 1 on a smooth globe, more on a lumpy one). Not done: the letters on a big planet such as Jupiter still turn away at the limb as any name written on a globe does; showing them whole is a choice of `body-label-facing` or a flat name, noted on the ticket. `e2e/name-shell.demo.ts` checks the shell.
+- **A body's name is drawn whole, in front of the body** (MODULES-1797). On a lumpy moon (Thebe, Amalthea and the like) the name is a band on a sphere of radius 1, and the shape stands out past that sphere, so letters sat inside the surface. The band is now written on the shell that clears the shape's highest point (`stats.label.shell`: 1 on a smooth globe, more on a lumpy one). On a smooth globe the same band turns with the body, so a long name such as Jupiter's runs off the limb and the planet cuts the letters. The name now slides about the pole, only as far as it needs, until every letter is on the near side; a name already on the front still turns with the body, and `body-label-facing` is unchanged. `e2e/name-shell.demo.ts` checks the shell.
 
 ## [0.75.0] - 2026-11-23
 
