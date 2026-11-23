@@ -73,7 +73,7 @@ export const renderPlan = (): string =>
 
 /** The flat map page. */
 export const renderFlat = (): string =>
-  render("flat.html", "Wakusei Planets 惑星: flat maps of the Moon and Mars", "The Moon and Mars as flat maps with day and night for any time, the landing, rover and crash sites marked, and the spacecraft in orbit moving over them with their coverage and ground tracks. English and Japanese, no WebGL.");
+  render("flat.html", "Wakusei Planets 惑星: flat maps of any body", "Any planet, dwarf planet or moon the package has a picture of, flat: as the photograph or as a line map, with day and night for any time, the sunrise line, the landing, rover and crash sites and named features, and the spacecraft in orbit round the Moon and Mars. English and Japanese, no WebGL.");
 
 /** The flat solar system page. */
 export const renderSystem = (): string =>

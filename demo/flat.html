@@ -15,12 +15,16 @@
             <span class="fam-label" data-say="fl_body">Body</span>
             <span class="fam-seg" id="bodies" role="group" data-say-label="fl_body" data-testid="bodies"></span>
           </div>
+          <div class="fam-row">
+            <span class="fam-label" data-say="fl_moons">Moons</span>
+            <span class="fam-seg" id="moons" role="group" data-say-label="fl_moons" data-testid="moons"></span>
+          </div>
         </div>
       </div>
 
       <section class="fam-felt flat-stage" aria-labelledby="stage-h">
-        <h2 id="stage-h" class="fam-sr" data-say="fl_stage">Flat map of the Moon and Mars</h2>
-        <wakusei-flat id="flat" body="moon" texture-base="textures/" data-testid="flat"></wakusei-flat>
+        <h2 id="stage-h" class="fam-sr" data-say="fl_stage">Flat map of any body</h2>
+        <wakusei-flat id="flat" body="moon" texture-base="textures/" controls="centre look zoom footprint track chips key" data-testid="flat"></wakusei-flat>
         <p class="fam-fine stage-name" id="caption" role="status" data-testid="caption"></p>
         <p class="fam-fine stage-name" data-say="fl_hint">Press an orbiter or a mark for its name. Drag to pan and pinch to zoom; the + and − buttons and the keyboard do the same.</p>
       </section>
@@ -33,11 +37,11 @@
             <label class="field"><span data-say="fl_date">Date (UTC)</span><input type="datetime-local" id="date" class="fam-field" data-testid="date" /></label>
             <span class="fam-fine" id="shown-time" role="status" data-testid="shown-time"></span>
           </div>
-          <div class="fam-row">
+          <div class="fam-row" id="places-row">
             <span class="fam-label" data-say="fl_place">My place</span>
             <span class="fam-seg" id="places" role="group" data-say-label="fl_place" data-testid="places"></span>
           </div>
-          <div class="fam-row">
+          <div class="fam-row" id="orbiters-row">
             <span class="fam-label" data-say="fl_orbiters">Orbiters</span>
             <span class="fam-seg flat-orbiters" id="orbiters" role="group" data-say-label="fl_orbiters" data-testid="orbiters"></span>
           </div>

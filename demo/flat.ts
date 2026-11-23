@@ -1,14 +1,14 @@
-// The flat map page: the Moon or Mars as a flat map, drawn by <wakusei-flat>. Every dot is an orbiter at the place the package's own orbit puts it for the time shown, over the body's own picture with day and night.
+// The flat map page: any body the package has a picture of as a flat map, drawn by <wakusei-flat>, as the photo or as a line map. Round the Moon and Mars every dot is an orbiter at the place the package's own orbit puts it for the time shown.
 // Choose the body (the one control that swaps the Earth's map for these, as in the satellites' page), drive the clock, press an orbiter or a mark, and set a site as "my place". Nothing here asks a server for orbits.
 import "@johnmorrisdotca/hata/element/define";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import { BODIES } from "../src/facts.ts";
 import { flagCodeOf } from "../src/landing-sites.ts";
-import { FLAT_BODIES, coordinateText, flatBody, flatSun, hasPath, isFlatBody, orbiterColour, orbiterName, type FlatBodyId } from "../src/flat/index.ts";
+import { FLAT_BODIES, coordinateText, flatBody, flatSun, hasPath, isFlatBody, orbiterColour, orbiterName, readLook, type FlatBodyId } from "../src/flat/index.ts";
 import "../src/flat/define.ts";
 import type { FlatPick, WakuseiFlat } from "../src/flat/define.ts";
 import { ORBITER_FACTS, orbiterNumbers, type OrbiterId } from "../src/orbiters.ts";
-import { localSolarTime, loadPlaces, type Place } from "../src/places.ts";
+import { localSolarTime, loadPlaces, PLACE_BODIES, type Place, type PlaceBody } from "../src/places.ts";
 import { picturesCredit } from "../src/picture-credits.ts";
 import { WORDS } from "./words.js";
 import { startProjections } from "./flat-projections.ts";
@@ -23,10 +23,16 @@ const flat = $<WakuseiFlat>("#flat");
 const address = createAddressState({ defaults: {} });
 const SPEEDS = [1, 10, 60, 600, 3600, 86400] as const;
 /** The sites offered as "my place", by body: the ones a reader has heard of. */
-const TRY_PLACES: Readonly<Record<FlatBodyId, readonly string[]>> = {
+const TRY_PLACES: Readonly<Partial<Record<FlatBodyId, readonly string[]>>> = {
   moon: ["moon/apollo-11-lunar-module", "moon/apollo-17-lunar-module", "moon/chang-e-4", "moon/chandrayaan-3-vikram"],
   mars: ["mars/perseverance", "mars/curiosity", "mars/viking-1", "mars/zhurong"],
 };
+
+/** The row of planets and the Moon; the other moons have a row of their own. */
+const MAIN: readonly FlatBodyId[] = ["mercury", "venus", "earth", "moon", "mars", "ceres", "vesta", "jupiter", "saturn", "uranus", "neptune", "pluto"];
+const MOONS = FLAT_BODIES.filter((id) => !MAIN.includes(id));
+/** The places offered as "my place" for a body: the ones a reader has heard of, or the first few the package holds. */
+const tryPlaces = (): readonly string[] => TRY_PLACES[body] ?? places.slice(0, 4).map((place) => place.id);
 
 const asked = address.get("body");
 let body: FlatBodyId = isFlatBody(asked) ? asked : "moon";
@@ -35,6 +41,8 @@ let places: readonly Place[] = [];
 let speedAt = 0;
 let chosen: FlatPick | null = null;
 flat.setAttribute("body", body);
+if (readLook(address.get("look")) === "map") flat.setAttribute("look", "map");
+flat.addEventListener("wakusei-flat-look", (event) => address.set("look", (event as CustomEvent<{ look: string }>).detail.look === "map" ? "map" : null));
 
 // ----- the rows of buttons --------------------------------------------------------------------------------------------------------------------------------------------------
 const rows: (() => void)[] = [];
@@ -42,7 +50,7 @@ function buttons(container: string, items: () => readonly { value: string; text:
   const box = $(container);
   rows.push(() => {
     const list = items();
-    if ([...box.children].map((child) => (child as HTMLElement).dataset["value"]).join() !== list.map((one) => one.value).join()) {
+    if (box.children.length !== list.length || [...box.children].map((child) => (child as HTMLElement).dataset["value"]).join() !== list.map((one) => one.value).join()) {
       box.replaceChildren(
         ...list.map((item) => {
           const button = document.createElement("button");
@@ -65,10 +73,11 @@ function buttons(container: string, items: () => readonly { value: string; text:
     });
   });
 }
-buttons("#bodies", () => FLAT_BODIES.map((id) => ({ value: id, text: BODIES[id].name[lang()] })), () => body, (value) => {
+const chooseBody = (value: string): void => {
   body = value as FlatBodyId;
   home = "";
   chosen = null;
+  places = [];
   flat.removeAttribute("selected");
   flat.setAttribute("body", body);
   address.set("body", body === "moon" ? null : body);
@@ -76,8 +85,10 @@ buttons("#bodies", () => FLAT_BODIES.map((id) => ({ value: id, text: BODIES[id].
   applyHome();
   void loadList();
   render();
-});
-buttons("#places", () => [{ value: "", text: say("fl_place_none") }, ...TRY_PLACES[body].map((id) => ({ value: id, text: places.find((p) => p.id === id)?.name[lang()] ?? id }))], () => home, (value) => {
+};
+buttons("#bodies", () => MAIN.map((id) => ({ value: id, text: BODIES[id].name[lang()] })), () => body, chooseBody);
+buttons("#moons", () => MOONS.map((id) => ({ value: id, text: BODIES[id].name[lang()] })), () => body, chooseBody);
+buttons("#places", () => [{ value: "", text: say("fl_place_none") }, ...tryPlaces().map((id) => ({ value: id, text: places.find((p) => p.id === id)?.name[lang()] ?? id }))], () => home, (value) => {
   home = value;
   applyHome();
   render();
@@ -262,6 +273,8 @@ function render(): void {
     if (name === "slower") button.disabled = speedAt === 0;
     if (name === "faster") button.disabled = speedAt === SPEEDS.length - 1;
   }
+  $("#orbiters-row").hidden = flatBody(body).orbiters.length === 0;
+  $("#places-row").hidden = places.length === 0;
   const missing = flatBody(body).orbiters.filter((id) => !hasPath(id));
   $("#nopath").textContent = missing.length === 0 ? "" : say("fl_nopath", { names: missing.map((id) => orbiterName(id, lang())).join(lang() === "ja" ? "、" : ", ") });
   const l = lang();
@@ -285,7 +298,7 @@ function render(): void {
 
 async function loadList(): Promise<void> {
   const wanted = body;
-  const list = await loadPlaces(wanted);
+  const list = (PLACE_BODIES as readonly string[]).includes(wanted) ? await loadPlaces(wanted as PlaceBody) : [];
   if (wanted !== body) return;
   places = list;
   if (home !== "") applyHome();
