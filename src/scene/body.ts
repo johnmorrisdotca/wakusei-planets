@@ -18,7 +18,7 @@ import { writeBasis } from "./basis.ts";
 import { interiorOf } from "../interior.ts";
 import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
-import { createNameLabel, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import { createNameLabel, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 
 export { fallbackLook } from "./fallback.ts";
 
@@ -67,7 +67,7 @@ export interface BodyScene extends Scene3D {
   /** The window of finer map on the body, or `undefined` for a body with none (a glowing one, or one with no painted map). */
   readonly detail: DetailStats | undefined;
   /** The name on the globe now: whether it is drawn (made, its font in, and the body big enough), its text, and its turn about the pole in radians (for `facing`); `null` for none. */
-  readonly label: { shown: boolean; text: string; turn: number; look: string } | null;
+  readonly label: { shown: boolean; text: string; turn: number; look: string; shell: number } | null;
 }
 
 export interface BodyItemOptions {
@@ -505,6 +505,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (label === undefined) {
           label = createNameLabel(T, state.label.text, state.label, look.emissive === true, () => options.redraw(), facts.colour);
           mesh.add(label.object);
+          // a lumpy shape (Thebe, Amalthea, Phobos) stands out past the sphere the name is written on in places: the name is written on the shell that clears its highest point, so no letter is hidden inside the surface
+          const reach = shapeReach(geometry);
+          if (reach > 1.002) label.object.scale.setScalar(reach);
         } else {
           label.set(state.label.text, state.label);
           options.redraw();
@@ -586,7 +589,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         },
         get label() {
           const inner = label?.object.children[0] as THREE.Object3D | undefined;
-          return label === undefined || latest.label === undefined || latest.label === null ? null : { shown: label.ready && inner !== undefined && inner.visible, text: latest.label.text, turn: inner?.rotation.y ?? 0, look: label.look };
+          return label === undefined || latest.label === undefined || latest.label === null ? null : { shown: label.ready && inner !== undefined && inner.visible, text: latest.label.text, turn: inner?.rotation.y ?? 0, look: label.look, shell: label.object.scale.x };
         },
         resize(w: number, h: number) {
           viewWidth = w;

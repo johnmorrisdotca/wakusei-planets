@@ -138,8 +138,8 @@ test("the body page: a name on Saturn through the row, kept in the address, and 
   const main = page.locator("#main");
   await main.hover();
   await expect(main).toHaveAttribute("data-state", "live", { timeout: 90_000 });
-  const stats = () => main.evaluate((el) => (Reflect.get(el, "stats") as { label: { shown: boolean; text: string; turn: number; look: string } | null }).label);
-  await expect.poll(stats, { timeout: 60_000 }).toEqual({ shown: true, text: "SATURN", turn: 0, look: "etched" }); // etched asked for, etched drawn: auto tone changes only a painted look (MODULES-983)
+  const stats = () => main.evaluate((el) => (Reflect.get(el, "stats") as { label: { shown: boolean; text: string; turn: number; look: string; shell: number } | null }).label);
+  await expect.poll(stats, { timeout: 60_000 }).toEqual({ shown: true, text: "SATURN", turn: 0, look: "etched", shell: 1 }); // etched asked for, etched drawn: auto tone changes only a painted look (MODULES-983)
   expect(await main.evaluate((el) => Reflect.get(el, "bodyLabel"))).toEqual({ look: "etched", latitude: 55 });
   keep("body-saturn-etched-north", (await main.screenshot()).toString("base64"));
   await page.getByRole("group", { name: "Name on the body" }).getByRole("button", { name: "Off", exact: true }).dispatchEvent("click");

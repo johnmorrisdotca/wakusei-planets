@@ -19,7 +19,7 @@ import { shapeGeometry } from "./shape.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
-import { createNameLabel, nameLabelText, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import { createNameLabel, nameLabelText, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 import { roundShape } from "./round.ts";
 
 let pictureLoads = 0;
@@ -196,8 +196,8 @@ export interface Painting {
   readonly tiles?: DetailStats;
   /** Write the body's name on its globe, change how, or take it off (`null`). The name is drawn when the font is in, and `context.invalidate` is called then. */
   setLabel(label: PaintLabel | null): void;
-  /** The name on the globe now: whether one is drawn (made and big enough on the screen at the last `update`), the text, and the group's turn about the pole in radians (for `facing`). */
-  readonly label: { shown: boolean; text: string; turn: number; look: string } | null;
+  /** The name on the globe now: whether one is drawn (made and big enough on the screen at the last `update`), the text, and the group's turn about the pole in radians (for `facing`), and `shell`, the radius of the shell the name is written on in the mesh's units (1 on a smooth globe, more on a lumpy moon). */
+  readonly label: { shown: boolean; text: string; turn: number; look: string; shell: number } | null;
   dispose(): void;
 }
 
@@ -625,7 +625,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let labelText = "";
   let labelShown = false;
   // what `label` reports: one object, written at each draw (it is read for every body at every frame)
-  const labelReport = { shown: false, text: "", turn: 0, look: "" };
+  const labelReport = { shown: false, text: "", turn: 0, look: "", shell: 1 };
   const setLabel = (next: PaintLabel | null): void => {
     if (next === null || next === undefined || gone) {
       if (label !== undefined) {
@@ -709,6 +709,9 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       }
       keepSized(info.radiusPx);
       if (label !== undefined) {
+        // a lumpy shape stands out past the sphere the name is written on: the shell clears its highest point
+        labelReport.shell = shapeReach((mesh as unknown as THREE.Mesh).geometry);
+        if (labelReport.shell > 1.002 || label.object.scale.x !== 1) label.object.scale.setScalar(Math.max(1, labelReport.shell));
         label.update(info.view?.camera, info.radiusPx, info.toSun);
         const inner = label.object.children[0] as THREE.Object3D | undefined;
         labelShown = inner !== undefined && inner.visible;
