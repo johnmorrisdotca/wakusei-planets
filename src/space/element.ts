@@ -371,6 +371,8 @@ export class WakuseiSpace extends HTMLElement {
   #hands: ElementControls | undefined;
   #markLayer: PlaceLayerView | undefined;
   #markList: { body: BodyId; list: readonly Place[] } | undefined;
+  /** The body the camera stands at while `turnTo` has turned the view to another: the body looked at is `to`, the camera is still at `at`. Let go when the camera goes to a body. */
+  #turned: { at: BodyId; to: BodyId } | null = null;
   #markLoading: BodyId | undefined;
   #markHeard: (() => void) | undefined;
   #placeGlide = 0;
@@ -1807,6 +1809,23 @@ export class WakuseiSpace extends HTMLElement {
   get body(): BodyId {
     return this.#model.focus;
   }
+
+  /**
+   * The body the camera is at, which is `body` unless `turnTo` has turned the view to another body from where the camera stands: then `body` is the body looked at and `at` is the one the camera is still at, so a page can tell "looking at" from "at".
+   * It follows `body` the moment the camera goes anywhere (`goTo`, setting `body`, a hop).
+   *
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   *
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * space.turnTo("mars", { smooth: false });
+   * console.log(space.body, space.at);
+   * ```
+   */
+  get at(): BodyId {
+    return this.#turned !== null && this.#turned.to === this.#model.focus ? this.#turned.at : this.#model.focus;
+  }
   set body(name: BodyId | string) {
     const id = readBody(name);
     if (!id) return;
@@ -1816,6 +1835,7 @@ export class WakuseiSpace extends HTMLElement {
   /** Move the camera to `id` (not yet drawn) and tell the page. */
   #centre(id: BodyId): void {
     const was = this.#model.focus;
+    this.#turned = null;
     this.#model.focus = id;
     this.#gate?.request();
     if (was !== id) this.#announceHop();
@@ -1875,6 +1895,7 @@ export class WakuseiSpace extends HTMLElement {
     model.region = null;
     this.#showRegion();
     this.#selected = id;
+    this.#turned = null;
     this.#model.focus = id;
     const zoom = options.zoom ?? 1;
     // the side the camera comes from, as the controls' yaw and tilt: the element's own hands are set to it here, and a bar bound to the element (which holds the view's state) hears it in the event with the zoom
@@ -1898,7 +1919,7 @@ export class WakuseiSpace extends HTMLElement {
   /**
    * Turn the camera where it stands until a body is in the picture, by the least turn: no move of the camera's place, only the way it looks. A body is in the picture when its middle is inside the picture less `margin` of
    * each side (the left and right margins are `margin` of the width, the top and bottom `margin` of the height; 0.15 by default, 0 to 0.45). One already so is left alone and the answer is `false`, as it is for an id the
-   * view does not know, the body already looked at, and a view that is riding. The body becomes the one looked at: the camera stays at its place and looks at it, from as far
+   * view does not know, the body already looked at, and a view that is riding (a camera beside the Moon in a ride is not turned: ride off first). The body becomes the one looked at (`body`) while `at` still names the body the camera stands at: the camera stays at its place and looks at it, from as far
    * as it stands (the zoom is worked out from that distance, inside the controls' limits; a body so far that the zoom's limit would move the camera is not turned to). It glides the way a move does, or at once with
    * `smooth: false` or for a reader who prefers reduced motion; nothing is drawn at rest and one draw more at most ends it.
    *
@@ -1954,6 +1975,8 @@ export class WakuseiSpace extends HTMLElement {
     model.region = null;
     this.#showRegion();
     this.#selected = id;
+    // the camera stays at the body it stood at, or the one it was already turned from: the view looks at `id`
+    this.#turned = { at: this.#turned !== null && this.#turned.to === model.focus ? this.#turned.at : model.focus, to: id };
     model.focus = id;
     if (this.#hands !== undefined && !this.hasAttribute("data-kazoku-bar")) this.#hands.controller.set({ yaw, tilt, zoom }, true, "jump");
     else this.setView({ yaw, tilt, zoom, roll: from.roll, panX: from.panX, panY: from.panY }, true);

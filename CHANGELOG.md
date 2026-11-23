@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`<wakusei-space>` says which body the camera is at after `turnTo`** (MODULES-1352). `turnTo(id)` turns the view where the camera stands, but `body` then named the turned-to body, so a page could not tell "looking at" from "at". `body` is unchanged (the body looked at); the new `at` is the body the camera stands at, equal to `body` except between a `turnTo` and the next move of the camera (`goTo`, setting `body`, a hop). `turnTo` has always declined to turn a riding view; the docs now say so beside the Moon. `e2e/space-turn.demo.ts` checks both.
+
 ## [0.74.2] - 2026-11-21
 
 - **`<wakusei-surface>` `position` follows the view through a glide** (MODULES-1487). While driving or watching the landing `position.up` already followed the view; during the move from the watched descent to the standing view, the rover or the other camera (the `glide`), `position` still gave the standing place at 1.7 m. It now gives the eyes on the way: east, north and the height over the ground under them, ending at the standing place and 1.7 m. Standing, driving and watching are unchanged.
