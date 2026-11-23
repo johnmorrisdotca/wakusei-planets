@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as THREE from "three";
 import { BODIES } from "../src/index.ts";
-import { nameLabelKey, nameLabelLook, nameLabelText, nameTone, readNameLabel } from "../src/scene/name-label.ts";
+import { nameClearYaw, nameLabelKey, nameLabelLook, nameLabelText, nameTone, readNameLabel } from "../src/scene/name-label.ts";
 import { createPainter } from "../src/scene/painter.ts";
 
 /** An element as `readNameLabel` reads one: its attributes in a map. */
@@ -82,6 +82,19 @@ test("the tone of the letters comes from the body's own colour: dark on Venus, S
   assert.equal(nameLabelLook({ look: "painted", tone: "auto" }, BODIES.venus.colour), "burned");
   // with no colour to go by, auto leaves the look as it is
   assert.equal(nameLabelLook({ look: "painted" }), "painted");
+});
+
+test("a name already on the front is left where the body put it, and one running off the limb is slid until its letters clear the edge", () => {
+  const band = { latitude: 0, height: 14 };
+  const narrow = [{ centre: 0, width: 30 }];
+  assert.equal(nameClearYaw(1, 0, 0, band.latitude, band.height, narrow), 0);
+  // the camera is 80 degrees east of a wide name, so the trailing letters are past the limb
+  const camera = Math.PI / 180 * 80;
+  const yaw = nameClearYaw(Math.cos(camera), 0, -Math.sin(camera), band.latitude, band.height, [{ centre: 0, width: 70 }]);
+  assert.ok(yaw > 0.2 && yaw < camera, `slid ${yaw} toward the camera, not all the way`);
+  // two copies: the one already facing the camera stays, even when the other is on the far side
+  assert.equal(nameClearYaw(-1, 0, 0, band.latitude, band.height, [{ centre: 0, width: 30 }, { centre: 180, width: 30 }]), 0);
+  assert.equal(nameClearYaw(0, 0, 0, band.latitude, band.height, narrow), 0);
 });
 
 test("body-label-tone is read as auto, light or dark, and anything else is left out; the key changes with it", () => {
