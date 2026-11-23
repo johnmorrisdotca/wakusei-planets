@@ -174,7 +174,9 @@ ${world ? `  for (int i = 0; i < 6; i++) {
   vec3 alb = pow(s.rgb, vec3(2.2));
   vec3 lit = alb * (uAmbient + (1.0 - uAmbient) * diff * 1.18);
   float rim = pow(1.0 - mu, uAtmosPow);
-  lit += pow(uAtmos, vec3(2.2)) * rim * (uRimBase + (1.0 - uRimBase) * clamp(dg * 1.6 + 0.35, 0.0, 1.0));
+  // the extra haze stops at the terminator: the old +0.35 stayed bright a little way onto the night side and drew a lighter strip beside the line
+  float dayRim = clamp(dg * 1.6 + 0.35, 0.0, 1.0) * smoothstep(-0.02, 0.08, dg);
+  lit += pow(uAtmos, vec3(2.2)) * rim * (uRimBase + (1.0 - uRimBase) * dayRim);
   lit *= mix(1.0, pow(mu, 0.45), uLimb);
   gl_FragColor = vec4(pow(lit, vec3(1.0 / 2.2)), 1.0);
 }`;

@@ -4,7 +4,7 @@ import { cloud } from "../scene/recipes.ts";
 registerLook({
   id: "venus",
   surface: cloud({ light: "#f6ebc6", dark: "#bf9552", swirl: 1 }),
-  atmosphere: { colour: [1, 0.9, 0.62], strength: 0.55, power: 2.6 },
+  atmosphere: { colour: [1, 0.9, 0.62], strength: 1, power: 2.6 },
   limb: 0.35,
   ambient: 0.07,
   painted: { map: "venus", widths: [512, 1024, 2048], far: 2048 },

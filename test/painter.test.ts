@@ -114,7 +114,7 @@ test("the moons of a planet: the Galilean four and Amalthea and Thebe for Jupite
   assert.ok(Math.abs(moons[4]!.radius - 2634.1 / 71492) < 0.005);
   assert.deepEqual(painter.moons("Earth", ms), []);
   assert.equal(painter.moons("Mercury", ms).length, 0);
-  assert.equal(painter.moons("Pluto", ms).length, 3);
+  assert.deepEqual(painter.moons("Pluto", ms).map((m) => m.name), ["Charon", "Styx", "Nix", "Kerberos", "Hydra"]);
 });
 
 test("a time a day later moves the moon, and the same time gives the same place", () => {

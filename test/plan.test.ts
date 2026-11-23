@@ -250,7 +250,7 @@ test("a moon system is seen from above the planet's IAU north pole: each system'
     saturn: { pan: 1, daphnis: 1, atlas: 1, prometheus: 1, pandora: 1, epimetheus: 1, janus: 1, mimas: 1, enceladus: 1, tethys: 1, telesto: 1, calypso: 1, dione: 1, helene: 1, rhea: 1, titan: 1, hyperion: 1, iapetus: 1, phoebe: -1 },
     uranus: { miranda: -1, ariel: -1, umbriel: -1, titania: -1, oberon: -1 },
     neptune: { larissa: 1, proteus: 1, triton: -1, nereid: 1 },
-    pluto: { charon: 1, nix: 1, hydra: 1 },
+    pluto: { charon: 1, styx: 1, nix: 1, kerberos: 1, hydra: 1 },
     orcus: { vanth: -1 },
     haumea: { hiiaka: -1, namaka: -1 },
     eris: { dysnomia: 1 },

@@ -73,7 +73,7 @@ test("every moon the package does not draw in full matches the catalogue, and no
     assert.ok(Math.abs(mean - rock.radiusKm) / rock.radiusKm < 0.02, `${moon.id}: mean ${mean} against ${rock.radiusKm}`);
     seen.add(moon.id);
   }
-  assert.equal(seen.size, 424);
+  assert.equal(seen.size, 422);
 });
 
 test("the shape depends on the id and the line drawing uses that rock's colour", () => {

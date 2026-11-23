@@ -13,7 +13,7 @@ test("the bodies with moons are the hosts the package knows, and the others have
   assert.deepEqual([...moonsOfBody("mars")], ["phobos", "deimos"]);
   assert.equal(moonsOfBody("jupiter").length, 6);
   assert.equal(moonsOfBody("saturn").length, 19);
-  assert.equal(moonsOfBody("pluto").length, 3);
+  assert.equal(moonsOfBody("pluto").length, 5);
   for (const id of ["mercury", "venus", "moon", "io", "titan", "ceres", "vesta"] as const) assert.equal(moonsOfBody(id).length, 0, id);
   for (const id of FLAT_BODIES) assert.equal(moonsOfBody(id).length, id in MOONS_OF ? MOONS_OF[id as keyof typeof MOONS_OF].length : 0, id);
   assert.deepEqual(flatMoons("venus", T), []);

@@ -7,7 +7,7 @@ import { BODIES, type BodyFacts, type BodyId } from "../facts.ts";
 import { silhouette } from "../pose.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
-import { detailOf, lookOf, type BodyLook } from "./look.ts";
+import { atmosphereTint, detailOf, lookOf, type BodyLook } from "./look.ts";
 import { shapeGeometry } from "./shape.ts";
 import type { SourceBook } from "../door/book.ts";
 import type { BodyMapSource } from "../door/map.ts";
@@ -125,7 +125,7 @@ export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean
       uAmbient: { value: look.ambient ?? 0.04 },
       uLimb: { value: look.limb ?? 0 },
       uWrap: { value: look.wrap ?? (a === undefined ? 0.04 : 0.3) },
-      uAtmos: { value: new T.Vector3(...(a?.colour ?? [0, 0, 0])) },
+      uAtmos: { value: new T.Vector3(...atmosphereTint(a)) },
       uAtmosPow: { value: a?.power ?? 3 },
       uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },

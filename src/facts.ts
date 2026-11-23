@@ -50,7 +50,7 @@ export const MOONS_OF = {
   saturn: ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe"],
   uranus: ["miranda", "ariel", "umbriel", "titania", "oberon"],
   neptune: ["proteus", "triton", "nereid", "larissa"],
-  pluto: ["charon", "nix", "hydra"],
+  pluto: ["charon", "styx", "nix", "kerberos", "hydra"],
   orcus: ["vanth"],
   haumea: ["hiiaka", "namaka"],
   eris: ["dysnomia"],
@@ -436,6 +436,9 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   charon: f("charon", "moon", "Charon", "カロン", 606, 0, 0, 132.993, -6.163, 122.695, 56.3625225, 153.2935, "#9c9189", { parent: "pluto", synchronous: true, features: [{ kind: "oval", lon: 0, lat: 76, rx: 90, ry: 14, fill: true }, { kind: "circle", lon: 40, lat: -15, radius: 12 }, ...dots([[-60, 10, 8], [120, 30, 7]])] }),
   nix: f("nix", "moon", "Nix", "ニクス", 19.3, 0.3, 0, 132.993, -6.163, 0, 14.48, 0, "#b3ada7", { parent: "pluto", axesKm: [24.9, 16.6, 15.6], features: [{ kind: "circle", lon: 0, lat: 0, radius: 18 }] }),
   hydra: f("hydra", "moon", "Hydra", "ヒドラ", 19.5, 0.4, 0, 132.993, -6.163, 0, 9.42, 0, "#c4beb6", { parent: "pluto", axesKm: [32.5, 22.5, 12.5], features: [{ kind: "circle", lon: 30, lat: 10, radius: 20 }] }),
+  // radii from the moon catalogue (JPL physical parameters). No measured shape or spin, so each is a sphere that does not turn.
+  styx: f("styx", "moon", "Styx", "ステュクス", 5.2, 0, 0, 132.993, -6.163, 0, 0, 0, "#b7b2aa", { parent: "pluto", features: dots([[0, 10, 16]]) }),
+  kerberos: f("kerberos", "moon", "Kerberos", "ケルベロス", 6, 0, 0, 132.993, -6.163, 0, 0, 0, "#aea89f", { parent: "pluto", features: dots([[20, -10, 16]]) }),
   vanth: f("vanth", "moon", "Vanth", "ヴァンス", 221, 0, 0, 142.474, 15.004, 0, 37.738618, 228.9488, "#6e6a66", { parent: "orcus", synchronous: true, features: dots([[-50, 15, 10], [80, -20, 9], [150, 30, 8]]) }),
   hiiaka: f("hiiaka", "moon", "Hiʻiaka", "ヒイアカ", 185, 0, 0, 282.6, -13, 0, 0, 0, "#e0e0e0", { parent: "haumea", features: dots([[-30, 20, 12], [70, -25, 10]]) }),
   namaka: f("namaka", "moon", "Namaka", "ナマカ", 75, 0, 0, 282.6, -13, 0, 0, 0, "#d0d0d0", { parent: "haumea", features: dots([[0, 0, 14]]) }),

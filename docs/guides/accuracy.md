@@ -148,6 +148,7 @@ On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engin
 - **Why the Saturn moons are not closer.** TASS1.7 is a fit to observations of the moons, and observations of Saturn's moons are good to about 0.1 arc-second, which is 600 km at Saturn. Mimas, which goes round in under a day on an orbit of 185,000 km, is 0.7 degree off for that reason. Horizons' own ephemeris is numerical and fitted to spacecraft (Cassini), so the two differ by about that much. Dione and Rhea are where the old fit to 1950 to 2050 was as close as the theory, so they did not move.
 - **Nereid** is the loosest because its orbit is very eccentric (0.75): near its closest point a small timing error is a large angle.
 - **Nix and Hydra** are measured from the Pluto system's barycentre, which they go round. Pluto's centre is about 2,000 km from it, so seen from Pluto's centre they can be up to about 2.5° further off.
+- **Styx and Kerberos** use the moon catalogue's mean elements (JPL Planetary Satellite Mean Elements, ephemeris PLU060, epoch 2026-01-01). They are not in this Horizons check. A distance that names them allows 5°.
 - **Miranda** and **Mimas** are the loosest of the regular moons: both have small swings the fitted orbit does not carry.
 - The dwarf planets' moons other than Pluto's (Eris, Haumea, Makemake, Orcus, Quaoar and the rest) come from the papers named in `src/data/dwarf.ts`, and are not part of this check.
 

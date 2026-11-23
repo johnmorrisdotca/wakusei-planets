@@ -29,5 +29,5 @@ registerLook({
 registerLook({ id: "quaoar", surface: rock({ dark: "#7d5844", light: "#b58b72", craters: 0.35, contrast: 0.4, seed: 65, patches: 2.4 }), relief: 0.5, ambient: 0.02 });
 registerLook({ id: "makemake", surface: rock({ dark: "#8e5a3c", light: "#cf9a76", craters: 0.12, contrast: 0.3, seed: 67, patches: 2.8, extra: "col = mix(col, vec3(0.45, 0.25, 0.17), oval(p, 30.0, 10.0, 34.0, 20.0, 0.45) * 0.5);" }), relief: 0.35, ambient: 0.02 });
 registerLook({ id: "gonggong", surface: rock({ dark: "#6e3524", light: "#a9604a", craters: 0.3, contrast: 0.4, seed: 69, patches: 2.5 }), relief: 0.5, ambient: 0.02 });
-registerLook({ id: "eris", surface: ice({ base: "#ece8e0", stain: "#cdc6ba", craters: 0.06 }), atmosphere: { colour: [0.9, 0.9, 0.95], strength: 0.03, power: 5 }, relief: 0.2, ambient: 0.02 });
+registerLook({ id: "eris", surface: ice({ base: "#ece8e0", stain: "#cdc6ba", craters: 0.06 }), atmosphere: { colour: [0.9, 0.9, 0.95], strength: 1, power: 5 }, relief: 0.2, ambient: 0.02 });
 registerLook({ id: "sedna", surface: rock({ dark: "#6a2a1b", light: "#a24b34", craters: 0.2, contrast: 0.3, seed: 71, patches: 2.6 }), relief: 0.4, ambient: 0.02 });

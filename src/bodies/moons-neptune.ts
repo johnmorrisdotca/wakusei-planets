@@ -5,7 +5,7 @@ registerLook({ id: "proteus", surface: rock({ dark: "#45433f", light: "#6f6c68",
 registerLook({
   id: "triton",
   surface: ice({ base: "#e8d8cb", stain: "#8b6f62", craters: 0.2, extra: "col = mix(col, vec3(0.95, 0.88, 0.84), smoothstep(radians(-20.0), radians(-60.0), lat(p)) * 0.8); float cant = fbm(p * 14.0); col *= 0.92 + 0.16 * cant;" }),
-  atmosphere: { colour: [0.8, 0.8, 0.9], strength: 0.05, power: 5 },
+  atmosphere: { colour: [0.8, 0.8, 0.9], strength: 1, power: 5 },
   ambient: 0.025,
   relief: 0.4,
   painted: { map: "triton", widths: [512, 1024, 2048], far: 2048 },
