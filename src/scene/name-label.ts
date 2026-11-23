@@ -386,3 +386,17 @@ export function createNameLabel(T: ThreeParts, text: string, options: NameLabelO
 function withoutUndefined<T extends object>(value: T): Partial<T> {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined)) as Partial<T>;
 }
+
+const reaches = new WeakMap<THREE.BufferGeometry, number>();
+/** How far the highest point of a body's mesh is from its centre, in the mesh's own units (1 for a plain sphere): the radius of the smallest shell that clears the whole surface. */
+export function shapeReach(geometry: THREE.BufferGeometry): number {
+  let reach = reaches.get(geometry);
+  if (reach === undefined) {
+    const at = geometry.getAttribute("position");
+    reach = 1;
+    for (let i = 0; i < at.count; i += 1) reach = Math.max(reach, Math.hypot(at.getX(i), at.getY(i), at.getZ(i)));
+    reaches.set(geometry, reach);
+  }
+  return reach;
+}
+

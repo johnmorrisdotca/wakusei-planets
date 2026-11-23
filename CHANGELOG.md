@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A name written on a lumpy moon is no longer hidden inside it** (MODULES-1797, the part that is wakusei's). The name is a band on a sphere of radius 1 round the body; a moon drawn from a shape (Thebe, Amalthea and the like) stands out past that sphere in places, so letters sat inside the surface and showed as a stray letter behind the lump. The band is now written on the shell that clears the shape's highest point (`stats.label.shell`: 1 on a smooth globe, more on a lumpy one). Not done: the letters on a big planet such as Jupiter still turn away at the limb as any name written on a globe does; showing them whole is a choice of `body-label-facing` or a flat name, noted on the ticket. `e2e/name-shell.demo.ts` checks the shell.
+
 ## [0.74.2] - 2026-11-21
 
 - **`<wakusei-surface>` `position` follows the view through a glide** (MODULES-1487). While driving or watching the landing `position.up` already followed the view; during the move from the watched descent to the standing view, the rover or the other camera (the `glide`), `position` still gave the standing place at 1.7 m. It now gives the eyes on the way: east, north and the height over the ground under them, ending at the standing place and 1.7 m. Standing, driving and watching are unchanged.
