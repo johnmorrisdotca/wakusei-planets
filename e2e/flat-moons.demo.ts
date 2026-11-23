@@ -107,6 +107,8 @@ test("a moon is named when pointed at, chosen by a tap with its record and dista
       for (let i = 3; i < data.length; i += 4) if (data[i]! > 0) n += 1;
       return n;
     });
+  // the tap asks for a draw at the next frame: the pixels are read once it has been made (Linux WebKit reads them before it otherwise, and sees the picture as it was)
+  await settled(page);
   const chosen = await painted();
   await page.mouse.click(box.x + 4, box.y + 4);
   await settled(page);
