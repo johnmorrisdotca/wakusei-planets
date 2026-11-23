@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`still-size` makes a still sharp** (MODULES-1795). A `<wakusei-body live="off">` still was always made at 160 pixels on its long side and scaled up by the page, so a large still was blurred; the `data-still-size` a page set was read by nothing. The element now takes `still-size` (CSS pixels on the long side) and keeps `data-still-size` on itself at that times the device pixel ratio (up to 3, at most 2048), which the shared renderer reads; changing it makes the still again. An element with no `still-size` is as before. `e2e/still-size.demo.ts` checks the size of the picture made.
+
 ## [0.74.2] - 2026-11-21
 
 - **`<wakusei-surface>` `position` follows the view through a glide** (MODULES-1487). While driving or watching the landing `position.up` already followed the view; during the move from the watched descent to the standing view, the rover or the other camera (the `glide`), `position` still gave the standing place at 1.7 m. It now gives the eyes on the way: east, north and the height over the ground under them, ending at the standing place and 1.7 m. Standing, driving and watching are unchanged.

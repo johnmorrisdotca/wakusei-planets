@@ -113,7 +113,7 @@ const TEMPLATE = `<style>
  * A `body` that names a catalogue moon the package does not draw in full (such as `himalia`, or `S/2003 J 18`) is an estimated rock: the size is the catalogue radius, the shape is a guess from that id, and the picture says the shape is estimated. A size worked out from the brightness says so. Any other unknown name stays the Earth.
  *
  * It carries the shared view controls itself: a drag turns the body, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), the arrow keys, + and - and 0 work once it is focused.
- * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
+ * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `still-size` is the long side of the still in CSS pixels; the still is made at that times the device pixel ratio (up to 3), where the page's default is 160 device pixels, so a still shown large is sharp. `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
  * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera, turning with the body, and lists the interior layers. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
@@ -135,7 +135,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -505,6 +505,7 @@ export class WakuseiBody extends HTMLElement {
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
     this.#reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
     this.#clockFromAttributes();
+    this.#stillSide();
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
     this.#gate = createGate(1000 / frameCap(30, { deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory, hardwareConcurrency: navigator.hardwareConcurrency }), () => this.#frame());
     if (typeof IntersectionObserver === "function") {
@@ -565,6 +566,19 @@ export class WakuseiBody extends HTMLElement {
     this.#placeHeard = undefined;
   }
 
+  /**
+   * The sharpness of the still, from `still-size` (CSS pixels on its long side): the shared renderer reads `data-still-size` (device pixels) from the element, so it is kept at `still-size` times the device pixel ratio (up to 3), and the picture is sharp on a screen that has more pixels than CSS pixels.
+   * A page that sets `data-still-size` itself, and no `still-size`, is left alone. Returns true when the value changed.
+   */
+  #stillSide(): boolean {
+    const asked = Number(this.getAttribute("still-size"));
+    if (!this.hasAttribute("still-size") || !Number.isFinite(asked) || asked <= 0) return false;
+    const side = String(Math.round(Math.min(2048, Math.max(16, asked * Math.min(3, window.devicePixelRatio || 1)))));
+    if (this.getAttribute("data-still-size") === side) return false;
+    this.setAttribute("data-still-size", side);
+    return true;
+  }
+
   attributeChangedCallback(name: string): void {
     if (!this.isConnected) return;
     // the name on the globe is read again when its attributes, the body, a star's numbers or the language change
@@ -575,6 +589,7 @@ export class WakuseiBody extends HTMLElement {
     }
     if (name === "data") this.#door.book.ownOnly(this.getAttribute("data") === "own");
     if (name === "live") this.#applyHover();
+    if (name === "still-size" && this.#stillSide()) this.#still();
     if (name === "live" || name === "look" || name === "body") this.#carry();
     if (name === "body" || name === "look" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
       if (name === "body" || name === "look") this.#tileLevels = undefined;
