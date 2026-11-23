@@ -8,13 +8,13 @@ import { layerOf, placeRank, readPlaceLayers, readSurfaceNames, type PlaceLayer 
 import { loadPlaces, PLACE_BODIES, type Place, type PlaceBody, type PlaceKind } from "../places.ts";
 import { picturesCredit } from "../picture-credits.ts";
 import { texturePaths } from "../scene/textures.ts";
-import { BODIES } from "../facts.ts";
+import { BODIES, type MoonId } from "../facts.ts";
 import { createGameClock, type GameClock } from "../space/clock.ts";
 import { flatBody, isFlatBody, orbiterColour, orbiterName, type FlatBodyId, type FlatBodyInfo } from "./bodies.ts";
 import { MAX_ZOOM, clampView, pixelsPerDegree, projectFlat, wrapLongitude, zoomAbout, type FlatView } from "./geometry.ts";
 import { MAP_LAND, MAP_LINE, MAP_SEA, creditLicence, creditWho, pictureWidth, readLook, toneMap, toneRamp, type FlatLook, type Tone } from "./look.ts";
 import { markName, readMarks, type FlatMark, type HeldMark } from "./marks.ts";
-import { circleOutline, flatOrbiter, flatSun, flatSunRate, flatTrack, shadeNight, sunriseLine, trackPieces, type FlatOrbiter } from "./scene.ts";
+import { circleOutline, flatMoonTrackHalf, flatMoonTracks, flatMoons, flatOrbiter, flatSun, flatSunRate, flatTrack, moonsOfBody, shadeNight, sunriseLine, trackPieces, type FlatOrbiter } from "./scene.ts";
 import { coordinateText, gridText, say, type FlatLang } from "./words.ts";
 import type { OrbiterStatus } from "../orbiters.ts";
 import type { GroundPoint } from "../ground-track.ts";
@@ -77,6 +77,11 @@ interface Mark {
   layer: PlaceLayer;
   x: number;
   y: number;
+}
+interface MoonTracks {
+  key: string;
+  past: Map<string, [GroundPoint, GroundPoint][]>;
+  future: Map<string, [GroundPoint, GroundPoint][]>;
 }
 type MarkTextOrNull = FlatMark["name"] | null;
 interface Custom {
@@ -233,7 +238,8 @@ function picture(url: string): Promise<HTMLImageElement> {
  *
  * Attributes (the ones marked "same" are the names and meanings `<chikyu-flat>` has): `body` (`moon`, the default, or any of `FLAT_BODIES`: `mars`, `jupiter`, `titan`, ...), `look` (same: `photo`, the default here, or `map`), `center` (same: the longitude in the middle, degrees; 0, the near side or the prime meridian, by default; the map wraps round the body),
  * `home-lon` and `home-lat` (same: the reader's place, a chosen site: a marker, and the "My place" button, which appear only when given),
- * `footprint` and `track` (same, for the Moon and Mars, the bodies with orbiters: the circle on the ground the orbiter can see, and its ground track for one trip round; the footprint and track of the chosen orbiter, or of every orbiter shown when none is chosen), `footprint-elevation` (same: degrees above the horizon the circle is drawn for; 10 by default),
+ * `moons` (the moons of the body, each marked over the place on the ground it is straight above, named and pressable; `all` or empty for every moon, some ids with commas, `off` or absent for none; Earth has one, Mars two, Jupiter six, Saturn nineteen, Uranus five, Neptune four, Pluto three),
+ * `footprint` and `track` (same, for the Moon and Mars, the bodies with orbiters: the circle on the ground the orbiter can see, and its ground track for one trip round; the footprint and track of the chosen orbiter, or of every orbiter shown when none is chosen; `track` also draws each moon's path over the ground, half a turn of the body either way), `footprint-elevation` (same: degrees above the horizon the circle is drawn for; 10 by default),
  * `paused` (same: hold the clock and keep the speed; nothing is drawn while it is held), `time` (same: `now`, an ISO date or milliseconds since 1970; live when absent), `speed` (same: 1 is real time, 0 holds, 86400 is a day a second, negative runs backwards),
  * `selected` (same: the chosen orbiter's id such as `lro`, or a place's id such as `moon/apollo-11-lunar-module`), `shade` (same: `off` for no night), `dot-size` (same: pixels), `controls` (same: `none`, or any of `centre zoom footprint track chips key look`: the buttons, filter chips, key and Map / Photo pair shown; all but `look` by default), `lang` (same: `en` or `ja`; the page's language by default),
  * `orbiters` (`all`, the default, `off`, or some ids with commas: the orbiters drawn), `places` (the kinds of place marked, from `landing` (crewed, landing and rover sites), `crash` (crashes and impacts), `planned` and `feature` (named craters, seas and mountains); `landing` by default and in the photo look, `landing` and `feature` in the map look, `all` for every kind, `off` for none),
@@ -257,7 +263,7 @@ function picture(url: string): Promise<HTMLImageElement> {
  * ```
  */
 export class WakuseiFlat extends HTMLElement {
-  static observedAttributes = ["body", "look", "center", "home-lon", "home-lat", "time", "speed", "paused", "footprint", "track", "footprint-elevation", "selected", "shade", "dot-size", "controls", "lang", "orbiters", "places", "names", "site-flags", "texture-base", "texture-far-base"];
+  static observedAttributes = ["body", "look", "moons", "center", "home-lon", "home-lat", "time", "speed", "paused", "footprint", "track", "footprint-elevation", "selected", "shade", "dot-size", "controls", "lang", "orbiters", "places", "names", "site-flags", "texture-base", "texture-far-base"];
 
   #body: FlatBodyId = "moon";
   #info: FlatBodyInfo = flatBody("moon");
@@ -271,6 +277,10 @@ export class WakuseiFlat extends HTMLElement {
   #placesFor: FlatBodyId | "" = "";
   #layers = new Set<PlaceLayer>(["landing"]);
   #showOrbiters = true;
+  #showMoons = false;
+  #moonIds: MoonId[] = [];
+  #moonMarks: HeldMark[] = [];
+  #moonTracks: MoonTracks | undefined;
   #orbiterIds: OrbiterId[] = [];
   #footprint = false;
   #track = false;
@@ -401,11 +411,16 @@ export class WakuseiFlat extends HTMLElement {
     this.#marksChanged();
   }
 
+  /** The page's marks and the moons the element places itself (`moons`), in one list: what is drawn, hit, reached by the keyboard and read aloud. */
+  #allMarks(): readonly HeldMark[] {
+    return this.#moonMarks.length === 0 ? this.marks : [...this.marks, ...this.#moonMarks];
+  }
+
   #marksChanged(): void {
     const chosen = this.#selected?.kind === "mark" ? this.#selected.id : null;
-    if (chosen !== null && !this.marks.some((mark) => mark.id === chosen)) this.#selected = null;
-    if (this.#hover?.kind === "mark" && !this.marks.some((mark) => mark.id === this.#hover!.id)) this.#hover = null;
-    if (this.#cursor?.kind === "mark" && !this.marks.some((mark) => mark.id === this.#cursor!.id)) this.#cursor = null;
+    if (chosen !== null && !this.#allMarks().some((mark) => mark.id === chosen)) this.#selected = null;
+    if (this.#hover?.kind === "mark" && !this.#allMarks().some((mark) => mark.id === this.#hover!.id)) this.#hover = null;
+    if (this.#cursor?.kind === "mark" && !this.#allMarks().some((mark) => mark.id === this.#cursor!.id)) this.#cursor = null;
     this.#legendKey = "";
     this.#sync();
     this.#syncLegend();
@@ -638,6 +653,7 @@ export class WakuseiFlat extends HTMLElement {
         this.#mapKey = "";
         this.#view = clampView({ ...this.#view, centerLon: finite(this.getAttribute("center"), 0), centerLat: 0, zoom: 1 });
         this.#readOrbiters();
+        this.#readMoons();
         this.#loadPlaces();
       }
     } else if (name === "look") this.#setLook(readLook(value));
@@ -646,6 +662,7 @@ export class WakuseiFlat extends HTMLElement {
       if (Number.isFinite(lon)) this.#view = clampView({ ...this.#view, centerLon: lon });
       this.#mapKey = "";
     } else if (name === "orbiters") this.#readOrbiters();
+    else if (name === "moons") this.#readMoons();
     else if (name === "places") {
       this.#layersOwn = value !== null;
       this.#layers = this.#layersFor(value);
@@ -682,6 +699,26 @@ export class WakuseiFlat extends HTMLElement {
     this.#tracks.clear();
   }
 
+  /** `moons`: absent or `off` shows none (the chip turns them on), empty or `all` shows every moon of the body, or some ids with commas. A body with no moons has none whatever is asked. */
+  #readMoons(): void {
+    const value = this.getAttribute("moons");
+    const all = [...moonsOfBody(this.#body)];
+    if (value === null || /^(off|none|false|0)$/i.test(value.trim())) {
+      this.#showMoons = false;
+      this.#moonIds = all;
+    } else if (value.trim() === "" || /^(all|on|true|1)$/i.test(value.trim())) {
+      this.#showMoons = all.length > 0;
+      this.#moonIds = all;
+    } else {
+      const wanted = value.toLowerCase().split(/[\s,]+/).filter((one) => one !== "");
+      this.#moonIds = all.filter((id) => wanted.includes(id));
+      this.#showMoons = this.#moonIds.length > 0;
+    }
+    this.#moonMarks = [];
+    this.#moonTracks = undefined;
+    this.#legendKey = "";
+  }
+
   #readClock(): void {
     const now = performance.now();
     this.#clock.advance(now);
@@ -697,7 +734,7 @@ export class WakuseiFlat extends HTMLElement {
   #find(id: string | null): Chosen | null {
     if (id === null) return null;
     if (this.#info.orbiters.includes(id as OrbiterId)) return { kind: "orbiter", id: id as OrbiterId };
-    if (this.marks.some((mark) => mark.id === id)) return { kind: "mark", id };
+    if (this.#allMarks().some((mark) => mark.id === id)) return { kind: "mark", id };
     // a landing site's own id (`moon/apollo-11`) is its lander's place
     const place = LANDING_SITES.find((site) => site.id === id)?.place ?? id;
     return this.#placeIds.has(place) || place.startsWith(`${this.#body}/`) ? { kind: "place", id: place } : null;
@@ -755,8 +792,10 @@ export class WakuseiFlat extends HTMLElement {
   #rate(): number {
     const k = pixelsPerDegree(this.#view.width > 0 ? this.#view : { ...this.#view, width: 600, height: 300 });
     const dots = this.#showOrbiters && this.#orbiterIds.length > 0;
-    let perSecond = ((dots ? 0.08 : this.#sunRate) * Math.abs(this.#speed) * k) / 0.5;
-    perSecond = Math.min(60, Math.max(dots ? 1 : 1 / 30, perSecond));
+    // a moon crosses the ground more slowly than a craft and faster than the Sun
+    const moons = this.#showMoons && this.#moonIds.length > 0;
+    let perSecond = ((dots ? 0.08 : moons ? Math.max(this.#sunRate, 0.01) : this.#sunRate) * Math.abs(this.#speed) * k) / 0.5;
+    perSecond = Math.min(60, Math.max(dots || moons ? 1 : 1 / 30, perSecond));
     if (prefersLessMotion()) perSecond = Math.min(perSecond, 1);
     return perSecond;
   }
@@ -1362,6 +1401,7 @@ export class WakuseiFlat extends HTMLElement {
         ctx.stroke();
       }
     }
+    this.#placeMoons(ms);
     this.#drawCustoms(ctx);
     this.#counts.draws += 1;
     this.#counts.dots = dots;
@@ -1378,12 +1418,44 @@ export class WakuseiFlat extends HTMLElement {
     this.#schedule();
   }
 
+  /** The moons of the body, as marks over the place on the ground each is straight above, worked out for the moment drawn: named, pressable, in the key as a group of their own. None unless `moons` (or the chip) asks. */
+  #placeMoons(ms: number): void {
+    if (!this.#showMoons || this.#moonIds.length === 0) {
+      if (this.#moonMarks.length > 0) {
+        this.#moonMarks = [];
+        this.#legendKey = "";
+      }
+      return;
+    }
+    const before = this.#moonMarks.length;
+    this.#moonMarks = flatMoons(this.#body, ms)
+      .filter((moon) => this.#moonIds.includes(moon.id))
+      .map((moon) => ({ id: moon.id, lat: moon.lat, lon: moon.lon, name: BODIES[moon.id].name, group: "moons", shape: "dot" as const, colour: BODIES[moon.id].colour, size: 4.5, labelled: true, data: { moon: moon.id, distanceKm: moon.distanceKm } }));
+    if (before !== this.#moonMarks.length) this.#legendKey = "";
+  }
+
+  /** The tracks of the moons over the ground (half a turn of the body either way), worked out again when the clock has moved a fortieth of that. */
+  #moonTrackOf(ms: number): MoonTracks {
+    const half = flatMoonTrackHalf(this.#body);
+    const every = Math.max((half * 2) / 40, this.#fast() ? Math.abs(this.#speed) * 1000 : 0);
+    const key = `${this.#body}|${Math.round(ms / every)}|${this.#moonIds.join()}`;
+    if (this.#moonTracks && this.#moonTracks.key === key) return this.#moonTracks;
+    const past = new Map<string, [GroundPoint, GroundPoint][]>();
+    const future = new Map<string, [GroundPoint, GroundPoint][]>();
+    for (const [id, points] of flatMoonTracks(this.#body, ms, 48)) {
+      if (!this.#moonIds.includes(id)) continue;
+      past.set(id, trackPieces(points.filter((p) => p.ms <= ms)));
+      future.set(id, trackPieces(points.filter((p) => p.ms >= ms)));
+    }
+    return (this.#moonTracks = { key, past, future });
+  }
+
   /** The page's own marks (`setMarks`): each in its shape and colour with a dark rim, and its name beside it when the page asked for that and there is room. They are drawn with the dots so a page that moves them sees them at the next frame. */
   #drawCustoms(ctx: CanvasRenderingContext2D): void {
     const lang = this.language;
     const v = this.#view;
     const customs: Custom[] = [];
-    for (const mark of this.marks) {
+    for (const mark of this.#allMarks()) {
       const at = this.#screen(mark.lon, mark.lat, mark.size + 2);
       customs.push({ mark, x: at?.x ?? 0, y: at?.y ?? 0, on: at !== null });
     }
@@ -1515,38 +1587,54 @@ export class WakuseiFlat extends HTMLElement {
         }
       }
     }
+    const chosenMoon = this.#selected?.kind === "mark" ? this.#moonMarks.find((one) => one.id === (this.#selected as { id: string }).id) : undefined;
     if (this.#track || chosen) {
       for (const o of this.#track ? orbs : chosen ? [chosen] : []) {
         const lines = this.#trackOf(o.id, ms);
         const strong = chosen !== undefined && o.id === chosen.id;
-        const draw = (pieces: readonly [GroundPoint, GroundPoint][], dash: boolean): void => {
-          if (pieces.length === 0) return;
-          for (const pass of strong ? [0, 1] : [1]) {
-            ctx.beginPath();
-            for (const [a, b] of pieces) {
-              const xa = v.width / 2 + wrapLongitude(a.lon - v.centerLon) * k;
-              const xb = xa + (b.lon - a.lon) * k;
-              const ya = v.height / 2 - (a.lat - v.centerLat) * k;
-              const yb = v.height / 2 - (b.lat - v.centerLat) * k;
-              for (const shift of [-wrap, 0, wrap]) {
-                if (Math.max(xa, xb) + shift < -2 || Math.min(xa, xb) + shift > v.width + 2) continue;
-                ctx.moveTo(xa + shift, ya);
-                ctx.lineTo(xb + shift, yb);
-              }
-            }
-            ctx.setLineDash(dash ? [4, 4] : []);
-            ctx.lineWidth = pass === 0 ? 4 : strong ? 1.8 : 1.2;
-            ctx.strokeStyle = pass === 0 ? "rgba(0,0,0,.55)" : strong ? "#ffffff" : o.colour;
-            ctx.globalAlpha = strong || pass === 0 ? 1 : dash ? 0.5 : 0.85;
-            ctx.stroke();
-          }
-        };
-        draw(lines.past, true);
-        draw(lines.future, false);
-        ctx.setLineDash([]);
-        ctx.globalAlpha = 1;
+        this.#strokePieces(ctx, lines.past, o.colour, strong, true);
+        this.#strokePieces(ctx, lines.future, o.colour, strong, false);
       }
     }
+    // the moons' tracks: every moon shown with `track` on, or the chosen moon's alone
+    if (this.#moonMarks.length > 0 && (this.#track || chosenMoon !== undefined)) {
+      const tracks = this.#moonTrackOf(ms);
+      for (const moon of this.#moonMarks) {
+        if (!this.#track && moon.id !== chosenMoon?.id) continue;
+        const strong = moon.id === chosenMoon?.id;
+        this.#strokePieces(ctx, tracks.past.get(moon.id) ?? [], moon.colour ?? "#ffffff", strong, true);
+        this.#strokePieces(ctx, tracks.future.get(moon.id) ?? [], moon.colour ?? "#ffffff", strong, false);
+      }
+    }
+  }
+
+  /** A track's pieces in a colour, over a dark edge: dashed behind the thing, solid ahead; the chosen one white and thick. Each piece is drawn a world to the left and right as well. */
+  #strokePieces(ctx: CanvasRenderingContext2D, pieces: readonly [GroundPoint, GroundPoint][], colour: string, strong: boolean, dash: boolean): void {
+    if (pieces.length === 0) return;
+    const v = this.#view;
+    const k = pixelsPerDegree(v);
+    const wrap = 360 * k;
+    for (const pass of strong ? [0, 1] : [1]) {
+      ctx.beginPath();
+      for (const [a, b] of pieces) {
+        const xa = v.width / 2 + wrapLongitude(a.lon - v.centerLon) * k;
+        const xb = xa + (b.lon - a.lon) * k;
+        const ya = v.height / 2 - (a.lat - v.centerLat) * k;
+        const yb = v.height / 2 - (b.lat - v.centerLat) * k;
+        for (const shift of [-wrap, 0, wrap]) {
+          if (Math.max(xa, xb) + shift < -2 || Math.min(xa, xb) + shift > v.width + 2) continue;
+          ctx.moveTo(xa + shift, ya);
+          ctx.lineTo(xb + shift, yb);
+        }
+      }
+      ctx.setLineDash(dash ? [4, 4] : []);
+      ctx.lineWidth = pass === 0 ? 4 : strong ? 1.8 : 1.2;
+      ctx.strokeStyle = pass === 0 ? "rgba(0,0,0,.55)" : strong ? "#ffffff" : colour;
+      ctx.globalAlpha = strong || pass === 0 ? 1 : dash ? 0.5 : 0.85;
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
   }
 
   /** An orbiter's ground track for one trip round, half behind it and half ahead, worked out again when the clock has moved a fortieth of a trip (and, at a fast clock, a real second). */
@@ -1646,7 +1734,8 @@ export class WakuseiFlat extends HTMLElement {
       return say(lang, "announceOrbiter", { name: orbiterName(item.id, lang), body: this.#nameOfBody(lang), altitude: o ? Math.round(o.altitudeKm).toLocaleString(lang) : "", note: o?.dim ? say(lang, "approximate") : "" });
     }
     if (item.kind === "mark") {
-      const mark = this.marks.find((one) => one.id === item.id);
+      const mark = this.#allMarks().find((one) => one.id === item.id);
+      if (mark?.group === "moons" && mark.data !== undefined) return say(lang, "announceMoon", { name: markName(mark.name, lang), body: this.#nameOfBody(lang), lat: coordinateText(lang, "lat", mark.lat), lon: coordinateText(lang, "lon", mark.lon), km: Math.round((mark.data as { distanceKm: number }).distanceKm).toLocaleString(lang) });
       return mark ? say(lang, "announceMark", { name: markName(mark.name, lang), lat: coordinateText(lang, "lat", mark.lat), lon: coordinateText(lang, "lon", mark.lon) }) : item.id;
     }
     const place = this.#placeIds.get(item.id);
@@ -1750,14 +1839,16 @@ export class WakuseiFlat extends HTMLElement {
     if (wants.has("zoom")) first.push(button("zoomout", "−", ` aria-label="${escape(say(lang, "zoomOut"))}"`), button("zoomin", "+", ` aria-label="${escape(say(lang, "zoomIn"))}"`));
     // a footprint and a ground track belong to an orbiter: a body with none has neither button
     const craft = this.#info.orbiters.some((id) => orbiterElements(id) !== undefined);
+    const moons = moonsOfBody(this.#body).length;
     if (wants.has("footprint") && craft) first.push(button("footprint", say(lang, "footprint"), ` aria-pressed="false"`));
-    if (wants.has("track") && craft) first.push(button("track", say(lang, "groundTrack"), ` aria-pressed="false"`));
+    if (wants.has("track") && (craft || moons > 0)) first.push(button("track", say(lang, "groundTrack"), ` aria-pressed="false"`));
     if (first.length > 1) rows.push(`<div class="row">${first.join("")}</div>`);
     if (wants.has("chips")) {
       const counts = new Map<PlaceLayer, number>();
       for (const place of this.#places) counts.set(layerOf(place.kind), (counts.get(layerOf(place.kind)) ?? 0) + 1);
       const chip = (act: string, key: string, label: string, n: number): string => `<button type="button" class="chip" data-act="layer" data-layer="${act}" aria-pressed="false"><span class="swatch" data-key="${key}"></span>${escape(label)} <span class="n">${n.toLocaleString(lang)}</span></button>`;
       const chips = craft ? [chip("orbiters", "orbiters", say(lang, "orbiters"), this.#info.orbiters.filter((id) => orbiterElements(id) !== undefined).length)] : [];
+      if (moons > 0) chips.push(chip("moons", "moons", say(lang, "moons"), moons));
       // while a body's places are on their way every chip is there (so the row does not jump); once they are in, only the kinds the body has
       const waiting = !this.#placesLoaded && (PLACE_BODIES as readonly string[]).includes(this.#body);
       for (const layer of ["landing", "crash", "planned", "feature"] as const) if ((counts.get(layer) ?? 0) > 0 || waiting) chips.push(chip(layer, LAYER_WORD[layer], say(lang, layer), counts.get(layer) ?? 0));
@@ -1766,7 +1857,7 @@ export class WakuseiFlat extends HTMLElement {
     bar.innerHTML = rows.join("");
     this.#showCredit();
     // colours go on through the CSS object model: an inline style attribute in the markup would be refused by a strict Content-Security-Policy
-    const swatches: Record<string, string> = { orbiters: "#ffd23f", landing: "#ffffff", crash: "#ff8a65", planned: "#b9a7ff", feature: "#9aa5b1" };
+    const swatches: Record<string, string> = { orbiters: "#ffd23f", moons: "#b8e986", landing: "#ffffff", crash: "#ff8a65", planned: "#b9a7ff", feature: "#9aa5b1" };
     bar.querySelectorAll<HTMLElement>(".swatch").forEach((swatch) => swatch.style.setProperty("--c", swatches[swatch.dataset["key"] ?? ""] ?? "#9aa5b1"));
     this.#sync();
     this.#syncLegend();
@@ -1785,7 +1876,7 @@ export class WakuseiFlat extends HTMLElement {
     bar.querySelectorAll('[data-act="track"]').forEach((b) => b.setAttribute("aria-pressed", String(this.#track)));
     bar.querySelectorAll<HTMLElement>('[data-act="layer"]').forEach((b) => {
       const layer = b.dataset["layer"]!;
-      b.setAttribute("aria-pressed", String(layer === "orbiters" ? this.#showOrbiters : this.#layers.has(layer as PlaceLayer)));
+      b.setAttribute("aria-pressed", String(layer === "orbiters" ? this.#showOrbiters : layer === "moons" ? this.#showMoons : this.#layers.has(layer as PlaceLayer)));
     });
     bar.querySelector<HTMLButtonElement>('[data-act="zoomin"]')?.toggleAttribute("disabled", this.#view.zoom >= MAX_ZOOM);
     bar.querySelector<HTMLButtonElement>('[data-act="zoomout"]')?.toggleAttribute("disabled", this.#view.zoom <= 1);
@@ -1818,7 +1909,11 @@ export class WakuseiFlat extends HTMLElement {
     } else if (act === "layer") {
       const layer = target.dataset["layer"]!;
       if (layer === "orbiters") this.#showOrbiters = !this.#showOrbiters;
-      else if (this.#layers.has(layer as PlaceLayer)) this.#layers.delete(layer as PlaceLayer);
+      else if (layer === "moons") {
+        this.#showMoons = !this.#showMoons;
+        if (!this.#showMoons && this.#selected?.kind === "mark" && this.#moonMarks.some((one) => one.id === this.#selected!.id)) this.#selected = null;
+        if (!this.#showMoons) this.#moonMarks = [];
+      } else if (this.#layers.has(layer as PlaceLayer)) this.#layers.delete(layer as PlaceLayer);
       else this.#layers.add(layer as PlaceLayer);
       // a choice whose mark has just gone is let go
       if (this.#selected?.kind === "place" && !this.#layers.has(layerOf(this.#placeIds.get(this.#selected.id)?.kind ?? "feature"))) this.#selected = null;
@@ -1828,7 +1923,7 @@ export class WakuseiFlat extends HTMLElement {
       this.#sync();
       this.#request();
       this.#schedule();
-      this.dispatchEvent(new CustomEvent("wakusei-flat-filter", { detail: { orbiters: this.#showOrbiters, layers: [...this.#layers] }, bubbles: true, composed: true }));
+      this.dispatchEvent(new CustomEvent("wakusei-flat-filter", { detail: { orbiters: this.#showOrbiters, moons: this.#showMoons, layers: [...this.#layers] }, bubbles: true, composed: true }));
     }
   };
 
@@ -1850,6 +1945,8 @@ export class WakuseiFlat extends HTMLElement {
     if (this.#selected !== null) entries.push({ glyph: "chosen", text: say(lang, "keyRing") });
     if (this.#footprint && this.#orbs.some((o) => o.on)) entries.push({ glyph: "footprint", text: say(lang, "keyFootprint") });
     if (this.#track && this.#orbs.some((o) => o.on)) entries.push({ glyph: "track", text: say(lang, "keyTrack") });
+    if (this.#moonMarks.length > 0) entries.push({ glyph: "custom", text: say(lang, "keyMoon"), colour: this.#moonMarks[0]!.colour ?? "#ffffff" });
+    if (this.#track && this.#moonMarks.length > 0) entries.push({ glyph: "track", text: say(lang, "keyMoonTrack") });
     for (const layer of this.#layers) if (this.#marks.some((m) => m.layer === layer)) entries.push({ glyph: layer, text: say(lang, layer) });
     for (const [group, held] of this.#groups) entries.push({ glyph: "custom", text: markName(held.label ?? group, lang), colour: held.marks[0]?.colour ?? "#ffffff" });
     const credit = this.#creditText();
@@ -1957,7 +2054,7 @@ export class WakuseiFlat extends HTMLElement {
       const o = this.#orbs.find((one) => one.id === item.id);
       detail = { kind: "orbiter", id: item.id, name: orbiterName(item.id, this.language), body: this.#body, lat: o?.lat ?? null, lon: o?.lon ?? null, altitudeKm: o?.altitudeKm ?? null, status: o?.status ?? null, placeKind: null, via };
     } else if (item.kind === "mark") {
-      const mark = this.marks.find((one) => one.id === item.id);
+      const mark = this.#allMarks().find((one) => one.id === item.id);
       detail = { kind: "mark", id: item.id, name: mark ? markName(mark.name, this.language) : item.id, body: this.#body, lat: mark?.lat ?? null, lon: mark?.lon ?? null, altitudeKm: null, status: null, placeKind: null, via, ...(mark ? { mark } : {}) };
     } else {
       const place = this.#placeIds.get(item.id);
