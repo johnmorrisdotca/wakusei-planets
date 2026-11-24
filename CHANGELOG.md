@@ -4,6 +4,8 @@
 
 - **Ceres's radius matches JPL's extent** (MODULES-1761). The drawn radius was 481.05 km and the flattening 0.0731. JPL's Small-Body Database, read 2026-11-23, gives the extent 964.4 x 964.2 x 891.8 km (Park et al. 2016, sigma 0.2 km). The radius is now 482.15 km, the mean of the equatorial axes, and the flattening 0.075184, which puts the pole at 445.9 km. The 966.2 x 962.0 x 891.8 km figure is not used: the Ermakov et al. 2017 page did not open, and that paper's abstract gives about 470 km, the volume-equivalent size (the database's diameter 939.4 km). The pole and the spin are unchanged. MODULES-1484 had changed the citation only.
 
+- **Every demo page says what it is and credits its data** (MODULES-1764). The build writes kazoku-ui's page header and credit line where the page marks `<!--frame:header-->` and `<!--frame:credits-->`. An embed has the credit line only. The family's checker is kazoku-ui's of 2026-11-11b. Tests: `test/page-frame.test.ts`, `test/standard.test.ts`.
+
 ## [0.75.1] - 2026-11-23
 
 - **The Jupiter chart's phone test waits for the redraw** (MODULES-1802). Narrowing the page paints the chart again. The test reads a label's box only after that paint, and the box still has to be at least 11 pixels tall.

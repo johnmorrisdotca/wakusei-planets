@@ -2,6 +2,7 @@
 // into site/, and the dev server serves the same files, so the tests play the page that is published. The page's words, in both languages, are demo/words.js.
 import { readFileSync } from "node:fs";
 
+import { pageCreditsHtml, pageHeaderHtml, type PageTexts } from "@johnmorrisdotca/kazoku-ui/page-frame";
 import { WORDS } from "../demo/words.js";
 import { BODIES } from "../src/facts.ts";
 import { MOON_PAGE_HOSTS, moonPage, type MoonPageHost } from "../src/moon-pages/data.ts";
@@ -22,10 +23,22 @@ const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.h
 const scripts = (script: string): string =>
   `<script>${FAMILY_SCRIPT}</script>\n<script>window.wakuseiLanguage = familyLanguage({ id: ${JSON.stringify(id)}, words: ${JSON.stringify(WORDS)}, onChange: function (lang) { window.dispatchEvent(new CustomEvent('wakusei-language', { detail: { lang: lang } })); } });</script>\n<script type="module" src="kazoku-parts.js"></script>\n<script type="module" src="${script}"></script>`;
 
+const said = WORDS as { en: Record<string, string>; ja: Record<string, string> };
+
+/** The family's page frame: what the page is and where its data comes from, in place of `<!--frame:header-->` and `<!--frame:credits-->`. */
+function frame(html: string, title: string, description: string, embed = false): string {
+  const name = "Wakusei Planets 惑星";
+  const what = title.startsWith(name) ? title.slice(name.length).replace(/^[:\s]+/, "") || title : title;
+  const texts: PageTexts = { en: { name, what, description } };
+  const credits = pageCreditsHtml({ en: said.en.credits!, ja: said.ja.credits! }, { href: NOTICE, embed });
+  const header = embed ? "" : pageHeaderHtml(texts, { meta: true, sheets: "kids.html" });
+  return html.replace("<!--frame:header-->", header).replace("<!--frame:credits-->", credits);
+}
+
 /** A page of the demo with the family's blocks put in where its comments say. */
 function render(file: string, title: string, description: string): string {
   const html = readFileSync(new URL(`../demo/${file}`, import.meta.url), "utf8");
-  return html
+  return frame(html, title, description)
     .replace("<!--family:head-->", familyHead({ id, title, description }))
     .replace("<!--family:header-->", familyHeader({ id, links: LINKS }))
     .replace("<!--family:unreviewed-->", familyUnreviewed({ id }))
@@ -33,7 +46,6 @@ function render(file: string, title: string, description: string): string {
     .replace(/<!--family:scripts ([\w.-]+)-->/, (_, script: string) => scripts(script));
 }
 
-/** The demo's page. */
 /** The demo's page, with a card for each giant planet's moon page (its count of moons from the moon list). */
 export const renderIndex = (): string =>
   render("index.html", TITLE, DESCRIPTION).replace("<!--moons:index-->", () =>
@@ -116,7 +128,14 @@ export function renderMoons(host: MoonPageHost): string {
     .replace("<!--moons:planets-->", () => planets);
 }
 
-/** demo/embed.html, the frame a page puts in an iframe: plain, no family blocks. */
+/** demo/embed.html, the frame a page puts in an iframe: the credit line, and no family header. */
 export function renderEmbed(): string {
-  return readFileSync(new URL("../demo/embed.html", import.meta.url), "utf8");
+  const html = readFileSync(new URL("../demo/embed.html", import.meta.url), "utf8");
+  return frame(html, "Wakusei Planets 惑星: embed", "A body in a frame for another page.", true);
+}
+
+/** The code builder, which is its own page and still gets the family's page frame. */
+export function renderBuilder(): string {
+  const html = readFileSync(new URL("../demo/builder.html", import.meta.url), "utf8");
+  return frame(html, "Wakusei Planets 惑星: code builder", "Choose a body, how it is drawn and its size, and copy the code that puts exactly that in your page.");
 }
