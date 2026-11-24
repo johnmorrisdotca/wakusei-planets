@@ -2,10 +2,10 @@
 title: 望遠鏡なしで見える星
 section: how-to
 order: 15
-description: 6.0 等級までの5,080個の星。名前、位置、固有運動、距離、色。数値は hoshi-stars のもので、写しはありません。
+description: 6.0 等級までの5,080個の星。名前、位置、固有運動、距離、色。数値は hoshi-stars のもので、このパッケージは行の写しを持ちません。
 ---
 
-`/stars` は惑星の後ろに広がる空です。暗い場所で目で見えるすべての星、5,080個です。数値は hoshi-stars (`@johnmorrisdotca/hoshi-stars`) の関数から来ます。その関数はイェール輝星カタログを読んでいます。このパッケージは行の写しを持ちません。どの星にも、カタログ番号、名前 (あれば)、位置、動く速さ、明るさ、色、距離があります。どこでも動きます。表は hoshi-stars が持ち、最初に星をたずねたときに読み込まれます。このパッケージのほかの部分はこれを読み込みません。
+`/stars` は惑星の後ろに広がる空です。暗い場所で肉眼で見える5,080個の星すべてです。数値は hoshi-stars (`@johnmorrisdotca/hoshi-stars`) の関数から来ます。その関数はイェール輝星カタログを読んでいます。このパッケージは行の写しを持ちません。どの星にも、カタログ番号、名前 (あれば)、位置、動く速さ、明るさ、色、距離があります。どこでも動きます。表は hoshi-stars が持ち、初めて星を求めたときに読み込まれます。このパッケージのほかの部分はこれを読み込みません。
 
 ```ts
 import { starByName, starColour, starDistanceLightYears, starPosition, stars } from "@johnmorrisdotca/wakusei-planets/stars";
