@@ -254,7 +254,7 @@ function plain(text: string): string {
 /**
  * Finds a body by its id, minor-planet number, designation or name (English or Japanese, ignoring case, accents and spaces). Nothing matches a string that is not one of them.
  *
- * @param query - "eros", "433", 433, "A898 PA", "2024 YR4", "Šteins" or "エロス".
+ * @param query - "itokawa", "25143", 25143, "1998 SF36", "2024 YR4", "Šteins" or "イトカワ".
  * @returns The record, or `undefined`.
  *
  * @example
@@ -506,9 +506,9 @@ export function asteroidFromElements(name: string, elements: Omit<AsteroidElemen
  * import { smallBodyAt } from "@johnmorrisdotca/wakusei-planets/door";
  * import { asteroidAsSmallBody, asteroidPositionAu } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const eros = asteroidAsSmallBody("Eros");
+ * const itokawa = asteroidAsSmallBody("Itokawa");
  * const jd = 2461200.5;
- * console.log(smallBodyAt(eros, jd).map((au) => au.toFixed(3)), asteroidPositionAu("Eros", (jd - 2440587.5) * 86400000).map((au) => au.toFixed(3)));
+ * console.log(smallBodyAt(itokawa, jd).map((au) => au.toFixed(3)), asteroidPositionAu("Itokawa", (jd - 2440587.5) * 86400000).map((au) => au.toFixed(3)));
  * ```
  */
 export function asteroidAsSmallBody(body: AsteroidRef): SmallBody {

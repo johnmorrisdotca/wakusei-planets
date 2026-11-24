@@ -227,7 +227,7 @@ test("a distance on an irregular body is the circle on its mean radius, and the 
     if ("axesKm" in mean) assert.ok(Math.abs(distance.accuracyKm! - right * shapeHalfRangeKm(mean.axesKm)) < 1e-9, body);
     else assert.equal(distance.accuracyKm, null, body);
   }
-  assert.ok(Math.abs(placeDistance("eros", quarter, east).accuracyKm! - right * 5.8) < 1e-9);
+  assert.equal(placeDistance("eros", quarter, east).accuracyKm, null);
   assert.ok(Math.abs(placeDistance("ryugu", quarter, east).accuracyKm! - right * 0.032) < 1e-9);
   assert.ok(Math.abs(placeDistance("bennu", quarter, east).accuracyKm! - right * 0.012) < 1e-9);
   assert.ok(Math.abs(placeDistance("dimorphos", quarter, east).accuracyKm! - right * 0.01525) < 1e-9);

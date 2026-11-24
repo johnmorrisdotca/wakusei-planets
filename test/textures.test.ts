@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { test } from "node:test";
 import { BODY_IDS } from "../src/index.ts";
 import { lookOf } from "../src/scene/look.ts";
@@ -33,5 +33,6 @@ test("the pictures of the package are small: the widths that ship stay within 2.
     for (const width of map.widths) if (width < (map.far ?? Infinity)) bytes += statSync(`textures/${map.map}-${width}.webp`).size;
     if (map.rings) bytes += statSync(`textures/${map.rings.map}-${map.rings.width}.webp`).size;
   }
+  for (const name of readdirSync("textures")) if (name.includes("-craft-")) bytes += statSync(`textures/${name}`).size;
   assert.ok(bytes < 2.3 * 1024 * 1024, String(bytes));
 });

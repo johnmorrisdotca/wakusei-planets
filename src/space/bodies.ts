@@ -15,7 +15,7 @@ import { BODIES, MOONS_OF, type BodyId, type HostId, type MinorId } from "../fac
 export type SpaceKind = "star" | "planet" | "dwarf-planet" | "moon" | "asteroid" | "centaur" | "comet";
 
 /** Planets, dwarf planets and minor bodies, ordered by the size of their orbits (the semi-major axis), each followed by its moons nearest first. */
-const SUN_ORDER: readonly (HostId | MinorId)[] = ["mercury", "venus", "earth", "mars", "vesta", "ceres", "pallas", "jupiter", "saturn", "chiron", "halley", "uranus", "pholus", "neptune", "pluto", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"];
+const SUN_ORDER: readonly (HostId | MinorId)[] = ["mercury", "venus", "earth", "eros", "mars", "vesta", "ceres", "pallas", "jupiter", "saturn", "chiron", "halley", "uranus", "pholus", "neptune", "pluto", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"];
 
 /**
  * Every body the package knows, in the order a hopper goes: the Sun, then each planet, dwarf planet and minor body from the Sun outwards, each followed by its moons nearest first (Mercury, Venus, the Earth and the

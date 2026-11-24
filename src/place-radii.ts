@@ -13,9 +13,8 @@ export interface PlaceMeanRadius {
 }
 
 /**
- * The six place bodies `BODIES` has no radius for. Read 2026-11-19, one request a second, from JPL's Small-Body Database except Dimorphos, which is not in it.
+ * The five place bodies `BODIES` has no radius for. Read 2026-11-19, one request a second, from JPL's Small-Body Database except Dimorphos, which is not in it.
  *
- * Eros: diameter 16.84 ± 0.06 km (Yeomans et al. 2000), extents 34.4 × 11.2 × 11.2 km (Veverka et al. 2000).
  * Ryugu: diameter 0.896 ± 0.004 km, extents 1.004 × 0.876 km, two axes (Watanabe et al. 2019).
  * Bennu: diameter 0.48444 ± 0.00030 km, extents 0.5047 × 0.4918 × 0.4567 km (Daly et al. 2020).
  * Dimorphos: volume-equivalent diameter 151 ± 5 m, extents 177 ± 2 × 174 ± 4 × 116 ± 2 m (Daly et al., Nature 2023). The volume is the shape model's, not an ellipsoid of those extents.
@@ -23,7 +22,6 @@ export interface PlaceMeanRadius {
  * 67P: diameter 3.4 ± 0.1 km (Sierks et al. 2015). No extents.
  */
 export const PLACE_MEAN_RADII = {
-  eros: { radiusKm: 8.42, axesKm: [34.4, 11.2, 11.2], source: "JPL SBDB: Yeomans et al. 2000; Veverka et al. 2000" },
   ryugu: { radiusKm: 0.448, axesKm: [1.004, 0.876], source: "JPL SBDB, Watanabe et al. 2019", note: "Two extents only." },
   bennu: { radiusKm: 0.24222, axesKm: [0.5047, 0.4918, 0.4567], source: "JPL SBDB, Daly et al. 2020" },
   dimorphos: { radiusKm: 0.0755, axesKm: [0.177, 0.174, 0.116], source: "Daly et al., Nature 2023" },

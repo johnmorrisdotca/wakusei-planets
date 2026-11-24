@@ -32,7 +32,7 @@ export const DWARF_IDS = ["ceres", "orcus", "haumea", "quaoar", "makemake", "gon
  * console.log(MINOR_IDS.join(", "));
  * ```
  */
-export const MINOR_IDS = ["vesta", "pallas", "chiron", "pholus", "halley"] as const;
+export const MINOR_IDS = ["eros", "vesta", "pallas", "chiron", "pholus", "halley"] as const;
 /**
  * The moons the package draws, by planet or dwarf planet. The moons it drew first come first, from the nearest out, and the small ones that came later with their real shapes (Amalthea and Thebe, Saturn's small moons, Hyperion, Phoebe and Larissa) follow in the same order, so a page that takes the first moon of a planet, or goes through them one by one, still meets the big ones first.
  *
@@ -372,8 +372,9 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   gonggong: f("gonggong", "dwarf-planet", "Gonggong", "ゴンゴン", 615, 0, 0, 255.383, 36.831, 0, 385.7, 22.4, "#9c4f3b", { features: dots([[-50, 10, 9], [60, -25, 8], [140, 30, 7]]) }),
   eris: f("eris", "dwarf-planet", "Eris", "エリス", 1163, 0, 78.22, 36.17, 44.51, 0, 22.805163, 378.8616, "#e8e4dc", { features: [{ kind: "band", lat: 0 }, ...dots([[-30, 30, 8], [80, -20, 9]])] }),
   sedna: f("sedna", "dwarf-planet", "Sedna", "セドナ", 453, 0, 0, 297.062, 74.71, 0, 840.95, 10.273, "#9a3f2b", { features: dots([[-40, 20, 9], [70, -30, 8], [150, 10, 7]]) }),
-  // The minor bodies. Vesta: Park et al. 2025 (Nature Astronomy, JPL SBDB), pole and rotation from the same; Pallas: Marsset et al. 2020 (shape), Carry et al. 2010 (pole, rotation); Chiron and Pholus: JPL SBDB (diameters
+  // The minor bodies. Eros: Yeomans et al. 2000 (volume, pole) and NASA's published model (the shape drawn); Vesta: Park et al. 2025 (Nature Astronomy, JPL SBDB), pole and rotation from the same; Pallas: Marsset et al. 2020 (shape), Carry et al. 2010 (pole, rotation); Chiron and Pholus: JPL SBDB (diameters
   // from occultation and thermal measurements) with the pole estimated along the orbit's; Halley: Keller et al. 1987 (the nucleus), the pole estimated along the orbit's and no spin drawn. See NOTICE.md.
+  eros: f("eros", "asteroid", "Eros", "エロス", 8.42, 0, 89, 11.37, 17.22, 0, 1639.4686907, 5.27, "#8f8f8f", { axesKm: [16.41, 7.35, 6.0] }),
   vesta: f("vesta", "asteroid", "Vesta", "ベスタ", 261.385, 0, 27.4, 309.0611, 42.2324, 285.39, 1617.33312922, 5.3421276322, "#aaa397", {
     axesKm: [284.62, 277.24, 226.33],
     showLon: 301,

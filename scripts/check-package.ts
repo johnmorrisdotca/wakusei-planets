@@ -44,9 +44,18 @@ for (const id of mod.BODY_IDS as string[]) {
     pictures += 1;
   }
 }
+for (const id of mod.BODY_IDS as string[]) {
+  const craft = look.lookOf(id)?.craft as (() => Promise<{ map: string }>) | undefined;
+  if (craft === undefined) continue;
+  const mesh = await craft();
+  const file = new URL(`../dist/textures/${mesh.map}`, import.meta.url);
+  if (!existsSync(file)) throw new Error(`missing dist/textures/${mesh.map}`);
+  pictureBytes += statSync(file).size;
+  pictures += 1;
+}
 if (existsSync(new URL("../dist/textures/", import.meta.url)) && readdirSync(new URL("../dist/textures/", import.meta.url)).length !== pictures) throw new Error("dist/textures holds a picture no painted look names");
 if (pictureBytes > 2.3 * 1024 * 1024) throw new Error(`the pictures are ${(pictureBytes / 1048576).toFixed(2)} MB, over the 2.3 MB budget`);
-console.log(`painted ok: ${pictures} pictures, ${(pictureBytes / 1048576).toFixed(2)} MB in the package`);
+console.log(`pictures ok: ${pictures} pictures, ${(pictureBytes / 1048576).toFixed(2)} MB in the package`);
 
 // Check the public sub-path through package resolution, as a consumer does.
 const coordinateEntry = "@johnmorrisdotca/wakusei-planets/coordinates";
@@ -179,12 +188,12 @@ if (earthMark === undefined || Math.abs(earthMark.planeAu - 0.99) > 0.03) throw 
 if (Math.round(system.squeezeAu(1, 0, 50, "squeezed").r * 100) !== 39) throw new Error("flat system: the squeezed scale is not the plan's");
 if (system.systemName("roadster", "en") !== "Tesla Roadster") throw new Error("flat system: the Tesla Roadster has the wrong name");
 
-// The asteroids through package resolution: the table loads with the entry point, Eros is where its elements put it at their epoch (a distance from the Sun between perihelion and aphelion), and the counts hold.
+// The asteroids through package resolution: the table loads with the entry point, Itokawa is where its elements put it at their epoch (a distance from the Sun between perihelion and aphelion), and the counts hold. Eros is a body, not a row of this list.
 const asteroidsEntry = "@johnmorrisdotca/wakusei-planets/asteroids";
 const asteroids = await import(asteroidsEntry);
-const eros = asteroids.findAsteroid("Eros");
-const erosSun = Math.hypot(...(asteroids.asteroidPositionAu(eros, Date.UTC(2026, 5, 9)) as number[]));
-if (asteroids.ASTEROIDS.length !== 104 || eros.number !== 433 || erosSun < eros.elements.q || erosSun > eros.elements.a * (1 + eros.elements.e)) throw new Error("asteroids package entry failed");
+const itokawa = asteroids.findAsteroid("Itokawa");
+const itokawaSun = Math.hypot(...(asteroids.asteroidPositionAu(itokawa, Date.UTC(2026, 5, 9)) as number[]));
+if (asteroids.ASTEROIDS.length !== 103 || itokawa.number !== 25143 || itokawaSun < itokawa.elements.q || itokawaSun > itokawa.elements.a * (1 + itokawa.elements.e) || asteroids.findAsteroid("Eros") !== undefined) throw new Error("asteroids package entry failed");
 
 // The approaches through package resolution: the table loads with the entry point, Apophis passes the Earth on 2029-04-13 at about 0.000254 au, and the counts hold.
 const approachesEntry = "@johnmorrisdotca/wakusei-planets/approaches";

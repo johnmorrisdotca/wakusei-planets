@@ -10,9 +10,9 @@ import "../src/tables/all.ts";
 
 const ms = Date.UTC(2026, 10, 10, 12);
 
-test("there are five minor bodies, each a body of its kind with the facts of one", () => {
-  assert.deepEqual([...MINOR_IDS], ["vesta", "pallas", "chiron", "pholus", "halley"]);
-  const kinds = { vesta: "asteroid", pallas: "asteroid", chiron: "centaur", pholus: "centaur", halley: "comet" } as const;
+test("there are six minor bodies, each a body of its kind with the facts of one", () => {
+  assert.deepEqual([...MINOR_IDS], ["eros", "vesta", "pallas", "chiron", "pholus", "halley"]);
+  const kinds = { eros: "asteroid", vesta: "asteroid", pallas: "asteroid", chiron: "centaur", pholus: "centaur", halley: "comet" } as const;
   for (const id of MINOR_IDS) {
     assert.ok(BODY_IDS.includes(id), id);
     assert.equal(BODIES[id].kind, kinds[id]);
@@ -24,6 +24,9 @@ test("there are five minor bodies, each a body of its kind with the facts of one
   assert.ok(Math.abs(BODIES.vesta.axesKm![0] * 2 - 569.24) < 1 && Math.abs(BODIES.vesta.axesKm![2] * 2 - 452.66) < 1);
   assert.ok(Math.abs(BODIES.pallas.axesKm![0] * 2 - 568) < 1 && Math.abs(BODIES.pallas.axesKm![2] * 2 - 448) < 1);
   assert.ok(Math.abs(BODIES.halley.axesKm![0] * 2 - 14.9) < 0.1);
+  // Eros: the sphere of the volume Yeomans et al. 2000 measured (diameter 16.84 km), and the axes of NASA's simplified model
+  assert.ok(Math.abs(BODIES.eros.radiusKm - 8.42) < 0.01);
+  assert.ok(Math.abs(BODIES.eros.axesKm![0] * 2 - 32.82) < 0.05 && Math.abs(BODIES.eros.rotationHours - 5.27) < 1e-6);
   assert.ok(Math.abs(BODIES.vesta.rotationHours - 5.3421276) < 1e-6 && Math.abs(BODIES.pallas.rotationHours - 7.8132214) < 1e-6);
 });
 
@@ -31,15 +34,21 @@ test("each one has a line drawing in both languages, and a table of its own", ()
   for (const id of MINOR_IDS) {
     assert.ok(lineSvg(id).includes(BODIES[id].name.en), id);
     assert.ok(lineSvg(id, { lang: "ja" }).includes(BODIES[id].name.ja), id);
-    assert.ok(tableOf(id) !== undefined, id);
-    assert.equal(heliocentricModel(id, ms).theory, "chebyshev", id);
-    assert.ok(heliocentricModel(id, ms).worstArcseconds! <= 1.0001, id);
+    if (id === "eros") {
+      // Eros keeps the Small-Body Database ellipse. It has no fitted table.
+      assert.equal(tableOf(id), undefined, id);
+      assert.equal(heliocentricModel(id, ms).theory, "osculating-elements", id);
+    } else {
+      assert.ok(tableOf(id) !== undefined, id);
+      assert.equal(heliocentricModel(id, ms).theory, "chebyshev", id);
+      assert.ok(heliocentricModel(id, ms).worstArcseconds! <= 1.0001, id);
+    }
   }
 });
 
 test("a minor body is on its published orbit: its distance from the Sun is between its perihelion and its aphelion", () => {
   // Horizons' own elements (OBJ_DATA, read 2026-11-10): perihelion and aphelion in au
-  const reach: Record<string, [number, number]> = { vesta: [2.15, 2.58], pallas: [2.13, 3.42], chiron: [8.4, 18.9], pholus: [8.69, 31.92], halley: [0.574, 35.29] };
+  const reach: Record<string, [number, number]> = { eros: [1.13, 1.79], vesta: [2.15, 2.58], pallas: [2.13, 3.42], chiron: [8.4, 18.9], pholus: [8.69, 31.92], halley: [0.574, 35.29] };
   for (const id of MINOR_IDS) {
     const [q, Q] = reach[id]!;
     for (let k = 0; k < 40; k += 1) {
@@ -50,7 +59,7 @@ test("a minor body is on its published orbit: its distance from the Sun is betwe
 });
 
 test("a body that turns, turns about its axis the way its tilt says: Vesta 27 degrees from its orbit's pole and Pallas on its side", () => {
-  for (const id of ["vesta", "pallas", "chiron", "pholus"] as const) {
+  for (const id of ["eros", "vesta", "pallas", "chiron", "pholus"] as const) {
     const f = BODIES[id];
     const a = heliocentric(id, ms);
     const b = heliocentric(id, ms + 86_400_000);

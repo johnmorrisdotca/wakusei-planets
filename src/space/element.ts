@@ -132,7 +132,7 @@ export interface BodyHover extends BodyInfo {
  * ```
  */
 export interface BodySight extends Sight {
-  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`, or an asteroid's id from `/asteroids` (`eros`, with the option `asteroids` on) when `kind` is `small-body`. */
+  /** A body's id, a craft's own id (`voyager1`, `roadster`) when `kind` is `spacecraft`, or an orbiter's id (`mro`, the one `orbiter` takes) when `kind` is `orbiter`, or an asteroid's id from `/asteroids` (`itokawa`, with the option `asteroids` on) when `kind` is `small-body`. */
   id: string;
   kind: SpaceKind | "spacecraft" | "orbiter" | "small-body";
   host?: BodyId;
@@ -1273,7 +1273,7 @@ export class WakuseiSpace extends HTMLElement {
     return id !== undefined && this.#model.asteroids && this.#model.asteroidSet !== null && this.#model.asteroidSet.ids.includes(id);
   }
   /**
-   * The asteroid a `goTo` or `ride` names, as its plain id, or `undefined` where the name is none and the call goes on as it did: `eros`, or `asteroid:eros` (the form that always means the asteroid; `europa` and `dione`
+   * The asteroid a `goTo` or `ride` names, as its plain id, or `undefined` where the name is none and the call goes on as it did: `itokawa`, or `asteroid:itokawa` (the form that always means the asteroid; `europa` and `dione`
    * are moons first). Throws a `RangeError` when it is one and the option `asteroids` is off, and, with the option on, for a name that is neither a body of the view nor an asteroid.
    */
   #asteroidNamed(target: string, call: string): string | undefined {
@@ -1282,7 +1282,7 @@ export class WakuseiSpace extends HTMLElement {
     const id = prefixed ? lower.slice(ASTEROID_PREFIX.length) : lower;
     if (!prefixed && findBody(target) !== undefined) return undefined;
     if (!ASTEROID_IDS.includes(id)) {
-      if (prefixed || this.#model.asteroids) throw new RangeError(`${call}(${JSON.stringify(target)}): not a body of the view and not an asteroid of /asteroids (an asteroid's id is one of asteroidList(), such as "eros")`);
+      if (prefixed || this.#model.asteroids) throw new RangeError(`${call}(${JSON.stringify(target)}): not a body of the view and not an asteroid of /asteroids (an asteroid's id is one of asteroidList(), such as "itokawa")`);
       return undefined;
     }
     if (!this.#model.asteroids) throw new RangeError(`${call}(${JSON.stringify(target)}): "${id}" is an asteroid of /asteroids, which the view places only with the option asteroids on (the attribute asteroids, or space.asteroids = true)`);
@@ -1835,7 +1835,7 @@ export class WakuseiSpace extends HTMLElement {
    * tells the page where it went and where the next and previous hops lead. A name in any case, in English or Japanese, works.
    *
    *
-   * With the option `asteroids` on it takes an asteroid's id from `/asteroids` too (`"eros"`; `"asteroid:europa"` and `"asteroid:dione"` are the forms that mean the asteroid, for `europa` and `dione` are moons first): the view
+   * With the option `asteroids` on it takes an asteroid's id from `/asteroids` too (`"itokawa"`; `"asteroid:europa"` and `"asteroid:dione"` are the forms that mean the asteroid, for `europa` and `dione` are moons first): the view
    * is set to the true scale (the squeezed scale cannot place a camera among the bodies, and going back to it ends the move), and the camera goes to a distance of a few times the asteroid's size (at least 200 km) looking at it
    * and keeps it there as the clock runs: `riding` says which asteroid (`riding.target.id`), `wakusei-ride` is sent as for any ride and `wakusei-hop` is not (an asteroid is no stop of the hopper), and a `goTo` of a body or `ride(null)` ends it.
    * Asked before the records are in, the move is made when they are, unless another move is asked for first.
@@ -1851,7 +1851,7 @@ export class WakuseiSpace extends HTMLElement {
    *
    * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
    * space.asteroids = true;
-   * space.goTo("eros");
+   * space.goTo("itokawa");
    * console.log(space.riding?.target);
    * ```
    */

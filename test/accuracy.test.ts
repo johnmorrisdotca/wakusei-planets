@@ -18,7 +18,7 @@ const AU_KM = 149597870.7;
 const PLANET_ARCSEC: Record<string, number> = { mercury: 3.5, venus: 1, earth: 2.2, mars: 2.2, jupiter: 1.6, saturn: 5.6, uranus: 5.8, neptune: 2.5, pluto: 0.3 };
 /** The worst direction error in arc-seconds from the Sun, over the dates from 1900 to 2100, for each dwarf planet besides Pluto. */
 const DWARF_ARCSEC: Record<string, number> = { ceres: 0.3, orcus: 0.1, haumea: 0.1, quaoar: 0.15, makemake: 0.15, gonggong: 0.1, eris: 0.1, sedna: 0.1 };
-/** The worst direction error in arc-seconds from the Sun for each minor body, on the dates inside its fitted table's years (Vesta and Pallas 1900 to 2100, the others 1800 to 2200): the fits are held to 1 arc-second, and the measured worst is under 0.6. */
+/** The worst direction error in arc-seconds from the Sun for each fitted minor body, on the dates inside its table's years (Vesta and Pallas 1900 to 2100, the others 1800 to 2200): the fits are held to 1 arc-second, and the measured worst is under 0.6. Eros is the Small-Body Database ellipse and is not in this table. */
 const MINOR_ARCSEC: Record<string, number> = { vesta: 1, pallas: 1, chiron: 1, pholus: 1, halley: 1 };
 const MINOR_YEARS: Record<string, [number, number]> = { vesta: [1900, 2100], pallas: [1900, 2100], chiron: [1800, 2200], pholus: [1800, 2200], halley: [1800, 2200] };
 /** The worst direction error in degrees from the planet (from the Pluto system's barycentre for Nix and Hydra), over the dates, for the Moon and each moon. */
@@ -65,7 +65,7 @@ test("every dwarf planet is where JPL Horizons puts it, within its limit, on eve
   }
 });
 
-test("each minor body is where JPL Horizons puts it, within 1 arc-second, on every date inside its table's years", () => {
+test("each fitted minor body is where JPL Horizons puts it, within 1 arc-second, on every date inside its table's years", () => {
   for (const [name, limit] of Object.entries(MINOR_ARCSEC)) {
     const rows = minorReference.minors[name]!;
     const [first, last] = MINOR_YEARS[name]!;

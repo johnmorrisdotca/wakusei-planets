@@ -1,4 +1,4 @@
-// The asteroids of `/asteroids` in the space view (MODULES-1353): the option `asteroids` places the 104 bodies as points with the belts' (one instanced draw), names the few within about an astronomical unit of the camera, makes
+// The asteroids of `/asteroids` in the space view (MODULES-1353): the option `asteroids` places the 103 bodies as points with the belts' (one instanced draw), names the few within about an astronomical unit of the camera, makes
 // each an entry of `sight()` and a name that can be pressed (`wakusei-body-click`, `wakusei-asteroid-click`), and costs nothing while it is off. Chromium, drawing in software; the time is held by the page's `t` and every wait is
 // on a draw.
 import { expect, test, type Page } from "@playwright/test";
