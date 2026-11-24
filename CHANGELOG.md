@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Pluto's south is painted ground, not a plain tone** (MODULES-1798). New Horizons never photographed the south of Pluto, about 30 degrees south and beyond, and the map made it one plain tone. The three pictures (`pluto-512`, `-1024`, `-2048`) now carry painted ground there: an image model's repaint of the south, continuing the photographed ground, enlarged four times with Real-ESRGAN x4plus, matched in tone and contrast to the photographed edge and joined over a few hundred pixels, so a globe shows no dark half and no seam. The photographed ground is NASA's 300 m LORRI/MVIC mosaic coloured by the Ralph/MVIC colour map (both public domain), unchanged. South of about 30 degrees S was not photographed by New Horizons; it is painted with an image model to continue the photographed ground, and is not observed. The credit is in `NOTICE.md` and in `PICTURE_CREDITS` (`changes` of the Pluto row). `pluto-512` and `-1024` are 29.4 and 82.6 KB (were 12.9 and 45.7), still inside the 2.3 MB budget; `pluto-2048` is 336.9 KB (was 183.7). `scripts/make-textures.py` no longer builds Pluto: the 16384 by 8192 master is kept offline.
+
 ## [0.75.1] - 2026-11-23
 
 - **The Jupiter chart's phone test waits for the redraw** (MODULES-1802). Narrowing the page paints the chart again. The test reads a label's box only after that paint, and the box still has to be at least 11 pixels tall.
