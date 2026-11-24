@@ -116,7 +116,8 @@ test("facing: the name turns to the reader as the view turns; turning with the b
   expect(turned, "a quarter turn of the view turns the name a quarter turn back").toBeGreaterThan(Math.PI / 2 - 0.15);
   expect(turned).toBeLessThan(Math.PI / 2 + 0.15);
   keep("space-earth-facing-90", await shot(page));
-  await drawn(page, () => setOn(page, "bodyLabel", { look: "painted" }), (now) => now.focus !== null && now.focus.turn === 0);
+  // Facing off, the name turns with the body and may slide just far enough to stay on the near side, so its turn is not zero while the view is still a quarter turn around. From the front the slide lets go.
+  await drawn(page, () => setOn(page, "bodyLabel", { look: "painted" }), (now) => now.focus !== null && now.focus.shown);
   await drawn(page, () => callOn(page, "setView", { yaw: 0, tilt: 0, zoom: 1 }), (now) => now.focus !== null && now.focus.turn === 0);
 });
 

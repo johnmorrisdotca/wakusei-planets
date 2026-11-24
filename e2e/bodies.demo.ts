@@ -168,7 +168,9 @@ for (const lookName of ["line", "realistic", "painted"] as const) {
       await page.locator(`#tiles .tile[data-body="${planet}"]`).click();
       for (const tile of await page.locator("#moon-row .tile wakusei-body").all()) await check(tile);
     }
-    expect(seen.size, "every body of the picker was looked at").toBe(10 + 2 + 6 + 19 + 5 + 4 + 3 + 1);
+    // ten worlds in the grid, then each world's own moons. Pluto includes Styx and Kerberos.
+    const moons = (["mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "earth"] as const).reduce((n, id) => n + MOONS_OF[id].length, 0);
+    expect(seen.size, "every body of the picker was looked at").toBe(10 + moons);
   });
 }
 
