@@ -354,8 +354,7 @@ def make(body):
     elif body == "jupiter":
         pass
     elif body == "pluto":
-        img = roll(img, 0.5)
-        img = fill_unseen_plain(img)
+        sys.exit("pluto is built by scripts/pluto-south.py")
     elif body == "saturn":
         cx, cy, r = disc_of(img, 0.09)
         r = ((img.mean(axis=2) > 0.09).sum(axis=1) > img.shape[1] * 0.02).nonzero()[0]
@@ -444,4 +443,7 @@ def make_ring():
 
 
 for name in (sys.argv[1:] or list(SOURCES)):
+    if name == "pluto":
+        print("pluto: kept. scripts/pluto-south.py builds it, including the generated south")
+        continue
     make_ring() if name == "saturn-ring" else make(name)

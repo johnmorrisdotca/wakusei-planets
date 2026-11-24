@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Pluto's unseen south is generated from the New Horizons mosaic** (MODULES-1798). The polar night was a plain tone. South of the photographed edge, the map is generated from New Horizons images (NASA, public domain): real patches of the photographed ground, at the mosaic's ground scale, blended across the ragged edge, with the pole filled in a south-polar projection. It is not a photograph of that ground. `scripts/pluto-south.py`, seed 17981123.
+
 ## [0.75.0] - 2026-11-23
 
 - **The moons on their planet's flat map** (MODULES-1787, part of MODULES-1785). `<wakusei-flat moons>` marks each moon of the body over the place on its ground that it is straight above: Earth's Moon, Mars's two, Jupiter's six, Saturn's nineteen, Uranus's five, Neptune's four, Pluto's three (`moonsOfBody`, `flatMoons`). Each moon is a named dot, pressable (`wakusei-flat-pick`, `kind: "mark"`, `mark.group` `moons`, `mark.data` `{ moon, distanceKm }`), reached by the arrow keys, read aloud and in the key. Off until `moons` (or the new **Moons** chip) asks; `moons="io,europa"` chooses some. With `track`, or by choosing a moon, the path each moon draws over the ground is drawn, half a turn of the planet either way (`flatMoonTracks`, `flatMoonTrackHalf`). The point is worked out from the planet's pole and prime meridian and the moon's place from the package's own theories; the unit test holds the Moon's point to its phase (the angle from the Sun's point is 180 degrees less the phase angle, to 0.5 degree). The landers and rovers were already on a body's map as places, and the orbiters are the Moon's and Mars's (the package holds no others); `e2e/flat-moons.demo.ts` and `test/flat-moons.test.ts` are the tests. The demo's flat page has the chip and `?moons=1`.

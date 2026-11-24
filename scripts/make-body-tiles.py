@@ -321,7 +321,7 @@ def detail_level(name, source, base, image, width):
     low_small = resize_wrapped(seen * weight[..., None], BASE, BASE // 2) / np.maximum(resize_wrapped(weight, BASE, BASE // 2), 1e-3)[..., None]
     low = resize_wrapped(low_small.astype(np.float32), width, height, Image.BICUBIC)
     up = resize_wrapped(base, width, height, Image.BICUBIC)
-    # where the 2048 picture fades the detail of the map into a plain tone (Pluto's unseen south), the detail fades over as far here, or the tiles show crisp ground right up to the ragged edge of the map and a seam against the plain beyond it
+    # where the 2048 picture's photographed detail gives way to the generated south, the source mosaic's detail fades over as far, or the tiles draw a seam against that generated ground
     fade = erode_feather(valid, source.get("fade", 4))
     out = up + fade[..., None] * (seen - low)
     return np.clip(out, 0, 1).astype(np.float32)
