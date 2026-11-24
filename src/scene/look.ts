@@ -1,6 +1,7 @@
 // What a body needs to be drawn with three.js: the surface as shader code, how bright it glows, its atmosphere and its painted map. Each body's own entry point registers its look here;
 // the element finds it by name. Pure data and strings, so it imports on a server.
 import type { BodyId } from "../facts.ts";
+import type { CraftMesh } from "./craft.ts";
 import type { ShapeTable } from "./shape.ts";
 
 export { shapeRadii, type ShapeTable } from "./shape.ts";
@@ -97,6 +98,10 @@ export interface BodyLook {
    * ellipsoid of `axesKm`. Until it arrives the ellipsoid is drawn.
    */
   shape?: () => Promise<ShapeTable>;
+  /**
+   * A body drawn as a published mesh with that mesh's own picture on its faces (a chunk of its own). Not a map wrapped on a globe. Until it arrives, the body's shader is drawn.
+   */
+  craft?: () => Promise<CraftMesh>;
   /**
    * An estimated rock shares one surface shader. These uniforms are that moon's own: a seed so the craters differ, and the dark and light colours of its albedo class.
    * Only a look whose `surface` reads `uRockSeed`, `uRockDark` and `uRockLight` sets this.

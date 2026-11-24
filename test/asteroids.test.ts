@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
+import { heliocentric } from "../src/ephemeris.ts";
 import { BODIES } from "../src/facts.ts";
 import { ASTEROID_IDS, asteroidIdOf, asteroidKey } from "../src/space/asteroid-ids.ts";
 import {
@@ -44,9 +45,9 @@ const utcOf = (jd: number): number => {
 
 test("the counts by kind and group are pinned", () => {
   const count = (kind: AsteroidKind): number => asteroidsOfKind(kind).length;
-  assert.equal(ASTEROIDS.length, 104);
-  assert.deepEqual(ASTEROID_KINDS.map(count), [29, 38, 16, 7, 14]);
-  assert.deepEqual(["Atira", "Aten", "Apollo", "Amor"].map((g) => asteroidsOfKind("near-earth", g as "Amor").length), [1, 4, 20, 4]);
+  assert.equal(ASTEROIDS.length, 103);
+  assert.deepEqual(ASTEROID_KINDS.map(count), [28, 38, 16, 7, 14]);
+  assert.deepEqual(["Atira", "Aten", "Apollo", "Amor"].map((g) => asteroidsOfKind("near-earth", g as "Amor").length), [1, 4, 20, 3]);
   assert.equal(asteroidList(), ASTEROIDS);
   assert.equal(ASTEROIDS_FETCHED, "2026-11-11");
   assert.equal(fixture.fetched, "2026-11-11");
@@ -82,15 +83,16 @@ test("every record is complete: names in both languages, an ellipse, a source, a
 });
 
 test("known records: names, years, sizes, groups, hazard flags and missions as the source gives them", () => {
-  const eros = findAsteroid("Eros")!;
-  assert.equal(eros.number, 433);
-  assert.equal(eros.group, "Amor");
-  assert.equal(eros.discoveryYear, 1898);
-  assert.equal(eros.name.ja, "エロス");
-  assert.ok(eros.diameterKm! > 16 && eros.diameterKm! < 18, "Eros is about 17 km across");
+  assert.equal(findAsteroid("Eros"), undefined, "Eros is a body of the package, not a row of this list");
+  const itokawa = findAsteroid("Itokawa")!;
+  assert.equal(itokawa.number, 25143);
+  assert.equal(itokawa.group, "Apollo");
+  assert.equal(itokawa.discoveryYear, 1998);
+  assert.equal(itokawa.name.ja, "イトカワ");
+  assert.ok(itokawa.diameterKm! > 0.3 && itokawa.diameterKm! < 0.4, "Itokawa is about 330 m across");
   assert.equal(findAsteroid("Apophis")!.group, "Aten");
   assert.equal(findAsteroid("Apophis")!.hazardous, true);
-  assert.equal(findAsteroid("Eros")!.hazardous, false);
+  assert.equal(findAsteroid("Itokawa")!.hazardous, true);
   assert.equal(findAsteroid("Atira")!.group, "Atira");
   assert.equal(findAsteroid("Apollo")!.group, "Apollo");
   assert.equal(findAsteroid("Amor")!.group, "Amor");
@@ -116,13 +118,14 @@ test("known records: names, years, sizes, groups, hazard flags and missions as t
   assert.equal(findAsteroid("Leleākūhonua")!.designation, "2015 TG387");
   // the Lucy targets and the visits already made
   assert.deepEqual(["Eurybates", "Polymele", "Leucus", "Orus", "Patroclus"].map((n) => findAsteroid(n)!.missions[0]!.name), ["Lucy", "Lucy", "Lucy", "Lucy", "Lucy"]);
-  assert.equal(ASTEROIDS.filter((a) => a.missions.some((m) => !m.planned)).length, 20);
+  assert.equal(ASTEROIDS.filter((a) => a.missions.some((m) => !m.planned)).length, 19);
   assert.equal(ASTEROIDS.filter((a) => a.hazardous).length, 17);
 });
 
 test("findAsteroid reads an id, a number, a designation, an English or a Japanese name, and nothing else", () => {
-  const eros = findAsteroid("Eros");
-  for (const q of ["eros", "EROS", " Eros ", 433, "433", "A898 PA", "エロス"]) assert.equal(findAsteroid(q), eros, String(q));
+  const itokawa = findAsteroid("Itokawa");
+  for (const q of ["itokawa", "ITOKAWA", " Itokawa ", 25143, "25143", "1998 SF36", "イトカワ"]) assert.equal(findAsteroid(q), itokawa, String(q));
+  for (const q of ["eros", "Eros", 433, "エロス"]) assert.equal(findAsteroid(q), undefined, String(q));
   assert.equal(findAsteroid("Kamo`oalewa")!.id, "kamooalewa");
   assert.equal(findAsteroid("kamo‘oalewa"), findAsteroid("KAMOOALEWA"));
   assert.equal(findAsteroid("Steins")!.number, 2867);
@@ -139,6 +142,14 @@ test("two-body positions against JPL Horizons within a year of each epoch: the e
   const bound: Record<AsteroidKind, number[]> = { "near-earth": [1e-7, 4e-4, 1e-3], "main-belt": [1e-7, ASTEROID_ACCURACY.halfYearAu, ASTEROID_ACCURACY.yearAu], trojan: [1e-7, 4e-4, 1e-3], centaur: [1e-7, 4e-4, 1e-3], "trans-neptunian": [1e-7, 4e-4, 1e-3] };
   const worst = { epoch: 0, half: 0, year: 0 };
   for (const body of fixture.bodies) {
+    if (body.id === "eros") {
+      // Eros is a body of the package. Its ellipse is the elements this row was fetched from, so it matches Horizons at that epoch.
+      const row = body.rows.find((r) => Math.abs(r[0]! - 2_461_200.5) < 1)!;
+      const got = heliocentric("eros", utcOf(row[0]!));
+      const want: [number, number, number] = [row[1]! / AU_KM, row[2]! / AU_KM, row[3]! / AU_KM];
+      assert.ok(length(sub(got, want)) < 1e-3, `Eros the body at the epoch: ${length(sub(got, want)).toExponential(2)} au`);
+      continue;
+    }
     const rec = findAsteroid(body.id)!;
     assert.equal(rec.kind, body.kind);
     assert.equal(body.rows.length, 5);
@@ -157,17 +168,17 @@ test("two-body positions against JPL Horizons within a year of each epoch: the e
 
 test("positions: km and au agree, a body can be given by name, number or record, and the same moment gives the same answer", () => {
   const day = Date.UTC(2026, 10, 11);
-  const au = asteroidPositionAu("Eros", day);
-  const km = asteroidPosition("Eros", new Date(day));
+  const au = asteroidPositionAu("Itokawa", day);
+  const km = asteroidPosition("Itokawa", new Date(day));
   for (let k = 0; k < 3; k += 1) assert.ok(Math.abs(km[k]! - au[k]! * AU_KM) < 1e-3);
-  assert.deepEqual(asteroidPositionAu(433, day), au);
-  assert.deepEqual(asteroidPositionAu(findAsteroid("Eros")!, day), au);
+  assert.deepEqual(asteroidPositionAu(25143, day), au);
+  assert.deepEqual(asteroidPositionAu(findAsteroid("Itokawa")!, day), au);
   const r = length(au);
-  const el = findAsteroid("Eros")!.elements;
+  const el = findAsteroid("Itokawa")!.elements;
   assert.ok(r >= el.q - 1e-6 && r <= el.a * (1 + el.e) + 1e-6, "between perihelion and aphelion");
   assert.throws(() => asteroidPositionAu("Ceres", day), RangeError);
-  assert.throws(() => asteroidPositionAu("Eros", Number.NaN), RangeError);
-  assert.throws(() => asteroidPositionAu("Eros", "2026-11-11" as unknown as number), TypeError);
+  assert.throws(() => asteroidPositionAu("Itokawa", Number.NaN), RangeError);
+  assert.throws(() => asteroidPositionAu("Itokawa", "2026-11-11" as unknown as number), TypeError);
   assert.throws(() => asteroidPositionAu({} as unknown as string, day), TypeError);
   assert.throws(() => asteroidPositionAu(null as unknown as string, day), TypeError);
 });
@@ -187,29 +198,29 @@ test("distances from the Sun and the Earth", () => {
 });
 
 test("the orbit line closes, is an ellipse of the elements, and has the points asked for", () => {
-  const pts = asteroidOrbitPoints("Eros", 90);
+  const pts = asteroidOrbitPoints("Itokawa", 90);
   assert.equal(pts.length, 91);
   assert.deepEqual(pts[0], pts[90]);
-  const el = findAsteroid("Eros")!.elements;
+  const el = findAsteroid("Itokawa")!.elements;
   const radii = pts.map((p) => length(p));
   assert.ok(Math.abs(Math.min(...radii) - el.q) < 1e-3 && Math.abs(Math.max(...radii) - el.a * (1 + el.e)) < 2e-3);
-  assert.equal(asteroidOrbitPoints("Eros").length, 181);
-  assert.equal(asteroidOrbitPoints("Eros", 2).length, 9, "at least eight segments");
+  assert.equal(asteroidOrbitPoints("Itokawa").length, 181);
+  assert.equal(asteroidOrbitPoints("Itokawa", 2).length, 9, "at least eight segments");
   // every point lies in the orbit's plane: the normal from the node and the inclination
   const i = (el.i * Math.PI) / 180;
   const o = (el.node * Math.PI) / 180;
   const normal = [Math.sin(i) * Math.sin(o), -Math.sin(i) * Math.cos(o), Math.cos(i)];
   for (const p of pts) assert.ok(Math.abs(p[0] * normal[0]! + p[1] * normal[1]! + p[2] * normal[2]!) < 1e-9);
   // the body is on its line: its position at the epoch is one of the line's points on the same ellipse
-  const here = asteroidPositionAu("Eros", utcOf(el.epochJd));
-  const near = Math.min(...asteroidOrbitPoints("Eros", 720).map((p) => length(sub(p, here))));
+  const here = asteroidPositionAu("Itokawa", utcOf(el.epochJd));
+  const near = Math.min(...asteroidOrbitPoints("Itokawa", 720).map((p) => length(sub(p, here))));
   assert.ok(near < 0.02);
-  assert.ok(Math.abs(asteroidPeriodDays("Eros") - 643.2) < 1, "Eros' year is about 643 days");
+  assert.ok(Math.abs(asteroidPeriodDays("Itokawa") - 556.5) < 1, "Itokawa's year is about 556 days");
 });
 
 test("the door: a record as the data door's small body, and a body made from elements", () => {
   const jd = 2_461_200.5;
-  for (const id of ["eros", "hektor", "salacia"]) {
+  for (const id of ["apophis", "hektor", "salacia"]) {
     const door = asteroidAsSmallBody(id);
     // the door counts from the epoch in the same Julian date (TT): the same orbit, the same place
     const ours = asteroidPositionAu(id, utcOf(jd + 100));
@@ -247,8 +258,8 @@ test("the table is a chunk of its own: no other entry point of the package carri
     const entry = result.outputFiles.find((file) => file.path.endsWith(entryPath.replace(/^.*\//, "")))!.text;
     return { entry, all: result.outputFiles.map((file) => file.text).join("") };
   };
-  // Eros' semi-major axis, which appears only in the table
-  const marks = ["1.458243716760167"];
+  // Itokawa's semi-major axis, which appears only in the table
+  const marks = ["1.324052284342771"];
   const asteroids = await bundle(`export * from "./src/asteroids.ts";`);
   for (const mark of marks) assert.ok(asteroids.entry.includes(mark), `the /asteroids bundle holds the table (${mark})`);
   // the space view reaches the table only through `import("../asteroids.ts")`, for its attribute `asteroids`: a file of its own
@@ -278,10 +289,10 @@ test("asteroidsSource gives every body as a data-door record, the same orbit, wi
   assert.equal(records.length, ASTEROIDS.length);
   records.forEach((record, k) => assert.deepEqual(record, asteroidAsSmallBody(ASTEROIDS[k]!)));
   // the sky of a date is the same from the record as from the body
-  const eros = records[ASTEROIDS.findIndex((body) => body.id === "eros")]!;
-  const el = ASTEROIDS.find((body) => body.id === "eros")!.elements;
-  assert.ok(length(sub(smallBodyAt(eros, el.epochJd), smallBodyAt(asteroidAsSmallBody("eros"), el.epochJd))) < 1e-12, "the record places Eros where the body does");
-  assert.ok(Math.abs(length(smallBodyAt(eros, el.epochJd)) - length(asteroidPositionAu("eros", (el.epochJd - 2440587.5) * 86_400_000))) < 1e-3, "and at the epoch it is at the same distance from the Sun");
+  const itokawa = records[ASTEROIDS.findIndex((body) => body.id === "itokawa")]!;
+  const el = ASTEROIDS.find((body) => body.id === "itokawa")!.elements;
+  assert.ok(length(sub(smallBodyAt(itokawa, el.epochJd), smallBodyAt(asteroidAsSmallBody("itokawa"), el.epochJd))) < 1e-12, "the record places Itokawa where the body does");
+  assert.ok(Math.abs(length(smallBodyAt(itokawa, el.epochJd)) - length(asteroidPositionAu("itokawa", (el.epochJd - 2440587.5) * 86_400_000))) < 1e-3, "and at the epoch it is at the same distance from the Sun");
 });
 
 test("two asteroids have the id of a body of the package (europa, dione), and the space view's key keeps them apart", () => {

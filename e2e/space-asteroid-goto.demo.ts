@@ -14,7 +14,7 @@ test.beforeEach(async ({ page, browserName }, testInfo) => {
   await underLoad(page, browserName);
 });
 
-/** The moment held: Eros, Apophis and the other asteroids are where the table puts them; the clock does not run. */
+/** The moment held: Itokawa, Apophis and the other asteroids are where the table puts them; the clock does not run. */
 const QUERY = "t=2026-11-02T14:00Z&scale=true&play=off";
 /** The moment held. */
 const T0 = Date.UTC(2026, 10, 2, 14);
@@ -70,7 +70,7 @@ async function sightedAsteroid(page: Page, id: string): Promise<Sighted> {
 
 test("with the option off, goTo and ride of an asteroid's id throw an error that says to turn it on, and a name that is no asteroid goes on as it did", async ({ page }) => {
   await openSpace(page, QUERY);
-  for (const [method, args] of [["goTo", ["eros"]], ["ride", ["eros"]], ["goTo", ["Eros", { smooth: false }]], ["goTo", ["asteroid:eros"]]] as const) {
+  for (const [method, args] of [["goTo", ["itokawa"]], ["ride", ["itokawa"]], ["goTo", ["Itokawa", { smooth: false }]], ["goTo", ["asteroid:itokawa"]]] as const) {
     const error = await thrownBy(page, method, ...args);
     expect(error?.name, `${method}(${String(args[0])}) throws a RangeError`).toBe("RangeError");
     expect(error?.message, "and says which option to turn on").toMatch(/asteroid of \/asteroids.*option asteroids on/);
@@ -107,31 +107,31 @@ test("goTo(id) brings the camera to the asteroid: it is in the middle of the pic
   await openSpace(page, "t=2026-11-02T14:00Z&scale=compressed&play=off");
   await turnOn(page);
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "scale")), "the view starts in the squeezed scale").toBe("compressed");
-  const before = await callCounted(page, "goTo", "Eros", { smooth: false });
-  await drawnAfter(page, before, "the move to Eros");
-  await arrived(page, "eros");
+  const before = await callCounted(page, "goTo", "Itokawa", { smooth: false });
+  await drawnAfter(page, before, "the move to Itokawa");
+  await arrived(page, "itokawa");
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "scale")), "the squeezed scale does not map a camera among the bodies: the view is at the true scale").toBe("true");
   const riding = (await ridingOf(page))!;
   expect([riding.view, riding.around]).toEqual(["follow", "sun"]);
   expect(riding.distanceKm, "a few times its measured size, at least 200 km").toBeGreaterThanOrEqual(200);
-  const eros = await sightedAsteroid(page, "eros");
+  const itokawa = await sightedAsteroid(page, "itokawa");
   const box = await page.locator(SPACE).boundingBox();
-  expect(eros.inView).toBe(true);
-  expect(Math.abs(eros.x - box!.width / 2), "in the middle across").toBeLessThan(box!.width * 0.02);
-  expect(Math.abs(eros.y - box!.height / 2), "and in the middle down").toBeLessThan(box!.height * 0.02);
-  expect(eros.distanceKm! / riding.distanceKm, "at the distance the ride keeps").toBeGreaterThan(0.95);
-  expect(eros.distanceKm! / riding.distanceKm).toBeLessThan(1.05);
+  expect(itokawa.inView).toBe(true);
+  expect(Math.abs(itokawa.x - box!.width / 2), "in the middle across").toBeLessThan(box!.width * 0.02);
+  expect(Math.abs(itokawa.y - box!.height / 2), "and in the middle down").toBeLessThan(box!.height * 0.02);
+  expect(itokawa.distanceKm! / riding.distanceKm, "at the distance the ride keeps").toBeGreaterThan(0.95);
+  expect(itokawa.distanceKm! / riding.distanceKm).toBeLessThan(1.05);
   // its name is on the picture: the asteroid is the nearest thing, so it is named
-  await expect(page.locator(`${SPACE} .sp-label[data-body="asteroid:eros"]`)).toBeVisible();
+  await expect(page.locator(`${SPACE} .sp-label[data-body="asteroid:itokawa"]`)).toBeVisible();
   // the clock moves on and the camera goes with it: ten days later the asteroid is still in the middle at the same distance
   const step = await setCounted(page, "time", Date.UTC(2026, 10, 12, 14));
   await drawnAfter(page, step, "ten days on");
   await quiet(page);
-  const later = await sightedAsteroid(page, "eros");
-  expect(Math.abs(later.x - eros.x)).toBeLessThan(box!.width * 0.02);
-  expect(Math.abs(later.y - eros.y)).toBeLessThan(box!.height * 0.02);
-  expect(later.distanceKm! / eros.distanceKm!).toBeGreaterThan(0.99);
-  expect(later.distanceKm! / eros.distanceKm!).toBeLessThan(1.01);
+  const later = await sightedAsteroid(page, "itokawa");
+  expect(Math.abs(later.x - itokawa.x)).toBeLessThan(box!.width * 0.02);
+  expect(Math.abs(later.y - itokawa.y)).toBeLessThan(box!.height * 0.02);
+  expect(later.distanceKm! / itokawa.distanceKm!).toBeGreaterThan(0.99);
+  expect(later.distanceKm! / itokawa.distanceKm!).toBeLessThan(1.01);
 });
 
 test("ride(id) puts the camera at the asteroid, looking at the Sun, and goTo of a body ends it", async ({ page }) => {
@@ -181,10 +181,10 @@ test("asked before the records are in, the move is made when they are", async ({
   const asked = await page.locator(SPACE).evaluate((el) => {
     const space = el as unknown as { asteroids: boolean; goTo(id: string, o: object): boolean };
     space.asteroids = true;
-    return space.goTo("eros", { smooth: false });
+    return space.goTo("itokawa", { smooth: false });
   });
   expect(asked, "goTo says the view can go there").toBe(true);
-  await arrived(page, "eros");
+  await arrived(page, "itokawa");
 });
 
 test("asked before the records are in, a move asked for after it takes it back: the camera is not taken to the asteroid when they come", async ({ page }) => {
@@ -192,7 +192,7 @@ test("asked before the records are in, a move asked for after it takes it back: 
   const asked = await page.locator(SPACE).evaluate((el) => {
     const space = el as unknown as { asteroids: boolean; goTo(id: string, o: object): boolean };
     space.asteroids = true;
-    const first = space.goTo("eros", { smooth: false });
+    const first = space.goTo("itokawa", { smooth: false });
     return first && space.goTo("mars", { smooth: false });
   });
   expect(asked).toBe(true);
@@ -206,19 +206,19 @@ test("asked before the records are in, a move asked for after it takes it back: 
 test("the squeezed scale, and turning the option off, take the camera back from the asteroid", async ({ page }) => {
   await openSpace(page, QUERY);
   await turnOn(page);
-  const first = await callCounted(page, "goTo", "eros", { smooth: false });
-  await drawnAfter(page, first, "the move to Eros");
-  await arrived(page, "eros");
+  const first = await callCounted(page, "goTo", "itokawa", { smooth: false });
+  await drawnAfter(page, first, "the move to Itokawa");
+  await arrived(page, "itokawa");
   const squeezed = await setCounted(page, "scale", "compressed");
   await drawnAfter(page, squeezed, "the squeezed scale");
   await quiet(page);
   expect(await ridingOf(page), "a camera among the bodies needs the true scale").toBeNull();
-  const again = await callCounted(page, "goTo", "eros", { smooth: false });
-  await drawnAfter(page, again, "the move to Eros again");
-  await arrived(page, "eros");
+  const again = await callCounted(page, "goTo", "itokawa", { smooth: false });
+  await drawnAfter(page, again, "the move to Itokawa again");
+  await arrived(page, "itokawa");
   const off = await setCounted(page, "asteroids", false);
   await drawnAfter(page, off, "the option turned off");
   await quiet(page);
   expect(await ridingOf(page), "the asteroid is gone, so the camera is back where it was").toBeNull();
-  expect(await thrownBy(page, "goTo", "eros")).toMatchObject({ name: "RangeError" });
+  expect(await thrownBy(page, "goTo", "itokawa")).toMatchObject({ name: "RangeError" });
 });

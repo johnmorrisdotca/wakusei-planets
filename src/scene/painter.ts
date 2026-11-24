@@ -15,6 +15,7 @@ import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURF
 import { fallbackLook } from "./fallback.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import { atmosphereTint, detailOf, lookOf } from "./look.ts";
+import { craftGeometry, craftMaterial, craftPicture } from "./craft.ts";
 import { shapeGeometry } from "./shape.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
@@ -612,6 +613,35 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
         scaleX = 1;
         scaleY = 1;
         scaleZ = 1;
+        redraw();
+      },
+      () => undefined,
+    );
+  }
+  // a body whose picture is the mesh a mission published: the faces carry that model's own picture, not a map wrapped on a globe
+  if (look.craft !== undefined) {
+    look.craft().then(
+      (table) => {
+        if (gone) return;
+        const shaped = acquire(T, `craft:${id}`, () => craftGeometry(T, table));
+        releases.push(shaped.release);
+        const material = acquire(T, `craftmat:${id}`, () => craftMaterial(T, look.ambient ?? 0.08));
+        releases.push(material.release);
+        materials.push(material.value);
+        (mesh as unknown as THREE.Mesh).geometry = shaped.value;
+        mesh.material = material.value;
+        scaleX = 1;
+        scaleY = 1;
+        scaleZ = 1;
+        loadImage(T, `${bases.near}${table.map}`).then(
+          (picture) => {
+            if (gone) return;
+            craftPicture(picture);
+            material.value.uniforms.uMap!.value = picture;
+            redraw();
+          },
+          () => undefined,
+        );
         redraw();
       },
       () => undefined,

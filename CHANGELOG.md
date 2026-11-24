@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Eros is a body** (MODULES-558). `eros` is a minor body: the shape and the colour picture of NASA's published model (NEAR Shoemaker; public domain, credit NASA Visualization Technology Applications and Development), drawn as that mesh rather than a map wrapped on a globe. The orbit is the Small-Body Database ellipse at JD 2461200.5, the elements the asteroid list used, not a fitted table. Eros is no longer a row of `/asteroids` (103 remain). The mesh is its own file and the entry points that reach the minor bodies grow by about 34 KB gzipped, which the size baseline records. Bodies with no spacecraft picture are unchanged.
+
 - **Ceres's radius matches JPL's extent** (MODULES-1761). The drawn radius was 481.05 km and the flattening 0.0731. JPL's Small-Body Database, read 2026-11-23, gives the extent 964.4 x 964.2 x 891.8 km (Park et al. 2016, sigma 0.2 km). The radius is now 482.15 km, the mean of the equatorial axes, and the flattening 0.075184, which puts the pole at 445.9 km. The 966.2 x 962.0 x 891.8 km figure is not used: the Ermakov et al. 2017 page did not open, and that paper's abstract gives about 470 km, the volume-equivalent size (the database's diameter 939.4 km). The pole and the spin are unchanged. MODULES-1484 had changed the citation only.
 
 - **Every demo page says what it is and credits its data** (MODULES-1764). The build writes kazoku-ui's page header and credit line where the page marks `<!--frame:header-->` and `<!--frame:credits-->`. An embed has the credit line only. The family's checker is kazoku-ui's of 2026-11-11b. Tests: `test/page-frame.test.ts`, `test/standard.test.ts`.

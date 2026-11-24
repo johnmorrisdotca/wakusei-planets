@@ -164,11 +164,14 @@ test("the line a card says matches the looks: a measured shape with no map says 
   for (const id of BODY_IDS) {
     const look = lookOf(id);
     const basis = shapeBasis(id);
-    if (look?.shape === undefined) assert.equal(basis, undefined, id);
+    if (look?.craft !== undefined) assert.equal(basis, "craft", id);
+    else if (look?.shape === undefined) assert.equal(basis, undefined, id);
     else assert.equal(basis, look.painted === undefined ? "shape" : "shape-and-map", id);
     assert.equal(shapeNote(id, "en") === "", basis === undefined, id);
     assert.equal(shapeNote(id, "ja") === "", basis === undefined, id);
   }
+  assert.equal(shapeNote("eros", "en"), "shape measured by spacecraft; colour from its photograph, not a map");
+  assert.equal(shapeNote("eros", "ja"), "形は探査機が測定したもの。色は写真からで、地面の地図ではない");
   assert.equal(shapeNote("nix", "en"), "shape measured; colour from its measured brightness");
   assert.equal(shapeNote("hydra", "ja"), "形は測定したもの。色は測定した明るさから");
   assert.equal(shapeNote("mars", "en"), "");

@@ -24,12 +24,15 @@ for _body in ("janus", "epimetheus", "prometheus", "pandora", "helene", "telesto
     GRID[_body] = (96, 48)  # Thomas's 30,000 plates
 for _body in ("amalthea", "thebe", "larissa", "proteus"):
     GRID[_body] = (72, 36)  # Stooke's grids are 5 degrees
+GRID["eros"] = (96, 48)
 
 # body -> (file, kind, scale to km, orientation, centre)
 MODELS = {
     "phobos": ("phobos_ver64q.tab.obj", "obj", 1.0, "iau", "box"),
     "phoebe": ("phoebe_ver64q.tab.obj", "obj", 1.0, "iau", "box"),
     "deimos": ("deimos.glb", "glb", None, "axes", "box"),
+    # NASA's glTF names no pole, so the long axis becomes longitude 0 (the same turn the other glTF models get)
+    "eros": ("Eros_1_10.glb", "glb", None, "axes", "box"),
     "hyperion": ("hyperion_30k_plt.tab", "plt", 1.0, "axes", "box"),
     "nix": ("nix.stl.gz", "stl", 0.5, "axes", "box"),
     "hydra": ("hydra.stl.gz", "stl", 1.0, "axes", "box"),
@@ -41,8 +44,8 @@ MODELS = {
     "larissa": ("n7larissa.tab", "grid", 1.0, "iau", "box"),
     "proteus": ("n8proteus.tab", "grid", 1.0, "iau", "box"),
 }
-# a glTF file states no unit: its model is scaled so that the sphere of its own volume has JPL's mean radius of the moon (JPL SSD planetary satellite physical parameters: Deimos 6.2 km)
-MEAN_KM = {"deimos": 6.2}
+# a glTF file states no unit: its model is scaled so that the sphere of its own volume has the published mean radius (JPL SSD: Deimos 6.2 km; Yeomans et al. 2000: Eros, a sphere of the measured volume, diameter 16.84 km)
+MEAN_KM = {"deimos": 6.2, "eros": 8.42}
 
 
 def read_obj(path):
@@ -212,6 +215,7 @@ SOURCES = {
     "phobos": {"file": "phobos_ver64q.tab.obj", "source": "Gaskell Phobos Shape Model V1.0, NASA PDS Small Bodies Node, urn:nasa:pds:gaskell.phobos.shape-model::1.0, doi 10.26033/xzv5-bw95"},
     "phoebe": {"file": "phoebe_ver64q.tab.obj", "source": "Gaskell Phoebe Shape Model V2.0, NASA PDS Small Bodies Node, urn:nasa:pds:gaskell.phoebe.shape-model::1.0, doi 10.26033/ehkj-xj95"},
     "deimos": {"file": "24879_Deimos_1_1000.glb", "source": "NASA 3D Resources, Deimos, credit NASA/JPL-Caltech"},
+    "eros": {"file": "Eros_1_10.glb", "source": "NASA 3D Resources, Eros, credit NASA Visualization Technology Applications and Development (VTAD), https://science.nasa.gov/resource/eros-3d-model/"},
     "hyperion": {"file": "hyperion_30k_plt.tab", "source": "P. Thomas, Saturn Small Moon Shape Models V1.0, NASA PDS Small Bodies Node, urn:nasa:pds:saturn_satellite_shape_models::1.0, doi 10.26033/ewy3-jy61"},
     "nix": {"file": "nix_nrf1d3_hipoly.stl.gz", "source": "Simon Porter, Shape Model of Nix, figshare doi 10.6084/m9.figshare.12779948.v1, CC BY 4.0"},
     "hydra": {"file": "hydra_shf1k3_hipoly.stl.gz", "source": "Simon Porter, Shape Model of Hydra, figshare doi 10.6084/m9.figshare.12779975.v1, CC BY 4.0"},

@@ -13,11 +13,12 @@ import type { BodyId } from "./facts.ts";
  * console.log(basis);
  * ```
  */
-export type ShapeBasis = "shape-and-map" | "shape";
+export type ShapeBasis = "shape-and-map" | "shape" | "craft";
 
 const NOTE = {
   shape: { en: "shape measured; colour from its measured brightness", ja: "形は測定したもの。色は測定した明るさから" },
   "shape-and-map": { en: "shape and surface measured by spacecraft", ja: "形も表面も探査機が測定したもの" },
+  craft: { en: "shape measured by spacecraft; colour from its photograph, not a map", ja: "形は探査機が測定したもの。色は写真からで、地面の地図ではない" },
 } as const;
 
 // The moons drawn with a measured shape (their looks carry `shape`), and whether a mission map is drawn on them too. test/shape.test.ts holds this table to the looks.
@@ -25,6 +26,7 @@ const BASIS: Partial<Record<BodyId, ShapeBasis>> = {
   phobos: "shape-and-map", deimos: "shape-and-map", phoebe: "shape-and-map",
   nix: "shape", hydra: "shape", proteus: "shape", larissa: "shape", amalthea: "shape", thebe: "shape", hyperion: "shape", janus: "shape", epimetheus: "shape", prometheus: "shape", pandora: "shape",
   atlas: "shape", pan: "shape", daphnis: "shape", helene: "shape", telesto: "shape", calypso: "shape",
+  eros: "craft",
 };
 
 /**
