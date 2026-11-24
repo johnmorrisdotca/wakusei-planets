@@ -361,7 +361,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
       ...dots([[-60, 20, 6], [-100, -20, 7], [60, 40, 5]]),
     ],
   }),
-  ceres: f("ceres", "dwarf-planet", "Ceres", "ケレス", 482.15, 0.075184, 4.04, 291.42744, 66.76033, 170.65, 952.1532, 9.07417, "#7b7873", {
+  ceres: f("ceres", "dwarf-planet", "Ceres", "ケレス", 481.05, 0.0731, 4.04, 291.42744, 66.76033, 170.65, 952.1532, 9.07417, "#7b7873", {
     showLon: 239,
     features: [{ kind: "circle", lon: 239, lat: 20, radius: 6 }, { kind: "circle", lon: 239, lat: 20, radius: 1.5, fill: true }, { kind: "circle", lon: 10, lat: -42, radius: 10 }, ...dots([[-60, 30, 8], [100, 15, 9], [160, -20, 7], [-120, -35, 8], [40, 45, 6], [-20, 0, 5]])],
   }),
