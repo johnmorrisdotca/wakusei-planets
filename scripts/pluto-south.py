@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
-"""Quilt Pluto's unphotographed south from the New Horizons mosaic.
+"""Quilt Pluto's unphotographed south from the New Horizons mosaics.
 
-The south was in polar night, so the mosaic is black there. This fills it with real patches of the photographed ground just north of that ragged edge, at the mosaic's own ground scale, blended across the edge. The last stretch to the pole is quilted in a south-polar projection, so the pole is not pinched, then written back to the equirectangular map. No drawn noise and no image service.
+The south was in polar night, so the mosaic is black there. The photographed
+half is the USGS 300 m LORRI/MVIC terrain, coloured by the Ralph/MVIC global
+colour map. The south is filled with many different pieces of that
+photographed ground (turned by right angles, scaled a little, never the same
+piece beside itself). The pole is filled in a south-polar projection and
+written back onto every pixel, so it is not pinched into spokes.
 
-Seed 17981123. Source: the full "Pluto color mapmosaic.jpg" on Wikimedia Commons (public domain, NASA / JHUAPL / SwRI), the file NOTICE.md names, checked by SHA-256 before use.
+Seed 17981123. Both source files are NASA / JHUAPL / SwRI, public domain.
+The Commons file is checked for its licence and is not the picture.
 
 The master is kept out of the repository:
 
   ~/Library/CloudStorage/Dropbox/Projects/Handoff/3d-assets/wakusei/pluto/pluto-south-16384.png
 
 Run: python3 scripts/pluto-south.py
-     python3 scripts/pluto-south.py --width 2048     (a small preview in /tmp, no master)
+     python3 scripts/pluto-south.py --width 2048
 """
 import hashlib, json, os, sys, urllib.parse, urllib.request
 import numpy as np
@@ -22,12 +28,18 @@ SEED = 17981123
 MASTER_W = 16384
 WIDTHS = (512, 1024, 2048)
 SOURCE_TITLE = "Pluto color mapmosaic.jpg"
-SOURCE_URL = "https://upload.wikimedia.org/wikipedia/commons/a/ad/Pluto_color_mapmosaic.jpg"
-SOURCE_SHA = "d63da5ee9eab8d0b98ebef3c0cdc3a92676d7c9b247b2383294fb5da5c67a71a"
-POLAR_FROM = 55.0  # degrees south: the cap is quilted in a polar projection
+POLAR_BLEND = -34.0  # just south of the photographed edge
+POLAR_FULL = -55.0  # from here to the pole the polar picture is the whole pixel
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CACHE = os.path.join(ROOT, ".cache", "src", "pluto-full.jpg")
 DROPBOX = os.path.expanduser("~/Library/CloudStorage/Dropbox/Projects/Handoff/3d-assets/wakusei/pluto")
+TERRAIN_PATH = os.path.join(DROPBOX, "sources", "Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif")
+TERRAIN_SHA = "592b7fb0f88cafa0bedf9f33bb71e983952a250ee8577edf2abfe814b473356b"
+TERRAIN_PAGE = "https://astrogeology.usgs.gov/search/map/pluto_new_horizons_lorri_mvic_global_mosaic_300m"
+TERRAIN_URL = "https://planetarymaps.usgs.gov/mosaic/Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif"
+COLOUR_PATH = os.path.join(DROPBOX, "sources", "PIA11707.tif")
+COLOUR_SHA = "cdee0025859fe36067da51f0e50137f3a39023d11c5b18d5c6f59fd8f53d2a60"
+COLOUR_PAGE = "https://science.nasa.gov/photojournal/pluto-color-map/"
+COLOUR_URL = "https://assets.science.nasa.gov/content/dam/science/psd/photojournal/pia/pia11/pia11707/PIA11707.tif"
 UA = {"User-Agent": "wakusei-planets-build/0.1 (https://github.com/johnmorrisdotca/wakusei-planets)"}
 
 
@@ -41,25 +53,14 @@ def licence_is_public_domain():
     lic = page["imageinfo"][0]["extmetadata"].get("LicenseShortName", {}).get("value", "")
     if not (lic.lower().startswith("public domain") or lic.lower().startswith("cc0")):
         sys.exit(f"pluto source is '{lic}', not public domain: not used")
-    print(f"source licence: {lic}")
+    print(f"source licence: {lic}", flush=True)
 
 
-def source_image():
-    os.makedirs(os.path.dirname(CACHE), exist_ok=True)
-    if not os.path.exists(CACHE):
-        print("downloading the New Horizons mosaic")
-        with urllib.request.urlopen(urllib.request.Request(SOURCE_URL, headers=UA), timeout=180) as r:
-            data = r.read()
-        digest = hashlib.sha256(data).hexdigest()
-        if digest != SOURCE_SHA:
-            sys.exit(f"SHA-256 {digest} is not the file NOTICE.md names")
-        with open(CACHE, "wb") as f:
-            f.write(data)
-    else:
-        digest = hashlib.sha256(open(CACHE, "rb").read()).hexdigest()
-        if digest != SOURCE_SHA:
-            sys.exit(f"cached mosaic SHA-256 {digest} is not the file NOTICE.md names")
-    return np.asarray(Image.open(CACHE).convert("RGB"))
+def file_sha(path, expect, label):
+    digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    if digest != expect:
+        sys.exit(f"{label} SHA-256 {digest} is not the file this script records")
+    return digest
 
 
 def roll_half(img):
@@ -67,157 +68,304 @@ def roll_half(img):
     return np.concatenate([img[:, w // 2 :], img[:, : w // 2]], axis=1)
 
 
-def photo_edge(img):
-    """The first row, in the south, from which the mosaic is black for 12 rows. A thin dark line is dropped by a median, and the edge is the northernmost of the nearby columns, so black does not leak into the photograph."""
-    h, w, _ = img.shape
-    black = img.mean(axis=2) < 10
-    csum = np.cumsum(black, axis=0, dtype=np.int16)
-    csum = np.vstack([np.zeros((1, w), np.int16), csum])
-    run = csum[12:] - csum[:-12]
-    south = run[h // 2 :] == 12
-    has = south.any(axis=0)
-    edge = np.where(has, south.argmax(axis=0) + h // 2, h - 12).astype(np.float32)
+def align_and_tint(width):
+    """The 300 m terrain, turned to the package's longitude, coloured by the MVIC map."""
+    for path in (TERRAIN_PATH, COLOUR_PATH):
+        if not os.path.exists(path):
+            sys.exit(f"missing {path}")
+    file_sha(TERRAIN_PATH, TERRAIN_SHA, "terrain")
+    file_sha(COLOUR_PATH, COLOUR_SHA, "colour")
+    height = width // 2
+    grey = np.array(
+        Image.open(TERRAIN_PATH).convert("L").resize((width, height), Image.Resampling.LANCZOS),
+        dtype=np.float32,
+    )
+    colour = np.array(
+        Image.open(COLOUR_PATH).convert("RGB").resize((width, height), Image.Resampling.LANCZOS),
+        dtype=np.float32,
+    )
+    colour = roll_half(colour)
+    lum = colour.mean(axis=2)
+    best, shift = -1.0, 0.0
+    for frac in (0.0, 0.5):
+        rolled = np.roll(grey, int(width * frac), axis=1)
+        mask = (rolled > 12) & (lum > 12)
+        mask[int(height * 0.7) :] = False
+        score = float(np.corrcoef(rolled[mask], lum[mask])[0, 1]) if mask.sum() > 1000 else -1.0
+        if score > best:
+            best, shift = score, frac
+    grey = np.roll(grey, int(width * shift), axis=1)
+    print(f"terrain aligned at roll {shift} (correlation {best:.3f})", flush=True)
+    tone = colour[lum > 12].mean(axis=0)
+    painted = colour * (grey[..., None] / np.maximum(lum[..., None], 8.0))
+    missing = lum < 12
+    painted[missing] = grey[missing][..., None] * (tone / max(float(tone.mean()), 1.0))
+    painted[grey < 4] = 0
+    return np.clip(painted, 0, 255).astype(np.uint8), grey
+
+
+def photo_edge(grey):
+    """The row after the last photographed pixel. A dark crater does not count: the polar night is black from the edge all the way to the pole. A column with no data takes the median, so a gore does not pull the quilt up to the equator."""
+    h, w = grey.shape
+    data = grey >= 2
+    rev = data[::-1]
+    has = rev.any(axis=0)
+    last = h - 1 - rev.argmax(axis=0)
+    edge = np.where(has, last + 1, np.nan).astype(np.float64)
+    edge[~has] = np.nanmedian(edge)
     pad = np.pad(edge, 15, mode="wrap")
-    edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 31), axis=1)
+    edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 31), axis=1).astype(np.float32)
     half = max(8, w // 64)
     pad = np.pad(edge, half, mode="wrap")
-    low = np.lib.stride_tricks.sliding_window_view(pad, 2 * half + 1).min(axis=1)
-    # `low` stays north of every black pixel nearby; `edge` follows the ragged end of the photographs, which is where the blend sits
+    low = np.lib.stride_tricks.sliding_window_view(pad, 2 * half + 1).min(axis=1).astype(np.float32)
     return edge, low
 
 
 def patch_window(n):
-    """A raised cosine, 1 in the middle and 0 at the edges, so overlapping patches of the real ground meet with no square edge."""
     t = np.linspace(-np.pi, np.pi, n, dtype=np.float32)
     w = (0.5 * (1 + np.cos(t))).astype(np.float32)
     return np.outer(w, w)
 
 
-def add_patch(acc, weight, src, win, y, x):
-    """Add one windowed patch. Longitude wraps; a patch that would run off the pole is clipped."""
-    h, w, _ = acc.shape
-    ph, pw = win.shape
+def take(img, y, x, n):
+    h, w = img.shape[:2]
+    ys = np.arange(y, y + n)
+    xs = np.arange(x, x + n) % w
+    if ys.min() < 0 or ys.max() >= h:
+        return None
+    return img[ys][:, xs]
+
+
+def source_points(img, safe, patch):
+    h, w, _ = img.shape
+    step = max(16, patch // 2)
+    found = []
+    for x in range(0, w, step):
+        y = int(safe[x]) - patch - 4
+        block = take(img, y, x, patch)
+        if block is not None and (block.mean(axis=2) < 8).mean() < 0.05:
+            found.append((y, x, (y // step, x // step)))
+    for y in range(int(h * 0.12), int(h * 0.48), step):
+        for x in range(0, w, step * 2):
+            if y + patch >= int(safe[min(x, w - 1)]):
+                continue
+            block = take(img, y, x, patch)
+            if block is not None and (block.mean(axis=2) < 8).mean() < 0.08:
+                found.append((y, x, (y // step, x // step)))
+    return found
+
+
+def varied_patch(img, y, x, n, rot, scale):
+    src = take(img, y, x, n)
+    if src is None:
+        return None
+    src = np.array(src)
+    if rot:
+        src = np.rot90(src, int(rot))
+    if abs(scale - 1) > 0.03:
+        m = max(8, int(round(n * scale)))
+        arr = np.array(Image.fromarray(src).resize((m, m), Image.Resampling.BILINEAR))
+        if m >= n:
+            o = (m - n) // 2
+            src = arr[o : o + n, o : o + n]
+        else:
+            canvas = np.zeros((n, n, src.shape[2]), np.uint8)
+            o = (n - m) // 2
+            canvas[o : o + m, o : o + m] = arr
+            src = canvas
+    return src
+
+
+def add_patch(acc, weight, src, win, y, x, wrap=False):
+    h, w = weight.shape
+    ph, pw = src.shape[:2]
     y1 = min(h, y + ph)
-    if y1 <= y or y >= h:
+    if y1 <= y or y >= h or y < 0:
         return
     src = src[: y1 - y]
     win = win[: y1 - y]
+    if not wrap:
+        x1 = min(w, x + pw)
+        x0 = max(x, 0)
+        if x1 <= x0 or x >= w:
+            return
+        part = src[:, x0 - x : x0 - x + (x1 - x0)]
+        part_w = win[:, x0 - x : x0 - x + (x1 - x0)]
+        acc[y:y1, x0:x1] += part.astype(np.float32) * part_w[..., None]
+        weight[y:y1, x0:x1] += part_w
+        return
     x0 = x % w
     if x0 + pw <= w:
-        acc[y:y1, x0 : x0 + pw] += src * win[..., None]
+        acc[y:y1, x0 : x0 + pw] += src.astype(np.float32) * win[..., None]
         weight[y:y1, x0 : x0 + pw] += win
         return
     cut = w - x0
-    acc[y:y1, x0:] += src[:, :cut] * win[:, :cut, None]
+    acc[y:y1, x0:] += src[:, :cut].astype(np.float32) * win[:, :cut, None]
     weight[y:y1, x0:] += win[:, :cut]
-    acc[y:y1, : pw - cut] += src[:, cut:] * win[:, cut:, None]
+    acc[y:y1, : pw - cut] += src[:, cut:].astype(np.float32) * win[:, cut:, None]
     weight[y:y1, : pw - cut] += win[:, cut:]
 
 
-def source_band(safe, height, patch):
-    bot = int(safe.min()) - patch - 2
-    top = max(0, bot - patch)
-    if bot <= top:
-        sys.exit("the photographed band is too thin to quilt from")
-    return top, bot
+def seam_error(acc, weight, src, y, x):
+    h, w = weight.shape
+    n = src.shape[0]
+    y1 = min(h, y + min(8, n))
+    x1 = min(w, x + n)
+    if y1 <= y or x1 <= x:
+        return 40.0
+    ww = weight[y:y1, x:x1]
+    have = ww > 0.25
+    if not have.any():
+        return 40.0
+    got = acc[y:y1, x:x1][have] / ww[have, None]
+    return float(np.abs(got - src[: y1 - y, : x1 - x][have].astype(np.float32)).mean())
 
 
 def quilt(img, edge, safe, rng):
-    """Lay large patches of the ground just north of the edge over the unphotographed south. Each patch is a real piece of the mosaic, taken from about the same longitude, and the patches overlap so widely that no square shows."""
+    """Fill the south with many different pieces of the photographed ground."""
     h, w, _ = img.shape
     deg = w / 360.0
-    patch = max(48, int(8 * deg))
-    step = max(24, patch // 3)
-    top, bot = source_band(safe, h, patch)
+    patch = max(48, int(5 * deg))
+    step = max(16, patch // 2)
+    found = source_points(img, safe, patch)
+    if len(found) < 12:
+        sys.exit(f"only {len(found)} photographed patches")
     win = patch_window(patch)
     acc = np.zeros((h, w, 3), np.float32)
     weight = np.zeros((h, w), np.float32)
     photo = np.arange(h)[:, None] < safe[None, :]
     acc[photo] = img[photo]
     weight[photo] = 1
-    cap = int(h * (90 + POLAR_FROM) / 180)
-    y = int(safe.min()) - patch // 5
-    rows = 0
-    while y < cap:
-        x = int(rng.integers(0, step))
+    placed = {}
+    row_i = 0
+    count = 0
+    y = int(np.percentile(safe, 8)) - patch // 3
+    while y < h - 2:
+        x = int(rng.integers(0, max(1, step // 3)))
+        col_i = 0
         while x < w:
-            sy = int(bot - rng.integers(0, max(1, bot - top)))
-            sx = int(x + rng.integers(-int(6 * deg), int(6 * deg) + 1)) % w
-            src = take(img, sy, sx, patch, patch).astype(np.float32)
-            add_patch(acc, weight, src, win, y, x)
+            banned = {placed.get((col_i - 1, row_i)), placed.get((col_i, row_i - 1))}
+            banned.discard(None)
+            best_src, best_key, best_err = None, None, 1e9
+            for _try in range(8):
+                sy, sx, key = found[int(rng.integers(0, len(found)))]
+                if key in banned:
+                    continue
+                src = varied_patch(img, sy, sx, patch, int(rng.integers(0, 4)), float(rng.uniform(0.9, 1.12)))
+                if src is None:
+                    continue
+                err = seam_error(acc, weight, src, y, x)
+                if err < best_err:
+                    best_src, best_key, best_err = src, key, err
+            if best_src is None:
+                sy, sx, key = found[int(rng.integers(0, len(found)))]
+                best_src = varied_patch(img, sy, sx, patch, int(rng.integers(0, 4)), 1.0)
+                best_key = key
+            if best_src is not None:
+                add_patch(acc, weight, best_src, win, y + int(rng.integers(-4, 5)), x, wrap=True)
+                placed[(col_i, row_i)] = best_key
+                count += 1
             x += step
+            col_i += 1
         y += step
-        rows += 1
-    covered = weight > 0.2
+        row_i += 1
+    covered = weight > 0.15
     mixed = np.divide(acc, weight[..., None], out=np.zeros_like(acc), where=covered[..., None])
     quilted = img.copy()
     quilted[covered] = np.clip(mixed[covered], 0, 255).astype(np.uint8)
-    done = rows
+    span = max(8.0, h * 0.045)
     rows = np.arange(h)[:, None]
-    span = max(8.0, h * 0.055)
     t = np.clip((rows - (edge[None, :] - span)) / span, 0, 1)
     t = (t * t * (3 - 2 * t))[..., None]
     out = np.clip(img.astype(np.float32) * (1 - t) + quilted.astype(np.float32) * t, 0, 255).astype(np.uint8)
-    print(f"  quilted {done} rows of {patch}px patches", flush=True)
+    print(f"  quilted {row_i} rows from {count} patches of {patch}px", flush=True)
     return out
 
 
-def polar_cap(img, edge, safe, rng):
-    """The last degrees, made where a pixel is the same size north and east, from the same real patches, then put back one pixel at a time so the pole is not pinched."""
+def fill_holes(polar, weight, inside):
+    hole = inside & (weight < 0.05)
+    for _ in range(24):
+        if not hole.any():
+            break
+        padded = np.pad(polar, ((1, 1), (1, 1), (0, 0)), mode="edge")
+        ww = np.pad(weight, 1, mode="edge")
+        acc = np.zeros_like(polar)
+        count = np.zeros(polar.shape[:2], np.float32)
+        for dy in (-1, 0, 1):
+            for dx in (-1, 0, 1):
+                if dy == 0 and dx == 0:
+                    continue
+                sl = padded[1 + dy : 1 + dy + polar.shape[0], 1 + dx : 1 + dx + polar.shape[1]]
+                sw = ww[1 + dy : 1 + dy + weight.shape[0], 1 + dx : 1 + dx + weight.shape[1]]
+                good = sw > 0.2
+                acc[good] += sl[good]
+                count[good] += 1
+        use = hole & (count > 0)
+        polar[use] = acc[use] / count[use, None]
+        weight[use] = 1
+        hole = inside & (weight < 0.05)
+    if hole.any() and (weight > 0.5).any():
+        polar[hole] = polar[weight > 0.5].mean(axis=0)
+        weight[hole] = 1
+    return polar, weight
+
+
+def polar_cap(img, safe, rng):
+    """The pole, made as one square picture and written onto every southern pixel."""
     h, w, _ = img.shape
     px = w / 360.0
-    radius_deg = (90 - POLAR_FROM) + 6.0
-    radius = int(radius_deg * px)
+    radius_deg = 90.0 + POLAR_BLEND + 3.0
+    radius = max(16, int(round(radius_deg * px)))
     size = radius * 2 + 1
     cy = cx = radius
     yy, xx = np.mgrid[0:size, 0:size]
-    rr = np.hypot(yy - cy, xx - cx)
-    ang = np.arctan2(xx - cx, -(yy - cy))
+    dx = xx - cx
+    dy = yy - cy
+    rr = np.hypot(dy, dx)
     lat = -90.0 + rr / px
-    lon = np.degrees(ang)
-    eq_y = np.clip(((90.0 - lat) / 180.0 * h).astype(int), 0, h - 1)
-    eq_x = np.clip(((lon + 180.0) / 360.0 * w).astype(int), 0, w - 1)
+    lon = np.degrees(np.arctan2(dx, -dy))
     acc = np.zeros((size, size, 3), np.float32)
     weight = np.zeros((size, size), np.float32)
-    have = (lat >= -POLAR_FROM) & (rr <= radius)
-    acc[have] = img[eq_y[have], eq_x[have]]
-    weight[have] = 1
-    deg = w / 360.0
-    patch = max(32, int(6 * deg))
-    step = max(16, patch // 3)
-    top, bot = source_band(safe, h, patch)
+    ring = (lat >= POLAR_BLEND - 4) & (lat <= POLAR_BLEND + 1) & (rr <= radius)
+    eq_y = np.clip(((90.0 - lat) / 180.0 * h).astype(np.int32), 0, h - 1)
+    eq_x = np.mod(((lon + 180.0) / 360.0 * w).astype(np.int32), w)
+    acc[ring] = img[eq_y[ring], eq_x[ring]]
+    weight[ring] = 1
+    patch = max(32, int(14 * px))
+    found = source_points(img, safe, patch)
+    if len(found) < 8:
+        sys.exit(f"only {len(found)} patches for the pole")
     win = patch_window(patch)
-    count = max(40, (size // step) ** 2)
-    for _ in range(count):
-        y = int(rng.integers(0, size - patch))
-        x = int(rng.integers(0, size - patch))
-        if rr[y + patch // 2, x + patch // 2] > radius - 2:
-            continue
-        if have[y : y + patch, x : x + patch].mean() > 0.9:
-            continue
-        sy = int(rng.integers(top, bot))
-        sx = int(rng.integers(0, w))
-        src = take(img, sy, sx, patch, patch).astype(np.float32)
-        acc[y : y + patch, x : x + patch] += src * win[..., None]
-        weight[y : y + patch, x : x + patch] += win
-    polar = np.divide(acc, np.maximum(weight, 1e-6)[..., None], out=np.zeros_like(acc), where=(weight > 0)[..., None])
-    # a missed pixel would be black, and at the pole that black is a hole. Fill it from the covered ground, and make the centre one colour.
-    hole = weight < 0.05
-    covered = weight > 0.2
-    if covered.any():
-        fill = polar[covered].mean(axis=0)
-        polar[hole] = fill
-        weight[hole] = 1
-        polar[cy - 3 : cy + 4, cx - 3 : cx + 4] = polar[cy - 14 : cy - 7, cx - 3 : cx + 4].mean(axis=(0, 1))
-        weight[cy - 3 : cy + 4, cx - 3 : cx + 4] = 1
-    y0 = int(h * (90 + POLAR_FROM - 8) / 180)
+    step = max(8, patch // 2)
+    count = 0
+    for y in range(0, size - patch, step):
+        for x in range(0, size - patch, step):
+            if rr[y + patch // 2, x + patch // 2] > radius - 2:
+                continue
+            best_src, best_err = None, 1e9
+            for _try in range(6):
+                sy, sx, _key = found[int(rng.integers(0, len(found)))]
+                src = varied_patch(img, sy, sx, patch, int(rng.integers(0, 4)), float(rng.uniform(0.9, 1.12)))
+                if src is None:
+                    continue
+                err = seam_error(acc, weight, src, y, x)
+                if err < best_err:
+                    best_src, best_err = src, err
+            if best_src is not None:
+                add_patch(acc, weight, best_src, win, y, x)
+                count += 1
+    inside = rr <= radius
+    covered = weight > 0.05
+    polar = np.divide(acc, np.maximum(weight, 1e-6)[..., None], out=np.zeros_like(acc), where=covered[..., None])
+    polar, weight = fill_holes(polar, weight, inside)
+    y0 = int((90.0 - (POLAR_BLEND + 1)) / 180.0 * h)
     lats = 90.0 - (np.arange(y0, h) + 0.5) / h * 180.0
     lons = np.radians((np.arange(w) + 0.5) / w * 360.0 - 180.0)
     rad = (90.0 + lats)[:, None] * px
     fy = cy - rad * np.cos(lons)[None, :]
     fx = cx + rad * np.sin(lons)[None, :]
-    yf = np.clip(np.floor(fy).astype(int), 0, size - 2)
-    xf = np.clip(np.floor(fx).astype(int), 0, size - 2)
+    yf = np.clip(np.floor(fy).astype(np.int32), 0, size - 2)
+    xf = np.clip(np.floor(fx).astype(np.int32), 0, size - 2)
     ty = (fy - yf)[..., None]
     tx = (fx - xf)[..., None]
     sampled = (
@@ -226,42 +374,78 @@ def polar_cap(img, edge, safe, rng):
         + polar[yf + 1, xf] * ty * (1 - tx)
         + polar[yf + 1, xf + 1] * ty * tx
     )
-    wy = ty[..., 0]
-    wx = tx[..., 0]
-    covered = (
-        weight[yf, xf] * (1 - wy) * (1 - wx)
-        + weight[yf, xf + 1] * (1 - wy) * wx
-        + weight[yf + 1, xf] * wy * (1 - wx)
-        + weight[yf + 1, xf + 1] * wy * wx
-    )
-    tw = np.clip((8.0 - (lats + POLAR_FROM)) / 8.0, 0, 1)[:, None] * np.clip(covered / 0.35, 0, 1)
-    tw = tw[..., None]
+    tw = np.clip((POLAR_BLEND - lats) / (POLAR_BLEND - POLAR_FULL), 0, 1)[:, None, None]
+    img = img.copy()
     img[y0:] = np.clip(img[y0:].astype(np.float32) * (1 - tw) + sampled * tw, 0, 255).astype(np.uint8)
+    dark = img[y0:].mean(axis=2) < 1
+    if dark.mean() > 0.002:
+        rows = np.where(dark.any(axis=1))[0]
+        lat_dark = lats[rows] if len(rows) else []
+        print(f"  pole holes {dark.mean():.1%} at latitudes {lat_dark[:3]} .. {lat_dark[-3:] if len(lat_dark) else ''}", flush=True)
+    print(f"  polar cap {size}px, {count} patches, join {POLAR_BLEND:.0f} to {POLAR_FULL:.0f}", flush=True)
     return img
 
 
-def take(img, y, x, bh, bw):
+def pole_view(img, n=700):
+    """A disc as the globe sees the south pole, so a pinched pole shows as spokes."""
     h, w, _ = img.shape
-    xs = np.arange(x, x + bw) % w
-    return img[y : y + bh][:, xs]
+    yy, xx = np.mgrid[0:n, 0:n]
+    cy = cx = (n - 1) / 2.0
+    r = np.hypot(yy - cy, xx - cx) / (n / 2.0)
+    lat = -90.0 + r * 55.0
+    lon = np.degrees(np.arctan2(xx - cx, -(yy - cy)))
+    fy = (90.0 - lat) / 180.0 * h - 0.5
+    fx = (lon + 180.0) / 360.0 * w - 0.5
+    yf = np.clip(np.floor(fy).astype(np.int32), 0, h - 2)
+    xf = np.clip(np.floor(fx).astype(np.int32), 0, w - 2)
+    ty = (fy - yf)[..., None]
+    tx = (fx - xf)[..., None]
+    fx1 = (xf + 1) % w
+    sampled = (
+        img[yf, xf] * (1 - ty) * (1 - tx)
+        + img[yf, fx1] * (1 - ty) * tx
+        + img[yf + 1, xf] * ty * (1 - tx)
+        + img[yf + 1, fx1] * ty * tx
+    )
+    sampled[r > 1] = 20
+    return np.clip(sampled, 0, 255).astype(np.uint8)
 
+
+def match_brightness(img, edge):
+    """The generated south is brought to the brightness of the mapped ground, feathered across the edge, so it does not read as a lighter band."""
+    h, w, _ = img.shape
+    ref = float(img[int(h * 0.2) : int(h * 0.5)].mean())
+    south = float(img[int(h * 0.85) :].mean())
+    if south < 1:
+        return img
+    scale = float(np.clip(ref / south * 0.98, 0.75, 1.0))
+    rows = np.arange(h)[:, None]
+    span = h * 0.06
+    t = np.clip((rows - (edge[None, :] - span)) / (span * 2), 0, 1)
+    t = (t * t * (3 - 2 * t))[..., None]
+    out = np.clip(img.astype(np.float32) * (1 - t + t * scale), 0, 255).astype(np.uint8)
+    print(f"  south brightness x{scale:.3f}", flush=True)
+    return out
 
 
 def build(width):
     licence_is_public_domain()
-    full = roll_half(source_image())
-    height = width // 2
-    img = np.array(Image.fromarray(full).resize((width, height), Image.Resampling.LANCZOS))
-    edge, safe = photo_edge(img)
-    print(f"edge rows {edge.min():.0f} to {edge.max():.0f} of {height} (about {90 - edge.mean() / height * 180:.0f} degrees south)")
+    painted, grey = align_and_tint(width)
+    edge, safe = photo_edge(grey)
+    height = painted.shape[0]
+    print(
+        f"edge rows {edge.min():.0f} to {edge.max():.0f} of {height} "
+        f"(about {90 - edge.mean() / height * 180:.0f} degrees south)",
+        flush=True,
+    )
     rng = np.random.default_rng(SEED)
-    img = quilt(img, edge, safe, rng)
-    img = polar_cap(img, edge, safe, rng)
-    # the south must carry real variation, not one tone
+    img = quilt(painted, edge, safe, rng)
+    img = polar_cap(img, safe, rng)
+    img = match_brightness(img, edge)
     south = img[int(edge.max()) + 8 :]
     if float(south.std()) < 8:
         sys.exit(f"the south is flat (std {south.std():.1f}): the quilt failed")
-    return img, edge
+    return img
 
 
 def write_master(img):
@@ -278,37 +462,52 @@ def write_master(img):
             "",
             "Equirectangular, 16384 by 8192, north at the top, longitude 0 in the middle.",
             "",
-            f"- Source: {SOURCE_TITLE}",
-            f"- Address: {SOURCE_URL}",
-            f"- Source SHA-256: `{SOURCE_SHA}`",
-            "- Licence: public domain (Wikimedia Commons metadata, NASA / Johns Hopkins University Applied Physics Laboratory / Southwest Research Institute).",
+            f"- Terrain: Pluto_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif",
+            f"- Terrain page: {TERRAIN_PAGE}",
+            f"- Terrain file: {TERRAIN_URL}",
+            f"- Terrain SHA-256: `{TERRAIN_SHA}`",
+            "- Terrain credit: NASA / JHUAPL / SwRI / LPI, published by USGS Astrogeology. Public domain. 300 m per pixel, 8-bit. A pixel of 0 is no data.",
+            f"- Colour: PIA11707.tif (Ralph/MVIC global colour mosaic)",
+            f"- Colour page: {COLOUR_PAGE}",
+            f"- Colour file: {COLOUR_URL}",
+            f"- Colour SHA-256: `{COLOUR_SHA}`",
+            "- Colour credit: NASA / JHUAPL / SwRI. Public domain.",
+            "- The Commons JPEG is not this picture. Its licence is still checked, because NOTICE names that file.",
             "- Generator: `scripts/pluto-south.py` in wakusei-planets.",
             f"- Seed: {SEED}.",
             "- Date: 2026-11-23.",
-            "- What it is: the New Horizons mosaic, with the unphotographed south quilted from real patches of the ground just north of the ragged edge. The pole is filled in a south-polar projection. It is not a photograph of that ground.",
+            "- What it is: the 300 m terrain, coloured by the MVIC map, with the unphotographed south quilted from many different pieces of that photographed ground (turned by right angles, scaled a little, never the same piece beside itself). The pole is one picture in a south-polar projection, written back so it is not pinched. It is not a photograph of that ground.",
             f"- Master SHA-256: `{digest}`.",
             "",
         ]))
-    print(f"master {path} ({os.path.getsize(path) // (1024 * 1024)} MB)")
+    print(f"master {path} ({os.path.getsize(path) // (1024 * 1024)} MB)", flush=True)
+    write_webps(img)
+
+
+def write_webps(img):
     out = os.path.join(ROOT, "textures")
     for w in WIDTHS:
         small = Image.fromarray(img).resize((w, w // 2), Image.Resampling.LANCZOS)
         webp = os.path.join(out, f"pluto-{w}.webp")
         small.save(webp, "WEBP", quality=82, method=6)
-        print(f"  pluto-{w}.webp {os.path.getsize(webp) // 1024} KB")
+        print(f"  pluto-{w}.webp {os.path.getsize(webp) // 1024} KB", flush=True)
 
 
 def main():
     width = MASTER_W
     if len(sys.argv) == 3 and sys.argv[1] == "--width":
         width = int(sys.argv[2])
-    img, _ = build(width)
+    img = build(width)
+    page = Image.fromarray(img).resize((1400, 700), Image.Resampling.LANCZOS)
     if width == MASTER_W:
+        page.save("/tmp/pluto-south-page.jpg", quality=88)
+        Image.fromarray(pole_view(img, 900)).save("/tmp/pluto-south-pole.jpg", quality=90)
         write_master(img)
     else:
         path = f"/tmp/pluto-south-{width}.jpg"
-        Image.fromarray(img).save(path, quality=90)
-        print(f"preview {path}")
+        page.save(path, quality=88)
+        Image.fromarray(pole_view(img)).save("/tmp/pluto-south-pole.jpg", quality=90)
+        print(f"preview {path}", flush=True)
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **Pluto's unseen south is generated from the New Horizons mosaic** (MODULES-1798). The polar night was a plain tone. South of the photographed edge, the map is generated from New Horizons images (NASA, public domain): real patches of the photographed ground, at the mosaic's ground scale, blended across the ragged edge, with the pole filled in a south-polar projection. It is not a photograph of that ground. `scripts/pluto-south.py`, seed 17981123.
+- **Pluto's unseen south is generated from the New Horizons mosaic** (MODULES-1798). The polar night was a plain tone. The photographed half is the USGS 300 m LORRI/MVIC mosaic, coloured by the Ralph/MVIC map (PIA11707). South of that edge the map is quilted from many different pieces of the photographed ground, turned by right angles and scaled a little, and the pole is filled in a south-polar projection. It is not a photograph of that ground. `scripts/pluto-south.py`, seed 17981123.
 
 ## [0.75.0] - 2026-11-23
 
