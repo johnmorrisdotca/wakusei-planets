@@ -113,7 +113,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   pd("moon", "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro); Lunar Reconnaissance Orbiter Camera", "NASA Scientific Visualization Studio（Ernie Wright、Noah Petro）、Lunar Reconnaissance Orbiter Camera"),
   pd("io", "NASA / JPL (Galileo SSI and Voyager images); the file page names no author", "NASA / JPL（Galileo SSIとVoyagerの画像）。ファイルのページに作者の名はありません"),
   pd("europa", "U.S. Geological Survey / Planetary Data System / Tammy Becker", "U.S. Geological Survey / Planetary Data System / Tammy Becker"),
-  pd("ganymede", "USGS", "USGS"),
+  pd("ganymede", "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI", "NASA / JPL / USGS Astrogeology（ボイジャー1号・2号とガリレオSSI）"),
   pd("callisto", "USGS", "USGS"),
   pd("titan", "NASA / JPL / Space Science Institute", "NASA / JPL / Space Science Institute"),
   pd("earth", "NASA Earth Observatory (Reto Stockli), Blue Marble", "NASA Earth Observatory（Reto Stockli）、Blue Marble"),

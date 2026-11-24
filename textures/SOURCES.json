@@ -88,12 +88,13 @@
     "usage": "Public domain"
   },
   "ganymede": {
-    "file": "Ganymede equatorial.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Ganymede_equatorial.jpg",
+    "file": "Ganymede_Voyager_GalileoSSI_global_mosaic_1km.tif",
+    "page": "https://astrogeology.usgs.gov/search/map/ganymede_voyager_galileo_ssi_global_mosaic_1km",
     "licence": "Public domain",
-    "credit": "http://geopubs.wr.usgs.gov/i-map/i2762/",
-    "artist": "USGS",
-    "usage": "Public domain"
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI",
+    "usage": "The monochrome mosaic supplies measured relief, and the colour mosaic (https://planetarymaps.usgs.gov/mosaic/Ganymede_Voyager_GalileoSSI_Global_ClrMosaic_1435m.tif, public domain) supplies low-pass colour. Soft or missing ground was painted in equal-area polar views, including the noisy southern Voyager swath. The delivery width is matched to the resolved terrain, and the higher-pixel-count working map is retained. Parts of Ganymede were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "c2c8d9506b8cf8f7a0a90d823d9052e91c8d9885cf7267fdce8de8216f4df888"
   },
   "callisto": {
     "file": "Callisto equatorial.jpg",
