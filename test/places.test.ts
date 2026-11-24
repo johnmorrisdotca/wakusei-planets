@@ -229,7 +229,7 @@ test("a distance on an irregular body is the circle on its mean radius, and the 
   }
   assert.equal(placeDistance("eros", quarter, east).accuracyKm, null);
   assert.ok(Math.abs(placeDistance("ryugu", quarter, east).accuracyKm! - right * 0.032) < 1e-9);
-  assert.ok(Math.abs(placeDistance("bennu", quarter, east).accuracyKm! - right * 0.012) < 1e-9);
+  assert.equal(placeDistance("bennu", quarter, east).accuracyKm, null);
   assert.ok(Math.abs(placeDistance("dimorphos", quarter, east).accuracyKm! - right * 0.01525) < 1e-9);
   assert.ok(Math.abs(placeDistance("tempel-1", quarter, east).accuracyKm! - right * 0.675) < 1e-9);
   assert.equal(placeDistance("67p", quarter, east).accuracyKm, null);

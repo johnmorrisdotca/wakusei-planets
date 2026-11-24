@@ -4,6 +4,13 @@ import { rock } from "../scene/recipes.ts";
 // The minor bodies, drawn from their numbers: a rock of the body's colour with craters. Vesta has Dawn's own map as its painted look; the others have never been seen as more than a few pixels
 // (Halley's nucleus was photographed by the Giotto probe in 1986, a picture whose terms keep it out of this package), so their craters and patches are made up.
 registerLook({
+  id: "bennu",
+  surface: rock({ dark: "#4a4a4a", light: "#9a9a9a", craters: 0.6, contrast: 0.6, seed: 101955, patches: 1.4 }),
+  relief: 0.4,
+  ambient: 0.12,
+  craft: () => import("../data/shapes/bennu-craft.ts").then((m) => m.BENNU_CRAFT),
+});
+registerLook({
   id: "eros",
   surface: rock({ dark: "#5c5c5c", light: "#b0b0b0", craters: 0.4, contrast: 0.5, seed: 433, patches: 1.2 }),
   relief: 0.3,

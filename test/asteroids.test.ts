@@ -45,9 +45,9 @@ const utcOf = (jd: number): number => {
 
 test("the counts by kind and group are pinned", () => {
   const count = (kind: AsteroidKind): number => asteroidsOfKind(kind).length;
-  assert.equal(ASTEROIDS.length, 103);
-  assert.deepEqual(ASTEROID_KINDS.map(count), [28, 38, 16, 7, 14]);
-  assert.deepEqual(["Atira", "Aten", "Apollo", "Amor"].map((g) => asteroidsOfKind("near-earth", g as "Amor").length), [1, 4, 20, 3]);
+  assert.equal(ASTEROIDS.length, 102);
+  assert.deepEqual(ASTEROID_KINDS.map(count), [27, 38, 16, 7, 14]);
+  assert.deepEqual(["Atira", "Aten", "Apollo", "Amor"].map((g) => asteroidsOfKind("near-earth", g as "Amor").length), [1, 4, 19, 3]);
   assert.equal(asteroidList(), ASTEROIDS);
   assert.equal(ASTEROIDS_FETCHED, "2026-11-11");
   assert.equal(fixture.fetched, "2026-11-11");
@@ -62,7 +62,7 @@ test("no id or number twice, and none of the bodies the package already has", ()
   const own = [...DWARF_IDS, ...MINOR_IDS, "pluto", "roadster", "starman"] as string[];
   for (const id of ids) assert.ok(!own.includes(id), `${id} is a body the package already has`);
   // Ceres 1, Pallas 2, Vesta 4, Chiron 2060, Pholus 5145, Orcus 90482, Haumea 136108, Quaoar 50000, Makemake 136472, Gonggong 225088, Eris 136199, Sedna 90377, Pluto 134340, Halley 1P
-  for (const n of [1, 2, 4, 2060, 5145, 90482, 136108, 50000, 136472, 225088, 136199, 90377, 134340]) assert.equal(findAsteroid(n), undefined, `number ${n} is already in the package`);
+  for (const n of [1, 2, 4, 433, 101955, 2060, 5145, 90482, 136108, 50000, 136472, 225088, 136199, 90377, 134340]) assert.equal(findAsteroid(n), undefined, `number ${n} is already in the package`);
 });
 
 test("every record is complete: names in both languages, an ellipse, a source, a year, a kind that agrees with the orbit", () => {
@@ -101,7 +101,6 @@ test("known records: names, years, sizes, groups, hazard flags and missions as t
   assert.equal(findAsteroid("Arrokoth")!.kind, "trans-neptunian");
   assert.equal(findAsteroid("Hygiea")!.discoveryYear, 1849);
   assert.equal(findAsteroid("Ryugu")!.missions[0]!.name, "Hayabusa2");
-  assert.equal(findAsteroid("Bennu")!.missions[0]!.year, 2018);
   assert.equal(findAsteroid("Itokawa")!.missions[0]!.year, 2005);
   assert.deepEqual(findAsteroid("Didymos")!.missions.map((m) => m.name), ["DART", "Hera"]);
   assert.equal(findAsteroid("Didymos")!.satellites, 1);
@@ -118,14 +117,14 @@ test("known records: names, years, sizes, groups, hazard flags and missions as t
   assert.equal(findAsteroid("Leleākūhonua")!.designation, "2015 TG387");
   // the Lucy targets and the visits already made
   assert.deepEqual(["Eurybates", "Polymele", "Leucus", "Orus", "Patroclus"].map((n) => findAsteroid(n)!.missions[0]!.name), ["Lucy", "Lucy", "Lucy", "Lucy", "Lucy"]);
-  assert.equal(ASTEROIDS.filter((a) => a.missions.some((m) => !m.planned)).length, 19);
-  assert.equal(ASTEROIDS.filter((a) => a.hazardous).length, 17);
+  assert.equal(ASTEROIDS.filter((a) => a.missions.some((m) => !m.planned)).length, 18);
+  assert.equal(ASTEROIDS.filter((a) => a.hazardous).length, 16);
 });
 
 test("findAsteroid reads an id, a number, a designation, an English or a Japanese name, and nothing else", () => {
   const itokawa = findAsteroid("Itokawa");
   for (const q of ["itokawa", "ITOKAWA", " Itokawa ", 25143, "25143", "1998 SF36", "イトカワ"]) assert.equal(findAsteroid(q), itokawa, String(q));
-  for (const q of ["eros", "Eros", 433, "エロス"]) assert.equal(findAsteroid(q), undefined, String(q));
+  for (const q of ["eros", "Eros", 433, "エロス", "bennu", "Bennu", 101955, "ベンヌ"]) assert.equal(findAsteroid(q), undefined, String(q));
   assert.equal(findAsteroid("Kamo`oalewa")!.id, "kamooalewa");
   assert.equal(findAsteroid("kamo‘oalewa"), findAsteroid("KAMOOALEWA"));
   assert.equal(findAsteroid("Steins")!.number, 2867);
@@ -142,12 +141,12 @@ test("two-body positions against JPL Horizons within a year of each epoch: the e
   const bound: Record<AsteroidKind, number[]> = { "near-earth": [1e-7, 4e-4, 1e-3], "main-belt": [1e-7, ASTEROID_ACCURACY.halfYearAu, ASTEROID_ACCURACY.yearAu], trojan: [1e-7, 4e-4, 1e-3], centaur: [1e-7, 4e-4, 1e-3], "trans-neptunian": [1e-7, 4e-4, 1e-3] };
   const worst = { epoch: 0, half: 0, year: 0 };
   for (const body of fixture.bodies) {
-    if (body.id === "eros") {
-      // Eros is a body of the package. Its ellipse is the elements this row was fetched from, so it matches Horizons at that epoch.
+    if (body.id === "eros" || body.id === "bennu") {
+      // Eros and Bennu are bodies of the package. Each ellipse is the elements this row was fetched from, so it matches Horizons at that epoch.
       const row = body.rows.find((r) => Math.abs(r[0]! - 2_461_200.5) < 1)!;
-      const got = heliocentric("eros", utcOf(row[0]!));
+      const got = heliocentric(body.id, utcOf(row[0]!));
       const want: [number, number, number] = [row[1]! / AU_KM, row[2]! / AU_KM, row[3]! / AU_KM];
-      assert.ok(length(sub(got, want)) < 1e-3, `Eros the body at the epoch: ${length(sub(got, want)).toExponential(2)} au`);
+      assert.ok(length(sub(got, want)) < 1e-3, `${body.id} the body at the epoch: ${length(sub(got, want)).toExponential(2)} au`);
       continue;
     }
     const rec = findAsteroid(body.id)!;

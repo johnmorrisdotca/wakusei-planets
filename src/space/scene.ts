@@ -93,7 +93,7 @@ const ROADSTER_ORBIT_MS = 560 * 86_400_000;
 const ROADSTER_ORBIT_KEEP_MS = 30 * 86_400_000;
 
 /**
- * The twenty-five bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets, Pluto, the eight other dwarf planets and the six minor bodies (Eros, Vesta, Pallas, Chiron, Pholus and Halley). The moons of the planets and of the dwarf planets are placed round their hosts.
+ * The twenty-six bodies the space view places, names and lets a reader choose: the Earth, the Sun, the Moon, the seven other planets, Pluto, the eight other dwarf planets and the seven minor bodies (Bennu, Eros, Vesta, Pallas, Chiron, Pholus and Halley). The moons of the planets and of the dwarf planets are placed round their hosts.
  *
  * @example
  * ```ts no-run
