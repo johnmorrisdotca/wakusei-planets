@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-- **The sky behind the planets comes from hoshi** (MODULES-539). `/stars` calls `@johnmorrisdotca/hoshi-stars` 0.61.0 for the 5,080 bright stars. The copied Yale table and the script that wrote it are gone. Nothing else in this package imports the entry. A page that bundles the entry now carries hoshi's fuller table (about 145 KB gzipped; it was about 103 KB).
+- **The sky behind the planets comes from hoshi** (MODULES-539). `/stars` calls `@johnmorrisdotca/hoshi-stars` 0.61.0 for the 5,080 bright stars. The copied Yale table and the script that wrote it are gone. `<wakusei-space sky>` draws those stars, the constellation figures and a ribbon of the Milky Way behind the planets. The space view's bundle grows by that sky: `./space/element` is 1,246,019 bytes gzipped, 165,407 over its previous 1,080,612.
 
 ## [0.75.1] - 2026-11-23
 

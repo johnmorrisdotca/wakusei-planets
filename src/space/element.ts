@@ -316,7 +316,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "sky", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #moons: MoonsChoice = "major";
@@ -412,6 +412,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#model.orbiterLines = orbiterLines(this.getAttribute("orbiter-lines"));
     this.#model.orbiterTrack = this.hasAttribute("orbiter-track") && this.getAttribute("orbiter-track") !== "off";
     this.#model.orbits = this.getAttribute("orbits") !== "off";
+    this.#model.sky = this.hasAttribute("sky") && this.getAttribute("sky") !== "off";
     this.#model.arrowCount = arrowCount(this.getAttribute("arrows"));
     this.#model.help = this.hasAttribute("help") && this.getAttribute("help") !== "off";
     this.#model.helpThrough = this.hasAttribute("help-through") && this.getAttribute("help-through") !== "off";
@@ -575,6 +576,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
     else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
+    else if (name === "sky") this.sky = value !== null && value !== "off";
     else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
     else if (name === "moons") this.moons = readMoonsChoice(value);
     else if (name === "moons-of") this.moonsOf = readMoonsOf(value);
@@ -1588,6 +1590,15 @@ export class WakuseiSpace extends HTMLElement {
   }
   set orbits(value: boolean) {
     this.#model.orbits = value;
+    this.#gate?.request();
+  }
+
+  /** The bright stars, constellation lines and Milky Way behind the planets, from hoshi-stars. Off until `sky` is set. */
+  get sky(): boolean {
+    return this.#model.sky;
+  }
+  set sky(value: boolean) {
+    this.#model.sky = value;
     this.#gate?.request();
   }
 

@@ -17,6 +17,7 @@ import { edgeStretch, roundShape, squashPoint } from "../scene/round.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import { turn, type Vec3 } from "../vec.ts";
+import { createStarSky, holdStarSky } from "./starSky.ts";
 import { groundDirection } from "./aim.ts";
 import { hostOf } from "./bodies.ts";
 import { arrowSites, ARROWS_PER_ORBIT, chevron, helpSpin, MAX_ARROWS_PER_ORBIT, type HelpPlace, type OrbitArrow } from "./arrows.ts";
@@ -233,6 +234,8 @@ export interface SpaceModel {
   /** The moment the camera was last pointed at the ground: it is fixed to the stars, not to the ground. */
   anchor: number | null;
   orbits: boolean;
+  /** The bright stars, the constellation lines and the Milky Way, from hoshi-stars, drawn behind the planets. */
+  sky: boolean;
   labels: boolean;
   /** The catalogue as a source of places and orbits, for the planets set to show all their moons (`moons`), or null for none (or before it has loaded); the planets chosen; what the orbits' colours say. */
   moonSource: MoonSource | null;
@@ -443,6 +446,7 @@ export const newSpaceModel = (): SpaceModel => ({
   centre: { lon: 0, lat: 0 },
   anchor: null,
   orbits: true,
+  sky: false,
   labels: true,
   moonSource: null,
   moonHosts: new Set(),
@@ -630,6 +634,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const track = createTrack(model.stepMs);
       let trackStep = model.stepMs;
       const scene = new three.Scene();
+      let starSky: Awaited<ReturnType<typeof createStarSky>> = null;
+      let starSkyState: "idle" | "loading" | "missing" = "idle";
       // the small bodies of the record sources, in one instanced draw (a page's own subset of three needs the two instanced classes for it)
       const points = deps.book !== undefined && typeof (three as Partial<PointsThree>).InstancedBufferGeometry === "function" ? createSmallBodyPoints(three as unknown as PointsThree, { colours: Object.fromEntries(BELT_IDS.map((id) => [id, BELTS[id].colour])) }) : undefined;
       if (points !== undefined) scene.add(points.object);
@@ -1176,6 +1182,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const hiddenBody = rideFrom?.hiddenBody ?? null;
           const hiddenMoon = rideFrom?.hiddenMoon ?? null;
           const e2 = camera.matrixWorld.elements;
+          if (model.sky && starSkyState === "idle") {
+            starSkyState = "loading";
+            void createStarSky(three as unknown as Parameters<typeof createStarSky>[0]).then((group) => {
+              if (group === null) starSkyState = "missing";
+              else { starSky = group; scene.add(group as unknown as THREE.Object3D); }
+            }).catch(() => { starSkyState = "missing"; });
+          }
+          if (starSky !== null) { starSky.visible = model.sky; if (model.sky) holdStarSky(starSky, camera); }
           model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow, up: [e2[4]!, e2[5]!, e2[6]!], forward: [-e2[8]!, -e2[9]!, -e2[10]!] };
           model.pose = { p: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
           model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom, roll: model.view.roll, panX: model.view.panX, panY: model.view.panY };
