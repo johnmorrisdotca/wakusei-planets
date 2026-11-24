@@ -128,7 +128,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   pd("tethys", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("dione", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("iapetus", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
-  pd("triton", "NASA/JPL-Caltech/Lunar & Planetary Institute (Paul Schenk; Voyager 2 images)", "NASA/JPL-Caltech/Lunar & Planetary Institute（Paul Schenk、Voyager 2の画像）"),
+  pd("triton", "NASA / JPL-Caltech / Lunar & Planetary Institute, Paul Schenk, from Voyager 2", "NASA / JPL-Caltech / Lunar & Planetary Institute、Paul Schenk（ボイジャー2号）"),
   pd("charon", "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute (via the IAU)", "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute（IAU経由）"),
 ];
 
