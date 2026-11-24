@@ -175,7 +175,7 @@ test("the painter asks a page's own textureBase only for the widths the npm pack
   const { BODY_IDS } = await import("../src/index.ts");
   const { lookOf } = await import("../src/scene/look.ts");
   const { TEXTURE_FAR_BASE } = await import("../src/scene/textures.ts");
-  // the package ships the 512 and 1024 of each map (scripts/copy-textures.mjs); a look's `far` width and up are only in the repository
+  // Widths below a look's remote threshold are shipped in the package.
   const shipped = /-(512|1024)\.webp$/;
   /** Every picture a body asks for while it grows from small to filling the screen; each picture arrives at once. */
   const asked = async (painter: ReturnType<typeof createPainter>, id: string): Promise<string[]> => {
@@ -207,7 +207,8 @@ test("the painter asks a page's own textureBase only for the widths the npm pack
     const mine = await asked(own, id);
     assert.ok(mine.length > 0, `${id} asks for a picture`);
     for (const url of mine) assert.match(url, shipped, `${id}: ${url} is not in the npm package`);
-    assert.ok(mine.some((url) => url.endsWith("-1024.webp")), `${id} still gets the widest the package ships: ${mine.join(" ")}`);
+    const widestBundled = Math.max(...painted.widths.filter((width) => painted.far === undefined || width < painted.far));
+    assert.ok(mine.some((url) => url.endsWith(`-${widestBundled}.webp`)), `${id} still gets the widest the package ships: ${mine.join(" ")}`);
     // with farBase: the far width comes from there, the rest from textureBase
     if (painted.far !== undefined && top >= painted.far) {
       sharpest += 1;

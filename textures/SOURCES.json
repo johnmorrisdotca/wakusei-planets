@@ -267,5 +267,14 @@
     "credit": "NASA Visualization Technology Applications and Development (VTAD). The picture is the colour image in NASA's published model of asteroid Eros, from NEAR Shoemaker images. Public domain: NASA content is not subject to copyright in the United States.",
     "artist": "NASA Visualization Technology Applications and Development",
     "usage": "The model's own colour picture, resized to 512 and saved as eros-craft-512.webp. It is drawn on the faces of the mesh, not wrapped on a globe."
+  },
+  "ariel": {
+    "file": "ura1vuu2.tif",
+    "page": "https://space.jpl.nasa.gov/tmaps/uranus.html",
+    "licence": "Public domain",
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "usage": "The USGS Voyager 2 map distributed by JPL supplies the southern observations. The polar repaint fills the unobserved northern hemisphere and reconstructs only fine detail in blurred observed areas. The 4096-pixel output is a texture delivery size. The original optical map is 1440 × 720. Parts of Ariel were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "c0062ef9b87921ad6ae7f52e79802857955f9d981177441812b860b8ea3b3820"
   }
 }
