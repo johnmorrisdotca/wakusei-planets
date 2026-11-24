@@ -96,12 +96,13 @@
     "usage": "Public domain"
   },
   "callisto": {
-    "file": "Callisto equatorial.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Callisto_equatorial.jpg",
+    "file": "Callisto_Voyager_GalileoSSI_global_mosaic_1km.tif",
+    "page": "https://astrogeology.usgs.gov/search/map/callisto_galileo_voyager_global_mosaic_1km",
     "licence": "Public domain",
-    "credit": "http://geopubs.wr.usgs.gov/i-map/i2770/",
-    "artist": "USGS",
-    "usage": "Public domain"
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI",
+    "usage": "The global Galileo and Voyager mosaic supplies the observations. Soft ground and coverage gaps are repainted in overlapping equal-area polar views, including a dedicated south-pole repaint and a separate crop spanning a residual equatorial photometric seam. The 8K delivery is scaled to the resolved detail. Parts of Callisto were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "e1f0bd2e0e05de605d067d6b5f5ededddaf31ca6c064562a1ca770f15a7dbaa3"
   },
   "saturn-ring": {
     "file": "Saturn's rings in visible light and radio.jpg",
