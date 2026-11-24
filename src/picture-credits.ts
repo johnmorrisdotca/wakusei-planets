@@ -128,6 +128,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   pd("tethys", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("dione", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("iapetus", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
+  pd("ariel", "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)", "NASA / JPL / USGS Astrogeology（ボイジャー2号モザイク、Tammy Becker）"),
   pd("triton", "NASA/JPL-Caltech/Lunar & Planetary Institute (Paul Schenk; Voyager 2 images)", "NASA/JPL-Caltech/Lunar & Planetary Institute（Paul Schenk、Voyager 2の画像）"),
   pd("charon", "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute (via the IAU)", "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute（IAU経由）"),
 ];

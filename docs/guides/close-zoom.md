@@ -80,7 +80,7 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Telesto | 4096 | shader | 11x |  |  |
 | Calypso | 4096 | shader | 11x |  |  |
 | Miranda | 4096 | shader | 11x |  |  |
-| Ariel | 4096 | shader | 11x |  |  |
+| Ariel | 2048 | map | 8x |  |  |
 | Umbriel | 4096 | shader | 11x |  |  |
 | Titania | 4096 | shader | 11x |  |  |
 | Oberon | 4096 | shader | 11x |  |  |
