@@ -195,12 +195,13 @@
     "usage": "Public domain"
   },
   "triton": {
-    "file": "Triton map no grid.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Triton_map_no_grid.jpg",
+    "file": "Triton_Voyager2_ClrMosaic_GlobalFill_600m.tif",
+    "page": "https://science.nasa.gov/resource/map-of-triton/",
     "licence": "Public domain",
-    "credit": "https://www.lpi.usra.edu/icy_moons/neptune/triton/",
-    "artist": "Image selection, radiometric calibration, geographic registration and photometric correction, and final mosaic assembly were performed by Dr. Paul Schenk at the Lunar and Planetary Institute, Houston, Texas. Image data from Voyager 2 (NASA, JPL).",
-    "usage": "Public domain"
+    "credit": "NASA / JPL-Caltech / Lunar & Planetary Institute, Paul Schenk, from Voyager 2",
+    "artist": "NASA / JPL-Caltech / Lunar & Planetary Institute, Paul Schenk, from Voyager 2",
+    "usage": "Paul Schenk’s Voyager 2 mosaic supplies the photographed terrain and color. Reconstructed the unobserved north, replaced the soft south-polar smear using polar coordinates and rebuilt the fine terrain in the blue-green belt, retaining its broad measured color through a wraparound frequency blend. Parts of Triton were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "f20ed332e85df469725629b81d3a73ad026897fe561ec59d6245d249a09507db"
   },
   "charon": {
     "file": "Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif",
