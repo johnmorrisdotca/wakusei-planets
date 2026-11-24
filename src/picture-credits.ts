@@ -111,7 +111,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   },
   cc("sun", "Solar System Scope", "Solar System Scope", "Equirectangular map, resized to 512, 1024 and 2048.", "正距円筒図法の地図を、512、1024、2048に縮小しました。"),
   pd("moon", "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro); Lunar Reconnaissance Orbiter Camera", "NASA Scientific Visualization Studio（Ernie Wright、Noah Petro）、Lunar Reconnaissance Orbiter Camera"),
-  pd("io", "NASA / JPL (Galileo SSI and Voyager images); the file page names no author", "NASA / JPL（Galileo SSIとVoyagerの画像）。ファイルのページに作者の名はありません"),
+  pd("io", "NASA / JPL / USGS Astrogeology, Voyager 1 and Galileo SSI", "NASA / JPL / USGS Astrogeology（ボイジャー1号とガリレオSSI）"),
   pd("europa", "U.S. Geological Survey / Planetary Data System / Tammy Becker", "U.S. Geological Survey / Planetary Data System / Tammy Becker"),
   pd("ganymede", "USGS", "USGS"),
   pd("callisto", "USGS", "USGS"),
