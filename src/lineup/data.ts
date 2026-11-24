@@ -1,6 +1,6 @@
 // The size line-up's table of radii: every star's radius with its uncertainty, how it was got, and the refereed paper it comes from. Typed here, never read from a catalogue, an infographic or an encyclopedia.
 // A radius is an angular diameter (interferometry, where it exists) times a distance. Where the star has no measured angular diameter, or its distance is not a measured one, the row says so (`basis`).
-// Pure: strings and numbers, no DOM, no three.js. This package never imports hoshi-stars: the stars it needs are typed here.
+// Pure: strings and numbers, no DOM, no three.js. This file does not import hoshi-stars: the radii it needs are typed here.
 import { BODIES } from "../facts.ts";
 import type { StarNumbers } from "../star.ts";
 

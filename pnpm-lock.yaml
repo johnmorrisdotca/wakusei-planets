@@ -13,6 +13,9 @@ importers:
 
   .:
     dependencies:
+      '@johnmorrisdotca/hoshi-stars':
+        specifier: 0.61.0
+        version: 0.61.0(three@0.186.1)
       '@johnmorrisdotca/kazoku-ui':
         specifier: ^0.41.0
         version: 0.41.0(patch_hash=f752937f1f48229b069722492d6e9588772ff77cf015231a2e24a19f8ac99ecc)(three@0.186.1)
@@ -34,7 +37,7 @@ importers:
         version: 9.39.5
       '@johnmorrisdotca/chikyu-earth':
         specifier: ^0.36.0
-        version: 0.36.0(astronomy-engine@2.1.19)(three@0.186.1)
+        version: 0.36.0(@johnmorrisdotca/hoshi-stars@0.61.0(three@0.186.1))(astronomy-engine@2.1.19)(three@0.186.1)
       '@johnmorrisdotca/hata':
         specifier: ^1.9.0
         version: 1.9.0
@@ -423,6 +426,15 @@ packages:
   '@johnmorrisdotca/hata@1.9.0':
     resolution: {integrity: sha512-TlKv9O3elQzgpbCngQZuadYe7sbsuhoJB8F0L5Ip5IiHfTaWlEzZtcRKzKYPpU4VWHPe0i3jgYfeEudY9o+azw==}
     engines: {node: '>=24'}
+
+  '@johnmorrisdotca/hoshi-stars@0.61.0':
+    resolution: {integrity: sha512-wrva8rfIURTXDJd5ikm4eL/ADCgKIv1+OAglO+/Qr8EqN8v8kgXL1kprsKfbaW5ERmHGRKrIOr18Jw4hfjeTiA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      three: '>=0.160.0'
+    peerDependenciesMeta:
+      three:
+        optional: true
 
   '@johnmorrisdotca/kazoku-ui@0.41.0':
     resolution: {integrity: sha512-Zp/iTun5jgsXMPAJ9qCoIpr6Oc6O/kBSwAeEw4MdNRwwmALHtAwAuALXewecxhQ2j5HUEXamu5HKTA8OFOz+HA==}
@@ -1858,18 +1870,25 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@johnmorrisdotca/chikyu-earth@0.36.0(astronomy-engine@2.1.19)(three@0.186.1)':
+  '@johnmorrisdotca/chikyu-earth@0.36.0(@johnmorrisdotca/hoshi-stars@0.61.0(three@0.186.1))(astronomy-engine@2.1.19)(three@0.186.1)':
     dependencies:
       '@johnmorrisdotca/chizu': 1.6.1
       '@johnmorrisdotca/kazoku-ui': 0.41.0(patch_hash=f752937f1f48229b069722492d6e9588772ff77cf015231a2e24a19f8ac99ecc)(three@0.186.1)
       d3-geo: 3.1.1
     optionalDependencies:
+      '@johnmorrisdotca/hoshi-stars': 0.61.0(three@0.186.1)
       astronomy-engine: 2.1.19
       three: 0.186.1
 
   '@johnmorrisdotca/chizu@1.6.1': {}
 
   '@johnmorrisdotca/hata@1.9.0': {}
+
+  '@johnmorrisdotca/hoshi-stars@0.61.0(three@0.186.1)':
+    dependencies:
+      '@johnmorrisdotca/kazoku-ui': 0.41.0(patch_hash=f752937f1f48229b069722492d6e9588772ff77cf015231a2e24a19f8ac99ecc)(three@0.186.1)
+    optionalDependencies:
+      three: 0.186.1
 
   '@johnmorrisdotca/kazoku-ui@0.41.0(patch_hash=f752937f1f48229b069722492d6e9588772ff77cf015231a2e24a19f8ac99ecc)(three@0.186.1)':
     optionalDependencies:

@@ -1,9 +1,17 @@
 // The stars you can see without a telescope: the 5,080 of the Yale Bright Star Catalogue to visual magnitude 6.0, with their names, positions, proper motion, brightness and colour.
-// An opt-in entry point (`@johnmorrisdotca/wakusei-planets/stars`): the table is about 100 kB gzipped and nothing else imports it. Pure: no DOM, no three.js, no state beyond the parsed table.
-import { J2000_MS } from "./clock.ts";
-import { blackBodyRgb } from "./blackbody.ts";
-import { STAR_NAMES, STAR_ROWS } from "./data/stars.ts";
-import { moment, type When } from "./when.ts";
+// An opt-in entry point (`@johnmorrisdotca/wakusei-planets/stars`). The numbers are hoshi-stars's functions. This file keeps no copy of the rows. Pure: no DOM, no three.js.
+import {
+  blackBodyColour as colourOf,
+  starByHr as byHr,
+  starByName as byName,
+  starColour as colourOfStar,
+  starDistanceLightYears as lightYears,
+  starPosition as positionOf,
+  starTemperatureK as temperatureOf,
+  stars as list,
+  type Star as HoshiStar,
+} from "@johnmorrisdotca/hoshi-stars";
+import type { When } from "./when.ts";
 
 /**
  * One star, as the Yale Bright Star Catalogue gives it. Positions are J2000 (equator and equinox of 2000, the FK5 frame, which is the ICRS to a fraction of an arc-second).
@@ -23,7 +31,7 @@ export interface Star {
   name: string | undefined;
   /** The Bayer letter and constellation (`α CMa`), else the Flamsteed number and constellation (`9 CMa`), else `undefined`. */
   designation: string | undefined;
-  /** The IAU three-letter constellation abbreviation (`CMa`) where the star has a Bayer or Flamsteed name, else `undefined`. */
+  /** The IAU three-letter constellation abbreviation (`CMa`) the star lies in. */
   constellation: string | undefined;
   /** Right ascension in degrees at J2000, 0 up to 360. The catalogue gives it to a tenth of a second of time (1.5 arc-seconds at the equator). */
   rightAscension: number;
@@ -43,37 +51,27 @@ export interface Star {
   parallaxMas: number;
 }
 
-const stored: Star[] = [];
-const byHr = new Map<number, Star>();
-const byText = new Map<string, Star>();
+const shared = new Map<number, Star>();
 
-function load(): void {
-  if (stored.length > 0) return;
-  for (const row of STAR_ROWS.split("\n")) {
-    const p = row.split("|");
-    const hr = Number(p[0]);
-    const letter = p[1]!;
-    const flamsteed = p[2]!;
-    const constellation = p[3]!;
-    const designation = constellation === "" ? undefined : `${letter !== "" ? letter : flamsteed} ${constellation}`;
-    const star: Star = Object.freeze({
-      hr,
-      name: STAR_NAMES[hr],
-      designation: letter === "" && flamsteed === "" ? undefined : designation,
-      constellation: constellation === "" ? undefined : constellation,
-      rightAscension: (Number(p[4]) / 2400),
-      declination: Number(p[5]) / 3600,
-      magnitude: Number(p[8]) / 100,
-      colourIndex: p[9] === "" ? undefined : Number(p[9]) / 100,
-      spectralClass: p[10]!,
-      properMotionRaMas: Number(p[6]),
-      properMotionDecMas: Number(p[7]),
-      parallaxMas: Number(p[11]),
-    });
-    stored.push(star);
-    byHr.set(hr, star);
-    for (const text of [star.name, star.designation]) if (text !== undefined) byText.set(text.toLowerCase(), star);
-  }
+function asStar(star: HoshiStar): Star {
+  const hit = shared.get(star.hr);
+  if (hit !== undefined) return hit;
+  const ours: Star = Object.freeze({
+    hr: star.hr,
+    name: star.name,
+    designation: star.designation,
+    constellation: star.constellation === "" ? undefined : star.constellation,
+    rightAscension: star.rightAscension,
+    declination: star.declination,
+    magnitude: star.magnitude,
+    colourIndex: star.colourIndex,
+    spectralClass: star.spectralClass,
+    properMotionRaMas: star.properMotionRaMas,
+    properMotionDecMas: star.properMotionDecMas,
+    parallaxMas: star.parallaxMas,
+  });
+  shared.set(star.hr, ours);
+  return ours;
 }
 
 /**
@@ -90,10 +88,7 @@ function load(): void {
  * ```
  */
 export function stars(options: { magnitude?: number } = {}): Star[] {
-  load();
-  const limit = options.magnitude ?? Number.POSITIVE_INFINITY;
-  if (typeof limit !== "number" || Number.isNaN(limit)) throw new TypeError(`magnitude must be a number, got ${String(limit)}`);
-  return stored.filter((star) => star.magnitude <= limit);
+  return list(options).map(asStar);
 }
 
 /**
@@ -110,8 +105,8 @@ export function stars(options: { magnitude?: number } = {}): Star[] {
  * ```
  */
 export function starByHr(hr: number): Star | undefined {
-  load();
-  return byHr.get(hr);
+  const star = byHr(hr);
+  return star === undefined ? undefined : asStar(star);
 }
 
 /**
@@ -128,11 +123,9 @@ export function starByHr(hr: number): Star | undefined {
  * ```
  */
 export function starByName(text: string): Star | undefined {
-  load();
-  return byText.get(text.trim().toLowerCase());
+  const star = byName(text);
+  return star === undefined ? undefined : asStar(star);
 }
-
-const JULIAN_YEAR_MS = 365.25 * 86_400_000;
 
 /**
  * Where a star is at a moment: its J2000 position carried forward (or back) by its proper motion in a straight line. The frame stays J2000, so precession to the date is not applied: use
@@ -152,12 +145,7 @@ const JULIAN_YEAR_MS = 365.25 * 86_400_000;
  * ```
  */
 export function starPosition(star: Star, when?: When): { rightAscension: number; declination: number } {
-  const years = (moment(when ?? J2000_MS) - J2000_MS) / JULIAN_YEAR_MS;
-  const declination = star.declination + (star.properMotionDecMas * years) / 3_600_000;
-  const cosine = Math.cos((star.declination * Math.PI) / 180);
-  // The motion is a true angle on the sky: it stretches by 1 / cos(declination) in right ascension. At the poles the division is kept finite.
-  const rightAscension = star.rightAscension + (star.properMotionRaMas * years) / 3_600_000 / Math.max(Math.abs(cosine), 1e-6);
-  return { rightAscension: ((rightAscension % 360) + 360) % 360, declination: Math.max(-90, Math.min(90, declination)) };
+  return positionOf(star, when);
 }
 
 /**
@@ -174,7 +162,7 @@ export function starPosition(star: Star, when?: When): { rightAscension: number;
  * ```
  */
 export function starDistanceLightYears(star: Star): number | undefined {
-  return star.parallaxMas > 0 ? 3261.563777 / star.parallaxMas : undefined;
+  return lightYears(star as HoshiStar);
 }
 
 /**
@@ -191,8 +179,7 @@ export function starDistanceLightYears(star: Star): number | undefined {
  * ```
  */
 export function starTemperatureK(colourIndex: number): number {
-  if (!Number.isFinite(colourIndex)) throw new RangeError(`colourIndex must be a finite number, got ${colourIndex}`);
-  return 4600 * (1 / (0.92 * colourIndex + 1.7) + 1 / (0.92 * colourIndex + 0.62));
+  return temperatureOf(colourIndex);
 }
 
 /**
@@ -210,10 +197,7 @@ export function starTemperatureK(colourIndex: number): number {
  * ```
  */
 export function blackBodyColour(kelvin: number): string {
-  if (!Number.isFinite(kelvin) || kelvin <= 0) throw new RangeError(`kelvin must be a positive number, got ${kelvin}`);
-  const [red, green, blue] = blackBodyRgb(kelvin);
-  const byte = (v: number): string => Math.round(v).toString(16).padStart(2, "0");
-  return `#${byte(red)}${byte(green)}${byte(blue)}`;
+  return colourOf(kelvin);
 }
 
 /**
@@ -230,5 +214,5 @@ export function blackBodyColour(kelvin: number): string {
  * ```
  */
 export function starColour(star: Star): string {
-  return star.colourIndex === undefined ? "#ffffff" : blackBodyColour(starTemperatureK(star.colourIndex));
+  return colourOfStar(star as HoshiStar);
 }

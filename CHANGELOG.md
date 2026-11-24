@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The sky behind the planets comes from hoshi** (MODULES-539). `/stars` calls `@johnmorrisdotca/hoshi-stars` 0.61.0 for the 5,080 bright stars. The copied Yale table and the script that wrote it are gone. Nothing else in this package imports the entry. A page that bundles the entry now carries hoshi's fuller table (about 145 KB gzipped; it was about 103 KB).
+
 ## [0.75.1] - 2026-11-23
 
 - **The Jupiter chart's phone test waits for the redraw** (MODULES-1802). Narrowing the page paints the chart again. The test reads a label's box only after that paint, and the box still has to be at least 11 pixels tall.

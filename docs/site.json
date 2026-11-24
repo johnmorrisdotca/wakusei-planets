@@ -91,8 +91,8 @@
       "platform": "node"
     },
     "./stars": {
-      "en": "The 5,080 stars you can see without a telescope: names, positions, proper motion, distance and colour (about 100 kB gzipped)",
-      "ja": "望遠鏡なしで見える5,080個の星: 名前、位置、固有運動、距離、色 (gzip で約100 kB)",
+      "en": "The 5,080 stars you can see without a telescope: names, positions, proper motion, distance and colour (hoshi-stars's functions; no copy here)",
+      "ja": "望遠鏡なしで見える5,080個の星: 名前、位置、固有運動、距離、色 (hoshi-stars の関数。写しはありません)",
       "platform": "node"
     },
     "./belts": {

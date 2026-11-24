@@ -2,10 +2,10 @@
 title: The stars you can see without a telescope
 section: how-to
 order: 15
-description: 5,080 stars to magnitude 6.0 with names, positions, proper motion, distance and colour, about 100 kB gzipped and no dependencies.
+description: 5,080 stars to magnitude 6.0 with names, positions, proper motion, distance and colour, from hoshi-stars, with no copy of the rows.
 ---
 
-`/stars` is the sky behind the planets: every star the unaided eye can see from a dark place, 5,080 of them, from the Yale Bright Star Catalogue. Each has its catalogue number, its name where it has one, its position, how fast it moves, how bright it is, its colour and its distance. It runs anywhere and imports nothing but the clock. The table is about 100 kB gzipped and loads when you first ask for a star, and nothing else in the package imports it.
+`/stars` is the sky behind the planets: every star the unaided eye can see from a dark place, 5,080 of them. The numbers come from hoshi-stars (`@johnmorrisdotca/hoshi-stars`), which reads the Yale Bright Star Catalogue. This package calls those functions and does not keep a copy of the rows. Each star has its catalogue number, its name where it has one, its position, how fast it moves, how bright it is, its colour and its distance. It runs anywhere. The table lives in hoshi-stars and loads when you first ask for a star, and nothing else in this package imports it.
 
 ```ts
 import { starByName, starColour, starDistanceLightYears, starPosition, stars } from "@johnmorrisdotca/wakusei-planets/stars";

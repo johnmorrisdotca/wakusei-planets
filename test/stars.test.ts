@@ -107,9 +107,10 @@ test("temperature and colour follow the colour index: hot stars blue-white, the 
   assert.equal(starColour(none), "#ffffff");
 });
 
-test("the table's size stays within its budget", async () => {
-  const { gzipSync } = await import("node:zlib");
-  const { readFileSync } = await import("node:fs");
-  const bytes = gzipSync(readFileSync(new URL("../src/data/stars.ts", import.meta.url))).byteLength;
-  assert.ok(bytes < 110_000, `the star table is ${bytes} bytes gzipped`);
+test("the catalogue is hoshi's functions, and this package keeps no copy of the rows", async () => {
+  const { readFileSync, existsSync } = await import("node:fs");
+  assert.equal(existsSync(new URL("../src/data/stars.ts", import.meta.url)), false);
+  const source = readFileSync(new URL("../src/stars.ts", import.meta.url), "utf8");
+  assert.match(source, /@johnmorrisdotca\/hoshi-stars/);
+  assert.doesNotMatch(source, /STAR_ROWS/);
 });
