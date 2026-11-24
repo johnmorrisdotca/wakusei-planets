@@ -200,12 +200,13 @@
     "usage": "Public domain"
   },
   "charon": {
-    "file": "Charon map iau1803c.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Charon_map_iau1803c.jpg",
+    "file": "Charon_NewHorizons_Global_Mosaic_300m_Jul2017_8bit.tif",
+    "page": "https://astrogeology.usgs.gov/search/map/charon_new_horizons_lorri_mvic_global_mosaic_300m",
     "licence": "Public domain",
-    "credit": "https://www.iau.org/public/images/detail/iau1803c/",
-    "artist": "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute",
-    "usage": "Public domain"
+    "credit": "NASA / JHUAPL / SwRI / USGS Astrogeology, New Horizons LORRI and MVIC",
+    "artist": "NASA / JHUAPL / SwRI / USGS Astrogeology, New Horizons LORRI and MVIC",
+    "usage": "The 300 m USGS New Horizons mosaic supplies measured relief. The original published Charon color map (https://www.iau.org/public/images/detail/iau1803c/) supplies low-pass chroma for the observed north polar stain, through the prior package texture. The unobserved south and soft margins were painted together in overlapping polar views. The 4K delivery matches the effective detail of the combined map. Parts of Charon were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "4a874809e0a33a851cd026b8e4647f5875ed15807e677d413812367509564b00"
   },
   "vesta": {
     "file": "Vesta map for GeoHack.png",
