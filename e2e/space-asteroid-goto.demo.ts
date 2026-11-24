@@ -53,7 +53,7 @@ const thrownBy = (page: Page, method: string, ...args: unknown[]): Promise<{ nam
 async function turnOn(page: Page): Promise<void> {
   const before = await setCounted(page, "asteroids", true);
   await drawnAfter(page, before, "the option");
-  await expect.poll(async () => ((await statsOf(page)) as unknown as { asteroids: { placed: number } }).asteroids.placed, { timeout: 60_000, message: "the asteroids are placed" }).toBe(104);
+  await expect.poll(async () => ((await statsOf(page)) as unknown as { asteroids: { placed: number } }).asteroids.placed, { timeout: 60_000, message: "the asteroids are placed" }).toBe(101);
   await quiet(page);
 }
 /** Wait for a ride to be the one asked for and the move to it to be over, and the view to hold still. */
@@ -197,7 +197,7 @@ test("asked before the records are in, a move asked for after it takes it back: 
   });
   expect(asked).toBe(true);
   // the records come (they are placed), and the camera stays at Mars
-  await expect.poll(async () => ((await statsOf(page)) as unknown as { asteroids: { placed: number } }).asteroids.placed, { timeout: 60_000, message: "the asteroids are placed" }).toBe(104);
+  await expect.poll(async () => ((await statsOf(page)) as unknown as { asteroids: { placed: number } }).asteroids.placed, { timeout: 60_000, message: "the asteroids are placed" }).toBe(101);
   await quiet(page);
   expect(await ridingOf(page)).toBeNull();
   expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe("mars");

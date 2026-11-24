@@ -187,8 +187,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       if (craft !== undefined) {
         const picture = await loadImage(T, `${options.textureBase()}${craft.map}`).catch(() => undefined);
         if (picture !== undefined) {
+          picture.colorSpace = T.NoColorSpace;
           craftPicture(picture);
-          shader.uniforms.uMap!.value = picture;
+          shader.uniforms.uMap!.value = assets.acquire(`wk:craftmap:${held}`, () => picture, (t) => t.dispose());
         }
       }
       const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;

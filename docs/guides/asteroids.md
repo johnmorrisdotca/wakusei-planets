@@ -10,12 +10,12 @@ description: "About a hundred asteroids, centaurs and trans-Neptunian objects fr
 ```ts
 import { asteroidDistances, asteroidPositionAu, findAsteroid } from "@johnmorrisdotca/wakusei-planets/asteroids";
 
-const eros = findAsteroid("Eros")!;
+const itokawa = findAsteroid("Itokawa")!;
 const day = new Date("2026-11-11T12:00:00Z");
-const d = asteroidDistances(eros, day);
-console.log(eros.name.en, eros.name.ja, "is a", eros.group, "asteroid, found in", eros.discoveryYear, "and visited by", eros.missions[0]!.name);
+const d = asteroidDistances(itokawa, day);
+console.log(itokawa.name.en, itokawa.name.ja, "is a", itokawa.group, "asteroid, found in", itokawa.discoveryYear, "and visited by", itokawa.missions[0]!.name);
 console.log("it is", d.sunAu.toFixed(2), "au from the Sun and", d.earthAu.toFixed(2), "au from the Earth;", d.lightMinutes.toFixed(1), "light minutes");
-console.log("x, y, z in au:", asteroidPositionAu(eros, day).map((au) => au.toFixed(3)).join(", "));
+console.log("x, y, z in au:", asteroidPositionAu(itokawa, day).map((au) => au.toFixed(3)).join(", "));
 ```
 
 ## What is in the set
@@ -23,12 +23,12 @@ console.log("x, y, z in au:", asteroidPositionAu(eros, day).map((au) => au.toFix
 | Kind | Bodies | Examples |
 |---|---|---|
 | `main-belt` | 38 | Hygiea, Interamnia, Psyche, Gaspra, Ida, Lutetia, Šteins |
-| `near-earth` | 29 | Eros, Itokawa, Ryugu, Bennu, Apophis, 2024 YR4, Phaethon, Didymos, Kamo`oalewa |
+| `near-earth` | 27 | Itokawa, Ryugu, Apophis, 2024 YR4, Phaethon, Didymos, Kamo`oalewa |
 | `trojan` | 16 | Hektor, Achilles, Patroclus, Eurybates, Polymele, Leucus, Orus |
 | `centaur` | 7 | Chariklo, Nessus, Asbolus |
 | `trans-neptunian` | 13 | Salacia, Varuna, Ixion, Varda, Albion, Leleākūhonua |
 
-The near-Earth asteroids have a `group` as well: 1 Atira, 4 Aten, 20 Apollo and 4 Amor. A body the package already has is not repeated: Ceres, Pallas, Vesta, Chiron, Pholus, Halley, Pluto and the dwarf planets Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna have their own, fuller, tables (so the largest asteroids here begin with Hygiea, the fourth largest). `hazardous` is JPL's own flag for a potentially hazardous asteroid; the numbers `H`, `diameterKm`, `albedo`, `rotationHours`, `spectral` and the discovery year are left out where the source has none.
+The near-Earth asteroids have a `group` as well: 1 Atira, 4 Aten, 19 Apollo and 3 Amor. A body the package already has is not repeated: Ceres, Pallas, Vesta, Eros, Bennu, Arrokoth, Chiron, Pholus, Halley, Pluto and the dwarf planets Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna have their own, fuller, tables (so the largest asteroids here begin with Hygiea, the fourth largest). `hazardous` is JPL's own flag for a potentially hazardous asteroid; the numbers `H`, `diameterKm`, `albedo`, `rotationHours`, `spectral` and the discovery year are left out where the source has none.
 
 ## What you can ask
 
@@ -60,7 +60,7 @@ console.log(mine.kind, mine.group, asteroidOrbitPoints(mine, 90).length, "points
 
 The motion is two-body: Kepler's equation from the elements, with the package's own solver, and no planet pulls on the body. At the epoch (2026-06-09) it agrees with JPL Horizons to under 0.0000001 au. Away from it the error grows: on 16 bodies of every kind, at five times between a year before and a year after each epoch, the worst error against Horizons' own positions (which include the planets) was 0.001 au (150,000 km) within half a year and 0.004 au (600,000 km) within a year, the main-belt asteroids being the worst and the others under a quarter of it. `ASTEROID_ACCURACY` states the numbers. Beyond a year, or close to a planet, treat a position as a guide: a close approach in 2029 is not worked out from 2026's elements, and Apophis' pass of the Earth is in `/approaches`.
 
-The elements are osculating at one epoch each, all 2026-06-09; Bennu's and 2018 AG37's own solutions are from other years, so theirs are Horizons' osculating elements for that date. `ASTEROIDS_FETCHED` holds the date the records were read, and orbits are refined as bodies are observed.
+The elements are osculating at one epoch each, all 2026-06-09; 2018 AG37's own solution is from another year, so its elements are Horizons' osculating elements for that date. `ASTEROIDS_FETCHED` holds the date the records were read, and orbits are refined as bodies are observed.
 
 ## Where the numbers come from
 

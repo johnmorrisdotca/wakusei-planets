@@ -51,16 +51,16 @@ test("with the option off (the default) nothing is placed, named, in the sight o
   expect(asked.filter((url) => /asteroids/.test(url) && url.endsWith(".js")), "no asteroid chunk was asked for").toEqual([]);
 });
 
-test("with the option on all 104 are placed with the belts' points, the ones near the camera are named, each is an entry of sight() with kind small-body, and turning it off takes them all away", async ({ page }) => {
+test("with the option on all 101 are placed with the belts' points, the ones near the camera are named, each is an entry of sight() with kind small-body, and turning it off takes them all away", async ({ page }) => {
   await openSpace(page, QUERY);
   const pointsBefore = await doorPoints(page);
   await turnOn(page);
   const on = await asteroidsOf(page);
-  expect(on.placed).toBe(104);
+  expect(on.placed).toBe(101);
   expect(on.named, "Duende, Cruithne, Itokawa and Kamo`oalewa are within an astronomical unit of the Earth on this date, and at most twelve are named").toBeGreaterThanOrEqual(4);
   expect(on.named).toBeLessThanOrEqual(12);
-  expect(await doorPoints(page), "the bodies are drawn in the one instanced draw, with the other points").toBe(pointsBefore + 104);
-  expect((await sightKinds(page))["small-body"]).toBe(104);
+  expect(await doorPoints(page), "the bodies are drawn in the one instanced draw, with the other points").toBe(pointsBefore + 101);
+  expect((await sightKinds(page))["small-body"]).toBe(101);
   // the names are buttons of the view's own, for the ones in front of the camera (one behind it has no place on the screen); Duende, nearest on this date, is one
   await expect(page.locator(`${SPACE} .sp-label[data-body="asteroid:duende"]`)).toBeVisible();
   const shown = await page.locator(`${SPACE} .sp-label:not([hidden])`).evaluateAll((els, ids) => els.filter((el) => ids.includes((el as HTMLElement).dataset["body"]!)).length, ASTEROIDS.map((one) => `asteroid:${one.id}`));

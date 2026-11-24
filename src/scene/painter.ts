@@ -394,6 +394,9 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let ringOuter = 2;
   const table = look.emissive === true ? null : ringStrip(facts, 1024);
   let gone = false;
+  // the mesh picture of a body drawn from a mission's model: it is this painting's own, and it is given back with the painting
+  let craftMap: THREE.Texture | undefined;
+  let craftMat: THREE.ShaderMaterial | undefined;
   if (table !== null) {
     ringInner = table.inner;
     ringOuter = table.outer;
@@ -628,15 +631,22 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
         const material = acquire(T, `craftmat:${id}`, () => craftMaterial(T, look.ambient ?? 0.08));
         releases.push(material.release);
         materials.push(material.value);
+        craftMat = material.value;
         (mesh as unknown as THREE.Mesh).geometry = shaped.value;
         mesh.material = material.value;
         scaleX = 1;
         scaleY = 1;
         scaleZ = 1;
-        loadImage(T, `${bases.near}${table.map}`).then(
+        void trackPicture(loadImage(T, `${bases.near}${table.map}`)).then(
           (picture) => {
-            if (gone) return;
+            if (gone) {
+              picture.dispose();
+              return;
+            }
+            // the painted maps do this too: a colour conversion would leave a second texture the painting does not own
+            picture.colorSpace = T.NoColorSpace;
             craftPicture(picture);
+            craftMap = picture;
             material.value.uniforms.uMap!.value = picture;
             redraw();
           },
@@ -762,6 +772,11 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       small?.dispose();
       sharp?.dispose();
       ringTexture?.dispose();
+      const mat = craftMat;
+      const map = craftMap;
+      if (mat !== undefined && mat.uniforms.uMap !== undefined && mat.uniforms.uMap.value === map) mat.uniforms.uMap.value = null;
+      map?.dispose();
+      craftMap = undefined;
       for (const d of disposables) d.dispose();
       for (const r of releases) r();
       group.clear();

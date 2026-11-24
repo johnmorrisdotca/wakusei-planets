@@ -271,7 +271,7 @@ await step("asteroids", async () => {
     await page.locator("wakusei-space[data-state=live]").waitFor({ timeout: 60_000 });
     await page.waitForFunction(() => {
       const el = document.querySelector("wakusei-space") as (HTMLElement & { stats?: { asteroids?: { placed: number } } }) | null;
-      return el?.stats?.asteroids?.placed === 104;
+      return el?.stats?.asteroids?.placed === 101;
     }, undefined, { timeout: 60_000 });
   });
 });

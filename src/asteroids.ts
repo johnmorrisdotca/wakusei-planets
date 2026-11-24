@@ -64,7 +64,7 @@ export type AsteroidGroup = "Atira" | "Aten" | "Apollo" | "Amor";
  * ```ts
  * import { findAsteroid, type AsteroidName } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const name: AsteroidName = findAsteroid("Eros")!.name;
+ * const name: AsteroidName = findAsteroid("Itokawa")!.name;
  * console.log(name.en, name.ja);
  * ```
  */
@@ -82,7 +82,7 @@ export interface AsteroidName {
  * ```ts
  * import { findAsteroid, type AsteroidElements } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const orbit: AsteroidElements = findAsteroid("Eros")!.elements;
+ * const orbit: AsteroidElements = findAsteroid("Itokawa")!.elements;
  * console.log(orbit.a.toFixed(3), "au, eccentricity", orbit.e.toFixed(3));
  * ```
  */
@@ -114,7 +114,7 @@ export interface AsteroidElements {
  * ```ts
  * import { findAsteroid, type AsteroidMission } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const visit: AsteroidMission = findAsteroid("Bennu")!.missions[0]!;
+ * const visit: AsteroidMission = findAsteroid("Itokawa")!.missions[0]!;
  * console.log(visit.name, visit.year);
  * ```
  */
@@ -139,7 +139,7 @@ export interface AsteroidMission {
  * ```
  */
 export interface AsteroidRecord {
-  /** A slug of the name: "eros", "apophis", "2024-yr4". Unique in the set. */
+  /** A slug of the name: "itokawa", "apophis", "2024-yr4". Unique in the set. */
   id: string;
   /** The minor-planet number, or `undefined` for a body not yet numbered. */
   number?: number;
@@ -278,7 +278,7 @@ export function findAsteroid(query: string | number): AsteroidRecord | undefined
  * ```ts
  * import { asteroidPositionAu, findAsteroid, type AsteroidRef } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const refs: AsteroidRef[] = ["Eros", 433, findAsteroid("Eros")!];
+ * const refs: AsteroidRef[] = ["Itokawa", 25143, findAsteroid("Itokawa")!];
  * console.log(refs.map((r) => asteroidPositionAu(r, Date.UTC(2026, 10, 11))[0]!.toFixed(3)).join(" "));
  * ```
  */
@@ -322,7 +322,7 @@ const jdOf = (ms: number): number => toTerrestrialTime(ms) / DAY_MS + UNIX_JD;
  * ```ts
  * import { asteroidPositionAu } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const [x, y, z] = asteroidPositionAu("Eros", new Date("2026-11-11T00:00:00Z"));
+ * const [x, y, z] = asteroidPositionAu("Itokawa", new Date("2026-11-11T00:00:00Z"));
  * console.log(Math.hypot(x, y, z).toFixed(3), "au from the Sun");
  * ```
  */
@@ -341,7 +341,7 @@ export function asteroidPositionAu(body: AsteroidRef, when: When): Vec3 {
  * ```ts
  * import { asteroidPosition } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * console.log(asteroidPosition(433, Date.UTC(2026, 10, 11)).map((km) => Math.round(km / 1e6)), "million km");
+ * console.log(asteroidPosition(25143, Date.UTC(2026, 10, 11)).map((km) => Math.round(km / 1e6)), "million km");
  * ```
  */
 export function asteroidPosition(body: AsteroidRef, when: When): Vec3 {
@@ -384,7 +384,7 @@ export interface AsteroidDistances {
  * ```ts
  * import { asteroidDistances } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const d = asteroidDistances("Bennu", Date.UTC(2026, 10, 11));
+ * const d = asteroidDistances("Itokawa", Date.UTC(2026, 10, 11));
  * console.log(d.sunAu.toFixed(2), "au from the Sun,", d.earthAu.toFixed(2), "from the Earth,", d.lightMinutes.toFixed(1), "light minutes");
  * ```
  */
@@ -408,7 +408,7 @@ export function asteroidDistances(body: AsteroidRef, when: When): AsteroidDistan
  * ```ts
  * import { asteroidOrbitPoints } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * const line = asteroidOrbitPoints("Eros", 90);
+ * const line = asteroidOrbitPoints("Itokawa", 90);
  * console.log(line.length, "points");
  * ```
  */
@@ -441,7 +441,7 @@ export function asteroidOrbitPoints(body: AsteroidRef, count = 180): Vec3[] {
  * ```ts
  * import { asteroidPeriodDays } from "@johnmorrisdotca/wakusei-planets/asteroids";
  *
- * console.log((asteroidPeriodDays("Eros") / 365.25).toFixed(2), "years");
+ * console.log((asteroidPeriodDays("Itokawa") / 365.25).toFixed(2), "years");
  * ```
  */
 export function asteroidPeriodDays(body: AsteroidRef): number {

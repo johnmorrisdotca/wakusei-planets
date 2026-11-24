@@ -10,12 +10,12 @@ description: "JPL の小天体データベースから、小惑星・ケンタ�
 ```ts
 import { asteroidDistances, asteroidPositionAu, findAsteroid } from "@johnmorrisdotca/wakusei-planets/asteroids";
 
-const eros = findAsteroid("Eros")!;
+const itokawa = findAsteroid("Itokawa")!;
 const day = new Date("2026-11-11T12:00:00Z");
-const d = asteroidDistances(eros, day);
-console.log(eros.name.en, eros.name.ja, "is a", eros.group, "asteroid, found in", eros.discoveryYear, "and visited by", eros.missions[0]!.name);
+const d = asteroidDistances(itokawa, day);
+console.log(itokawa.name.en, itokawa.name.ja, "is a", itokawa.group, "asteroid, found in", itokawa.discoveryYear, "and visited by", itokawa.missions[0]!.name);
 console.log("it is", d.sunAu.toFixed(2), "au from the Sun and", d.earthAu.toFixed(2), "au from the Earth;", d.lightMinutes.toFixed(1), "light minutes");
-console.log("x, y, z in au:", asteroidPositionAu(eros, day).map((au) => au.toFixed(3)).join(", "));
+console.log("x, y, z in au:", asteroidPositionAu(itokawa, day).map((au) => au.toFixed(3)).join(", "));
 ```
 
 ## セットの内容
@@ -23,12 +23,12 @@ console.log("x, y, z in au:", asteroidPositionAu(eros, day).map((au) => au.toFix
 | 種類 | 数 | 例 |
 |---|---|---|
 | `main-belt` (主小惑星帯) | 38 | ヒギエア、インテラムニア、プシケ、ガスプラ、イダ、ルテティア、シュテインス |
-| `near-earth` (地球接近) | 29 | エロス、イトカワ、リュウグウ、ベンヌ、アポフィス、2024 YR4、ファエトン、ディディモス、カモオアレワ |
+| `near-earth` (地球接近) | 27 | イトカワ、リュウグウ、アポフィス、2024 YR4、ファエトン、ディディモス、カモオアレワ |
 | `trojan` (トロヤ群) | 16 | ヘクトル、アキレス、パトロクロス、エウリュバテス、ポリュメレ、レウコス、オルス |
 | `centaur` (ケンタウルス族) | 7 | カリクロー、ネッソス、アスボルス |
 | `trans-neptunian` (太陽系外縁) | 13 | サラキア、ヴァルナ、イクシオン、ヴァルダ、アルビオン、レレアークーホヌア |
 
-地球接近小惑星には `group` もあります。アティラ群1、アテン群4、アポロ群20、アモール群4です。このパッケージがすでに持つ天体は重ねて入れていません。ケレス、パラス、ベスタ、ケイロン、ポルス、ハレー彗星、冥王星、準惑星のオルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナには、それぞれ詳しい別の表があります (そのため、ここで最も大きい小惑星は4番目に大きいヒギエアから始まります)。`hazardous` は、JPL が「潜在的に危険な小惑星」とする印です。`H`、`diameterKm`、`albedo`、`rotationHours`、`spectral`、発見の年は、情報源に値がなければ省いています。
+地球接近小惑星には `group` もあります。アティラ群1、アテン群4、アポロ群19、アモール群3です。このパッケージがすでに持つ天体は重ねて入れていません。ケレス、パラス、ベスタ、エロス、ベンヌ、アロコス、ケイロン、ポルス、ハレー彗星、冥王星、準惑星のオルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナには、それぞれ詳しい別の表があります (そのため、ここで最も大きい小惑星は4番目に大きいヒギエアから始まります)。`hazardous` は、JPL が「潜在的に危険な小惑星」とする印です。`H`、`diameterKm`、`albedo`、`rotationHours`、`spectral`、発見の年は、情報源に値がなければ省いています。
 
 ## 使える関数
 
@@ -60,7 +60,7 @@ console.log(mine.kind, mine.group, asteroidOrbitPoints(mine, 90).length, "points
 
 動きは二体問題です。軌道要素からケプラーの方程式をこのパッケージ自身の解法で解き、惑星の引力は含みません。元期 (2026-06-09) では JPL Horizons と 0.0000001 au 未満で一致します。元期から離れると誤差は増えます。あらゆる種類の16天体で、各元期の1年前から1年後までの5つの時刻に、(惑星の影響を含む) Horizons の位置と比べた最大の誤差は、半年以内で 0.001 au (15万 km)、1年以内で 0.004 au (60万 km) でした。主小惑星帯の小惑星が最も悪く、ほかはその4分の1未満です。`ASTEROID_ACCURACY` がこの数値を示します。1年を超える日付や惑星の近くでは、位置は目安としてお使いください。2029年の接近を2026年の軌道要素から求めることはしません。アポフィスの地球接近は `/approaches` にあります。
 
-軌道要素は、どれも2026-06-09の接触軌道要素です。ベンヌと 2018 AG37 の軌道解はほかの年のものなので、その日付の Horizons の接触軌道要素を使っています。`ASTEROIDS_FETCHED` は記録を読み取った日付です。天体が観測されるたびに軌道は改良されます。
+軌道要素は、どれも2026-06-09の接触軌道要素です。2018 AG37 の軌道解はほかの年のものなので、その日付の Horizons の接触軌道要素を使っています。`ASTEROIDS_FETCHED` は記録を読み取った日付です。天体が観測されるたびに軌道は改良されます。
 
 ## 数値の出どころ
 
