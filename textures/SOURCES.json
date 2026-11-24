@@ -197,7 +197,7 @@
     "licence": "Public domain",
     "credit": "NASA / JPL-Caltech / Lunar & Planetary Institute, Paul Schenk, from Voyager 2",
     "artist": "NASA / JPL-Caltech / Lunar & Planetary Institute, Paul Schenk, from Voyager 2",
-    "usage": "Paul Schenk’s Voyager 2 mosaic supplies the photographed terrain and color. North-pole no-data and the soft parts of the observed edge are rendered in overlapping equal-area polar views, retaining observed regional ice tones. Parts of Triton were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "usage": "Added a focused south-polar detail repaint across the residual Voyager resolution drop, retaining broad yellow-pink color and outlines of the photographed plains. Blended into the sharper source and tested in pole and side views. Parts of Triton were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
     "sha256": "f20ed332e85df469725629b81d3a73ad026897fe561ec59d6245d249a09507db"
   },
   "charon": {
