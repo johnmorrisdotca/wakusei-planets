@@ -72,12 +72,13 @@
     "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
   },
   "io": {
-    "file": "Io from Galileo and Voyager missions.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Io_from_Galileo_and_Voyager_missions.jpg",
+    "file": "Io_GalileoSSI-Voyager_Global_Mosaic_ClrMerge_1km.tif",
+    "page": "https://astrogeology.usgs.gov/search/map/io_galileo_ssi_voyager_color_merged_global_mosaic_1km",
     "licence": "Public domain",
-    "credit": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author",
-    "artist": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author",
-    "usage": "Public domain"
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 1 and Galileo SSI",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 1 and Galileo SSI",
+    "usage": "A focused polar-projected repair replaces the remaining southern smear and stretched rows with sulfur plains, scalloped lava-flow margins and occasional volcanic depressions. Keeps the large Galileo SSI and Voyager mosaic colors and retains the preceding source tone matching across the two tile edges. Parts of Io were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "135f88cb645bfdb4e045b380971ab2ba14e230590c96c9c86cfe7310fda881ac"
   },
   "europa": {
     "file": "Europa Voyager GalileoSSI global mosaic.jpg",
