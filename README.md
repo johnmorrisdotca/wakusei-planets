@@ -97,7 +97,7 @@ A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (a
 ## Features
 
 - The asteroid belts and the Kuiper belt: 3,340 real numbered small bodies from NASA/JPL's Small-Body Database in seven belts, drawn in the space view (one draw each) with a flight into the main belt, and as data (`/belts`).
-- The Sun, the eight planets, Pluto, eight more dwarf planets, eight minor bodies (the asteroids Bennu, Eros, Vesta, Pallas and Arrokoth, the centaurs Chiron and Pholus and Halley's comet) and 44 moons, each with its real size, flattening, axial tilt, pole and rotation as data.
+- The Sun, the eight planets, Pluto, eight more dwarf planets, eight minor bodies (the asteroids Bennu and Eros and the Kuiper belt object Arrokoth, the asteroids Vesta and Pallas, the centaurs Chiron and Pholus and Halley's comet) and 44 moons, each with its real size, flattening, axial tilt, pole and rotation as data.
 - Three looks: a clean `line` drawing (an SVG string), a shaded `realistic` sphere worked out in a shader, and a `painted` surface map from public-domain imagery.
 - The sky for any date and time: a body's pole, rotation, phase and ring opening as the Earth sees it, and a planet's moons where they are then.
 - One WebGL context for the page, nothing drawn at rest, at most thirty frames a second, and everything freed when an element leaves.
