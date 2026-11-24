@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **Bennu is a body** (MODULES-558). `bennu` is a minor body: the shape and the colour picture of NASA's published model (OSIRIS-REx; public domain, credit NASA Visualization Technology Applications and Development), drawn as that mesh rather than a map wrapped on a globe. The orbit is the Horizons ellipse at JD 2461200.5, the elements the asteroid list used, not a fitted table. Bennu is no longer a row of `/asteroids` (102 remain). The mesh is its own file and the entry points that reach the minor bodies grow by about 56 KB gzipped, which the size baseline records.
 - **Eros is a body** (MODULES-558). `eros` is a minor body: the shape and the colour picture of NASA's published model (NEAR Shoemaker; public domain, credit NASA Visualization Technology Applications and Development), drawn as that mesh rather than a map wrapped on a globe. The orbit is the Small-Body Database ellipse at JD 2461200.5, the elements the asteroid list used, not a fitted table. Eros is no longer a row of `/asteroids` (103 remain). The mesh is its own file and the entry points that reach the minor bodies grow by about 34 KB gzipped, which the size baseline records. Bodies with no spacecraft picture are unchanged.
 
 ## [0.75.0] - 2026-11-23

@@ -26,7 +26,7 @@ const BASIS: Partial<Record<BodyId, ShapeBasis>> = {
   phobos: "shape-and-map", deimos: "shape-and-map", phoebe: "shape-and-map",
   nix: "shape", hydra: "shape", proteus: "shape", larissa: "shape", amalthea: "shape", thebe: "shape", hyperion: "shape", janus: "shape", epimetheus: "shape", prometheus: "shape", pandora: "shape",
   atlas: "shape", pan: "shape", daphnis: "shape", helene: "shape", telesto: "shape", calypso: "shape",
-  eros: "craft",
+  bennu: "craft", eros: "craft",
 };
 
 /**

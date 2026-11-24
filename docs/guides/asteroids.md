@@ -54,7 +54,7 @@ console.log(mine.kind, mine.group, asteroidOrbitPoints(mine, 90).length, "points
 
 ## In the space view
 
-`<wakusei-space>` places the 103 bodies as points with its option `asteroids`, names the ones near the camera, and with the option on `space.goTo("itokawa")` brings the camera to a body and `space.ride("apophis")` rides along with one, at the true scale; the option off, or an id that is not in the set, throws a `RangeError` that says so. The details, with the cost measured, are in [The space view](space-view.md).
+`<wakusei-space>` places the 102 bodies as points with its option `asteroids`, names the ones near the camera, and with the option on `space.goTo("itokawa")` brings the camera to a body and `space.ride("apophis")` rides along with one, at the true scale; the option off, or an id that is not in the set, throws a `RangeError` that says so. The details, with the cost measured, are in [The space view](space-view.md).
 
 ## How exact it is
 

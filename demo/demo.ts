@@ -310,7 +310,8 @@ if (main && controls && pickerBox) {
     const f = BODIES[state.body];
     const name = f.name[lang()];
     if (!state.real) {
-      caption.textContent = say("caption", { name, radius: Math.round(f.radiusKm).toLocaleString(lang() === "ja" ? "ja-JP" : "en-US"), tilt: f.tiltDeg });
+      const km = f.radiusKm < 1 ? f.radiusKm.toFixed(2) : Math.round(f.radiusKm).toLocaleString(lang() === "ja" ? "ja-JP" : "en-US");
+      caption.textContent = say("caption", { name, radius: km, tilt: f.tiltDeg });
       return;
     }
     const a = apparent(state.body, timeMs());

@@ -311,7 +311,7 @@ export function nearestPlace(places: readonly Place[], lat: number, lon: number,
 /**
  * The distance over the surface between two points, and the shape bound on it.
  *
- * `km` is the great circle. On a body in `BODIES` the sphere is the equatorial radius (1737.4 km for the Moon, 3396.19 km for Mars; flattening is not allowed for, which is 0.6 per cent on Mars and nothing on the Moon). On Eros, Ryugu, Bennu, Dimorphos, Tempel 1 and 67P the sphere is the volume-equivalent mean radius.
+ * `km` is the great circle. On a body in `BODIES` the sphere is the equatorial radius (1737.4 km for the Moon, 3396.19 km for Mars; flattening is not allowed for, which is 0.6 per cent on Mars and nothing on the Moon). On Ryugu, Dimorphos, Tempel 1 and 67P the sphere is the volume-equivalent mean radius.
  *
  * `accuracyKm` is the shape bound: the same angle times half the spread of the published semi-axes. It is `null` when no shape bound is stated, which is a sphere in `BODIES`, and 67P (the source gives no extents; the 0.05 km uncertainty of its mean radius is a note, not this bound).
  *

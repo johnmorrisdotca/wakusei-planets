@@ -243,10 +243,10 @@ test("the scale is compressed or true: the Moon is 3.5 Earth radii away, or 60",
   expect(real).toBeLessThan(75);
 });
 
-test("the painted look draws all twenty-five bodies in one context, and Jupiter's moons are there when zoomed in", async ({ page }) => {
+test("the painted look draws all twenty-six bodies in one context, and Jupiter's moons are there when zoomed in", async ({ page }) => {
   await open(page, `t=${NOV2}&look=painted`);
   // in the compressed scale the dwarf planets and the minor bodies are specks a pixel or two across, and are made
-  await expect.poll(async () => (await statsOf(page)).bodies.painted, { timeout: 30_000 }).toBe(25);
+  await expect.poll(async () => (await statsOf(page)).bodies.painted, { timeout: 30_000 }).toBe(26);
   expect((await statsOf(page)).bodies.look).toBe("painted");
   await jump(page, "Jupiter and its moons");
   await expect.poll(async () => (await statsOf(page)).bodies.moons, { timeout: 30_000 }).toBeGreaterThanOrEqual(2);

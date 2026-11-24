@@ -7,10 +7,10 @@ import { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, systemOf } from "../s
 test("the hopper's order holds every body once, the Sun first, and each planet is followed by its moons nearest first", () => {
   assert.equal(HOP_ORDER.length, BODY_IDS.length);
   assert.deepEqual([...HOP_ORDER].sort(), [...BODY_IDS].sort());
-  assert.deepEqual(HOP_ORDER.slice(0, 12), ["sun", "mercury", "venus", "earth", "moon", "eros", "mars", "phobos", "deimos", "vesta", "ceres", "pallas"]);
+  assert.deepEqual(HOP_ORDER.slice(0, 13), ["sun", "mercury", "venus", "earth", "moon", "bennu", "eros", "mars", "phobos", "deimos", "vesta", "ceres", "pallas"]);
 
   const at = (id: string): number => HOP_ORDER.indexOf(id as (typeof HOP_ORDER)[number]);
-  assert.ok(at("earth") < at("eros") && at("eros") < at("mars"), "Eros's orbit is between the Earth's and Mars's");
+  assert.ok(at("earth") < at("bennu") && at("bennu") < at("eros") && at("eros") < at("mars"), "Bennu and Eros orbit between the Earth and Mars");
   // the minor bodies are among the planets by the size of their orbits: Chiron and Halley between Saturn and Uranus, Pholus just beyond Uranus
   assert.ok(at("saturn") < at("chiron") && at("chiron") < at("halley") && at("halley") < at("uranus") && at("uranus") < at("pholus") && at("pholus") < at("neptune"));
   for (const [host, moons] of Object.entries(MOONS_OF)) {

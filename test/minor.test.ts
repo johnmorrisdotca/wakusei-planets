@@ -10,21 +10,24 @@ import "../src/tables/all.ts";
 
 const ms = Date.UTC(2026, 10, 10, 12);
 
-test("there are six minor bodies, each a body of its kind with the facts of one", () => {
-  assert.deepEqual([...MINOR_IDS], ["eros", "vesta", "pallas", "chiron", "pholus", "halley"]);
-  const kinds = { eros: "asteroid", vesta: "asteroid", pallas: "asteroid", chiron: "centaur", pholus: "centaur", halley: "comet" } as const;
+test("there are seven minor bodies, each a body of its kind with the facts of one", () => {
+  assert.deepEqual([...MINOR_IDS], ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]);
+  const kinds = { bennu: "asteroid", eros: "asteroid", vesta: "asteroid", pallas: "asteroid", chiron: "centaur", pholus: "centaur", halley: "comet" } as const;
   for (const id of MINOR_IDS) {
     assert.ok(BODY_IDS.includes(id), id);
     assert.equal(BODIES[id].kind, kinds[id]);
     assert.equal(BODIES[id].parent, undefined);
     assert.ok(BODIES[id].name.en.length > 0 && BODIES[id].name.ja.length > 0, id);
-    assert.ok(BODIES[id].radiusKm > 1 && BODIES[id].radiusKm < 300, id);
+    // Bennu is under a kilometre across. Every other minor body is larger than that.
+    if (id === "bennu") assert.ok(Math.abs(BODIES.bennu.radiusKm - 0.24222) < 1e-5);
+    else assert.ok(BODIES[id].radiusKm > 1 && BODIES[id].radiusKm < 300, id);
   }
   // the sizes JPL's Small-Body Database gives (read 2026-11-10): Vesta 569.24 x 554.48 x 452.66 km, Pallas 568 x 532 x 448 km, Halley 14.9 x 8.2 km
   assert.ok(Math.abs(BODIES.vesta.axesKm![0] * 2 - 569.24) < 1 && Math.abs(BODIES.vesta.axesKm![2] * 2 - 452.66) < 1);
   assert.ok(Math.abs(BODIES.pallas.axesKm![0] * 2 - 568) < 1 && Math.abs(BODIES.pallas.axesKm![2] * 2 - 448) < 1);
   assert.ok(Math.abs(BODIES.halley.axesKm![0] * 2 - 14.9) < 0.1);
   // Eros: the sphere of the volume Yeomans et al. 2000 measured (diameter 16.84 km), and the axes of NASA's simplified model
+  assert.ok(Math.abs(BODIES.bennu.axesKm![0] * 2 - 0.557) < 0.01 && Math.abs(BODIES.bennu.rotationHours - 4.296061) < 1e-6);
   assert.ok(Math.abs(BODIES.eros.radiusKm - 8.42) < 0.01);
   assert.ok(Math.abs(BODIES.eros.axesKm![0] * 2 - 32.82) < 0.05 && Math.abs(BODIES.eros.rotationHours - 5.27) < 1e-6);
   assert.ok(Math.abs(BODIES.vesta.rotationHours - 5.3421276) < 1e-6 && Math.abs(BODIES.pallas.rotationHours - 7.8132214) < 1e-6);
@@ -34,7 +37,7 @@ test("each one has a line drawing in both languages, and a table of its own", ()
   for (const id of MINOR_IDS) {
     assert.ok(lineSvg(id).includes(BODIES[id].name.en), id);
     assert.ok(lineSvg(id, { lang: "ja" }).includes(BODIES[id].name.ja), id);
-    if (id === "eros") {
+    if (id === "eros" || id === "bennu") {
       // Eros keeps the Small-Body Database ellipse. It has no fitted table.
       assert.equal(tableOf(id), undefined, id);
       assert.equal(heliocentricModel(id, ms).theory, "osculating-elements", id);
@@ -48,7 +51,7 @@ test("each one has a line drawing in both languages, and a table of its own", ()
 
 test("a minor body is on its published orbit: its distance from the Sun is between its perihelion and its aphelion", () => {
   // Horizons' own elements (OBJ_DATA, read 2026-11-10): perihelion and aphelion in au
-  const reach: Record<string, [number, number]> = { eros: [1.13, 1.79], vesta: [2.15, 2.58], pallas: [2.13, 3.42], chiron: [8.4, 18.9], pholus: [8.69, 31.92], halley: [0.574, 35.29] };
+  const reach: Record<string, [number, number]> = { bennu: [0.89, 1.36], eros: [1.13, 1.79], vesta: [2.15, 2.58], pallas: [2.13, 3.42], chiron: [8.4, 18.9], pholus: [8.69, 31.92], halley: [0.574, 35.29] };
   for (const id of MINOR_IDS) {
     const [q, Q] = reach[id]!;
     for (let k = 0; k < 40; k += 1) {
@@ -59,7 +62,7 @@ test("a minor body is on its published orbit: its distance from the Sun is betwe
 });
 
 test("a body that turns, turns about its axis the way its tilt says: Vesta 27 degrees from its orbit's pole and Pallas on its side", () => {
-  for (const id of ["eros", "vesta", "pallas", "chiron", "pholus"] as const) {
+  for (const id of ["bennu", "eros", "vesta", "pallas", "chiron", "pholus"] as const) {
     const f = BODIES[id];
     const a = heliocentric(id, ms);
     const b = heliocentric(id, ms + 86_400_000);

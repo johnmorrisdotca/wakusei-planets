@@ -1,10 +1,12 @@
 // The minor bodies' osculating elements, from JPL Horizons' own element tables (https://ssd.jpl.nasa.gov/api/horizons.api, OBJ_DATA, read 2026-11-10): ecliptic and equinox J2000, a in au, angles in degrees, `n` the mean motion in degrees a day,
-// at the epoch the orbit solution gives (Eros 2026-06-09, Vesta 2020-01-01, Pallas 2017-04-27, Chiron 2017-06-12, Pholus 2010-06-22, Halley 1968-01-20). Eros has no fitted table: the ellipse is its orbit at every date. They are the plain ellipse a body follows outside the years its table covers (1800 to 2200); a planet's
+// at the epoch the orbit solution gives (Bennu and Eros 2026-06-09, Vesta 2020-01-01, Pallas 2017-04-27, Chiron 2017-06-12, Pholus 2010-06-22, Halley 1968-01-20). Bennu and Eros have no fitted table: the ellipse is the orbit at every date. They are the plain ellipse a body follows outside the years its table covers (1800 to 2200); a planet's
 // pull moves a real orbit away from it, so far from the epoch it is only roughly right (a comet's, most of all).
 import type { MinorId } from "../facts.ts";
 import type { Osculating } from "./dwarf.ts";
 
 export const MINOR_ELEMENTS: Readonly<Record<MinorId, Osculating>> = {
+  // Bennu has no fitted table: Horizons elements at JD 2461200.5 (2026-06-09), the ones the asteroid list used. The Small-Body Database solution's own epoch is 2455562.5.
+  bennu: { epoch: 1780963200000, a: 1.125950726463012, e: 0.2036821438660532, i: 6.032966274857705, node: 1.96657403725591, w: 66.41055452273676, m: 72.45176654686115, n: 0.8249450020676293 },
   // Eros has no fitted table: this is the Small-Body Database ellipse the asteroid list used (orbit 659, epoch JD 2461200.5, 2026-06-09).
   eros: { epoch: 1780963200000, a: 1.458243716760167, e: 0.2228779627700761, i: 10.82854410314273, node: 304.2679713350896, w: 178.9181319135911, m: 62.51145501986792, n: 0.5597046347038453 },
   vesta: { epoch: 1577836800000, a: 2.361908654291772, e: 0.08857261385730482, i: 7.14181494423702, node: 103.8092892453337, w: 150.8357762126256, m: 163.3754032354997, n: 0.271524753 },

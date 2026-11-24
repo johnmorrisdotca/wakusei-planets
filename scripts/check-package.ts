@@ -193,7 +193,7 @@ const asteroidsEntry = "@johnmorrisdotca/wakusei-planets/asteroids";
 const asteroids = await import(asteroidsEntry);
 const itokawa = asteroids.findAsteroid("Itokawa");
 const itokawaSun = Math.hypot(...(asteroids.asteroidPositionAu(itokawa, Date.UTC(2026, 5, 9)) as number[]));
-if (asteroids.ASTEROIDS.length !== 103 || itokawa.number !== 25143 || itokawaSun < itokawa.elements.q || itokawaSun > itokawa.elements.a * (1 + itokawa.elements.e) || asteroids.findAsteroid("Eros") !== undefined) throw new Error("asteroids package entry failed");
+if (asteroids.ASTEROIDS.length !== 102 || itokawa.number !== 25143 || itokawaSun < itokawa.elements.q || itokawaSun > itokawa.elements.a * (1 + itokawa.elements.e) || asteroids.findAsteroid("Eros") !== undefined || asteroids.findAsteroid("Bennu") !== undefined) throw new Error("asteroids package entry failed");
 
 // The approaches through package resolution: the table loads with the entry point, Apophis passes the Earth on 2029-04-13 at about 0.000254 au, and the counts hold.
 const approachesEntry = "@johnmorrisdotca/wakusei-planets/approaches";

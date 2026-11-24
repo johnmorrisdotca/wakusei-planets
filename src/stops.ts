@@ -4,7 +4,7 @@
 // (https://nssdc.gsfc.nasa.gov/planetary/factsheet/) for the Sun (132,712 × 10^6), Mercury (0.022032 × 10^6) and Venus (0.32486 × 10^6).
 // Ceres, Eris, Makemake and Haumea: the mass on JPL "Planetary Physical Parameters" (https://ssd.jpl.nasa.gov/planets/phys_par.html)
 // times the CODATA 2018 G that page names. Escape speeds for the Sun and those planets are the speeds those pages print.
-// Eros (4.463e-4), Vesta (17.2882844) and Pallas (13.63): the GM of JPL's Small-Body Database (https://ssd-api.jpl.nasa.gov/sbdb.api; Eros read 2026-11-23, the others 2026-11-10), from Yeomans et al. 2000, Park et al. 2025 and Vernazza et al. 2021.
+// Bennu (4.8904e-9), Eros (4.463e-4), Vesta (17.2882844) and Pallas (13.63): the GM of JPL's Small-Body Database (https://ssd-api.jpl.nasa.gov/sbdb.api; Bennu and Eros read 2026-11-23, the others 2026-11-10), from Chesley et al. 2020, Yeomans et al. 2000, Park et al. 2025 and Vernazza et al. 2021.
 // A moon's escape speed is sqrt(2 GM / radius) from this package's radius. Nereid, and the dwarf planets and moons
 // whose pages do not print a mass, are left empty.
 import { heliocentric, meanSunAu, moonVector } from "./ephemeris.ts";
@@ -34,6 +34,7 @@ const GM: Partial<Record<BodyId, number>> = {
   eris: mass(16_600e18),
   makemake: mass(3_100e18),
   haumea: mass(4_006e18),
+  bennu: 4.8904e-9,
   eros: 4.463e-4,
   vesta: 17.2882844,
   pallas: 13.63,

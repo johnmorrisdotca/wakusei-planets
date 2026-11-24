@@ -170,6 +170,7 @@ test("the line a card says matches the looks: a measured shape with no map says 
     assert.equal(shapeNote(id, "en") === "", basis === undefined, id);
     assert.equal(shapeNote(id, "ja") === "", basis === undefined, id);
   }
+  assert.equal(shapeNote("bennu", "en"), "shape measured by spacecraft; colour from its photograph, not a map");
   assert.equal(shapeNote("eros", "en"), "shape measured by spacecraft; colour from its photograph, not a map");
   assert.equal(shapeNote("eros", "ja"), "形は探査機が測定したもの。色は写真からで、地面の地図ではない");
   assert.equal(shapeNote("nix", "en"), "shape measured; colour from its measured brightness");

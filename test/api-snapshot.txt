@@ -31,7 +31,7 @@ export interface LineupText { name: string; radius: string; km: string; source: 
 export interface LineupView { x: number; y: number; h: number; }
 export type Look = "line" | "realistic" | "painted" | "illustrated";
 export type LuminosityClass = (typeof LUMINOSITY_CLASSES)[number];
-const MINOR_IDS: readonly ["eros", "vesta", "pallas", "chiron", "pholus", "halley"]
+const MINOR_IDS: readonly ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]
 const MOONS_OF: { readonly earth: readonly ["moon"]; readonly mars: readonly ["phobos", "deimos"]; readonly jupiter: readonly ["io", "europa", "ganymede", "callisto", "amalthea", "thebe"]; readonly saturn: readonly ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe"]; readonly uranus: readonly ["miranda", "ariel", "umbriel", "titania", "oberon"]; readonly neptune: readonly ["proteus", "triton", "nereid", "larissa"]; readonly pluto: readonly ["charon", "nix", "hydra"]; readonly orcus: readonly ["vanth"]; readonly haumea: readonly ["hiiaka", "namaka"]; readonly eris: readonly ["dysnomia"]; }
 export type MinorId = (typeof MINOR_IDS)[number];
 export type MoonId = (typeof MOONS_OF)[keyof typeof MOONS_OF][number];
@@ -69,8 +69,8 @@ const drawnTilt: (facts: BodyFacts) => number
 function embedCode(options: EmbedOptions, kind?: "html" | "module" | "react" | "vue" | "angular" | "svelte" | "iframe", settings?: EmbedSettings) => string
 function embedCredit(options: EmbedOptions) => string
 function encodeScene(scene: Portrait) => string
-function heliocentric(planet: "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | HostId, ms: number) => Vec3
-function heliocentricModel(planet: "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | HostId, ms: number) => { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null; }
+function heliocentric(planet: "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | HostId, ms: number) => Vec3
+function heliocentricModel(planet: "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | HostId, ms: number) => { theory: "vsop87b" | "chebyshev" | "osculating-elements" | "approximate-elements"; worstArcseconds: number | null; }
 function interiorLegend(bodyId: string, lang: "en" | "ja") => InteriorRow[] | undefined
 function interiorOf(bodyId: string) => Interior | undefined
 function journeyStop(id: BodyId) => JourneyStop
@@ -88,7 +88,7 @@ function lineupText(body: LineupBody, lang: LineupLang) => LineupText
 function lineupView(places: readonly LineupPlace[], zoom: number, aspect?: number) => LineupView
 function lineupZoomFor(places: readonly LineupPlace[], radius: number) => number
 function lineupZoomOf(places: readonly LineupPlace[], id: string) => number | undefined
-function meanSunAu(id: "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | HostId) => number
+function meanSunAu(id: "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | HostId) => number
 function mercuryTilesCredit(lang: "en" | "ja") => string
 function mix(a: string, b: string, t: number) => string
 function moonGeocentric(ms: number) => Vec3
@@ -155,10 +155,10 @@ export type RideLook = "down" | "horizon" | "ahead";
 export interface RidePose { position: Vec3; forward: Vec3; up: Vec3; fov: number; bodyRadiusDegrees: number; }
 const SIGHT_STEP_PX: 8
 const SPACE_DWARFS: readonly ["ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna"]
-const SPACE_MINORS: readonly ["eros", "vesta", "pallas", "chiron", "pholus", "halley"]
+const SPACE_MINORS: readonly ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]
 const SPACE_PLANETS: readonly ["mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
 const SUN_COMPRESSED: 70
-const SUN_REGIONS: readonly [{ readonly id: "inner-planets"; readonly name: { readonly en: "Inner planets"; readonly ja: "内太陽系"; }; readonly bodies: readonly ["mercury", "venus", "earth", "mars"]; }, { readonly id: "asteroid-belt"; readonly name: { readonly en: "Asteroid belt"; readonly ja: "小惑星帯"; }; readonly bodies: readonly ["vesta", "ceres", "pallas"]; }, { readonly id: "outer-planets"; readonly name: { readonly en: "Outer planets"; readonly ja: "外太陽系"; }; readonly bodies: readonly ["jupiter", "saturn", "uranus", "neptune"]; }, { readonly id: "kuiper-belt"; readonly name: { readonly en: "Kuiper belt"; readonly ja: "カイパーベルト"; }; readonly bodies: readonly ["pluto", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris"]; }, { readonly id: "whole-system"; readonly name: { readonly en: "Whole solar system"; readonly ja: "太陽系全体"; }; readonly bodies: readonly ["earth", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]; }]
+const SUN_REGIONS: readonly [{ readonly id: "inner-planets"; readonly name: { readonly en: "Inner planets"; readonly ja: "内太陽系"; }; readonly bodies: readonly ["mercury", "venus", "earth", "mars"]; }, { readonly id: "asteroid-belt"; readonly name: { readonly en: "Asteroid belt"; readonly ja: "小惑星帯"; }; readonly bodies: readonly ["vesta", "ceres", "pallas"]; }, { readonly id: "outer-planets"; readonly name: { readonly en: "Outer planets"; readonly ja: "外太陽系"; }; readonly bodies: readonly ["jupiter", "saturn", "uranus", "neptune"]; }, { readonly id: "kuiper-belt"; readonly name: { readonly en: "Kuiper belt"; readonly ja: "カイパーベルト"; }; readonly bodies: readonly ["pluto", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris"]; }, { readonly id: "whole-system"; readonly name: { readonly en: "Whole solar system"; readonly ja: "太陽系全体"; }; readonly bodies: readonly ["earth", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna", "bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]; }]
 export type ScaleMode = "compressed" | "true";
 export interface Sight { inView: boolean; behind: boolean; edge: SightEdge | null; x: number; y: number; along: number; angle: number; }
 export type SightEdge = "top" | "right" | "bottom" | "left";
@@ -225,8 +225,8 @@ function placeBodies(mode: ScaleMode, frame: SpaceFrame) => Record<BaseBody, Vec
 function placeLabels(boxes: readonly LabelBox[], gap?: number, keepOut?: readonly KeepOut[]) => Map<string, { x: number; y: number; }>
 const placeMoon: (mode: ScaleMode, geo: Vec3) => Vec3
 function placeSun(mode: ScaleMode, geo: Vec3) => Vec3
-function planetOrbit(id: "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley", ms: number, count?: number) => Vec3[]
-function radiusIn(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | "moon", mode: ScaleMode) => number
+function planetOrbit(id: "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna" | "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley", ms: number, count?: number) => Vec3[]
+function radiusIn(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna" | "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | "moon", mode: ScaleMode) => number
 function readFrame(value: unknown) => FrameKind
 function readHelpPlace(value: string | null | undefined) => HelpPlace
 function regionOrbits(region: "inner-planets" | "asteroid-belt" | "outer-planets" | "kuiper-belt" | "whole-system", mode: ScaleMode, ms: number, count?: number) => Vec3[][]
@@ -266,7 +266,7 @@ export interface RideOptions { view?: "from" | "follow" | "beside"; look?: RideL
 export interface RidePoint { readonly id?: string; at(ms: number): { position: SpaceVec3; velocity: SpaceVec3; } | null; }
 export type RideTarget = SpaceBody | MoonId | RidePoint;
 export type Riding = RideState;
-const SPACE_BODIES: readonly ["earth", "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]
+const SPACE_BODIES: readonly ["earth", "sun", "moon", "mercury", "venus", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna", "bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]
 export interface Sight { inView: boolean; behind: boolean; edge: SightEdge | null; x: number; y: number; along: number; angle: number; }
 export type SightEdge = "top" | "right" | "bottom" | "left";
 export type SpaceBody = (typeof SPACE_BODIES)[number];
@@ -790,13 +790,13 @@ function angleBetween(lat1: number, lon1: number, lat2: number, lon2: number) =>
 function findPlace(places: readonly Place[], text: string) => Place | undefined
 function isDaylight(id: BodyId, lat: number, lon: number, when: When) => boolean
 function layerOf(kind: PlaceKind) => "landing" | "crash" | "planned" | "feature"
-function listPlaces(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "bennu" | "dimorphos" | "tempel-1" | "67p", ...kinds: readonly PlaceKind[]) => Promise<Place[]>
-function loadPlaces(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "bennu" | "dimorphos" | "tempel-1" | "67p") => Promise<readonly Place[]>
+function listPlaces(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "bennu" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "dimorphos" | "tempel-1" | "67p", ...kinds: readonly PlaceKind[]) => Promise<Place[]>
+function loadPlaces(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "bennu" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "dimorphos" | "tempel-1" | "67p") => Promise<readonly Place[]>
 function localSolarTime(id: BodyId, lon: number, when: When) => number
 function marksToShow(places: readonly Place[], layers: readonly ("landing" | "crash" | "planned" | "feature")[], view: SurfaceView, radiusKm: number, names: { on: boolean; limit: number | null; }, keepClear?: readonly Obstacle[], lang?: "en" | "ja") => PlaceMark[]
 function nearestPlace(places: readonly Place[], lat: number, lon: number, ...kinds: readonly PlaceKind[]) => { place: Place; degrees: number; } | undefined
-function placeDistance(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "bennu" | "dimorphos" | "tempel-1" | "67p", a: Place | { lat: number; lon: number; }, b: Place | { lat: number; lon: number; }) => { km: number; accuracyKm: number | null; }
-function placeDistanceKm(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "bennu" | "dimorphos" | "tempel-1" | "67p", a: Place | { lat: number; lon: number; }, b: Place | { lat: number; lon: number; }) => number
+function placeDistance(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "bennu" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "dimorphos" | "tempel-1" | "67p", a: Place | { lat: number; lon: number; }, b: Place | { lat: number; lon: number; }) => { km: number; accuracyKm: number | null; }
+function placeDistanceKm(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "bennu" | "eros" | "vesta" | "moon" | "io" | "europa" | "ganymede" | "callisto" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "triton" | "charon" | "ryugu" | "dimorphos" | "tempel-1" | "67p", a: Place | { lat: number; lon: number; }, b: Place | { lat: number; lon: number; }) => number
 function placeMarks(places: readonly Place[], layers: readonly ("landing" | "crash" | "planned" | "feature")[], view: SurfaceView, radiusKm: number, options?: { limit?: number | undefined; gapPx?: number | undefined; label?: boolean | undefined; avoid?: readonly Obstacle[] | undefined; lang?: "en" | "ja" | undefined; nudge?: boolean | undefined; } | undefined) => PlaceMark[]
 function placeRank(place: Place) => number
 function placesNear(places: readonly Place[], lat: number, lon: number, withinDeg: number) => { place: Place; degrees: number; }[]
@@ -884,7 +884,7 @@ const SEARCH_SOURCE_IDS: readonly ("iau-gazetteer" | "gcat-landercat" | "nssdca"
 function hitToBodyPlace(hit: PlaceHit, options?: { lang?: "en" | "ja" | undefined; kind?: "here" | "favourite" | undefined; color?: string | undefined; label?: string | false | undefined; }) => PlaceOnBody
 function hitToPlace(hit: PlaceHit) => Place
 function loadPlaceHits(ids: readonly string[]) => Promise<PlaceHit[]>
-function loadPlaceSearch(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "eros" | "vesta" | "moon" | "phobos" | "deimos" | "io" | "europa" | "ganymede" | "callisto" | "amalthea" | "thebe" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "epimetheus" | "janus" | "hyperion" | "phoebe" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "proteus" | "triton" | "charon" | "ryugu" | "bennu" | "dimorphos" | "tempel-1" | "67p" | "dactyl" | "didymos" | "dinkinesh" | "donaldjohanson" | "gaspra" | "ida" | "itokawa" | "lutetia" | "mathilde" | "steins", options?: { satellites?: boolean | undefined; }) => Promise<readonly PlaceHit[]>
+function loadPlaceSearch(body: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "pluto" | "ceres" | "bennu" | "eros" | "vesta" | "moon" | "phobos" | "deimos" | "io" | "europa" | "ganymede" | "callisto" | "amalthea" | "thebe" | "mimas" | "enceladus" | "tethys" | "dione" | "rhea" | "titan" | "iapetus" | "epimetheus" | "janus" | "hyperion" | "phoebe" | "miranda" | "ariel" | "umbriel" | "titania" | "oberon" | "proteus" | "triton" | "charon" | "ryugu" | "dimorphos" | "tempel-1" | "67p" | "dactyl" | "didymos" | "dinkinesh" | "donaldjohanson" | "gaspra" | "ida" | "itokawa" | "lutetia" | "mathilde" | "steins", options?: { satellites?: boolean | undefined; }) => Promise<readonly PlaceHit[]>
 function placeHitUrl(hit: PlaceHit) => string | undefined
 function readPlaceHits(body: string, text: string) => PlaceHit[]
 function resolvePlaceId(id: string) => string
