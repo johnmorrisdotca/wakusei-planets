@@ -7,7 +7,7 @@ const URL = "/wakusei-planets/";
 test("the body page has a row of small bodies, each a click away, and the address keeps the choice", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=mars`);
   await page.locator('#picker [data-testid="group-minor"]').click();
-  await expect(page.locator("#tiles .tile")).toHaveCount(5);
+  await expect(page.locator("#tiles .tile")).toHaveCount(8);
   await page.locator('#tiles .tile[data-body="halley"]').click();
   await expect(page.locator("#main")).toHaveAttribute("body", "halley");
   await expect(page).toHaveURL(/body=halley/);

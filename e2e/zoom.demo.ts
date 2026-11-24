@@ -29,6 +29,8 @@ async function bare(page: Page, attributes: Record<string, string>): Promise<voi
 
 const last = (page: Page): Promise<View | undefined> => page.evaluate(() => (window as unknown as { __view?: View }).__view);
 const centre = async (page: Page, selector: string): Promise<{ x: number; y: number }> => {
+  // the page's header can put the view below the first screen of a phone: a touch is sent to a place on the screen
+  await page.locator(selector).scrollIntoViewIfNeeded();
   const box = (await page.locator(selector).boundingBox())!;
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 };

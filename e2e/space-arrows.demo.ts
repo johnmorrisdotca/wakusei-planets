@@ -58,7 +58,7 @@ for (const scale of ["true", "compressed"] as const) {
       await setOn(page, "speed", speed);
       await settle(page, speed === 0 ? 500 : 1500);
       const now = await seen(page);
-      expect(Object.keys(now.arrows).length, "an orbit line each for the Earth, the planets, the dwarf planets, the minor bodies and the Moon").toBe(23);
+      expect(Object.keys(now.arrows).length, "an orbit line each for the Earth, the planets, the dwarf planets, the minor bodies and the Moon").toBe(26);
       for (const list of Object.values(now.arrows)) expect(list.length).toBe(2);
       for (const id of ["earth", "venus", "uranus", "moon"]) {
         const { about, direction } = await momentum(id, now.time, scale);

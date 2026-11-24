@@ -200,6 +200,8 @@ async function pinch(page: Page, at: { x: number; y: number }, gap: number, spre
 test("two fingers pinching apart zoom the view in, and together zoom it out", async ({ page, browserName }, testInfo) => {
   test.skip(browserName !== "chromium" || !/phone/.test(testInfo.project.name), "a phone's touch, sent through Chromium's input");
   await open(page);
+  // the page's header can put the view below the first screen of a phone: a touch is sent to a place on the screen
+  await page.locator("#view").scrollIntoViewIfNeeded();
   const box = (await page.locator("#view").boundingBox())!;
   const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   await pinch(page, centre, 60, 120);

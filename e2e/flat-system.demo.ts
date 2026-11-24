@@ -60,7 +60,7 @@ test("the map is in: the Sun, nine planets, the dwarf planets, the comets, the c
   const bodies = await system(page).evaluate((el) => (el as System).bodies);
   expect(bodies[0]!.id).toBe("sun");
   expect(bodies.filter((b) => b.layer === "planets")).toHaveLength(9);
-  expect(bodies.filter((b) => b.layer === "dwarfs").length).toBe(12);
+  expect(bodies.filter((b) => b.layer === "dwarfs").length).toBe(15);
   expect(bodies.filter((b) => b.layer === "comets").length).toBeGreaterThan(20);
   expect(bodies.some((b) => b.id === "roadster" && b.kind === "spacecraft")).toBe(true);
   expect(bodies.some((b) => b.id === "voyager1")).toBe(true);

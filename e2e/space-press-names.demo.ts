@@ -21,6 +21,8 @@ async function uranus(page: Page): Promise<void> {
   await callOn(page, "goTo", "uranus", { smooth: false, zoom });
   await page.locator("kazoku-view-controls").evaluate((el, z) => (Reflect.get(el, "controller") as { set(v: unknown, f: boolean, r: string): void }).set({ zoom: z }, true, "jump"), zoom);
   await expect.poll(async () => (await statsOf(page)).bodies.moons, { timeout: 60_000, message: "Uranus's moons are drawn" }).toBeGreaterThanOrEqual(3);
+  // the page's header can put the view below the first screen of a phone: a press is sent to a place on the screen
+  await page.locator(SPACE).scrollIntoViewIfNeeded();
   await quiet(page);
 }
 

@@ -23,7 +23,7 @@ test("the view offers every body: the Sun, every planet, dwarf planet and minor 
   expect(of("star")).toEqual(["sun"]);
   expect(of("planet")).toEqual(["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"]);
   expect(of("dwarf-planet").sort()).toEqual(["ceres", "eris", "gonggong", "haumea", "makemake", "orcus", "pluto", "quaoar", "sedna"]);
-  expect(of("asteroid")).toEqual(["vesta", "pallas"]);
+  expect(of("asteroid")).toEqual(["bennu", "eros", "vesta", "pallas", "arrokoth"]);
   expect(of("centaur")).toEqual(["chiron", "pholus"]);
   expect(of("comet")).toEqual(["halley"]);
   expect(of("moon").length).toBe(Object.values(MOONS_OF).flat().length);
@@ -39,7 +39,7 @@ test("the picker: a kind, then (for a moon) the planet it goes round, then the b
   await page.locator('#choices button[data-id="eris"]').dispatchEvent("click");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("eris");
   await press(page, '#kinds [data-kind="minor"]');
-  expect(await choices(page), "the minor bodies, from the Sun outwards").toEqual(["vesta", "pallas", "chiron", "halley", "pholus"]);
+  expect(await choices(page), "the minor bodies, from the Sun outwards").toEqual(["bennu", "eros", "vesta", "pallas", "chiron", "halley", "pholus", "arrokoth"]);
   await page.locator('#choices button[data-id="halley"]').dispatchEvent("click");
   await expect.poll(() => bodyOf(page), { timeout: 30_000 }).toBe("halley");
   await press(page, '#kinds [data-kind="moon"]');

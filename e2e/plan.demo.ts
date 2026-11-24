@@ -13,6 +13,8 @@ const open = async (page: Page, query = "?date=2026-11-11", both = true): Promis
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`/wakusei-planets/plan.html${query}`);
+  // on a narrow phone the page's header (what the page is, the way home) puts the first inset below the first screen too
+  await sun(page).scrollIntoViewIfNeeded();
   await expect(sun(page)).toHaveAttribute("data-state", "ready");
   // a plan below the first screen is not drawn until it is seen: on a phone the second inset sits below the first and, with the page's links in more rows, below the screen, so it is brought into view (and the first back after it)
   if (both) {

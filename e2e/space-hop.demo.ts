@@ -75,7 +75,7 @@ test("the hopper goes through every body in order, each at the middle within thr
   await openSpace(page);
   const bodies = await listOf(page);
   const ids = bodies.map((b) => b.id);
-  expect(ids.slice(0, 8), "the order").toEqual(["sun", "mercury", "venus", "earth", "moon", "mars", "phobos", "deimos"]);
+  expect(ids.slice(0, 10), "the order").toEqual(["sun", "mercury", "venus", "earth", "moon", "bennu", "eros", "mars", "phobos", "deimos"]);
   expect(ids, "the moons of the planets are there").toEqual(expect.arrayContaining(["io", "titan", "triton", "charon"]));
   expect(bodies.find((b) => b.id === "titan")).toMatchObject({ kind: "moon", host: "saturn" });
   await callOn(page, "goTo", "sun", { smooth: false });

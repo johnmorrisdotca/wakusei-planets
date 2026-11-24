@@ -1079,7 +1079,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
             camera.up.set(upNow[0], upNow[1], upNow[2]);
             camera.lookAt(target);
-            camera.near = Math.max(0.0005, distance * 0.02 - focusRadius * 0.5, focusRadius * 0.01);
+            // the floor is a tenth of the distance when the camera is nearer than 0.005 (about 32 km): Bennu's middle is 1 km from the eye, inside the old floor of 0.0005, and a point nearer than the near plane is not drawn or placed
+            camera.near = Math.max(Math.min(0.0005, distance * 0.1), distance * 0.02 - focusRadius * 0.5, focusRadius * 0.01);
             camera.far = Math.max(2000, distance * 4 + (mode === "true" ? 40 * 23_481 : 400));
           }
 
