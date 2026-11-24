@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { existsSync, statSync } from "node:fs";
 import { test } from "node:test";
+import { ARROKOTH_CRAFT } from "../src/data/shapes/arrokoth-craft.ts";
 import { BENNU_CRAFT } from "../src/data/shapes/bennu-craft.ts";
 import { EROS_CRAFT } from "../src/data/shapes/eros-craft.ts";
 import { craftArrays, craftMaterial } from "../src/scene/craft.ts";
@@ -42,6 +43,22 @@ test("Bennu's mesh is the published model, and the whole body fits the picture",
     if (r > farthest) farthest = r;
   }
   assert.ok(farthest > 1 && farthest < 1.3, farthest.toFixed(3));
+});
+
+test("Arrokoth's mesh is the published model, and the whole body fits the picture", async () => {
+  const mesh = await lookOf("arrokoth")!.craft!();
+  assert.equal(mesh, ARROKOTH_CRAFT);
+  const arrays = craftArrays(mesh);
+  assert.equal(arrays.positions.length, 2908 * 3);
+  assert.equal(arrays.indices.length, 5576 * 3);
+  assert.equal(mesh.map, "arrokoth-craft-512.webp");
+  assert.ok(statSync(`textures/${mesh.map}`).size < 40_000);
+  let farthest = 0;
+  for (let i = 0; i < arrays.positions.length; i += 3) {
+    const r = Math.hypot(arrays.positions[i]!, arrays.positions[i + 1]!, arrays.positions[i + 2]!);
+    if (r > farthest) farthest = r;
+  }
+  assert.ok(farthest > 1.8 && farthest < 2.2, farthest.toFixed(3));
 });
 
 test("the craft material keeps the uniforms the body page writes on every material", () => {

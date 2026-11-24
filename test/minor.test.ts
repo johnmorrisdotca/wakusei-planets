@@ -10,9 +10,9 @@ import "../src/tables/all.ts";
 
 const ms = Date.UTC(2026, 10, 10, 12);
 
-test("there are seven minor bodies, each a body of its kind with the facts of one", () => {
-  assert.deepEqual([...MINOR_IDS], ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"]);
-  const kinds = { bennu: "asteroid", eros: "asteroid", vesta: "asteroid", pallas: "asteroid", chiron: "centaur", pholus: "centaur", halley: "comet" } as const;
+test("there are eight minor bodies, each a body of its kind with the facts of one", () => {
+  assert.deepEqual([...MINOR_IDS], ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley", "arrokoth"]);
+  const kinds = { bennu: "asteroid", eros: "asteroid", vesta: "asteroid", pallas: "asteroid", chiron: "centaur", pholus: "centaur", halley: "comet", arrokoth: "asteroid" } as const;
   for (const id of MINOR_IDS) {
     assert.ok(BODY_IDS.includes(id), id);
     assert.equal(BODIES[id].kind, kinds[id]);
@@ -37,7 +37,7 @@ test("each one has a line drawing in both languages, and a table of its own", ()
   for (const id of MINOR_IDS) {
     assert.ok(lineSvg(id).includes(BODIES[id].name.en), id);
     assert.ok(lineSvg(id, { lang: "ja" }).includes(BODIES[id].name.ja), id);
-    if (id === "eros" || id === "bennu") {
+    if (id === "eros" || id === "bennu" || id === "arrokoth") {
       // Eros keeps the Small-Body Database ellipse. It has no fitted table.
       assert.equal(tableOf(id), undefined, id);
       assert.equal(heliocentricModel(id, ms).theory, "osculating-elements", id);
@@ -51,7 +51,7 @@ test("each one has a line drawing in both languages, and a table of its own", ()
 
 test("a minor body is on its published orbit: its distance from the Sun is between its perihelion and its aphelion", () => {
   // Horizons' own elements (OBJ_DATA, read 2026-11-10): perihelion and aphelion in au
-  const reach: Record<string, [number, number]> = { bennu: [0.89, 1.36], eros: [1.13, 1.79], vesta: [2.15, 2.58], pallas: [2.13, 3.42], chiron: [8.4, 18.9], pholus: [8.69, 31.92], halley: [0.574, 35.29] };
+  const reach: Record<string, [number, number]> = { bennu: [0.89, 1.36], eros: [1.13, 1.79], vesta: [2.15, 2.58], pallas: [2.13, 3.42], chiron: [8.4, 18.9], pholus: [8.69, 31.92], halley: [0.574, 35.29], arrokoth: [42.4, 45.7] };
   for (const id of MINOR_IDS) {
     const [q, Q] = reach[id]!;
     for (let k = 0; k < 40; k += 1) {
@@ -62,7 +62,7 @@ test("a minor body is on its published orbit: its distance from the Sun is betwe
 });
 
 test("a body that turns, turns about its axis the way its tilt says: Vesta 27 degrees from its orbit's pole and Pallas on its side", () => {
-  for (const id of ["bennu", "eros", "vesta", "pallas", "chiron", "pholus"] as const) {
+  for (const id of ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "arrokoth"] as const) {
     const f = BODIES[id];
     const a = heliocentric(id, ms);
     const b = heliocentric(id, ms + 86_400_000);

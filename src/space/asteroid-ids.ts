@@ -1,10 +1,10 @@
 // The ids of the asteroids of /asteroids, in table order: what the space view needs to tell an asteroid from a body (and to say so when the option `asteroids` is off) without loading the table, which is a chunk of its own
 // that the view reaches only when the option is turned on. A test holds this list to the table. And how the view keys the asteroids among its own names (labels, places, the sight): two of them, `europa` and `dione`, have the id of a moon.
-/** The ids of the 102 bodies of `/asteroids`, in table order. Eros and Bennu are bodies of the package, so they are not in this list. */
+/** The ids of the 101 bodies of `/asteroids`, in table order. Eros, Bennu and Arrokoth are bodies of the package, so they are not in this list. */
 export const ASTEROID_IDS: readonly string[] = [
   "hygiea", "interamnia", "europa", "davida", "euphrosyne", "patientia", "sylvia", "juno", "cybele", "thisbe", "eunomia", "psyche", "bamberga", "doris", "ursula",
   "camilla", "hermione", "lomia", "dione", "daphne", "aurora", "egeria", "eugenia", "fortuna", "iris", "chicago", "themis", "gaspra", "ida", "mathilde", "lutetia",
-  "steins", "annefrank", "braille", "dinkinesh", "donaldjohanson", "masursky", "apl", "itokawa", "ryugu", "toutatis", "didymos", "arrokoth",
+  "steins", "annefrank", "braille", "dinkinesh", "donaldjohanson", "masursky", "apl", "itokawa", "ryugu", "toutatis", "didymos",
   "apophis", "torifune", "1998-ky26", "2024-yr4", "phaethon", "icarus", "geographos", "toro", "cruithne", "kamooalewa", "1950-da", "florence", "ganymed", "apollo",
   "aten", "amor", "atira", "hermes", "wilson-harrington", "duende", "nereus", "golevka", "adonis", "eurybates", "polymele", "leucus", "orus", "patroclus", "hektor",
   "achilles", "agamemnon", "nestor", "priamus", "diomedes", "odysseus", "ajax", "menelaus", "aneas", "anchises", "chariklo", "nessus", "asbolus", "hylonome",

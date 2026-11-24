@@ -32,7 +32,7 @@ export const DWARF_IDS = ["ceres", "orcus", "haumea", "quaoar", "makemake", "gon
  * console.log(MINOR_IDS.join(", "));
  * ```
  */
-export const MINOR_IDS = ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley"] as const;
+export const MINOR_IDS = ["bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley", "arrokoth"] as const;
 /**
  * The moons the package draws, by planet or dwarf planet. The moons it drew first come first, from the nearest out, and the small ones that came later with their real shapes (Amalthea and Thebe, Saturn's small moons, Hyperion, Phoebe and Larissa) follow in the same order, so a page that takes the first moon of a planet, or goes through them one by one, still meets the big ones first.
  *
@@ -372,7 +372,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   gonggong: f("gonggong", "dwarf-planet", "Gonggong", "ゴンゴン", 615, 0, 0, 255.383, 36.831, 0, 385.7, 22.4, "#9c4f3b", { features: dots([[-50, 10, 9], [60, -25, 8], [140, 30, 7]]) }),
   eris: f("eris", "dwarf-planet", "Eris", "エリス", 1163, 0, 78.22, 36.17, 44.51, 0, 22.805163, 378.8616, "#e8e4dc", { features: [{ kind: "band", lat: 0 }, ...dots([[-30, 30, 8], [80, -20, 9]])] }),
   sedna: f("sedna", "dwarf-planet", "Sedna", "セドナ", 453, 0, 0, 297.062, 74.71, 0, 840.95, 10.273, "#9a3f2b", { features: dots([[-40, 20, 9], [70, -30, 8], [150, 10, 7]]) }),
-  // The minor bodies. Bennu: Daly et al. 2020 (volume, extents, pole) and NASA's published model (the shape drawn); Eros: Yeomans et al. 2000 (volume, pole) and NASA's published model (the shape drawn); Vesta: Park et al. 2025 (Nature Astronomy, JPL SBDB), pole and rotation from the same; Pallas: Marsset et al. 2020 (shape), Carry et al. 2010 (pole, rotation); Chiron and Pholus: JPL SBDB (diameters
+  // The minor bodies. Bennu: Daly et al. 2020 (volume, extents, pole) and NASA's published model (the shape drawn); Eros: Yeomans et al. 2000 (volume, pole) and NASA's published model (the shape drawn); Arrokoth: Spencer et al. 2020 (volume, extents, pole) and NASA's published model (the shape drawn); Vesta: Park et al. 2025 (Nature Astronomy, JPL SBDB), pole and rotation from the same; Pallas: Marsset et al. 2020 (shape), Carry et al. 2010 (pole, rotation); Chiron and Pholus: JPL SBDB (diameters
   // from occultation and thermal measurements) with the pole estimated along the orbit's; Halley: Keller et al. 1987 (the nucleus), the pole estimated along the orbit's and no spin drawn. See NOTICE.md.
   bennu: f("bennu", "asteroid", "Bennu", "ベンヌ", 0.24222, 0, 178, 85.4522, -60.3678, 0, 2011.1446276, 4.296061, "#7b7b7b", { axesKm: [0.278, 0.264, 0.250] }),
   eros: f("eros", "asteroid", "Eros", "エロス", 8.42, 0, 89, 11.37, 17.22, 0, 1639.4686907, 5.27, "#8f8f8f", { axesKm: [16.41, 7.35, 6.0] }),
@@ -385,6 +385,7 @@ export const BODIES: Readonly<Record<BodyId, BodyFacts>> = {
   chiron: f("chiron", "centaur", "Chiron", "ケイロン", 83, 0, 0, 258.793, 72.317, 0, 1460, 5.918, "#8d8e90", { features: dots([[-50, 20, 14], [70, -25, 12], [150, 30, 10], [-120, -35, 9]]) }),
   pholus: f("pholus", "centaur", "Pholus", "ポルス", 95, 0, 0, 334.495, 66.246, 0, 865.73, 9.98, "#8e4b36", { features: dots([[-60, 15, 14], [40, -30, 12], [130, 25, 10], [-130, -20, 9]]) }),
   halley: f("halley", "comet", "Halley", "ハレー彗星", 5.5, 0, 0, 41.795, -69.39, 0, 0, 0, "#44403d", { axesKm: [7.45, 4.1, 4.1], features: [...dots([[-40, 20, 16], [60, -15, 12], [130, 30, 10]]), { kind: "line", points: [[-120, -5], [-80, 8], [-30, -4], [20, 10], [80, 0]] }] }),
+  arrokoth: f("arrokoth", "asteroid", "Arrokoth", "アロコス", 9.15, 0, 99, 317.5, -24.9, 0, 542.7817565, 15.918, "#6f6f6f", { axesKm: [16.37, 12.42, 5.34] }),
   moon: f("moon", "moon", "Moon", "月", 1737.4, 0.0012, 6.68, 269.9949, 66.5392, 38.3213, 13.17635815, 655.728, "#b8b5ae", {
     parent: "earth",
     synchronous: true,

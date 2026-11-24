@@ -5,7 +5,7 @@ order: 19
 description: "About a hundred asteroids, centaurs and trans-Neptunian objects from JPL's Small-Body Database: orbits, sizes, the spacecraft that visited them, and where each is on any date. A 17 kB table that only /asteroids carries."
 ---
 
-`/asteroids` is a set of 104 small bodies: the largest main-belt asteroids, the ones spacecraft have visited (Eros, Itokawa, Ryugu, Bennu, Arrokoth and more), famous near-Earth asteroids (Apophis, 2024 YR4, Phaethon), Jupiter's trojans (the targets of the Lucy mission, Hektor, Achilles), centaurs and trans-Neptunian objects. Each record has the orbit (osculating elements at one epoch, read from JPL's Small-Body Database on 2026-11-11), the size, spin, brightness and colour class where the source gives them, the missions and the year of discovery. It runs anywhere, with no DOM and no three.js, needs no loading step, and the table (about 17.6 kB gzipped) is part of this entry point only: a page that does not import `/asteroids` does not carry it.
+`/asteroids` is a set of 101 small bodies: the largest main-belt asteroids, the ones spacecraft have visited (Itokawa, Ryugu and more), famous near-Earth asteroids (Apophis, 2024 YR4, Phaethon), Jupiter's trojans (the targets of the Lucy mission, Hektor, Achilles), centaurs and trans-Neptunian objects. Each record has the orbit (osculating elements at one epoch, read from JPL's Small-Body Database on 2026-11-11), the size, spin, brightness and colour class where the source gives them, the missions and the year of discovery. It runs anywhere, with no DOM and no three.js, needs no loading step, and the table (about 17.4 kB gzipped) is part of this entry point only: a page that does not import `/asteroids` does not carry it.
 
 ```ts
 import { asteroidDistances, asteroidPositionAu, findAsteroid } from "@johnmorrisdotca/wakusei-planets/asteroids";
@@ -26,7 +26,7 @@ console.log("x, y, z in au:", asteroidPositionAu(eros, day).map((au) => au.toFix
 | `near-earth` | 29 | Eros, Itokawa, Ryugu, Bennu, Apophis, 2024 YR4, Phaethon, Didymos, Kamo`oalewa |
 | `trojan` | 16 | Hektor, Achilles, Patroclus, Eurybates, Polymele, Leucus, Orus |
 | `centaur` | 7 | Chariklo, Nessus, Asbolus |
-| `trans-neptunian` | 14 | Arrokoth, Salacia, Varuna, Ixion, Varda, Albion, Leleākūhonua |
+| `trans-neptunian` | 13 | Salacia, Varuna, Ixion, Varda, Albion, Leleākūhonua |
 
 The near-Earth asteroids have a `group` as well: 1 Atira, 4 Aten, 20 Apollo and 4 Amor. A body the package already has is not repeated: Ceres, Pallas, Vesta, Chiron, Pholus, Halley, Pluto and the dwarf planets Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna have their own, fuller, tables (so the largest asteroids here begin with Hygiea, the fourth largest). `hazardous` is JPL's own flag for a potentially hazardous asteroid; the numbers `H`, `diameterKm`, `albedo`, `rotationHours`, `spectral` and the discovery year are left out where the source has none.
 
@@ -54,7 +54,7 @@ console.log(mine.kind, mine.group, asteroidOrbitPoints(mine, 90).length, "points
 
 ## In the space view
 
-`<wakusei-space>` places the 102 bodies as points with its option `asteroids`, names the ones near the camera, and with the option on `space.goTo("itokawa")` brings the camera to a body and `space.ride("apophis")` rides along with one, at the true scale; the option off, or an id that is not in the set, throws a `RangeError` that says so. The details, with the cost measured, are in [The space view](space-view.md).
+`<wakusei-space>` places the 101 bodies as points with its option `asteroids`, names the ones near the camera, and with the option on `space.goTo("itokawa")` brings the camera to a body and `space.ride("apophis")` rides along with one, at the true scale; the option off, or an id that is not in the set, throws a `RangeError` that says so. The details, with the cost measured, are in [The space view](space-view.md).
 
 ## How exact it is
 

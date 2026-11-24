@@ -50,6 +50,7 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Chiron | 4096 | shader | 11x |  |  |
 | Pholus | 4096 | shader | 11x |  |  |
 | Halley | 4096 | shader | 11x |  |  |
+| Arrokoth | 4096 | shader | 11x |  |  |
 | Moon | 16384 | tiles | 44x |  |  |
 | Phobos | 2048 | map | 8x |  |  |
 | Deimos | 2048 | map | 8x |  |  |
