@@ -20,7 +20,7 @@ export interface PictureCredit {
   readonly licence: "CC BY 4.0" | "Public domain";
   /** The credit column of `NOTICE.md` for this picture, in English, and the same fact in Japanese. */
   readonly credit: { readonly en: string; readonly ja: string };
-  /** What this package changed, from the table's "What was done" column. Present for a CC BY 4.0 map, which asks that changes be named, and for Pluto, whose south was not photographed. */
+  /** What this package changed, from the table's "What was done" column. Present for a CC BY 4.0 map, which asks that changes be named, and for Pluto, whose south was not photographed and whose far side was seen only at low resolution. */
   readonly changes?: { readonly en: string; readonly ja: string };
   /** Another picture drawn with the body (Saturn's rings), with its own credit and licence. */
   readonly also?: { readonly en: string; readonly ja: string };
@@ -105,8 +105,8 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   {
     ...pd("pluto", "NASA / Johns Hopkins University Applied Physics Laboratory / Southwest Research Institute", "NASA / Johns Hopkins University Applied Physics Laboratory / Southwest Research Institute"),
     changes: {
-      en: "South of about 30 degrees S was not photographed by New Horizons; it is painted with an image model to continue the photographed ground, and is not observed.",
-      ja: "南緯約30度より南はニュー・ホライズンズが撮影しておらず、撮影された地面に続くように画像生成モデルで描いたもので、観測されたものではありません。撮影された部分は NASA の画像で、パブリックドメインです。",
+      en: "South of about 30 degrees S was not photographed by New Horizons, and the far side only at low resolution; those parts are painted with an image model to continue the photographed ground, keeping the far side's observed broad pattern, and are not observed in detail.",
+      ja: "南緯約30度より南はニュー・ホライズンズが撮影しておらず、反対側も低い解像度でしか撮影されていません。それらの部分は、撮影された地面に続くように画像生成モデルで描いたもので、反対側の観測された大まかな模様を保っていますが、細部は観測されたものではありません。撮影された部分は NASA の画像で、パブリックドメインです。",
     },
   },
   cc("sun", "Solar System Scope", "Solar System Scope", "Equirectangular map, resized to 512, 1024 and 2048.", "正距円筒図法の地図を、512、1024、2048に縮小しました。"),

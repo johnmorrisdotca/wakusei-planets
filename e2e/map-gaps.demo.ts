@@ -1,4 +1,4 @@
-// Pluto's south was never photographed. The shipped map paints it (MODULES-1798), so the bottom of the picture has texture and is about as bright as the mapped ground,
+// Pluto's south was never photographed and its far side was seen only at low resolution. The shipped map paints them (MODULES-1798), so the bottom of the picture has texture and is about as bright as the mapped ground,
 // and the detail does not stop in one step at the edge of the photographed ground (MODULES-993 made that edge a fade; a hard-edged dark half was the fault). A picture test
 // on the shipped map itself, read the same way at each width. Chromium decodes the picture.
 import "./load.ts";
@@ -55,7 +55,7 @@ for (const width of [512, 1024, 2048]) {
   test(`Pluto's map at ${width}: the painted south keeps texture, and the detail does not stop in one step`, async ({ page }) => {
     await page.goto("/wakusei-planets/");
     const gap = await gapOf(page, "pluto", width);
-    // read the same way on the shipped maps: step 0.16 to 0.20, tone 0.89, south 0.45 to 0.62
+    // read the same way on the shipped maps: step 0.14 to 0.16, tone 0.91, south 0.29 to 0.52
     expect(gap.step, `the detail lost over 1.5% of the height is ${gap.step.toFixed(2)} of the most`).toBeLessThan(0.35);
     expect(gap.tone, `the painted south is ${gap.tone.toFixed(2)} of the mapped ground's brightness`).toBeGreaterThan(0.6);
     expect(gap.tone).toBeLessThan(1.05);
