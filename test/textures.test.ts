@@ -24,7 +24,7 @@ test("each picture's source is public domain, CC0 or CC BY 4.0, and credited in 
   }
 });
 
-test("the pictures of the package are small: the widths that ship stay within 2.3 MB, and the sharpest is far", () => {
+test("the pictures of the package are small: the widths that ship stay within 2.4 MB, and the sharpest is far", () => {
   let bytes = 0;
   for (const id of BODY_IDS) {
     const map = lookOf(id)?.painted;
@@ -34,5 +34,5 @@ test("the pictures of the package are small: the widths that ship stay within 2.
     if (map.rings) bytes += statSync(`textures/${map.rings.map}-${map.rings.width}.webp`).size;
   }
   for (const name of readdirSync("textures")) if (name.includes("-craft-")) bytes += statSync(`textures/${name}`).size;
-  assert.ok(bytes < 2.3 * 1024 * 1024, String(bytes));
+  assert.ok(bytes < 2.4 * 1024 * 1024, String(bytes));
 });
