@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.76.0] - 2026-11-24
+
+- **Ganymede, Callisto and Io have their poles** (MODULES-1821). Their pictures were the USGS Mercator sheets between 57 degrees north and south, with the poles faded into a band. They are now made from the USGS global mosaics of Voyager and Galileo images, with the poles (Ganymede: the grey 1 km mosaic for the relief and the colour mosaic for the colour; Callisto: the 1 km mosaic; Io: the colour merge at 1 km). Ground that was never photographed, or only at low resolution, is painted to continue the photographed ground, and the credit says so.
+- **Charon's south and Triton's north are painted ground** (MODULES-1821). New Horizons saw one hemisphere of Charon and Voyager 2 the south of Triton; the rest was flat grey. It is now painted from each moon's own photographed ground (Charon from the USGS New Horizons mosaic, Triton from the Voyager 2 colour mosaic), with the red cap of Charon's north and Triton's south polar cap and its streaks kept where they were photographed.
+- **Ariel has a picture** (MODULES-1821). It had none. Its picture is the Voyager 2 mosaic of its south, with the north, which was never photographed, painted to continue it.
+
 ## [0.75.2] - 2026-11-24
 
 - **Arrokoth is a body** (MODULES-558). `arrokoth` is a minor body: the shape and the picture of NASA's published model (New Horizons; public domain, credit NASA Visualization Technology Applications and Development), drawn as that mesh rather than a map wrapped on a globe. It is a contact binary. The orbit is the Small-Body Database ellipse at JD 2461200.5, the elements the asteroid list used, not a fitted table. Arrokoth is no longer a row of `/asteroids` (101 remain). The mesh is its own file and the entry points that reach the minor bodies grow by about 114 KB gzipped, which the size baseline records. The picture on each of these meshes is given back when the view that loaded it is removed. The `/asteroids` examples and guide use Itokawa, which is still a row of that list.
