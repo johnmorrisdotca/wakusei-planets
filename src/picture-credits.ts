@@ -114,7 +114,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   pd("io", "NASA / JPL (Galileo SSI and Voyager images); the file page names no author", "NASA / JPL（Galileo SSIとVoyagerの画像）。ファイルのページに作者の名はありません"),
   pd("europa", "U.S. Geological Survey / Planetary Data System / Tammy Becker", "U.S. Geological Survey / Planetary Data System / Tammy Becker"),
   pd("ganymede", "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI", "NASA / JPL / USGS Astrogeology（ボイジャー1号・2号とガリレオSSI）"),
-  pd("callisto", "USGS", "USGS"),
+  pd("callisto", "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI", "NASA / JPL / USGS Astrogeology（ボイジャー1号・2号とガリレオSSI）"),
   pd("titan", "NASA / JPL / Space Science Institute", "NASA / JPL / Space Science Institute"),
   pd("earth", "NASA Earth Observatory (Reto Stockli), Blue Marble", "NASA Earth Observatory（Reto Stockli）、Blue Marble"),
   pd("rhea", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
