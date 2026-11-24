@@ -129,7 +129,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   pd("dione", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("iapetus", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("triton", "NASA/JPL-Caltech/Lunar & Planetary Institute (Paul Schenk; Voyager 2 images)", "NASA/JPL-Caltech/Lunar & Planetary Institute（Paul Schenk、Voyager 2の画像）"),
-  pd("charon", "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute (via the IAU)", "NASA/Johns Hopkins University Applied Physics Laboratory/Southwest Research Institute（IAU経由）"),
+  pd("charon", "NASA / JHUAPL / SwRI / USGS Astrogeology, New Horizons LORRI and MVIC", "NASA / JHUAPL / SwRI / USGS Astrogeology（ニュー・ホライズンズのLORRIとMVIC）"),
 ];
 
 const BY_ID = new Map(PICTURE_CREDITS.map((row) => [row.id, row]));
