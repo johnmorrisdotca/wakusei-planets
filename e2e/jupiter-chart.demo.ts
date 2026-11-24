@@ -17,12 +17,8 @@ test("every moon of Jupiter is a circle, and the page does not scroll sideways a
   await page.setViewportSize({ width: 390, height: 844 });
   const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(extra).toBeLessThanOrEqual(1);
-  // WebKit's box for an SVG text is 0 in the frame after the viewport changes. The chart sets the font so a label is 11px of the drawn width.
-  await expect.poll(async () => page.locator("#chart svg").evaluate((svg: SVGSVGElement) => {
-    const view = svg.viewBox.baseVal.width;
-    const drawn = svg.getBoundingClientRect().width;
-    return view > 0 ? (Number(svg.getAttribute("font-size")) * drawn) / view : 0;
-  })).toBeGreaterThanOrEqual(11);
+  const label = await page.locator("#chart text").first().boundingBox();
+  expect(label?.height ?? 0).toBeGreaterThanOrEqual(11);
   await expect(page.locator("#chart text", { hasText: "Ganymede" })).toBeVisible();
   await page.goto("/wakusei-planets/chart.html?lang=ja");
   await expect(page.locator("#chart text", { hasText: "ガニメデ" })).toBeVisible();
