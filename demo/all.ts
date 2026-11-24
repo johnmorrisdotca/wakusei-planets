@@ -99,7 +99,9 @@ function rowOf(row: AllMoonRow): HTMLElement {
 }
 
 function paint(): void {
-  const rock = estimatedRock("kerberos")!;
+  // Kerberos is drawn in full, so it is not an estimated rock. The star note is the same for every estimated moon; Himalia is one that still is.
+  const rock = estimatedRock("himalia");
+  if (rock === null) throw new Error("Himalia is drawn in full, so the poster has no star note");
   legend.textContent = lang() === "ja" ? rock.legend.ja : rock.legend.en;
   const poster = allMoonPoster();
   rows.replaceChildren(...poster.map(rowOf));

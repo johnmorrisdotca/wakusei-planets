@@ -16,8 +16,8 @@ test("every world is listed, Saturn has the most, and an estimated moon keeps it
   await expect(page.locator('[data-host="saturn"]')).toHaveAttribute("data-most", "true");
   await expect(page.locator('[data-host="saturn"] .all-count')).toContainText("293");
   await expect(page.locator('[data-moon="io"] wakusei-body')).toHaveAttribute("body", "io");
-  await expect(page.locator('[data-moon="kerberos"] figcaption')).toHaveText(estimatedRock("kerberos")!.line.en);
-  await expect(page.locator("#all-legend")).toHaveText(estimatedRock("kerberos")!.legend.en);
+  await expect(page.locator('[data-moon="kerberos"] figcaption')).toHaveText("Kerberos");
+  await expect(page.locator("#all-legend")).toHaveText(estimatedRock("himalia")!.legend.en);
   await expect(page.locator("#all-source")).toContainText(ALL_MOON_READ);
   if (browserName === "chromium") {
     await page.locator('[data-host="jupiter"] .all-planet').scrollIntoViewIfNeeded();
