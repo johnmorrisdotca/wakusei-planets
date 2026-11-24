@@ -63,6 +63,6 @@ test("nothing the builder had before the shared panel is gone: its rows, seven t
   // a public-domain body names no CC BY source
   await page.locator('[data-testid="group-jupiter"]').click();
   await page.locator('[data-testid="body-io"]').click();
-  await expect(credits).toContainText("NASA / JPL (Galileo SSI and Voyager images)");
+  await expect(credits).toContainText("NASA / JPL / USGS Astrogeology, Voyager 1 and Galileo SSI");
   await expect(credits).not.toContainText("CC BY");
 });
