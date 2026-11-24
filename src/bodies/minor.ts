@@ -1,8 +1,8 @@
 import { registerLook } from "../scene/look.ts";
 import { rock } from "../scene/recipes.ts";
 
-// The minor bodies, drawn from their numbers: a rock of the body's colour with craters. Vesta has Dawn's own map as its painted look; the others have never been seen as more than a few pixels
-// (Halley's nucleus was photographed by the Giotto probe in 1986, a picture whose terms keep it out of this package), so their craters and patches are made up.
+// The minor bodies. Bennu, Eros and Arrokoth are the mesh and the picture NASA published. Vesta has Dawn's own map. Pallas, Chiron, Pholus and Halley have no picture this package may use
+// (Halley's nucleus was photographed by the Giotto probe in 1986, a picture whose terms keep it out), so their craters and patches are made up. The rock is what shows until a mesh arrives.
 registerLook({
   id: "bennu",
   surface: rock({ dark: "#4a4a4a", light: "#9a9a9a", craters: 0.6, contrast: 0.6, seed: 101955, patches: 1.4 }),
@@ -29,3 +29,10 @@ registerLook({ id: "pallas", surface: rock({ dark: "#5e6064", light: "#92949a", 
 registerLook({ id: "chiron", surface: rock({ dark: "#6f7073", light: "#a5a6a9", craters: 0.9, contrast: 0.7, seed: 85, patches: 2.4 }), relief: 0.6, ambient: 0.02 });
 registerLook({ id: "pholus", surface: rock({ dark: "#6b3524", light: "#a85c42", craters: 0.9, contrast: 0.7, seed: 87, patches: 2.6 }), relief: 0.6, ambient: 0.02 });
 registerLook({ id: "halley", surface: rock({ dark: "#25221f", light: "#4a4541", craters: 0.8, contrast: 0.9, seed: 89, patches: 3.2 }), relief: 0.9, ambient: 0.02 });
+registerLook({
+  id: "arrokoth",
+  surface: rock({ dark: "#6b3030", light: "#a85a4a", craters: 0.5, contrast: 0.6, seed: 486958, patches: 1.2 }),
+  relief: 0.4,
+  ambient: 0.12,
+  craft: () => import("../data/shapes/arrokoth-craft.ts").then((m) => m.ARROKOTH_CRAFT),
+});
