@@ -2,6 +2,7 @@
 // search by name), each planet's system with its moons, and every body ridden. Chromium, drawing in software.
 import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
+import { BODY_IDS, MOONS_OF } from "../src/facts.ts";
 import { callOn, openSpace, settle, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
@@ -14,10 +15,10 @@ const bodyOf = (page: Page): Promise<string> => page.locator(SPACE).evaluate((el
 const choices = (page: Page): Promise<string[]> => page.locator("#choices button").evaluateAll((buttons) => buttons.map((b) => (b as HTMLElement).dataset["id"] ?? ""));
 const press = (page: Page, selector: string) => page.locator(selector).dispatchEvent("click");
 
-test("the view offers all 67 bodies: the Sun, every planet, dwarf planet and minor body, and every moon, each with its kind", async ({ page }) => {
+test("the view offers every body: the Sun, every planet, dwarf planet and minor body, and every moon, each with its kind", async ({ page }) => {
   await openSpace(page);
   const list = await page.locator(SPACE).evaluate((el) => (el as unknown as { bodyList(): { id: string; kind: string; host?: string }[] }).bodyList());
-  expect(list.length).toBe(67);
+  expect(list.length).toBe(BODY_IDS.length);
   const of = (kind: string): string[] => list.filter((b) => b.kind === kind).map((b) => b.id);
   expect(of("star")).toEqual(["sun"]);
   expect(of("planet")).toEqual(["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune"]);
@@ -25,7 +26,7 @@ test("the view offers all 67 bodies: the Sun, every planet, dwarf planet and min
   expect(of("asteroid")).toEqual(["vesta", "pallas"]);
   expect(of("centaur")).toEqual(["chiron", "pholus"]);
   expect(of("comet")).toEqual(["halley"]);
-  expect(of("moon").length).toBe(44);
+  expect(of("moon").length).toBe(Object.values(MOONS_OF).flat().length);
   expect(list.find((b) => b.id === "dysnomia")).toMatchObject({ host: "eris" });
 });
 
