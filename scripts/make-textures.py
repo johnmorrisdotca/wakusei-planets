@@ -354,8 +354,7 @@ def make(body):
     elif body == "jupiter":
         pass
     elif body == "pluto":
-        img = roll(img, 0.5)
-        img = fill_unseen_plain(img)
+        sys.exit("pluto is not built here: its 512, 1024 and 2048 come from the 16384 by 8192 master (south painted with an image model), which is kept offline")
     elif body == "saturn":
         cx, cy, r = disc_of(img, 0.09)
         r = ((img.mean(axis=2) > 0.09).sum(axis=1) > img.shape[1] * 0.02).nonzero()[0]
@@ -444,4 +443,7 @@ def make_ring():
 
 
 for name in (sys.argv[1:] or list(SOURCES)):
+    if name == "pluto":
+        print("pluto: kept as it is; its pictures come from the 16384 by 8192 master, kept offline (NOTICE.md)")
+        continue
     make_ring() if name == "saturn-ring" else make(name)

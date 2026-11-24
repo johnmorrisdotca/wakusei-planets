@@ -1,6 +1,6 @@
-// The part of a map that was never imaged is a plain tone with no hard edge (MODULES-993). Pluto's map was mapped to about 30 degrees south and the rest was a dark brown that began on a straight line,
-// so a globe showed a hard-edged dark half, and its name, drawn on the equator, ran into it. A picture test on the shipped map itself: the detail (how much the brightness changes from one column to the
-// next) falls away gradually, not in one step, and the part never seen is a tone near the mapped ground's own average, a little darker, not black. Chromium decodes the picture.
+// Pluto's south was never photographed and its far side was seen only at low resolution. The shipped map paints them (MODULES-1798), so the bottom of the picture has texture and is about as bright as the mapped ground,
+// and the detail does not stop in one step at the edge of the photographed ground (MODULES-993 made that edge a fade; a hard-edged dark half was the fault). A picture test
+// on the shipped map itself, read the same way at each width. Chromium decodes the picture.
 import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -14,6 +14,8 @@ interface Gap {
   step: number;
   /** The brightness of the bottom 15 percent of the map as a share of the mapped ground's (rows 20 to 50 percent). */
   tone: number;
+  /** The detail in the bottom 15 percent, as a share of the most detail in the northern half. A plain tone is 0. */
+  south: number;
 }
 
 async function gapOf(page: Page, body: string, width: number): Promise<Gap> {
@@ -41,19 +43,22 @@ async function gapOf(page: Page, body: string, width: number): Promise<Gap> {
         for (let y = Math.floor(rows * from); y < Math.floor(rows * to); y += 1) for (let x = 0; x < cols; x += 1) sum += grey(x, y);
         return sum / (cols * (Math.floor(rows * to) - Math.floor(rows * from)));
       };
-      return { step, tone: mean(0.85, 1) / mean(0.2, 0.5) };
+      const from = Math.floor(rows * 0.85);
+      const south = smooth.slice(from).reduce((sum, value) => sum + value, 0) / (rows - from) / peak;
+      return { step, tone: mean(0.85, 1) / mean(0.2, 0.5), south };
     },
     [body, width] as const,
   );
 }
 
 for (const width of [512, 1024, 2048]) {
-  test(`Pluto's map at ${width}: the unseen south is a plain tone near the mapped average, and the detail fades out, not in a step`, async ({ page }) => {
+  test(`Pluto's map at ${width}: the painted south keeps texture, and the detail does not stop in one step`, async ({ page }) => {
     await page.goto("/wakusei-planets/");
     const gap = await gapOf(page, "pluto", width);
-    // before (origin/main's map, read the same way): step 0.59 to 0.64 and tone 0.26; after: step 0.16 to 0.19 and tone 0.75
-    expect(gap.step, `the detail lost over 1.5% of the height is ${gap.step.toFixed(2)} of the most`).toBeLessThan(0.3);
-    expect(gap.tone, `the unseen south is ${gap.tone.toFixed(2)} of the mapped ground's brightness`).toBeGreaterThan(0.6);
-    expect(gap.tone).toBeLessThan(1);
+    // read the same way on the shipped maps: step 0.14 to 0.16, tone 0.91, south 0.29 to 0.52
+    expect(gap.step, `the detail lost over 1.5% of the height is ${gap.step.toFixed(2)} of the most`).toBeLessThan(0.35);
+    expect(gap.tone, `the painted south is ${gap.tone.toFixed(2)} of the mapped ground's brightness`).toBeGreaterThan(0.6);
+    expect(gap.tone).toBeLessThan(1.05);
+    expect(gap.south, `the south's detail is ${gap.south.toFixed(2)} of the northern half's`).toBeGreaterThan(0.15);
   });
 }
