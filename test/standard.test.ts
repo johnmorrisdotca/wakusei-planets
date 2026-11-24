@@ -12,8 +12,8 @@ const standard = (await import(new URL("../scripts/check-standard.mjs", import.m
 const sha = (path: string) => createHash("sha256").update(readFileSync(path)).digest("hex");
 
 test("the checker is the recorded file, byte for byte", () => {
-  assert.equal(standard.STANDARD_VERSION, "2026-11-03");
-  assert.equal(sha("scripts/check-standard.mjs"), "f9197b71745fc6598e8bfb70c7265814b910a775fdf96c5b1b7ab2129772859f");
+  assert.equal(standard.STANDARD_VERSION, "2026-11-11b");
+  assert.equal(sha("scripts/check-standard.mjs"), "ecf0627e155de2b2c148e89d0722cac3b55f7d4a76e1fbfe1b52a008e50896bb");
 });
 
 test("every item of the must-have list is there", () => {

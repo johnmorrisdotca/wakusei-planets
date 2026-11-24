@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { MOON_PAGE_HOSTS } from "../src/moon-pages/data.ts";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
-import { renderAll, renderChart, renderCounts, renderCraft, renderEmbed, renderFlat, renderGroups, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface, renderDots } from "./page.ts";
+import { renderAll, renderBuilder, renderChart, renderCounts, renderCraft, renderEmbed, renderFlat, renderGroups, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface, renderDots } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
 
@@ -22,7 +22,7 @@ await build({
   logLevel: "silent",
 });
 // The family header's language picker and theme switch: one small module for every page of the site.
-await writeFile(at("site/kazoku-parts.src.js"), `import "@johnmorrisdotca/kazoku-ui/language-picker/define";\nimport "@johnmorrisdotca/kazoku-ui/theme-switch/define";\n`);
+await writeFile(at("site/kazoku-parts.src.js"), `import "@johnmorrisdotca/kazoku-ui/language-picker/define";\nimport "@johnmorrisdotca/kazoku-ui/theme-switch/define";\nimport "@johnmorrisdotca/kazoku-ui/page-frame/define";\n`);
 await build({ entryPoints: [at("site/kazoku-parts.src.js")], outfile: at("site/kazoku-parts.js"), bundle: true, format: "esm", minify: true, logLevel: "silent", absWorkingDir: at("") });
 await rm(at("site/kazoku-parts.src.js"));
 await cp(at("demo/demo.css"), at("site/demo.css"));
@@ -59,5 +59,5 @@ await writeFile(at("site/all.html"), renderAll(), "utf8");
 await writeFile(at("site/counts.html"), renderCounts(), "utf8");
 await writeFile(at("site/dots.html"), renderDots(), "utf8");
 await writeFile(at("site/chart.html"), renderChart(), "utf8");
-await cp(at("demo/builder.html"), at("site/builder.html"));
+await writeFile(at("site/builder.html"), renderBuilder(), "utf8");
 console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, system.html, jupiter.html, saturn.html, uranus.html, neptune.html, groups.html, all.html, counts.html, dots.html, chart.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
