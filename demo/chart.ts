@@ -35,7 +35,10 @@ function draw(lang: "en" | "ja"): void {
     }));
   }
   const host = document.querySelector("#chart");
-  if (host) host.replaceChildren(picture(chart, lang));
+  if (host) {
+    host.replaceChildren(picture(chart, lang));
+    if (host instanceof HTMLElement) host.dataset.drawnWidth = String(host.clientWidth);
+  }
 }
 
 function picture(data: JupiterChart, lang: "en" | "ja"): SVGSVGElement {

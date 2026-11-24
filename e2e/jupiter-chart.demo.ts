@@ -17,8 +17,12 @@ test("every moon of Jupiter is a circle, and the page does not scroll sideways a
   await page.setViewportSize({ width: 390, height: 844 });
   const extra = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(extra).toBeLessThanOrEqual(1);
-  const label = await page.locator("#chart text").first().boundingBox();
-  expect(label?.height ?? 0).toBeGreaterThanOrEqual(11);
+  const chart = page.locator("#chart");
+  await expect.poll(async () => {
+    const width = Number(await chart.getAttribute("data-drawn-width"));
+    if (width < 240 || width > 400) return 0;
+    return (await page.locator("#chart text").first().boundingBox())?.height ?? 0;
+  }).toBeGreaterThanOrEqual(11);
   await expect(page.locator("#chart text", { hasText: "Ganymede" })).toBeVisible();
   await page.goto("/wakusei-planets/chart.html?lang=ja");
   await expect(page.locator("#chart text", { hasText: "ガニメデ" })).toBeVisible();
