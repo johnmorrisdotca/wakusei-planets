@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [0.77.0] - 2026-11-25
+
+- **`space.pathOf` gives a body's path over a stretch of time** (MODULES-1790). `pathOf(id, from, to, { steps, about })` returns the body's places on the screen from `from` to `to` (`steps` + 1 points, 96 by default, 1 to 512), each `{ ms, x, y, behind }` in CSS pixels in the element as `placeOf` has them, in the view's own scale (squeezed or true) and from the camera as it is now, so a page can draw a track that lies in the picture. A moon's path is taken round its planet by default (`about`), so the Moon's fortnight is a ring round the Earth; `about: null` is the line the body itself travels. It is worked out when asked from the last draw; nothing is drawn or stored for it. The Sun, the planets, the Moon, the other major bodies and the moons of the planets are placed; any other name gives an empty list. `BodyPathPoint` is exported with `BodyPlace`. The demo's space page has a Path row (a fortnight or a month, on the body in the middle). Tests: `test/body-path.test.ts` (the Moon's offset over the fortnight sweeps the 191.8 degrees an independent ephemeris gives), `e2e/body-path.demo.ts` (the path's middle is where the view draws the Moon at five moments, and a sidereal month closes the ring).
+
 ## [0.76.0] - 2026-11-24
 
 - **Ganymede, Callisto and Io have their poles** (MODULES-1821). Their pictures were the USGS Mercator sheets between 57 degrees north and south, with the poles faded into a band. They are now made from the USGS global mosaics of Voyager and Galileo images, with the poles (Ganymede: the grey 1 km mosaic for the relief and the colour mosaic for the colour; Callisto: the 1 km mosaic; Io: the colour merge at 1 km). Ground that was never photographed, or only at low resolution, is painted to continue the photographed ground, and the credit says so.

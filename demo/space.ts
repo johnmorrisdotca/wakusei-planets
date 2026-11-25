@@ -31,6 +31,50 @@ const caption = document.querySelector<HTMLElement>("#caption")!;
 const scaleNote = document.querySelector<HTMLElement>("#scale-note")!;
 const $$ = (selector: string): HTMLButtonElement[] => [...document.querySelectorAll<HTMLButtonElement>(selector)];
 
+// The path of the body in the middle, drawn over the picture as dots from `space.pathOf` (the view's own places, in its scale and from its camera). Redrawn each frame while it is on and the view is in sight, so it follows the camera and the clock.
+const SVG = "http://www.w3.org/2000/svg";
+const trackLayer = document.createElementNS(SVG, "svg");
+trackLayer.setAttribute("class", "track-layer");
+trackLayer.setAttribute("aria-hidden", "true");
+trackLayer.style.cssText = "position:absolute;pointer-events:none;overflow:visible";
+let trackFrame = 0;
+const DAY = 86_400_000;
+function drawTrack(): void {
+  cancelAnimationFrame(trackFrame);
+  trackFrame = 0;
+  if (!state.track) {
+    trackLayer.innerHTML = "";
+    trackLayer.dataset["last"] = "";
+    trackLayer.remove();
+    return;
+  }
+  const host = space.parentElement!;
+  if (getComputedStyle(host).position === "static") host.style.position = "relative";
+  if (trackLayer.parentElement !== host) host.append(trackLayer);
+  const paint = (): void => {
+    trackFrame = requestAnimationFrame(paint);
+    if (document.visibilityState === "hidden") return;
+    const box = space.getBoundingClientRect();
+    const hostBox = host.getBoundingClientRect();
+    trackLayer.style.left = `${box.left - hostBox.left}px`;
+    trackLayer.style.top = `${box.top - hostBox.top}px`;
+    trackLayer.style.width = `${box.width}px`;
+    trackLayer.style.height = `${box.height}px`;
+    const half = (state.trackLength === "1m" ? 15 : 7) * DAY;
+    const points = space.pathOf(space.body, space.time - half, space.time + half);
+    const middle = Math.floor(points.length / 2);
+    const dots = points
+      .map((p, i) => (p.behind ? "" : `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${i === middle ? 4 : i % 8 === 0 ? 2.2 : 1.4}" fill="${i < middle ? "#ffd479" : i === middle ? "#ffffff" : "#7fd1ff"}" fill-opacity="${i === middle ? 1 : 0.85}"/>`))
+      .join("");
+    if (trackLayer.dataset["last"] !== dots) {
+      trackLayer.dataset["last"] = dots;
+      trackLayer.innerHTML = dots;
+    }
+  };
+  paint();
+}
+
+
 // the element names bodies and the scale in the page's language from the start, not only after the reader changes it
 space.setAttribute("lang", chooser()?.lang ?? "en");
 const address = createAddressState({ defaults: {} });
@@ -50,6 +94,9 @@ const state = {
   /** The spacecraft in orbit round the Moon and Mars (their paths are fetched the first time). */
   orbiters: address.get("orbiters") === "1",
   /** Paint the ground track of the chosen orbiter (LRO at the Moon, MRO at Mars when none is chosen) for a day, a week or a month. */
+  /** Draw the path of the body in the middle over the days either side of the clock (`space.pathOf`), a fortnight or a month in all. */
+  track: address.get("track") === "1",
+  trackLength: pick(address.get("tracklength"), ["2w", "1m"], "2w") as "2w" | "1m",
   paint: address.get("paint") === "1",
   paintLength: pick(address.get("paintlength"), ["1d", "1w", "1m"], "1d") as "1d" | "1w" | "1m",
   /** Every other known moon drawn as a dot, and the list of the planet's moons under the controls (`moons=all`). */
@@ -154,6 +201,9 @@ function render(): void {
   pressed(document.querySelector<HTMLElement>("#starman")!, state.starman);
   pressed(document.querySelector<HTMLElement>("#craft")!, state.craft);
   pressed(document.querySelector<HTMLElement>("#orbiters")!, state.orbiters);
+  pressed(document.querySelector<HTMLElement>("#track")!, state.track);
+  for (const b of $$("#track-lengths [data-track-length]")) pressed(b, b.dataset["trackLength"] === state.trackLength);
+  drawTrack();
   pressed(document.querySelector<HTMLElement>("#paint")!, state.paint);
   for (const b of $$("#paint-lengths [data-paint-length]")) pressed(b, b.dataset["paintLength"] === state.paintLength);
   pressed(document.querySelector<HTMLElement>("#all-moons")!, state.allMoons);
@@ -178,6 +228,8 @@ function render(): void {
   address.set("starman", state.starman ? "1" : null);
   address.set("craft", state.craft ? "all" : null);
   address.set("orbiters", state.orbiters ? "1" : null);
+  address.set("track", state.track ? "1" : null);
+  address.set("tracklength", state.trackLength === "2w" ? null : state.trackLength);
   address.set("paint", state.paint ? "1" : null);
   address.set("paintlength", state.paintLength === "1d" ? null : state.paintLength);
   address.set("moons", state.allMoons ? "all" : null);
@@ -241,6 +293,8 @@ document.querySelector("#orbits")!.addEventListener("click", () => ((state.orbit
 document.querySelector("#names")!.addEventListener("click", () => ((state.names = !state.names), render()));
 document.querySelector("#starman")!.addEventListener("click", () => ((state.starman = !state.starman), render()));
 document.querySelector("#craft")!.addEventListener("click", () => ((state.craft = !state.craft), render()));
+document.querySelector("#track")!.addEventListener("click", () => ((state.track = !state.track), render()));
+for (const b of $$("#track-lengths [data-track-length]")) b.addEventListener("click", () => ((state.trackLength = b.dataset["trackLength"] as typeof state.trackLength), render()));
 document.querySelector("#paint")!.addEventListener("click", () => ((state.paint = !state.paint), (state.orbiters = state.orbiters || state.paint), render()));
 document.querySelector("#paint-clear")!.addEventListener("click", () => ((state.paint = false), space.clearPaint(), render()));
 for (const b of $$("#paint-lengths [data-paint-length]")) b.addEventListener("click", () => ((state.paintLength = b.dataset["paintLength"] as typeof state.paintLength), render()));

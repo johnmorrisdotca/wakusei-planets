@@ -41,7 +41,7 @@ import { createEarthPlaceLayer, earthPlaceClick, EARTH_PLACE_MARKS, EARTH_PLACES
 import { layBodyPlaces, bodiesOf, readBodyPlacesWith, type BodySurface, type PlaceOnBody, type PlaceOnBodyMark } from "../scene/body-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
-import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPathPoint, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
@@ -55,7 +55,7 @@ export { setThreeLoader, SPACE_BODIES, type RidePoint, type RideTarget, type Sig
 const SMALL_MOONS: ReadonlySet<string> = new Set(["amalthea", "thebe", "pan", "daphnis", "atlas", "prometheus", "pandora", "epimetheus", "janus", "telesto", "calypso", "helene", "hyperion", "phoebe", "larissa"]);
 
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
-export type { BodyPlace };
+export type { BodyPathPoint, BodyPlace };
 
 /** The words the view says on itself for the scale in use. A page in another language gives its own with `scaleNames`. */
 const SCALE_WORDS = {
@@ -3110,6 +3110,36 @@ export class WakuseiSpace extends HTMLElement {
     if (!this.#scaleLine) return;
     const words = SCALE_WORDS[this.getAttribute("lang") === "ja" ? "ja" : "en"];
     this.#scaleLine.textContent = this.#scaleNames[this.#model.mode] ?? words[this.#model.mode];
+  }
+
+  /**
+   * Where a body is, on the screen, over a stretch of time: the path it takes between two moments, in the view's own scale (the squeezed one or true distances) and as the camera sees it now, so a page can draw a track
+   * that lies in the picture (the Moon's path round the Earth over a fortnight). The points run from `from` to `to`, `steps` + 1 of them (96 by default, from 1 to 512), each in CSS pixels in the element as `placeOf` has them;
+   * one where the body is behind the camera has `behind` true and no place. `about` names the body the path is taken round: each place is the body's offset from `about` at that moment, put where `about` is now. A moon's
+   * default is its planet (a ring round it, as its orbit is drawn, whatever the planet does meanwhile) and anything else's is none (the line it travels, as the camera sees it); `about: null` asks for none of a moon too.
+   * Worked out when asked, from the last draw: nothing is drawn or stored for it, so it costs nothing while it is not called. The Sun, the planets, the Moon and the other major bodies and the moons of the planets are
+   * placed; any other id, or a call before the first draw, gives an empty list. The path is of the view as it is now: a camera that turns or moves gives another.
+   *
+   * @param id - A body's name (`moon`, `mars`, `io`).
+   * @param from - The first moment, in milliseconds since 1970.
+   * @param to - The last moment.
+   * @param options - `steps` (how many steps between the two moments) and `about` (the body the path is taken round).
+   * @returns The points, oldest first.
+   *
+   * @example
+   * ```ts
+   * const space = document.querySelector("wakusei-space")!;
+   * const day = 86_400_000;
+   * const track = space.pathOf("moon", space.time - 7 * day, space.time + 7 * day);
+   * console.log(track.length); // 97 once the view has drawn
+   * ```
+   */
+  pathOf(id: BodyId, from: number, to: number, options: { steps?: number; about?: BodyId | null } = {}): BodyPathPoint[] {
+    if (!Number.isFinite(from) || !Number.isFinite(to) || findBody(id) === undefined) return [];
+    const steps = options.steps;
+    const count = Math.max(1, Math.min(512, Math.round(steps !== undefined && Number.isFinite(steps) ? steps : 96)));
+    const about = options.about === undefined ? (id === "moon" ? "earth" : ((hostOf(id) as BodyId | undefined) ?? null)) : options.about;
+    return this.#model.bodyPath(id, Array.from({ length: count + 1 }, (_, i) => from + ((to - from) * i) / count), about);
   }
 
   /** Where a body is on the screen now: its centre and radius in CSS pixels in the element, or `null` when it is behind the camera or not drawn. */

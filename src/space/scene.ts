@@ -276,6 +276,8 @@ export interface SpaceModel {
   rings: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[]; fade: { crowd: number; outness: number; opacity: number } };
   /** The orbit lines on the screen as the last draw left them (every kind, the catalogue moons' too), for a hover and a press; with `only`, the one line of that key. */
   orbitPaths: (only?: string) => ScreenLine[];
+  /** A body's places at the moments given, on the screen of the last draw, in the scale and the camera drawn (`space.pathOf` asks it). Empty before the first draw and for a body this view does not place. */
+  bodyPath: (id: BodyId, times: readonly number[], about: BodyId | null) => BodyPathPoint[];
   /** The arrowheads on the orbit lines at the last draw, by line: where each is and the way it points. */
   arrows: Record<string, OrbitArrow[]>;
   /** Help mode: draw, on the body looked at, the axis it turns about and a curved arrow showing which way it turns. */
@@ -468,6 +470,7 @@ export const newSpaceModel = (): SpaceModel => ({
   tiles: { requested: 0, loading: 0, failed: 0, shown: null },
   rings: { drawn: [], miss: {}, hidden: [], faded: [], fade: { crowd: 0, outness: 0, opacity: LINE_OPACITY } },
   orbitPaths: () => [],
+  bodyPath: () => [],
   arrows: {},
   help: false,
   helpThrough: false,
@@ -537,6 +540,25 @@ export interface BodyPlace {
   named?: boolean;
   /** The id of the nearer body whose disc covers this body's place on the screen, when one does. */
   behind?: string;
+}
+
+/**
+ * One point of a body's path over a window of time, on the screen: `x` and `y` in CSS pixels in the element, as `placeOf` has them. `behind` is true (and `x`, `y` are NaN) where the body, at that moment, is behind the camera.
+ *
+ * @example
+ * ```ts
+ * import type { BodyPathPoint } from "@johnmorrisdotca/wakusei-planets/space/element";
+ *
+ * const point: BodyPathPoint = { ms: Date.UTC(2026, 10, 2), x: 320, y: 200, behind: false };
+ * console.log(point.behind);
+ * ```
+ */
+export interface BodyPathPoint {
+  /** The moment, in milliseconds since 1970. */
+  ms: number;
+  x: number;
+  y: number;
+  behind: boolean;
 }
 
 export interface SpaceDeps {
@@ -924,6 +946,28 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const placed = placeBodies(mode, at);
             for (const id of Object.keys(placed) as (keyof typeof placed)[]) placed[id] = minus(placed[id], origin);
             return placed;
+          };
+          // a body's path over a window: its place at each moment as the view places it now (the same scale, the same origin and the same camera as this draw), worked out when asked. With `about`, each place is
+          // taken from where that body is at the same moment and put where that body is now, so a moon's path is a ring round its planet and not the line the planet itself travels
+          model.bodyPath = (id, times, about) => {
+            const siteOf = (who: BodyId, ms: number): Vec3 | null => {
+              const placed = placeAll(frameAt(ms));
+              if ((SPACE_BODIES as readonly string[]).includes(who)) return placed[who as SpaceBody];
+              const host = hostOf(who) as SpacePlanet | SpaceDwarf | undefined;
+              if (host === undefined) return null;
+              const offset = moonSite(who as MoonId, ms, host);
+              const hostRadius = radiusOf(host);
+              return [placed[host][0] + offset[0] * hostRadius, placed[host][1] + offset[1] * hostRadius, placed[host][2] + offset[2] * hostRadius];
+            };
+            if (siteOf(id, model.time) === null) return [];
+            const anchor = about === null ? null : siteOf(about, model.time);
+            return times.map((ms) => {
+              const site = siteOf(id, ms)!;
+              const base = anchor === null ? null : siteOf(about!, ms);
+              const at: Vec3 = base === null || anchor === null ? site : [site[0] - base[0] + anchor[0], site[1] - base[1] + anchor[1], site[2] - base[2] + anchor[2]];
+              const spot = labelFor(at);
+              return spot ? { ms, x: spot.x, y: spot.y, behind: false } : { ms, x: Number.NaN, y: Number.NaN, behind: true };
+            });
           };
           const toSunOf = (id: SpaceBody): Vec3 => unit(minus(frame.sun, id === "earth" ? [0, 0, 0] : id === "moon" ? frame.moon : id === "sun" ? [0, 0, 0] : (SPACE_DWARFS as readonly string[]).includes(id) ? frame.dwarfs[id as SpaceDwarf] : (SPACE_MINORS as readonly string[]).includes(id) ? frame.minors[id as SpaceMinor] : frame.planets[id as SpacePlanet]));
 
