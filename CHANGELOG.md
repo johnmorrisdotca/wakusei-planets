@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **More bodies open to a sourced interior** (MODULES-1691). `interiorOf` now has the Moon, Mercury, the Sun, Jupiter and Saturn, each from one named model read on 2026-11-26, beside the Earth and Mars. The Moon's near-side crust is about 40 km (the far side, up to about 60 km, is not the crust drawn). Mercury's shell is the fact-sheet radius minus the stated core, 365.7 km, where the page also says about 400 km. The Sun's core thickness of about 138,000 km is used as the core's outside radius, and the radiative and convection zones are one layer. Jupiter is Militzer and others 2022, model A (a dilute core, not a wall). Saturn is Mankovich and Fuller 2021, a diffuse core to about 60% of the radius. Venus, Uranus, Neptune and the four large moons stay whole: the pages name a core and state no radius.
+
 ## [0.77.3] - 2026-11-26
 
 - **A card can print the orbit and the discovery of a dwarf planet or a minor body** (MODULES-1353). `minorFact` on `/fact-sheets` gives the semi-major axis, the perihelion and the sidereal period of the osculating ellipse the package already stores, for the dwarf planets besides Pluto and for Bennu, Eros, Vesta, Pallas, Chiron, Pholus, Halley and Arrokoth. `/discovery` now has those eight bodies, read from the JPL Small-Body Database on 2026-11-26, and that entry is about 600 bytes larger gzipped, which the size baseline records. Pluto stays on `factSheet`. Placing the `/asteroids` bodies in the space view was already on main. Chiron's Japanese name is キロン and Pholus's is フォルス.
