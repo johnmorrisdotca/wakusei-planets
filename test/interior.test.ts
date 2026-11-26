@@ -68,8 +68,12 @@ test("the Moon, Mercury, the Sun, Jupiter and Saturn use one named model each (M
   assert.equal(interiorLegend("mercury", "en")?.[0]?.depth, "0 km to about 365.7 km");
   assert.equal(interiorLegend("mercury", "ja")?.[0]?.name, "マントルと地殻");
   assert.equal(interiorLegend("sun", "en")?.[0]?.depth, "0 km to about 557700 km");
+  assert.equal(interiorLegend("sun", "ja")?.[0]?.name, "放射層と対流層");
   assert.equal(interiorLegend("jupiter", "en")?.length, 5);
-  assert.equal(interiorLegend("saturn", "ja")?.[1]?.name, "ぼやけた核");
+  assert.equal(interiorLegend("jupiter", "ja")?.[3]?.name, "遷移層");
+  assert.equal(interiorLegend("jupiter", "ja")?.[4]?.name, "均質な内層");
+  assert.equal(interiorLegend("saturn", "ja")?.[1]?.name, "境界のぼやけた核");
+  assert.equal(interiorLegend("earth", "ja")?.[2]?.madeOf, "鉄とニッケル、液体");
 });
 
 test("the legend lists each layer from the surface, outermost first, in English and Japanese", () => {

@@ -44,7 +44,7 @@ const EARTH: Interior = {
   source: { page: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html", read: "2026-11-13" },
   layers: [
     { id: "inner-core", name: { en: "Inner core", ja: "内核" }, madeOf: { en: "iron and nickel, solid", ja: "鉄とニッケル、固体" }, outerKm: 1221, about: true, colour: "#e6c36a" },
-    { id: "outer-core", name: { en: "Outer core", ja: "外核" }, madeOf: { en: "iron and nickel, fluid", ja: "鉄とニッケル、流体" }, outerKm: 3485, about: false, colour: "#d4652f" },
+    { id: "outer-core", name: { en: "Outer core", ja: "外核" }, madeOf: { en: "iron and nickel, fluid", ja: "鉄とニッケル、液体" }, outerKm: 3485, about: false, colour: "#d4652f" },
     { id: "mantle", name: { en: "Mantle", ja: "マントル" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: 6341, about: true, colour: "#8a3e2a" },
     { id: "crust", name: { en: "Crust", ja: "地殻" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: 6371, about: false, colour: "#c9a36b" },
   ],
@@ -105,7 +105,7 @@ const SUN: Interior = {
   source: { page: "https://science.nasa.gov/sun/facts/", read: "2026-11-26" },
   layers: [
     { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素がヘリウムになる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
-    { id: "outside-core", name: { en: "Outside the core", ja: "核の外側" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#d4652f" },
+    { id: "outside-core", name: { en: "Outside the core", ja: "放射層と対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#d4652f" },
   ],
 };
 
@@ -120,8 +120,8 @@ const JUPITER: Interior = {
   radiusAbout: false,
   source: { page: "https://doi.org/10.3847/PSJ/ac7ec8", read: "2026-11-26" },
   layers: [
-    { id: "inner", name: { en: "Inner mix", ja: "一様な内側" }, madeOf: { en: "heavy elements, 18%", ja: "重元素 18%" }, outerKm: 0.41 * JUPITER_RADIUS_KM, about: true, colour: "#e6c36a" },
-    { id: "transition", name: { en: "Transition", ja: "移り変わり" }, madeOf: { en: "heavy elements, fading", ja: "重元素が減っていく" }, outerKm: 0.63 * JUPITER_RADIUS_KM, about: true, colour: "#d4652f" },
+    { id: "inner", name: { en: "Inner mix", ja: "均質な内層" }, madeOf: { en: "heavy elements, 18%", ja: "重元素 18%" }, outerKm: 0.41 * JUPITER_RADIUS_KM, about: true, colour: "#e6c36a" },
+    { id: "transition", name: { en: "Transition", ja: "遷移層" }, madeOf: { en: "heavy elements, fading", ja: "重元素が減っていく" }, outerKm: 0.63 * JUPITER_RADIUS_KM, about: true, colour: "#d4652f" },
     { id: "metallic", name: { en: "Metallic hydrogen", ja: "金属水素" }, madeOf: { en: "metallic hydrogen", ja: "金属状の水素" }, outerKm: 0.72 * JUPITER_RADIUS_KM, about: false, colour: "#8a3e2a" },
     { id: "helium-rain", name: { en: "Helium rain", ja: "ヘリウムの雨" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: 0.83 * JUPITER_RADIUS_KM, about: false, colour: "#a85a3c" },
     { id: "envelope", name: { en: "Envelope", ja: "外層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: JUPITER_RADIUS_KM, about: false, colour: "#c9a36b" },
@@ -138,7 +138,7 @@ const SATURN: Interior = {
   radiusAbout: false,
   source: { page: "https://doi.org/10.1038/s41550-021-01448-3", read: "2026-11-26" },
   layers: [
-    { id: "core", name: { en: "Diffuse core", ja: "ぼやけた核" }, madeOf: { en: "ice and rock, mixed", ja: "氷と岩石が混ざる" }, outerKm: 0.6 * SATURN_RADIUS_KM, about: true, colour: "#e6c36a" },
+    { id: "core", name: { en: "Diffuse core", ja: "境界のぼやけた核" }, madeOf: { en: "ice and rock, mixed", ja: "氷と岩石が混ざる" }, outerKm: 0.6 * SATURN_RADIUS_KM, about: true, colour: "#e6c36a" },
     { id: "envelope", name: { en: "Envelope", ja: "外層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SATURN_RADIUS_KM, about: false, colour: "#c9a36b" },
   ],
 };
