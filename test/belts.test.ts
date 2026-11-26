@@ -249,8 +249,13 @@ test("each belt's inner and outer distance is the range its sentences state, and
     const ja = statedAu(belt.about.ja);
     assert.deepEqual(en, [belt.innerAu, belt.outerAu], `${id} English`);
     assert.deepEqual(ja, [belt.innerAu, belt.outerAu], `${id} Japanese`);
+    assert.equal(belt.about.ja.includes("載せる"), false, id);
     assert.ok(belt.innerAu > 0 && belt.innerAu <= belt.outerAu, id);
   }
+  assert.match(BELTS.resonant.about.ja, /^海王星と共鳴する天体。太陽から36\.4〜62\.6天文単位 \(冥王星などのプルティノは3:2共鳴\)$/);
+  assert.match(BELTS.scattered.about.en, /with orbits 30 to 2687 au in size \(half the long axis\)/);
+  assert.match(BELTS.scattered.about.ja, /軌道の大きさ \(長半径\) は30〜2687天文単位/);
+  assert.match(BELTS.scattered.about.ja, /収録している天体/);
   // `all` is every asteroid the database held, not a partition into the seven belts
   const seven = BELT_IDS.reduce((n, id) => n + BELT_TOTALS[id], 0);
   assert.notEqual(seven, BELT_TOTALS.all);
