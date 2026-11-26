@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Japanese nearest guide says 内側の惑星 for the inner planets** (MODULES-1014). 内惑星 means only Mercury and Venus. The space-view guide now says 太陽系全体, the region name, wherever it said 太陽系ぜんぶ or 太陽系ぜんたい for the whole solar system. 外惑星 in the sky-events guide stays: there it means a superior planet.
+
 - **The giant-planet cards draw the planet and three moons, and the Moons tab groups every moon under its planet** (MODULES-1719). The cards were names and counts only. Each card now draws the planet and its three largest moons. The Moons tab lists every drawn moon under its planet, including all six of Jupiter's and all nineteen of Saturn's. A moon stays in that list, so the row under a planet no longer takes the well-known moons back out of it.
 
 - **The Jupiter chart publishes a label's height after it has been laid out** (MODULES-1802). On the narrow chart WebKit's box for the first label is empty in the frame that draws it. The page measures that label on the next frame. The test still requires the height to be at least 11 pixels, and a scrollbar's few pixels do not draw the chart again.

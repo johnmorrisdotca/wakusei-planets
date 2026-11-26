@@ -133,7 +133,7 @@ console.log(Math.round(distance("jupiter", "io", Date.UTC(2026, 10, 8)).distance
 | 土星と海王星 | 20.178 | 1989 | 40.007 | 2079 |
 | 天王星と海王星 | 10.570 | 1994 | 49.879 | 2084 |
 
-どの距離も、結果の不確かさの範囲で正しいと考えてください。内惑星で数千km、木星より外で数万kmです。JPL Horizons との比較は3つの組 (地球と火星、金星と地球、木星と土星) で行います。`test/nearest.test.ts` は、1900年から2100年のそれぞれの組の最小と最大の距離について、Horizons の表 (一方の惑星の中心からもう一方の中心への幾何学的なベクトルで、折り返し点の前後10日を6時間刻み。`scripts/fetch-horizons-distance.py` が問い合わせを `test/data/horizons-distance.json` に記録します) を使い、放物線を当てはめて極値を求めます。
+どの距離も、結果の不確かさの範囲で正しいと考えてください。内側の惑星で数千km、木星より外で数万kmです。JPL Horizons との比較は3つの組 (地球と火星、金星と地球、木星と土星) で行います。`test/nearest.test.ts` は、1900年から2100年のそれぞれの組の最小と最大の距離について、Horizons の表 (一方の惑星の中心からもう一方の中心への幾何学的なベクトルで、折り返し点の前後10日を6時間刻み。`scripts/fetch-horizons-distance.py` が問い合わせを `test/data/horizons-distance.json` に記録します) を使い、放物線を当てはめて極値を求めます。
 
 | 組 | Horizons | このパッケージ | 距離の差 | 時刻の差 |
 |---|---|---|---|---|
