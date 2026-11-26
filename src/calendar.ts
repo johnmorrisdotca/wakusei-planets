@@ -106,6 +106,12 @@ export function daysInMonth(year: number, month: number, calendar: Calendar = "a
   return [4, 6, 9, 11].includes(month) ? 30 : 31;
 }
 
+/** The highest day number written on a month. October 1582 in `auto` is labelled to the 31st; `daysInMonth` counts the 21 days that were lived. */
+function lastDayNumber(year: number, month: number, calendar: Calendar): number {
+  if (calendar === "auto" && year === 1582 && month === 10) return 31;
+  return daysInMonth(year, month, calendar);
+}
+
 /**
  * A moment as a date and time of day in UTC, in the Gregorian or the Julian calendar.
  * @param when - A `Date` or milliseconds since 1970 (UTC).
@@ -145,7 +151,7 @@ export function fromCalendar(civil: { year: number } & Partial<Omit<CivilTime, "
   const { year, month = 1, day = 1, hour = 0, minute = 0, second = 0, millisecond = 0 } = civil;
   for (const [name, value] of Object.entries({ year, month, day, hour, minute, second, millisecond })) wholeNumber(name, value);
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59 || second < 0 || second > 59 || millisecond < 0 || millisecond > 999) throw new RangeError(`the time of day ${hour}:${minute}:${second}.${millisecond} does not exist`);
-  if (day < 1 || day > daysInMonth(year, month, calendar)) throw new RangeError(`${year}-${month}-${day} does not exist in the ${calendar} calendar`);
+  if (day < 1 || day > lastDayNumber(year, month, calendar)) throw new RangeError(`${year}-${month}-${day} does not exist in the ${calendar} calendar`);
   let gregorian = calendar === "gregorian";
   if (calendar === "auto") {
     if (year === 1582 && month === 10 && day > 4 && day < 15) throw new RangeError(`${year}-${month}-${day} does not exist: the calendar skipped 5 to 14 October 1582`);

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **22 to 31 October 1582 are real dates** (MODULES-568). `fromCalendar` used October 1582's count of 21 days as the highest day number, so the 22nd to the 31st threw. Those days exist. Only the 5th to the 14th were skipped. `daysInMonth` still returns 21.
+
 - **Next and previous can stay among one kind of body** (MODULES-892). `next({ kind: "planet" })` and `previous` go through the eight planets, with the Sun as the inner end, and skip moons and dwarf planets. `kind: "moon"` stays among the moons of the planet the view is at, and `kind: "dwarf-planet"` among the dwarf planets. The hop announces the previous and next of that kind. With no kind, the order is unchanged.
 
 - **The Earth's line look zooms, and a line portrait goes to 50** (MODULES-689). The line Earth had no hands, so it could not zoom or pan, including when it is chikyu-earth's globe. The body now takes the hands and passes the view to that globe, which does not take a second drag. A line portrait was held at 8x; it now goes to 50x, the same ceiling as a body's line drawing, and the range follows the look.

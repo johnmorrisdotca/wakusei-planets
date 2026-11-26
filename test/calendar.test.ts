@@ -61,7 +61,11 @@ test("the switch of 1582: 4 October (Julian) is followed by 15 October (Gregoria
   assert.equal(toJulianDate(first), 2299160.5);
   assert.deepEqual(toCalendar(first, "julian").day, 5, "the same day in the Julian calendar is 5 October");
   assert.deepEqual([toCalendar(last).day, toCalendar(first).day], [4, 15]);
-  assert.throws(() => fromCalendar({ year: 1582, month: 10, day: 10 }), /skipped 5 to 14 October 1582/);
+  for (const day of [4, 15, 21, 22, 31]) assert.equal(toCalendar(fromCalendar({ year: 1582, month: 10, day })).day, day, `1582-10-${day}`);
+  assert.equal(fromCalendar({ year: 1582, month: 10, day: 22 }) - first, 7 * 86_400_000);
+  assert.equal(fromCalendar({ year: 1582, month: 10, day: 31 }) - first, 16 * 86_400_000);
+  for (let day = 5; day <= 14; day += 1) assert.throws(() => fromCalendar({ year: 1582, month: 10, day }), /skipped 5 to 14 October 1582/);
+  assert.throws(() => fromCalendar({ year: 1582, month: 10, day: 32 }), /does not exist in the auto calendar/);
   assert.equal(daysInMonth(1582, 10), 21);
   assert.equal(dayOfYear(Date.UTC(1582, 11, 31)), 355, "the year of the switch has 355 days");
 });
