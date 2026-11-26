@@ -104,7 +104,7 @@ const SUN: Interior = {
   radiusAbout: false,
   source: { page: "https://science.nasa.gov/sun/facts/", read: "2026-11-26" },
   layers: [
-    { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素がヘリウムになる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
+    { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素がヘリウムに変わる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
     { id: "outside-core", name: { en: "Radiative and convective zones", ja: "放射層と対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#d4652f" },
   ],
 };
@@ -123,7 +123,7 @@ const JUPITER: Interior = {
     { id: "inner", name: { en: "Inner mix", ja: "均質な内層" }, madeOf: { en: "heavy elements, 18%", ja: "重元素 18%" }, outerKm: 0.41 * JUPITER_RADIUS_KM, about: true, colour: "#e6c36a" },
     { id: "transition", name: { en: "Transition", ja: "遷移層" }, madeOf: { en: "heavy elements, fading", ja: "重元素が減っていく" }, outerKm: 0.63 * JUPITER_RADIUS_KM, about: true, colour: "#d4652f" },
     { id: "metallic", name: { en: "Metallic hydrogen", ja: "金属水素" }, madeOf: { en: "metallic hydrogen", ja: "金属状の水素" }, outerKm: 0.72 * JUPITER_RADIUS_KM, about: false, colour: "#8a3e2a" },
-    { id: "helium-rain", name: { en: "Helium rain", ja: "ヘリウムの雨" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: 0.83 * JUPITER_RADIUS_KM, about: false, colour: "#a85a3c" },
+    { id: "helium-rain", name: { en: "Helium rain", ja: "ヘリウムの雨" }, madeOf: { en: "helium falls as droplets", ja: "ヘリウムが液滴になって沈む" }, outerKm: 0.83 * JUPITER_RADIUS_KM, about: false, colour: "#a85a3c" },
     { id: "envelope", name: { en: "Envelope", ja: "外層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: JUPITER_RADIUS_KM, about: false, colour: "#c9a36b" },
   ],
 };
@@ -138,7 +138,7 @@ const SATURN: Interior = {
   radiusAbout: false,
   source: { page: "https://doi.org/10.1038/s41550-021-01448-3", read: "2026-11-26" },
   layers: [
-    { id: "core", name: { en: "Diffuse core", ja: "境界のぼやけた核" }, madeOf: { en: "ice and rock, mixed", ja: "氷と岩石が混ざる" }, outerKm: 0.6 * SATURN_RADIUS_KM, about: true, colour: "#e6c36a" },
+    { id: "core", name: { en: "Diffuse core", ja: "境界のぼやけた核" }, madeOf: { en: "ice and rock, mixed", ja: "氷と岩石が混ざっている" }, outerKm: 0.6 * SATURN_RADIUS_KM, about: true, colour: "#e6c36a" },
     { id: "envelope", name: { en: "Envelope", ja: "外層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SATURN_RADIUS_KM, about: false, colour: "#c9a36b" },
   ],
 };
@@ -164,13 +164,31 @@ export function interiorOf(bodyId: string): Interior | undefined {
   return INTERIORS[bodyId as BodyId];
 }
 
-const km = (n: number): string => (Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10));
+/** Three significant figures, so a boundary worked out from a fraction is not written as if it were measured to a tenth of a kilometre. */
+function round3(n: number): number {
+  if (n === 0) return 0;
+  const scale = 10 ** (Math.floor(Math.log10(Math.abs(n))) - 2);
+  return Math.round(n / scale) * scale;
+}
 
-/** A depth, with "about" when the figure it comes from is the source's "about". */
+/** A depth, with "about" when the figure it comes from is the source's "about". Thousands are grouped. */
 function depthEnd(n: number, about: boolean, lang: "en" | "ja"): string {
-  const text = `${km(n)} km`;
+  const text = `${round3(n).toLocaleString(lang === "ja" ? "ja-JP" : "en-CA", { maximumFractionDigits: 0 })} km`;
   if (!about) return text;
-  return lang === "ja" ? `約 ${text}` : `about ${text}`;
+  return lang === "ja" ? `約${text}` : `about ${text}`;
+}
+
+/** The legend's heading: the numbers are depth from the surface, not radius from the centre. */
+export function interiorDepthHeading(lang: "en" | "ja"): string {
+  return lang === "ja" ? "表面から下へ" : "From the surface down";
+}
+
+/**
+ * Whether a point in view space (the camera sits on +Z) lies in the quarter the cutaway leaves open.
+ * The shells stay put, so this is the same sector the geometry omits.
+ */
+export function inCutOpening(point: readonly [number, number, number]): boolean {
+  return point[2] > 0 && Math.abs(Math.atan2(point[0], point[2])) < Math.PI / 4;
 }
 
 /**

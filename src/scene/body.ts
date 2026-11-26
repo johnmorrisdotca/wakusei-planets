@@ -203,7 +203,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const mesh = new T.Mesh(geometry, shader);
       mesh.frustumCulled = false;
       scene.add(mesh);
-      // the cutaway: a quarter of the globe left open toward the camera. Its own group, not a child of the hidden globe, so the shells are drawn. The same basis as the globe, so the opening turns with the body.
+      // the cutaway: true spheres at the model's radii, a quarter left open toward the camera. Not the body's flattened shape, and not turned with it, so the rims stay round and concentric. The Sun is flat discs, one ring per layer, so the core stays in view. Its glow is unchanged.
       const shells: { geometry: { dispose(): void }; material: { dispose(): void } }[] = [];
       let cut: InstanceType<ThreeParts["Group"]> | undefined;
       if (options.cutaway === true) {
@@ -212,9 +212,11 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           mesh.visible = false;
           cut = new T.Group();
           scene.add(cut);
+          const sun = options.id === "sun";
+          let hole = 0;
           for (const layer of interior.layers) {
             const radius = layer.outerKm / interior.radiusKm;
-            const shellGeometry = new T.SphereGeometry(radius, 48, 24, Math.PI / 4, Math.PI * 1.5);
+            const shellGeometry = sun ? new T.RingGeometry(hole, radius, 96) : new T.SphereGeometry(radius, 96, 48, (3 * Math.PI) / 4, Math.PI * 1.5);
             const channel = (start: number) => Number.parseInt(layer.colour.slice(start, start + 2), 16) / 255;
             const material = new T.ShaderMaterial({
               side: T.DoubleSide,
@@ -225,8 +227,10 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             });
             const shell = new T.Mesh(shellGeometry, material);
             shell.frustumCulled = false;
+            if (sun) shell.position.z = (1 - radius) * 0.02;
             cut.add(shell);
             shells.push({ geometry: shellGeometry, material });
+            hole = radius;
           }
         }
       }
@@ -400,7 +404,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const scaleY = ax ? ax[2] / mean : measured ? 1 : 1 - facts.flattening;
         const scaleZ = ax ? ax[0] / mean : 1;
         setBasis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
-        if (cut !== undefined) setBasis(cut, east, pole, meridian, scaleX, scaleY, scaleZ);
+        if (cut !== undefined) setBasis(cut, [1, 0, 0], [0, 1, 0], [0, 0, 1]);
         if (ringHalves !== undefined) {
           const [near, far] = ringHalves;
           // The camera sits on +Z. The ring's near direction is +Z laid onto the ring plane, and that half is drawn over the disc.

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { interiorLegend, interiorOf } from "../src/interior.ts";
+import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf } from "../src/interior.ts";
 
 test("the Earth and Mars use the figures read from NASA, and a body with none is left out", () => {
   const earth = interiorOf("earth");
@@ -65,27 +65,37 @@ test("the Moon, Mercury, the Sun, Jupiter and Saturn use one named model each (M
   ]);
   assert.equal(interiorLegend("moon", "en")?.[0]?.depth, "0 km to about 40 km");
   assert.equal(interiorLegend("moon", "ja")?.[0]?.name, "地殻");
-  assert.equal(interiorLegend("mercury", "en")?.[0]?.depth, "0 km to about 365.7 km");
+  assert.equal(interiorLegend("mercury", "en")?.[0]?.depth, "0 km to about 366 km");
   assert.equal(interiorLegend("mercury", "ja")?.[0]?.name, "マントルと地殻");
-  assert.equal(interiorLegend("sun", "en")?.[0]?.depth, "0 km to about 557700 km");
+  assert.equal(interiorLegend("sun", "en")?.[0]?.depth, "0 km to about 558,000 km");
   assert.equal(interiorLegend("sun", "en")?.[0]?.name, "Radiative and convective zones");
   assert.equal(interiorLegend("sun", "ja")?.[0]?.name, "放射層と対流層");
+  assert.equal(interiorLegend("sun", "ja")?.[1]?.madeOf, "水素がヘリウムに変わる");
   assert.equal(interiorLegend("jupiter", "en")?.length, 5);
+  assert.equal(interiorLegend("jupiter", "en")?.[0]?.depth, "0 km to 11,900 km");
+  assert.equal(interiorLegend("jupiter", "en")?.[2]?.depth, "19,600 km to about 25,900 km");
+  assert.equal(interiorLegend("jupiter", "en")?.[1]?.madeOf, "helium falls as droplets");
+  assert.equal(interiorLegend("jupiter", "ja")?.[1]?.madeOf, "ヘリウムが液滴になって沈む");
   assert.equal(interiorLegend("jupiter", "ja")?.[3]?.name, "遷移層");
   assert.equal(interiorLegend("jupiter", "ja")?.[4]?.name, "均質な内層");
   assert.equal(interiorLegend("saturn", "ja")?.[1]?.name, "境界のぼやけた核");
+  assert.equal(interiorLegend("saturn", "ja")?.[1]?.madeOf, "氷と岩石が混ざっている");
   assert.equal(interiorLegend("earth", "ja")?.[2]?.madeOf, "鉄とニッケル、液体");
+  assert.equal(interiorDepthHeading("en"), "From the surface down");
+  assert.equal(interiorDepthHeading("ja"), "表面から下へ");
+  assert.equal(inCutOpening([0, 0, 1]), true);
+  assert.equal(inCutOpening([1, 0, 0]), false);
 });
 
 test("the legend lists each layer from the surface, outermost first, in English and Japanese", () => {
   assert.deepEqual(interiorLegend("earth", "en")?.map((row) => [row.name, row.depth, row.madeOf]), [
     ["Crust", "0 km to about 30 km", "rock"],
-    ["Mantle", "about 30 km to 2886 km", "rock"],
-    ["Outer core", "2886 km to about 5150 km", "iron and nickel, fluid"],
-    ["Inner core", "about 5150 km to 6371 km", "iron and nickel, solid"],
+    ["Mantle", "about 30 km to 2,890 km", "rock"],
+    ["Outer core", "2,890 km to about 5,150 km", "iron and nickel, fluid"],
+    ["Inner core", "about 5,150 km to 6,370 km", "iron and nickel, solid"],
   ]);
   assert.equal(interiorLegend("earth", "ja")?.[0]?.name, "地殻");
-  assert.equal(interiorLegend("earth", "ja")?.[0]?.depth, "0 km から 約 30 km");
-  assert.deepEqual(interiorLegend("mars", "en")?.map((row) => row.depth), ["0 km to 1559.5 km", "1559.5 km to 3389.5 km"]);
+  assert.equal(interiorLegend("earth", "ja")?.[0]?.depth, "0 km から 約30 km");
+  assert.deepEqual(interiorLegend("mars", "en")?.map((row) => row.depth), ["0 km to 1,560 km", "1,560 km to 3,390 km"]);
   assert.equal(interiorLegend("venus", "en"), undefined);
 });

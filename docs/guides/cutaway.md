@@ -5,7 +5,7 @@ order: 20
 description: Open a body to its layers. The cutaway is off until you ask, draws only figures from a named model, and says when a figure is about.
 ---
 
-`cutaway` on `<wakusei-body>` opens a quarter of the globe. The opening faces the camera when the body is in its usual pose, and it turns as the body turns. The layers are concentric shells, each a flat colour, and a legend under the picture names every layer, how deep it is from the surface, and what it is made of.
+`cutaway` on `<wakusei-body>` opens a quarter of the globe. The opening stays toward the camera. The shells are true spheres at the radii the model gives, not the body's flattened shape, so each rim is a circle and the rims share a centre. The Sun is drawn as whole discs, not a wedge. A legend names every layer, how deep it is from the surface, and what it is made of. The heading says the numbers are from the surface down. Each depth is three significant figures, with thousands grouped. On a narrow picture the legend sits below the body.
 
 Leave the attribute off, or set it to `off`, and the body is whole. The shells are built when the cutaway is turned on and given back when it is turned off. A body with no sourced figures is not cut: the legend says so, and the globe stays whole.
 
@@ -22,9 +22,9 @@ The volumetric mean radius is 6371 km and the core's outside is 3485 km (NASA Ea
 | Layer | Depth from the surface | Made of |
 |---|---|---|
 | Crust | 0 km to about 30 km | rock |
-| Mantle | about 30 km to 2886 km | rock |
-| Outer core | 2886 km to about 5150 km | iron and nickel, fluid |
-| Inner core | about 5150 km to 6371 km | iron and nickel, solid |
+| Mantle | about 30 km to 2,890 km | rock |
+| Outer core | 2,890 km to about 5,150 km | iron and nickel, fluid |
+| Inner core | about 5,150 km to 6,370 km | iron and nickel, solid |
 
 ## Mars
 
@@ -32,8 +32,8 @@ The volumetric mean radius is 3389.5 km and the core's radius is 1830 km (NASA M
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Outside the core | 0 km to 1559.5 km | not stated |
-| Core | 1559.5 km to 3389.5 km | not stated |
+| Outside the core | 0 km to 1,560 km | not stated |
+| Core | 1,560 km to 3,390 km | not stated |
 
 ## The Moon
 
@@ -42,9 +42,9 @@ The volumetric mean radius is 1737.4 km (NASA Moon Fact Sheet). The layers are N
 | Layer | Depth from the surface | Made of |
 |---|---|---|
 | Crust | 0 km to about 40 km | rock |
-| Mantle | about 40 km to 1407.4 km | olivine and pyroxene |
-| Outer core | 1407.4 km to 1497.4 km | iron, liquid |
-| Inner core | 1497.4 km to 1737.4 km | iron, solid |
+| Mantle | about 40 km to 1,410 km | olivine and pyroxene |
+| Outer core | 1,410 km to 1,500 km | iron, liquid |
+| Inner core | 1,500 km to 1,740 km | iron, solid |
 
 ## Mercury
 
@@ -52,8 +52,8 @@ The volumetric mean radius is 2439.7 km (NASA Mercury Fact Sheet). NASA Science'
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Mantle and crust | 0 km to about 365.7 km | rock |
-| Core | about 365.7 km to 2439.7 km | metal, partly molten |
+| Mantle and crust | 0 km to about 366 km | rock |
+| Core | about 366 km to 2,440 km | metal, partly molten |
 
 ## The Sun
 
@@ -61,8 +61,8 @@ The volumetric mean radius is 695,700 km (NASA Sun Fact Sheet). NASA Science's S
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Radiative and convective zones | 0 km to about 557700 km | hydrogen and helium |
-| Core | about 557700 km to 695700 km | hydrogen to helium |
+| Radiative and convective zones | 0 km to about 558,000 km | hydrogen and helium |
+| Core | about 558,000 km to 696,000 km | hydrogen to helium |
 
 ## Jupiter
 
@@ -70,11 +70,11 @@ Militzer and others, 2022, "Juno Spacecraft Measurements of Jupiter's Gravity Im
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Envelope | 0 km to 11884.9 km | hydrogen and helium |
-| Helium rain | 11884.9 km to 19575.1 km | hydrogen and helium |
-| Metallic hydrogen | 19575.1 km to about 25867.1 km | metallic hydrogen |
-| Transition | about 25867.1 km to about 41247.5 km | heavy elements, fading |
-| Inner mix | about 41247.5 km to 69911 km | heavy elements, 18% |
+| Envelope | 0 km to 11,900 km | hydrogen and helium |
+| Helium rain | 11,900 km to 19,600 km | helium falls as droplets |
+| Metallic hydrogen | 19,600 km to about 25,900 km | metallic hydrogen |
+| Transition | about 25,900 km to about 41,200 km | heavy elements, fading |
+| Inner mix | about 41,200 km to 69,900 km | heavy elements, 18% |
 
 ## Saturn
 
@@ -82,8 +82,8 @@ Mankovich and Fuller, 2021, "A diffuse core in Saturn revealed by ring seismolog
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Envelope | 0 km to about 23292.8 km | hydrogen and helium |
-| Diffuse core | about 23292.8 km to 58232 km | ice and rock, mixed |
+| Envelope | 0 km to about 23,300 km | hydrogen and helium |
+| Diffuse core | about 23,300 km to 58,200 km | ice and rock, mixed |
 
 ## Left out
 

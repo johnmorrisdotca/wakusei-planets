@@ -11,7 +11,7 @@ import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId 
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
-import { interiorLegend } from "./interior.ts";
+import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf } from "./interior.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
 import { detailOf, lookOf, starLookOf } from "./scene/look.ts";
@@ -32,7 +32,7 @@ import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
 import { cross, RAD, turn as turnVec, type Vec3 } from "./vec.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "./places.ts";
-import { marksToShow, readPlaceLayers, readSurfaceNames, turnToPlace, type PlaceLayer } from "./place-marks.ts";
+import { marksToShow, readPlaceLayers, readSurfaceNames, surfacePoint, turnToPlace, type PlaceLayer } from "./place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "./scene/place-layer.ts";
 
 export { setThreeLoader };
@@ -93,8 +93,11 @@ function clampPan(pan: number, extent: number, zoom: number): number {
 const LINE_LIMITS = { zoomMin: 0.1, zoomMax: 50, tiltMax: 90 } as const;
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 320px); max-width: 100%; aspect-ratio: 1 / 1; position: relative; contain: layout style; }
-#stage { position: absolute; inset: 0; }
-#cutaway { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 6px 8px; list-style: none; background: color-mix(in srgb, Canvas 88%, transparent); color: CanvasText; font: 12px/1.35 system-ui, sans-serif; }
+#stage { position: absolute; inset: 0; bottom: var(--cutaway-band, 0px); }
+#cutaway-panel { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 6px 8px; background: color-mix(in srgb, Canvas 88%, transparent); color: CanvasText; font: 12px/1.35 system-ui, sans-serif; }
+#cutaway-panel[hidden] { display: none; }
+#cutaway-heading { margin: 0 0 4px; font-weight: 600; }
+#cutaway { margin: 0; padding: 0; list-style: none; }
 #cutaway[hidden] { display: none; }
 #cutaway li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 8px; align-items: baseline; }
 #cutaway li[data-empty] { display: block; }
@@ -103,7 +106,7 @@ const TEMPLATE = `<style>
 #estimate { position: absolute; z-index: 2; left: 2px; right: 2px; bottom: 1px; margin: 0; max-height: 2.4em; overflow: hidden; text-align: center; font: 10px/1.2 system-ui, sans-serif; color: inherit; pointer-events: none; }
 #estimate[hidden] { display: none; }
 :host([data-shape="estimated"]) #stage { bottom: 22px; }
-</style><div id="stage"></div><p id="estimate" hidden></p><ol id="cutaway" hidden></ol>`;
+</style><div id="stage"></div><p id="estimate" hidden></p><div id="cutaway-panel" hidden><p id="cutaway-heading" hidden></p><ol id="cutaway" hidden></ol></div>`;
 
 /**
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
@@ -118,7 +121,7 @@ const TEMPLATE = `<style>
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
  * `earth-from="chikyu"` (the Earth in the shaded looks only, and only when the page has imported chikyu-earth's realistic element) draws the Earth with chikyu-earth's `<chikyu-earth-realistic>`: day and night by the real Sun, lights, clouds and air, at `meridian` and, when there is a `time`, held at that date; `earth-texture-base` is the folder of its pictures. It is the other package's picture, so tilt, moons, places and the shared view controls do not apply to it.
- * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera, turning with the body, and lists the interior layers. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
+ * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera. The shells are true spheres at the model's radii and the opening stays toward the camera, so the rims stay round; the Sun is whole discs. The legend names the layers. On a narrow picture it sits below the body. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
  * `places` marks the places on the body in the shaded looks, by layer (`landing`, `crash`, `planned`, `feature`; the lists come from `setPlacesLoader`), with `wakusei-place` on a click and `goToPlace` to turn one to the middle: see the guide "Places on the Moon, Mars and 31 more bodies".
  * `body-label` writes the body's name on its globe in the shaded looks (`painted`, `etched`, `outline` or `burned`; absent for none), with `body-label-strength`, `-repeat`, `-latitude`, `-facing`, `-font`, `-fallback-font` and `-tone` (`auto`, `light` or `dark` letters: auto takes dark ones for a `painted` look on a light body) beside it, and the `bodyLabel` property takes the same as an object: see the guide "A name on the body".
  * A dated picture (a `time`, or `moons`) has a clock: `rate` is the simulated seconds for each real second, and `rate="0"` holds it, drawing nothing. While it runs (`rate` not 0), `wakusei-timechange` carries
@@ -482,18 +485,20 @@ export class WakuseiBody extends HTMLElement {
     const facts = this.#facts();
     const ax = facts.axesKm;
     const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
-    const marks = marksToShow(this.#placeList.list, layers, {
-      centre: [0, 0, 0],
+    const view = {
+      centre: [0, 0, 0] as Vec3,
       radius: 1,
       pole: state.pose.pole,
       meridian: state.pose.meridian,
       scale,
-      toward: [0, 0, 1],
-      project: (p) => ({ x: ((p[0] - left) / (2 * halfW)) * w, y: ((top - p[1]) / (2 * halfH)) * h }),
+      toward: [0, 0, 1] as Vec3,
+      project: (p: Vec3) => ({ x: ((p[0] - left) / (2 * halfW)) * w, y: ((top - p[1]) / (2 * halfH)) * h }),
       width: w,
       height: h,
       radiusPx: (Math.min(w, h) / 2) * (state.zoom / state.extent),
-    }, facts.radiusKm, names, [], this.getAttribute("lang") === "ja" ? "ja" : "en");
+    };
+    const open = this.#cutawayOn() && this.body !== "sun" && interiorOf(this.body) !== undefined;
+    const marks = marksToShow(this.#placeList.list, layers, view, facts.radiusKm, names, [], this.getAttribute("lang") === "ja" ? "ja" : "en").filter((mark) => !open || !inCutOpening(surfacePoint(view, mark.place.lat, mark.place.lon).point));
     this.#placeLayer.set(marks, (Math.min(w, h) / 2) * (state.zoom / state.extent));
   }
 
@@ -541,6 +546,7 @@ export class WakuseiBody extends HTMLElement {
     for (const name of ["pointerdown", "wheel", "keydown"]) this.addEventListener(name, this.#measure, true);
     if (typeof ResizeObserver === "function") {
       this.#placeResize = new ResizeObserver(() => {
+        this.#fitCutaway();
         if (this.#placeLayer !== undefined) this.#markPlaces();
       });
       this.#placeResize.observe(this.#stage);
@@ -949,26 +955,46 @@ export class WakuseiBody extends HTMLElement {
     return value !== null && value !== "off" && value !== "0";
   }
 
+  /** On a narrow picture the legend takes a band under the body, so it is never drawn across the globe. */
+  #fitCutaway(): void {
+    const panel = this.shadowRoot?.querySelector("#cutaway-panel");
+    if (!(panel instanceof HTMLElement)) return;
+    const narrow = this.clientWidth > 0 && this.clientWidth <= 480;
+    const band = narrow && !panel.hidden ? panel.offsetHeight + 8 : 0;
+    const next = `${band}px`;
+    if (this.style.getPropertyValue("--cutaway-band") !== next) this.style.setProperty("--cutaway-band", next);
+  }
+
   /** The legend. It is HTML, so it costs no graphics object, and it lists only the layers `interiorLegend` has. */
   #syncLegend(): void {
     const list = this.shadowRoot?.querySelector("#cutaway");
-    if (!(list instanceof HTMLOListElement)) return;
+    const panel = this.shadowRoot?.querySelector("#cutaway-panel");
+    const heading = this.shadowRoot?.querySelector("#cutaway-heading");
+    if (!(list instanceof HTMLOListElement) || !(panel instanceof HTMLElement) || !(heading instanceof HTMLElement)) return;
     if (!this.#cutawayOn()) {
+      panel.hidden = true;
       list.hidden = true;
+      heading.hidden = true;
       list.replaceChildren();
+      this.#fitCutaway();
       return;
     }
+    panel.hidden = false;
     list.hidden = false;
     list.replaceChildren();
     const lang = this.getAttribute("lang") === "ja" ? "ja" : "en";
     const rows = interiorLegend(this.body, lang);
     if (rows === undefined) {
+      heading.hidden = true;
       const item = document.createElement("li");
       item.dataset.empty = "";
       item.textContent = lang === "ja" ? "この天体の内部は、このパッケージには出典つきの数値がありません。" : "This body has no sourced interior in this package.";
       list.append(item);
+      this.#fitCutaway();
       return;
     }
+    heading.hidden = false;
+    heading.textContent = interiorDepthHeading(lang);
     for (const row of rows) {
       const item = document.createElement("li");
       item.dataset.layer = row.id;
@@ -989,6 +1015,7 @@ export class WakuseiBody extends HTMLElement {
       item.append(swatch, text);
       list.append(item);
     }
+    this.#fitCutaway();
   }
 
   async #refresh(): Promise<void> {

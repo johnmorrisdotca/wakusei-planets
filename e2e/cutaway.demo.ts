@@ -32,16 +32,16 @@ test("the Earth's legend matches its layers, Japanese follows the language, and 
   await body.evaluate((el) => el.setAttribute("cutaway", ""));
   await expect.poll(() => legend(page)).toEqual([
     { layer: "crust", empty: false, name: "Crust", depth: "0 km to about 30 km" },
-    { layer: "mantle", empty: false, name: "Mantle", depth: "about 30 km to 2886 km" },
-    { layer: "outer-core", empty: false, name: "Outer core", depth: "2886 km to about 5150 km" },
-    { layer: "inner-core", empty: false, name: "Inner core", depth: "about 5150 km to 6371 km" },
+    { layer: "mantle", empty: false, name: "Mantle", depth: "about 30 km to 2,890 km" },
+    { layer: "outer-core", empty: false, name: "Outer core", depth: "2,890 km to about 5,150 km" },
+    { layer: "inner-core", empty: false, name: "Inner core", depth: "about 5,150 km to 6,370 km" },
   ]);
   await body.evaluate((el) => el.setAttribute("lang", "ja"));
   await expect.poll(() => legend(page)).toEqual([
-    { layer: "crust", empty: false, name: "地殻", depth: "0 km から 約 30 km" },
-    { layer: "mantle", empty: false, name: "マントル", depth: "約 30 km から 2886 km" },
-    { layer: "outer-core", empty: false, name: "外核", depth: "2886 km から 約 5150 km" },
-    { layer: "inner-core", empty: false, name: "内核", depth: "約 5150 km から 6371 km" },
+    { layer: "crust", empty: false, name: "地殻", depth: "0 km から 約30 km" },
+    { layer: "mantle", empty: false, name: "マントル", depth: "約30 km から 2,890 km" },
+    { layer: "outer-core", empty: false, name: "外核", depth: "2,890 km から 約5,150 km" },
+    { layer: "inner-core", empty: false, name: "内核", depth: "約5,150 km から 6,370 km" },
   ]);
   await body.evaluate((el) => el.removeAttribute("cutaway"));
   await expect.poll(() => legend(page)).toBeNull();
