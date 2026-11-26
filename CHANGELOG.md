@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [0.77.2] - 2026-11-26
+
+Tests only: the package is unchanged by this release.
+
+- **The sideways-and-roll test waits for the names, not for a draw** (MODULES-822). `e2e/space.demo.ts` "the view can be moved sideways and rolled" counted draws to know the Inner planets were on the screen; a draw already on its way when the click came counted, and it read the names of the picture before. It now waits until three names are placed. With every frame a third of a second away (a busy machine, now part of the test) it failed before the change, 2 names where 3 were wanted, and passes after.
+- **The Starman at-rest test waits for quiet and says what the view was doing** (MODULES-1116). One run drew 42 times in the 3 seconds it measures, after every condition it waited for was met. It has not come back in 52 runs, 40 of them eight at a time, nor with the CPU slowed six times, so the cause is not known. The test now waits for a second without a draw before its baseline, keeps the assertion, and puts the view's state (time, glide, travel, pictures, moons held) in the failure message.
+- **The drag test says where its second pending frame comes from** (MODULES-697). Beside the renderer's own frame, the page's family help script asks for one frame (a MutationObserver) to refresh tooltips when the DOM changes; the test already waits for it to run. The package asks for one frame at a time.
+
 ## [0.77.1] - 2026-11-26
 
 - **A body's still is made at `still-size`, in a page that installs the package** (MODULES-1834, MODULES-1843). The package depended on kazoku-ui `^0.41.0`, and its own repo carried a local patch of that version so that the shared renderer made a still at the element's `data-still-size`; a patch is not published, so a page that installed wakusei-planets got the unpatched renderer and a body drawn 1,593 px wide was a 160 px picture blown up. The dependency is now `^0.54.4`, whose renderer reads `data-still-size` from the stage's host or the element round its shadow root, and the patch is gone. The still is as sharp as `still-size` times the device pixel ratio says (up to 2048 px on the long side).
