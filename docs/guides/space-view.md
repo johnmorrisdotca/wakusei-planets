@@ -178,7 +178,10 @@ Orbit lines fade, light up and can be pressed. With `orbits` on, every line (the
 
 The lines are one overlay of the view, drawn when the view draws and not while it rests, and they add no graphics-card draw. They are still drawn when `orbits` is off. `path-hit` (8 px by default, 0 to 40, `off` for none; a finger has twice the reach and at least 16) makes `wakusei-path-hover` and `wakusei-path-click` say which styled path is under the pointer: `{ id, style, x, y, distancePx, pointer }`. A body under the pointer is heard first, and a styled path does not also press its body. `pathAt(x, y)` asks the same for any point. `stats.paths.drawn` is how many the last draw drew.
 
-```ts
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
 space.setPathStyles({ favourite: { width: 3 } });
 space.setPaths([{ id: "mars", style: "favourite" }, { id: "io", style: "selected" }]);
 ```

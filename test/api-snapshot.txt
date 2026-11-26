@@ -129,6 +129,7 @@ const ARROWS_PER_ORBIT: 2
 const AU_IN_EARTH_RADII: number
 export interface ArrivalCompanion { id?: string; at: Vec3; rank: 1 | 2 | 3; }
 const BESIDE_RADII: 5.8
+const BUILT_IN_PATH_STYLES: Readonly<Record<string, PathStyle>>
 export interface BesideCamera { position: Vec3; forward: Vec3; up: Vec3; fov: number; distance: number; separation: number; }
 export interface BesideInput { moon: Vec3; moonRadius: number; host: Vec3; hostRadius: number; sun: Vec3; aspect: number; zoom: number; yaw: number; tilt: number; north?: Vec3; }
 const COVER_ARROW_GAP: 6
@@ -147,8 +148,13 @@ export interface KeepOut { x: number; y: number; w: number; h: number; }
 const LABEL_GAP: 3
 export interface LabelBox { id: string; x: number; y: number; width: number; height: number; rank: number; size: number; alternates?: readonly { x: number; y: number; }[]; }
 const MAX_ARROWS_PER_ORBIT: 4
+const MAX_PATHS: 16
 const MOON_COMPRESSED: 3.5
 export interface OrbitArrow { position: Vec3; direction: Vec3; }
+export interface PathHit { id: string; style: string; x: number; y: number; distancePx: number; }
+export interface PathRequest { id: string; style?: string | Partial<PathStyle>; }
+export interface PathScreen { id: string; style: string; xy: ArrayLike<number>; }
+export interface PathStyle { color: string; width: number; opacity: number; dash: [ number, number ] | null; }
 const RIDE_FOV: 60
 export interface RideInput { position: Vec3; velocity: Vec3; radius: number; look: RideLook; yaw: number; tilt: number; zoom: number; }
 export type RideLook = "down" | "horizon" | "ahead";
@@ -191,6 +197,7 @@ function bodyKindOf(id: BodyId) => SpaceKind
 function carry(aim: Vec3, from: HoldBasis, to: HoldBasis) => Vec3
 function chevron(position: Vec3, direction: Vec3, right: Vec3, up: Vec3, size: number) => [Vec3, Vec3, Vec3] | null
 function chooseLabels(boxes: readonly LabelBox[], gap?: number, keepOut?: readonly KeepOut[]) => Set<string>
+function completeStyle(given: Partial<PathStyle> | null | undefined, base: PathStyle) => PathStyle
 function compress(v: Vec3) => Vec3
 function controlsFor(aim: Vec3, centre: { lon: number; lat: number; }, ms: number) => { yaw: number; tilt: number; }
 function coverArrows(places: Readonly<Record<string, BodyPlace | null>>, rank: (id: string) => number) => CoverArrow[]
@@ -217,9 +224,11 @@ function moonOrbit(ms: number, count?: number) => Vec3[]
 function moonSizeFactor(mode: ScaleMode, host: "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna", size: number, moons: readonly { radius: number; orbit: number; }[]) => { factor: number; clamped: boolean; }
 function nameAlternates(dot: { x: number; y: number; r: number; }, size: { width: number; height: number; }, frame: { width: number; height: number; }) => { x: number; y: number; }[]
 function nameSpot(dot: { x: number; y: number; r: number; }, size: { width: number; height: number; }, frame: { width: number; height: number; }) => { x: number; y: number; flipped: boolean; }
+function nearestPath(lines: readonly PathScreen[], pointer: { x: number; y: number; }, radius: number) => PathHit | null
 const orbitLine: (mode: ScaleMode, sun: Vec3, points: readonly Vec3[]) => Vec3[]
 function pairAxis(toward: (ms: number) => Vec3, ms: number) => Vec3
 function pairBasis(toward: Vec3, axis: Vec3) => HoldBasis
+function pathSpanMs(id: string) => number | null
 function placeAround(mode: ScaleMode, sun: Vec3, helio: Vec3) => Vec3
 function placeBodies(mode: ScaleMode, frame: SpaceFrame) => Record<BaseBody, Vec3>
 function placeLabels(boxes: readonly LabelBox[], gap?: number, keepOut?: readonly KeepOut[]) => Map<string, { x: number; y: number; }>
@@ -236,6 +245,7 @@ function sightChanged(before: Readonly<Record<string, Sight>>, now: Readonly<Rec
 function sightOf(input: SightInput, width: number, height: number, axis?: { x: number; y: number; }) => Sight
 function spinArrow(centre: Vec3, axis: Vec3, radius: number, lift: number, segments?: number) => { arc: Vec3[]; head: [Vec3, Vec3]; }
 function spinAxis(id: BodyId, ms: number) => SpinAxis
+function styleTable(overrides: Readonly<Record<string, Partial<PathStyle> | null>>) => Record<string, PathStyle>
 function subCameraPoint(body: BodyId, view: FaceView, centre: Face, anchor: number, time: number) => Face
 function surfaceDirection(body: BodyId, face: Face, time: number) => Vec3
 function systemOf(id: BodyId) => { host: BodyId; moons: BodyId[]; }

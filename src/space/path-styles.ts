@@ -11,7 +11,7 @@ const DAY_MS = 86_400_000;
  *
  * @example
  * ```ts
- * import type { PathStyle } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import type { PathStyle } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * const look: PathStyle = { color: "#ffd166", width: 1.75, opacity: 0.85, dash: [3, 4] };
  * console.log(look.dash === null);
@@ -33,7 +33,7 @@ export interface PathStyle {
  *
  * @example
  * ```ts
- * import type { PathRequest } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import type { PathRequest } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * const path: PathRequest = { id: "mars", style: "favourite" };
  * console.log(path.id);
@@ -49,7 +49,7 @@ export interface PathRequest {
  *
  * @example
  * ```ts
- * import type { PathScreen } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import type { PathScreen } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * const line: PathScreen = { id: "mars", style: "favourite", xy: [0, 0, 40, 0] };
  * console.log(line.xy.length);
@@ -66,7 +66,7 @@ export interface PathScreen {
  *
  * @example
  * ```ts
- * import type { PathHit } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import type { PathHit } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * const hit: PathHit = { id: "mars", style: "favourite", x: 20, y: 1, distancePx: 1 };
  * console.log(hit.id);
@@ -87,7 +87,7 @@ export interface PathHit {
  *
  * @example
  * ```ts
- * import { MAX_PATHS } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import { MAX_PATHS } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * console.log(MAX_PATHS);
  * ```
@@ -102,7 +102,7 @@ export const MAX_PATHS = 16;
  *
  * @example
  * ```ts
- * import { pathSpanMs } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import { pathSpanMs } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * console.log(pathSpanMs("mars") !== null, pathSpanMs("sun"));
  * ```
@@ -126,7 +126,7 @@ const MAX_WIDTH = 8;
  *
  * @example
  * ```ts
- * import { BUILT_IN_PATH_STYLES } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import { BUILT_IN_PATH_STYLES } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * console.log(BUILT_IN_PATH_STYLES.selected.dash, BUILT_IN_PATH_STYLES.hovered.dash);
  * ```
@@ -149,7 +149,7 @@ const clamp = (value: number, low: number, high: number): number => Math.min(hig
  *
  * @example
  * ```ts
- * import { BUILT_IN_PATH_STYLES, completeStyle } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import { BUILT_IN_PATH_STYLES, completeStyle } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * console.log(completeStyle({ width: 3 }, BUILT_IN_PATH_STYLES.favourite).width);
  * ```
@@ -173,7 +173,7 @@ export function completeStyle(given: Partial<PathStyle> | null | undefined, base
  *
  * @example
  * ```ts
- * import { styleTable } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import { styleTable } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * console.log(styleTable({ favourite: { width: 3 } }).favourite.width);
  * ```
@@ -228,7 +228,7 @@ export function hitRadius(base: number, pointer: "mouse" | "touch" | "pen"): num
  *
  * @example
  * ```ts
- * import { nearestPath } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * import { nearestPath } from "@johnmorrisdotca/wakusei-planets/space";
  *
  * console.log(nearestPath([{ id: "mars", style: "path", xy: [0, 0, 10, 0] }], { x: 5, y: 1 }, 8)?.id);
  * ```

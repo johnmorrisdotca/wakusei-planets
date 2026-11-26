@@ -178,7 +178,10 @@ try {
 
 線は画面の上に重ねる1つの層に描き、画面を描くときに描き、止まっているあいだは描き直しません。グラフィックスカードに渡す呼び出しは増えません。`orbits` がオフでも、この線は描きます。`path-hit` (初期値は8ピクセル。0から40。`off` で判定なし。指は2倍で、少なくとも16ピクセル) を置くと、`wakusei-path-hover` と `wakusei-path-click` が、ポインターの下の線を伝えます。中身は `{ id, style, x, y, distancePx, pointer }` です。天体がポインタの下にあるときは、天体のほうが先です。この線を押しても、その天体を押したことにはなりません。`pathAt(x, y)` は、画面の任意の点について同じことを返します。`stats.paths.drawn` は、前回の描画で描いた本数です。
 
-```ts
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
 space.setPathStyles({ favourite: { width: 3 } });
 space.setPaths([{ id: "mars", style: "favourite" }, { id: "io", style: "selected" }]);
 ```
