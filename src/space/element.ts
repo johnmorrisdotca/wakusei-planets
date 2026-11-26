@@ -7,7 +7,7 @@ import { BODIES, BODY_IDS, MOONS_OF, type BodyId, type MoonId } from "../facts.t
 import { createGate, frameCap, type Gate } from "../gate.ts";
 import { arrowCount, readHelpPlace, type HelpPlace } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
-import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
+import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, inHopKind, systemOf, type SpaceKind } from "./bodies.ts";
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { craftRank, craftSize, LABEL_GAP, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox, type LabelReport } from "./labels.ts";
 import { coverArrows, coverOf } from "./covered.ts";
@@ -1942,10 +1942,14 @@ export class WakuseiSpace extends HTMLElement {
     if (was !== id) this.#announceHop();
   }
 
-  /** What the hopper can do from where it is: the body at the middle, and the bodies the previous and next hop lead to. */
+  /** Set while `next` or `previous` is moving, so the hop it announces names neighbours of the same kind. */
+  #hopKind: "planet" | "moon" | "dwarf-planet" | undefined;
+
+  /** What the hopper can do from where it is: the body at the middle, and the bodies the previous and next hop lead to. During a hop of one kind, those neighbours are of that kind. */
   get hopper(): { current: BodyInfo; previous: BodyInfo; next: BodyInfo } {
     const here = this.#model.focus;
-    return { current: this.bodyInfo(here), previous: this.bodyInfo(hopFrom(here, -1, canCentre)), next: this.bodyInfo(hopFrom(here, 1, canCentre)) };
+    const can = (id: BodyId): boolean => canCentre(id) && inHopKind(id, here, this.#hopKind);
+    return { current: this.bodyInfo(here), previous: this.bodyInfo(hopFrom(here, -1, can)), next: this.bodyInfo(hopFrom(here, 1, can)) };
   }
 
   /**
@@ -2314,15 +2318,28 @@ export class WakuseiSpace extends HTMLElement {
     line.hidden = region === null;
   }
 
-  /** Go to the next body in the order of `bodyList()` (the Sun, Mercury, Venus, the Earth, the Moon, Mars, Phobos, Deimos, Ceres, Jupiter, its moons, and on), round to the Sun after the last. */
-  next(options: { smooth?: boolean } = {}): BodyInfo {
-    this.goTo(hopFrom(this.#model.focus, 1, canCentre), options);
-    return this.bodyInfo(this.#model.focus);
+  /**
+   * Go to the next body in the order of `bodyList()` (the Sun, Mercury, Venus, the Earth, the Moon, Mars, Phobos, Deimos, Ceres, Jupiter, its moons, and on), round to the Sun after the last.
+   * `kind` keeps to one kind: `planet` is the eight planets with the Sun as the inner end, `dwarf-planet` the dwarf planets, and `moon` the moons of the host the view is at. The hop it announces names the previous and next of that kind.
+   */
+  next(options: { smooth?: boolean; kind?: "planet" | "moon" | "dwarf-planet" } = {}): BodyInfo {
+    return this.#hop(1, options);
   }
 
-  /** Go to the previous body in the same order. */
-  previous(options: { smooth?: boolean } = {}): BodyInfo {
-    this.goTo(hopFrom(this.#model.focus, -1, canCentre), options);
+  /** Go to the previous body in the same order, and of the same `kind` when one is given. */
+  previous(options: { smooth?: boolean; kind?: "planet" | "moon" | "dwarf-planet" } = {}): BodyInfo {
+    return this.#hop(-1, options);
+  }
+
+  /** Move one step of the hopper and announce neighbours of the same kind, then forget the kind so a later hop is among every body. */
+  #hop(step: 1 | -1, options: { smooth?: boolean; kind?: "planet" | "moon" | "dwarf-planet" }): BodyInfo {
+    const here = this.#model.focus;
+    this.#hopKind = options.kind;
+    try {
+      this.goTo(hopFrom(here, step, (id) => canCentre(id) && inHopKind(id, here, options.kind)), options);
+    } finally {
+      this.#hopKind = undefined;
+    }
     return this.bodyInfo(this.#model.focus);
   }
 

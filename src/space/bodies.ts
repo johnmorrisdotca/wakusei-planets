@@ -84,6 +84,29 @@ export function findBody(text: string): BodyId | undefined {
 }
 
 /**
+ * Whether a body is a stop of a hop that stays among one kind. With no kind, every body is. `planet` is the eight planets and the Sun, the inner end. `dwarf-planet` is Pluto and the other dwarf planets. `moon` is the moons of the host the hop is at (the body itself when it is not a moon).
+ *
+ * @param id - The body being considered.
+ * @param here - Where the hop is now.
+ * @param kind - Which stops to keep, or every body when left out.
+ * @returns Whether the hop may stop at `id`.
+ *
+ * @example
+ * ```ts
+ * import { inHopKind } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * console.log(inHopKind("mars", "earth", "planet"), inHopKind("moon", "earth", "planet"), inHopKind("io", "europa", "moon"));
+ * ```
+ */
+export function inHopKind(id: BodyId, here: BodyId, kind: "planet" | "moon" | "dwarf-planet" | undefined): boolean {
+  if (kind === undefined) return true;
+  if (kind === "planet") return id === "sun" || bodyKindOf(id) === "planet";
+  if (kind === "dwarf-planet") return bodyKindOf(id) === "dwarf-planet";
+  const host = hostOf(here) ?? here;
+  return bodyKindOf(id) === "moon" && hostOf(id) === host;
+}
+
+/**
  * The body after `id` in the hopper's order (or before it with a negative `step`), among those `can` accepts, going round from the last to the first.
  *
  * @param id - Where the hopper is.

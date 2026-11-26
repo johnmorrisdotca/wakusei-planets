@@ -4,7 +4,7 @@ export { compress, MOON_COMPRESSED, moonDistance, moonSizeFactor, orbitLine, pla
 export { groundDirection } from "./aim.ts";
 export { RIDE_FOV, ridePose, type RideInput, type RideLook, type RidePose } from "./ride.ts";
 export { chooseLabels, craftRank, craftSize, LABEL_GAP, labelPlacementReady, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox, type LabelReport } from "./labels.ts";
-export { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, systemOf, type SpaceKind } from "./bodies.ts";
+export { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, inHopKind, systemOf, type SpaceKind } from "./bodies.ts";
 export { besideMoon, BESIDE_RADII, type BesideCamera, type BesideInput } from "./beside.ts";
 export { ARROWS_PER_ORBIT, arrowCount, arrowSites, MAX_ARROWS_PER_ORBIT, chevron, helpSpin, readHelpPlace, spinArrow, type HelpPlace, type OrbitArrow } from "./arrows.ts";
 export { spinAxis, type SpinAxis } from "./spin.ts";

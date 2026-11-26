@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BODY_IDS, BODIES, MOONS_OF } from "../src/facts.ts";
-import { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, systemOf } from "../src/space/index.ts";
+import { bodyKindOf, findBody, HOP_ORDER, hopFrom, hostOf, inHopKind, systemOf } from "../src/space/index.ts";
 
 test("the hopper's order holds every body once, the Sun first, and each planet is followed by its moons nearest first", () => {
   assert.equal(HOP_ORDER.length, BODY_IDS.length);
@@ -32,6 +32,24 @@ test("a hop goes to the next body and round: the last goes to the Sun, the Sun b
   assert.equal(id, HOP_ORDER[0]);
   for (let i = 0; i < HOP_ORDER.length; i += 1) id = hopFrom(id, -1);
   assert.equal(id, HOP_ORDER[0]);
+});
+
+test("a hop of one kind skips the others: planets keep the Sun, moons stay with their planet", () => {
+  const planets = (here: string, step: 1 | -1): string => hopFrom(here as (typeof HOP_ORDER)[number], step, (id) => inHopKind(id, here as (typeof HOP_ORDER)[number], "planet"));
+  assert.equal(planets("earth", 1), "mars");
+  assert.equal(planets("mars", -1), "earth");
+  assert.equal(planets("mercury", -1), "sun");
+  assert.equal(planets("sun", 1), "mercury");
+  assert.equal(planets("neptune", 1), "sun");
+  assert.equal(inHopKind("moon", "earth", "planet"), false);
+  assert.equal(inHopKind("pluto", "neptune", "planet"), false);
+  const moons = (here: string, step: 1 | -1): string => hopFrom(here as (typeof HOP_ORDER)[number], step, (id) => inHopKind(id, here as (typeof HOP_ORDER)[number], "moon"));
+  assert.equal(moons("earth", 1), "moon");
+  assert.equal(moons("europa", 1), "ganymede");
+  assert.equal(moons("europa", -1), "io");
+  assert.equal(moons("titan", 1) === "phobos", false);
+  assert.equal(inHopKind("ceres", "pluto", "dwarf-planet"), true);
+  assert.equal(inHopKind("mars", "pluto", "dwarf-planet"), false);
 });
 
 test("a body is read from its name in any case, in English or in Japanese; anything else is none", () => {
