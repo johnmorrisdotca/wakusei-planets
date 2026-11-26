@@ -31,6 +31,8 @@ test("there are eight minor bodies, each a body of its kind with the facts of on
   assert.ok(Math.abs(BODIES.eros.radiusKm - 8.42) < 0.01);
   assert.ok(Math.abs(BODIES.eros.axesKm![0] * 2 - 32.82) < 0.05 && Math.abs(BODIES.eros.rotationHours - 5.27) < 1e-6);
   assert.ok(Math.abs(BODIES.vesta.rotationHours - 5.3421276) < 1e-6 && Math.abs(BODIES.pallas.rotationHours - 7.8132214) < 1e-6);
+  assert.equal(BODIES.chiron.name.ja, "キロン");
+  assert.equal(BODIES.pholus.name.ja, "フォルス");
 });
 
 test("each one has a line drawing in both languages, and a table of its own", () => {

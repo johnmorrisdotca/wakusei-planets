@@ -112,7 +112,7 @@
     },
     "./tables": {
       "en": "Every dwarf planet's and minor body's fitted position table (Ceres, the seven slower dwarf planets, Vesta, Pallas, Chiron, Pholus and Halley) and the moon theories for Jupiter's and Saturn's moons, so heliocentric and moonVector are as close as the accuracy guide says",
-      "ja": "すべての準惑星と小天体の位置の表 (ケレス、動きの遅い7つの準惑星、ベスタ、パラス、ケイロン、ポルス、ハレー彗星) と、木星と土星の衛星の理論。heliocentric と moonVector が精度ガイドの値まで正確になります",
+      "ja": "すべての準惑星と小天体の位置の表 (ケレス、動きの遅い7つの準惑星、ベスタ、パラス、キロン、フォルス、ハレー彗星) と、木星と土星の衛星の理論。heliocentric と moonVector が精度ガイドの値まで正確になります",
       "platform": "node"
     },
     "./tables/ceres": {
@@ -127,7 +127,7 @@
     },
     "./tables/minor": {
       "en": "The fitted position tables of Vesta and Pallas (1900 to 2100) and of Chiron, Pholus and Halley's comet (1800 to 2200), within 1 arc-second of Horizons (about 48 kB gzipped)",
-      "ja": "ベスタとパラス (1900年から2100年)、ケイロン、ポルス、ハレー彗星 (1800年から2200年) の位置の表。ホライズンズとの差は1秒角以内 (gzip で約48 kB)",
+      "ja": "ベスタとパラス (1900年から2100年)、キロン、フォルス、ハレー彗星 (1800年から2200年) の位置の表。ホライズンズとの差は1秒角以内 (gzip で約48 kB)",
       "platform": "node"
     },
     "./tables/vsop": {
@@ -709,7 +709,7 @@
     },
     "./minor": {
       "en": "The minor bodies: shaded looks (Vesta, Pallas, Chiron, Pholus, Halley)",
-      "ja": "小天体の陰影つきの見た目 (ベスタ、パラス、ケイロン、ポルス、ハレー彗星)",
+      "ja": "小天体の陰影つきの見た目 (ベスタ、パラス、キロン、フォルス、ハレー彗星)",
       "platform": "browser"
     },
     "./moons-earth": {
