@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "runtime": {
-    "node": "v24.14.1",
-    "nodeZlib": "1.2.12",
+    "node": "v24.22.1",
+    "nodeZlib": "1.3.2.1-motley-285e94b",
     "python": "3.14.4",
     "pythonZlib": "1.2.12"
   },
@@ -25,18 +25,18 @@
   },
   "packages": {
     "wakusei": {
-      "version": "0.21.0",
-      "sourceRevision": "a126c5e78e28a6df3b1adee43e2e6881cbdf6d0b",
+      "version": "0.78.0",
+      "sourceRevision": "9da1c3837c2337a2ed96c17c02305fb07a96753c",
       "license": "MIT",
-      "minifiedBytes": 190190,
-      "gzipBytes": 76979,
-      "bundleSha256": "ce4843ede174357b901905531f0b0f2c86a6881f89c793dc3c124ef019197373"
+      "minifiedBytes": 371294,
+      "gzipBytes": 145089,
+      "bundleSha256": "6d410c8b2fb251c88ee273ed9372d3e150ddd20e6c86f21d244f91791a37b073"
     },
     "astronomyEngine": {
       "version": "2.1.19",
       "license": "MIT",
       "minifiedBytes": 107095,
-      "gzipBytes": 43971,
+      "gzipBytes": 43912,
       "sourceFiles": 1,
       "bundleSha256": "dbe07509b72ca4129fd0a92cd918205221ecc38e61a170e6fab0e32945cf9f8f"
     },
@@ -50,7 +50,7 @@
       "version": "2.1.2",
       "license": "BSD-2-Clause",
       "minifiedBytes": 8024,
-      "gzipBytes": 3893,
+      "gzipBytes": 3908,
       "sourceFiles": 1,
       "bundleSha256": "a0c18d44910059f8617a1e15818886f07d03828a7b43ebfcb66fd46c6496358b"
     }
