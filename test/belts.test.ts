@@ -232,3 +232,26 @@ test("status, parts, filters and tiers come from the rows already carried (MODUL
     assert.equal(tiers[id].known, BELTS[id].known);
   }
 });
+
+/** The distances a belt's sentence states, in astronomical units. "2.1 to 3.3 au" is a pair; "5.2 au from the Sun" is one distance, so both edges are that. */
+function statedAu(text: string): [number, number] | undefined {
+  const pair = text.match(/(\d+(?:\.\d+)?) to (\d+(?:\.\d+)?) au/) ?? text.match(/(\d+(?:\.\d+)?)〜(\d+(?:\.\d+)?)天文単位/);
+  if (pair) return [Number(pair[1]), Number(pair[2])];
+  const one = text.match(/(\d+(?:\.\d+)?) au from the Sun/) ?? text.match(/太陽から(\d+(?:\.\d+)?)天文単位/);
+  if (one) return [Number(one[1]), Number(one[1])];
+  return undefined;
+}
+
+test("each belt's inner and outer distance is the range its sentences state, and the all-asteroid count is not the sum of the belts (MODULES-1350)", () => {
+  for (const id of BELT_IDS) {
+    const belt = BELTS[id];
+    const en = statedAu(belt.about.en);
+    const ja = statedAu(belt.about.ja);
+    assert.deepEqual(en, [belt.innerAu, belt.outerAu], `${id} English`);
+    assert.deepEqual(ja, [belt.innerAu, belt.outerAu], `${id} Japanese`);
+    assert.ok(belt.innerAu > 0 && belt.innerAu <= belt.outerAu, id);
+  }
+  // `all` is every asteroid the database held, not a partition into the seven belts
+  const seven = BELT_IDS.reduce((n, id) => n + BELT_TOTALS[id], 0);
+  assert.notEqual(seven, BELT_TOTALS.all);
+});

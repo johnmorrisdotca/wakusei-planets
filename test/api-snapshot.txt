@@ -650,7 +650,7 @@ const BELT_TOTALS: { readonly all: 1580096; readonly numbered: 895910; readonly 
 export interface BeltBody extends SmallBody { belt: BeltId; }
 export interface BeltFilter { belts?: readonly BeltId[]; hMax?: number; hMin?: number; status?: readonly BeltStatus[]; part?: BeltPart; jd?: number; jupiterLongitude?: number; }
 export type BeltId = (typeof BELT_IDS)[number];
-export interface BeltInfo { id: BeltId; name: { en: string; ja: string; }; about: { en: string; ja: string; }; colour: string; known: number; sample: number; }
+export interface BeltInfo { id: BeltId; name: { en: string; ja: string; }; about: { en: string; ja: string; }; colour: string; innerAu: number; outerAu: number; known: number; sample: number; }
 export type BeltPart = "inner-main" | "middle-main" | "outer-main" | "trojan-l4" | "trojan-l5" | "plutino" | "detached";
 export type BeltStatus = "provisional" | "numbered" | "named";
 const OORT: { readonly innerAu: 2000; readonly outerAu: 100000; readonly name: { readonly en: "Oort cloud"; readonly ja: "オールトの雲"; }; readonly about: { readonly en: "where long-period comets are thought to come from: nothing in it has been seen"; readonly ja: "長周期彗星の起源と考えられる領域。そこにある天体はまだ見つかっていません"; }; }

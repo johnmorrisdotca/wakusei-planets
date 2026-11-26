@@ -45,36 +45,46 @@ export type BeltId = (typeof BELT_IDS)[number];
 export interface BeltInfo {
   id: BeltId;
   name: { en: string; ja: string };
-  /** What the belt is, in a few words. */
+  /** What the belt is, in a few words. The distances it states are `innerAu` and `outerAu`. */
   about: { en: string; ja: string };
   /** The colour of its points, `#rrggbb`. */
   colour: string;
+  /**
+   * The inner edge, in astronomical units from the Sun. The same number the sentences in `about` state. Where both swarms share one orbit (the Trojans) this equals `outerAu`.
+   * Where the cut has no sharp outer edge (the scattered belt) this is still the inner bound of the cut. NOTICE names the source of each.
+   */
+  innerAu: number;
+  /** The outer edge, in astronomical units from the Sun. The same number the sentences in `about` state. See `innerAu`. */
+  outerAu: number;
   /** How many bodies of this belt the Small-Body Database held on 2026-11-10. */
   known: number;
   /** How many of them this package carries: the brightest numbered ones. */
   sample: number;
 }
 
-const info = (id: BeltId, en: string, ja: string, aboutEn: string, aboutJa: string, colour: string, known: number): BeltInfo => ({ id, name: { en, ja }, about: { en: aboutEn, ja: aboutJa }, colour, known, sample: BELT_SAMPLE[id] });
+const info = (id: BeltId, en: string, ja: string, aboutEn: string, aboutJa: string, colour: string, innerAu: number, outerAu: number, known: number): BeltInfo => ({
+  id, name: { en, ja }, about: { en: aboutEn, ja: aboutJa }, colour, innerAu, outerAu, known, sample: BELT_SAMPLE[id],
+});
 
 /**
- * The seven belts, by name.
+ * The seven belts, by name. `innerAu` and `outerAu` are the distances from the Sun a page can show, and they are the same numbers the English and Japanese sentences state. NOTICE says where each pair comes from.
+ * The Trojans sit on Jupiter's orbit, so both edges are 5.2 au. The scattered belt's cut has no outer bound: 2687 au is the farthest body this package carries there (2014 FE72), not a wall.
  *
  * @example
  * ```ts
  * import { BELTS } from "@johnmorrisdotca/wakusei-planets/belts";
  *
- * console.log(BELTS.trojan.known > BELTS.centaur.known);
+ * console.log(BELTS.hilda.innerAu, BELTS.hilda.outerAu);
  * ```
  */
 export const BELTS: Readonly<Record<BeltId, BeltInfo>> = {
-  main: info("main", "Main belt", "メインベルト", "between Mars and Jupiter, 2.1 to 3.3 au from the Sun", "火星と木星のあいだ、太陽から2.1〜3.3天文単位", "#d9d3c3", BELT_TOTALS.main),
-  hilda: info("hilda", "Hildas", "ヒルダ群", "locked to Jupiter, 3.9 to 4.1 au out, in a rounded triangle", "木星と共鳴する天体。太陽から3.9〜4.1天文単位で、丸い三角形をなす", "#ffb86b", BELT_TOTALS.hilda),
-  trojan: info("trojan", "Jupiter Trojans", "木星トロヤ群", "two swarms on Jupiter's orbit, 60 degrees ahead of it and 60 behind", "木星の軌道上で、木星の60度前と60度後ろにある2つの群れ", "#7fd4ff", BELT_TOTALS.trojan),
-  centaur: info("centaur", "Centaurs", "ケンタウルス族", "icy bodies on orbits that cross the giant planets, 5 to 30 au out", "巨大惑星の軌道と交わる氷の天体。太陽から5〜30天文単位", "#ff8fb1", BELT_TOTALS.centaur),
-  classical: info("classical", "Kuiper belt, classical", "カイパーベルト (古典的)", "on nearly round orbits 39 to 48 au out, beyond Neptune", "海王星の外、太陽から39〜48天文単位のほぼ円形の軌道", "#9ee493", BELT_TOTALS.classical),
-  resonant: info("resonant", "Kuiper belt, resonant", "カイパーベルト (共鳴)", "in step with Neptune (Pluto and the other plutinos are 3:2)", "海王星と共鳴する天体 (冥王星などのプルティノは3:2共鳴)", "#d6a8ff", BELT_TOTALS.resonant),
-  scattered: info("scattered", "Kuiper belt, scattered", "カイパーベルト (散乱円盤)", "on long, tilted orbits thrown outwards by Neptune", "海王星に外へはじき出された、細長くかたむいた軌道", "#ffe36b", BELT_TOTALS.scattered),
+  main: info("main", "Main belt", "メインベルト", "between Mars and Jupiter, 2.1 to 3.3 au from the Sun", "火星と木星のあいだ、太陽から2.1〜3.3天文単位", "#d9d3c3", 2.1, 3.3, BELT_TOTALS.main),
+  hilda: info("hilda", "Hildas", "ヒルダ群", "locked to Jupiter, 3.9 to 4.1 au out, in a rounded triangle", "木星と共鳴する天体。太陽から3.9〜4.1天文単位で、丸い三角形をなす", "#ffb86b", 3.9, 4.1, BELT_TOTALS.hilda),
+  trojan: info("trojan", "Jupiter Trojans", "木星トロヤ群", "two swarms on Jupiter's orbit, 5.2 au from the Sun, 60 degrees ahead of it and 60 behind", "木星の軌道上、太陽から5.2天文単位で、木星の60度前と60度後ろにある2つの群れ", "#7fd4ff", 5.2, 5.2, BELT_TOTALS.trojan),
+  centaur: info("centaur", "Centaurs", "ケンタウルス族", "icy bodies on orbits that cross the giant planets, 5 to 30 au out", "巨大惑星の軌道と交わる氷の天体。太陽から5〜30天文単位", "#ff8fb1", 5, 30, BELT_TOTALS.centaur),
+  classical: info("classical", "Kuiper belt, classical", "カイパーベルト (古典的)", "on nearly round orbits 39 to 48 au out, beyond Neptune", "海王星の外、太陽から39〜48天文単位のほぼ円形の軌道", "#9ee493", 39, 48, BELT_TOTALS.classical),
+  resonant: info("resonant", "Kuiper belt, resonant", "カイパーベルト (共鳴)", "in step with Neptune, 36.4 to 62.6 au (Pluto and the other plutinos are 3:2)", "海王星と共鳴し、太陽から36.4〜62.6天文単位 (冥王星などのプルティノは3:2共鳴)", "#d6a8ff", 36.4, 62.6, BELT_TOTALS.resonant),
+  scattered: info("scattered", "Kuiper belt, scattered", "カイパーベルト (散乱円盤)", "on long, tilted orbits thrown outwards by Neptune, from 30 to 2687 au (2687 au is 2014 FE72, the farthest body carried, not a sharp edge)", "海王星に外へはじき出された、細長くかたむいた軌道で、太陽から30〜2687天文単位 (2687天文単位は、載せる天体のうちいちばん遠い2014 FE72で、はっきりした外縁ではない)", "#ffe36b", 30, 2687, BELT_TOTALS.scattered),
 };
 
 /**
