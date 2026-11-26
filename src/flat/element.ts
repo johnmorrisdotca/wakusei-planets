@@ -1213,7 +1213,7 @@ export class WakuseiFlat extends HTMLElement {
       this.#syncFlags();
       return;
     }
-    const pad = 8;
+    const pad = -5; // a place is drawn only where its whole dot is on the map: one at the edge would be cut in two (the dot is about 5 pixels across from its middle)
     const flags = this.hasAttribute("site-flags");
     const shown: Mark[] = [];
     for (const place of this.#places) {
@@ -1485,7 +1485,7 @@ export class WakuseiFlat extends HTMLElement {
     const v = this.#view;
     const customs: Custom[] = [];
     for (const mark of this.#allMarks()) {
-      const at = this.#screen(mark.lon, mark.lat, mark.size + 2);
+      const at = this.#screen(mark.lon, mark.lat, -mark.size); // (the whole mark on the map, as the places' dots)
       customs.push({ mark, x: at?.x ?? 0, y: at?.y ?? 0, on: at !== null });
     }
     this.#customs = customs;
