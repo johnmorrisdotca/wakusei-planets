@@ -486,12 +486,20 @@ test("Always lit lights every body, not only the Earth: the Moon and Venus show 
 
 test("the view can be moved sideways and rolled: every body in the picture moves by exactly the pixels asked, at any depth, and a roll turns the picture clockwise", async ({ page }) => {
   await open(page);
+  // a busy machine: every frame comes a third of a second after it was asked for, and what the page reads before it is the picture before the change (MODULES-822)
+  await page.evaluate(() => {
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (callback) => raf((now) => void setTimeout(() => callback(now), 300));
+  });
   /** Draw calls so far, and a poll that waits for one more: a change is on the screen only once a frame has drawn it, and on a busy machine the next frame is seconds away, not 800 ms. */
   const draws = async (): Promise<number> => (await statsOf(page)).draws;
   const untilDrawn = async (before: number, what: string): Promise<void> => {
     await expect.poll(draws, { message: `a frame draws ${what}`, timeout: 60_000 }).toBeGreaterThan(before);
   };
   const toInner = await draws();
+  // a draw of something else lands between the count and the click, as it can on a loaded machine: it must not stand for the frame that draws the Inner planets (MODULES-822)
+  await page.locator(SPACE).evaluate((el) => (el as unknown as { setView(v: unknown): void }).setView({ yaw: 0, tilt: 0, zoom: 1.02 }));
+  await untilDrawn(toInner, "a view of something else");
   await jump(page, "Inner planets");
   await untilDrawn(toInner, "the Inner planets");
   /** Set the view and wait for the frame that draws it. A view the element already has asks for no frame (it sends no `wakusei-view`), and none is waited for. */
@@ -511,16 +519,26 @@ test("the view can be moved sideways and rolled: every body in the picture moves
   const zoom = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("inner"));
   await view({ zoom });
   // three bodies whose names are shown (a name that would cover a surer one is left out, so which they are depends on the day)
+  // The names are placed by the frame that draws the view, and the draw counts above can be of another change (a draw already on its way when the click came, as when a frame is a third of a second away): so the names are waited for, not a number of draws.
   const shown: string[] = [];
   const before: { x: number; y: number }[] = [];
-  for (const id of ["sun", "earth", "venus", "mars", "mercury"]) {
-    const at = await labelAt(page, id);
-    if (at && shown.length < 3) {
-      shown.push(id);
-      before.push(at);
-    }
-  }
-  expect(shown.length, "three names are shown").toBe(3);
+  await expect
+    .poll(
+      async () => {
+        shown.length = 0;
+        before.length = 0;
+        for (const id of ["sun", "earth", "venus", "mars", "mercury"]) {
+          const at = await labelAt(page, id);
+          if (at && shown.length < 3) {
+            shown.push(id);
+            before.push(at);
+          }
+        }
+        return shown.length;
+      },
+      { timeout: 60_000, message: "three names are shown" },
+    )
+    .toBe(3);
   await view({ zoom, panX: 90, panY: -40 });
   const after = await Promise.all(shown.map((id) => labelAt(page, id)));
   for (const [i, at] of after.entries()) {
