@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The README names true distances first for the space view** (MODULES-882). The view opens at true distances. The README had named the compressed scale first.
+
 - **A covered arrow's screen-reader words come from the string table** (MODULES-1017). The label was written in the code: English "{bodies}: {cover} is in front. {hint}", Japanese "{bodies}: {cover} の後ろ. {hint}". Both are now a row of `COVERED_ARROW_WORDS`, so another language is another row. The words themselves are unchanged.
 
 - **The Japanese nearest guide says 内側の惑星 for the inner planets** (MODULES-1014). 内惑星 means only Mercury and Venus. The space-view guide now says 太陽系全体, the region name, wherever it said 太陽系ぜんぶ or 太陽系ぜんたい for the whole solar system. 外惑星 in the sky-events guide stays: there it means a superior planet.

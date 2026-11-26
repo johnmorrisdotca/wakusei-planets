@@ -453,7 +453,7 @@ console.log(mars.min.distanceAu.toFixed(2), "to", mars.max.distanceAu.toFixed(2)
 
 ## The space view
 
-[The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html) puts the Earth, the Moon, the Sun and the planets in their places for any date and time, in one WebGL context: the Moon's phase and the Earth's day side come out of the real Sun's light. Zoom from the Earth out to the whole solar system, in a compressed scale (every direction real, the distances squeezed) or the true one, and run time forwards or backwards. Positions come from this package's own models.
+[The space view](https://johnmorrisdotca.github.io/wakusei-planets/space.html) puts the Earth, the Moon, the Sun and the planets in their places for any date and time, in one WebGL context: the Moon's phase and the Earth's day side come out of the real Sun's light. Zoom from the Earth out to the whole solar system, at true distances (how it opens) or in a compressed scale (every direction real, the distances squeezed), and run time forwards or backwards. Positions come from this package's own models.
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/space/element/+esm"></script>
