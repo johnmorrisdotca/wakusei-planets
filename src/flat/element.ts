@@ -1,4 +1,4 @@
-// <wakusei-flat>: any body the package has a picture of, on a flat map. A canvas for the map (the body's picture as a photo or as a line map, the night, the sunrise line, the Sun) with the landing, rover and crash sites and the named features on it, and a canvas for the orbiters and the page's own marks, which move over it with their coverage circles and ground tracks.
+// <wakusei-flat>: any body the package has a picture of, on a flat map. A canvas for the map (the body's picture as a photo or as a line map, the night, the sunrise line, the Sun) with the landing, rover and crash sites and the named features' dots on it, and a canvas for the orbiters, the moons and the page's own marks, which move over it with their coverage circles and ground tracks. The places' names are painted on that moving canvas after the dots, so a dot cannot cover a name.
 // The same attributes, events, key, look switch and credit line as chikyu-earth's <chikyu-flat>, so a page can swap one for the other behind one control. Nothing runs on a timer when the clock is held, and nothing is drawn at rest, out of sight or in a hidden tab.
 // This file registers nothing: `@johnmorrisdotca/wakusei-planets/flat/define` does.
 import { coverageAngleRad } from "../ground-track.ts";
@@ -14,6 +14,7 @@ import { flatBody, isFlatBody, orbiterColour, orbiterName, type FlatBodyId, type
 import { MAX_ZOOM, clampView, pixelsPerDegree, projectFlat, wrapLongitude, zoomAbout, type FlatView } from "./geometry.ts";
 import { MAP_LAND, MAP_LINE, MAP_SEA, creditLicence, creditWho, pictureWidth, readLook, toneMap, toneRamp, type FlatLook, type Tone } from "./look.ts";
 import { markName, readMarks, type FlatMark, type HeldMark } from "./marks.ts";
+import { paintFlatLabels, type FlatLabel } from "./namePaint.ts";
 import { circleOutline, flatMoonTrackHalf, flatMoonTracks, flatMoons, flatOrbiter, flatSun, flatSunRate, flatTrack, moonsOfBody, shadeNight, sunriseLine, trackPieces, type FlatOrbiter } from "./scene.ts";
 import { coordinateText, gridText, say, type FlatLang } from "./words.ts";
 import type { OrbiterStatus } from "../orbiters.ts";
@@ -305,6 +306,8 @@ export class WakuseiFlat extends HTMLElement {
   #marks: Mark[] = [];
   /** The room taken by the places' dots and names at the last draw of the map (the page's own marks name themselves in what is left, so two names never lie over each other), and the names drawn. */
   #taken: Box[] = [];
+  /** The places' names from the last map draw. They are painted on the moving canvas after the dots, so a moon's dot cannot cover one. */
+  #placeLabels: FlatLabel[] = [];
   /** The room the degrees along the map's edges took when the map was drawn: names are laid out in what they leave. */
   #gridBoxes: DrawnName[] = [];
   #placeNames: DrawnName[] = [];
@@ -1202,12 +1205,13 @@ export class WakuseiFlat extends HTMLElement {
     ctx.setLineDash([]);
   }
 
-  /** The marks of the kinds on show: sites as shapes by kind, the named features as a small dot, and a name beside as many as there is room for. */
+  /** The marks of the kinds on show: sites as shapes by kind, the named features as a small dot, and a name beside as many as there is room for. The names are kept and painted later, on the moving canvas, after the dots. */
   #drawMarks(ctx: CanvasRenderingContext2D, names: { on: boolean; limit: number | null }, lang: FlatLang): void {
     const v = this.#view;
     this.#marks = [];
     this.#taken = [];
     this.#placeNames = [];
+    this.#placeLabels = [];
     this.#flagSpots = [];
     if (this.#layers.size === 0 || this.#places.length === 0) {
       this.#syncFlags();
@@ -1231,10 +1235,8 @@ export class WakuseiFlat extends HTMLElement {
     const boxes: Box[] = [...this.#gridBoxes]; // the degrees along the edges are drawn already: the names give way to them
     const hit = (a: { x0: number; y0: number; x1: number; y1: number }): boolean => boxes.some((b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0);
     let named = 0;
-    ctx.font = "600 11px system-ui, sans-serif";
-    ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
-    const labels: { text: string; x: number; y: number; align: CanvasTextAlign }[] = [];
+    const labels: FlatLabel[] = [];
     const chosenId = this.#selected?.kind === "place" ? this.#selected.id : null;
     for (const mark of shown) {
       const feature = mark.layer === "feature";
@@ -1265,15 +1267,13 @@ export class WakuseiFlat extends HTMLElement {
       this.#mark(ctx, mark);
     }
     this.#taken = boxes;
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(0,0,0,.72)";
-    ctx.fillStyle = "#fff";
-    for (const label of labels) {
-      ctx.textAlign = label.align;
-      ctx.strokeText(label.text, label.x, label.y);
-      ctx.fillText(label.text, label.x, label.y);
-    }
+    this.#placeLabels = labels;
     this.#syncFlags();
+  }
+
+  /** The places' names, on the moving canvas after the dots, so a moon's dot cannot cover one. */
+  #paintPlaceNames(ctx: CanvasRenderingContext2D): void {
+    paintFlatLabels(ctx, this.#placeLabels);
   }
 
   /** The flags beside the names of the landing sites: `<hata-flag>` elements (from `@johnmorrisdotca/hata`, which the page imports; where it is not defined they draw nothing and the name stands alone), moved to the spots the map drew, each made once and kept. */
@@ -1432,6 +1432,7 @@ export class WakuseiFlat extends HTMLElement {
     }
     this.#placeMoons(ms);
     this.#drawCustoms(ctx);
+    this.#paintPlaceNames(ctx);
     this.#counts.draws += 1;
     this.#counts.dots = dots;
     this.#placeMarks();
@@ -1491,9 +1492,9 @@ export class WakuseiFlat extends HTMLElement {
     this.#customs = customs;
     this.#markNames = [];
     if (customs.length === 0) return;
-    // the places' dots and names are already on the map: a mark's name gives way to them (right of its dot, then left, then above, then below), and is left out where there is no room (the mark is still named on hover, tap and key)
+    // the places' dots and names already hold their room: a mark's name gives way to them (right of its dot, then left, then above, then below), and is left out where there is no room (the mark is still named on hover, tap and key). The places' names are painted after these marks.
     const boxes: Box[] = [...this.#taken];
-    const labels: { text: string; x: number; y: number; align: CanvasTextAlign }[] = [];
+    const labels: FlatLabel[] = [];
     ctx.font = "600 11px system-ui, sans-serif";
     ctx.textBaseline = "middle";
     for (const { mark, x, y, on } of customs) {
@@ -1567,16 +1568,7 @@ export class WakuseiFlat extends HTMLElement {
         }
       }
     }
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "rgba(0,0,0,.72)";
-    ctx.fillStyle = "#fff";
-    for (const label of labels) {
-      ctx.textAlign = label.align;
-      ctx.strokeText(label.text, label.x, label.y);
-      ctx.fillText(label.text, label.x, label.y);
-    }
-    ctx.textAlign = "left";
+    paintFlatLabels(ctx, labels);
   }
 
   /** The coverage circles and the ground tracks, drawn before the dots so the dots lie on them. */
@@ -1813,7 +1805,7 @@ export class WakuseiFlat extends HTMLElement {
     const legend = Object.assign(d.createElement("div"), { className: "legend", hidden: true });
     legend.setAttribute("role", "group");
     legend.addEventListener("click", this.#onLegend);
-    stage.append(map, flagLayer, dots, selRing, hovRing, tip, credit, msg);
+    stage.append(map, dots, flagLayer, selRing, hovRing, tip, credit, msg);
     this.#flagLayer = flagLayer;
     this.#credit = credit;
     this.#legend = legend;

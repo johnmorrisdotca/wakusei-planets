@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A moving dot no longer covers a place's name on a flat map** (MODULES-1873). The places' names were painted on the map canvas, and the moons' dots on the canvas above it, so a moon passing a name hid the letters (the name itself already gave way). The names are now painted on the moving canvas after the dots, and a landing site's flag sits above that canvas too.
+
 ## [0.78.2] - 2026-11-26
 
 - **Phoebe, Europa and Titan use the fuller maps** (MODULES-1821). Phoebe's white blocks along the south edge are gone. Europa's soft patches are the USGS Voyager and Galileo mosaic, now 2048 across. Titan's flat colour is the Cassini near-infrared mosaic. Titan's 1024 and 2048 stay out of the package, with the other far pictures. Where the ground was never photographed, or only softly, it is painted to continue the photographed ground.
