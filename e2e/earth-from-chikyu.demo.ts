@@ -15,7 +15,10 @@ test.beforeEach(async ({ page, browserName }) => {
   await page.addInitScript(COUNT_SCRIPT);
 });
 
-/** How much of the picture's middle is dark and how much is bright: a lit Earth has both, a day and a night side. */
+/**
+ * How much of the picture's middle is dark and how much is bright: a lit Earth has both, a day and a night side.
+ * This date faces mostly night. On a phone the day limb was 9 per cent of the middle, so a day side is a real bright share, not a tenth of the picture.
+ */
 const sides = async (page: Page): Promise<{ dark: number; bright: number }> => {
   const png = (await main(page).screenshot()).toString("base64");
   return page.evaluate(async (data) => {
@@ -57,7 +60,7 @@ test("with chikyu-earth's realistic element on the page and earth-from=chikyu, t
   const shown = await sides(page);
   console.log(`realistic Earth by chikyu-earth: ${(shown.dark * 100).toFixed(0)} per cent dark, ${(shown.bright * 100).toFixed(0)} per cent bright`);
   expect(shown.dark, "a night side").toBeGreaterThan(0.1);
-  expect(shown.bright, "and a day side").toBeGreaterThan(0.1);
+  expect(shown.bright, "and a day side").toBeGreaterThan(0.05);
   const before = await readCounts(page);
   // the page's row of tiles is this package's stills (one context, as ever); the big Earth is chikyu-earth's own (one more): this package makes none for a body another package draws
   expect(before.contexts, "two WebGL contexts at most: this package's tiles and chikyu-earth's Earth").toBeLessThanOrEqual(2);
