@@ -4,7 +4,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { flatMoons } from "../src/flat/index.ts";
 
 type Flat = HTMLElement & {
-  stats: { draws: number; custom: number };
+  stats: { draws: number; custom: number; names: { id: string; kind: "place" | "mark" | "grid"; x0: number; y0: number; x1: number; y1: number }[] };
   placeOf(id: string): { x: number; y: number; lon: number; lat: number } | null;
   selected: string | null;
   center: number;
@@ -145,6 +145,54 @@ test("the moons move as the clock runs: Io's place over Jupiter is another place
   await settled(page);
   const b = (await flat(page).evaluate((el) => (el as Flat).placeOf("io")))!;
   expect(Math.abs(a.lon - b.lon)).toBeGreaterThan(1);
+});
+
+// MODULES-1861: a moon's name was drawn over the name of a feature (Deimos over Pavonis Mons on Mars's map), because the two were laid out apart. The moon's name now takes what room the places' names left (beside its dot, or above, or below), and no two names overlap.
+test("a moon's name never lies over a place's name, nor over another moon's, nor over the degrees along the edges, as the clock runs", async ({ page }) => {
+  await open(page, "?body=mars&moons=1&look=map");
+  await flat(page).evaluate((el) => el.setAttribute("places", "landing crash feature"));
+  await expect.poll(() => custom(page)).toBe(2);
+  const overlaps = (a: Flat["stats"]["names"][number], b: Flat["stats"]["names"][number]): boolean => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  let moonNames = 0;
+  let places = 0;
+  for (let step = 0; step < 150; step += 1) {
+    await flat(page).evaluate((el, ms) => el.setAttribute("time", new Date(ms).toISOString()), Date.UTC(2026, 10, 23, 12) + step * 20 * 60_000);
+    await settled(page);
+    const names = await flat(page).evaluate((el) => (el as Flat).stats.names);
+    moonNames += names.filter((n) => n.kind === "mark").length;
+    places = Math.max(places, names.filter((n) => n.kind === "place").length);
+    for (let i = 0; i < names.length; i += 1) for (let j = i + 1; j < names.length; j += 1) expect(overlaps(names[i]!, names[j]!), `step ${step}: ${names[i]!.id} and ${names[j]!.id} overlap`).toBe(false);
+  }
+  expect(places, "the places are named").toBeGreaterThan(3);
+  expect((await flat(page).evaluate((el) => (el as Flat).stats.names)).filter((n) => n.kind === "grid").length, "the degrees are named").toBeGreaterThan(4);
+  expect(moonNames, "the moons are named most of the time").toBeGreaterThan(100);
+});
+
+// MODULES-1861: a place or a moon at the very edge of the map was drawn half off it (a dot cut in two beside "Arsia Mons"). A mark is drawn only where its whole dot is on the map.
+test("no dot is cut by the edge of the map: a place or a moon within a dot's width of the edge is not drawn", async ({ page }) => {
+  await open(page, "?body=mars&moons=1&look=map");
+  await flat(page).evaluate((el) => el.setAttribute("places", "landing crash feature"));
+  const width = await flat(page).evaluate((el) => el.getBoundingClientRect().width);
+  const spot = async (id: string): Promise<{ x: number; lon: number } | null> => flat(page).evaluate((el, who) => (el as Flat).placeOf(who) as { x: number; lon: number } | null, id);
+  const centre = (lon: number): Promise<void> => flat(page).evaluate((el, value) => { (el as Flat).center = value; }, lon).then(() => settled(page)) as Promise<void>;
+  await centre(0);
+  const lon = (await spot("mars/arsia-mons"))!.lon;
+  await centre(lon);
+  expect(Math.abs((await spot("mars/arsia-mons"))!.x - width / 2)).toBeLessThan(2);
+  await centre(lon + 10);
+  const k = (width / 2 - (await spot("mars/arsia-mons"))!.x) / 10; // pixels a degree
+  let seen = 0;
+  for (const target of [1, width - 1]) {
+    for (let step = -12; step <= 12; step += 1) {
+      await centre(lon + (target - width / 2) / k + step * 0.25);
+      const at = await spot("mars/arsia-mons");
+      if (at === null) continue;
+      seen += 1;
+      expect(at.x, `Arsia Mons is drawn at ${at.x}: its dot is cut by the edge`).toBeGreaterThanOrEqual(5);
+      expect(at.x, `Arsia Mons is drawn at ${at.x}: its dot is cut by the edge`).toBeLessThanOrEqual(width - 5);
+    }
+  }
+  expect(seen, "Arsia Mons is drawn somewhere along the way").toBeGreaterThan(0);
 });
 
 test.describe("on a phone", () => {
