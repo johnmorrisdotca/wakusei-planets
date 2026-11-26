@@ -28,6 +28,7 @@ import type { TileLevel } from "./scene/tiles.ts";
 import { createBodyItem, type BodyScene, type MoonDraw, type SceneState, type ThreeParts } from "./scene/body.ts";
 import { estimatedRock, estimatedRockLine } from "./scene/estimated-rock.ts";
 import { NAME_LABEL_ATTRIBUTES, nameLabelKey, nameLabelText, readNameLabel, type NameLabelOptions } from "./scene/name-label.ts";
+import { bodyHandsOn, passLineView } from "./body-hands.ts";
 import { delegates, onRegister } from "./scene/store.ts";
 import { setThreeLoader, takeRenderer, type ContextState } from "./scene/shared.ts";
 import { cross, RAD, turn as turnVec, type Vec3 } from "./vec.ts";
@@ -648,13 +649,14 @@ export class WakuseiBody extends HTMLElement {
     const [yaw, tilt, roll, zoom, panX, panY] = [view.yaw ?? 0, view.tilt ?? 0, view.roll ?? 0, view.zoom ?? 1, -(view.panX ?? 0) / half, (view.panY ?? 0) / half];
     if (yaw === this.#yaw && tilt === this.#tilt && roll === this.#roll && zoom === this.#zoom && panX === this.#panX && panY === this.#panY) return;
     [this.#yaw, this.#tilt, this.#roll, this.#zoom, this.#panX, this.#panY] = [yaw, tilt, roll, zoom, panX, panY];
+    if (this.#delegating() === "line") passLineView(this.#delegateEl, { yaw, tilt, zoom, panX: view.panX ?? 0, panY: view.panY ?? 0 });
     this.dispatchEvent(new CustomEvent("wakusei-view", { detail: { yaw: this.#yaw, tilt: this.#tilt, roll: this.#roll, zoom: this.#zoom, panX: view.panX ?? 0, panY: view.panY ?? 0 } }));
     this.#queue(true);
   }
 
-  /** Take the shared hands, unless the picture is a still (`live="off"`) or another package's drawing (the Earth's line look); the look decides the zoom range, so a new look takes new hands. */
+  /** Take the shared hands, unless the picture is a still (`live="off"`) or another package's shaded Earth. The line Earth takes them and the view is passed on to its globe. The look decides the zoom range, so a new look takes new hands. */
   #carry(): void {
-    const on = this.getAttribute("live") !== "off" && this.#delegating() === undefined;
+    const on = bodyHandsOn(this.getAttribute("live"), this.#delegating());
     const key = `${on}|${this.look === "line"}|${this.#delegating() ?? ""}`;
     if (this.#handsKey === key) {
       this.#refreshLimits();
@@ -1244,6 +1246,10 @@ export class WakuseiBody extends HTMLElement {
     this.#stage.append(el);
     this.#delegateEl = el;
     this.#delegateKind = key;
+    if (kind === "line") {
+      const half = Math.max(1, Math.min(this.clientWidth, this.clientHeight)) / 2;
+      passLineView(el, { yaw: this.#yaw, tilt: this.#tilt, zoom: this.#zoom, panX: -this.#panX * half, panY: this.#panY * half });
+    }
     // the line Earth is a drawing; the realistic Earth is the other package's picture, which it draws and moves itself: here it is a picture shown, with no view of this package's own
     this.#set(kind === "line" ? "line" : "still");
     return true;

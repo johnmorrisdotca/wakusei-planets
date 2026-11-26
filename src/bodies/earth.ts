@@ -42,6 +42,10 @@ delegates.set("earth", {
     globe.setAttribute("center", center || CENTRE);
     globe.setAttribute("look", "line");
     globe.setAttribute("size", String(size));
+    // the body takes the hands and passes the view on; the globe must not take a second drag, and it zooms as far as a line drawing
+    globe.setAttribute("controls", "none");
+    globe.setAttribute("zoom-min", "0.1");
+    globe.setAttribute("zoom-max", "50");
     return globe;
   },
   async shaded({ center, time, textureBase }) {

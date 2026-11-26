@@ -18,6 +18,7 @@ import { decodeScene, defaultPortrait, encodeScene, fromScreen, hitTest, resolve
 import { REDUCED_TURN } from "../live.ts";
 import { poseOf } from "./pose.ts";
 import { createPortraitItem, type PortraitDraw, type PortraitScene } from "./scene3d.ts";
+import { linePortraitLimits } from "./zoom-range.ts";
 
 export { setThreeLoader };
 
@@ -36,9 +37,10 @@ export type PortraitState = "line" | "loading" | "still" | "live" | "lost" | "un
 
 /**
  * The zoom range of a portrait that carries its own controls, before it knows what its bodies have. The floor is arbitrary: a tenth of Fit leaves room to see the whole scene small. The ceiling is as far as the
- * bodies' own pictures go: 8 times is where the 2048 pixel maps and the shader detail run out. A shaded scene goes further where a body has finer map tiles (`#limits`), as far as the farthest-reaching body in it;
- * a scene of a line look stays here, so a scene can change look without the range changing under it.
+ * bodies' own pictures go: 8 times is where the 2048 pixel maps and the shader detail run out. A shaded scene goes further where a body has finer map tiles (`#limits`), as far as the farthest-reaching body in it.
+ * A line scene is vector and goes to 50, the same ceiling as a body's line drawing, so the range follows the look.
  */
+
 const CARRIED_LIMITS = { zoomMin: 0.1, zoomMax: 8 } as const;
 
 const TEMPLATE = `<style>
@@ -60,7 +62,7 @@ const num = (value: string | null, fallback: number): number => {
  * `live` (`always`, `hover` or `off`: when it takes the page's one WebGL context), `texture-base` and `texture-far-base` (where the surface pictures are), and `tiles` (where the finer map tiles are, for a close zoom; `off` for none).
  *
  * It carries the shared view controls itself: a drag moves the picture, two fingers pinch, Ctrl, Command or Alt with the wheel zooms (the plain wheel scrolls the page at Fit), and the arrow keys, + and - and 0 work once it is focused.
- * `controls="none"` turns them off (the portrait builder does, for it edits the scene by dragging its bodies); `zoom-min` and `zoom-max` set the range (0.1 to 8 by default, and further for a body with finer map tiles: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
+ * `controls="none"` turns them off (the portrait builder does, for it edits the scene by dragging its bodies); `zoom-min` and `zoom-max` set the range (0.1 to 8 for a shaded scene, and further for a body with finer map tiles; a line scene goes to 50: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  *
  * @example
  * ```ts no-run
@@ -294,12 +296,13 @@ export class WakuseiPortrait extends HTMLElement {
   }
 
   /**
-   * The zoom range now: a line scene, or one of bodies with no finer maps, `CARRIED_LIMITS`; a shaded scene as far as its farthest-reaching body goes by the table of `scene/reach.ts` (each body measured in the
+   * The zoom range now: a line scene goes to 50, like a body's line drawing; a shaded scene of bodies with no finer maps stays at `CARRIED_LIMITS`, and one with maps goes as far as its farthest-reaching body by the table of `scene/reach.ts` (each body measured in the
    * radii its picture reaches at zoom 1, from the middle of the short side of the view to its edge, on the widest map it has, the finest tile level once the tiles are found, and on whether its surface is soft).
    */
   #limits(): { zoomMin: number; zoomMax: number } {
     const p = this.#portrait;
-    if (p.look === "line") return CARRIED_LIMITS;
+    const line = linePortraitLimits(p.look);
+    if (line !== null) return line;
     const { placed, camera } = resolve(p);
     const { width, height } = this.#size();
     const half = camera.h * Math.min(1, width / Math.max(1, height));

@@ -17,10 +17,14 @@ afterEach(() => {
 test("a page that has chikyu-earth's element gets its globe and no message", async () => {
   mock.timers.enable({ apis: ["setTimeout"] });
   const info = mock.method(console, "info", () => {});
-  const globe = { setAttribute() {} };
+  const attributes: Record<string, string> = {};
+  const globe = { setAttribute: (name: string, value: string) => (attributes[name] = value) };
   slot.customElements = { get: () => class {}, whenDefined: () => new Promise(() => {}) };
   Object.assign(globalThis, { document: { createElement: () => globe } });
   assert.equal(await line(), globe);
+  assert.equal(attributes["controls"], "none");
+  assert.equal(attributes["zoom-min"], "0.1");
+  assert.equal(attributes["zoom-max"], "50");
   mock.timers.tick(5000);
   assert.equal(info.mock.callCount(), 0);
   delete (globalThis as { document?: unknown }).document;

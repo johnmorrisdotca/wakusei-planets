@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Earth's line look zooms, and a line portrait goes to 50** (MODULES-689). The line Earth had no hands, so it could not zoom or pan, including when it is chikyu-earth's globe. The body now takes the hands and passes the view to that globe, which does not take a second drag. A line portrait was held at 8x; it now goes to 50x, the same ceiling as a body's line drawing, and the range follows the look.
+
 - **The README names true distances first for the space view** (MODULES-882). The view opens at true distances. The README had named the compressed scale first.
 
 - **A covered arrow's screen-reader words come from the string table** (MODULES-1017). The label was written in the code: English "{bodies}: {cover} is in front. {hint}", Japanese "{bodies}: {cover} の後ろ. {hint}". Both are now a row of `COVERED_ARROW_WORDS`, so another language is another row. The words themselves are unchanged.
