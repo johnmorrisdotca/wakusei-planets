@@ -9,7 +9,7 @@ import { arrowCount, readHelpPlace, type HelpPlace } from "./arrows.ts";
 import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceKind } from "./bodies.ts";
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
-import { craftRank, craftSize, LABEL_GAP, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox } from "./labels.ts";
+import { craftRank, craftSize, LABEL_GAP, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox, type LabelReport } from "./labels.ts";
 import { coverArrows, coverOf } from "./covered.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
 import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
@@ -2729,6 +2729,8 @@ export class WakuseiSpace extends HTMLElement {
     help: { body: string; axis: [number, number, number]; pole: [number, number, number]; retrograde: boolean; arcTurn: [number, number, number] } | null;
     /** The names on the globes at the last draw: how many are drawn (made, their font in, and the body big enough on the screen), and the one on the body looked at (its text and its turn about the pole in radians), or null. */
     bodyLabels: { count: number; focus: { shown: boolean; text: string; turn: number; look: string } | null };
+    /** The floating names after the last placement: how many are shown, whether each one was measured (a name measured at no width is placed again on the next frame), and the camera that placement belongs to. */
+    labels: { shown: number; settled: boolean; panX: number; panY: number; roll: number; zoom: number };
     /** Starman and the Roadster at the last draw: whether the car was drawn (shown, its path in, the moment within 2018 to 2035), its place in Earth radii from the Earth's centre, and its radius on the screen in CSS pixels. */
     roadster: { shown: boolean; position: [number, number, number] | null; radiusPx: number };
     /** The deep-space craft at the last draw: how many dots, each id's status (`drawn` or `outside` the record), and the ids drawn. */
@@ -2770,6 +2772,7 @@ export class WakuseiSpace extends HTMLElement {
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
       bodyLabels: { count: this.#model.labelsDrawn.count, focus: this.#model.labelsDrawn.focus === null ? null : { ...this.#model.labelsDrawn.focus } },
+      labels: { ...this.#labelReport },
       orbiters: { count: this.#model.orbitersDrawn.count, status: { ...this.#model.orbitersDrawn.status }, dim: [...this.#model.orbitersDrawn.dim], lines: this.#model.orbitersDrawn.lines, track: this.#model.orbitersDrawn.track },
       asteroids: { ...this.#model.asteroidsDrawn },
       roadster: { shown: this.#model.roadsterDrawn.shown, position: this.#model.roadsterDrawn.position === null ? null : [...this.#model.roadsterDrawn.position], radiusPx: this.#model.roadsterDrawn.radiusPx },
@@ -2840,6 +2843,7 @@ export class WakuseiSpace extends HTMLElement {
     if (!box) return;
     const wanted: LabelBox[] = [];
     const spots = new Map<string, { x: number; y: number; small: boolean; carried: boolean; flipped: boolean }>();
+    let measuring = false;
     const frame = { width: box.clientWidth, height: box.clientHeight };
     const ids = [...new Set([...SPACE_BODIES, ...this.#pool.keys(), ...Object.keys(places)])];
     for (const id of ids) {
@@ -2869,6 +2873,7 @@ export class WakuseiSpace extends HTMLElement {
       }
       if (!at) continue;
       const width = this.#widthOf(label);
+      if (width === 0) measuring = true;
       // beside the dot, on the side that stays inside the view
       const { x, y, flipped } = nameSpot(at, { width, height: 16 }, frame);
       // a body that carries its drawn name gives its floating name up (it fades, and leaves its place to the others) unless the page keeps both; a body behind another gives it up for the arrow
@@ -2932,12 +2937,24 @@ export class WakuseiSpace extends HTMLElement {
     this.#markFar();
     // the names written on the body keep off the names and dots just placed
     this.#markSurface();
+    const drawn = this.#model.drawnView;
+    let shownCount = 0;
+    for (const label of this.#pool.values()) if (!label.hidden) shownCount += 1;
+    this.#labelReport = { shown: shownCount, settled: !measuring, panX: drawn?.panX ?? 0, panY: drawn?.panY ?? 0, roll: drawn?.roll ?? 0, zoom: drawn?.zoom ?? 0 };
+    // a name measured before it has a width is placed again on the next frame, once: a second miss does not keep asking for frames
+    if (measuring && !this.#labelRetry) {
+      this.#labelRetry = true;
+      this.#gate?.request();
+    } else if (!measuring) this.#labelRetry = false;
   }
 
   // --- far names, and the system under the pointer ---------------------------------------------------------------------------------------------------
   #hovered: BodyId | null = null;
   #hoverBy: "pointer" | "focus" = "pointer";
   #nameBoxes: LabelBox[] = [];
+  /** The last placement of the floating names, for a page that waits to read them. A name measured at no width is not settled: it is placed again once. */
+  #labelReport: LabelReport = { shown: 0, settled: false, panX: 0, panY: 0, roll: 0, zoom: 0 };
+  #labelRetry = false;
 
   /** The bodies drawn at full strength: the system of the body under the pointer, or else the one in the middle of the view. */
   #lit(): Set<string> {

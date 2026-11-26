@@ -223,3 +223,42 @@ export function nameAlternates(dot: { x: number; y: number; r: number }, size: {
     inside(dot.x - size.width / 2, dot.y + gap),
   ];
 }
+
+/**
+ * What the space view reports after it places the floating names. `settled` is false while a name was measured at no width: that placement is done again on the next frame.
+ *
+ * @example
+ * ```ts
+ * import type { LabelReport } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const report: LabelReport = { shown: 3, settled: true, panX: 90, panY: -40, roll: 0, zoom: 2 };
+ * console.log(report.shown, report.settled);
+ * ```
+ */
+export interface LabelReport {
+  shown: number;
+  settled: boolean;
+  panX: number;
+  panY: number;
+  roll: number;
+  zoom: number;
+}
+
+/**
+ * Whether this placement is the one to read: it used real widths, and it belongs to the camera asked for. A placement that is still measuring, or that belongs to the camera from before the change, is not.
+ *
+ * @param report - The placement the view last reported.
+ * @param camera - The zoom, pan and roll the reader asked for. A pan or roll left out is 0.
+ * @returns True when the names may be read.
+ *
+ * @example
+ * ```ts
+ * import { labelPlacementReady } from "@johnmorrisdotca/wakusei-planets/space";
+ *
+ * const ready = labelPlacementReady({ shown: 3, settled: true, panX: 90, panY: -40, roll: 0, zoom: 2 }, { zoom: 2, panX: 90, panY: -40 });
+ * console.log(ready);
+ * ```
+ */
+export function labelPlacementReady(report: LabelReport, camera: { zoom: number; panX?: number; panY?: number; roll?: number }): boolean {
+  return report.settled && report.zoom === camera.zoom && report.panX === (camera.panX ?? 0) && report.panY === (camera.panY ?? 0) && report.roll === (camera.roll ?? 0);
+}

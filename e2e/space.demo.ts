@@ -1,6 +1,7 @@
 // The space view in a real browser (Chromium, drawing in software): the right things in the right places, and the budget every live 3D view keeps.
 import { COUNT_SCRIPT, gpuObjects, readCounts } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, test, type Page } from "@playwright/test";
+import { labelPlacementReady, type LabelReport } from "../src/space/labels.ts";
 import { advance, holdClock, takeClock } from "./clock.ts";
 import "./load.ts";
 import { setCounted, setLight } from "./space-ui.ts";
@@ -463,6 +464,26 @@ const labelAt = (page: Page, id: string): Promise<{ x: number; y: number } | nul
     return label && !label.hidden && found ? { x: Number(found[1]), y: Number(found[2]) } : null;
   }, id);
 
+const labelReport = (page: Page): Promise<LabelReport> => page.locator(SPACE).evaluate((el) => (Reflect.get(el, "stats") as { labels: LabelReport }).labels);
+
+/** The names of these bodies, read only once the page reports a settled placement for this camera. A count taken on the frame that asked for the view can still be the placement from before it, or a name measured at no width. */
+async function namesAt(page: Page, camera: { zoom: number; panX?: number; panY?: number; roll?: number }, ids: readonly string[]): Promise<{ x: number; y: number }[]> {
+  await expect
+    .poll(
+      async () => {
+        if (!labelPlacementReady(await labelReport(page), camera)) return 0;
+        let found = 0;
+        for (const id of ids) if (await labelAt(page, id)) found += 1;
+        return found;
+      },
+      { timeout: 60_000, message: "the names are shown" },
+    )
+    .toBe(ids.length);
+  const at: { x: number; y: number }[] = [];
+  for (const id of ids) at.push((await labelAt(page, id))!);
+  return at;
+}
+
 test("Always lit lights every body, not only the Earth: the Moon and Venus show a bright face from the night side", async ({ page }) => {
   await open(page);
   for (const id of ["moon", "venus"] as const) {
@@ -519,38 +540,35 @@ test("the view can be moved sideways and rolled: every body in the picture moves
   const zoom = await page.locator(SPACE).evaluate((el) => (el as unknown as { zoomFor(p: string): number }).zoomFor("inner"));
   await view({ zoom });
   // three bodies whose names are shown (a name that would cover a surer one is left out, so which they are depends on the day)
-  // The names are placed by the frame that draws the view, and the draw counts above can be of another change (a draw already on its way when the click came, as when a frame is a third of a second away): so the names are waited for, not a number of draws.
+  // The names are read when the page reports a settled placement for this camera (MODULES-1141). One frame is not that: the frame already on its way can be the picture from before the change, and a name measured at no width is placed again on the next frame.
+  const candidates = ["sun", "earth", "venus", "mars", "mercury"];
   const shown: string[] = [];
-  const before: { x: number; y: number }[] = [];
   await expect
     .poll(
       async () => {
         shown.length = 0;
-        before.length = 0;
-        for (const id of ["sun", "earth", "venus", "mars", "mercury"]) {
-          const at = await labelAt(page, id);
-          if (at && shown.length < 3) {
-            shown.push(id);
-            before.push(at);
-          }
+        if (!labelPlacementReady(await labelReport(page), { zoom })) return 0;
+        for (const id of candidates) {
+          if ((await labelAt(page, id)) && shown.length < 3) shown.push(id);
         }
         return shown.length;
       },
       { timeout: 60_000, message: "three names are shown" },
     )
     .toBe(3);
+  const before = await namesAt(page, { zoom }, shown);
   await view({ zoom, panX: 90, panY: -40 });
-  const after = await Promise.all(shown.map((id) => labelAt(page, id)));
+  const after = await namesAt(page, { zoom, panX: 90, panY: -40 }, shown);
   for (const [i, at] of after.entries()) {
-    expect(Math.abs(at!.x - before[i]!.x - 90), `${shown[i]} moves 90 px right`).toBeLessThanOrEqual(1);
-    expect(Math.abs(at!.y - before[i]!.y + 40), `${shown[i]} moves 40 px up`).toBeLessThanOrEqual(1);
+    expect(Math.abs(at.x - before[i]!.x - 90), `${shown[i]} moves 90 px right`).toBeLessThanOrEqual(1);
+    expect(Math.abs(at.y - before[i]!.y + 40), `${shown[i]} moves 40 px up`).toBeLessThanOrEqual(1);
   }
   // rolling a quarter turn clockwise takes what was at the right to the bottom
   await view({ zoom });
-  const flat = await labelAt(page, shown[0]!);
+  const [flat] = await namesAt(page, { zoom }, [shown[0]!]);
   const box = (await page.locator(SPACE).boundingBox())!;
   await view({ zoom, roll: 90 });
-  const rolled = await labelAt(page, shown[0]!);
+  const [rolled] = await namesAt(page, { zoom, roll: 90 }, [shown[0]!]);
   const [cx, cy] = [box.width / 2, box.height / 2];
   const [dx, dy] = [flat!.x - cx, flat!.y - cy];
   expect(Math.abs(rolled!.x - (cx - dy)), "a clockwise quarter turn").toBeLessThan(60);
