@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Japanese pitches name the photo map** (MODULES-569). The demo pitch and the site pitch said a line drawing, a surface map and a shaded picture. They now say a line drawing or a photographic surface map, and that realistic and the surface map are the same photos. The site pitch still says you can see where the moons are at any date and time.
+
 - **A long local browser check keeps the Mac awake** (MODULES-572). `test:demo`, `test:demo:one`, `test:freeze`, `test:soak` and `screenshots` hold an idle-sleep assertion on macOS for that process, and release it when the command exits. Timeouts, assertions and other systems are unchanged.
 
 - **The README's looks match the package** (MODULES-569). The opening and the looks table said `realistic` was a shader drawing and the pictures were 1.31 MB. `realistic` and `painted` are the photo maps, and `illustrated` is the shaded drawing. The packaged pictures are 2.38 MB (66 pictures). The guides already said this. The features list already counts 44 moons; the old comment of 25 is gone.
