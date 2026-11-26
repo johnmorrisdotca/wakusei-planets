@@ -84,6 +84,20 @@ interface MoonTracks {
   future: Map<string, [GroundPoint, GroundPoint][]>;
 }
 type MarkTextOrNull = FlatMark["name"] | null;
+/** A rectangle on the map in CSS pixels, from its top left. */
+interface Box {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+/** A name drawn on the map: whose it is and the room it takes. */
+export interface DrawnName extends Box {
+  id: string;
+  kind: "place" | "mark";
+}
+
 interface Custom {
   mark: HeldMark;
   x: number;
@@ -289,6 +303,10 @@ export class WakuseiFlat extends HTMLElement {
   #hover: Chosen | null = null;
   #orbs: Orb[] = [];
   #marks: Mark[] = [];
+  /** The room taken by the places' dots and names at the last draw of the map (the page's own marks name themselves in what is left, so two names never lie over each other), and the names drawn. */
+  #taken: Box[] = [];
+  #placeNames: DrawnName[] = [];
+  #markNames: DrawnName[] = [];
   #flagSpots: { x: number; y: number; code: string }[] = [];
   #flagLayer: HTMLElement | undefined;
   #lastDraw = 0;
@@ -520,10 +538,10 @@ export class WakuseiFlat extends HTMLElement {
     return [...this.#layers];
   }
 
-  /** Counters for a test or a page: draws of the dots, draws of the map, the orbiters drawn at the last draw, the marks drawn (the places of the tables, and `custom` for the page's own), the milliseconds the last draw and the slowest took, whether the picture is in and which look is drawn, and the canvases' size in pixels. */
-  get stats(): { draws: number; mapDraws: number; dots: number; marks: number; custom: number; lastDrawMs: number; maxDrawMs: number; averageDrawMs: number; running: boolean; paused: boolean; fast: boolean; mapLoaded: boolean; look: FlatLook; lookState: "loading" | "map" | "photo" | "failed"; canvases: { width: number; height: number }[] } {
+  /** Counters for a test or a page: draws of the dots, draws of the map, the orbiters drawn at the last draw, the marks drawn (the places of the tables, and `custom` for the page's own), the milliseconds the last draw and the slowest took, whether the picture is in and which look is drawn, the canvases' size in pixels, and `names`: every name drawn on the map now (a place's or a page's mark's) with the room it takes, which never overlap. */
+  get stats(): { draws: number; mapDraws: number; dots: number; marks: number; custom: number; lastDrawMs: number; maxDrawMs: number; averageDrawMs: number; running: boolean; paused: boolean; fast: boolean; mapLoaded: boolean; look: FlatLook; lookState: "loading" | "map" | "photo" | "failed"; canvases: { width: number; height: number }[]; names: DrawnName[] } {
     const canvases = [this.#mapCanvas, this.#dotCanvas].filter((c): c is HTMLCanvasElement => c !== undefined).map((c) => ({ width: c.width, height: c.height }));
-    return { draws: this.#counts.draws, mapDraws: this.#counts.mapDraws, dots: this.#counts.dots, marks: this.#marks.length, custom: this.#customs.filter((one) => one.on).length, lastDrawMs: this.#counts.lastMs, maxDrawMs: this.#counts.maxMs, averageDrawMs: this.#counts.draws > 0 ? this.#totalMs / this.#counts.draws : 0, running: this.#running(), paused: this.#paused, fast: this.#fast(), mapLoaded: this.#image !== undefined, look: this.#look, lookState: this.lookState, canvases };
+    return { draws: this.#counts.draws, mapDraws: this.#counts.mapDraws, dots: this.#counts.dots, marks: this.#marks.length, custom: this.#customs.filter((one) => one.on).length, lastDrawMs: this.#counts.lastMs, maxDrawMs: this.#counts.maxMs, averageDrawMs: this.#counts.draws > 0 ? this.#totalMs / this.#counts.draws : 0, running: this.#running(), paused: this.#paused, fast: this.#fast(), mapLoaded: this.#image !== undefined, look: this.#look, lookState: this.lookState, canvases, names: [...this.#placeNames, ...this.#markNames] };
   }
 
   /** Where an orbiter, a place or one of the page's marks is on the screen as of the last draw, in CSS pixels from the map's top left, or null when it is not drawn (not shown, off the map, or an orbiter with no path). */
@@ -641,6 +659,8 @@ export class WakuseiFlat extends HTMLElement {
         this.#tracks.clear();
         this.#orbs = [];
         this.#marks = [];
+        this.#taken = [];
+        this.#placeNames = [];
         this.#places = [];
         this.#placeIds = new Map();
         this.#placesFor = "";
@@ -1181,6 +1201,8 @@ export class WakuseiFlat extends HTMLElement {
   #drawMarks(ctx: CanvasRenderingContext2D, names: { on: boolean; limit: number | null }, lang: FlatLang): void {
     const v = this.#view;
     this.#marks = [];
+    this.#taken = [];
+    this.#placeNames = [];
     this.#flagSpots = [];
     if (this.#layers.size === 0 || this.#places.length === 0) {
       this.#syncFlags();
@@ -1228,6 +1250,7 @@ export class WakuseiFlat extends HTMLElement {
       if (feature && label === null && !dotsFrom && mark.place.id !== chosenId) continue;
       if (label !== null) {
         boxes.push(label);
+        this.#placeNames.push({ id: mark.place.id, kind: "place", x0: label.x0, y0: label.y0, x1: label.x1, y1: label.y1 });
         labels.push({ text, x: label.x, y: mark.y, align: label.align });
         if (flag !== undefined) this.#flagSpots.push({ x: label.flagX, y: mark.y, code: flag });
         named += 1;
@@ -1236,6 +1259,7 @@ export class WakuseiFlat extends HTMLElement {
       this.#marks.push(mark);
       this.#mark(ctx, mark);
     }
+    this.#taken = boxes;
     ctx.lineWidth = 3;
     ctx.strokeStyle = "rgba(0,0,0,.72)";
     ctx.fillStyle = "#fff";
@@ -1460,8 +1484,10 @@ export class WakuseiFlat extends HTMLElement {
       customs.push({ mark, x: at?.x ?? 0, y: at?.y ?? 0, on: at !== null });
     }
     this.#customs = customs;
+    this.#markNames = [];
     if (customs.length === 0) return;
-    const boxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+    // the places' dots and names are already on the map: a mark's name gives way to them (right of its dot, then left, then above, then below), and is left out where there is no room (the mark is still named on hover, tap and key)
+    const boxes: Box[] = [...this.#taken];
     const labels: { text: string; x: number; y: number; align: CanvasTextAlign }[] = [];
     ctx.font = "600 11px system-ui, sans-serif";
     ctx.textBaseline = "middle";
@@ -1523,11 +1549,16 @@ export class WakuseiFlat extends HTMLElement {
         const width = this.#measureText(text);
         const right = { x0: x + r + 4, y0: y - 7, x1: x + r + 4 + width, y1: y + 7 };
         const left = { x0: x - r - 4 - width, y0: y - 7, x1: x - r - 4, y1: y + 7 };
-        const fits = (b: typeof right): boolean => b.x0 >= 0 && b.x1 <= v.width && !boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
-        const where = fits(right) ? right : fits(left) ? left : null;
+        const above = { x0: x - width / 2, y0: y - r - 17, x1: x + width / 2, y1: y - r - 3 };
+        const below = { x0: x - width / 2, y0: y + r + 3, x1: x + width / 2, y1: y + r + 17 };
+        const fits = (b: Box): boolean => b.x0 >= 0 && b.x1 <= v.width && !boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+        const where = fits(right) ? right : fits(left) ? left : fits(above) && above.y0 >= 0 ? above : fits(below) && below.y1 <= v.height ? below : null;
         if (where !== null) {
           boxes.push(where);
-          labels.push({ text, x: where === right ? where.x0 : where.x1, y, align: where === right ? "left" : "right" });
+          this.#markNames.push({ id: mark.id, kind: "mark", ...where });
+          if (where === right) labels.push({ text, x: where.x0, y, align: "left" });
+          else if (where === left) labels.push({ text, x: where.x1, y, align: "right" });
+          else labels.push({ text, x, y: (where.y0 + where.y1) / 2, align: "center" });
         }
       }
     }

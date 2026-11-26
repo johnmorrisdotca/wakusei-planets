@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A moon's name no longer lies over a place's name on a body's flat map** (MODULES-1861). The places' names (the named features, the sites) are laid out when the map is drawn and the page's own marks, the moons among them, when the dots are, and the second took no account of the first: on Mars at 2026-11-23 12:00 UTC Deimos was written over Pavonis Mons. A mark's name now takes what room the places' dots and names left: right of its dot as before, then left, then above, then below, and is left out when there is none (the mark is still named on hover, tap and in the key). A moving dot can still pass over a place's name. `stats.names` lists every name drawn, place or mark, with the room it takes, and none overlaps another. Test: `e2e/flat-moons.demo.ts`, a day of Mars's two moons at 20-minute steps.
+
 ## [0.78.0] - 2026-11-26
 
 - **On a phone the shaded Earth's day limb still counts** (MODULES-542). The test asked for a tenth of the middle to be day. At this date the phone's picture is 72 per cent night and 9 per cent day, so a day side is a bright share above 5 per cent.
