@@ -276,5 +276,41 @@
     "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
     "usage": "The USGS Voyager 2 map distributed by JPL supplies the southern observations. The polar repaint fills the unobserved northern hemisphere and reconstructs only fine detail in blurred observed areas. The 4096-pixel output is a texture delivery size. The original optical map is 1440 × 720. Parts of Ariel were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
     "sha256": "c0062ef9b87921ad6ae7f52e79802857955f9d981177441812b860b8ea3b3820"
+  },
+  "miranda": {
+    "file": "ura5vuu2.tif",
+    "page": "https://space.jpl.nasa.gov/tmaps/uranus.html",
+    "licence": "Public domain",
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "usage": "The 1440 by 720 USGS Voyager 2 map supplies the measured southern terrain. The unobserved north is painted to continue that ground. Parts of Miranda were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "3b0e3fdd7233511be7bb55537ce00641223a9f611ecd5b364bbac87de03ffb03"
+  },
+  "umbriel": {
+    "file": "ura2vuu2.tif",
+    "page": "https://space.jpl.nasa.gov/tmaps/uranus.html",
+    "licence": "Public domain",
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "usage": "The USGS Voyager 2 map supplies the southern observations. The unobserved north is painted to continue that ground. Parts of Umbriel were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "b9818d0ae7cccc69801f86eae99ddaf8736ced39f2a875d0e36ddac9e7588de3"
+  },
+  "titania": {
+    "file": "ura3vuu2.tif",
+    "page": "https://space.jpl.nasa.gov/tmaps/uranus.html",
+    "licence": "Public domain",
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "usage": "The USGS Voyager 2 map supplies the southern observations. The unobserved north is painted to continue that ground. Parts of Titania were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "7a99a4a12ecbf765ed3dc55d07fe62b795236d2a01bbd1171b4143cc9f8f922a"
+  },
+  "oberon": {
+    "file": "ura4vuu2.tif",
+    "page": "https://space.jpl.nasa.gov/tmaps/uranus.html",
+    "licence": "Public domain",
+    "credit": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
+    "usage": "The USGS Voyager 2 map supplies the southern observations. The unobserved north is painted to continue that ground. Parts of Oberon were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "0d609cc834478c95be1078dff8527634b66bf58afaad8ea59a6c2d8bce64a4d0"
   }
 }

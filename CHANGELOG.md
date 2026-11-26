@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Miranda, Umbriel, Titania and Oberon have Voyager maps** (MODULES-1821). Each southern hemisphere is the USGS mosaic Voyager 2 made. The north, which was not photographed, is painted to continue that ground. The line drawing stays underneath.
+
 ## [0.78.1] - 2026-11-26
 
 - **An unseen pole is a plain tone** (MODULES-1196). Dawn left a black cap on about 7.5 percent of Vesta's map and a dark strip along Ceres's south edge. Voyager left Triton's north in the dark, about 28 percent of the map, and New Horizons left Charon's south in the dark, about 31 percent. Each was a black cap or a painted fill. Each is now the mapped ground's own average, a little darker, and the photographed ground fades into it. Picture test: `e2e/map-gaps.demo.ts`.

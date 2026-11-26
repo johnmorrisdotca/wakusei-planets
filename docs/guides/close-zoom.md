@@ -79,11 +79,11 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Helene | 4096 | shader | 11x |  |  |
 | Telesto | 4096 | shader | 11x |  |  |
 | Calypso | 4096 | shader | 11x |  |  |
-| Miranda | 4096 | shader | 11x |  |  |
+| Miranda | 2048 | map | 8x |  |  |
 | Ariel | 2048 | map | 8x |  |  |
-| Umbriel | 4096 | shader | 11x |  |  |
-| Titania | 4096 | shader | 11x |  |  |
-| Oberon | 4096 | shader | 11x |  |  |
+| Umbriel | 2048 | map | 8x |  |  |
+| Titania | 2048 | map | 8x |  |  |
+| Oberon | 2048 | map | 8x |  |  |
 | Proteus | 4096 | shader | 11x |  |  |
 | Larissa | 4096 | shader | 11x |  |  |
 | Triton | 8192 | tiles | 22x |  |  |

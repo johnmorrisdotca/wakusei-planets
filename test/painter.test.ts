@@ -135,12 +135,12 @@ test("a painter told to map every body asks for each body's picture in the reali
     body.dispose();
     return urls;
   };
-  for (const [id, map] of [["mars", "mars"], ["moon", "moon"], ["mercury", "mercury"], ["venus", "venus"], ["jupiter", "jupiter"], ["saturn", "saturn"], ["uranus", "uranus"], ["neptune", "neptune"], ["pluto", "pluto"], ["io", "io"], ["titan", "titan"], ["triton", "triton"], ["charon", "charon"]] as const) {
+  for (const [id, map] of [["mars", "mars"], ["moon", "moon"], ["mercury", "mercury"], ["venus", "venus"], ["jupiter", "jupiter"], ["saturn", "saturn"], ["uranus", "uranus"], ["neptune", "neptune"], ["pluto", "pluto"], ["io", "io"], ["titan", "titan"], ["triton", "triton"], ["charon", "charon"], ["miranda", "miranda"], ["umbriel", "umbriel"], ["titania", "titania"], ["oberon", "oberon"]] as const) {
     assert.deepEqual(asked(id, { look: "realistic" }), [], `${id} is shaded in the realistic look, with no picture asked for, unless told to map`);
     const urls = asked(id, { look: "realistic", mapped: true });
     assert.ok(urls.some((url) => new RegExp(`/${map}-\\d+\\.webp$`).test(url)), `${id} asks for its map when told to map every body: ${urls.join(" ")}`);
   }
-  for (const id of ["miranda", "dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
+  for (const id of ["dysnomia"]) assert.deepEqual(asked(id, { look: "realistic", mapped: true }), [], `${id} has no map and stays shaded`);
 });
 
 test("the Sun turns about its own pole with time, and the glow, not the globe, faces the camera", () => {
