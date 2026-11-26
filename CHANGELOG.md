@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A covered arrow's screen-reader words come from the string table** (MODULES-1017). The label was written in the code: English "{bodies}: {cover} is in front. {hint}", Japanese "{bodies}: {cover} の後ろ. {hint}". Both are now a row of `COVERED_ARROW_WORDS`, so another language is another row. The words themselves are unchanged.
+
 - **The Japanese nearest guide says 内側の惑星 for the inner planets** (MODULES-1014). 内惑星 means only Mercury and Venus. The space-view guide now says 太陽系全体, the region name, wherever it said 太陽系ぜんぶ or 太陽系ぜんたい for the whole solar system. 外惑星 in the sky-events guide stays: there it means a superior planet.
 
 - **The giant-planet cards draw the planet and three moons, and the Moons tab groups every moon under its planet** (MODULES-1719). The cards were names and counts only. Each card now draws the planet and its three largest moons. The Moons tab lists every drawn moon under its planet, including all six of Jupiter's and all nineteen of Saturn's. A moon stays in that list, so the row under a planet no longer takes the well-known moons back out of it.

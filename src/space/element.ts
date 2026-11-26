@@ -11,6 +11,7 @@ import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, systemOf, type SpaceK
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { craftRank, craftSize, LABEL_GAP, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox, type LabelReport } from "./labels.ts";
 import { coverArrows, coverOf } from "./covered.ts";
+import { coveredArrowLabel } from "./covered-words.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
 import { NAME_LABEL_ATTRIBUTES, readNameLabel, type NameLabelOptions } from "../scene/name-label.ts";
 import type { Credit, DataSource } from "../data-door.ts";
@@ -608,6 +609,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "belts") this.belts = readBelts(value);
     else if (name === "lang") {
       for (const [id, button] of this.#pool) this.#nameLabel(button, id);
+      if (this.#places) this.#placeArrows(this.#places);
       this.#nameScale();
       this.#showRegion();
       this.#showNote();
@@ -3266,8 +3268,8 @@ export class WakuseiSpace extends HTMLElement {
       if (el.dataset["body"] !== arrow.lead || el.textContent !== text) {
         el.dataset["body"] = arrow.lead;
         el.textContent = text;
-        el.setAttribute("aria-label", `${arrow.bodies.map((id) => this.#nameOf(id)).join(", ")}: ${this.#nameOf(arrow.cover)} ${this.getAttribute("lang") === "ja" ? "の後ろ" : "is in front"}. ${this.#hint}`);
       }
+      el.setAttribute("aria-label", coveredArrowLabel(this.getAttribute("lang"), { bodies: arrow.bodies.map((id) => this.#nameOf(id)).join(", "), cover: this.#nameOf(arrow.cover), hint: this.#hint }));
       // the tip sits at the arrow's place and points into the disc; the name hangs off the far side, to the right of the tip for an arrow on the right half of the disc and to the left for one on the left
       const onLeft = Math.cos((arrow.angle * Math.PI) / 180) > 0;
       el.style.setProperty("--turn", `${Math.round(arrow.angle)}deg`);
