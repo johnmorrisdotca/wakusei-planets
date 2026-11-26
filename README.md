@@ -3,7 +3,7 @@
 <h1 align="center">Wakusei Planets <sub>惑星</sub></h1>
 
 <p align="center"><strong>The Sun, the planets and their moons, for the web.</strong><br>
-A clean line drawing, a shaded realistic drawing, or a painted surface map, with each body's real size, axial tilt and rotation as data, and a planet's moons where they are at any date and time.</p>
+A clean line drawing, a realistic surface map, or the same pictures as a painted look, with each body's real size, axial tilt and rotation as data, and a planet's moons where they are at any date and time.</p>
 
 <p align="center">Part of <strong>Space Program X (SPX)</strong>, the space packages: <a href="https://github.com/johnmorrisdotca/wakusei-planets">Wakusei Planets</a> · <a href="https://github.com/johnmorrisdotca/hoshi-stars">Hoshi Stars</a> · <a href="https://github.com/johnmorrisdotca/chikyu-earth">Chikyu Earth</a> · <a href="https://github.com/johnmorrisdotca/uchusen-rockets">Uchusen Rockets</a></p>
 
@@ -98,7 +98,7 @@ A bundled app imports it: `import "@johnmorrisdotca/wakusei-planets/element"` (a
 
 - The asteroid belts and the Kuiper belt: 3,340 real numbered small bodies from NASA/JPL's Small-Body Database in seven belts, drawn in the space view (one draw each) with a flight into the main belt, and as data (`/belts`).
 - The Sun, the eight planets, Pluto, eight more dwarf planets, eight minor bodies (the asteroids Bennu and Eros and the Kuiper belt object Arrokoth, the asteroids Vesta and Pallas, the centaurs Chiron and Pholus and Halley's comet) and 44 moons, each with its real size, flattening, axial tilt, pole and rotation as data.
-- Three looks: a clean `line` drawing (an SVG string), a shaded `realistic` sphere worked out in a shader, and a `painted` surface map from public-domain imagery.
+- Four looks: a clean `line` drawing (an SVG string), `realistic` and `painted` photo maps of the same pictures, and `illustrated`, a shaded drawing worked out in a shader and not a default.
 - The sky for any date and time: a body's pole, rotation, phase and ring opening as the Earth sees it, and a planet's moons where they are then.
 - One WebGL context for the page, nothing drawn at rest, at most thirty frames a second, and everything freed when an element leaves.
 - A pure side that runs on a server: `BODIES`, `apparent`, `system`, `orbitPath`, `portrait` and `lineSvg`.
@@ -119,13 +119,14 @@ import "@johnmorrisdotca/wakusei-planets/saturn";
 
 Import the element once in client code, and the entry point of each body you draw in a shaded look (or `/all`). A line drawing needs neither `three` nor an entry point. [Bundlers](docs/guides/bundlers.md) and [Frameworks](docs/guides/frameworks.md) go through it.
 
-## Three looks
+## Looks
 
 | Look | What it is | Needs |
 |---|---|---|
 | `line` | A clean outline drawing with the body's key features: bands, craters, rings and their gaps, caps, the dark side dashed off. An SVG. | nothing |
-| `realistic` | A shaded sphere drawn from the body's real colours and features, lit from the Sun's side, with the rings casting shadows. No pictures: the surface is worked out in a shader. | `three`, the body's entry point |
-| `painted` | A real surface map: public-domain NASA, USGS and JPL imagery, or for Mercury, Venus, Jupiter, Saturn, Uranus, Neptune and the Sun a CC BY 4.0 map (`picturesCredit` writes each body's credit). Small pictures first (1.31 MB for all of them in the package), a sharper one fetched when you zoom in, and finer map tiles for the part in view when you zoom right up, in a body, a portrait or the space view (Mars, the Moon, the Earth and ten moons: [close zoom](docs/guides/close-zoom.md)). | `three`, the body's entry point |
+| `realistic` | The photo maps, lit from the Sun's side, with the rings casting shadows. `painted` is the same maps, kept so an older page still works. Public-domain NASA, USGS and JPL imagery, or for Mercury, Venus, Jupiter, Saturn, Uranus, Neptune and the Sun a CC BY 4.0 map (`picturesCredit` writes each body's credit). The pictures in the package are 2.38 MB (66 of them). A sharper one is fetched when you zoom in, and finer map tiles for the part in view when you zoom right up, in a body, a portrait or the space view (Mars, the Moon, the Earth and ten moons: [close zoom](docs/guides/close-zoom.md)). | `three`, the body's entry point |
+| `painted` | The same photo maps as `realistic`. | `three`, the body's entry point |
+| `illustrated` | A shaded drawing from the body's colours and features, worked out in a shader. Not a default. No surface picture. | `three`, the body's entry point |
 
 Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are the eight other dwarf planets (Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna; Haumea and Quaoar as the long shapes they are, and Ceres with a painted map from Dawn) eight minor bodies (Bennu, Eros and Arrokoth, each drawn as NASA's published mesh and picture, Vesta, with Dawn's own map, Pallas, Chiron, Pholus and Halley's comet, each its own shape, size and spin) and 44 moons (the Moon, Phobos and Deimos, Amalthea, Thebe and the four Galilean moons, Saturn's seven larger moons with Hyperion, Phoebe and ten of its small ones (Pan, Daphnis, Atlas, Prometheus, Pandora, Epimetheus, Janus, Telesto, Calypso and Helene), Uranus's five, Larissa, Proteus, Triton and Nereid, Charon, Nix and Hydra, and Vanth, Hiʻiaka, Namaka and Dysnomia, the moons of the dwarf planets whose orbits are published with a date). The Earth is drawn like the rest in the realistic and painted looks (NASA's Blue Marble), and its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` 0.10.0 or later installed). The painted looks cover the Sun, the planets from Mercury to Earth and Pluto, Ceres, the Moon, the four Galilean moons, Saturn's Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus, Triton and Charon, and Saturn's rings are Cassini's own picture of them.
 
@@ -574,7 +575,7 @@ BODIES.pluto.kind; // "dwarf-planet"
 - A shaded look needs WebGL. Without it the line drawing is drawn.
 - Jupiter, Saturn, Uranus and Neptune have their rings drawn, each band's opacity from its sourced optical depth (`BodyFacts.rings[].tau`, NASA NSSDCA): Jupiter's is a faint line, Saturn's is bold. [Looks and bodies](docs/guides/looks-and-bodies.md) has the rule and its floor.
 - A portrait with no `turn` turns at 12 degrees a second, backwards when the body turns backwards. A picture with a date keeps that orientation and adds the same turn. `turn="0"` stays still.
-- Pictures for the painted look are 1.31 MB in the package at 512 and 1024 pixels; a sharper picture is fetched when you zoom in.
+- Pictures for the realistic and painted looks are 2.38 MB in the package (66 pictures); a sharper picture is fetched when you zoom in.
 
 ## How to cite
 

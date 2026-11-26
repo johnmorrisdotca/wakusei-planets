@@ -1,8 +1,8 @@
 {
   "job": "The Sun, planets and moons for the web",
   "pitch": {
-    "en": "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, tilt and rotation, and the moons where they are at any date and time.",
-    "ja": "太陽・惑星・衛星を、線画、陰影つきの絵、表面の地図で描きます。実際の大きさ・傾き・自転つきで、任意の日時の衛星の位置も分かります。"
+    "en": "The Sun, the planets and their moons as a clean line drawing, a realistic surface map or the same pictures as a painted look, with real sizes, tilt and rotation, and the moons where they are at any date and time.",
+    "ja": "太陽・惑星・衛星を、線画、表面の地図、陰影つきの絵で描きます。実際の大きさ・傾き・自転つきで、任意の日時の衛星の位置も分かります。"
   },
   "name": {
     "en": "Wakusei is the Japanese word 惑星 for a planet.",

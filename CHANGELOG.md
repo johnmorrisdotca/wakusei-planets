@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The README's looks match the package** (MODULES-569). The opening and the looks table said `realistic` was a shader drawing and the pictures were 1.31 MB. `realistic` and `painted` are the photo maps, and `illustrated` is the shaded drawing. The packaged pictures are 2.38 MB (66 pictures). The guides already said this. The features list already counts 44 moons; the old comment of 25 is gone.
+
 - **A Date from another realm is a moment** (MODULES-570). `meanObliquity` and `equatorialToHorizontal` rejected it: the check was `instanceof Date`, which is false across a frame. They now read it the same way the time module does. An invalid date, a number that is not finite, and a moment outside the Date range still throw.
 
 - **22 to 31 October 1582 are real dates** (MODULES-568). `fromCalendar` used October 1582's count of 21 days as the highest day number, so the 22nd to the 31st threw. Those days exist. Only the 5th to the 14th were skipped. `daysInMonth` still returns 21.

@@ -2,7 +2,7 @@
 // WORDS[language][key] as text by the family's chooser (never as HTML), and demo.ts reads the same table for the words it draws itself. Proper names are not translated here.
 export const WORDS = {
   en: {
-    pitch: "The Sun, the planets and their moons as a clean line drawing, a shaded realistic drawing or a painted surface map, with real sizes, tilt and rotation.",
+    pitch: "The Sun, the planets and their moons as a clean line drawing, a realistic surface map or the same pictures as a painted look, with real sizes, tilt and rotation.",
     name: "Wakusei (惑星, わくせい) is Japanese for a planet.",
     nameLink: "The name",
     foot: "The Sun, planets and moons for the web. MIT code. The numbers are the IAU's, NASA's and JPL's, and the papers named in the credits; the maps are NASA, USGS and JPL imagery and a few CC BY 4.0 maps.",
@@ -680,7 +680,7 @@ export const WORDS = {
     lu_sun: "the Sun",
   },
   ja: {
-    pitch: "太陽・惑星・衛星を、線画、陰影つきの絵、表面の地図で描きます。実際の大きさ、傾き、自転つきです。",
+    pitch: "太陽・惑星・衛星を、線画、表面の地図、陰影つきの絵で描きます。実際の大きさ、傾き、自転つきです。",
     name: "「惑星」(わくせい) は、太陽のまわりを回る大きな星のことです。",
     nameLink: "名前について（英語）",
     foot: "ウェブ用の、太陽・惑星・衛星の部品です。コードはMITライセンスです。数値は IAU、NASA、JPL のものと、出典の一覧にある論文のものです。地図は NASA、USGS、JPL の画像と、一部の CC BY 4.0 の地図です。",
