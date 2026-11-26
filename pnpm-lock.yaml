@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@johnmorrisdotca/kazoku-ui':
-        specifier: ^0.54.4
-        version: 0.54.4(three@0.186.1)
+        specifier: ^0.54.5
+        version: 0.54.5(three@0.186.1)
     devDependencies:
       '@angular/common':
         specifier: ^22.2.4
@@ -419,8 +419,8 @@ packages:
     resolution: {integrity: sha512-TlKv9O3elQzgpbCngQZuadYe7sbsuhoJB8F0L5Ip5IiHfTaWlEzZtcRKzKYPpU4VWHPe0i3jgYfeEudY9o+azw==}
     engines: {node: '>=24'}
 
-  '@johnmorrisdotca/kazoku-ui@0.41.0':
-    resolution: {integrity: sha512-Zp/iTun5jgsXMPAJ9qCoIpr6Oc6O/kBSwAeEw4MdNRwwmALHtAwAuALXewecxhQ2j5HUEXamu5HKTA8OFOz+HA==}
+  '@johnmorrisdotca/kazoku-ui@0.41.1':
+    resolution: {integrity: sha512-PFqO5/G8A6npgOgwrBVe+Ii8yBMUg7bHabwhJRNl0CYYLKBPE7mUglLPm+C8c3S6YWxqepZz5Rf4zhWfI5pJzg==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -429,8 +429,8 @@ packages:
       three:
         optional: true
 
-  '@johnmorrisdotca/kazoku-ui@0.54.4':
-    resolution: {integrity: sha512-MCz7alhuhYMxpuSpeGQ39Kxs/6Y22WQxpDzXwaZ2BJV1G6qqEk/o6bnEBTj6lyqoNPWKsui6i+ifiFBM2mpW9g==}
+  '@johnmorrisdotca/kazoku-ui@0.54.5':
+    resolution: {integrity: sha512-jbDcBlO1trRUT1Z08a/XOoY+ybsfQTKQRLMiXCnkVfGnkOf3q0s0+wUv6FFSkTO35vWKMp/fQjKNRktN4ZY/jg==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -1866,7 +1866,7 @@ snapshots:
   '@johnmorrisdotca/chikyu-earth@0.36.0(astronomy-engine@2.1.19)(three@0.186.1)':
     dependencies:
       '@johnmorrisdotca/chizu': 1.6.1
-      '@johnmorrisdotca/kazoku-ui': 0.41.0(three@0.186.1)
+      '@johnmorrisdotca/kazoku-ui': 0.41.1(three@0.186.1)
       d3-geo: 3.1.1
     optionalDependencies:
       astronomy-engine: 2.1.19
@@ -1876,11 +1876,11 @@ snapshots:
 
   '@johnmorrisdotca/hata@1.9.0': {}
 
-  '@johnmorrisdotca/kazoku-ui@0.41.0(three@0.186.1)':
+  '@johnmorrisdotca/kazoku-ui@0.41.1(three@0.186.1)':
     optionalDependencies:
       three: 0.186.1
 
-  '@johnmorrisdotca/kazoku-ui@0.54.4(three@0.186.1)':
+  '@johnmorrisdotca/kazoku-ui@0.54.5(three@0.186.1)':
     optionalDependencies:
       three: 0.186.1
 

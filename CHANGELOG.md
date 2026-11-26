@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The demo no longer zooms on a quick double tap on an iPhone** (MODULES-1827). kazoku-ui 0.54.5's page frame sets `touch-action: manipulation` on the document; the dependency is `^0.54.5`. `e2e/credits.demo.ts` reads it on the demo's pages. The package itself is unchanged.
+
 ## [0.77.2] - 2026-11-26
 
 Tests only: the package is unchanged by this release.

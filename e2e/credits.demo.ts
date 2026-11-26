@@ -45,3 +45,12 @@ test("the code builder links to every credit and back to the demo, in its footer
   await expect(footer.locator(`a[href="${NOTICE}"]`)).toBeVisible();
   await expect(footer.locator('a[href="./"]')).toBeVisible();
 });
+
+// MODULES-1827: a quick double tap on a button zooms an iPhone's page unless the page asks for presses only; the page frame (kazoku-ui 0.54.5) sets `touch-action: manipulation` on the document.
+for (const path of PAGES) {
+  test(`${path || "the home page"} asks for presses, not zooms, on a double tap`, async ({ page }) => {
+    await page.goto(`/wakusei-planets/${path}`);
+    await expect(page.locator("kazoku-page-credits, kazoku-page-header").first()).toBeVisible();
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).touchAction)).toBe("manipulation");
+  });
+}
