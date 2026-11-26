@@ -8,7 +8,7 @@
 
 - **A body with no sourced interior keeps that sentence on one line.** The empty row of the cutaway legend is a block, so the sentence is not stacked one word to a line.
 
-- **The reviewed Japanese names of four interior layers.** The Earth's outer core is 鉄とニッケル、液体. The Sun's layer outside the core is 放射層と対流層. Jupiter's inner mix is 均質な内層 and its transition is 遷移層. Saturn's diffuse core is 境界のぼやけた核.
+- **The reviewed Japanese names of four interior layers.** The Earth's outer core is 鉄とニッケル、液体. The Sun's layer outside the core is Radiative and convective zones, 放射層と対流層. Jupiter's inner mix is 均質な内層 and its transition is 遷移層. Saturn's diffuse core is 境界のぼやけた核.
 
 - **More bodies open to a sourced interior** (MODULES-1691). `interiorOf` now has the Moon, Mercury, the Sun, Jupiter and Saturn, each from one named model read on 2026-11-26, beside the Earth and Mars. The Moon's near-side crust is about 40 km (the far side, up to about 60 km, is not the crust drawn). Mercury's shell is the fact-sheet radius minus the stated core, 365.7 km, where the page also says about 400 km. The Sun's core thickness of about 138,000 km is used as the core's outside radius, and the radiative and convection zones are one layer. Jupiter is Militzer and others 2022, model A (a dilute core, not a wall). Saturn is Mankovich and Fuller 2021, a diffuse core to about 60% of the radius. Venus, Uranus, Neptune and the four large moons stay whole: the pages name a core and state no radius.
 

@@ -61,7 +61,7 @@ The volumetric mean radius is 695,700 km (NASA Sun Fact Sheet). NASA Science's S
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Outside the core | 0 km to about 557700 km | hydrogen and helium |
+| Radiative and convective zones | 0 km to about 557700 km | hydrogen and helium |
 | Core | about 557700 km to 695700 km | hydrogen to helium |
 
 ## Jupiter

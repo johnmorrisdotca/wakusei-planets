@@ -105,7 +105,7 @@ const SUN: Interior = {
   source: { page: "https://science.nasa.gov/sun/facts/", read: "2026-11-26" },
   layers: [
     { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素がヘリウムになる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
-    { id: "outside-core", name: { en: "Outside the core", ja: "放射層と対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#d4652f" },
+    { id: "outside-core", name: { en: "Radiative and convective zones", ja: "放射層と対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#d4652f" },
   ],
 };
 
