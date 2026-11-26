@@ -104,7 +104,7 @@ test("the sheet speaks Japanese in plain words, with the readings of the names",
   await open(page, "sheet=jupiter&paper=letter&lang=ja");
   const sheet = page.locator("#paper-inner .kazoku-sheet");
   await expect(sheet.locator(".kazoku-title")).toHaveText("もくせい（木星）");
-  await expect(sheet.locator(".kazoku-namelabel")).toHaveText("なまえ:");
+  await expect(sheet.locator(".kazoku-namelabel")).toHaveText("なまえ：");
   await expect(sheet.locator("svg [data-colour-head]")).toHaveText("ぬってね！");
   await expect(sheet.locator("svg [data-fact]").first()).toContainText("よこはば");
   await expect(page.locator("#print")).toHaveText("いんさつ / PDFで ほぞん");

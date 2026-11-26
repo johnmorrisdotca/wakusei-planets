@@ -59,6 +59,9 @@ const jobsDrawn = (page: Page): Promise<number> =>
     }
     return 0;
   });
+/** Jobs the shared renderer has drawn so far on the portrait page (`#view`), by its own scheduler's count. */
+const portraitJobsDrawn = (page: Page): Promise<number> =>
+  page.evaluate(() => (Reflect.get(document.querySelector("#view")!, "stats") as { renderer?: { frames?: { draws?: number } } }).renderer?.frames?.draws ?? 0);
 const pick = (page: Page, id: string) => page.locator(`.tile[data-body="${id}"]`).click();
 
 test.use({ reducedMotion: "no-preference" });
@@ -338,6 +341,7 @@ test("a moving drag of a body draws at most thirty frames a second", async ({ pa
   await advance(page, 500);
   const box = (await page.locator("#view").boundingBox())!;
   const before = await readCounts(page);
+  const drawnBefore = await portraitJobsDrawn(page);
   await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
   await page.mouse.down();
   for (let i = 0; i < 120; i += 1) {
@@ -348,7 +352,9 @@ test("a moving drag of a body draws at most thirty frames a second", async ({ pa
   const seconds = (120 * 16) / 1000;
   await advance(page, 500);
   const after = await readCounts(page);
-  expect(after.rafRequests - before.rafRequests, "frames asked for during the drag").toBeLessThanOrEqual(Math.ceil(seconds * 31) + 4);
+  // What the test is named for is frames drawn, so that is what is counted. The animation frames asked for are not the number drawn: since kazoku-ui 0.54 the scheduler asks again for a frame it deferred to keep to 30 draws in any
+  // second, so with a drag at the pace of the screen it asks for more frames than it draws (74 asked for where 0.41 asked for 61, drawing no more). The renderer's own count of jobs drawn is what the cap holds, and it fails a drag drawn at 60 a second.
+  expect(await portraitJobsDrawn(page).then((n) => n - drawnBefore), "frames drawn during the drag").toBeLessThanOrEqual(Math.ceil(seconds * 31) + 4);
   expect(after.rafRequests - before.rafRequests, "and the counter saw them (a count of nothing proves nothing)").toBeGreaterThan(10);
   // at rest at most one frame is still asked for: the page's time goes on in steps until the last frames of the drag are drawn
   await expect
