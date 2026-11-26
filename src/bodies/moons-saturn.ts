@@ -18,7 +18,7 @@ registerLook({
   atmosphere: { colour: [0.92, 0.66, 0.3], strength: 1, power: 2.3 },
   limb: 0.3,
   ambient: 0.06,
-  painted: { map: "titan", widths: [512, 1024, 2048], far: 2048 },
+  painted: { map: "titan", widths: [512, 1024, 2048], far: 1024 },
 });
 registerLook({
   id: "iapetus",

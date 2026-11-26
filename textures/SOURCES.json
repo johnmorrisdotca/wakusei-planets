@@ -81,12 +81,13 @@
     "sha256": "135f88cb645bfdb4e045b380971ab2ba14e230590c96c9c86cfe7310fda881ac"
   },
   "europa": {
-    "file": "Europa Voyager GalileoSSI global mosaic.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Europa_Voyager_GalileoSSI_global_mosaic.jpg",
+    "file": "Europa_Voyager_GalileoSSI_global_mosaic_500m.tif",
+    "page": "https://astrogeology.usgs.gov/search/map/europa_voyager_galileo_ssi_global_mosaic_500m",
     "licence": "Public domain",
-    "credit": "https://astrogeology.usgs.gov/search/map/Europa/Voyager-Galileo/Europa_Voyager_GalileoSSI_global_mosaic_500m",
-    "artist": "U.S. Geological Survey / Planetary Data System / Tammy Becker",
-    "usage": "Public domain"
+    "credit": "NASA / JPL / U.S. Geological Survey Astrogeology, Voyager and Galileo SSI",
+    "artist": "NASA / JPL / U.S. Geological Survey Astrogeology, Voyager and Galileo SSI",
+    "usage": "The USGS 500 m Voyager and Galileo mosaic supplies the measured ice and the sharp fractures. Missing regions and the soft patches are painted to continue that ground. Parts of Europa were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "a323f0c9ccb47d5af9902ea8297fe81f9a9708795645b80801f103c3f7c9a624"
   },
   "ganymede": {
     "file": "Ganymede_Voyager_GalileoSSI_global_mosaic_1km.tif",
@@ -147,12 +148,13 @@
     "usage": "Public domain"
   },
   "titan": {
-    "file": "Titan map April 2011 full.png",
-    "page": "https://commons.wikimedia.org/wiki/File:Titan_map_April_2011_full.png",
+    "file": "Titan_ISS_P19658_Mosaic_Global_4km.tif",
+    "page": "https://science.nasa.gov/resource/titan-mosaic-the-surface-under-the-haze/",
     "licence": "Public domain",
-    "credit": "http://photojournal.jpl.nasa.gov/catalog/PIA14908",
-    "artist": "NASA",
-    "usage": "Public domain"
+    "credit": "NASA / JPL-Caltech / Space Science Institute, Cassini ISS, via USGS Astrogeology",
+    "artist": "NASA / JPL-Caltech / Space Science Institute, Cassini ISS, via USGS Astrogeology",
+    "usage": "The Cassini ISS global near-infrared mosaic supplies the measured surface markings. Soft mosaic joins are feathered. Parts of Titan were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "sha256": "ca0fe5f6f9bdba1b6d03245969a42336a010ddc17d636e5e06fffa939d10ca83"
   },
   "earth": {
     "file": "world.topo.bathy.200409.3x5400x2700.jpg",
@@ -242,7 +244,7 @@
     "licence": "Public domain (NASA/JPL data; NASA's media guidelines, no endorsement implied)",
     "credit": "NASA/JPL/Space Science Institute, Cassini ISS global mosaic of Phoebe (DLR and the Cassini ISS team, 2006; PIA07775 is the same picture). NASA should be acknowledged as the source.",
     "artist": "DLR and the Cassini ISS team",
-    "usage": "The mosaic's brightness (a detached PDS3 label of 11520 bytes, then 2880 x 1440 bytes, 8 pixels per degree, longitude 0 in the middle), with the gaps the mosaic leaves black (the north pole and the rim of its data) filled by the brightness round them, cut to 512, 1024 and 2048 across, set to the level of its own look (the mean of its dark and light colours, 0.34) and left grey (scripts/make-moon-maps.py). Registered with the shape model (Gaskell): the relief of one and the brightness of the other correlate best at 8 degrees west of no turn, weakly (0.07, against 0.06 and below for every mirror and every other turn), so it is used unturned; an error of that size is about 15 km on the surface."
+    "usage": "The Cassini ISS mosaic supplies the photographed ground. The white blocks along the south edge and the gap at the north pole are painted to continue that ground. Registered with the shape model (Gaskell) and left unturned, as before. Parts of Phoebe were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved."
   },
   "arrokoth-craft": {
     "file": "Arrokoth.glb (the picture inside it)",
