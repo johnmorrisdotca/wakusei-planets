@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes src/data/discovery.ts: when, where, how and by whom each planet, dwarf planet and fully drawn moon was found, how it was first designated and numbered, and where its name comes from.
+"""Writes src/data/discovery.ts: when, where, how and by whom each planet, dwarf planet, minor body and fully drawn moon was found, how it was first designated and numbered, and where its name comes from.
 
 Every fact carries the source it was read from (SOURCES below). Nothing here is fetched when this runs: the records below were read on 2026-11-18 and are kept as they are, so a change to a fact is a change to this
 file, with its source. The sources:
@@ -59,6 +59,35 @@ rec("gonggong", "dwarf-planet", ancient=False, date=("2007-07-17", S), place=("P
     nameOrigin=("Named for Gonggong, a Chinese water god with red hair and a serpent's tail.", S), notes=[])
 rec("sedna", "dwarf-planet", ancient=False, date=("2003-11-14", S), place=("Palomar Observatory", S), by=(["M.E. Brown", "C.A. Trujillo", "D. Rabinowitz"], S), method=("electronic", D), designation=("2003 VB12", S), number=("(90377)", S), announced=None, namedBy=None,
     nameOrigin=("Named for the Inuit goddess of the sea and its creatures.", S), notes=[])
+
+# --- the minor bodies the package draws ------------------------------------------------------------------------------------------------------------------------------------------------
+# JPL Small-Body Database discovery records, read 2026-11-26 (sbdb.api?discovery=1). Naming citations are the Minor Planet Center's and are not copied.
+# `method` is worked out here from the place and the date, as for every other record.
+def minor(id, kind, date, place, who, method, des, number, notes):
+    rec(id, kind, ancient=False, date=(date, S), place=(place, S) if place else None, by=([who], S), method=(method, D), designation=(des, S),
+        number=(number, S) if number else None, announced=None, namedBy=None, nameOrigin=None, notes=notes)
+
+minor("bennu", "asteroid", "1999-09-11", "Socorro", "LINEAR", "electronic", "1999 RQ36", "(101955)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database names the LINEAR survey, not a person.", "The database has a naming citation, which is the Minor Planet Center's and is not copied here."])
+minor("eros", "asteroid", "1898-08-13", "Berlin", "Witt, G.", "visual", "A898 PA", "(433)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database has no naming citation for this record."])
+minor("vesta", "asteroid", "1807-03-29", "Bremen", "Olbers, H. W.", "visual", "A807 FA", "(4)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database has no naming citation for this record."])
+minor("pallas", "asteroid", "1802-03-28", "Bremen", "Olbers, H. W.", "visual", "A802 FA", "(2)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database has no naming citation for this record."])
+minor("chiron", "centaur", "1977-10-18", "Palomar", "Kowal, C.", "photographic", "1977 UB", "(2060)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database has no naming citation for this record."])
+minor("pholus", "centaur", "1992-01-09", "Kitt Peak", "Spacewatch", "electronic", "1992 AD", "(5145)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database names the Spacewatch survey, not a person.", "The database has no naming citation for this record."])
+minor("halley", "comet", "1758-12-25", None, "Palitzsch, Johann Georg", "visual", "1P", None,
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database's discovery is Johann Georg Palitzsch's recovery on this day of the return Edmond Halley had predicted. The comet was seen on earlier returns.", "The database names no place.", "The database has no naming citation for this record."])
+minor("arrokoth", "asteroid", "2014-06-26", "HST", "Hubble Space Telescope", "space-telescope", "2014 MU69", "(486958)",
+      ["Read from the JPL Small-Body Database on 2026-11-26.", "The database's who field says Hubble Space Telescope and its place says HST. The discovery sentence says M. W. Buie and the New Horizons Search Team, and the sentence's year is 2014.", "The database has a naming citation, which is the Minor Planet Center's and is not copied here."])
+# Pluto's two small moons: JPL gives the year only, so the day, the place and the method are left out. These records were already in the data file and were missing from this script.
+rec("styx", "moon", ancient=False, date=("2012", M), place=None, by=(["M.R. Showalter", "H.A. Weaver", "S.A. Stern", "A.J. Steffl", "M.W. Buie", "W.J. Merline", "M.J. Mutchler", "R. Soummer", "H.B. Throop"], M), method=None,
+    designation=("S/2012 (134340) 1", M), number=("Pluto V", M), announced=("IAUC 9253", M), namedBy=None, nameOrigin=None, notes=["JPL gives the year only, so the day and the place are left out."])
+rec("kerberos", "moon", ancient=False, date=("2011", M), place=None, by=(["M.R. Showalter", "D.P. Hamilton", "S.A. Stern", "H.A. Weaver", "A.J. Steffl", "L.A. Young"], M), method=None,
+    designation=("S/2011 (134340) 1", M), number=("Pluto IV", M), announced=("IAUC 9221", M), namedBy=None, nameOrigin=None, notes=["JPL gives the year only, so the day and the place are left out."])
 
 # --- the Moon and the moons drawn in full ---------------------------------------------------------------------------------------------------------------------------------------------------------
 rec("moon", "moon", ancient=True, date=None, place=None, by=None, method=("ancient", D), designation=None, number=("Earth I", U), announced=None, namedBy=None,
@@ -137,8 +166,9 @@ SOURCES = {
     "derived": ["worked out here from the place and the date of the record (the instrument of the day); not a published field", "", "2026-11-18"],
 }
 ORDER = ["mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto", "ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna",
+         "bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley", "arrokoth",
          "moon", "phobos", "deimos", "io", "europa", "ganymede", "callisto", "amalthea", "thebe", "mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "hyperion", "phoebe", "janus", "epimetheus", "prometheus", "pandora", "atlas", "pan", "daphnis", "helene", "telesto", "calypso", "miranda", "ariel", "umbriel", "titania", "oberon",
-         "larissa", "proteus", "triton", "nereid", "charon", "nix", "hydra", "vanth", "hiiaka", "namaka", "dysnomia"]
+         "larissa", "proteus", "triton", "nereid", "charon", "nix", "hydra", "styx", "kerberos", "vanth", "hiiaka", "namaka", "dysnomia"]
 
 def fact(v):
     return "null" if v is None else "{ value: %s, source: %s }" % (json.dumps(v[0], ensure_ascii=False), json.dumps(v[1]))
@@ -151,8 +181,8 @@ def out(r):
     lines += [f"    notes: {notes},", "  },"]
     return "\n".join(lines)
 
-HEADER = """// Made by scripts/make-discovery-data.py: when, where, how and by whom each planet, dwarf planet and fully drawn moon was found, how it was first designated, numbered and named, with the source of every fact
-// (the Gazetteer of Planetary Nomenclature, the JPL Small-Body Database, JPL's moon discovery page and Wikidata, read on 2026-11-11 and 2026-11-18); do not edit by hand.
+HEADER = """// Made by scripts/make-discovery-data.py: when, where, how and by whom each planet, dwarf planet, minor body and fully drawn moon was found, how it was first designated, numbered and named, with the source of every fact
+// (the Gazetteer of Planetary Nomenclature, the JPL Small-Body Database, JPL's moon discovery page and Wikidata, read on 2026-11-11 and 2026-11-18; the eight minor bodies' discovery records were read from the Small-Body Database on 2026-11-26); do not edit by hand.
 import type { Discovery } from "../discovery.ts";
 """
 

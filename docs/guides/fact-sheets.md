@@ -29,6 +29,19 @@ console.log(mars.description.en);
 | `nasaPage` | NASA's own page about the body |
 | `description` | a short description in our own words, `en` and `ja` |
 
+## Orbits of the dwarf planets and the minor bodies
+
+`minorFact(id)` (the ids are `MINOR_FACT_IDS`) is the ellipse a card can print for a dwarf planet besides Pluto, or for a minor body the package draws: Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna, Bennu, Eros, Vesta, Pallas, Chiron, Pholus, Halley and Arrokoth. `aAu` is the semi-major axis and `perihelionAu` the closest the ellipse comes to the Sun, both in astronomical units. `periodDays` is the sidereal period. These are the osculating elements the package already stores (`NOTICE.md`), not a new fit. Pluto stays on `factSheet`: its year is there, and its place is the fitted table, not one ellipse. Who found the body, and when, is `discoveryOf` in `/discovery`.
+
+```ts
+import { minorFact } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+import { discoveryOf } from "@johnmorrisdotca/wakusei-planets/discovery";
+
+const vesta = minorFact("vesta");
+console.log(vesta.name.en, vesta.aAu, vesta.periodDays);
+console.log(discoveryOf("vesta")!.date?.value, discoveryOf("vesta")!.by?.value.join(", "));
+```
+
 ## Where the facts come from
 
 Radius and rotation are the IAU working group's values and the distance is JPL's approximate elements (both are in the package already, see `NOTICE.md`); the year is from NASA's planetary fact sheets; the moon count is JPL's planetary satellite page; the links go to NASA's pages and copy nothing from them. The descriptions are written here: no text of NASA's, the IAU's, an encyclopedia's or of another package is copied.

@@ -2,9 +2,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MOON_CATALOGUE_FETCHED, moonCounts } from "../src/moon-catalogue.ts";
-import { BODIES } from "../src/facts.ts";
+import { DWARF_ELEMENTS } from "../src/data/dwarf.ts";
+import { MINOR_ELEMENTS } from "../src/data/minor.ts";
+import { BODIES, DWARF_IDS, MINOR_IDS } from "../src/facts.ts";
 import { journeyStop } from "../src/stops.ts";
-import { FACT_SHEET_IDS, MOONS_READ_ON, factSheet } from "../src/fact-sheets.ts";
+import { FACT_SHEET_IDS, MINOR_FACT_IDS, MOONS_READ_ON, factSheet, minorFact } from "../src/fact-sheets.ts";
 
 test("a sheet's size, distance and spin are the package's own numbers, in km and in miles", () => {
   for (const id of FACT_SHEET_IDS) {
@@ -56,4 +58,26 @@ test("a sheet is a copy: changing it does not change the next one; a body withou
   a.description.en = "changed";
   assert.notEqual(factSheet("mars").description.en, "changed");
   assert.throws(() => factSheet("io" as never), /"io"/);
+});
+
+test("each dwarf planet besides Pluto and each minor body carries the ellipse the package stores (MODULES-1353)", () => {
+  assert.deepEqual([...MINOR_FACT_IDS], [...DWARF_IDS, ...MINOR_IDS]);
+  for (const id of MINOR_FACT_IDS) {
+    const fact = minorFact(id);
+    const elements = (DWARF_IDS as readonly string[]).includes(id) ? DWARF_ELEMENTS[id as (typeof DWARF_IDS)[number]] : MINOR_ELEMENTS[id as (typeof MINOR_IDS)[number]];
+    assert.equal(fact.aAu, elements.a, id);
+    assert.equal(fact.periodDays, 360 / elements.n, id);
+    assert.equal(fact.perihelionAu, elements.a * (1 - elements.e), id);
+    assert.equal(fact.epochMs, elements.epoch, id);
+    assert.equal(fact.name.en.length > 0, true, id);
+    assert.equal(fact.name.ja.length > 0, true, id);
+  }
+  assert.ok(minorFact("halley").perihelionAu < 1);
+  assert.ok(minorFact("halley").periodDays > 70 * 365);
+  assert.equal(minorFact("ceres").kind, "dwarf-planet");
+  assert.equal((MINOR_FACT_IDS as readonly string[]).includes("pluto"), false);
+  const copy = minorFact("vesta");
+  copy.name.en = "changed";
+  assert.notEqual(minorFact("vesta").name.en, "changed");
+  assert.throws(() => minorFact("mars" as never), /"mars"/);
 });

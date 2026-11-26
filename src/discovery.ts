@@ -1,4 +1,4 @@
-// When, where, how and by whom each planet, dwarf planet and fully drawn moon was found, how it was first designated and numbered, and where its name comes from, as plain data: every fact says which source it was read from.
+// When, where, how and by whom each planet, dwarf planet, minor body and fully drawn moon was found, how it was first designated and numbered, and where its name comes from, as plain data: every fact says which source it was read from.
 // The records are in `data/discovery.ts`, made by `scripts/make-discovery-data.py` from the Gazetteer of Planetary Nomenclature (IAU, hosted by the USGS), the JPL Small-Body Database, JPL's moon discovery page and Wikidata.
 // Pure: no DOM, no clock reads, no three.js.
 import { RECORDS, SOURCES } from "./data/discovery.ts";
@@ -62,7 +62,7 @@ export interface DiscoveryFact<T> {
  */
 export interface Discovery {
   id: string;
-  kind: "planet" | "dwarf-planet" | "moon";
+  kind: "planet" | "dwarf-planet" | "moon" | "asteroid" | "centaur" | "comet";
   /** True for what has been known since before recorded history: Mercury to Saturn, the Earth and the Moon. */
   ancient: boolean;
   date: DiscoveryFact<string> | null;
@@ -78,7 +78,7 @@ export interface Discovery {
 }
 
 /**
- * The bodies that have a discovery record: the eight planets, nine dwarf planets and the Moon and 28 other moons the package draws in full, in the order of the Sun outward.
+ * The bodies that have a discovery record: the eight planets, nine dwarf planets, the eight minor bodies the package draws, and the Moon and 28 other moons the package draws in full, in the order of the Sun outward.
  *
  * @example
  * ```ts

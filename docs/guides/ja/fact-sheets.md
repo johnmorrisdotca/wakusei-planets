@@ -29,6 +29,19 @@ console.log(mars.description.ja);
 | `nasaPage` | その天体についての NASA の公式ページ |
 | `description` | 私たち自身の言葉による短い説明。`en` と `ja` |
 
+## 準惑星と小天体の軌道
+
+`minorFact(id)` (id は `MINOR_FACT_IDS`) は、冥王星以外の準惑星と、このパッケージが描く小天体について、カードに出せる楕円です。ケレス、オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナ、ベンヌ、エロス、ベスタ、パラス、ケイロン、フォルス、ハレー彗星、アロコスです。`aAu` は軌道長半径、`perihelionAu` は楕円が太陽にいちばん近づく距離で、どちらも天文単位です。`periodDays` は恒星周期 (日) です。これらは、パッケージがすでに持っている接触軌道要素で (`NOTICE.md`)、新しく合わせたものではありません。冥王星は `factSheet` のままです。1年の長さはそこにあり、位置は合わせた表から出すので、一つの楕円ではありません。いつ、だれが見つけたかは `/discovery` の `discoveryOf` です。
+
+```ts
+import { minorFact } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+import { discoveryOf } from "@johnmorrisdotca/wakusei-planets/discovery";
+
+const vesta = minorFact("vesta");
+console.log(vesta.name.en, vesta.aAu, vesta.periodDays);
+console.log(discoveryOf("vesta")!.date?.value, discoveryOf("vesta")!.by?.value.join(", "));
+```
+
 ## 事実の出どころ
 
 半径と自転は IAU の作業部会の値、距離は JPL の近似軌道要素です (どちらもすでにパッケージに入っています。`NOTICE.md` を参照)。1年の長さは NASA の惑星ファクトシート、衛星の数は JPL の惑星衛星のページの値です。リンクは NASA のページへ移動するだけで、中身は写していません。説明はここで書いたもので、NASA、IAU、百科事典、ほかのパッケージの文章は写していません。

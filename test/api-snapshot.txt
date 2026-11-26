@@ -719,8 +719,12 @@ const FACT_SHEET_IDS: readonly ["sun", "mercury", "venus", "earth", "mars", "jup
 export interface FactSheet { id: FactSheetId; name: { en: string; ja: string; }; kind: "star" | "planet" | "dwarf-planet"; radius: Length; distanceFromSun: Length & { au: number; }; yearDays: number | null; rotationHours: number; retrograde: boolean; knownMoons: number; moonsReadOn: string; nasaPage: string; description: { en: string; ja: string; }; }
 export type FactSheetId = (typeof FACT_SHEET_IDS)[number];
 export interface Length { km: number; miles: number; }
+const MINOR_FACT_IDS: readonly ["ceres", "orcus", "haumea", "quaoar", "makemake", "gonggong", "eris", "sedna", "bennu", "eros", "vesta", "pallas", "chiron", "pholus", "halley", "arrokoth"]
 const MOONS_READ_ON: "2026-11-18"
+export interface MinorFact { id: MinorFactId; name: { en: string; ja: string; }; kind: "dwarf-planet" | "asteroid" | "centaur" | "comet"; aAu: number; perihelionAu: number; periodDays: number; epochMs: number; }
+export type MinorFactId = (typeof MINOR_FACT_IDS)[number];
 function factSheet(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto") => FactSheet
+function minorFact(id: "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna" | "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | "arrokoth") => MinorFact
 ## ./body-physics
 export interface BodyPhysics { id: PhysicsId; mass: PhysicsReading | null; gm: PhysicsReading | null; surfaceGravity: PhysicsReading | null; airDensity: PhysicsReading | null; pressure: PhysicsReading | null; temperature: (Omit<PhysicsReading, "value"> & { value: number | null; }) | null; }
 const PHYSICS_IDS: readonly ["sun", "mercury", "venus", "earth", "moon", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"]
@@ -733,7 +737,7 @@ const DISCOVERIES: readonly Discovery[]
 const DISCOVERY_IDS: readonly string[]
 const DISCOVERY_METHODS: readonly ["ancient", "visual", "calculation", "photographic", "electronic", "adaptive-optics", "space-telescope", "spacecraft"]
 const DISCOVERY_SOURCES: Readonly<Record<string, readonly [name: string, address: string, read: string]>>
-export interface Discovery { id: string; kind: "planet" | "dwarf-planet" | "moon"; ancient: boolean; date: DiscoveryFact<string> | null; place: DiscoveryFact<string> | null; by: DiscoveryFact<readonly string[]> | null; method: DiscoveryFact<DiscoveryMethod> | null; designation: DiscoveryFact<string> | null; number: DiscoveryFact<string> | null; announced: DiscoveryFact<string> | null; namedBy: DiscoveryFact<string> | null; nameOrigin: DiscoveryFact<string> | null; notes: readonly string[]; }
+export interface Discovery { id: string; kind: "planet" | "dwarf-planet" | "moon" | "asteroid" | "centaur" | "comet"; ancient: boolean; date: DiscoveryFact<string> | null; place: DiscoveryFact<string> | null; by: DiscoveryFact<readonly string[]> | null; method: DiscoveryFact<DiscoveryMethod> | null; designation: DiscoveryFact<string> | null; number: DiscoveryFact<string> | null; announced: DiscoveryFact<string> | null; namedBy: DiscoveryFact<string> | null; nameOrigin: DiscoveryFact<string> | null; notes: readonly string[]; }
 export interface DiscoveryFact<T> { value: T; source: string; }
 export type DiscoveryMethod = (typeof DISCOVERY_METHODS)[number];
 function discoveryOf(id: string) => Discovery | undefined

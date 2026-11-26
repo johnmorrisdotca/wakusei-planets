@@ -3,7 +3,9 @@
 // year from NASA's planetary fact sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/, read 2026-11-17), the moon counts from JPL's planetary satellite page (read 2026-11-11, the same read as `/moon-catalogue`),
 // the page links to NASA's own page for each body (each fetched 2026-11-17). The descriptions are written here in our own words; no text of NASA's, the IAU's or an encyclopedia's is copied.
 // Pure: no DOM, no clock reads, no three.js.
-import { BODIES, type PlanetId } from "./facts.ts";
+import { DWARF_ELEMENTS } from "./data/dwarf.ts";
+import { MINOR_ELEMENTS } from "./data/minor.ts";
+import { BODIES, DWARF_IDS, MINOR_IDS, type PlanetId } from "./facts.ts";
 import { journeyStop } from "./stops.ts";
 
 const KM_PER_MILE = 1.609344;
@@ -198,5 +200,86 @@ export function factSheet(id: FactSheetId): FactSheet {
     moonsReadOn: MOONS_READ_ON,
     nasaPage: NASA[id],
     description: { ...DESCRIPTION[id] },
+  };
+}
+
+/**
+ * The dwarf planets besides Pluto, and the minor bodies the package draws, nearest the Sun first within each group.
+ *
+ * @example
+ * ```ts
+ * import { MINOR_FACT_IDS } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * console.log(MINOR_FACT_IDS.includes("ceres"), MINOR_FACT_IDS.includes("halley"));
+ * ```
+ */
+export const MINOR_FACT_IDS = [...DWARF_IDS, ...MINOR_IDS] as const;
+
+/**
+ * The name of a dwarf planet besides Pluto, or of a minor body, that has an orbit fact.
+ *
+ * @example
+ * ```ts
+ * import { MINOR_FACT_IDS, type MinorFactId } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const id: MinorFactId = MINOR_FACT_IDS[0];
+ * console.log(id);
+ * ```
+ */
+export type MinorFactId = (typeof MINOR_FACT_IDS)[number];
+
+/**
+ * The orbit a card can print for a dwarf planet besides Pluto, or for a minor body: the osculating ellipse the package already stores, not a new fit.
+ *
+ * `aAu` is the semi-major axis and `perihelionAu` the closest the ellipse comes to the Sun, both in astronomical units. `periodDays` is the sidereal period, 360 degrees divided by the mean motion in degrees a day.
+ * `epochMs` is the epoch of those elements, in milliseconds since 1970. Pluto is not here: its fact sheet carries the year, and its place is the fitted table, not one ellipse. Discovery is `discoveryOf` in `/discovery`.
+ *
+ * @example
+ * ```ts
+ * import { minorFact, type MinorFact } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const vesta: MinorFact = minorFact("vesta");
+ * console.log(vesta.aAu, vesta.periodDays);
+ * ```
+ */
+export interface MinorFact {
+  id: MinorFactId;
+  name: { en: string; ja: string };
+  kind: "dwarf-planet" | "asteroid" | "centaur" | "comet";
+  aAu: number;
+  perihelionAu: number;
+  periodDays: number;
+  epochMs: number;
+}
+
+/**
+ * The orbit fact for a dwarf planet besides Pluto, or for a minor body the package draws.
+ *
+ * @param id - One of {@link MINOR_FACT_IDS} (`ceres`, `vesta`, `halley`).
+ * @returns The fact (a new object each call).
+ * @throws {RangeError} For an id that has none, naming it. Pluto's sheet is `factSheet("pluto")`.
+ *
+ * @example
+ * ```ts
+ * import { minorFact } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const halley = minorFact("halley");
+ * console.log(halley.perihelionAu < 1, halley.kind);
+ * ```
+ */
+export function minorFact(id: MinorFactId): MinorFact {
+  if (!(MINOR_FACT_IDS as readonly string[]).includes(id)) throw new RangeError(`There is no orbit fact for "${String(id)}"; it has one for ${MINOR_FACT_IDS.join(", ")}.`);
+  const elements = (DWARF_IDS as readonly string[]).includes(id) ? DWARF_ELEMENTS[id as (typeof DWARF_IDS)[number]] : MINOR_ELEMENTS[id as (typeof MINOR_IDS)[number]];
+  const facts = BODIES[id];
+  const kind = facts.kind;
+  if (kind !== "dwarf-planet" && kind !== "asteroid" && kind !== "centaur" && kind !== "comet") throw new RangeError(`"${id}" is not a dwarf planet or a minor body.`);
+  return {
+    id,
+    name: { en: facts.name.en, ja: facts.name.ja },
+    kind,
+    aAu: elements.a,
+    perihelionAu: elements.a * (1 - elements.e),
+    periodDays: 360 / elements.n,
+    epochMs: elements.epoch,
   };
 }

@@ -2,7 +2,7 @@
 title: Discovery facts
 section: how-to
 order: 16
-description: When, where, how and by whom each planet, dwarf planet and fully drawn moon was found, how it was first designated, and where its name comes from, each fact with its source.
+description: When, where, how and by whom each planet, dwarf planet, minor body and fully drawn moon was found, how it was first designated, and where its name comes from, each fact with its source.
 ---
 
 `/discovery` is the story of how each body was found, as data you can print, search or put in a card: the day, the place, who, how, the first provisional designation, the number, and where the name comes from. Every fact says which source it was read from, so a page can show it, and a reader can check it.
@@ -18,7 +18,7 @@ const where = neptune.date!.source;
 console.log("read from", DISCOVERY_SOURCES[where]![0]);
 ```
 
-`discoveryOf(id)` gives the record of one of the 46 bodies in `DISCOVERY_IDS`: the eight planets, nine dwarf planets, the Moon and the 28 moons the package draws in full. `DISCOVERIES` is the whole list in order. The fields, each of them `null` where no source read gives it:
+`discoveryOf(id)` gives the record of one body in `DISCOVERY_IDS`: the eight planets, nine dwarf planets, the eight minor bodies the package draws (Bennu, Eros, Vesta, Pallas, Chiron, Pholus, Halley and Arrokoth), the Moon and the other moons the package draws in full. `DISCOVERIES` is the whole list in order. The fields, each of them `null` where no source read gives it:
 
 | Field | Meaning |
 |---|---|
@@ -39,7 +39,7 @@ console.log("read from", DISCOVERY_SOURCES[where]![0]);
 | Key | Source | Read |
 |---|---|---|
 | `usgs` | the IAU Working Group for Planetary System Nomenclature's Gazetteer of Planetary Nomenclature, hosted by the USGS (a US government work): the day, the place, the discoverers and the account of each name | 2026-11-18 |
-| `jpl-sbdb` | the JPL Small-Body Database's discovery record, which holds what the Minor Planet Center published: the first designation, the day, the place and the discoverers of a numbered minor planet | 2026-11-18 |
+| `jpl-sbdb` | the JPL Small-Body Database's discovery record, which holds what the Minor Planet Center published: the first designation, the day, the place and the discoverers of a numbered minor planet. The eight minor bodies the package draws were read from the same API on 2026-11-26; each of those records says so in `notes` | 2026-11-18 |
 | `jpl-ssd-moons` | JPL's Planetary Satellite Discovery Circumstances: a moon's designation and number and the circular that announced it (the read of `/moon-catalogue`) | 2026-11-11 |
 | `wikidata` | Wikidata (CC0), only where the others give nothing: the four people credited with Neptune, the day Vanth was found, the origin of a few names | 2026-11-18 |
 | `derived` | worked out here, not published: the `method` | 2026-11-18 |

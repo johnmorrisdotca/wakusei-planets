@@ -8,7 +8,7 @@ import { DISCOVERIES, DISCOVERY_IDS, DISCOVERY_METHODS, DISCOVERY_SOURCES, disco
 const FIELDS = ["date", "place", "by", "method", "designation", "number", "announced", "namedBy", "nameOrigin"] as const;
 
 test("every planet, dwarf planet and moon the package draws in full has a record, and nothing else does", () => {
-  const drawn = BODY_IDS.filter((id) => ["planet", "dwarf-planet", "moon"].includes(BODIES[id].kind));
+  const drawn = BODY_IDS.filter((id) => ["planet", "dwarf-planet", "moon", "asteroid", "centaur", "comet"].includes(BODIES[id].kind));
   assert.deepEqual([...DISCOVERY_IDS].sort(), [...drawn].sort());
   assert.equal(new Set(DISCOVERY_IDS).size, DISCOVERY_IDS.length, "no id twice");
   for (const d of DISCOVERIES) assert.equal(d.kind, BODIES[d.id as keyof typeof BODIES].kind, d.id);
@@ -75,4 +75,18 @@ test("the records say where sources differ and what they leave out", () => {
   assert.equal(find("proteus").date?.value, "1989-06", "a month where the source gives only that");
   assert.equal(find("ceres").designation?.value, "A801 AA");
   assert.equal(find("eris").designation?.value, "2003 UB313");
+  assert.equal(find("vesta").date?.value, "1807-03-29");
+  assert.equal(find("pallas").date?.value, "1802-03-28");
+  assert.equal(find("chiron").by?.value[0], "Kowal, C.");
+  assert.equal(find("pholus").by?.value[0], "Spacewatch");
+  assert.equal(find("pholus").place?.value, "Kitt Peak");
+  assert.equal(find("halley").date?.value, "1758-12-25");
+  assert.equal(find("halley").place, null);
+  assert.ok(find("halley").notes.join(" ").includes("earlier returns"));
+  assert.equal(find("bennu").date?.value, "1999-09-11");
+  assert.equal(find("eros").designation?.value, "A898 PA");
+  assert.equal(find("arrokoth").method?.value, "space-telescope");
+  assert.ok(find("arrokoth").notes.join(" ").includes("Buie"));
+  assert.equal(find("bennu").nameOrigin, null);
+  assert.equal(find("arrokoth").nameOrigin, null);
 });
