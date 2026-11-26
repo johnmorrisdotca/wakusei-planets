@@ -50,6 +50,24 @@ import "@johnmorrisdotca/wakusei-planets/earth";
 
 Without chikyu-earth the line Earth is that plain outline, and nothing else changes: the realistic and painted looks never need it. If the element has still not come two seconds after the first line Earth is drawn, the page's console gets one `console.info` line, once, saying why: `wakusei-planets: the Earth's line look is drawn as a plain outline because chikyu-earth's element is not on the page. Import "@johnmorrisdotca/chikyu-earth/element" for the globe with the countries.` It is an information line, not a warning, because leaving out an optional peer is a choice. `pnpm test:usage` builds `/earth` with chikyu-earth missing, draws the outline and checks that line.
 
+### chikyu-earth's realistic Earth in the shaded looks (opt in)
+
+The shaded Earth above is a picture, lit like the other bodies. chikyu-earth's `<chikyu-earth-realistic>` draws more: the day and night sides by the real Sun, city lights, clouds, the air and the Sun's glint on the sea. A page that wants it for the Earth in the `realistic` and `painted` looks says so with `earth-from="chikyu"`, and imports chikyu-earth's realistic element and where its pictures are:
+
+```html no-run
+<script type="module">
+  import "@johnmorrisdotca/chikyu-earth/realistic/element";
+  import "@johnmorrisdotca/wakusei-planets/earth";
+</script>
+<wakusei-body body="earth" look="realistic" earth-from="chikyu" earth-texture-base="/chikyu-earth-textures/"></wakusei-body>
+```
+
+- **It is opt in, and the body is then chikyu-earth's.** This package never imports chikyu-earth, so the attribute does nothing until the page has imported the element. A body drawn by chikyu-earth is its element in this one's place, so what this package adds to a body does not apply to it: tilt, pitch and phase, moons and rings, places and names on the globe, the shared view controls and the finer tiles. It follows `meridian` (the longitude in the middle), `time` (the Earth at that date, held; with no `time` it keeps the real Sun's time and moves with it) and the body's size. Leave the attribute out and the Earth is this package's, as before.
+- **`earth-texture-base`** is the folder of chikyu-earth's own pictures (`day`, `night`, `clouds` and `water`, in `dist/textures/` of the package), given to the element as its `texture-base`. Without it the element looks beside its own script, which a bundler may have moved.
+- **Two WebGL contexts, not one.** Each package asks kazoku-ui's shared renderer for its own context, so a page that shows a shaded body of this package beside chikyu-earth's Earth has two (measured by `e2e/earth-from-chikyu.demo.ts`); this package makes none for the Earth chikyu-earth draws. chikyu-earth can be given a renderer to share (`setSharedRenderer`, before its first element connects), but this package does not yet export or take one: see [the two packages](two-packages.md).
+- **Without the element.** When the page asked for it and the element is not there, the Earth is drawn by this package as usual, and the page's console gets one `console.info` line, once, two seconds after: `wakusei-planets: earth-from="chikyu" asks for chikyu-earth's realistic Earth, but its element is not on the page, so the Earth is drawn by this package. Import "@johnmorrisdotca/chikyu-earth/realistic/element" for its day and night, clouds and city lights.` An element that arrives later takes the body over.
+- The demo opens it with `earth-from=chikyu` in the address (`?body=earth&look=realistic&earth-from=chikyu`).
+
 ## The dwarf planets
 
 Besides Pluto: `ceres`, `orcus`, `haumea`, `quaoar`, `makemake`, `gonggong`, `eris` and `sedna`, in every look. They are put where they are from JPL's osculating elements of June 2026 (good for a few years either side), their sizes are from the papers NOTICE.md lists, Haumea (1161 x 852 x 513 km, turning every 3.9 hours) and Quaoar are drawn as the long shapes they are, and only Ceres has a painted map (Dawn's), which its realistic look draws too, so Ceres looks like Ceres, with the bright spots of Occator crater, in every look. The surface of the others is drawn from their published colours, so it is an estimate, and where a pole has not been measured it is taken along the orbit's pole: NOTICE.md says which. The moons Weywot, Xiangliu and S/2015 (136472) 1 are not drawn because no orbit with a published phase exists.

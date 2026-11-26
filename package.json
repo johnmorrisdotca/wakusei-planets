@@ -981,6 +981,8 @@
     "@eslint/js": "^9.0.0",
     "@johnmorrisdotca/chikyu-earth": "^0.36.0",
     "@johnmorrisdotca/hata": "^1.9.0",
+    "@johnmorrisdotca/hoshi-stars": "^0.61.2",
+    "@johnmorrisdotca/kuni": "^1.17.2",
     "@playwright/test": "1.64.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^24.0.0",

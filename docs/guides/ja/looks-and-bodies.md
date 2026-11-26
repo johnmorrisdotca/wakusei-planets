@@ -50,6 +50,24 @@ import "@johnmorrisdotca/wakusei-planets/earth";
 
 chikyu-earth がなくても、線画の地球はこの輪郭のままで、ほかは何も変わりません。realistic と painted は chikyu-earth を必要としません。線画の地球を最初に描いてから2秒たっても要素が来ていないときは、ページのコンソールに `console.info` の1行を、1回だけ出して理由を伝えます。`wakusei-planets: the Earth's line look is drawn as a plain outline because chikyu-earth's element is not on the page. Import "@johnmorrisdotca/chikyu-earth/element" for the globe with the countries.`（地球の線画は、chikyu-earth の要素がページにないため、輪郭だけで描いています。国の入った地球儀にするには `@johnmorrisdotca/chikyu-earth/element` を import してください。）という英語の文です。警告ではなく情報として出すのは、省略できる peer を入れないのは選択だからです。`pnpm test:usage` は、chikyu-earth がない状態で `/earth` をビルドして輪郭を描き、この1行を確かめます。
 
+### 陰影つきの見た目で chikyu-earth の realistic な地球を使う (オプトイン)
+
+上の陰影つきの地球は、ほかの天体と同じように光を当てた写真です。chikyu-earth の `<chikyu-earth-realistic>` は、もっと多くを描きます。本物の太陽に合わせた昼と夜、都市の灯り、雲、大気、海に映る太陽のきらめきです。`realistic` と `painted` の地球にこれを使いたいページは、`earth-from="chikyu"` と書き、chikyu-earth の realistic の要素を import して、その画像の場所も指定します。
+
+```html no-run
+<script type="module">
+  import "@johnmorrisdotca/chikyu-earth/realistic/element";
+  import "@johnmorrisdotca/wakusei-planets/earth";
+</script>
+<wakusei-body body="earth" look="realistic" earth-from="chikyu" earth-texture-base="/chikyu-earth-textures/"></wakusei-body>
+```
+
+- **オプトインです。使うと、その天体は chikyu-earth のものになります。** このパッケージは chikyu-earth を自分では import しないので、ページがその要素を import するまで、この属性は何もしません。chikyu-earth が描く天体は、このパッケージの要素の代わりに chikyu-earth の要素が入るので、このパッケージが天体に加えるものは効きません。効かないのは、`tilt`、`pitch`、`phase`、衛星と輪、地球儀の上の場所と名前、共通の表示の操作、細かい地図のタイルです。効くのは `meridian` (真ん中の経度)、`time` (その日時の地球で止まります。`time` がなければ本物の太陽に合わせた時刻のままで、時間とともに進みます)、天体の大きさです。属性を書かなければ、これまでどおりこのパッケージの地球です。
+- **`earth-texture-base`** は、chikyu-earth 自身の画像 (`day`、`night`、`clouds`、`water`。パッケージの `dist/textures/` にあります) のフォルダーです。要素の `texture-base` として渡します。指定しないと、要素は自分のスクリプトのそばを探しますが、バンドラーがスクリプトの場所を変えていることがあります。
+- **WebGL コンテキストは1つではなく2つです。** それぞれのパッケージが kazoku-ui の共有レンダラーに自分のコンテキストを求めるので、このパッケージの陰影つきの天体と chikyu-earth の地球を並べたページには、コンテキストが2つあります (`e2e/earth-from-chikyu.demo.ts` で計測しています)。chikyu-earth が描く地球のために、このパッケージはコンテキストを作りません。chikyu-earth には共有できるレンダラーを渡せますが (`setSharedRenderer`。最初の要素がつながる前に呼びます)、このパッケージはまだレンダラーを公開も受け取りもしません。詳しくは [2つのパッケージ](two-packages.md) を見てください。
+- **要素がないとき。** ページが頼んだのに要素がないときは、いつもどおりこのパッケージが地球を描き、2秒後にコンソールへ `console.info` の1行を1度だけ出します。`wakusei-planets: earth-from="chikyu" asks for chikyu-earth's realistic Earth, but its element is not on the page, so the Earth is drawn by this package. Import "@johnmorrisdotca/chikyu-earth/realistic/element" for its day and night, clouds and city lights.` という英語の文です。あとから要素が来たときは、その要素が天体を引き継ぎます。
+- デモでは、アドレスに `earth-from=chikyu` を付けると、この地球が出ます (`?body=earth&look=realistic&earth-from=chikyu`)。
+
 ## 準惑星
 
 冥王星のほかに、`ceres`、`orcus`、`haumea`、`quaoar`、`makemake`、`gonggong`、`eris`、`sedna` が、どの見た目でも描けます。位置は2026年6月のJPLの接触軌道要素から求めます (前後数年は合います)。大きさは NOTICE.md に挙げた論文の値です。ハウメア (1161 x 852 x 513 km、3.9時間で1回転) とクワオアーは、本当の細長い形で描きます。地図つきの見た目は、ケレス (探査機ドーンの地図) だけで、ケレスは realistic（デモの「リアル」）でもこの地図を使うので、どの見た目でも、オッカトル・クレーターの明るい点がある本物のケレスの姿になります。ほかの天体の表面は、発表されている色から描いた推定です。自転軸が測られていない天体は、軌道の極の向きにしています (どれかは NOTICE.md にあります)。ウェイウォト、シャンリュウ、S/2015 (136472) 1 は、日時つきの軌道が発表されていないので描きません。

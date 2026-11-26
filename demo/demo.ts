@@ -14,6 +14,8 @@ import "../src/element.ts";
 import "../src/bodies/all.ts";
 import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
+// `earth-from=chikyu` in the address asks for chikyu-earth's realistic Earth in the shaded looks: its element is loaded only then (its own chunk), the way a page that wants it imports it
+if (new URLSearchParams(location.search).get("earth-from") === "chikyu") void import("@johnmorrisdotca/chikyu-earth/realistic/element");
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { creditLine } from "../src/door/index.ts";
 import { turnRate } from "../src/live.ts";
@@ -478,6 +480,8 @@ if (main && controls && pickerBox) {
     setAttr(main!, "body", state.body);
     setAttr(main!, "look", state.look);
     setAttr(main!, "lang", lang());
+    setAttr(main!, "earth-from", address.get("earth-from") === "chikyu" ? "chikyu" : null);
+    setAttr(main!, "earth-texture-base", address.get("earth-from") === "chikyu" ? "earth-textures/" : null);
     setAttr(main!, "texture-base", "textures/");
     setAttr(main!, "tiles", "tiles/");
     setAttr(main!, "time", real ? state.time : null);

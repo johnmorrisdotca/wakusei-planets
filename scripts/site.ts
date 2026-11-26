@@ -28,6 +28,13 @@ await rm(at("site/kazoku-parts.src.js"));
 await cp(at("demo/demo.css"), at("site/demo.css"));
 await cp(at("demo/family.css"), at("site/family.css"));
 if (existsSync(at("textures"))) await cp(at("textures"), at("site/textures"), { recursive: true });
+// chikyu-earth's pictures of the Earth (NASA's, public domain: its day, night, clouds and water), for the page that asks for its realistic Earth in the shaded looks (`earth-from=chikyu` in the address, `earth-texture-base` on the body)
+for (const name of ["day", "night", "clouds", "water"]) {
+  for (const size of [1024, 2048]) {
+    const from = at(`node_modules/@johnmorrisdotca/chikyu-earth/dist/textures/${name}-${size}.webp`);
+    if (existsSync(from)) await cp(from, at(`site/earth-textures/${name}-${size}.webp`));
+  }
+}
 // The rover models (NASA's two public domain; the Apollo one is CC BY-SA 4.0, a named exception, with its credit line on the surface page; NOTICE.md): each its own file, fetched only by a page that asks for it (`drive-model`), in no package.
 if (existsSync(at("models"))) await cp(at("models"), at("site/models"), { recursive: true });
 // Michroma, for a name written on a body: kazoku-ui's copy and its licence, beside the scripts, where the label fetches it from (`new URL("./fonts/…", import.meta.url)` in the bundled chunk).

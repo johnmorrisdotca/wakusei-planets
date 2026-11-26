@@ -29,10 +29,16 @@ importers:
         version: 9.39.5
       '@johnmorrisdotca/chikyu-earth':
         specifier: ^0.36.0
-        version: 0.36.0(astronomy-engine@2.1.19)(three@0.186.1)
+        version: 0.36.0(@johnmorrisdotca/hoshi-stars@0.61.2(three@0.186.1))(@johnmorrisdotca/kuni@1.17.2)(astronomy-engine@2.1.19)(three@0.186.1)
       '@johnmorrisdotca/hata':
         specifier: ^1.9.0
         version: 1.9.0
+      '@johnmorrisdotca/hoshi-stars':
+        specifier: ^0.61.2
+        version: 0.61.2(three@0.186.1)
+      '@johnmorrisdotca/kuni':
+        specifier: ^1.17.2
+        version: 1.17.2
       '@playwright/test':
         specifier: 1.64.0
         version: 1.64.0
@@ -419,6 +425,15 @@ packages:
     resolution: {integrity: sha512-TlKv9O3elQzgpbCngQZuadYe7sbsuhoJB8F0L5Ip5IiHfTaWlEzZtcRKzKYPpU4VWHPe0i3jgYfeEudY9o+azw==}
     engines: {node: '>=24'}
 
+  '@johnmorrisdotca/hoshi-stars@0.61.2':
+    resolution: {integrity: sha512-EICgGheOFkrf9b99tKsiYsyy9fMeHclZ1pQjU6j76hB/cuiZZ0GjV1LcAcyV6MF3Sdcol8S09QotVPZTeU5qEw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      three: '>=0.160.0'
+    peerDependenciesMeta:
+      three:
+        optional: true
+
   '@johnmorrisdotca/kazoku-ui@0.41.1':
     resolution: {integrity: sha512-PFqO5/G8A6npgOgwrBVe+Ii8yBMUg7bHabwhJRNl0CYYLKBPE7mUglLPm+C8c3S6YWxqepZz5Rf4zhWfI5pJzg==}
     engines: {node: '>=22'}
@@ -438,6 +453,10 @@ packages:
     peerDependenciesMeta:
       three:
         optional: true
+
+  '@johnmorrisdotca/kuni@1.17.2':
+    resolution: {integrity: sha512-2Nw1X0ClF7XueotK2qUKJjFQ97NYQItfsHCgQvZvOwWzyuaB9uczIaZO5XHhx9c3lQI2h/rB3DiAQnO/oC0IOg==}
+    engines: {node: '>=24'}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -1863,18 +1882,26 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@johnmorrisdotca/chikyu-earth@0.36.0(astronomy-engine@2.1.19)(three@0.186.1)':
+  '@johnmorrisdotca/chikyu-earth@0.36.0(@johnmorrisdotca/hoshi-stars@0.61.2(three@0.186.1))(@johnmorrisdotca/kuni@1.17.2)(astronomy-engine@2.1.19)(three@0.186.1)':
     dependencies:
       '@johnmorrisdotca/chizu': 1.6.1
       '@johnmorrisdotca/kazoku-ui': 0.41.1(three@0.186.1)
       d3-geo: 3.1.1
     optionalDependencies:
+      '@johnmorrisdotca/hoshi-stars': 0.61.2(three@0.186.1)
+      '@johnmorrisdotca/kuni': 1.17.2
       astronomy-engine: 2.1.19
       three: 0.186.1
 
   '@johnmorrisdotca/chizu@1.6.1': {}
 
   '@johnmorrisdotca/hata@1.9.0': {}
+
+  '@johnmorrisdotca/hoshi-stars@0.61.2(three@0.186.1)':
+    dependencies:
+      '@johnmorrisdotca/kazoku-ui': 0.54.5(three@0.186.1)
+    optionalDependencies:
+      three: 0.186.1
 
   '@johnmorrisdotca/kazoku-ui@0.41.1(three@0.186.1)':
     optionalDependencies:
@@ -1883,6 +1910,8 @@ snapshots:
   '@johnmorrisdotca/kazoku-ui@0.54.5(three@0.186.1)':
     optionalDependencies:
       three: 0.186.1
+
+  '@johnmorrisdotca/kuni@1.17.2': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

@@ -4,10 +4,12 @@ import type { StarLook } from "../star.ts";
 import type { BodyLook } from "./look.ts";
 
 const KEY = Symbol.for("johnmorrisdotca.wakusei-planets.looks");
-/** A body whose line look another package's element draws (the Earth, by chikyu-earth) instead of this one: the element asks it for what to show. The shaded and painted looks are always this package's. */
+/** A body whose line look another package's element draws (the Earth, by chikyu-earth) instead of this one: the element asks it for what to show. The shaded and painted looks are this package's, unless a page asks for the other package's Earth in them (`earth-from="chikyu"`). */
 export interface Delegate {
   /** The line look: an element for the body, centred on a longitude and latitude (`"lon,lat"`), or null when the other package is not on the page and this one draws its own. */
   line(options: { center: string; size: number }): Promise<HTMLElement | null>;
+  /** The shaded looks, only for a page that asked for it: an element for the body (the realistic Earth: day and night by the real Sun, lights, clouds and air), centred as above, at `time` (an ISO date) or live when that is null, with its pictures in the folder `textureBase` (its own `texture-base`) when that is not null; or null when the other package is not on the page and this one draws its own. */
+  shaded?(options: { center: string; size: number; time: string | null; textureBase: string | null }): Promise<HTMLElement | null>;
 }
 
 const store = ((globalThis as Record<symbol, unknown>)[KEY] ??= { looks: new Map<BodyId, BodyLook>(), stars: new Map<string, StarLook>(), waiting: new Set<() => void>(), delegates: new Map<BodyId, Delegate>() }) as {

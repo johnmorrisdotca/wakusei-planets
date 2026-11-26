@@ -116,6 +116,7 @@ const TEMPLATE = `<style>
  * `controls="none"` turns them off, and `live="off"` (a still, a thumbnail) starts without them (`controls` with no value brings them back). `still-size` is the long side of the still in CSS pixels; the still is made at that times the device pixel ratio (up to 3), where the page's default is 160 device pixels, so a still shown large is sharp. `zoom-min` and `zoom-max` set the range (0.1 to 50 for the line drawing; for the shaded looks 0.1 up to where the body's detail runs out, 8 at least and 1000 at most: see the close zoom guide); a `<kazoku-view-controls for="...">` takes over and reads it.
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
+ * `earth-from="chikyu"` (the Earth in the shaded looks only, and only when the page has imported chikyu-earth's realistic element) draws the Earth with chikyu-earth's `<chikyu-earth-realistic>`: day and night by the real Sun, lights, clouds and air, at `meridian` and, when there is a `time`, held at that date; `earth-texture-base` is the folder of its pictures. It is the other package's picture, so tilt, moons, places and the shared view controls do not apply to it.
  * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera, turning with the body, and lists the interior layers. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
  * `places` marks the places on the body in the shaded looks, by layer (`landing`, `crash`, `planned`, `feature`; the lists come from `setPlacesLoader`), with `wakusei-place` on a click and `goToPlace` to turn one to the middle: see the guide "Places on the Moon, Mars and 31 more bodies".
  * `body-label` writes the body's name on its globe in the shaded looks (`painted`, `etched`, `outline` or `burned`; absent for none), with `body-label-strength`, `-repeat`, `-latitude`, `-facing`, `-font`, `-fallback-font` and `-tone` (`auto`, `light` or `dark` letters: auto takes dark ones for a `painted` look on a light body) beside it, and the `bodyLabel` property takes the same as an object: see the guide "A name on the body".
@@ -135,7 +136,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", "earth-from", "earth-texture-base", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -146,6 +147,13 @@ export class WakuseiBody extends HTMLElement {
   #viewSig = "";
   #delegateEl: HTMLElement | undefined;
   #delegateKind = "";
+  /** Whether the body is another package's drawing at the moment: the Earth's line look (chikyu-earth's globe), or its realistic Earth in a shaded look when the page asked for it (`earth-from="chikyu"`). */
+  #delegating(): "line" | "shaded" | undefined {
+    const delegate = delegates.get(this.body);
+    if (delegate === undefined) return undefined;
+    if (this.look === "line") return "line";
+    return this.body === "earth" && this.getAttribute("earth-from") === "chikyu" && delegate.shaded !== undefined ? "shaded" : undefined;
+  }
   #stilled = false;
   #wantLive = false;
   #visible = typeof IntersectionObserver !== "function";
@@ -590,7 +598,7 @@ export class WakuseiBody extends HTMLElement {
     if (name === "data") this.#door.book.ownOnly(this.getAttribute("data") === "own");
     if (name === "live") this.#applyHover();
     if (name === "still-size" && this.#stillSide()) this.#still();
-    if (name === "live" || name === "look" || name === "body") this.#carry();
+    if (name === "live" || name === "look" || name === "body" || name === "earth-from") this.#carry();
     if (name === "body" || name === "look" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
       if (name === "body" || name === "look") this.#tileLevels = undefined;
       this.#refreshLimits();
@@ -602,7 +610,7 @@ export class WakuseiBody extends HTMLElement {
 
   /** Put the picture on the page's one WebGL context and draw it, moving if it is asked to. Resolves true when it is live. A `line` look has nothing to take and resolves false. */
   async goLive(): Promise<boolean> {
-    if (this.look === "line") return false;
+    if (this.look === "line" || this.#delegateEl !== undefined) return false;
     this.#wantLive = true;
     await this.#ensureView();
     const ok = (await this.#view?.focus()) === true;
@@ -639,8 +647,8 @@ export class WakuseiBody extends HTMLElement {
 
   /** Take the shared hands, unless the picture is a still (`live="off"`) or another package's drawing (the Earth's line look); the look decides the zoom range, so a new look takes new hands. */
   #carry(): void {
-    const on = this.getAttribute("live") !== "off" && !(this.look === "line" && delegates.has(this.body));
-    const key = `${on}|${this.look === "line"}`;
+    const on = this.getAttribute("live") !== "off" && this.#delegating() === undefined;
+    const key = `${on}|${this.look === "line"}|${this.#delegating() ?? ""}`;
     if (this.#handsKey === key) {
       this.#refreshLimits();
       return;
@@ -994,8 +1002,9 @@ export class WakuseiBody extends HTMLElement {
       this.#set("line");
       return;
     }
-    const delegate = this.#estimate() === null && this.look === "line" ? delegates.get(this.body) : undefined;
-    if (delegate !== undefined && (await this.#delegated(delegate))) return;
+    const kind = this.#estimate() === null ? this.#delegating() : undefined;
+    const delegate = kind === undefined ? undefined : delegates.get(this.body);
+    if (delegate !== undefined && kind !== undefined && (await this.#delegated(delegate, kind))) return;
     const undelegated = this.#delegateEl !== undefined;
     if (this.#delegateEl !== undefined) {
       this.#delegateEl.remove();
@@ -1188,16 +1197,18 @@ export class WakuseiBody extends HTMLElement {
   }
 
   /** A body whose line look another package draws (the Earth's globe with its countries). It is drawn at the body's size in a scale picture, never larger than the picture. */
-  async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>): Promise<boolean> {
+  async #delegated(delegate: NonNullable<ReturnType<typeof delegates.get>>, kind: "line" | "shaded"): Promise<boolean> {
     if (this.#view !== undefined) {
       this.#disposeView();
     }
     const center = this.hasAttribute("meridian") ? `${num(this.getAttribute("meridian"), 10)},20` : "10,20";
     const size = Math.round(this.clientWidth || 320);
     const fill = this.#fill();
-    const key = `line|${center}|${fill}`;
+    const time = kind === "shaded" && this.hasAttribute("time") && this.getAttribute("time") !== "now" ? this.getAttribute("time") : null;
+    const textureBase = kind === "shaded" ? this.getAttribute("earth-texture-base") : null;
+    const key = `${kind}|${center}|${fill}|${time ?? ""}|${textureBase ?? ""}`;
     if (this.#delegateEl !== undefined && this.#delegateKind === key) return true;
-    const el = await delegate.line({ center, size });
+    const el = kind === "shaded" ? await delegate.shaded!({ center, size, time, textureBase }) : await delegate.line({ center, size });
     if (el === null) return false;
     this.#delegateEl?.remove();
     this.#stage.innerHTML = "";
@@ -1205,7 +1216,8 @@ export class WakuseiBody extends HTMLElement {
     this.#stage.append(el);
     this.#delegateEl = el;
     this.#delegateKind = key;
-    this.#set("line");
+    // the line Earth is a drawing; the realistic Earth is the other package's picture, which it draws and moves itself: here it is a picture shown, with no view of this package's own
+    this.#set(kind === "line" ? "line" : "still");
     return true;
   }
 
