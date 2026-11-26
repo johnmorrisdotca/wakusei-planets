@@ -17,7 +17,7 @@ test.beforeEach(async ({ page, browserName }) => {
 
 /**
  * How much of the picture's middle is dark and how much is bright: a lit Earth has both, a day and a night side.
- * This date faces mostly night. On a phone the day limb was 9 per cent of the middle, so a day side is a real bright share, not a tenth of the picture.
+ * The page keeps a chosen date only in real-sky mode (`sky=real`) under `t`. Noon UTC on the June solstice then faces the Sun from the view's middle (longitude 10). Without `sky=real` the page shows the present, which faces mostly night.
  */
 const sides = async (page: Page): Promise<{ dark: number; bright: number }> => {
   const png = (await main(page).screenshot()).toString("base64");
@@ -51,7 +51,7 @@ test("with chikyu-earth's realistic element on the page and earth-from=chikyu, t
   test.setTimeout(150_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(`${URL}?body=earth&look=realistic&earth-from=chikyu&time=2026-06-21T12:00:00Z`);
+  await page.goto(`${URL}?body=earth&look=realistic&earth-from=chikyu&sky=real&t=2026-06-21T12:00:00Z`);
   await expect(globe(page)).toBeAttached({ timeout: 60_000 });
   await expect(page.locator("#main chikyu-earth")).toHaveCount(0);
   await expect(main(page)).toHaveAttribute("data-state", "still");

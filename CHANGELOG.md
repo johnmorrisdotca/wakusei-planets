@@ -4,6 +4,8 @@
 
 ## [0.78.1] - 2026-11-26
 
+- **The shaded Earth test looks at a date with a day side in view.** The page shows a chosen date only in real-sky mode, under `t`. The test was passing `time=`, which the page ignores, so it showed the present and the day limb stayed under 5 per cent. It now opens real-sky mode at noon UTC on the June solstice, when the Sun is in front of the view.
+
 - **A cutaway is true spheres, open toward the camera.** Each layer is a round shell at the radius the model gives, not the body's flattened shape, and the opening stays toward the camera so the rims stay concentric. The Sun stays whole discs. On a narrow picture the legend sits below the body, and a surface name that would fall in the opening is left off. A depth is three significant figures with thousands grouped, and the legend's heading says the numbers are from the surface down. Jupiter's helium rain reads as helium falling as droplets (ヘリウムが液滴になって沈む). Saturn's core is 氷と岩石が混ざっている. The Sun's core is 水素がヘリウムに変わる.
 
 - **A place's size may be the ring's radius in pixels.** `EarthPlace.size` takes `small` or a number from 1.5 to 14, the same range a mark's ring uses, so a page that draws a mark as large as its own figure still type-checks. A number outside that range is brought inside it.
