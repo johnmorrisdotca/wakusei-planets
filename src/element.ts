@@ -97,6 +97,7 @@ const TEMPLATE = `<style>
 #cutaway { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 6px 8px; list-style: none; background: color-mix(in srgb, Canvas 88%, transparent); color: CanvasText; font: 12px/1.35 system-ui, sans-serif; }
 #cutaway[hidden] { display: none; }
 #cutaway li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 8px; align-items: baseline; }
+#cutaway li[data-empty] { display: block; }
 #cutaway [data-swatch] { width: 12px; height: 12px; }
 #stage svg { display: block; width: 100%; height: 100%; }
 #estimate { position: absolute; z-index: 2; left: 2px; right: 2px; bottom: 1px; margin: 0; max-height: 2.4em; overflow: hidden; text-align: center; font: 10px/1.2 system-ui, sans-serif; color: inherit; pointer-events: none; }

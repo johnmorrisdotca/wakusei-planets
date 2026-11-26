@@ -45,7 +45,8 @@ test("the Earth's legend matches its layers, Japanese follows the language, and 
   ]);
   await body.evaluate((el) => el.removeAttribute("cutaway"));
   await expect.poll(() => legend(page)).toBeNull();
-  await page.goto("/wakusei-planets/?look=line&body=jupiter");
+  // Jupiter has a sourced interior. Venus is one of the bodies the pages give no radius for.
+  await page.goto("/wakusei-planets/?look=line&body=venus");
   await page.locator("#main").evaluate((el) => el.setAttribute("cutaway", ""));
   await expect.poll(() => legend(page)).toEqual([{ layer: "", empty: true, name: "", depth: "" }]);
 });
