@@ -185,6 +185,21 @@ export function marsAir(sunAltitude: number): SkyAir {
 }
 
 /**
+ * How a cast shadow is painted. With no air the shadow is black. On Mars the dusty sky fills it, so in daylight it is a dark brown-grey, and at night it is black again.
+ *
+ * @param air - The sky's light, or `null` where there is none (the Moon).
+ * @returns The colour the shade is drawn toward, and how much of the ground it covers.
+ */
+export function shadowFill(air: SkyAir | null): { rgb: Rgb; cover: number } {
+  if (air === null) return { rgb: [0, 0, 0], cover: 0.85 };
+  const share = 0.4;
+  return {
+    rgb: [air.zenith[0] * share, air.zenith[1] * share, air.zenith[2] * share],
+    cover: 0.85 - 0.25 * air.daylight,
+  };
+}
+
+/**
  * What a standing view's sky holds: the Moon's (the Sun and the Earth, no air) or Mars's (the Sun, the Earth as a point, and the air).
  *
  * @example

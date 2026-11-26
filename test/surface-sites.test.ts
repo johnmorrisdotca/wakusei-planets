@@ -8,7 +8,8 @@ import { DustField } from "../src/surface/dust.ts";
 import { flatManifest, flatTerrain } from "../src/surface/flat.ts";
 import { groundAt } from "../src/surface/height.ts";
 import { MARS_GRAVITY, MOON_GRAVITY, SURFACE_SITES, siteById } from "../src/surface/site.ts";
-import { marsAir, standSky } from "../src/surface/sky.ts";
+import { SHADOW_FRAGMENT } from "../src/surface/glsl.ts";
+import { marsAir, shadowFill, standSky } from "../src/surface/sky.ts";
 
 test("every landing site that leads to the standing view is there at the same point, place, body and moment", () => {
   const stands = LANDING_SITES.filter((site) => site.stand !== undefined);
@@ -99,4 +100,13 @@ test("the Moon's sky has no air and keeps the Earth as a disc; Mars's air is but
   const night = marsAir(-30);
   assert.deepEqual([night.daylight, ...night.zenith, ...night.horizon], [0, 0, 0, 0, 0, 0, 0]);
   assert.ok(night.ambient < noon.ambient);
+  const moonShadow = shadowFill(null);
+  assert.deepEqual(moonShadow, { rgb: [0, 0, 0], cover: 0.85 });
+  const dayShadow = shadowFill(noon);
+  assert.ok(dayShadow.rgb[0] > dayShadow.rgb[1] && dayShadow.rgb[1] > dayShadow.rgb[2] && dayShadow.rgb[2] > 0, "a daytime Mars shadow is brown");
+  assert.ok(dayShadow.rgb[0] < 0.2, "the shade stays dark");
+  assert.ok(dayShadow.cover < moonShadow.cover, "daylight fills the shadow");
+  assert.deepEqual(shadowFill(night), moonShadow, "a Mars night has no sky light, so the shadow is black");
+  assert.match(SHADOW_FRAGMENT, /uInk/);
+  assert.doesNotMatch(SHADOW_FRAGMENT, /vec4\(0\.0, 0\.0, 0\.0/);
 });

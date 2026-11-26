@@ -358,7 +358,7 @@ void main() {
 }
 `;
 
-/** A rock's shadow on the ground: a quad laid along the way the Sun's light goes, a soft dark shape, drawn over the ground. */
+/** A rock's shadow on the ground: a quad laid along the way the Sun's light goes. Black where there is no air; on Mars the dusty sky's dark brown. */
 export const SHADOW_VERTEX = /* glsl */ `
 precision highp float;
 uniform mat4 uVP;
@@ -371,14 +371,16 @@ void main() {
 
 export const SHADOW_FRAGMENT = /* glsl */ `
 precision highp float;
+uniform vec3 uInk;
+uniform float uCover;
 varying vec2 vUv;
 void main() {
   float u = vUv.x;
   float across = smoothstep(1.0, 0.5, abs(vUv.y));
   float along = smoothstep(0.0, 0.06, u) * (1.0 - smoothstep(0.78, 1.0, u));
-  float a = across * along * 0.85;
+  float a = across * along * uCover;
   if (a < 0.01) discard;
-  gl_FragColor = vec4(0.0, 0.0, 0.0, a);
+  gl_FragColor = vec4(uInk, a);
 }
 `;
 

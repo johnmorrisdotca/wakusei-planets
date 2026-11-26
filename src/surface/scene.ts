@@ -11,7 +11,7 @@ import { modelShadowParts } from "./rig.ts";
 import { placePart, ascentParts, landerParts } from "./shapes.ts";
 import { KEEP_OUT, objectParts, partShadows, type Part, type SiteObject } from "./objects.ts";
 import type { HeightLevel, TerrainManifest } from "./height.ts";
-import type { MoonSky, SkyAir } from "./sky.ts";
+import { shadowFill, type MoonSky, type SkyAir } from "./sky.ts";
 import { rockMesh } from "./rocks.ts";
 import { cameraAxes, viewProjection, type Look } from "./view.ts";
 
@@ -288,7 +288,9 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
       scene.add(skyMesh, sun.mesh, earth.mesh, ground);
       // the rocks and their shadows, made again when the eyes have walked a while or the Sun has moved
       const rockMaterial = new T.ShaderMaterial({ vertexShader: ROCK_VERTEX, fragmentShader: ROCK_FRAGMENT, uniforms });
-      const shadowMaterial = new T.ShaderMaterial({ vertexShader: SHADOW_VERTEX, fragmentShader: SHADOW_FRAGMENT, uniforms: { uVP: uniforms.uVP }, transparent: true, depthWrite: false });
+      const shadowInk = { value: new T.Vector3(0, 0, 0) };
+      const shadowCover = { value: 0.85 };
+      const shadowMaterial = new T.ShaderMaterial({ vertexShader: SHADOW_VERTEX, fragmentShader: SHADOW_FRAGMENT, uniforms: { uVP: uniforms.uVP, uInk: shadowInk, uCover: shadowCover }, transparent: true, depthWrite: false });
       shadowMaterial.polygonOffset = true;
       shadowMaterial.polygonOffsetFactor = -2;
       shadowMaterial.polygonOffsetUnits = -2;
@@ -741,6 +743,9 @@ export function createSurfaceItem(options: SurfaceItemOptions): Item3D<ThreePart
         const air = sky.air ?? null;
         uniforms.uExposure.value = state.exposure ?? (air === null ? 4.5 : 3.2);
         uniforms.uEarthshine.value = air === null ? 0.05 : air.ambient;
+        const ink = shadowFill(air);
+        shadowInk.value.set(ink.rgb[0], ink.rgb[1], ink.rgb[2]);
+        shadowCover.value = ink.cover;
         uniforms.uTint.value.set(air?.tint[0] ?? 1, air?.tint[1] ?? 1, air?.tint[2] ?? 1);
         uniforms.uAlbedo.value = state.albedo ?? 0.14;
         uniforms.uShadows.value = state.shadows === false ? 0 : 1;
