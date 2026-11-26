@@ -33,6 +33,7 @@ import { travelArrival, type TravelKind } from "./travel.ts";
 import { controlsFor, readFrame, type FrameKind } from "./hold.ts";
 import type { MoonSource, MoonSpot } from "./all-moons.ts";
 import { nearestLine, type ScreenLine } from "./orbit-lines.ts";
+import { capPaths, hitRadius, nearestPath, pathSpanMs, readPathHit, styleOf, styleTable, type PathHit, type PathRequest, type PathScreen, type PathStyle } from "./path-styles.ts";
 import { catalogueMoonIdOf, catalogueMoonKey, hostsShowingAll, MOON_HOSTS, moonSourceOf, readMoonColors, readMoonsChoice, readMoonsOf, type MoonsChoice } from "./moon-settings.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
@@ -45,6 +46,7 @@ import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpac
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
+export { BUILT_IN_PATH_STYLES, MAX_PATHS, completeStyle, nearestPath, pathSpanMs, styleTable, type PathHit, type PathRequest, type PathScreen, type PathStyle } from "./path-styles.ts";
 
 export { setPlacesLoader } from "../scene/place-layer.ts";
 export { EARTH_PLACE_LOOKS, EARTH_PLACE_MARKS, type EarthPlace, type EarthPlaceClickDetail, type EarthPlaceKind, type EarthPlaceLook, type EarthPlaceMark, type EarthPlaceNamePriority, type EarthPlaceSize } from "../scene/earth-places.ts";
@@ -273,7 +275,7 @@ const readBody = (value: string): BodyId | undefined => {
  */
 const CARRIED_LIMITS = { zoomMin: 1e-6, zoomMax: 3.6, tiltMax: 90 } as const;
 
-const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none;transition:opacity .35s ease}.sp-oort[data-covered]{opacity:0}@media (prefers-reduced-motion:reduce){.sp-oort{transition:none}}.sp-line{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none}.sp-line[hidden],.sp-linename[hidden]{display:none}.sp-line path{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.sp-linename{position:absolute;left:0;top:0;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}</style><div id="stage"></div><svg class="sp-line" part="line" aria-hidden="true" hidden><path/></svg><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p><p class="sp-linename" part="line-name" hidden></p>`;
+const STYLE = `<style>:host{display:block;aspect-ratio:1/1;position:relative;overflow:hidden}:host([immersive]){aspect-ratio:auto;width:100%;height:100%;touch-action:none!important;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}#stage,#labels{position:absolute;inset:0}#labels{pointer-events:none;overflow:hidden}.sp-label{position:absolute;left:0;top:0;margin:0;padding:0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}.sp-label:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label::before{content:"";display:inline-block;width:5px;height:5px;margin:0 5px 1px -2px;border-radius:50%;background:#fff}.sp-label[data-flip]{display:flex;flex-direction:row-reverse}.sp-label[data-flip]::before{margin:0 -2px 1px 5px}.sp-label[hidden]{display:none}.sp-arrow{position:absolute;left:0;top:0;margin:0;padding:0 4px 0 0;border:0;background:none;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.8;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:auto;cursor:pointer}.sp-arrow::before{content:"";display:inline-block;width:0;height:0;margin:0 5px 1px 0;border:5px solid transparent;border-left:7px solid #fff;transform:rotate(var(--turn,0deg));transform-origin:30% 50%}.sp-arrow[hidden]{display:none}.sp-arrow:focus-visible{outline:2px solid #6cd0ff;outline-offset:2px;border-radius:4px}.sp-label[data-far]:not([data-carried]),.sp-ring[data-far]:not([data-carried]){opacity:var(--wakusei-far-opacity,.5)}.sp-arrow[data-far]{opacity:calc(.8*var(--wakusei-far-opacity,.5))}.sp-label,.sp-ring,.sp-arrow{transition:opacity .35s ease}.sp-label[data-carried],.sp-ring[data-carried]{opacity:0;pointer-events:none}@media (prefers-reduced-motion:reduce){.sp-label,.sp-ring,.sp-arrow{transition:none}}.sp-ring{position:absolute;left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;box-sizing:border-box;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;box-shadow:0 0 3px #000;pointer-events:none;will-change:transform}.sp-ring[hidden]{display:none}.sp-scale{position:absolute;left:10px;top:8px;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.9;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-region{position:absolute;left:10px;bottom:8px;margin:0;padding:0;font:600 15px/20px system-ui,-apple-system,sans-serif;color:#fff;opacity:.95;text-shadow:0 0 4px #000,0 0 4px #000;pointer-events:none;transition:opacity .35s}.sp-region[hidden]{display:block;opacity:0}@media (prefers-reduced-motion:reduce){.sp-region{transition:none}}.sp-note{position:absolute;left:10px;right:10px;top:28px;max-width:44em;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;opacity:.92;text-shadow:0 0 3px #000,0 0 3px #000;pointer-events:none}.sp-note[hidden],.sp-oort[hidden]{display:none}.sp-oort{position:absolute;left:0;top:0;margin:0;padding:0;font:italic 12px/16px system-ui,-apple-system,sans-serif;color:#aeb8e6;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none;transition:opacity .35s ease}.sp-oort[data-covered]{opacity:0}@media (prefers-reduced-motion:reduce){.sp-oort{transition:none}}.sp-line,.sp-paths{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;pointer-events:none}.sp-line[hidden],.sp-paths[hidden],.sp-linename[hidden]{display:none}.sp-line path{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.sp-paths path{fill:none;stroke-linejoin:round;stroke-linecap:round}.sp-linename{position:absolute;left:0;top:0;margin:0;padding:0;font:12px/16px system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;text-shadow:0 0 3px #000,0 0 3px #000;will-change:transform;pointer-events:none}</style><div id="stage"></div><svg class="sp-line" part="line" aria-hidden="true" hidden><path/></svg><svg class="sp-paths" part="paths" aria-hidden="true" hidden></svg><div id="labels"></div><p class="sp-scale" part="scale" role="status"></p><p class="sp-region" id="region" part="region" role="status" hidden></p><p class="sp-note" part="note" role="status" hidden></p><p class="sp-oort" part="oort" hidden></p><p class="sp-linename" part="line-name" hidden></p>`;
 
 /** A dot of a moon of the catalogue answers a press within this many CSS pixels: smaller than a body's, so a crowd of dots can be told apart, and more than the dot is wide. */
 const MOON_DOT_HIT_PX = 9;
@@ -316,7 +318,7 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "path-hit", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #moons: MoonsChoice = "major";
@@ -344,7 +346,16 @@ export class WakuseiSpace extends HTMLElement {
   #noteLine: HTMLElement | undefined;
   #oortLabel: HTMLElement | undefined;
   #lineLayer: SVGElement | undefined;
+  #pathLayer: SVGElement | undefined;
   #lineName: HTMLElement | undefined;
+  #pathKept: PathRequest[] = [];
+  #pathDropped = 0;
+  #pathDrawn = 0;
+  #pathUnresolved = 0;
+  #pathHit = 8;
+  #pathScreens: PathScreen[] = [];
+  #pathOverrides: Record<string, Partial<PathStyle> | null> = {};
+  #pathTable: Record<string, PathStyle> = styleTable({});
   /** The belt the camera is flying through, and the point it flies on (the ride's target, to know the ride is still this one). */
   #flight: { belt: BeltId; point: ReturnType<typeof beltFlight> } | null = null;
   #spacing = new Map<BeltId, { known: number; drawn: number }>();
@@ -441,6 +452,7 @@ export class WakuseiSpace extends HTMLElement {
     this.#noteLine = root.querySelector<HTMLElement>(".sp-note")!;
     this.#oortLabel = root.querySelector<HTMLElement>(".sp-oort")!;
     this.#lineLayer = root.querySelector<SVGElement>(".sp-line")!;
+    this.#pathLayer = root.querySelector<SVGElement>(".sp-paths")!;
     this.#lineName = root.querySelector<HTMLElement>(".sp-linename")!;
     this.#nameScale();
     this.#showRegion();
@@ -465,6 +477,7 @@ export class WakuseiSpace extends HTMLElement {
       advance: () => this.#advance(),
       onLabels: (places) => {
         this.#placeLabels(places);
+        this.#paintPaths();
         this.#placeOort();
         this.#door.announce();
         this.#announceFrame();
@@ -575,6 +588,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "orbiter-lines") this.orbiterLines = orbiterLines(value);
     else if (name === "orbiter-track") this.orbiterTrack = value !== null && value !== "off";
     else if (name === "orbits") this.orbits = value !== "off";
+    else if (name === "path-hit") this.#pathHit = readPathHit(value);
     else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
     else if (name === "moons") this.moons = readMoonsChoice(value);
     else if (name === "moons-of") this.moonsOf = readMoonsOf(value);
@@ -1589,6 +1603,91 @@ export class WakuseiSpace extends HTMLElement {
   set orbits(value: boolean) {
     this.#model.orbits = value;
     this.#gate?.request();
+  }
+
+  /**
+   * Draw up to 16 orbits in looks of the page's own. Each entry is `{ id, style }`: `id` is a body's name (`mars`, `io`, `土星`), and `style` is the name of a look or part of a look. A planet's, dwarf planet's or minor body's line is its trip round the Sun; a moon's is its trip round its planet. A longer list keeps its last 16. The same body twice keeps the later look. A name that is not a body with an orbit is skipped. `[]` takes them all away. The lines are one overlay of the view, drawn when the view draws and not while it rests, and they add no graphics-card draw. With `orbits` off they are still drawn.
+   *
+   * @param list - The paths to draw, in order.
+   *
+   * @example
+   * ```ts
+   * const space = document.querySelector("wakusei-space")!;
+   * space.setPaths([{ id: "mars", style: "favourite" }, { id: "io", style: "selected" }]);
+   * ```
+   */
+  setPaths(list: readonly PathRequest[]): void {
+    const byKey = new Map<string, PathRequest>();
+    for (const item of list) {
+      if (item === null || typeof item !== "object" || typeof item.id !== "string" || item.id.trim() === "") continue;
+      const id = item.id.trim();
+      const key = findBody(id) ?? id;
+      byKey.delete(key);
+      const next: PathRequest = { id };
+      if (item.style !== undefined) next.style = item.style;
+      byKey.set(key, next);
+    }
+    const capped = capPaths([...byKey.values()]);
+    this.#pathKept = capped.kept;
+    this.#pathDropped = capped.dropped;
+    this.#gate?.request();
+  }
+
+  /** The styled paths the view is keeping, the last 16 of what the page asked for. */
+  get paths(): PathRequest[] {
+    return this.#pathKept.map((item) => ({ ...item }));
+  }
+  set paths(list: readonly PathRequest[]) {
+    this.setPaths(list);
+  }
+
+  /**
+   * Change the named looks. A page's entry is laid over the built-in look of that name (`selected`, `hovered`, `favourite`, `path`); a new name starts from `path`. `null` takes a page's entry away. `replace` drops every page entry first. `pathStyles` is the whole table in use.
+   *
+   * @param table - The looks to change.
+   * @param replace - When true, the page's earlier entries are dropped first.
+   *
+   * @example
+   * ```ts
+   * const space = document.querySelector("wakusei-space")!;
+   * space.setPathStyles({ favourite: { color: "#ffd166", width: 3, dash: [3, 4] } });
+   * ```
+   */
+  setPathStyles(table: Readonly<Record<string, Partial<PathStyle> | null>>, replace = false): void {
+    if (replace) this.#pathOverrides = {};
+    for (const [name, given] of Object.entries(table)) {
+      if (name === "") continue;
+      if (given === null) delete this.#pathOverrides[name];
+      else this.#pathOverrides[name] = given;
+    }
+    this.#pathTable = styleTable(this.#pathOverrides);
+    this.#gate?.request();
+  }
+
+  /** The looks in use: the built-in ones with the page's own laid over them. */
+  get pathStyles(): Record<string, PathStyle> {
+    const out: Record<string, PathStyle> = {};
+    for (const [name, style] of Object.entries(this.#pathTable)) out[name] = { ...style, dash: style.dash === null ? null : [...style.dash] };
+    return out;
+  }
+
+  /**
+   * The styled path under a point of the element, in CSS pixels, or `null`. `radiusPx` is how far from the line still counts; left out, it is `path-hit`.
+   *
+   * @param x - CSS pixels from the element's left.
+   * @param y - CSS pixels from the element's top.
+   * @param radiusPx - How far from a line still counts.
+   * @returns The path, or `null`.
+   *
+   * @example
+   * ```ts
+   * const space = document.querySelector("wakusei-space")!;
+   * console.log(space.pathAt(120, 80)?.id);
+   * ```
+   */
+  pathAt(x: number, y: number, radiusPx?: number): PathHit | null {
+    const radius = radiusPx !== undefined && Number.isFinite(radiusPx) ? Math.max(0, radiusPx) : this.#pathHit;
+    return nearestPath(this.#pathScreens, { x, y }, radius);
   }
 
   /**
@@ -2620,6 +2719,8 @@ export class WakuseiSpace extends HTMLElement {
     allMoons: { on: boolean; loaded: boolean; dots: number; orbits: number; hosts: readonly string[] };
     /** The orbit lines drawn at the last draw (`earth`, the planets, `moon`), and how far each body is from its own line as a fraction of the line's radius: a body on its line reads under 0.01. `hidden` are the lines left out because a body is close, and `faded` the lines whose part near the close body is let go (only a line that passes through it). */
     orbits: { drawn: string[]; miss: Record<string, number>; hidden: string[]; faded: string[]; fade: { crowd: number; outness: number; opacity: number } };
+    /** The styled orbits the page asked for (`setPaths`): how many the last draw drew, how many a list past 16 dropped, and how many of the kept names were not a body with an orbit. */
+    paths: { drawn: number; dropped: number; unresolved: number };
     /** The arrowheads on the orbit lines at the last draw, by line (`earth`, the planets, `moon`): where each is and the way it points, the way the body goes (not the way the clock runs). */
     arrows: Record<string, { position: [number, number, number]; direction: [number, number, number] }[]>;
     /** How long an arrowhead on an orbit line is on the screen at the last draw, in CSS pixels (0 when none is drawn): the same at every zoom. */
@@ -2664,6 +2765,7 @@ export class WakuseiSpace extends HTMLElement {
       travelling: this.#model.travelling === null ? null : { ...this.#model.travelling },
       region: this.#model.region === null ? null : { id: this.#model.region, name: this.#regionName(this.#model.region), reach: this.#model.regionDrawn?.reach ?? 0, distance: this.#model.regionDrawn?.distance ?? 0 },
       orbits: { drawn: [...this.#model.rings.drawn], miss: { ...this.#model.rings.miss }, hidden: [...this.#model.rings.hidden], faded: [...this.#model.rings.faded], fade: { ...this.#model.rings.fade } },
+      paths: { drawn: this.#pathDrawn, dropped: this.#pathDropped, unresolved: this.#pathUnresolved },
       arrows: Object.fromEntries(Object.entries(this.#model.arrows).map(([id, list]) => [id, list.map((a) => ({ position: [...a.position] as [number, number, number], direction: [...a.direction] as [number, number, number] }))])),
       arrowPx: this.#model.arrowPx,
       help: this.#model.helpDrawn ? { body: this.#model.helpDrawn.body, axis: [...this.#model.helpDrawn.axis], pole: [...this.#model.helpDrawn.pole], retrograde: this.#model.helpDrawn.retrograde, arcTurn: [...this.#model.helpDrawn.arcTurn] } : null,
@@ -2930,9 +3032,11 @@ export class WakuseiSpace extends HTMLElement {
     const y = event.clientY - rect.top;
     // a body is under the pointer before a line is; with the names off nothing is lit
     const body = this.#bodyAt(x, y);
-    const line = body === null && this.#model.labels && this.#model.orbits ? this.#lineAt(x, y, false) : null;
+    const path = body === null ? this.#pathAt(x, y, event.pointerType === "touch" ? "touch" : "mouse") : null;
+    const line = body === null && path === null && this.#model.labels && this.#model.orbits ? this.#lineAt(x, y, false) : null;
     this.#hover(body ?? (line?.id as BodyId | undefined) ?? null, "pointer");
-    this.#lightLine(line, x, y);
+    this.#lightLine(body === null && path === null ? line : null, x, y);
+    this.#tellPath(path, "wakusei-path-hover", event.pointerType);
   };
   #leave = (event: PointerEvent): void => {
     if (event.pointerType !== "touch" && this.#hoverBy === "pointer") {
@@ -2993,6 +3097,82 @@ export class WakuseiSpace extends HTMLElement {
       drawing = true;
     }
     this.#lineLayer!.querySelector("path")!.setAttribute("d", d);
+  }
+
+  /** The styled orbits, as one overlay. Worked out when the view draws, and not while it rests. An empty list draws nothing. */
+  #paintPaths(): void {
+    const layer = this.#pathLayer;
+    if (layer === undefined) return;
+    const kept = this.#pathKept;
+    if (kept.length === 0) {
+      this.#pathScreens = [];
+      this.#pathDrawn = 0;
+      this.#pathUnresolved = 0;
+      layer.replaceChildren();
+      if (!layer.hasAttribute("hidden")) layer.setAttribute("hidden", "");
+      return;
+    }
+    const time = this.#model.time;
+    const screens: PathScreen[] = [];
+    const drawn: SVGPathElement[] = [];
+    let unresolved = 0;
+    for (const request of kept) {
+      const id = findBody(request.id);
+      const span = id === undefined ? null : pathSpanMs(id);
+      if (id === undefined || span === null) {
+        unresolved += 1;
+        continue;
+      }
+      const about = (hostOf(id) as BodyId | undefined) ?? "sun";
+      const points = this.pathOf(id, time, time + span, { steps: 48, about });
+      if (points.length === 0) {
+        unresolved += 1;
+        continue;
+      }
+      const look = styleOf(request, this.#pathTable);
+      const xy: number[] = [];
+      let d = "";
+      let pen = false;
+      for (const point of points) {
+        const x = point.behind ? Number.NaN : point.x;
+        const y = point.behind ? Number.NaN : point.y;
+        xy.push(x, y);
+        if (x !== x || y !== y) {
+          pen = false;
+          continue;
+        }
+        d += `${pen ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`;
+        pen = true;
+      }
+      if (d === "") {
+        unresolved += 1;
+        continue;
+      }
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      path.setAttribute("stroke", look.style.color);
+      path.setAttribute("stroke-width", String(look.style.width));
+      path.setAttribute("stroke-opacity", String(look.style.opacity));
+      path.setAttribute("stroke-dasharray", look.style.dash === null ? "none" : look.style.dash.join(" "));
+      drawn.push(path);
+      screens.push({ id, style: look.name, xy });
+    }
+    layer.replaceChildren(...drawn);
+    if (drawn.length === 0) layer.setAttribute("hidden", "");
+    else layer.removeAttribute("hidden");
+    this.#pathScreens = screens;
+    this.#pathDrawn = screens.length;
+    this.#pathUnresolved = unresolved;
+  }
+
+  /** The styled path under a point, within the reach of that pointer. A body under the pointer is asked first, by the caller. */
+  #pathAt(x: number, y: number, pointer: "mouse" | "touch" | "pen"): PathHit | null {
+    return nearestPath(this.#pathScreens, { x, y }, hitRadius(this.#pathHit, pointer));
+  }
+
+  #tellPath(hit: PathHit | null, type: "wakusei-path-hover" | "wakusei-path-click", pointer: string): void {
+    if (hit === null) return;
+    this.dispatchEvent(new CustomEvent(type, { detail: { id: hit.id, style: hit.style, x: hit.x, y: hit.y, distancePx: hit.distancePx, pointer }, bubbles: true, composed: true }));
   }
 
   /** After a draw: the lit line is where the draw put it, or gone (its body's line is no longer drawn). Only the lit line is worked out. */
@@ -3227,6 +3407,12 @@ export class WakuseiSpace extends HTMLElement {
     const best = this.#bodyAt(x, y, true);
     if (best) {
       this.#press(best);
+      return;
+    }
+    // a styled path is its own press, and it does not also press the body
+    const path = this.#pathAt(x, y, event.pointerType === "touch" ? "touch" : "mouse");
+    if (path !== null) {
+      this.#tellPath(path, "wakusei-path-click", event.pointerType);
       return;
     }
     // failing a body, an orbit line is a press on its body; Ctrl or Command goes there at once

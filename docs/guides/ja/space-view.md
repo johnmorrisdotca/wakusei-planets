@@ -170,6 +170,19 @@ try {
 
 軌道の線は、薄くなり、光り、押せます。`orbits` がオンのとき、どの線も (惑星、準惑星、小天体、月、カタログの衛星、周回機、ロードスターの線)、画面に出ている線が多いほど、また視点が遠いほど薄くなります。薄くなっても、その線の濃さの6分の1より下にはなりません (`stats.orbits.fade` に、数えた線の数、視点の遠さ (0から1)、使った濃さが出ます。矢じりも同じように薄くなります)。名前を出しているときに線にポインタを合わせると、その線が画面の上に濃さ100%で描かれ、ポインタのそばにその天体の名前が出ます。その天体について `wakusei-body-hover` も出ます。光らせた線は画面専用の層なので、再描画は起きず、止まっているときは何も動きません。ポインタの下の線を調べるのは、ポインタが動いたときだけです。線を押すと (天体とその名前の判定のあとで)、その天体を押したことになります。1回目は選ぶだけ (`wakusei-body-select`) でカメラは動かず、2回目でそこへ行き、Ctrl か Command を押しながらなら、動きをつけずにすぐ行きます。カタログの衛星の線はその衛星の線で、2回目はその惑星へ行きます。線に届く距離は、マウスで6ピクセル、指で8ピクセルです。
 
+## 見た目を指定した軌道
+
+`setPaths(list)` (プロパティ `paths`) は、ページが選んだ見た目で軌道を16本まで描きます。各項目は `{ id, style }` です。`id` は天体の名前 (`mars`、`io`、`土星`) です。惑星、準惑星、小天体の線は太陽を一周する道で、衛星の線は自分の惑星を一周する道です。`style` は見た目の名前か、見た目の一部 `{ color, width, opacity, dash }` です。16本を超えるリストは、うしろの16本を残します (超えた数は `stats.paths.dropped`)。同じ天体が二度あるときは、うしろの見た目です。軌道のない名前は省きます (`stats.paths.unresolved`)。`[]` ですべて消します。
+
+`setPathStyles(table)` (プロパティ `pathStyles` は、いま使っている見た目の表全体) は、名前で見た目を変えます。初めからある見た目は、色だけでなく太さと破線も違います。`selected` (白、2ピクセル、実線)、`hovered` (白、1.5ピクセル、長い破線)、`favourite` (琥珀色、1.75ピクセル、短い破線)、`path` (白、1.5ピクセル、実線。名前を書かないときの見た目) です。ページの項目は、同じ名前の初めからある見た目の上に重ねます。新しい名前は `path` から始まります。`null` は、ページの項目を消します。見た目は `{ color, width: 0.5から8 CSSピクセル, opacity: 0から1, dash: [破線, 間隔] (CSSピクセル) または実線なら null }` です。
+
+線は画面の上の一つの層で、画面を描くときに描き、止まっているあいだは描きません。グラフィックスカードの描画は増えません。`orbits` がオフでも、この線は描きます。`path-hit` (初期値は8ピクセル。0から40。`off` で判定なし。指は2倍で、少なくとも16ピクセル) を置くと、`wakusei-path-hover` と `wakusei-path-click` が、ポインターの下の線を伝えます。中身は `{ id, style, x, y, distancePx, pointer }` です。天体がポインタの下にあるときは、天体のほうが先です。この線を押しても、その天体を押したことにはなりません。`pathAt(x, y)` は、画面の任意の点について同じことを返します。`stats.paths.drawn` は、前回の描画で描いた本数です。
+
+```ts
+space.setPathStyles({ favourite: { width: 3 } });
+space.setPaths([{ id: "mars", style: "favourite" }, { id: "io", style: "selected" }]);
+```
+
 `help` (属性、または `space.help`。初期値はオフ) はヘルプモードで、見ている天体に、軸にそった線と、回る向きを示す曲がった矢印を描きます。軸の線と矢印は、天体の手前と奥を区別して描くので、天体を突き抜けては描きません。軸の線は、手前の極から天体の中に入ります。奥の極から出ている部分は、その端が天体の後ろに隠れていないときだけ見えます。矢印も、天体の後ろを回る部分は隠れます。`help-through` (属性、または `space.helpThrough`。初期値はオフ) をオンにすると、以前と同じく、線も矢印も、全体を天体の上に重ねて描きます。`help-place` (属性、または `space.helpPlace`。初期値は `pole`) は、曲がった矢印をどこに置くかを選びます。`pole` は、表面のすぐ外、北極の線のまわりに小さな矢印を描きます。`across` は、中心から少しずらした大きな矢印を、天体を横切るように描きます。以前の描き方です。矢印は、天体が本当に回る軸のまわりを、右ねじの向きにまわります。その軸は、`spinAxis(id, ms)` が本初子午線の動きから求めます。地球、火星、木星やほとんどの天体は軸が北極の向きで、金星と天王星は逆まわりなので、北極と反対向きです。横だおしの天王星は、軸が黄道にほぼそって見えます。いつも同じ面を惑星に向ける衛星は、軌道を1周するあいだに1回まわり、公転と同じ向きです。デモでは、ヘッダーのファミリー共通の「説明」スイッチと結んでいます。`stats.help` は、どの天体か、その軸、描いた矢印がまわる軸を返します。
 
 ## 小惑星帯とカイパーベルト
@@ -178,7 +191,7 @@ try {
 
 ## プロパティ、イベント、stats
 
-属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`help-place` (`pole` か `across`。初期値は `pole`)、`frame` (`stars`、`body`、`pair`)、`pair-with`、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`moons` (`major` か `all`。`all` で、惑星のほかの衛星すべてを軌道つきの押せる点で表示)、`moons-of` (惑星ごと。`jupiter=all`)、`moon-colors` (`group` か `direction`)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-sight` (絵の中と外の天体)、`wakusei-frame` (カメラの向きを保つ枠組みが変わった) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`frame`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
+属性は `center` (`"lon,lat"`)、`time`、`speed`、`scale` (`true` か `compressed`。初期値は `true`)、`help` (ヘルプモード。初期値はオフ)、`help-place` (`pole` か `across`。初期値は `pole`)、`frame` (`stars`、`body`、`pair`)、`pair-with`、`look` (`realistic` か `painted`)、`light`、`labels` と `orbits` (`off` で隠す)、`path-hit` (見た目を指定した軌道にポインターが届く距離。初期値は8ピクセル。`off` で判定なし)、`moons` (`major` か `all`。`all` で、惑星のほかの衛星すべてを軌道つきの押せる点で表示)、`moons-of` (惑星ごと。`jupiter=all`)、`moon-colors` (`group` か `direction`)、`belts` (描く帯。`off` でなし)、`lang`、`texture-base`、`texture-far-base`、`max-texture`、`tiles` (細かい地図のタイルの場所。`off` でなし)、`far-opacity` (遠い名前の濃さ。初期値は0.5) です。イベントは `wakusei-view` (表示が変わった: `yaw`、`tilt`、`zoom`)、`wakusei-ready`、`wakusei-unavailable`、`wakusei-state`、`wakusei-timechange` (日付が変わった: 時間が進む間は1秒に4回まで、止まったときに1回、`{ time, running }`)、`wakusei-time` (時計が1ステップ進むたび)、`wakusei-body-click`、`wakusei-body-focus`、`wakusei-body-hover` と `wakusei-body-hover-end` (ポインターを重ねた天体、指がふれている天体、またはフォーカスのある天体と、それがなくなったとき)、`wakusei-path-hover` と `wakusei-path-click` (ポインターの下の、見た目を指定した軌道と、その線を押したとき)、`wakusei-sight` (絵の中と外の天体)、`wakusei-frame` (カメラの向きを保つ枠組みが変わった) です。`belts`、`enterBelt`、`leaveBelt`、`flyingThrough` は上の節にあります。`stats` には `state`、`draws`、`frame`、`contexts`、`canvas`、`distance`、`time`、`lookups`、`camera`、`bodies`、`tiles` があります。
 
 ## 天体から天体への移動
 

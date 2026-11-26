@@ -408,6 +408,40 @@ test("the space view at rest: one WebGL context, one canvas, eleven bodies, and 
   expect(await sky(page).evaluate((el) => el.shadowRoot!.querySelectorAll("canvas").length)).toBe(1);
 });
 
+test("styled orbit paths add no graphics objects and nothing is drawn at rest (MODULES-1328)", async ({ page }) => {
+  await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z&look=painted`);
+  await liveSky(page);
+  await expect.poll(async () => (await skyStats(page)).bodies.painted, { timeout: 60_000 }).toBe(11);
+  await settle(page, 2500);
+  const before = await readCounts(page);
+  await sky(page).evaluate((el) => {
+    const space = el as unknown as {
+      setPathStyles(table: unknown): void;
+      setPaths(list: unknown[]): void;
+    };
+    space.setPathStyles({ favourite: { color: "#ffd166", width: 3, dash: [3, 4] } });
+    space.setPaths([
+      { id: "mars", style: "favourite" },
+      { id: "io", style: "selected" },
+      { id: "earth", style: "hovered" },
+    ]);
+  });
+  await expect.poll(async () => sky(page).evaluate((el) => (el as unknown as { stats: { paths: { drawn: number } } }).stats.paths.drawn), { timeout: 30_000 }).toBe(3);
+  const widths = await sky(page).evaluate((el) => [...el.shadowRoot!.querySelectorAll(".sp-paths path")].map((path) => path.getAttribute("stroke-width")));
+  expect(new Set(widths).size).toBe(3);
+  await settle(page, 2500);
+  const mid = await readCounts(page);
+  await settle(page, 3000);
+  const after = await readCounts(page);
+  expect(after.draws - mid.draws, "nothing is drawn at rest").toBe(0);
+  expect(after.contexts).toBe(1);
+  expect(gpuObjects(after)).toBe(gpuObjects(before));
+  await sky(page).evaluate((el) => (el as unknown as { setPaths(list: unknown[]): void }).setPaths([]));
+  await expect.poll(async () => sky(page).evaluate((el) => (el as unknown as { stats: { paths: { drawn: number } } }).stats.paths.drawn)).toBe(0);
+  const cleared = await readCounts(page);
+  expect(gpuObjects(cleared)).toBe(gpuObjects(before));
+});
+
 test("pointing at bodies across the space view at rest lights their systems and draws nothing", async ({ page }) => {
   await page.goto(`${SPACE_PAGE}?t=2026-11-02T14:00Z`);
   await liveSky(page);

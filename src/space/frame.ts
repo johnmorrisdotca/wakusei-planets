@@ -290,6 +290,12 @@ const PERIOD_DAYS: Record<SpacePlanet | SpaceDwarf | SpaceMinor | "earth", numbe
   ...(Object.fromEntries(SPACE_MINORS.map((id) => [id, 360 / MINOR_ELEMENTS[id].n])) as Record<SpaceMinor, number>),
 };
 
+/** How long one trip round the Sun takes, in milliseconds, for a planet, a dwarf planet, a minor body or the Earth. A moon and the Sun are not here. */
+export function orbitSpanMs(id: string): number | null {
+  if (!Object.hasOwn(PERIOD_DAYS, id)) return null;
+  return PERIOD_DAYS[id as keyof typeof PERIOD_DAYS] * DAY_MS;
+}
+
 /**
  * The path a planet or the Earth takes round the Sun, as `count + 1` points round one trip from where the planet is at `ms`, from the Sun, in astronomical units and the scene's axes.
  *
