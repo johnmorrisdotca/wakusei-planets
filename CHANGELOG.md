@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.78.2] - 2026-11-26
+
 - **Phoebe, Europa and Titan use the fuller maps** (MODULES-1821). Phoebe's white blocks along the south edge are gone. Europa's soft patches are the USGS Voyager and Galileo mosaic, now 2048 across. Titan's flat colour is the Cassini near-infrared mosaic. Titan's 1024 and 2048 stay out of the package, with the other far pictures. Where the ground was never photographed, or only softly, it is painted to continue the photographed ground.
 
 - **Miranda, Umbriel, Titania and Oberon have Voyager maps** (MODULES-1821). Each southern hemisphere is the USGS mosaic Voyager 2 made. The north, which was not photographed, is painted to continue that ground. The line drawing stays underneath.
