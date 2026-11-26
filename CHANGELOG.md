@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The arrival test's waits have 60 seconds, and the test runs with slow frames** (MODULES-1588). `e2e/arrival.demo.ts` used the 5 second default of a poll; at a host load of 45 the frame a poll waited for was seconds away, once in five runs. With every frame 6.5 s after it was asked for the test failed on that 5 s before the change, and passes after; it now also runs with every frame 1.5 s late. Tests only.
+
 - **The demo no longer zooms on a quick double tap on an iPhone** (MODULES-1827). kazoku-ui 0.54.5's page frame sets `touch-action: manipulation` on the document; the dependency is `^0.54.5`. `e2e/credits.demo.ts` reads it on the demo's pages. The package itself is unchanged.
 
 ## [0.77.2] - 2026-11-26

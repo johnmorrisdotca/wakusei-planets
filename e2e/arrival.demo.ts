@@ -10,10 +10,16 @@ test.beforeEach(({ page }, testInfo) => {
 const PAGE = "/wakusei-planets/space.html?t=2026-11-11T12:00:00Z&speed=0";
 
 test("a move to Mercury keeps a companion, and a move to Jupiter keeps a moon", async ({ page }) => {
+  test.setTimeout(240_000);
   await page.goto(PAGE);
   const space = page.locator("wakusei-space");
   await expect(space).toHaveAttribute("data-state", "live", { timeout: 120_000 });
-  await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { distance: number } }).stats.distance)).toBeGreaterThan(1);
+  await expect.poll(() => space.evaluate((el) => (el as unknown as { stats: { distance: number } }).stats.distance), { timeout: 60_000, message: "the view has a distance" }).toBeGreaterThan(1);
+  // a busy machine: every frame comes SLOW ms after it was asked for (MODULES-1588: at a host load of 45 a poll ran out of its 5 s while the frame it waited for was seconds away: every wait here has 60 s)
+  await page.evaluate((slow) => {
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = (callback) => raf((now) => void setTimeout(() => callback(now), slow));
+  }, Number(process.env.SLOW ?? 1500));
 
   const arrived = (ids: string[]) => space.evaluate((el, names) => {
     const view = el as unknown as {
@@ -39,11 +45,11 @@ test("a move to Mercury keeps a companion, and a move to Jupiter keeps a moon", 
     view.goTo("mercury");
     return draws;
   });
-  await expect.poll(draws).toBeGreaterThan(beforeMercury);
-  await expect.poll(() => arrived(["earth", "venus", "sun"])).toMatchObject({ body: "mercury", wanted: true, inside: true, named: true });
+  await expect.poll(draws, { timeout: 60_000, message: "a frame draws the move to Mercury" }).toBeGreaterThan(beforeMercury);
+  await expect.poll(() => arrived(["earth", "venus", "sun"]), { timeout: 60_000, message: "Mercury has a companion in the picture, named" }).toMatchObject({ body: "mercury", wanted: true, inside: true, named: true });
 
   await space.evaluate((el) => (el as unknown as { goTo: (id: string) => void }).goTo("earth"));
-  await expect.poll(() => space.evaluate((el) => (el as unknown as { body: string }).body)).toBe("earth");
+  await expect.poll(() => space.evaluate((el) => (el as unknown as { body: string }).body), { timeout: 60_000, message: "the camera is at the Earth" }).toBe("earth");
   // the count is taken in the same call as the move: a draw between the two would be taken for the move's
   const beforeJupiter = await space.evaluate((el) => {
     const view = el as unknown as { goTo: (id: string) => void; stats: { draws: number } };
@@ -51,6 +57,6 @@ test("a move to Mercury keeps a companion, and a move to Jupiter keeps a moon", 
     view.goTo("jupiter");
     return draws;
   });
-  await expect.poll(draws).toBeGreaterThan(beforeJupiter);
-  await expect.poll(() => arrived(["io", "europa", "ganymede", "callisto"])).toMatchObject({ body: "jupiter", wanted: true, inside: true, named: true });
+  await expect.poll(draws, { timeout: 60_000, message: "a frame draws the move to Jupiter" }).toBeGreaterThan(beforeJupiter);
+  await expect.poll(() => arrived(["io", "europa", "ganymede", "callisto"]), { timeout: 60_000, message: "Jupiter has a moon in the picture, named" }).toMatchObject({ body: "jupiter", wanted: true, inside: true, named: true });
 });
