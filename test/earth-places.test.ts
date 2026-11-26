@@ -108,6 +108,11 @@ test("the look is beam unless the attribute says pin or ring", () => {
   assert.deepEqual([...EARTH_PLACE_LOOKS], ["beam", "pin", "ring"]);
 });
 
+test("a place keeps a numeric size, the ring's radius in pixels, between 1.5 and 14", () => {
+  const read = readEarthPlaces('[{"id":"n","lon":0,"lat":0,"size":8},{"id":"hi","lon":1,"lat":1,"size":100},{"id":"lo","lon":2,"lat":2,"size":0.2},{"id":"bad","lon":3,"lat":3,"size":"big"}]');
+  assert.deepEqual(read.map((p) => [p.id, p.size ?? null]), [["n", 8], ["hi", 14], ["lo", 1.5], ["bad", null]]);
+});
+
 test("a place keeps its layer, size, look and name priority, and only valid ones", () => {
   const read = readEarthPlaces('[{"id":"a","lon":0,"lat":0,"layer":" harbours ","size":"small","look":"ring","namePriority":"low"},{"id":"b","lon":1,"lat":1,"layer":"","size":"big","look":"star","namePriority":"high"},{"lon":2,"lat":2,"layer":"x"},{"lon":900,"lat":0,"layer":"gone"},{"id":"c","lon":3,"lat":3,"layer":"'.concat("l".repeat(60), '"}]'));
   assert.deepEqual(read.map((p) => [p.id, p.layer?.length ?? null, p.size ?? null, p.look ?? null, p.namePriority ?? null]), [["a", 8, "small", "ring", "low"], ["b", null, null, null, null], ["2", 1, null, null, null], ["c", 40, null, null, null]]);
@@ -141,6 +146,7 @@ test("a small place has a shorter stick and a smaller ring, a place whose look i
     { id: "small", lon: 12, lat: 20, label: "Small", size: "small" },
     { id: "flat", lon: 10, lat: 22, label: "Flat", look: "ring" },
     { id: "pin", lon: 14, lat: 20, look: "pin", size: "small" },
+    { id: "wide", lon: 16, lat: 20, label: "Wide", size: 10 },
   ];
   const options = { size: () => ({ width: 50, height: 18 }) };
   const view = spotView(viewAt(10, 20));
@@ -155,6 +161,7 @@ test("a small place has a shorter stick and a smaller ring, a place whose look i
   assert.equal(by("flat").tipX, by("flat").x);
   assert.equal(by("flat").ring, plain.ring);
   assert.ok(by("pin").length > 0 && by("pin").ring < plain.ring);
+  assert.equal(by("wide").ring, 10);
   // the tip is where the length says it is, from the foot along the same line
   for (const shape of laid.shapes) assert.ok(Math.abs(Math.hypot(shape.tipX - shape.x, shape.tipY - shape.y) - shape.length) < 1e-6);
   // a name sits against the top of its own stick: as far from it as chikyu-earth's layout puts one beside the beam's

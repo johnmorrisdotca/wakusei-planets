@@ -45,8 +45,8 @@ export interface EarthPlace {
   color?: string;
   /** A set of places (spaceports, harbours) the page shows or hides together with `earth-place-layers`; left out, the place is always shown. */
   layer?: string;
-  /** `small` draws a shorter, narrower mark; left out, the kind's own size. */
-  size?: EarthPlaceSize;
+  /** `small` draws a shorter, narrower mark; a number is the ring's radius in CSS pixels, from 1.5 to 14; left out, the kind's own size. */
+  size?: EarthPlaceSize | number;
   /** How this place is drawn, over `earth-places-look`; left out, `earth-places-look`. */
   look?: EarthPlaceLook;
   /** `low` lays this place's name after the others' (and, past the 32 markers, its marker too), so its name gives way where they crowd; left out (`high`), it is laid with the rest. */
@@ -122,6 +122,10 @@ export const EARTH_PLACES_FROM_PX = 40;
 /** What a `small` place's stick and ring are of the kind's own. */
 const SMALL_LENGTH = 0.55;
 const SMALL_RING = 0.7;
+/** A numeric size is the ring's radius in CSS pixels, the same limits chikyu-earth uses. */
+const MIN_PLACE_RING = 1.5;
+const MAX_PLACE_RING = 14;
+const ringRadius = (size: number): number => Math.round(Math.max(MIN_PLACE_RING, Math.min(MAX_PLACE_RING, size)) * 10) / 10;
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null;
 
@@ -248,6 +252,7 @@ export function keepPlaceFields(value: string | null | undefined, places: EarthP
     const fields: Partial<EarthPlace> = {};
     if (typeof item["layer"] === "string" && item["layer"].trim()) fields.layer = item["layer"].trim().slice(0, 40);
     if (item["size"] === "small") fields.size = "small";
+    else if (typeof item["size"] === "number" && Number.isFinite(item["size"])) fields.size = ringRadius(item["size"]);
     if ((EARTH_PLACE_LOOKS as readonly unknown[]).includes(item["look"])) fields.look = item["look"] as EarthPlaceLook;
     if (item["namePriority"] === "low") fields.namePriority = "low";
     if (Object.keys(fields).length > 0) own.set(typeof item["id"] === "string" && item["id"] ? item["id"] : String(i), fields);
@@ -260,7 +265,7 @@ export function keepPlaceFields(value: string | null | undefined, places: EarthP
  * (its own or the list's) has no stick, its name moving with the top of what is left. A list with no `size` or `look` of its own is laid as `layout` lays it, untouched.
  */
 export function layWithOwn(layout: EarthPlacesLayout["layout"], places: readonly EarthPlace[], view: SpotView, look: EarthPlaceLook, options?: EarthPlaceLayoutOptions): EarthPlaceLayout {
-  if (!places.some((place) => place.size === "small" || place.look !== undefined)) return layout(places, view, look, options);
+  if (!places.some((place) => place.size === "small" || typeof place.size === "number" || place.look !== undefined)) return layout(places, view, look, options);
   const plain = places.map((place) => {
     const one = { ...place };
     delete one.size;
@@ -274,6 +279,7 @@ export function layWithOwn(layout: EarthPlacesLayout["layout"], places: readonly
     const flat = (place.look ?? look) === "ring";
     const small = place.size === "small";
     const keep = flat ? 0 : small ? SMALL_LENGTH : 1;
+    if (typeof place.size === "number") shape.ring = ringRadius(place.size);
     if (keep === 1) continue;
     const dx = (shape.tipX - shape.x) * (keep - 1);
     const dy = (shape.tipY - shape.y) * (keep - 1);

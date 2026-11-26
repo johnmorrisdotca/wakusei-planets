@@ -264,7 +264,7 @@ export interface BodySight extends Sight { id: string; kind: SpaceKind | "spacec
 export type Covered = "hide" | "arrow" | "name";
 const EARTH_PLACE_LOOKS: readonly EarthPlaceLook[]
 const EARTH_PLACE_MARKS: 32
-export interface EarthPlace { id: string; lon: number; lat: number; label?: string; kind?: EarthPlaceKind; color?: string; layer?: string; size?: EarthPlaceSize; look?: EarthPlaceLook; namePriority?: EarthPlaceNamePriority; }
+export interface EarthPlace { id: string; lon: number; lat: number; label?: string; kind?: EarthPlaceKind; color?: string; layer?: string; size?: EarthPlaceSize | number; look?: EarthPlaceLook; namePriority?: EarthPlaceNamePriority; }
 export interface EarthPlaceClickDetail { body: string; id: string; kind: EarthPlaceKind; layer?: string; label?: string; lon: number; lat: number; x: number; y: number; }
 export type EarthPlaceKind = "here" | "favourite";
 export type EarthPlaceLook = "beam" | "pin" | "ring";
@@ -1218,7 +1218,7 @@ function setBodyLabelFontUrl(url: string | URL) => void
 ## ./earth-places
 const EARTH_PLACE_LOOKS: readonly EarthPlaceLook[]
 const EARTH_PLACE_MARKS: 32
-export interface EarthPlace { id: string; lon: number; lat: number; label?: string; kind?: EarthPlaceKind; color?: string; layer?: string; size?: EarthPlaceSize; look?: EarthPlaceLook; namePriority?: EarthPlaceNamePriority; }
+export interface EarthPlace { id: string; lon: number; lat: number; label?: string; kind?: EarthPlaceKind; color?: string; layer?: string; size?: EarthPlaceSize | number; look?: EarthPlaceLook; namePriority?: EarthPlaceNamePriority; }
 export interface EarthPlaceClickDetail { body: string; id: string; kind: EarthPlaceKind; layer?: string; label?: string; lon: number; lat: number; x: number; y: number; }
 export interface EarthPlaceLayout { shapes: EarthPlaceShape[]; labels: { index: number; left: number; top: number; }[]; }
 export interface EarthPlaceLayoutOptions { size?: (place: EarthPlace, index: number) => { width: number; height: number; } | null; taken?: readonly { left: number; top: number; width: number; height: number; }[]; maxLabels?: number; sun?: { lon: number; lat: number; } | null; }
