@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **An unseen pole is a plain tone** (MODULES-1196). Dawn left a black cap on about 7.5 percent of Vesta's map and a dark strip along Ceres's south edge. Voyager left Triton's north in the dark, about 28 percent of the map, and New Horizons left Charon's south in the dark, about 31 percent. Each was a black cap or a painted fill. Each is now the mapped ground's own average, a little darker, and the photographed ground fades into it. Picture test: `e2e/map-gaps.demo.ts`.
+
 ## [0.78.1] - 2026-11-26
 
 - **The shaded Earth test looks at a date with a day side in view.** The page shows a chosen date only in real-sky mode, under `t`. The test was passing `time=`, which the page ignores, so it showed the present and the day limb stayed under 5 per cent. It now opens real-sky mode at noon UTC on the June solstice, when the Sun is in front of the view.

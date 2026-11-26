@@ -275,42 +275,43 @@ def lat_strip_to_equirect(strip, lat_max, width):
     return extend_poles(out, pad, pad + resized.shape[0] - 1)
 
 
-def fill_unseen(img, side, margin=8, fade=0.2, depth=4, calm=0.0, feather=24, along=12):
-    """A map with a black region where nothing was imaged (the polar night): `side` is `north` (black above) or `south` (black below). Each column keeps its real rows; above (or below) the first of them it
-    continues with the colour just inside the edge, blurred a long way along the row, and fades to the picture's mean colour away from it. `calm` (0 to 1) takes that colour part of the way to the mean first, so dark ground at the edge does not smear into the fill, `feather` is how many rows the real picture takes to melt into it, and the colour at the edge is averaged over 1/`along` of the way round the body (a small number smooths it more)."""
-    work = img if side == "north" else img[::-1]
-    h, w, _ = work.shape
-    real = work.mean(axis=2) > 0.05
-    edge = np.array([next((r for r in range(h - 12) if real[r : r + 12, c].all()), h - 1) for c in range(w)])
-    pad = np.pad(edge, 20, mode="wrap")
-    edge = np.median(np.lib.stride_tricks.sliding_window_view(pad, 41), axis=1).astype(int) + margin
-    mean = np.median(work[real], axis=0)
-    band = np.stack([work[min(e + depth, h - 31) : min(e + depth + 26, h - 1), c].mean(axis=0) for c, e in enumerate(edge)])
-    n = w // along
-    k = np.ones(n) / n
-    band = np.stack([np.convolve(np.pad(band[:, c], n // 2, mode="wrap"), k, mode="valid")[:w] for c in range(3)], axis=1)
-    band = band * (1 - calm) + mean * calm
-    out = work.copy()
-    rows = np.arange(h)[:, None]
-    above = rows < edge[None, :]
-    t = np.clip((edge[None, :] - rows) / (h * fade), 0, 1)
-    t = (t * t * (3 - 2 * t))[..., None]
-    out = np.where(above[..., None], band[None] * (1 - t) + mean * t, out)
-    for j in range(feather):
-        f = j / feather
-        f = f * f * (3 - 2 * f)
-        r = edge + j
-        ok = r < h
-        out[r[ok], np.arange(w)[ok]] = band[ok] * (1 - f) + work[r[ok], np.arange(w)[ok]] * f
-    return out if side == "north" else out[::-1]
-
-
 def tint(img, dark, light, contrast):
     """A grey map as colour: its brightness picks a colour between `dark` and `light`, with the contrast turned down toward the middle."""
     g = img.mean(axis=2, keepdims=True)
     mid = np.median(g)
     g = np.clip(mid + (g - mid) * contrast, 0, 1)
     return np.asarray(dark, dtype=np.float32) * (1 - g) + np.asarray(light, dtype=np.float32) * g
+
+
+def plain_cap(img, side, reach=0.08, soft=0.08, darker=0.85, keep=False):
+    """A pole that was never imaged, the first `reach` of the height from `side`, made one plain tone. The tone is the mapped ground's
+    average (the middle half, each row weighted by the width of its circle of latitude) times `darker`, and the photographed ground fades
+    into it over `soft` of the height, so the cap has no hard edge. With `keep`, that fade stays inside the unseen cap and the photographed
+    ground is left as it is."""
+    h, w, _ = img.shape
+    lat = 90 - (np.arange(h) + 0.5) / h * 180
+    weight = np.clip(np.cos(np.radians(lat)), 0, None)
+    a, b = h // 4, 3 * h // 4
+    weight[:a] = 0
+    weight[b:] = 0
+    tone = (img * weight[:, None, None]).sum(axis=(0, 1)) / (weight.sum() * w) * darker
+    rows = np.arange(h, dtype=np.float32)
+    span = h * soft
+    if side == "north":
+        edge = h * reach
+        t = np.clip(((edge - rows) if keep else (edge + span - rows)) / span, 0, 1)
+    else:
+        edge = h * (1 - reach)
+        t = np.clip(((rows - edge) if keep else (rows - (edge - span))) / span, 0, 1)
+    t = (t * t * (3 - 2 * t))[:, None, None]
+    return img * (1 - t) + tone[None, None, :] * t
+
+
+def fill_pole_plain(img, side, darker=0.85, soft=0.08):
+    """The same plain tone as `fill_unseen_plain`, on the north or the south. The north is the south of the picture turned over."""
+    if side == "south":
+        return fill_unseen_plain(img, darker, soft)
+    return fill_unseen_plain(img[::-1], darker, soft)[::-1]
 
 
 def fill_unseen_plain(img, darker=0.85, soft=0.08):
@@ -398,17 +399,25 @@ def make(body):
         img = img * (1 - wrong) + lum * tone * wrong
         img = extend_poles(img, int(img.shape[0] * 0.02), int(img.shape[0] * 0.93))
         img = desaturate(img, 0.6)
+        # the south edge of Dawn's map is a dark strip that was never usefully imaged: a plain tone, not that strip
+        img = plain_cap(img, "south", reach=0.08, soft=0.12)
     elif body == "vesta":
-        # Dawn's grey photomap runs from 330 degrees (its left edge) to 330 degrees: longitude 0 is a twelfth in, so it is rolled to the middle; the grey is given the faint warmth of Vesta's surface (a V-type asteroid)
+        # Dawn's grey photomap runs from 330 degrees (its left edge) to 330 degrees: longitude 0 is a twelfth in, so it is rolled to the middle; the grey is given the faint warmth of Vesta's surface (a V-type asteroid).
+        # The north pole was in the dark at Dawn: about 7.5 percent of the height is a black cap, replaced by the same plain tone.
         img = tint(roll(img, 5 / 12), (0.05, 0.047, 0.042), (0.93, 0.90, 0.83), 1.0)
+        img = plain_cap(img, "north", reach=0.075, soft=0.12)
     elif body in ("tethys", "dione"):
         img = desaturate(roll(img, 0.5), 0.55)
     elif body == "iapetus":
         img = desaturate(roll(img, 0.5), 0.7)
     elif body == "triton":
-        img = desaturate(fill_unseen(img, "north", margin=30, fade=0.28, depth=60, calm=0.3, feather=110, along=3), 0.45)
+        # Voyager left the north in the polar night. The pictures in the repository keep the photographed mosaic and replace that cap in
+        # place (plain_cap, keep, the top 29 percent, fading over 16 percent inside the cap). A rebuild from this file, whose north is black, uses the same plain tone.
+        img = fill_pole_plain(desaturate(img, 0.45), "north", soft=0.16)
     elif body == "charon":
-        img = fill_unseen(img, "south", margin=12, fade=0.1, depth=40)
+        # New Horizons left the south in the polar night. The pictures in the repository keep the photographed mosaic and replace that cap in
+        # place (plain_cap, keep, the bottom 32 percent, fading over 16 percent inside the cap). A rebuild from this file, whose south is black, uses the same plain tone.
+        img = fill_pole_plain(img, "south", soft=0.16)
     elif body == "mimas":
         # the map inside its frame: the gap between the frame and the map is black, and a wider box left a black strip of 22 columns at the seam (a dark band pole to pole on the globe)
         img = img[183:1926, 226:3718]

@@ -18,36 +18,40 @@ interface Gap {
   south: number;
 }
 
-async function gapOf(page: Page, body: string, width: number): Promise<Gap> {
+async function gapOf(page: Page, body: string, width: number, side: "north" | "south" = "south", fromY = 0.25): Promise<Gap> {
   return page.evaluate(
-    async ([name, w]) => {
+    async ([name, w, pole, start]) => {
       const bitmap = await createImageBitmap(await (await fetch(`textures/${name}-${w}.webp`)).blob());
       const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
       const context = canvas.getContext("2d")!;
       context.drawImage(bitmap, 0, 0);
       const { data, width: cols, height: rows } = context.getImageData(0, 0, bitmap.width, bitmap.height);
-      const grey = (x: number, y: number): number => (data[(y * cols + x) * 4]! + data[(y * cols + x) * 4 + 1]! + data[(y * cols + x) * 4 + 2]!) / 765;
+      const sample = (x: number, y: number): number => {
+        const row = pole === "north" ? rows - 1 - y : y;
+        const i = (row * cols + x) * 4;
+        return (data[i]! + data[i + 1]! + data[i + 2]!) / 765;
+      };
       const detail: number[] = [];
       for (let y = 0; y < rows; y += 1) {
         let sum = 0;
-        for (let x = 1; x < cols; x += 1) sum += Math.abs(grey(x, y) - grey(x - 1, y));
+        for (let x = 1; x < cols; x += 1) sum += Math.abs(sample(x, y) - sample(x - 1, y));
         detail.push(sum / (cols - 1));
       }
       const smooth = detail.map((_, y) => (detail[Math.max(0, y - 1)]! + detail[y]! + detail[Math.min(rows - 1, y + 1)]!) / 3);
       const peak = Math.max(...smooth.slice(0, rows >> 1));
       const span = Math.max(1, Math.floor(rows * 0.015));
       let step = 0;
-      for (let y = rows >> 2; y < rows - span; y += 1) step = Math.max(step, (smooth[y]! - smooth[y + span]!) / peak);
+      for (let y = Math.floor(rows * start); y < rows - span; y += 1) step = Math.max(step, (smooth[y]! - smooth[y + span]!) / peak);
       const mean = (from: number, to: number): number => {
         let sum = 0;
-        for (let y = Math.floor(rows * from); y < Math.floor(rows * to); y += 1) for (let x = 0; x < cols; x += 1) sum += grey(x, y);
+        for (let y = Math.floor(rows * from); y < Math.floor(rows * to); y += 1) for (let x = 0; x < cols; x += 1) sum += sample(x, y);
         return sum / (cols * (Math.floor(rows * to) - Math.floor(rows * from)));
       };
       const from = Math.floor(rows * 0.85);
       const south = smooth.slice(from).reduce((sum, value) => sum + value, 0) / (rows - from) / peak;
       return { step, tone: mean(0.85, 1) / mean(0.2, 0.5), south };
     },
-    [body, width] as const,
+    [body, width, side, fromY] as const,
   );
 }
 
@@ -61,4 +65,25 @@ for (const width of [512, 1024, 2048]) {
     expect(gap.tone).toBeLessThan(1.05);
     expect(gap.south, `the south's detail is ${gap.south.toFixed(2)} of the northern half's`).toBeGreaterThan(0.15);
   });
+}
+
+// Vesta's north was in the dark at Dawn, and Ceres's south edge is a strip Dawn did not image usefully (MODULES-1196).
+// The same reading as Pluto's, with the pole at the bottom of the measurement: a plain tone, not a dark cap, and no hard edge.
+for (const [body, side, where, fromY] of [
+  ["vesta", "north", "north", 0.7],
+  ["ceres", "south", "south", 0.7],
+  // Triton and Charon were painted past the photographed ground. The unseen pole is the outer part of the picture (MODULES-1196).
+  ["triton", "north", "north", 0.68],
+  ["charon", "south", "south", 0.64],
+] as const) {
+  for (const width of [512, 1024, 2048]) {
+    test(`${body}'s map at ${width}: the unseen ${where} is a plain tone with a soft edge`, async ({ page }) => {
+      await page.goto("/wakusei-planets/");
+      const gap = await gapOf(page, body, width, side, fromY);
+      expect(gap.step, `the detail lost over 1.5% of the height is ${gap.step.toFixed(2)} of the most`).toBeLessThan(0.35);
+      expect(gap.tone, `the unseen part is ${gap.tone.toFixed(2)} of the mapped ground's brightness`).toBeGreaterThan(0.6);
+      expect(gap.tone).toBeLessThan(1.05);
+      expect(gap.south, `the unseen part's detail is ${gap.south.toFixed(2)} of the mapped ground's`).toBeLessThan(0.2);
+    });
+  }
 }
