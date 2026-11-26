@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A Date from another realm is a moment** (MODULES-570). `meanObliquity` and `equatorialToHorizontal` rejected it: the check was `instanceof Date`, which is false across a frame. They now read it the same way the time module does. An invalid date, a number that is not finite, and a moment outside the Date range still throw.
+
 - **22 to 31 October 1582 are real dates** (MODULES-568). `fromCalendar` used October 1582's count of 21 days as the highest day number, so the 22nd to the 31st threw. Those days exist. Only the 5th to the 14th were skipped. `daysInMonth` still returns 21.
 
 - **Next and previous can stay among one kind of body** (MODULES-892). `next({ kind: "planet" })` and `previous` go through the eight planets, with the Sun as the inner end, and skip moons and dwarf planets. `kind: "moon"` stays among the moons of the planet the view is at, and `kind: "dwarf-planet"` among the dwarf planets. The hop announces the previous and next of that kind. With no kind, the order is unchanged.

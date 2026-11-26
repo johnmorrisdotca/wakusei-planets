@@ -2,6 +2,7 @@
 // Standalone mathematics; no body data, ephemerides or rendering dependencies.
 import { ttMinusUtc } from "./clock.ts";
 import { meanObliquityArcseconds, meanSiderealDegrees } from "./sidereal.ts";
+import { moment } from "./when.ts";
 import type { EquatorialAngles, HorizontalAngles, Observer } from "./sky/types.ts";
 
 const RAD = Math.PI / 180;
@@ -112,7 +113,7 @@ function bounded(name: string, value: number, low: number, high: number): number
 }
 function wrap(value: number): number { return ((value % 360) + 360) % 360; }
 function instant(when: Date | number): number {
-  const ms = finite("when", when instanceof Date ? when.getTime() : when);
+  const ms = moment(when);
   if (Math.abs(ms) > 8640000000000000) throw new RangeError(`when: ${ms} is outside the Date range`);
   return ms;
 }

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
 import { test } from "node:test";
 import { build } from "esbuild";
 import { gzipSync } from "node:zlib";
@@ -85,6 +86,18 @@ test("bad values, mismatched frames/epochs, zero and overflow throw rather than 
     assert.throws(() => cartesianToSpherical({ ...base, xAu: bad, yAu: 0, zAu: 0 }), RangeError);
   }
   assert.throws(() => meanObliquity(new Date(NaN)), /when/);
+  const foreign = runInNewContext("new Date(0)") as Date;
+  assert.equal(foreign instanceof Date, false);
+  assert.equal(meanObliquity(foreign), meanObliquity(0));
+  assert.equal(foreign.getTime(), 0);
+  const ofDate = { ...base, frame: "equatorialOfDate", epoch: 0, rightAscension: 10, declination: 20 } as const;
+  const place = { latitude: 49, longitude: -123 };
+  const there = equatorialToHorizontal(ofDate, foreign, { observer: place });
+  const here = equatorialToHorizontal(ofDate, 0, { observer: place });
+  assert.equal(there.altitude, here.altitude);
+  assert.equal(there.azimuth, here.azimuth);
+  assert.throws(() => meanObliquity(runInNewContext("new Date(NaN)") as Date), /when/);
+  assert.throws(() => meanObliquity(8_640_000_000_000_001), /outside the Date range/);
   assert.throws(() => sphericalToCartesian({ ...base, longitude: 0, latitude: 91, distanceAu: 1 }), /latitude/);
   assert.throws(() => sphericalToCartesian({ ...base, longitude: 0, latitude: 0, distanceAu: -1 }), /distanceAu/);
   assert.throws(() => cartesianToSpherical({ ...base, xAu: 0, yAu: 0, zAu: 0 }), /no direction/);
