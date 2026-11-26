@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Jupiter chart publishes a label's height after it has been laid out** (MODULES-1802). On the narrow chart WebKit's box for the first label is empty in the frame that draws it. The page measures that label on the next frame. The test still requires the height to be at least 11 pixels, and a scrollbar's few pixels do not draw the chart again.
+
 - **The space view says when its names have settled** (MODULES-1141). A name measured before it has a width is placed again on the next frame, once. `stats.labels` reports how many names are shown, whether that placement used real widths, and the camera it belongs to. The sideways-move test waits for that report before it reads the names, and still requires the three names to move by the pixels asked.
 
 - **A moving dot no longer covers a place's name on a flat map** (MODULES-1873). The places' names were painted on the map canvas, and the moons' dots on the canvas above it, so a moon passing a name hid the letters (the name itself already gave way). The names are now painted on the moving canvas after the dots, and a landing site's flag sits above that canvas too.

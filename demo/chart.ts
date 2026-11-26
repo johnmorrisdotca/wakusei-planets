@@ -131,22 +131,48 @@ function labelFits(placed: { x: number; y: number; w: number; h: number }[], cir
 }
 
 let drawnWidth = -1;
+let labelFrame = 0;
+/** A scrollbar is about 15 pixels. Redrawing for that swaps the labels before WebKit has given them a box. */
+const REDRAW_AT = 16;
+
+/** The first label's height, published on the next frame, once it has been laid out. A read in the frame that built the picture is 0. */
+function measureLabels(host: Element): void {
+  if (!(host instanceof HTMLElement)) return;
+  const frame = ++labelFrame;
+  host.dataset.labelHeight = "0";
+  const publish = (): void => {
+    if (frame !== labelFrame) return;
+    const height = host.querySelector("text")?.getBoundingClientRect().height ?? 0;
+    host.dataset.labelHeight = String(Math.round(height * 10) / 10);
+  };
+  requestAnimationFrame(() => {
+    if (frame !== labelFrame) return;
+    const height = host.querySelector("text")?.getBoundingClientRect().height ?? 0;
+    if (height > 0) host.dataset.labelHeight = String(Math.round(height * 10) / 10);
+    else requestAnimationFrame(publish);
+  });
+}
+
 function paint(): void {
-  const width = document.querySelector("#chart")?.clientWidth ?? 0;
+  const host = document.querySelector("#chart");
+  const width = host?.clientWidth ?? 0;
   drawnWidth = width;
   draw(language());
+  if (host) measureLabels(host);
 }
 paint();
 window.addEventListener("wakusei-language", (event) => {
   const lang = (event as CustomEvent<{ lang?: string }>).detail?.lang;
   drawnWidth = -1;
   draw(lang === "ja" ? "ja" : "en");
+  const host = document.querySelector("#chart");
+  if (host) measureLabels(host);
 });
 const chartBox = document.querySelector("#chart");
 if (chartBox) {
   new ResizeObserver(() => {
     const width = chartBox.clientWidth;
-    if (width === drawnWidth) return;
+    if (Math.abs(width - drawnWidth) < REDRAW_AT) return;
     paint();
   }).observe(chartBox);
 }
