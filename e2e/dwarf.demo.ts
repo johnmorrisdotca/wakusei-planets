@@ -14,6 +14,8 @@ test("the picker has the planets, the dwarf planets and the well-known moons, ea
   await expect(page).toHaveURL(/body=eris/);
   await expect(page.locator('#moon-row .tile[data-body="dysnomia"]')).toBeVisible();
   await page.locator('#picker [data-testid="group-moons"]').click();
+  await expect(page.locator('#tiles .moon-family[data-host="jupiter"] .tile')).toHaveCount(6);
+  await expect(page.locator('#tiles .moon-family[data-host="saturn"] .tile')).toHaveCount(19);
   await expect(page.locator('#tiles .tile[data-body="titan"]')).toBeVisible();
   await page.locator('#tiles .tile[data-body="titan"]').click();
   await expect(page.locator("#main")).toHaveAttribute("body", "titan");

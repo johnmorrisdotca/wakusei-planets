@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The giant-planet cards draw the planet and three moons, and the Moons tab groups every moon under its planet** (MODULES-1719). The cards were names and counts only. Each card now draws the planet and its three largest moons. The Moons tab lists every drawn moon under its planet, including all six of Jupiter's and all nineteen of Saturn's. A moon stays in that list, so the row under a planet no longer takes the well-known moons back out of it.
+
 - **The Jupiter chart publishes a label's height after it has been laid out** (MODULES-1802). On the narrow chart WebKit's box for the first label is empty in the frame that draws it. The page measures that label on the next frame. The test still requires the height to be at least 11 pixels, and a scrollbar's few pixels do not draw the chart again.
 
 - **The space view says when its names have settled** (MODULES-1141). A name measured before it has a width is placed again on the next frame, once. `stats.labels` reports how many names are shown, whether that placement used real widths, and the camera it belongs to. The sideways-move test waits for that report before it reads the names, and still requires the three names to move by the pixels asked.

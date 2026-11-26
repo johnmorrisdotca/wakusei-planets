@@ -27,12 +27,17 @@ type Look = "line" | "realistic" | "painted" | "illustrated";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
 const DWARF_TILES: readonly BodyId[] = DWARF_IDS;
 const MINOR_TILES: readonly BodyId[] = MINOR_IDS;
-/** The well-known moons, in a row of their own: the rest are under their planet. */
-const MOON_TILES: readonly BodyId[] = ["moon", "phobos", "deimos", "io", "europa", "ganymede", "callisto", "enceladus", "titan", "triton", "charon"];
 type Group = "planets" | "dwarfs" | "minor" | "moons";
 /** Which row of bodies a body is in: the planets (with the Sun), the dwarf planets or the small bodies, each with their moons below. */
 const groupOfBody = (id: BodyId): Group => (MINOR_TILES.includes(id) ? "minor" : (DWARF_TILES as readonly string[]).includes(id) || (DWARF_TILES as readonly string[]).includes(BODIES[id].parent ?? "") ? "dwarfs" : "planets");
-const TILES_OF: Record<Group, readonly BodyId[]> = { planets: TILES, dwarfs: DWARF_TILES, minor: MINOR_TILES, moons: MOON_TILES };
+const TILES_OF: Record<Exclude<Group, "moons">, readonly BodyId[]> = { planets: TILES, dwarfs: DWARF_TILES, minor: MINOR_TILES };
+/** The planet a drawn moon goes round, or null when the body is not one of those moons. */
+const hostOfMoon = (id: BodyId): BodyId | null => {
+  for (const [host, moons] of Object.entries(MOONS_OF) as [BodyId, readonly BodyId[]][]) {
+    if ((moons as readonly string[]).includes(id)) return host;
+  }
+  return null;
+};
 /** The lineup: the same picture width in kilometres for every body, so the sizes are true to each other. Wide enough for Saturn's rings. */
 const SPAN_KM = 150_000;
 const FRAME_PX = 180;
@@ -196,6 +201,7 @@ if (main && controls && pickerBox) {
     let group: Group = groupOfBody(state.body);
     let lastBody = state.body;
     let rowOf = "";
+    let familyLang = "";
     for (const button of groupButtons) {
       button.addEventListener("click", () => {
         group = button.dataset["group"] as Group;
@@ -203,29 +209,53 @@ if (main && controls && pickerBox) {
       });
     }
     let shown = "";
+    /** Every drawn moon under its planet. One button is one moon, so the row under a planet cannot take the moons back out of this list. */
+    const showFamilies = (): void => {
+      bodiesRow.replaceChildren(...(Object.entries(MOONS_OF) as [BodyId, readonly BodyId[]][]).map(([host, moons]) => {
+        const section = document.createElement("section");
+        section.className = "moon-family";
+        section.dataset["host"] = host;
+        const title = document.createElement("h3");
+        title.textContent = say("moonsOf", { planet: BODIES[host].name[lang()] });
+        const row = document.createElement("div");
+        row.className = "tiles";
+        row.append(...moons.map((id) => tileOf(id).button));
+        section.append(title, row);
+        return section;
+      }));
+    };
     pickers.push({
       sync() {
         if (state.body !== lastBody) {
           lastBody = state.body;
-          if (!(group === "moons" && MOON_TILES.includes(state.body))) group = groupOfBody(state.body);
+          if (!(group === "moons" && hostOfMoon(state.body) !== null)) group = groupOfBody(state.body);
         }
-        if (rowOf !== group) {
+        if (group === "moons") {
+          if (rowOf !== "moons" || familyLang !== lang()) {
+            rowOf = "moons";
+            familyLang = lang();
+            showFamilies();
+          }
+          shown = "";
+          moonRow.hidden = true;
+        } else if (rowOf !== group) {
           rowOf = group;
+          familyLang = "";
           bodiesRow.replaceChildren(...TILES_OF[group].map((id) => tileOf(id).button));
         }
         for (const button of groupButtons) {
           button.textContent = say(`grp_${button.dataset["group"]}`);
           pressed(button, button.dataset["group"] === group);
         }
-        const planet = planetOfChoice();
+        const planet = group === "moons" ? null : planetOfChoice();
         const moons = planet === null ? [] : ([...MOONS_OF[planet as keyof typeof MOONS_OF]] as BodyId[]);
         const key = `${planet}|${lang()}`;
-        if (key !== shown) {
+        if (group !== "moons" && key !== shown) {
           shown = key;
           moonTiles.replaceChildren(...moons.map((id) => tileOf(id).button));
           heading.textContent = planet === null ? "" : say("moonsOf", { planet: BODIES[planet].name[lang()] });
         }
-        moonRow.hidden = moons.length === 0;
+        if (group !== "moons") moonRow.hidden = moons.length === 0;
         for (const [id, tile] of cache) {
           setAttrOn(tile.body, "look", state.look);
           setAttrOn(tile.body, "texture-base", "textures/");
@@ -493,6 +523,11 @@ if (main && controls && pickerBox) {
     renderBodyLabelRow(bodyLabel, main!, address);
     renderPlacesRow(places, main!, address);
     for (const picker of pickers) picker.sync();
+    for (const picture of document.querySelectorAll<WakuseiBody>("#giants wakusei-body")) {
+      setAttr(picture, "look", state.look);
+      setAttr(picture, "texture-base", "textures/");
+      setAttr(picture, "lang", lang());
+    }
     syncGrab();
     renderNotes();
     renderChips();

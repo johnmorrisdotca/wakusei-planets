@@ -8,6 +8,8 @@ test("the home page says what it is and credits its data", () => {
   assert.match(html, /<kazoku-page-header/);
   assert.match(html, /<kazoku-page-credits/);
   assert.doesNotMatch(html, /<!--frame:/);
+  assert.match(html, /data-host="jupiter"[\s\S]*?<wakusei-body body="jupiter"/);
+  assert.match(html, /data-host="jupiter"[\s\S]*?<wakusei-body body="ganymede"/);
 });
 
 test("the embed credits its data and has no page header", () => {

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 import { pageCreditsHtml, pageHeaderHtml, type PageTexts } from "@johnmorrisdotca/kazoku-ui/page-frame";
 import { WORDS } from "../demo/words.js";
-import { BODIES } from "../src/facts.ts";
+import { BODIES, MOONS_OF } from "../src/facts.ts";
 import { MOON_PAGE_HOSTS, moonPage, type MoonPageHost } from "../src/moon-pages/data.ts";
 import { FAMILY_SCRIPT, familyFooter, familyHead, familyHeader, familyUnreviewed } from "./family-template.mjs";
 
@@ -46,10 +46,17 @@ function render(file: string, title: string, description: string): string {
     .replace(/<!--family:scripts ([\w.-]+)-->/, (_, script: string) => scripts(script));
 }
 
-/** The demo's page, with a card for each giant planet's moon page (its count of moons from the moon list). */
+/** The three largest moons drawn for a giant planet's card, biggest first. */
+const cardMoons = (host: MoonPageHost): readonly string[] =>
+  [...MOONS_OF[host]].sort((a, b) => BODIES[b].radiusKm - BODIES[a].radiusKm).slice(0, 3);
+
+/** A still of a body for a card: the package draws it, and a click belongs to the card's link. */
+const cardBody = (id: string): string => `<wakusei-body body="${id}" live="off" fit="tight"></wakusei-body>`;
+
+/** The demo's page, with a card for each giant planet's moon page: the planet and three moons drawn, and the count of moons from the moon list. */
 export const renderIndex = (): string =>
   render("index.html", TITLE, DESCRIPTION).replace("<!--moons:index-->", () =>
-    MOON_PAGE_HOSTS.map((host) => `<li><a class="giant" href="${host}.html" data-host="${host}"><b data-say="gi_${host}">${BODIES[host].name.en}</b><span><span>${moonPage(host).counts.total}</span><span data-say="gi_count"></span></span></a></li>`).join(""),
+    MOON_PAGE_HOSTS.map((host) => `<li><a class="giant" href="${host}.html" data-host="${host}"><div class="giant-pics">${cardBody(host)}${cardMoons(host).map(cardBody).join("")}</div><b data-say="gi_${host}">${BODIES[host].name.en}</b><span><span>${moonPage(host).counts.total}</span><span data-say="gi_count"></span></span></a></li>`).join(""),
   );
 
 /** The portrait builder's page. */

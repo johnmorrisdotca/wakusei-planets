@@ -194,9 +194,21 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
   .moons-page header .intro p, .moons-page header nav > :not(kazoku-language-picker) { display: none !important; }
   .moons-page header nav { flex-wrap: nowrap; flex: none; }
 }
+.giants ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; list-style: none; margin: 12px 0 0; padding: 0; }
 .giants ul li > a.giant { width: 100%; min-height: 44px; text-decoration: none; color: inherit; border: 1px solid var(--rule); border-radius: 12px; padding: 8px 12px; display: grid; gap: 2px; }
 .giants ul li > a.giant:hover { border-color: var(--ink); }
 .giants ul li > a.giant > span { color: var(--muted); font-size: .85rem; }
+.giant-pics { display: flex; align-items: end; gap: 8px; height: 96px; color: inherit; font-size: 1rem; }
+.giant-pics wakusei-body { display: block; height: 72px; width: 72px; --wakusei-size: 72px; pointer-events: none; }
+.giant-pics wakusei-body:first-child { height: 96px; width: 96px; --wakusei-size: 96px; }
+@media (max-width: 600px) {
+  .giant-pics { height: 72px; }
+  .giant-pics wakusei-body { height: 48px; width: 48px; --wakusei-size: 48px; }
+  .giant-pics wakusei-body:first-child { height: 72px; width: 72px; --wakusei-size: 72px; }
+}
+.moon-family { margin-top: 14px; }
+.moon-family h3 { margin: 0 0 6px; font-size: 1rem; }
+.moon-family .tiles { margin-top: 0; }
 
 /* The planet on top, then every moon in a family. Tiles stay small so a screen of stills fits the still budget. */
 .groups-planets { margin: 12px 0; }

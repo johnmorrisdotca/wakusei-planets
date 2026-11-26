@@ -178,6 +178,8 @@ test("the ways in: a card on the demo's first page and a link on each giant plan
   for (const host of HOSTS) {
     await expect(page.locator(`#giants a[data-host="${host}"]`)).toHaveAttribute("href", `${host}.html`);
     await expect(page.locator(`#giants a[data-host="${host}"]`)).toContainText(`${moonCounts()[host]!.total} known moons`);
+    await expect(page.locator(`#giants a[data-host="${host}"] wakusei-body[body="${host}"]`)).toHaveCount(1);
+    await expect(page.locator(`#giants a[data-host="${host}"] wakusei-body`)).toHaveCount(4);
   }
   await page.goto("/wakusei-planets/plan.html?lang=ja");
   await expect(page.locator('#moon-pages a[data-host="saturn"]')).toHaveText("土星");
