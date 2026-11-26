@@ -37,7 +37,7 @@ test("they are wired in: the scripts, the dev dependencies, the Pages step and t
   assert.equal(pkg.scripts["docs:site"], "pnpm build && node scripts/docs-site.mjs build");
   assert.equal(pkg.scripts["docs:check"], "pnpm build && node scripts/docs-site.mjs check");
   assert.equal(pkg.scripts["size"], "node scripts/docs-site.mjs size");
-  assert.match(pkg.scripts["test:demo"] ?? "", /pnpm site && node scripts\/docs-site\.mjs build && playwright test/);
+  assert.match(pkg.scripts["test:demo"] ?? "", /pnpm site && node scripts\/docs-site\.mjs build && node scripts\/awake\.mjs playwright test/);
   for (const name of ["pagefind", "marked", "esbuild"]) {
     assert.ok(pkg.devDependencies?.[name], name);
     assert.equal(pkg.dependencies?.[name], undefined, `${name} builds the docs and is never a dependency of the package`);

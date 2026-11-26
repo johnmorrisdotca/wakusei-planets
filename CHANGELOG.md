@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A long local browser check keeps the Mac awake** (MODULES-572). `test:demo`, `test:demo:one`, `test:freeze`, `test:soak` and `screenshots` hold an idle-sleep assertion on macOS for that process, and release it when the command exits. Timeouts, assertions and other systems are unchanged.
+
 - **The README's looks match the package** (MODULES-569). The opening and the looks table said `realistic` was a shader drawing and the pictures were 1.31 MB. `realistic` and `painted` are the photo maps, and `illustrated` is the shaded drawing. The packaged pictures are 2.38 MB (66 pictures). The guides already said this. The features list already counts 44 moons; the old comment of 25 is gone.
 
 - **A Date from another realm is a moment** (MODULES-570). `meanObliquity` and `equatorialToHorizontal` rejected it: the check was `instanceof Date`, which is false across a frame. They now read it the same way the time module does. An invalid date, a number that is not finite, and a moment outside the Date range still throw.
