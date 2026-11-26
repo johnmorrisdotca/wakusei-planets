@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.77.3] - 2026-11-26
+
 - **A card can print the orbit and the discovery of a dwarf planet or a minor body** (MODULES-1353). `minorFact` on `/fact-sheets` gives the semi-major axis, the perihelion and the sidereal period of the osculating ellipse the package already stores, for the dwarf planets besides Pluto and for Bennu, Eros, Vesta, Pallas, Chiron, Pholus, Halley and Arrokoth. `/discovery` now has those eight bodies, read from the JPL Small-Body Database on 2026-11-26, and that entry is about 600 bytes larger gzipped, which the size baseline records. Pluto stays on `factSheet`. Placing the `/asteroids` bodies in the space view was already on main. Chiron's Japanese name is キロン and Pholus's is フォルス.
 
 - **The styled-orbit helpers run without a browser** (MODULES-1328). `MAX_PATHS`, `pathSpanMs`, `BUILT_IN_PATH_STYLES`, `completeStyle`, `styleTable` and `nearestPath` are on `/space` as well as the element. The guide's sample that calls `setPathStyles` is a page sample and is not run.
