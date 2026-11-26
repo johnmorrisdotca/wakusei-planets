@@ -4,7 +4,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { flatMoons } from "../src/flat/index.ts";
 
 type Flat = HTMLElement & {
-  stats: { draws: number; custom: number; names: { id: string; kind: "place" | "mark"; x0: number; y0: number; x1: number; y1: number }[] };
+  stats: { draws: number; custom: number; names: { id: string; kind: "place" | "mark" | "grid"; x0: number; y0: number; x1: number; y1: number }[] };
   placeOf(id: string): { x: number; y: number; lon: number; lat: number } | null;
   selected: string | null;
   center: number;
@@ -148,8 +148,8 @@ test("the moons move as the clock runs: Io's place over Jupiter is another place
 });
 
 // MODULES-1861: a moon's name was drawn over the name of a feature (Deimos over Pavonis Mons on Mars's map), because the two were laid out apart. The moon's name now takes what room the places' names left (beside its dot, or above, or below), and no two names overlap.
-test("a moon's name never lies over a place's name, nor over another moon's, as the clock runs", async ({ page }) => {
-  await open(page, "?body=mars&moons=1");
+test("a moon's name never lies over a place's name, nor over another moon's, nor over the degrees along the edges, as the clock runs", async ({ page }) => {
+  await open(page, "?body=mars&moons=1&look=map");
   await flat(page).evaluate((el) => el.setAttribute("places", "landing crash feature"));
   await expect.poll(() => custom(page)).toBe(2);
   const overlaps = (a: Flat["stats"]["names"][number], b: Flat["stats"]["names"][number]): boolean => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
@@ -164,6 +164,7 @@ test("a moon's name never lies over a place's name, nor over another moon's, as 
     for (let i = 0; i < names.length; i += 1) for (let j = i + 1; j < names.length; j += 1) expect(overlaps(names[i]!, names[j]!), `step ${step}: ${names[i]!.id} and ${names[j]!.id} overlap`).toBe(false);
   }
   expect(places, "the places are named").toBeGreaterThan(3);
+  expect((await flat(page).evaluate((el) => (el as Flat).stats.names)).filter((n) => n.kind === "grid").length, "the degrees are named").toBeGreaterThan(4);
   expect(moonNames, "the moons are named most of the time").toBeGreaterThan(100);
 });
 
