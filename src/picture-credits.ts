@@ -62,13 +62,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
     "Natural grey, resized to 512, 1024 and 2048. The normal map is not used.",
     "自然な灰色にし、512、1024、2048に縮小しました。法線マップは使っていません。",
   ),
-  cc(
-    "venus",
-    "Solar System Scope",
-    "Solar System Scope",
-    "Equirectangular surface map, resized to 512, 1024 and 2048.",
-    "正距円筒図法の表面の地図を、512、1024、2048に縮小しました。",
-  ),
+  pd("venus", "NASA / Jet Propulsion Laboratory, Magellan radar", "NASA / Jet Propulsion Laboratory（マゼランのレーダー画像）"),
   pd("mars", "NASA / Jet Propulsion Lab / USGS", "NASA / Jet Propulsion Lab / USGS"),
   cc(
     "jupiter",

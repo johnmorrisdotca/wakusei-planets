@@ -29,7 +29,7 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 |---|---|---|---|---|---|
 | Sun | 2048 | unchanged | 8x |  |  |
 | Mercury | 8192 | tiles | 22x |  |  |
-| Venus | 2048 | map | 9.6x |  |  |
+| Venus | 16384 | tiles | 76.5x |  |  |
 | Earth | 16384 | tiles | 44x | 69.9 radii | 1000x |
 | Mars | 16384 | tiles | 44x | 7.6 radii | 151.9x |
 | Jupiter | 2048 | map | 9.6x | 29.2 radii | 126.9x |
@@ -113,6 +113,7 @@ A tile set is the body's map cut into 512 pixel WebP squares at several sizes. L
 | The Moon | 3 (16384) | LRO Camera colour map (NASA SVS, CGI Moon Kit). The LROC WAC morphology mosaic at 100 m a pixel is cut to level 4 by `pnpm tiles:moon`, under the same switch |
 | Earth | 3 (16384) | Blue Marble Next Generation with topography and bathymetry |
 | Mercury | 2 (8192) | MESSENGER MDIS global basemap |
+| Venus | 3 (16384) | Magellan first-cycle radar mosaics (NASA, JPL, PDS), with detail feathered at observation boundaries |
 | Europa, Ganymede | 3 (16384) | Voyager and Galileo SSI global mosaics (NASA, JPL, USGS), with detail feathered at observation boundaries |
 | Io, Callisto | 2 | Galileo and Voyager mosaics (NASA, USGS) |
 | Rhea, Enceladus, Tethys, Dione, Iapetus | 2 | Cassini global colour maps (NASA, JPL, SSI, LPI) |
@@ -121,7 +122,7 @@ A tile set is the body's map cut into 512 pixel WebP squares at several sizes. L
 
 A tile is **the package's own 2048 picture, enlarged, with the source's fine detail added**. The source is put on the sphere the way the 2048 picture was (the same turn, strip projection and desaturation), and what it has beyond the 2048 picture is added where it really holds data, not in the black of a pole nobody imaged. So a tile's colour, grade and filled poles are the 2048 picture's own at every level, and only the sharpness is new. The sources' licences and credits are in `NOTICE.md`.
 
-Europa and Ganymede's mosaic resolution varies by observation. At mosaic joins and in gaps, the tiles use the bundled map. Titan, Ceres, Venus, the gas giants and the Sun also use their bundled maps.
+Europa and Ganymede's mosaic resolution varies by observation. At mosaic joins and in gaps, the tiles use the bundled map. Titan, Ceres, the gas giants and the Sun also use their bundled maps.
 
 ### What the element does
 
@@ -145,7 +146,7 @@ Europa and Ganymede's mosaic resolution varies by observation. At mosaic joins a
 
 ## Where the tiles are
 
-The tiles are **not in the npm package and not in the repository**: 17 bodies at up to 16384 pixels are about 91 MB, and a repository keeps every version of every file for ever. They are made from the sources by `scripts/make-body-tiles.py`, built by the Pages workflow and served beside the demo at https://johnmorrisdotca.github.io/wakusei-planets/tiles/ (GitHub Pages sends `access-control-allow-origin: *`; on a public repository it costs nothing). A level 4 for the Moon or Mars (32768 pixels across, 2048 tiles) is not built unless the repository variable `WAKUSEI_SHARP_TILES` is `1`. With it off, the Pages build does not download those two mosaics. Measured on 2026-11-13, once each file was on disk: the Moon is 72.79 MB, cut in 96 seconds from the 5.5 GB mosaic, and Mars is 66.02 MB, cut in 107 seconds from the 12 GB mosaic. The two add about 139 MB to the tile folder. The ordinary tiles of all 17 bodies are about 91 MB, so the folder stays under the 1 GB Pages limit. `WAKUSEI_SHARP_TILES=1 pnpm tiles:moon` and `pnpm tiles:mars` cut them.
+The tiles are **not in the npm package and not in the repository**: 18 bodies at up to 16384 pixels are about 97 MB, and a repository keeps every version of every file for ever. They are made from the sources by `scripts/make-body-tiles.py`, built by the Pages workflow and served beside the demo at https://johnmorrisdotca.github.io/wakusei-planets/tiles/ (GitHub Pages sends `access-control-allow-origin: *`; on a public repository it costs nothing). A level 4 for the Moon or Mars (32768 pixels across, 2048 tiles) is not built unless the repository variable `WAKUSEI_SHARP_TILES` is `1`. With it off, the Pages build does not download those two mosaics. Measured on 2026-11-13, once each file was on disk: the Moon is 72.79 MB, cut in 96 seconds from the 5.5 GB mosaic, and Mars is 66.02 MB, cut in 107 seconds from the 12 GB mosaic. The two add about 139 MB to the tile folder. The ordinary tiles of all 18 bodies are about 97 MB, so the folder stays under the 1 GB Pages limit. `WAKUSEI_SHARP_TILES=1 pnpm tiles:moon` and `pnpm tiles:mars` cut them.
 
 An element looks there by default. A page that serves its own pictures (it sets `texture-base`) has no tiles unless it says where they are, so nothing reaches out from a page that did not ask:
 

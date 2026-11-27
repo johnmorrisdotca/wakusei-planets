@@ -82,7 +82,7 @@ export function pictureWidth(body: FlatBodyId, pixelsAcross: number): number {
 /** The names the short credit gives, by body: a part of what `NOTICE.md` names, short enough for one small line. */
 const WHO: Readonly<Record<FlatBodyId, string>> = {
   mercury: "Shady Tex",
-  venus: "Solar System Scope",
+  venus: "NASA",
   earth: "NASA",
   moon: "NASA",
   mars: "NASA / USGS",
@@ -127,7 +127,7 @@ const WHO: Readonly<Record<FlatBodyId, string>> = {
 export const creditWho = (body: FlatBodyId): string => WHO[body];
 
 /** The bodies whose picture is CC BY 4.0, as `NOTICE.md` has it (the unit tests hold this to `PICTURE_CREDITS`); every other picture is public domain. */
-const CC_BY: readonly FlatBodyId[] = ["mercury", "venus", "jupiter", "saturn", "uranus", "neptune"];
+const CC_BY: readonly FlatBodyId[] = ["mercury", "jupiter", "saturn", "uranus", "neptune"];
 
 /**
  * The licence of a body's picture, in a language, for the credit line: `public domain` or `CC BY 4.0`.

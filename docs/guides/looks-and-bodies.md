@@ -19,7 +19,7 @@ A small picture loads first, and a sharper one is fetched on close zoom. If a pi
 
 ![Io in the painted look.](../images/hero-io-painted.png)
 
-![Venus in the realistic look, drawn from Solar System Scope's 2k_venus_surface.jpg.](../images/hero-venus-realistic.png)
+![Venus in the realistic look, drawn from NASA/JPL's Magellan radar composite with north up.](../images/hero-venus-realistic.png)
 
 ## Rings
 

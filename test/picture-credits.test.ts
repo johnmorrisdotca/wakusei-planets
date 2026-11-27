@@ -29,7 +29,7 @@ test("Jupiter's picture is Nestaeric's, under CC BY 4.0, and the Moon and Mars n
 
 test("every CC BY 4.0 picture names its author and the changes, and a public-domain picture does not", () => {
   const cc = PICTURE_CREDITS.filter((row) => row.licence === "CC BY 4.0").map((row) => row.id);
-  assert.deepEqual(cc, ["mercury", "venus", "jupiter", "saturn", "uranus", "neptune", "sun"]);
+  assert.deepEqual(cc, ["mercury", "jupiter", "saturn", "uranus", "neptune", "sun"]);
   for (const id of cc) {
     const line = picturesCredit([id], "en");
     assert.match(line, /CC BY 4.0/, id);

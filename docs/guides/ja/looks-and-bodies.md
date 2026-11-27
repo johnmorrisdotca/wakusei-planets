@@ -19,7 +19,7 @@ description: 見た目、天体ごとのエントリー、three.js、画像、�
 
 ![地図つきの見た目のイオ。](../../images/hero-io-painted.png)
 
-![リアルの見た目の金星。Solar System Scope の 2k_venus_surface.jpg を使用。](../../images/hero-venus-realistic.png)
+![リアルの見た目の金星。NASA/JPL のマゼラン・レーダーモザイクを北を上にして表示。](../../images/hero-venus-realistic.png)
 
 ## 輪
 

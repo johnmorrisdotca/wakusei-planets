@@ -4,7 +4,7 @@ Usage: python3 scripts/make-textures.py [body ... | saturn-ring]     (needs nump
 Each source's licence is read from Commons' own metadata for the file and the script stops unless it says public domain or CC0.
 Maps are equirectangular, 2:1, longitude 0 in the middle and east to the right, north at the top. A planet with no global map (Saturn, Uranus, Neptune, the Sun) is made from one
 photograph by turning the visible hemisphere back onto the sphere, taking the limb darkening off, and repeating the far side from the near one (mirrored at the limb)."""
-import json, os, sys, time, urllib.parse, urllib.request
+import hashlib, json, os, sys, time, urllib.parse, urllib.request
 import numpy as np
 from PIL import Image, ImageFilter
 
@@ -15,10 +15,13 @@ UA = {"User-Agent": "wakusei-planets-build/0.1 (https://github.com/johnmorrisdot
 WIDTHS = [512, 1024, 2048]
 os.makedirs(CACHE, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
+VENUS_URL = "https://upload.wikimedia.org/wikipedia/commons/1/19/Cylindrical_Map_of_Venus.jpg"
+VENUS_SHA256 = "7fcebc446ba767ed4ff3a1f6f4aa984719ef727a8228c66d87efde9c24c9b499"
+VENUS_USAGE = "Magellan radar composite, turned 60° east to put longitude 0° in the middle, then resized to 512, 1024 and 2048 pixels wide. Its colour represents radar brightness."
 
 SOURCES = {
     "mercury": ("Mercury MESSENGER MDIS Basemap EnhancedColor Mosaic Global 32ppd.jpg", 4096),
-    "venus": ("Cylindrical Map of Venus.jpg", 4096),
+    "venus": ("Cylindrical Map of Venus.jpg", 5120),
     "mars": ("Mars Viking MDIM21 ClrMosaic 1km.jpg", 4096),
     "jupiter": ("Jupiter Cylindrical Map - Dec 2000 PIA07782.jpg", 3601),
     "saturn": ("Saturn during Equinox.jpg", 4613),
@@ -47,7 +50,7 @@ SOURCES = {
 # A source with less than 2048 pixels across is not made at 2048.
 MAX_WIDTH = {"europa": 1024}
 # Pictures full of fine detail get a lower WebP quality, to keep the package small.
-QUALITY = {"vesta": 70, "rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 62, "dione": 62, "iapetus": 64}
+QUALITY = {"venus": 75, "vesta": 70, "rhea": 68, "enceladus": 68, "mimas": 74, "callisto": 74, "ceres": 72, "tethys": 62, "dione": 62, "iapetus": 64}
 META = os.path.join(OUT, "SOURCES.json")
 # Commons names no author for this file: the images are Galileo SSI and Voyager's, NASA and JPL's, and Commons marks the file public domain.
 CREDIT_FALLBACK = {"io": "NASA / JPL (Galileo SSI and Voyager images); the file page names no author"}
@@ -75,21 +78,30 @@ def fetch(body):
     lic, page, meta = licence(title)
     if not (lic.lower().startswith("public domain") or lic.lower().startswith("cc0")):
         sys.exit(f"{body}: {title} is '{lic}', not public domain: not used")
-    path = os.path.join(CACHE, body + ".jpg")
+    path = os.path.join(CACHE, "venus-magellan.jpg" if body == "venus" else body + ".jpg")
     if not os.path.exists(path):
         url = "https://commons.wikimedia.org/wiki/Special:FilePath/" + urllib.parse.quote(title.replace(" ", "_")) + f"?width={width}"
+        if body == "venus":
+            url = VENUS_URL
         with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=180) as r, open(path, "wb") as f:
             f.write(r.read())
         time.sleep(2)
+    if body == "venus":
+        with open(path, "rb") as raster:
+            if hashlib.sha256(raster.read()).hexdigest() != VENUS_SHA256:
+                sys.exit(f"{path}: the Magellan composite has a different SHA-256")
     print(f"{body}: {page} ({lic})")
-    record(body, {
+    entry = {
         "file": title,
         "page": "https://commons.wikimedia.org/wiki/" + page.replace(" ", "_"),
         "licence": lic,
         "credit": strip_tags(meta.get("Credit", {}).get("value", "")) or CREDIT_FALLBACK.get(body, ""),
         "artist": strip_tags(meta.get("Artist", {}).get("value", "")) or CREDIT_FALLBACK.get(body, ""),
         "usage": meta.get("UsageTerms", {}).get("value", lic),
-    })
+    }
+    if body == "venus":
+        entry.update({"url": VENUS_URL, "sha256": VENUS_SHA256, "usage": VENUS_USAGE})
+    record(body, entry)
     return np.asarray(Image.open(path).convert("RGB"), dtype=np.float32) / 255.0
 
 
@@ -349,7 +361,7 @@ def make(body):
         img = fill_black_rows(img)
         img = np.clip(desaturate(img, 0.12) * 1.22, 0, 1)
     elif body == "venus":
-        img = roll(fill_black_rows(img), 0.169)
+        img = roll(img, 1 / 6)
     elif body == "mars":
         img = fill_black_rows(img)
     elif body == "jupiter":
@@ -451,8 +463,9 @@ def make_ring():
     print(f"  saturn-ring: {RING_WIDTH} samples, {RING_FROM_KM:.0f} to {RING_FROM_KM + RING_KM_PER_PX * RING_COLUMNS:.0f} km, {os.path.getsize(path)} bytes")
 
 
-for name in (sys.argv[1:] or list(SOURCES)):
-    if name == "pluto":
-        print("pluto: kept as it is; its pictures come from the 16384 by 8192 master, kept offline (NOTICE.md)")
-        continue
-    make_ring() if name == "saturn-ring" else make(name)
+if __name__ == "__main__":
+    for name in (sys.argv[1:] or list(SOURCES)):
+        if name == "pluto":
+            print("pluto: kept as it is; its pictures come from the 16384 by 8192 master, kept offline (NOTICE.md)")
+            continue
+        make_ring() if name == "saturn-ring" else make(name)

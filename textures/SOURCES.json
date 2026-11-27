@@ -8,12 +8,14 @@
     "usage": "Natural grey equirectangular map, resized to 512, 1024 and 2048. The 8K original stays out of the package."
   },
   "venus": {
-    "file": "2k_venus_surface.jpg",
-    "page": "https://www.solarsystemscope.com/textures/",
-    "licence": "CC BY 4.0",
-    "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
-    "artist": "Solar System Scope",
-    "usage": "Equirectangular texture resized to 512, 1024 and 2048 pixels wide. The source record gives no mission or observed coverage for this file."
+    "file": "Cylindrical Map of Venus.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Cylindrical_Map_of_Venus.jpg",
+    "licence": "Public domain",
+    "credit": "http://solarviews.com/cap/venus/venmap.htm (image link)",
+    "artist": "NASA / Jet Propulsion Laboratory",
+    "usage": "Magellan radar composite, turned 60° east to put longitude 0° in the middle, then resized to 512, 1024 and 2048 pixels wide. Its colour represents radar brightness.",
+    "url": "https://upload.wikimedia.org/wikipedia/commons/1/19/Cylindrical_Map_of_Venus.jpg",
+    "sha256": "7fcebc446ba767ed4ff3a1f6f4aa984719ef727a8228c66d87efde9c24c9b499"
   },
   "mars": {
     "file": "Mars Viking MDIM21 ClrMosaic 1km.jpg",

@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **Venus surface orientation and closer views** (MODULES-774). The earlier realistic Venus was drawn upside down. Its replacement is NASA/JPL's Magellan radar composite, aligned to the mission grid. The finer maps add measured radar brightness where the first mapping cycle observed the surface.
 - **Pictures from a trip are let go** (MODULES-1905). A body that leaves the space view is kept a few seconds and then dropped, pictures included, and a closer picture is dropped once the body no longer needs it. A trip from the Earth out to the planets and back no longer keeps what it passed.
 
 ## [0.89.0] - 2026-11-27

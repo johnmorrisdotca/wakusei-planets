@@ -41,6 +41,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))
 UA = {"User-Agent": "wakusei-planets-build/0.1 (https://github.com/johnmorrisdotca/wakusei-planets)"}
 COMMONS = "https://upload.wikimedia.org/wikipedia/commons"
+MAGELLAN = "https://pds-geosciences.wustl.edu/mgn/urn-nasa-pds-magellan_midr/data/cmidr"
+# The first-cycle, left-looking C3 MIDR products. Each row gives its archive name, central meridian,
+# hemisphere and raster hash. The projections and offsets are from the corresponding PDS4 labels.
+VENUS_MIDRS = (
+    ("c3midr_14n060_1", 60, 1, "48dadcc6a4b5fa6749cf463aa91690310e535002593863d5e38d9648024f738a"),
+    ("c3midr_14n180_1", 180, 1, "5c031a6a9be7a603635351322002b3ddc761420e258c5357cfae7757513055db"),
+    ("c3midr_14n300_1", 300, 1, "2b6efbcb4cf97f944a0a80b2cf9268dbe7b4d8303d33ce35dbe045ffd14d88e1"),
+    ("c3midr_14s060_1", 60, -1, "3accd91dfe64e2ec23aa60d8dc58e687f687e888b8e45b5d0c4977e53351f7bc"),
+    ("c3midr_14s180_1", 180, -1, "d6ba5c50f0c439134fcd4dde5f5e879785c5423ecc9bc71263a5e40a2c1d7d9e"),
+    ("c3midr_14s300_1", 300, -1, "dad645c5c0a217f6e613a02623fb2f48ef6138e5e678d75aefe2b1c761a6b72d"),
+)
 
 
 def tls_context():
@@ -62,6 +73,13 @@ SOURCES = {
         "sha256": "e9d394bfd4ab472aa1463878b389e7f84cb898ac072211d68cc5f457fe2f4fa0",
         "file": "Mercury MESSENGER MDIS Basemap EnhancedColor Mosaic Global 32ppd.jpg",
         "credit": "NASA / Johns Hopkins University Applied Physics Laboratory / Carnegie Institution of Washington (MESSENGER MDIS global basemap, enhanced colour, 32 pixels a degree)",
+        "grey": True, "night": True, "quality": 74,
+    },
+    "venus": {
+        "url": "https://pds-geosciences.wustl.edu/missions/magellan/midr_pds4/index.htm",
+        "file": "Magellan C3 MIDR, cycle 1 left look (six PDS4 scenes)",
+        "sha256": hashlib.sha256("\n".join(row[3] for row in VENUS_MIDRS).encode()).hexdigest(),
+        "credit": "NASA / JPL Magellan radar, NASA Planetary Data System Geosciences Node",
         "grey": True, "night": True, "quality": 74,
     },
     "mars": {
@@ -190,9 +208,10 @@ def sha256_of(path):
     return digest.hexdigest()
 
 
-def fetch(name, cache):
+def fetch(name, cache, source=None):
     """The source's path in the cache, downloaded when missing; a file whose hash differs is never used."""
-    source = SOURCES[name]
+    if source is None:
+        source = SOURCES[name]
     path = os.path.join(cache, name + os.path.splitext(source["url"])[1])
     if not os.path.exists(path):
         os.makedirs(cache, exist_ok=True)
@@ -245,6 +264,51 @@ def load_source(path, source):
         k = image.width / ref
         image = image.crop((round(x0 * k), round(y0 * k), round(x1 * k), round(y1 * k)))
     return image
+
+
+def venus_mosaic(cache):
+    """Reproject the six Magellan scenes to the tile grid, leaving 0 where the cycle has no radar returns."""
+    files = []
+    scenes = []
+    for name, central_meridian, hemisphere, digest in VENUS_MIDRS:
+        product = {"file": f"{name}.img", "url": f"{MAGELLAN}/{name}.img", "sha256": digest}
+        data = np.memmap(fetch(name, cache, product), dtype=np.uint8, mode="r", shape=(7168, 8192))
+        # Planetocentric, positive east. The north and south labels differ in their Y offset.
+        corner_y = 8714588.0 if hemisphere > 0 else 5800612.5
+        scenes.append((data, central_meridian, 14 * hemisphere, corner_y))
+        files.append(product)
+
+    radius, scale, corner_x = 6051000, 2025, -8295412.5
+    width = BASE * 2 ** top_level(math.tau * radius / scale)
+    height = width // 2
+    longitude = (np.arange(width, dtype=np.float32) + 0.5) * (360 / width) - 180
+    latitude = 90 - (np.arange(height, dtype=np.float32) + 0.5) * (180 / height)
+    picture = np.zeros((height, width), dtype=np.uint8)
+    for row in range(0, height, 96):
+        lat = latitude[row : row + 96, None]
+        radians = np.radians(lat)
+        total = np.zeros((len(lat), width), dtype=np.float32)
+        weights = np.zeros_like(total)
+        for data, meridian, mid_lat, corner_y in scenes:
+            delta = (longitude - meridian + 180) % 360 - 180
+            x = (radius * np.radians(delta) * np.cos(radians) - corner_x) / scale
+            y = (corner_y - radius * radians) / scale
+            column = np.floor(x).astype(np.int32)
+            line = np.floor(y).astype(np.int32)
+            valid = (column >= 0) & (column < data.shape[1] - 1) & (line >= 0) & (line < data.shape[0] - 1)
+            cx = column.clip(0, data.shape[1] - 2)
+            cy = line.clip(0, data.shape[0] - 2)
+            dx, dy = x - column, y - line
+            tl, tr = data[cy, cx], data[cy, cx + 1]
+            bl, br = data[cy + 1, cx], data[cy + 1, cx + 1]
+            valid &= (tl > 0) & (tr > 0) & (bl > 0) & (br > 0)
+            sample = (tl * (1 - dx) + tr * dx) * (1 - dy) + (bl * (1 - dx) + br * dx) * dy
+            # The overlapping windows are from the same cycle. Prefer the centre of each scene.
+            weight = np.exp(-(delta / 45) ** 2 - ((lat - mid_lat) / 40) ** 2) * valid
+            total += sample * weight
+            weights += weight
+        picture[row : row + len(lat)] = np.rint(total / np.maximum(weights, 1e-12)).astype(np.uint8)
+    return Image.fromarray(picture).convert("RGB"), files
 
 
 def geometry(image, source, width):
@@ -365,8 +429,11 @@ def cut(picture, out, name, level, quality):
 
 def build_body(name, cache, out, textures):
     source = SOURCES[name]
-    path = fetch(name, cache)
-    image = load_source(path, source)
+    if name == "venus":
+        image, files = venus_mosaic(cache)
+    else:
+        image = load_source(fetch(name, cache), source)
+        files = None
     base = np.asarray(Image.open(os.path.join(textures, f"{name}-{BASE}.webp")).convert("RGB"), dtype=np.float32) / 255.0
     top = top_level(image.width)
     if top < 1:
@@ -384,7 +451,10 @@ def build_body(name, cache, out, textures):
         entry = cut(picture, out, name, level, source["quality"])
         levels.append(entry)
         print(f"  level {level}: {width} x {width // 2}, {entry['tiles']} tiles, {entry['bytes'] / 1048576:.2f} MB", flush=True)
-    return {"levels": levels, "tiles": sum(e["tiles"] for e in levels), "bytes": sum(e["bytes"] for e in levels), "source": {"file": source["file"], "url": source["url"], "sha256": source["sha256"], "credit": source["credit"], "width": image.width, "height": image.height}}
+    provenance = {"file": source["file"], "url": source["url"], "sha256": source["sha256"], "credit": source["credit"], "width": image.width, "height": image.height}
+    if files is not None:
+        provenance["files"] = files
+    return {"levels": levels, "tiles": sum(e["tiles"] for e in levels), "bytes": sum(e["bytes"] for e in levels), "source": provenance}
 
 
 def write_manifest(out, bodies):
