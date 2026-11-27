@@ -214,6 +214,20 @@ const CELLS: Record<LuminosityClass, readonly [number, number]> = { "0": [6, 30]
 /** How strongly a surface shows its cells: full for a cool star, fading through the hot ones whose outer layers are not convecting, none for a white dwarf. */
 const visibility = (temperatureK: number, cls: LuminosityClass): number => (cls === "D" ? 0 : clamp((9500 - temperatureK) / 3000, 0.12, 1));
 
+/** The Sun body's own bright-cell yellow and corona orange. A star near the Sun's temperature leans a step toward them; the named colour stays the black body. */
+const SUN_YELLOW: readonly [number, number, number] = [1, 0.9, 0.52];
+const SUN_ORANGE: readonly [number, number, number] = [1, 0.7, 0.3];
+
+/** 1 at the Sun's temperature, and gone well above or below it. */
+function sunOrangeStep(temperatureK: number): number {
+  const d = (temperatureK - SUN_K) / 900;
+  return Math.exp(-(d * d));
+}
+
+function lean(from: readonly [number, number, number], to: readonly [number, number, number], t: number): [number, number, number] {
+  return [0, 1, 2].map((i) => from[i]! + (to[i]! - from[i]!) * t) as [number, number, number];
+}
+
 const f = (x: number): string => x.toFixed(4);
 const v3 = (c: readonly number[]): string => `vec3(${f(c[0]!)}, ${f(c[1]!)}, ${f(c[2]!)})`;
 const unit = (kelvin: number): [number, number, number] => blackBodyRgb(kelvin).map((v) => v / 255) as [number, number, number];
@@ -361,9 +375,10 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
   if (periodGiven !== swingGiven) throw new RangeError("variablePeriodDays and variableAmplitude are given together, or neither");
   const variable = periodGiven ? { periodDays: within("variablePeriodDays", numbers.variablePeriodDays!, 1e-4, 1e6), amplitude: within("variableAmplitude", numbers.variableAmplitude!, 0, 1) } : undefined;
 
-  // colour: the black body for the cells, a cooler and more saturated one for the lanes between them
+  // colour: the black body for the cells, a cooler and more saturated one for the lanes between them. Near the Sun's temperature the cells and the glow lean toward the Sun's own orange.
   const body = unit(temperatureK);
-  const cell = saturate(unit(temperatureK * 1.06), 2);
+  const warm = sunOrangeStep(temperatureK) * 0.4;
+  const cell = lean(saturate(unit(temperatureK * 1.06), 2), SUN_YELLOW, warm);
   const lane = saturate(unit(temperatureK * (0.62 + 0.3 * clamp((temperatureK - 5000) / 7000, 0, 1))), 2.6).map((v) => v * 0.85) as [number, number, number];
   const gran = visibility(temperatureK, cls);
   const [grainFreq, grainFine] = GRAIN[cls];
@@ -414,7 +429,7 @@ vec4 surface(vec3 p) {
   const limb = clamp(0.5 + (SUN_K - temperatureK) / 30_000, 0.2, 0.7);
   const cool = unit(temperatureK * 0.78);
   const tint = [0, 1, 2].map((i) => Math.min(1, (cool[i]! / body[i]!) ** 1.4)) as [number, number, number];
-  const glowColour = saturate(body, 1.1);
+  const glowColour = lean(saturate(body, 1.1), SUN_ORANGE, warm);
   const spread = clamp(2.4 + (SUN_K - temperatureK) / 12_000, 1.7, 3.4);
   const prominence = low || activity < 0.15 ? 0 : clamp(activity * 1.1, 0, 1);
 

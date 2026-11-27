@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Sun's star drawing is a step warmer** (MODULES-734). Near the Sun's temperature the cells and the glow lean toward the Sun's own yellow and orange. The named colour stays the black body. A hot star is left alone.
+
 ## [0.80.0] - 2026-11-27
 
 - **Prominences turn with the star** (MODULES-734). They sit on the surface, so the turn carries them round the edge. The flicker stays with the clock. They are still drawn for looks.

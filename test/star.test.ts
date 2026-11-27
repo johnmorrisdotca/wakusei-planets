@@ -75,6 +75,23 @@ test("the colour is the black body of the temperature: red for a cool star, whit
   assert.ok(rb! > rr! + 40, "Rigel is blue");
 });
 
+test("the Sun's star drawing leans toward the Sun's own orange, and a hot star does not", () => {
+  const cellOf = (surface: string): number[] => {
+    const found = /vec3 col = mix\(vec3\([^)]*\), vec3\(([^)]*)\)/.exec(surface);
+    assert.ok(found, surface.slice(0, 240));
+    return found[1]!.split(",").map((part) => Number(part));
+  };
+  const sun = starLook(STAR_SUN);
+  const hot = starLook({ temperatureK: 12100, radiusSun: 1, luminosityClass: "V" });
+  const sunCell = cellOf(sun.look.surface);
+  const hotCell = cellOf(hot.look.surface);
+  assert.ok(sunCell[2]! < 0.82, `the Sun's cells are yellow, blue was ${sunCell[2]}`);
+  assert.ok(hotCell[2]! > sunCell[2]! + 0.05);
+  assert.ok(sun.look.glow!.colour[2] < hot.look.glow!.colour[2]);
+  const [red, , blue] = channels(sun.colour);
+  assert.ok(red! >= 250 && blue! > 215, "the named colour stays the black body");
+});
+
 test("a star is a pure function of its numbers, and the size is the radius in kilometres", () => {
   const a = starLook(PROXIMA);
   const b = starLook({ ...PROXIMA });
