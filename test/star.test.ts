@@ -92,6 +92,16 @@ test("the Sun's star drawing leans toward the Sun's own orange, and a hot star d
   assert.ok(red! >= 250 && blue! > 215, "the named colour stays the black body");
 });
 
+test("granulation is deeper, the chromosphere ring is brighter, and a hot star blooms more than the Sun", () => {
+  const sun = starLook(STAR_SUN);
+  const hot = starLook({ temperatureK: 12100, radiusSun: 2, luminosityClass: "V" });
+  assert.ok(sun.look.surface.includes("0.6 + 0.8 * smoothstep"));
+  assert.ok(sun.look.surface.includes("p * 96.0000"));
+  assert.ok(Math.abs(sun.look.glow!.rim! - 0.4) < 1e-9);
+  assert.ok(hot.look.glow!.strength > sun.look.glow!.strength * 1.2);
+  assert.equal(starLook({ temperatureK: 4000, radiusSun: 0.5, luminosityClass: "V" }).look.glow!.strength, sun.look.glow!.strength);
+});
+
 test("a star is a pure function of its numbers, and the size is the radius in kilometres", () => {
   const a = starLook(PROXIMA);
   const b = starLook({ ...PROXIMA });

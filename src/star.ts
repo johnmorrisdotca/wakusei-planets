@@ -401,11 +401,11 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
       ? "float cell = 0.8;"
       : low
         ? `float g = fbm(p * ${f(grainFreq)});
-  float g2 = fbm(p * ${f(grainFreq * 2.9)} + 4.0);
+  float g2 = fbm(p * ${f(grainFreq * 4)} + 4.0);
   float cell = mix(0.8, smoothstep(0.32, 0.72, mix(g, g2, ${f(grainFine)})), ${f(gran)});`
         : `float boil = 0.5 + 0.5 * sin(uTime * 0.35);
   float g = fbm(p * ${f(grainFreq)} + vec3(0.0, 0.0, uTime * 0.004));
-  float g2 = mix(fbm(p * ${f(grainFreq * 2.9)} + 4.0), fbm(p * ${f(grainFreq * 2.9)} + 11.0), boil);
+  float g2 = mix(fbm(p * ${f(grainFreq * 4)} + 4.0), fbm(p * ${f(grainFreq * 4)} + 11.0), boil);
   float cell = mix(0.8, smoothstep(0.32, 0.72, mix(g, g2, ${f(grainFine)})), ${f(gran)});`;
   const shape = oblateness > 0 ? `\n  col *= mix(${v3(ratioAt(pole))}, ${v3(ratioAt(eq * pole))}, 1.0 - p.z * p.z);` : "";
   const spots =
@@ -421,7 +421,7 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
   const surface = `${variable ? "\nuniform float uPulse;" : ""}${low || cls === "D" ? "" : "\nuniform float uTime;"}
 vec4 surface(vec3 p) {
   ${grain}
-  vec3 col = mix(${v3(lane)}, ${v3(cell)}, cell);${low ? "" : "\n  col *= 0.8 + 0.4 * smoothstep(0.1, 0.9, cell);"}${shape}${spots}${variable ? "\n  col *= uPulse;" : ""}
+  vec3 col = mix(${v3(lane)}, ${v3(cell)}, cell);${low ? "" : "\n  col *= 0.6 + 0.8 * smoothstep(0.1, 0.9, cell);"}${shape}${spots}${variable ? "\n  col *= uPulse;" : ""}
   return vec4(col * 1.12, 0.0);
 }`;
 
@@ -431,6 +431,7 @@ vec4 surface(vec3 p) {
   const tint = [0, 1, 2].map((i) => Math.min(1, (cool[i]! / body[i]!) ** 1.4)) as [number, number, number];
   const glowColour = lean(saturate(body, 1.1), SUN_ORANGE, warm);
   const spread = clamp(2.4 + (SUN_K - temperatureK) / 12_000, 1.7, 3.4);
+  const hot = temperatureK > 7000 ? 0.5 : 0;
   const prominence = low || activity < 0.15 ? 0 : clamp(activity * 1.1, 0, 1);
 
   const speedReal = rotationDays === undefined ? undefined : 360 / (Math.abs(rotationDays) * 86_400);
@@ -440,7 +441,7 @@ vec4 surface(vec3 p) {
 
   const key = JSON.stringify([low ? "low" : "full", name, temperatureK, radiusSun, cls, rotationDays ?? null, activity, oblateness, inclinationDeg ?? null, corona, variable?.periodDays ?? null, variable?.amplitude ?? null]);
   const colour = hex(body);
-  const look: BodyLook = { id: "sun", surface, emissive: true, limb, limbTint: tint, glow: { colour: glowColour, strength: 0.62 * corona, spread, rim: 0.3 * corona, prominence, seed: (seedOf(key) % 1000) / 1000, ...(variable ? { variable } : {}) } };
+  const look: BodyLook = { id: "sun", surface, emissive: true, limb, limbTint: tint, glow: { colour: glowColour, strength: 0.62 * corona * (1 + 0.5 * hot), spread, rim: 0.5 * corona, prominence, seed: (seedOf(key) % 1000) / 1000, ...(variable ? { variable } : {}) } };
   const facts: BodyFacts = {
     ...BODIES.sun,
     name: { en: name, ja: name === "Star" ? "恒星" : name },
