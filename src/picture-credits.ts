@@ -104,7 +104,11 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
     },
   },
   cc("sun", "Solar System Scope", "Solar System Scope", "Equirectangular map, resized to 512, 1024 and 2048.", "正距円筒図法の地図を、512、1024、2048に縮小しました。"),
-  pd("moon", "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro); Lunar Reconnaissance Orbiter Camera", "NASA Scientific Visualization Studio（Ernie Wright、Noah Petro）、Lunar Reconnaissance Orbiter Camera"),
+  pd(
+    "moon",
+    "NASA's Scientific Visualization Studio (Ernie Wright, Noah Petro); Lunar Reconnaissance Orbiter Camera. Polar elevations from the LOLA Team (NASA/GSFC), via NASA PDS",
+    "NASA Scientific Visualization Studio（Ernie Wright、Noah Petro）、Lunar Reconnaissance Orbiter Camera。極域の標高データは LOLA チーム（NASA/GSFC）が作成し、NASA PDS が公開",
+  ),
   pd("io", "NASA / JPL / USGS Astrogeology, Voyager 1 and Galileo SSI", "NASA / JPL / USGS Astrogeology（ボイジャー1号とガリレオSSI）"),
   pd("europa", "NASA / JPL / U.S. Geological Survey Astrogeology, Voyager and Galileo SSI", "NASA / JPL / U.S. Geological Survey Astrogeology（ボイジャーとガリレオSSI）"),
   pd("ganymede", "NASA / JPL / USGS Astrogeology, Voyager 1 and 2 and Galileo SSI", "NASA / JPL / USGS Astrogeology（ボイジャー1号・2号とガリレオSSI）"),
