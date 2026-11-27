@@ -4,6 +4,7 @@ import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/r
 import type * as THREE from "three";
 import type { Pose } from "../ephemeris.ts";
 import { BODIES, type BodyFacts, type BodyId } from "../facts.ts";
+import { starBrightness } from "../star.ts";
 import { silhouette } from "../pose.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
@@ -131,6 +132,7 @@ export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean
       uRimBase: { value: 0.12 },
       uEmissive: { value: look.emissive === true ? 1 : 0 },
       uTime: { value: 0 },
+      uPulse: { value: 1 },
       ...(painted ? { uMark: { value: look.painted?.turn === "hexagon" ? 2 : look.painted?.turn === "bands" ? 1 : 0 } } : {}),
       uRingN: { value: new T.Vector3(0, 1, 0) },
       uRingR: { value: new T.Vector2(1, 2) },
@@ -302,7 +304,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const own = look.glow;
         const glowMaterial = own === undefined
           ? assets.acquire("wk:glowmat", () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(1, 0.7, 0.3) } } }), (m) => m.dispose())
-          : assets.acquire(`wk:glowmat:${held}`, () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 } } }), (m) => m.dispose());
+          : assets.acquire(`wk:glowmat:${held}`, () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 } } }), (m) => m.dispose());
         glow = new T.Mesh(glowGeometry, glowMaterial);
         glow.position.z = -5;
         glow.scale.setScalar(1);
@@ -565,8 +567,16 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         if (look.glow !== undefined) {
           // the star's surface boils and its prominences move with the clock, but only when a frame is asked for: a star at rest draws nothing
           const seconds = (performance.now() / 1000) % 100_000;
-          for (const mat of materials) mat.uniforms.uTime!.value = seconds;
-          if (glowMaterialOf !== undefined) glowMaterialOf.uniforms.uTime!.value = seconds;
+          const variable = look.glow?.variable;
+          const pulse = variable === undefined ? 1 : starBrightness(variable.periodDays, variable.amplitude, seconds);
+          for (const mat of materials) {
+            mat.uniforms.uTime!.value = seconds;
+            if (mat.uniforms.uPulse !== undefined) mat.uniforms.uPulse.value = pulse;
+          }
+          if (glowMaterialOf !== undefined) {
+            glowMaterialOf.uniforms.uTime!.value = seconds;
+            glowMaterialOf.uniforms.uPulse!.value = pulse;
+          }
         }
         if (glow !== undefined) {
           // a flattened star is squeezed along its pole: the glow starts at its edge, not at a round one

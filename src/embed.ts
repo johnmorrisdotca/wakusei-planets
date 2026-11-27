@@ -100,6 +100,8 @@ function starAttributes(star: StarNumbers): [string, string][] {
   if (star.activity !== undefined) out.push(["activity", String(star.activity)]);
   if (star.oblateness !== undefined) out.push(["oblateness", String(star.oblateness)]);
   if (star.corona !== undefined) out.push(["corona", String(star.corona)]);
+  if (star.variablePeriodDays !== undefined) out.push(["variable-period-days", String(star.variablePeriodDays)]);
+  if (star.variableAmplitude !== undefined) out.push(["variable-amplitude", String(star.variableAmplitude)]);
   if (star.estimated !== undefined && star.estimated.length > 0) out.push(["estimated", star.estimated.join(",")]);
   return out;
 }

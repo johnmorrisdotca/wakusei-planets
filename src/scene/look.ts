@@ -80,7 +80,7 @@ export interface BodyLook {
   /** For a glowing body: the colour its edge shifts to as it darkens (0 to 1 each). Default the Sun's, orange. */
   limbTint?: readonly [number, number, number];
   /** For a glowing body: its soft corona. The colour (0 to 1 each), how strong it is and how fast it fades (higher is tighter). Default the Sun's glow. */
-  glow?: { colour: readonly [number, number, number]; strength: number; spread: number; /** How bright the thin glowing edge is. Default 0. */ rim?: number; /** How big the prominences and flares on the edge are, 0 to 1. Default 0. */ prominence?: number; /** 0 to 1: where on the edge they are. */ seed?: number };
+  glow?: { colour: readonly [number, number, number]; strength: number; spread: number; /** How bright the thin glowing edge is. Default 0. */ rim?: number; /** How big the prominences and flares on the edge are, 0 to 1. Default 0. */ prominence?: number; /** 0 to 1: where on the edge they are. */ seed?: number; /** When set, the disc and the glow are multiplied by `starBrightness` of these as the clock runs. */ variable?: { periodDays: number; amplitude: number } };
   /** How strongly the height shows as relief, 0 to 2. Default 0.6. */
   relief?: number;
   /** How far light wraps round the terminator: 0 is a hard edge (no air), 0.3 a soft one. Default 0.04, or 0.3 with an atmosphere. */

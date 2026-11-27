@@ -7,7 +7,7 @@ import { build } from "esbuild";
 import { compile } from "svelte/compiler";
 import ts from "typescript";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
-import { embedCode, embedCredit, EMBED_KINDS, LUMINOSITY_CLASSES, STAR_SUN, starLineSvg, starLook, type EmbedOptions, type StarNumbers } from "../src/index.ts";
+import { embedCode, embedCredit, EMBED_KINDS, LUMINOSITY_CLASSES, STAR_SUN, starBrightness, starLineSvg, starLook, type EmbedOptions, type StarNumbers } from "../src/index.ts";
 import { registerStarLook, starLookOf } from "../src/scene/look.ts";
 
 const BETELGEUSE: StarNumbers = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab", estimated: ["radiusSun"] };
@@ -17,6 +17,20 @@ const ALTAIR: StarNumbers = { name: "Altair", temperatureK: 7550, radiusSun: 1.7
 const DWARF: StarNumbers = { name: "Sirius B", temperatureK: 25200, radiusSun: 0.0084, luminosityClass: "D" };
 
 const channels = (hex: string): number[] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+
+test("a variable star is 1 at the mean, brighter by its swing a quarter of a period later, and dimmer by it three quarters later", () => {
+  assert.equal(starBrightness(10, 0.4, 0), 1);
+  assert.ok(Math.abs(starBrightness(10, 0.4, 10 * 86_400 / 4) - 1.4) < 1e-9);
+  assert.ok(Math.abs(starBrightness(10, 0.4, (10 * 86_400 * 3) / 4) - 0.6) < 1e-9);
+  const steady = starLook(STAR_SUN);
+  assert.equal(steady.variablePeriodDays, undefined);
+  assert.equal(steady.look.surface.includes("uPulse"), false);
+  const variable = starLook({ temperatureK: 3500, radiusSun: 40, variablePeriodDays: 430, variableAmplitude: 0.5 });
+  assert.equal(variable.look.glow?.variable?.periodDays, 430);
+  assert.equal(variable.look.surface.includes("uPulse"), true);
+  assert.equal(variable.parts.some((part) => part.part === "variability"), true);
+  assert.throws(() => starLook({ temperatureK: 3500, radiusSun: 40, variablePeriodDays: 10 }), /together/);
+});
 
 test("the colour is the black body of the temperature: red for a cool star, white for the Sun, blue for a hot one", () => {
   const [br, , bb] = channels(starLook(BETELGEUSE).colour);

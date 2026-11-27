@@ -65,7 +65,7 @@ const weakDevice = (): boolean => {
 };
 
 /** The attributes that carry a star's numbers beside `star`, and the number each is. */
-const STAR_ATTRS = ["temperature-k", "radius-sun", "luminosity-class", "rotation-days", "activity", "oblateness", "corona", "estimated"] as const;
+const STAR_ATTRS = ["temperature-k", "radius-sun", "luminosity-class", "rotation-days", "activity", "oblateness", "corona", "variable-period-days", "variable-amplitude", "estimated"] as const;
 
 const readLook = (value: string | null): Look => (value === "realistic" || value === "painted" || value === "illustrated" ? value : "line");
 
@@ -715,6 +715,8 @@ export class WakuseiBody extends HTMLElement {
         ...(pick("activity") !== null ? { activity: number("activity") } : {}),
         ...(pick("oblateness") !== null ? { oblateness: number("oblateness") } : {}),
         ...(pick("corona") !== null ? { corona: number("corona") } : {}),
+        ...(pick("variable-period-days") !== null ? { variablePeriodDays: number("variable-period-days") } : {}),
+        ...(pick("variable-amplitude") !== null ? { variableAmplitude: number("variable-amplitude") } : {}),
         ...(pick("estimated") !== null ? { estimated: pick("estimated")!.split(",").map((part) => part.trim()).filter((part) => part !== "") as StarNumbers["estimated"] } : {}),
       } as StarNumbers;
       this.#starMade = starLook(numbers, { quality });

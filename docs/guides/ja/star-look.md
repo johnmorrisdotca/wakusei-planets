@@ -16,6 +16,7 @@ description: どんな星も、温度・半径・階級・自転などの数字�
 | `activity` | 黒点と、ふちのプロミネンス・フレア。ないときは、温度と階級から決めます。熱い星はなし、冷たい星や赤色矮星は多め |
 | `oblateness` | つぶれた形と、極が熱く赤道が暗いこと (重力暗化)。ベガは約0.11、アルタイルは0.2 |
 | `corona` | やわらかい光の強さ (0〜1) |
+| `variablePeriodDays`、`variableAmplitude` | 明るさの周期 (日) と、平均からの振れ (0〜1)。両方そろえて渡します。波は正弦で、作りものです。ないときは明るさは一定です |
 | `estimated` | 上の数字のうち、測定ではなく推定のもの。絵にもそう書きます |
 
 ## ふつうのページで
@@ -176,7 +177,7 @@ export class StarViewComponent implements OnInit {
 
 ## iframe で
 
-埋め込みページは、同じ名前をアドレスで受け取ります: `star`・`temperature-k`・`radius-sun`・`luminosity-class`・`rotation-days`・`activity`・`oblateness`・`corona`・`estimated`・`look`。
+埋め込みページは、同じ名前をアドレスで受け取ります: `star`・`temperature-k`・`radius-sun`・`luminosity-class`・`rotation-days`・`activity`・`oblateness`・`corona`・`variable-period-days`・`variable-amplitude`・`estimated`・`look`。
 
 ```html
 <!doctype html>

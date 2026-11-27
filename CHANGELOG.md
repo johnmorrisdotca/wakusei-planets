@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A variable star brightens and dims** (MODULES-734). Give `variablePeriodDays` and `variableAmplitude` together and the disc and the glow follow a sine wave around the mean brightness. Left out, the brightness stays steady. The wave is invented. The pole-on view and the prominences that turn with the surface still wait.
+
 - **Ecliptic longitude and latitude of date** (MODULES-536). `skyBody` gives `eclipticDate`, the same apparent direction as `equatorialDate`, on the ecliptic of date. Houses and ayanamsa stay out of this package.
 
 - **A roadmap, planned and not promised** (MODULES-540). `docs/roadmap.md` says where positions, sky events, the suncalc drop-in, fact sheets, comets and asteroids, the element export and the interstellar-tools decision stand, and what is still open. It adds no accuracy figure. It is not a published guide.

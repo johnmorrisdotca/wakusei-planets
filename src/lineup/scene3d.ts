@@ -6,7 +6,7 @@ import type * as THREE from "three";
 import { makeBodyMaterial, type ThreeParts } from "../scene/body.ts";
 import { STAR_GLOW_FRAGMENT, GLOW_VERTEX } from "../scene/glsl.ts";
 import { createPainter, type Painting } from "../scene/painter.ts";
-import type { StarLook } from "../star.ts";
+import { starBrightness, type StarLook } from "../star.ts";
 import "../bodies/earth.ts";
 import "../bodies/jupiter.ts";
 import type { LineupBody } from "./data.ts";
@@ -101,7 +101,7 @@ export function createLineupItem(options: LineupItemOptions): Item3D<ThreeParts>
           if (own !== undefined) {
             item.glowMaterial = assets.acquire(
               `lu:glow:${star.key}`,
-              () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 } } }),
+              () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 } } }),
               (m) => m.dispose(),
             );
             item.glow = new T.Mesh(glowGeometry, item.glowMaterial);
@@ -157,8 +157,14 @@ export function createLineupItem(options: LineupItemOptions): Item3D<ThreeParts>
             item.mesh.scale.set(1, squash, 1);
             if (item.glow !== undefined && item.look.oblateness > 0) item.glow.scale.set(1, Math.sqrt(squash * squash * Math.cos(pitch) ** 2 + Math.sin(pitch) ** 2), 1);
             const seconds = (performance.now() / 1000) % 100_000;
+            const variable = item.look.look.glow?.variable;
+            const pulse = variable === undefined ? 1 : starBrightness(variable.periodDays, variable.amplitude, seconds);
             item.material!.uniforms.uTime!.value = seconds;
-            if (item.glowMaterial !== undefined) item.glowMaterial.uniforms.uTime!.value = seconds;
+            if (item.material!.uniforms.uPulse !== undefined) item.material!.uniforms.uPulse.value = pulse;
+            if (item.glowMaterial !== undefined) {
+              item.glowMaterial.uniforms.uTime!.value = seconds;
+              item.glowMaterial.uniforms.uPulse!.value = pulse;
+            }
           } else if (item.painting !== undefined) {
             const pole: [number, number, number] = [0, Math.cos(pitch), Math.sin(pitch)];
             // the prime meridian faces the viewer at yaw 0 and goes round the pole with the turn

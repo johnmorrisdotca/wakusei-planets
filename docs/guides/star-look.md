@@ -16,6 +16,7 @@ description: Draw any star from a few numbers (temperature, radius, class, how i
 | `activity` | spots, and prominences and flares on the edge. Left out it follows the temperature and the class: none on hot stars, many on cool dwarfs and red dwarfs |
 | `oblateness` | the squashed shape, and the hotter poles with a darker equator (gravity darkening): Vega is about 0.11 and Altair 0.2 |
 | `corona` | the strength of the soft glow, 0 to 1 |
+| `variablePeriodDays`, `variableAmplitude` | the period in days and the swing either side of the mean brightness, 0 to 1. Give both. The wave is a sine, invented. Left out, the brightness stays steady |
 | `estimated` | the numbers above that are estimates, so the picture can say so |
 
 ## In a plain page
@@ -176,7 +177,7 @@ export class StarViewComponent implements OnInit {
 
 ## In an iframe
 
-The embed page takes the same names in its address: `star`, `temperature-k`, `radius-sun`, `luminosity-class`, `rotation-days`, `activity`, `oblateness`, `corona`, `estimated` and `look`.
+The embed page takes the same names in its address: `star`, `temperature-k`, `radius-sun`, `luminosity-class`, `rotation-days`, `activity`, `oblateness`, `corona`, `variable-period-days`, `variable-amplitude`, `estimated` and `look`.
 
 ```html
 <!doctype html>

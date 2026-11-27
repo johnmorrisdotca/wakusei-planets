@@ -41,7 +41,7 @@ export type LuminosityClass = (typeof LUMINOSITY_CLASSES)[number];
  * console.log(name);
  * ```
  */
-export type StarNumberName = "temperatureK" | "radiusSun" | "luminosityClass" | "rotationDays" | "oblateness";
+export type StarNumberName = "temperatureK" | "radiusSun" | "luminosityClass" | "rotationDays" | "oblateness" | "variablePeriodDays" | "variableAmplitude";
 
 /**
  * The numbers a star is drawn from. Only the temperature and the radius are needed; the rest has a stated default.
@@ -71,6 +71,10 @@ export interface StarNumbers {
   oblateness?: number;
   /** The strength of the soft glow round the star, 0 to 1. Default 0.8. */
   corona?: number;
+  /** Days from one bright peak to the next, above 0. Give it with `variableAmplitude`, or neither. */
+  variablePeriodDays?: number;
+  /** How far the brightness swings either side of its mean, 0 to 1. Give it with `variablePeriodDays`, or neither. */
+  variableAmplitude?: number;
   /** The numbers above that are estimates, not measurements (a radius worked out from brightness, say). The picture says so. */
   estimated?: readonly StarNumberName[];
 }
@@ -100,7 +104,7 @@ export type StarStatus = "measured" | "estimated" | "derived" | "illustrative";
  * ```
  */
 export interface StarPart {
-  part: "temperature" | "colour" | "size" | "edge" | "surface" | "spots" | "rotation" | "shape" | "poles" | "prominences" | "glow";
+  part: "temperature" | "colour" | "size" | "edge" | "surface" | "spots" | "rotation" | "shape" | "poles" | "prominences" | "glow" | "variability";
   status: StarStatus;
   note: { en: string; ja: string };
 }
@@ -131,6 +135,9 @@ export interface StarLook {
   activity: number;
   oblateness: number;
   corona: number;
+  /** Set together, or both left out. The brightness is `starBrightness` of these. */
+  variablePeriodDays: number | undefined;
+  variableAmplitude: number | undefined;
   /** The black-body colour of the temperature, `#rrggbb`. */
   colour: string;
   /** The colour the line drawing and a page's accents take: the bright cells of the shaded look, a little stronger than the plain black body so a star reads as coloured, `#rrggbb`. */
@@ -251,7 +258,7 @@ function features(cls: LuminosityClass, gran: number, activity: number, key: str
   return out;
 }
 
-const parts = (s: { temperatureK: number; radiusSun: number; cls: LuminosityClass; rotationDays: number | undefined; oblateness: number; speedUp: number | undefined; estimated: ReadonlySet<StarNumberName>; prominence: boolean }): StarPart[] => {
+const parts = (s: { temperatureK: number; radiusSun: number; cls: LuminosityClass; rotationDays: number | undefined; oblateness: number; speedUp: number | undefined; estimated: ReadonlySet<StarNumberName>; prominence: boolean; variable: { periodDays: number; amplitude: number } | undefined }): StarPart[] => {
   const known = (name: StarNumberName): StarStatus => (s.estimated.has(name) ? "estimated" : "measured");
   const ratio = s.radiusSun >= 10 ? Math.round(s.radiusSun).toLocaleString("en-US") : String(Number(s.radiusSun.toPrecision(3)));
   const out: StarPart[] = [
@@ -262,6 +269,7 @@ const parts = (s: { temperatureK: number; radiusSun: number; cls: LuminosityClas
     { part: "surface", status: "illustrative", note: { en: `Surface texture: how coarse it is follows the luminosity class (${s.cls}); the pattern itself is invented.`, ja: `表面のもよう: 細かさは明るさの階級 (${s.cls}) で決めています。もようは作りものです。` } },
     { part: "spots", status: "illustrative", note: { en: "Spots: how many follows the temperature and the class; where they are is invented. They are not observations.", ja: "黒点: 数は温度と階級から決めています。場所は作りものです。観測ではありません。" } },
   ];
+  if (s.variable !== undefined) out.push({ part: "variability", status: s.estimated.has("variablePeriodDays") || s.estimated.has("variableAmplitude") ? "estimated" : "measured", note: { en: `Brightness: a period of ${Number(s.variable.periodDays.toPrecision(3))} days and a swing of ${s.variable.amplitude} either side of the mean. The smooth wave is invented.`, ja: `明るさ: 周期は${Number(s.variable.periodDays.toPrecision(3))}日、平均からの振れは${s.variable.amplitude}。なめらかな波は作りものです。` } });
   if (s.rotationDays === undefined) out.push({ part: "rotation", status: "illustrative", note: { en: "Turning: no rotation was given, so a slow turn is drawn.", ja: "自転: 数字がないので、ゆっくり回しています。" } });
   else {
     const times = s.speedUp === undefined ? "" : Math.round(s.speedUp).toLocaleString("en-US");
@@ -289,6 +297,26 @@ const parts = (s: { temperatureK: number; radiusSun: number; cls: LuminosityClas
  */
 export interface StarLookOptions {
   quality?: "full" | "low";
+}
+
+/**
+ * How bright a variable star is, as a factor of its mean: 1 at the mean, higher by `amplitude` at the bright peak and lower by it at the dim one.
+ * The wave is a sine over `periodDays`. At `seconds` 0 the factor is 1.
+ *
+ * @param periodDays - The period in days, above 0.
+ * @param amplitude - The swing either side of the mean, 0 to 1.
+ * @param seconds - Seconds from an arbitrary start.
+ * @returns The factor, from `1 - amplitude` to `1 + amplitude`.
+ * @example
+ * ```ts
+ * import { starBrightness } from "@johnmorrisdotca/wakusei-planets";
+ *
+ * console.log(starBrightness(5.4, 0.5, 0));
+ * ```
+ */
+export function starBrightness(periodDays: number, amplitude: number, seconds: number): number {
+  if (!(periodDays > 0) || amplitude < 0 || amplitude > 1 || !Number.isFinite(seconds)) throw new RangeError("starBrightness wants a period above 0, a swing from 0 to 1, and a finite time");
+  return 1 + amplitude * Math.sin((seconds / (periodDays * 86_400)) * Math.PI * 2);
 }
 
 /**
@@ -322,6 +350,10 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
   const activity = numbers.activity === undefined ? defaultActivity(temperatureK, cls, rotationDays) : within("activity", numbers.activity, 0, 1);
   const name = numbers.name !== undefined && numbers.name.trim() !== "" ? numbers.name.trim() : "Star";
   const estimated = new Set(numbers.estimated ?? []);
+  const periodGiven = numbers.variablePeriodDays !== undefined;
+  const swingGiven = numbers.variableAmplitude !== undefined;
+  if (periodGiven !== swingGiven) throw new RangeError("variablePeriodDays and variableAmplitude are given together, or neither");
+  const variable = periodGiven ? { periodDays: within("variablePeriodDays", numbers.variablePeriodDays!, 1e-4, 1e6), amplitude: within("variableAmplitude", numbers.variableAmplitude!, 0, 1) } : undefined;
 
   // colour: the black body for the cells, a cooler and more saturated one for the lanes between them
   const body = unit(temperatureK);
@@ -365,10 +397,10 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
   col = mix(col, ${v3(lane.map((v) => v * 0.6))}, pen * 0.55);
   col = mix(col, ${v3(lane.map((v) => v * 0.16))}, spot * 0.92);`
       : "";
-  const surface = `${low || cls === "D" ? "" : "\nuniform float uTime;"}
+  const surface = `${variable ? "\nuniform float uPulse;" : ""}${low || cls === "D" ? "" : "\nuniform float uTime;"}
 vec4 surface(vec3 p) {
   ${grain}
-  vec3 col = mix(${v3(lane)}, ${v3(cell)}, cell);${low ? "" : "\n  col *= 0.8 + 0.4 * smoothstep(0.1, 0.9, cell);"}${shape}${spots}
+  vec3 col = mix(${v3(lane)}, ${v3(cell)}, cell);${low ? "" : "\n  col *= 0.8 + 0.4 * smoothstep(0.1, 0.9, cell);"}${shape}${spots}${variable ? "\n  col *= uPulse;" : ""}
   return vec4(col * 1.12, 0.0);
 }`;
 
@@ -385,9 +417,9 @@ vec4 surface(vec3 p) {
   const degreesPerSecond = (rotationDays !== undefined && rotationDays < 0 ? -1 : 1) * shown;
   const speedUp = speedReal === undefined ? undefined : shown / speedReal;
 
-  const key = JSON.stringify([low ? "low" : "full", name, temperatureK, radiusSun, cls, rotationDays ?? null, activity, oblateness, corona]);
+  const key = JSON.stringify([low ? "low" : "full", name, temperatureK, radiusSun, cls, rotationDays ?? null, activity, oblateness, corona, variable?.periodDays ?? null, variable?.amplitude ?? null]);
   const colour = hex(body);
-  const look: BodyLook = { id: "sun", surface, emissive: true, limb, limbTint: tint, glow: { colour: glowColour, strength: 0.62 * corona, spread, rim: 0.3 * corona, prominence, seed: (seedOf(key) % 1000) / 1000 } };
+  const look: BodyLook = { id: "sun", surface, emissive: true, limb, limbTint: tint, glow: { colour: glowColour, strength: 0.62 * corona, spread, rim: 0.3 * corona, prominence, seed: (seedOf(key) % 1000) / 1000, ...(variable ? { variable } : {}) } };
   const facts: BodyFacts = {
     ...BODIES.sun,
     name: { en: name, ja: name === "Star" ? "恒星" : name },
@@ -397,7 +429,7 @@ vec4 surface(vec3 p) {
     colour,
     features: features(cls, gran, activity, key),
   };
-  const lines = parts({ temperatureK, radiusSun, cls, rotationDays, oblateness, speedUp, estimated, prominence: prominence > 0 });
+  const lines = parts({ temperatureK, radiusSun, cls, rotationDays, oblateness, speedUp, estimated, prominence: prominence > 0, variable });
   return {
     numbers,
     name,
@@ -410,6 +442,8 @@ vec4 surface(vec3 p) {
     activity,
     oblateness,
     corona,
+    variablePeriodDays: variable?.periodDays,
+    variableAmplitude: variable?.amplitude,
     colour,
     tone: hex(cell),
     look,

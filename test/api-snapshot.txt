@@ -55,10 +55,10 @@ export interface RingBand { from: number; to: number; tau: number; alpha: number
 export interface RingStrip { data: Uint8Array; width: number; inner: number; outer: number; }
 const STAR_SUN: StarNumbers
 export type ShapeBasis = "shape-and-map" | "shape" | "craft";
-export interface StarLook { numbers: StarNumbers; name: string; temperatureK: number; radiusSun: number; radiusKm: number; quality: "full" | "low"; luminosityClass: LuminosityClass; rotationDays: number | undefined; activity: number; oblateness: number; corona: number; colour: string; tone: string; look: BodyLook; facts: BodyFacts; turn: { degreesPerSecond: number; speedUp: number | undefined; }; parts: readonly StarPart[]; disclaimer: { en: string; ja: string; }; key: string; }
-export type StarNumberName = "temperatureK" | "radiusSun" | "luminosityClass" | "rotationDays" | "oblateness";
-export interface StarNumbers { name?: string; temperatureK: number; radiusSun: number; luminosityClass?: LuminosityClass; rotationDays?: number; activity?: number; oblateness?: number; corona?: number; estimated?: readonly StarNumberName[]; }
-export interface StarPart { part: "temperature" | "colour" | "size" | "edge" | "surface" | "spots" | "rotation" | "shape" | "poles" | "prominences" | "glow"; status: StarStatus; note: { en: string; ja: string; }; }
+export interface StarLook { numbers: StarNumbers; name: string; temperatureK: number; radiusSun: number; radiusKm: number; quality: "full" | "low"; luminosityClass: LuminosityClass; rotationDays: number | undefined; activity: number; oblateness: number; corona: number; variablePeriodDays: number | undefined; variableAmplitude: number | undefined; colour: string; tone: string; look: BodyLook; facts: BodyFacts; turn: { degreesPerSecond: number; speedUp: number | undefined; }; parts: readonly StarPart[]; disclaimer: { en: string; ja: string; }; key: string; }
+export type StarNumberName = "temperatureK" | "radiusSun" | "luminosityClass" | "rotationDays" | "oblateness" | "variablePeriodDays" | "variableAmplitude";
+export interface StarNumbers { name?: string; temperatureK: number; radiusSun: number; luminosityClass?: LuminosityClass; rotationDays?: number; activity?: number; oblateness?: number; corona?: number; variablePeriodDays?: number; variableAmplitude?: number; estimated?: readonly StarNumberName[]; }
+export interface StarPart { part: "temperature" | "colour" | "size" | "edge" | "surface" | "spots" | "rotation" | "shape" | "poles" | "prominences" | "glow" | "variability"; status: StarStatus; note: { en: string; ja: string; }; }
 export type StarStatus = "measured" | "estimated" | "derived" | "illustrative";
 export interface System { planet: Apparent; moons: MoonPlace[]; }
 function addBody(scene: Portrait, body: BodyId) => Portrait
@@ -102,6 +102,7 @@ const ringReach: (facts: BodyFacts) => number
 function ringStrip(facts: BodyFacts, width?: number) => RingStrip | null
 function shapeBasis(id: BodyId) => ShapeBasis | undefined
 function shapeNote(id: BodyId, lang: "en" | "ja") => string
+function starBrightness(periodDays: number, amplitude: number, seconds: number) => number
 function starLineSvg(star: StarNumbers | StarLook, options?: LineOptions) => string
 function starLook(numbers: StarNumbers, options?: StarLookOptions) => StarLook
 function stopPlaceAu(id: BodyId, ms: number) => Vec3
@@ -1148,7 +1149,7 @@ const times: [number, string, string][]
 (no exports: it registers itself when imported)
 ## ./look
 export interface Atmosphere { colour: readonly [ number, number, number ]; strength: number; power?: number; }
-export interface BodyLook { id: BodyId; surface: string; emissive?: boolean; atmosphere?: Atmosphere; limb?: number; limbTint?: readonly [ number, number, number ]; glow?: { colour: readonly [ number, number, number ]; strength: number; spread: number; rim?: number; prominence?: number; seed?: number; }; relief?: number; wrap?: number; ambient?: number; detail?: { amount?: number; stretch?: number; }; painted?: PaintedMap; shape?: () => Promise<ShapeTable>; craft?: () => Promise<CraftMesh>; rock?: { seed: number; dark: readonly [ number, number, number ]; light: readonly [ number, number, number ]; }; mapped?: boolean; }
+export interface BodyLook { id: BodyId; surface: string; emissive?: boolean; atmosphere?: Atmosphere; limb?: number; limbTint?: readonly [ number, number, number ]; glow?: { colour: readonly [ number, number, number ]; strength: number; spread: number; rim?: number; prominence?: number; seed?: number; variable?: { periodDays: number; amplitude: number; }; }; relief?: number; wrap?: number; ambient?: number; detail?: { amount?: number; stretch?: number; }; painted?: PaintedMap; shape?: () => Promise<ShapeTable>; craft?: () => Promise<CraftMesh>; rock?: { seed: number; dark: readonly [ number, number, number ]; light: readonly [ number, number, number ]; }; mapped?: boolean; }
 export interface PaintedMap { map: string; widths: readonly number[]; far?: number; relief?: number; turn?: "bands" | "hexagon"; rings?: { map: string; width: number; from: number; to: number; }; credit?: string; }
 export interface ShapeTable { lon: number; lat: number; unit: number; steps: string; }
 function atmosphereTint(atmosphere: Atmosphere | undefined) => [number, number, number]

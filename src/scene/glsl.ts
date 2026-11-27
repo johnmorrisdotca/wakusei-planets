@@ -399,6 +399,7 @@ uniform float uRim;
 uniform float uProm;
 uniform float uSeed;
 uniform float uTime;
+uniform float uPulse;
 float h1(float n) { return fract(sin(n * 127.1 + uSeed * 91.7) * 43758.5453); }
 float n1(float x) { float i = floor(x); float f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h1(i), h1(i + 1.0), f); }
 void main() {
@@ -427,7 +428,7 @@ void main() {
     a += pr + fl;
   }
   // additive blending multiplies by alpha, so the root of the light is the alpha and the colour carries the rest: the sum arrives as written
-  float s = sqrt(min(a * fade, 1.0));
+  float s = sqrt(min(a * fade, 1.0)) * uPulse;
   gl_FragColor = vec4(col / max(a, 1e-4) * s, s);
 }`;
 
