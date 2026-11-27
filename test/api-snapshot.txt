@@ -752,9 +752,13 @@ const MINOR_FACT_IDS: readonly ["ceres", "orcus", "haumea", "quaoar", "makemake"
 const MOONS_READ_ON: "2026-11-18"
 export interface MinorFact { id: MinorFactId; name: { en: string; ja: string; }; kind: "dwarf-planet" | "asteroid" | "centaur" | "comet"; aAu: number; perihelionAu: number; periodDays: number; epochMs: number; }
 export type MinorFactId = (typeof MINOR_FACT_IDS)[number];
+const SOLAR_SYSTEM_TERMS: readonly ["planet", "dwarf-planet", "moon", "asteroid", "comet", "meteoroid", "meteor", "meteorite"]
+export interface SolarSystemDefinition { term: SolarSystemTerm; name: { en: string; ja: string; }; description: { en: string; ja: string; }; sources: { name: string; url: string; }[]; }
+export type SolarSystemTerm = (typeof SOLAR_SYSTEM_TERMS)[number];
 export type WorldId = FactSheetId | "moon";
 function factSheet(id: "sun" | "mercury" | "venus" | "earth" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto") => FactSheet
 function minorFact(id: "ceres" | "orcus" | "haumea" | "quaoar" | "makemake" | "gonggong" | "eris" | "sedna" | "bennu" | "eros" | "vesta" | "pallas" | "chiron" | "pholus" | "halley" | "arrokoth") => MinorFact
+function solarSystemDefinition(term: "moon" | "planet" | "dwarf-planet" | "asteroid" | "comet" | "meteoroid" | "meteor" | "meteorite") => SolarSystemDefinition
 function weightOn(id: WorldId, kilograms: number) => number
 function worldAge(id: WorldId, born: When, on: When) => { years: number; nextBirthday: Date; } | null
 ## ./body-physics

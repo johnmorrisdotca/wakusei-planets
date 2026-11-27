@@ -7,7 +7,49 @@ import { MINOR_ELEMENTS } from "../src/data/minor.ts";
 import { BODIES, DWARF_IDS, MINOR_IDS } from "../src/facts.ts";
 import { journeyStop } from "../src/stops.ts";
 import { bodyPhysics } from "../src/body-physics.ts";
-import { FACT_SHEET_IDS, MINOR_FACT_IDS, MOONS_READ_ON, factSheet, minorFact, weightOn, worldAge } from "../src/fact-sheets.ts";
+import { FACT_SHEET_IDS, MINOR_FACT_IDS, MOONS_READ_ON, SOLAR_SYSTEM_TERMS, factSheet, minorFact, solarSystemDefinition, weightOn, worldAge } from "../src/fact-sheets.ts";
+
+test("the eight solar-system terms have their names and definitions in both languages and named sources", () => {
+  assert.deepEqual([...SOLAR_SYSTEM_TERMS], ["planet", "dwarf-planet", "moon", "asteroid", "comet", "meteoroid", "meteor", "meteorite"]);
+  const entries = SOLAR_SYSTEM_TERMS.map(solarSystemDefinition);
+  assert.deepEqual(entries.map(({ name }) => name.ja), ["惑星", "準惑星", "衛星", "小惑星", "彗星", "流星体", "流星", "隕石"]);
+  for (const [i, entry] of entries.entries()) {
+    assert.equal(entry.term, SOLAR_SYSTEM_TERMS[i]);
+    assert.ok(entry.name.en.length > 0 && entry.description.en.length > 40);
+    assert.match(entry.description.ja, /[ぁ-ん]/u);
+    assert.ok(entry.sources.length > 0);
+    for (const source of entry.sources) {
+      assert.ok(source.name.startsWith("IAU ") || source.name.startsWith("NASA "));
+      assert.match(source.url, /^https:\/\/(www\.iau\.org|science\.nasa\.gov)\//u);
+    }
+  }
+  assert.deepEqual(solarSystemDefinition("planet").sources, solarSystemDefinition("dwarf-planet").sources);
+  assert.match(solarSystemDefinition("planet").sources[0]!.name, /Resolution 5A/u);
+  for (const term of ["meteoroid", "meteor", "meteorite"] as const) {
+    const { sources } = solarSystemDefinition(term);
+    assert.match(sources[0]!.name, /Commission F1.*2017/u);
+    assert.match(sources[1]!.url, /meteors-meteorites/u);
+  }
+  assert.match(solarSystemDefinition("meteoroid").description.en, /30 micrometres to 1 metre/u);
+  assert.match(solarSystemDefinition("meteoroid").description.ja, /30\s*マイクロメートルから1\s*メートル/u);
+});
+
+test("definitions return independent copies and unknown keys give a RangeError", () => {
+  const meteor = solarSystemDefinition("meteor");
+  meteor.name.en = "changed";
+  meteor.description.ja = "changed";
+  meteor.sources[0]!.url = "changed";
+  meteor.sources.pop();
+  const next = solarSystemDefinition("meteor");
+  assert.equal(next.name.en, "Meteor");
+  assert.notEqual(next.description.ja, "changed");
+  assert.equal(next.sources.length, 2);
+  assert.equal(next.sources[0]!.url, solarSystemDefinition("meteorite").sources[0]!.url);
+  assert.notEqual(next.sources[0]!.url, "changed");
+  for (const key of ["sun", "__proto__"]) {
+    assert.throws(() => solarSystemDefinition(key as never), { name: "RangeError", message: new RegExp(`"${key}"`) });
+  }
+});
 
 test("a sheet's size, distance and spin are the package's own numbers, in km and in miles", () => {
   for (const id of FACT_SHEET_IDS) {

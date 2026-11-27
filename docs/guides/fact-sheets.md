@@ -2,7 +2,7 @@
 title: Fact sheets
 section: how-to
 order: 15
-description: A fact sheet for the Sun, the planets and Pluto, as plain data in English and Japanese.
+description: Fact sheets for the Sun, the planets and Pluto and eight solar-system definitions, as plain data in English and Japanese.
 ---
 
 `/fact-sheets` is what a page about a planet usually says, as data you can print, search or put in a card: size, distance from the Sun, the length of the year and of the day, the number of known moons, NASA's own page, and a short description in English and Japanese. It has no browser code, so it runs on a server.
@@ -54,6 +54,26 @@ console.log(weightOn("mars", 40) < 40);
 const age = worldAge("mars", Date.UTC(2016, 0, 1), Date.UTC(2026, 0, 1));
 console.log(age !== null && age.years < 6);
 ```
+
+## Solar system terms
+
+`solarSystemDefinition(term)` gives a term's name and definition in English and Japanese, followed by the names and links of its sources. `SOLAR_SYSTEM_TERMS` lists the eight keys in reading order.
+
+```ts
+import { SOLAR_SYSTEM_TERMS, solarSystemDefinition } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+
+for (const term of SOLAR_SYSTEM_TERMS) {
+  const { name, description, sources } = solarSystemDefinition(term);
+  console.log(name.en, description.en);
+  for (const source of sources) console.log(source.name, source.url);
+}
+```
+
+A planet and a dwarf planet both orbit the Sun directly and are rounded by their own gravity. A planet has also gained gravitational control of the neighbourhood around its orbit. [IAU General Assembly Resolution 5A (2006)](https://www.iau.org/IAU/Iau/News/PR2006/iau-2006-general-assembly-resolution-votes.aspx)
+
+A moon has another body as its main source of gravity. Even an asteroid can have a moon of its own. Many asteroids go around the Sun between Mars and Jupiter. Solar heating can give a comet a cloud of gas and dust and bring out its tails. [NASA Science on moons](https://science.nasa.gov/solar-system/moons/), [asteroids](https://science.nasa.gov/solar-system/asteroids/) and [comets](https://science.nasa.gov/solar-system/comets/)
+
+A piece of rock in interplanetary space may be a **meteoroid**. If it enters an atmosphere at high speed, the light and other effects are a **meteor**. A solid piece that survives the meteor phase is a **meteorite**. Some reach the ground. About 30 micrometres to 1 metre is the IAU's usual size range for a meteoroid. The word can cover any size of object in meteor observations. [IAU Commission F1 meteor terms (2017)](https://www.iau.org/common/Uploaded%20files/Definitions%20of%20terms%20in%20meteor%20astronomy_F1.pdf), [NASA Science on meteors and meteorites](https://science.nasa.gov/solar-system/meteors-meteorites/)
 
 ## Where the facts come from
 

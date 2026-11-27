@@ -1,4 +1,4 @@
-// A fact sheet for the Sun, the eight planets and Pluto, as plain data.
+// Fact sheets and solar-system definitions, as plain data.
 // Every number is the package's own (radius and rotation from the IAU working group's report, the distance from JPL's approximate elements) or a published figure with its source named here: the sidereal
 // year from NASA's planetary fact sheets (https://nssdc.gsfc.nasa.gov/planetary/factsheet/, read 2026-11-17), the moon counts from JPL's planetary satellite page (read 2026-11-11, the same read as `/moon-catalogue`),
 // the page links to NASA's own page for each body (each fetched 2026-11-17). The descriptions are written here in our own words; no text of NASA's, the IAU's or an encyclopedia's is copied.
@@ -8,6 +8,150 @@ import { MINOR_ELEMENTS } from "./data/minor.ts";
 import { BODIES, DWARF_IDS, MINOR_IDS, type PlanetId } from "./facts.ts";
 import { journeyStop } from "./stops.ts";
 import { moment, type When } from "./when.ts";
+
+/**
+ * The eight terms explained by `solarSystemDefinition`, in reading order.
+ *
+ * @example
+ * ```ts
+ * import { SOLAR_SYSTEM_TERMS } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * console.log(SOLAR_SYSTEM_TERMS.join(", "));
+ * ```
+ */
+export const SOLAR_SYSTEM_TERMS = ["planet", "dwarf-planet", "moon", "asteroid", "comet", "meteoroid", "meteor", "meteorite"] as const;
+
+/**
+ * One of the eight keys for `solarSystemDefinition`.
+ *
+ * @example
+ * ```ts
+ * import { solarSystemDefinition, type SolarSystemTerm } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const term: SolarSystemTerm = "comet";
+ * console.log(solarSystemDefinition(term).name.ja);
+ * ```
+ */
+export type SolarSystemTerm = (typeof SOLAR_SYSTEM_TERMS)[number];
+
+/**
+ * The English and Japanese name and definition of a solar-system term, with its named sources.
+ *
+ * @example
+ * ```ts
+ * import { solarSystemDefinition, type SolarSystemDefinition } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const meteor: SolarSystemDefinition = solarSystemDefinition("meteor");
+ * console.log(meteor.description.en, meteor.sources.map((source) => source.url));
+ * ```
+ */
+export interface SolarSystemDefinition {
+  term: SolarSystemTerm;
+  name: { en: string; ja: string };
+  description: { en: string; ja: string };
+  sources: { name: string; url: string }[];
+}
+
+const IAU_PLANETS = {
+  name: "IAU General Assembly Resolution 5A (2006)",
+  url: "https://www.iau.org/IAU/Iau/News/PR2006/iau-2006-general-assembly-resolution-votes.aspx",
+};
+const IAU_METEORS = {
+  name: "IAU Commission F1, Definitions of Terms in Meteor Astronomy (2017)",
+  url: "https://www.iau.org/common/Uploaded%20files/Definitions%20of%20terms%20in%20meteor%20astronomy_F1.pdf",
+};
+const NASA_METEORS = {
+  name: "NASA Science, Meteors and Meteorites",
+  url: "https://science.nasa.gov/solar-system/meteors-meteorites/",
+};
+
+const DEFINITIONS: Record<SolarSystemTerm, Omit<SolarSystemDefinition, "term">> = {
+  planet: {
+    name: { en: "Planet", ja: "惑星" },
+    description: {
+      en: "In the Solar System, a planet orbits the Sun, pulls itself into a nearly round shape by its own gravity, and gravitationally dominates the small bodies near its orbit.",
+      ja: "太陽系の惑星は、太陽のまわりを回り、自身の重力でほぼ丸くなった天体です。軌道の周辺では、その惑星の重力が小天体の運動を支配しています。",
+    },
+    sources: [IAU_PLANETS],
+  },
+  "dwarf-planet": {
+    name: { en: "Dwarf planet", ja: "準惑星" },
+    description: {
+      en: "A dwarf planet goes around the Sun in its own right and is nearly round because of its gravity. It shares the neighbourhood of its orbit with other bodies whose motion it does not dominate.",
+      ja: "準惑星は、太陽を主天体として公転し、自身の重力でほぼ丸くなった天体です。軌道の周辺にはほかの天体があり、それらの運動を重力で支配するまでには至っていません。",
+    },
+    sources: [IAU_PLANETS],
+  },
+  moon: {
+    name: { en: "Moon", ja: "衛星" },
+    description: {
+      en: "A moon is a natural satellite. Gravity keeps it in orbit around a planet, a dwarf planet or another body such as an asteroid.",
+      ja: "衛星は、惑星や準惑星、小惑星などの天体のまわりを、重力に引かれて回る自然の天体です。",
+    },
+    sources: [{ name: "NASA Science, Moons", url: "https://science.nasa.gov/solar-system/moons/" }],
+  },
+  asteroid: {
+    name: { en: "Asteroid", ja: "小惑星" },
+    description: {
+      en: "An asteroid is a small body orbiting the Sun, usually made chiefly of rock or metal. Many asteroids travel in the belt between Mars and Jupiter.",
+      ja: "小惑星は太陽のまわりを回る小天体で、多くは主に岩石や金属でできています。火星と木星の間にある小惑星帯に多く集まっています。",
+    },
+    sources: [{ name: "NASA Science, Asteroids", url: "https://science.nasa.gov/solar-system/asteroids/" }],
+  },
+  comet: {
+    name: { en: "Comet", ja: "彗星" },
+    description: {
+      en: "A comet is a small body made of ice, dust and rock. When it passes near the Sun, warmth can release gas and dust, forming a cloud around its solid centre and tails that stretch away from the Sun.",
+      ja: "彗星は氷やちり、岩石でできた小天体です。太陽に近づいて温まると、ガスやちりが出て中心の核を包み、太陽と反対の方向に尾が伸びることがあります。",
+    },
+    sources: [{ name: "NASA Science, Comets", url: "https://science.nasa.gov/solar-system/comets/" }],
+  },
+  meteoroid: {
+    name: { en: "Meteoroid", ja: "流星体" },
+    description: {
+      en: "A meteoroid is a natural piece of solid matter travelling in or arriving from the space between planets. The usual size range is about 30 micrometres to 1 metre.",
+      ja: "流星体は、惑星と惑星の間の空間を飛ぶ、またはそこから来た自然の固体です。大きさの目安は約30マイクロメートルから1メートルです。",
+    },
+    sources: [IAU_METEORS, NASA_METEORS],
+  },
+  meteor: {
+    name: { en: "Meteor", ja: "流星" },
+    description: {
+      en: "A meteor is the light, heat and other effects that a solid object from space produces when it enters an atmosphere at high speed. The streak we see in Earth's night sky is also called a shooting star.",
+      ja: "流星は、宇宙から来た固体が高速で大気に飛び込んだときに生じる光や熱などの現象です。地球の夜空で見える光の筋は、流れ星とも呼ばれます。",
+    },
+    sources: [IAU_METEORS, NASA_METEORS],
+  },
+  meteorite: {
+    name: { en: "Meteorite", ja: "隕石" },
+    description: {
+      en: "A meteorite is a solid piece of a natural object from space that makes it through the meteor phase of atmospheric entry. A fragment recovered on the ground is one example.",
+      ja: "隕石は、宇宙から来た自然の物体が大気に入り、流星を生じる段階を経ても、蒸発しきらずに残った固体です。地表まで落ちて、そこで見つかるものもあります。",
+    },
+    sources: [IAU_METEORS, NASA_METEORS],
+  },
+};
+
+/**
+ * Look up an original bilingual definition and its sources.
+ *
+ * @param term - One of `SOLAR_SYSTEM_TERMS`.
+ * @returns A new definition, including copies of its source entries.
+ * @throws {RangeError} For an unknown term.
+ *
+ * @example
+ * ```ts
+ * import { solarSystemDefinition } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const { name, description } = solarSystemDefinition("meteoroid");
+ * console.log(name.en, description.en);
+ * ```
+ */
+export function solarSystemDefinition(term: SolarSystemTerm): SolarSystemDefinition {
+  if (!Object.hasOwn(DEFINITIONS, term)) throw new RangeError(`Unknown solar-system term "${String(term)}". Use one of ${SOLAR_SYSTEM_TERMS.join(", ")}.`);
+  const { name, description, sources } = DEFINITIONS[term];
+  return { term, name: { ...name }, description: { ...description }, sources: sources.map((source) => ({ ...source })) };
+}
 
 const KM_PER_MILE = 1.609344;
 const AU_KM = 149_597_870.7;

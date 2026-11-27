@@ -5,6 +5,7 @@
 - **A body's place reports the disc that is drawn** (MODULES-1898). Off the middle of a wide view, `placeOf` and `framingFor` give the enclosing radius of the squashed disc, so the body is not smaller on the page than it is on the screen.
 - **A page can take a press** (MODULES-1651). `wakusei-body-click` is cancelable. `preventDefault` leaves the view where it is, so the page's own Go moves it.
 - **A covered body's arrow selects that body** (MODULES-1652). The first press selects it, as a press on its name does. A second press goes there.
+- **Eight solar-system definitions** (MODULES-1897). `/fact-sheets` exports `SOLAR_SYSTEM_TERMS` and `solarSystemDefinition` for the names, meanings and sources of eight terms in English and Japanese. The size baseline for this entry includes the new text and source links.
 
 ## [0.84.0] - 2026-11-27
 

@@ -2,7 +2,7 @@
 title: ファクトシート
 section: how-to
 order: 15
-description: 太陽、惑星、冥王星のファクトシートを、日本語と英語のデータとして提供します。
+description: 太陽、惑星、冥王星のファクトシートと、太陽系に関する8つの用語の定義を、日本語と英語のデータとして提供します。
 ---
 
 `/fact-sheets` は、惑星についてのページがたいてい載せていることを、印刷や検索やカードに使えるデータにしたものです。大きさ、太陽からの距離、1年と1日の長さ、知られている衛星の数、NASA の公式ページ、日本語と英語の短い説明が入っています。ブラウザー用のコードはないので、サーバーでも動きます。
@@ -54,6 +54,26 @@ console.log(weightOn("mars", 40) < 40);
 const age = worldAge("mars", Date.UTC(2016, 0, 1), Date.UTC(2026, 0, 1));
 console.log(age !== null && age.years < 6);
 ```
+
+## 太陽系の用語
+
+`solarSystemDefinition(term)` は、用語の名前と定義を日本語と英語で返します。出典の名前とリンクも含まれます。`SOLAR_SYSTEM_TERMS` には、8つの用語のキーが並んでいます。
+
+```ts
+import { SOLAR_SYSTEM_TERMS, solarSystemDefinition } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+
+for (const term of SOLAR_SYSTEM_TERMS) {
+  const { name, description, sources } = solarSystemDefinition(term);
+  console.log(name.ja, description.ja);
+  for (const source of sources) console.log(source.name, source.url);
+}
+```
+
+惑星も準惑星も、太陽を主天体として公転し、自身の重力でほぼ丸くなっています。惑星はさらに、軌道の周辺にある小天体の運動を重力で支配しています。 [IAU 総会決議 5A（2006年）](https://www.iau.org/IAU/Iau/News/PR2006/iau-2006-general-assembly-resolution-votes.aspx)
+
+衛星は、別の天体の重力に引かれて、そのまわりを回ります。小惑星にも衛星を持つものがあります。小惑星の多くは、火星と木星の間で太陽のまわりを回っています。彗星は太陽に近づいて温まると、ガスやちりの雲に包まれ、尾が伸びることがあります。 [NASA の衛星の解説](https://science.nasa.gov/solar-system/moons/)、[小惑星の解説](https://science.nasa.gov/solar-system/asteroids/)、[彗星の解説](https://science.nasa.gov/solar-system/comets/)
+
+惑星と惑星の間を飛ぶ小さな岩のかけらは、**流星体**と呼ばれます。これが高速で大気に入ると、光などの現象が起こります。この現象が**流星**です。流星を生じる段階を経ても残った固体が**隕石**です。地表まで届くものもあります。IAU が示す流星体の大きさの目安は、約30マイクロメートルから1メートルです。流星を観測するときは、流星を起こした天体を、大きさにかかわらず流星体と呼ぶこともあります。 [IAU F1 委員会の流星用語（2017年）](https://www.iau.org/common/Uploaded%20files/Definitions%20of%20terms%20in%20meteor%20astronomy_F1.pdf)、[NASA の流星と隕石の解説](https://science.nasa.gov/solar-system/meteors-meteorites/)
 
 ## 事実の出どころ
 
