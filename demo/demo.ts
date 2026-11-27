@@ -9,6 +9,7 @@ import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { apparent, BODIES, DWARF_IDS, MINOR_IDS, MOONS_OF, type BodyId } from "../src/index.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
+import { interiorOf } from "../src/interior.ts";
 import { lookOf } from "../src/scene/look.ts";
 import "../src/element.ts";
 import "../src/bodies/all.ts";
@@ -59,6 +60,12 @@ const pickerBox = document.querySelector<HTMLElement>("#picker");
 if (main && controls && pickerBox) {
   const address = createAddressState({ defaults: { body: "jupiter", look: "realistic" } });
   const looks = [...document.querySelectorAll<HTMLButtonElement>("#looks [data-look]")];
+  const cuts = [...document.querySelectorAll<HTMLButtonElement>("#cutaway-options [data-cutaway]")];
+  const flow = document.querySelector<HTMLButtonElement>("#cutaway-flow")!;
+  const cutFrom = (value: string | null): NonNullable<EmbedOptions["cutaway"]> | "off" =>
+    value === "classic" || value === "half" || value === "quarter" ? value : "off";
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  let flowing = false;
   const skies = [...document.querySelectorAll<HTMLButtonElement>("#skies [data-sky]")];
   const replay = document.querySelector<ReplayBarElement>("#replay")!;
   const spinSpeed = document.querySelector<SpeedButtonsElement>("#spin-speed")!;
@@ -80,6 +87,7 @@ if (main && controls && pickerBox) {
   const DEFAULT_SPEED = 3600;
   const state = {
     body: asBody(address.get("body")),
+    cutaway: cutFrom(address.get("cutaway")),
     look: (["line", "realistic", "painted", "illustrated"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
     real: address.get("sky") === "real" || address.get("moons") === "1",
     moons: address.get("moons") === "1",
@@ -484,6 +492,18 @@ if (main && controls && pickerBox) {
       pressed(b, b.dataset["look"] === "realistic" ? state.look === "realistic" || state.look === "painted" : b.dataset["look"] === state.look);
     }
     if (state.look === "painted" && !looksAvailable) notice(null);
+    const section = state.look === "line";
+    for (const button of cuts) {
+      const cutaway = button.dataset["cutaway"];
+      button.hidden = section && cutaway === "half";
+      if (cutaway === "quarter") button.textContent = say(section ? "cutaway_section" : "cutaway_quarter");
+      pressed(button, cutaway === state.cutaway || (section && cutaway === "quarter" && state.cutaway === "half"));
+    }
+    flow.hidden = motion.matches || state.cutaway === "off" || state.cutaway === "classic" ||
+      interiorOf(state.body)?.layers.some((layer) => layer.flow === true) !== true;
+    if (flow.hidden) flowing = false;
+    flow.textContent = say(flowing ? "cutaway_pause" : "cutaway_play");
+    pressed(flow, flowing);
     for (const b of skies) pressed(b, (b.dataset["sky"] === "real") === state.real);
     moonsButton.hidden = !hasMoons();
     pressed(moonsButton, state.moons && hasMoons());
@@ -510,6 +530,8 @@ if (main && controls && pickerBox) {
     const real = state.real || (state.moons && hasMoons());
     setAttr(main!, "body", state.body);
     setAttr(main!, "look", state.look);
+    setAttr(main!, "cutaway", state.cutaway === "off" ? null : state.cutaway === "classic" ? "" : state.cutaway);
+    setAttr(main!, "cutaway-flow", flowing ? "" : null);
     setAttr(main!, "lang", lang());
     setAttr(main!, "earth-from", address.get("earth-from") === "chikyu" ? "chikyu" : null);
     setAttr(main!, "earth-texture-base", address.get("earth-from") === "chikyu" ? "earth-textures/" : null);
@@ -560,6 +582,7 @@ if (main && controls && pickerBox) {
     describe();
     address.set("body", state.body);
     address.set("look", state.look);
+    address.set("cutaway", state.cutaway === "off" ? null : state.cutaway);
     address.set("sky", state.real ? "real" : null);
     address.set("moons", state.moons ? "1" : null);
     address.set("with", state.also.length > 0 ? state.also.join(",") : null);
@@ -577,7 +600,7 @@ if (main && controls && pickerBox) {
   const panel = document.querySelector<EmbedPanelElement>("#embed-panel")!;
   const embedOptions = (): EmbedOptions => {
     const real = state.real || (state.moons && hasMoons());
-    return { body: state.body, look: state.look, size: panel.size, lang: lang(), ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
+    return { body: state.body, look: state.look, size: panel.size, lang: lang(), ...(state.cutaway === "off" ? {} : { cutaway: state.cutaway }), ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
   };
   panel.kinds = EMBED_KINDS;
   const kept = address.get("embed");
@@ -589,6 +612,7 @@ if (main && controls && pickerBox) {
     const options = embedOptions();
     const body = document.createElement("wakusei-body") as WakuseiBody;
     for (const [name, value] of Object.entries({ body: options.body, look: options.look ?? "realistic", size: String(panel.size), "texture-base": "textures/", lang: lang() })) body.setAttribute(name, value);
+    if (options.cutaway !== undefined) body.setAttribute("cutaway", options.cutaway === "classic" ? "" : options.cutaway);
     if (options.time !== undefined) body.setAttribute("time", options.time);
     if (options.moons === true) body.setAttribute("moons", "");
     if (options.turn !== undefined) body.setAttribute("turn", String(options.turn));
@@ -604,11 +628,21 @@ if (main && controls && pickerBox) {
   function renderEmbed(): void {
     const options = embedOptions();
     panel.setAttribute("lang", lang());
-    panel.openHref = `embed.html?${new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.time !== undefined ? { time: options.time } : {}), ...(options.moons === true ? { moons: "1" } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) }).toString()}`;
+    panel.openHref = `embed.html?${new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.cutaway === undefined ? {} : { cutaway: options.cutaway }), ...(options.time !== undefined ? { time: options.time } : {}), ...(options.moons === true ? { moons: "1" } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) }).toString()}`;
     panel.update();
   }
 
   for (const b of looks) b.addEventListener("click", () => ((state.look = (b.dataset["look"] ?? "realistic") as Look), render()));
+  for (const button of cuts) button.addEventListener("click", () => {
+    state.cutaway = cutFrom(button.dataset["cutaway"] ?? null);
+    render();
+  });
+  flow.addEventListener("click", () => {
+    flowing = !flowing;
+    render();
+    if (flowing && state.look !== "line") void main.goLive();
+  });
+  motion.addEventListener("change", () => render());
   for (const b of skies) b.addEventListener("click", () => ((state.real = b.dataset["sky"] === "real"), render()));
   moonsButton.addEventListener("click", () => ((state.moons = !state.moons), (state.real = state.real || state.moons), render()));
   scaleButton.addEventListener("click", () => ((state.scale = !state.scale), render()));

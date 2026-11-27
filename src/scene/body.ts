@@ -18,7 +18,8 @@ import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import type { TileLevel } from "./tiles.ts";
 import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
-import { interiorOf } from "../interior.ts";
+import { cutOpening, interiorOf, type CutSize } from "../interior.ts";
+import { createCutaway } from "./cutaway.ts";
 import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
@@ -45,6 +46,8 @@ export interface MoonDraw {
 /** Everything that changes how the scene looks. The element fills one in and hands it over; the scene holds no clock of its own. */
 export interface SceneState {
   pose: Pose;
+  /** Elapsed seconds of the illustrative flow in the cut face. */
+  cutawaySeconds?: number;
   /** Body radii from the middle to the edge of the picture, at zoom 1. */
   extent: number;
   zoom: number;
@@ -100,21 +103,26 @@ export interface BodyItemOptions {
   /** Finer map tiles for a close zoom (see `scene/detail.ts`): where they are (`undefined` for none), the pixel ratio, whether this device may use them, and what to do when the tile set's levels for the body are known. */
   tiles?: { source(body: string): BodyMapSource | undefined; book: SourceBook; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
   /** Draw the interior cutaway instead of the whole globe. Off when left out. A body with no sourced interior is drawn whole. */
-  cutaway?: boolean;
+  cutaway?: boolean | CutSize;
   /** How many interior shells this scene built. `0` when the cutaway is off or the body has no sourced interior. */
   onShells?(count: number): void;
 }
 
 /** The shader material of a body: its surface code with the look's lighting and glow uniforms. A star made from numbers is drawn with it too (the size line-up). */
-export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean): THREE.ShaderMaterial {
+export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean, cutSize?: CutSize): THREE.ShaderMaterial {
   const a = look.atmosphere;
   // a glowing body (the Sun, a star) is drawn as it always was: no window of finer map and no generic detail
   const generic = look.emissive !== true;
   const fine = detailOf(look);
+  const fragment = bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic);
+  const opening = cutSize === undefined ? undefined : cutOpening(cutSize);
   return new T.ShaderMaterial({
     vertexShader: VERTEX,
-    fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic),
+    fragmentShader: opening === undefined ? fragment :
+      `uniform vec2 uCutOpening;
+${fragment.replace("void main() {", "void main() { if (abs(atan(vW.x, vW.z) - uCutOpening.x) < uCutOpening.y) discard;")}`,
     uniforms: {
+      ...(opening === undefined ? {} : { uCutOpening: { value: new T.Vector2(...opening) } }),
       ...(generic
         ? {
             uTexel: { value: painted ? (2 * Math.PI) / (look.painted?.widths[0] ?? 2048) : 0.005 },
@@ -172,6 +180,9 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
     key: options.key,
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
       const look = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
+      const interior = options.cutaway ? interiorOf(options.id) : undefined;
+      const cutSize = interior !== undefined && typeof options.cutaway === "string" ? options.cutaway : undefined;
+      const cutKey = cutSize === undefined ? "" : `:${cutSize}`;
       const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
       // a moon with a published shape model is the globe moved to its radii (its table is a chunk of its own, waited for here), and then needs no stretching to an ellipsoid
       const shapeTable = look.shape === undefined ? undefined : await look.shape().catch(() => undefined);
@@ -186,7 +197,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         : shapeTable === undefined ? assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 192, 96), (g) => g.dispose()) : assets.acquire(`wk:shape:${held}:${grid.lon}`, () => shapeGeometry(T, shapeTable, facts.radiusKm, grid), (g) => g.dispose());
       const shader = craft !== undefined
         ? assets.acquire(`wk:body:${held}:craft`, () => craftMaterial(T, look.ambient ?? 0.08), (m) => m.dispose())
-        : assets.acquire(`wk:body:${held}:r`, () => makeBodyMaterial(T, look, false), (m) => m.dispose());
+        : assets.acquire(`wk:body:${held}:r${cutKey}`, () => makeBodyMaterial(T, look, false, cutSize), (m) => m.dispose());
       if (craft !== undefined) {
         const picture = await loadImage(T, `${options.textureBase()}${craft.map}`).catch(() => undefined);
         if (picture !== undefined) {
@@ -195,7 +206,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           shader.uniforms.uMap!.value = assets.acquire(`wk:craftmap:${held}`, () => picture, (t) => t.dispose());
         }
       }
-      const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p`, () => makeBodyMaterial(T, look, true), (m) => m.dispose()) : undefined;
+      const paintedMaterial = wantPainted ? assets.acquire(`wk:body:${held}:p${cutKey}`, () => makeBodyMaterial(T, look, true, cutSize), (m) => m.dispose()) : undefined;
 
       const materials = paintedMaterial === undefined ? [shader] : [shader, paintedMaterial];
       const baseWrap = look.wrap ?? (look.atmosphere === undefined ? 0.04 : 0.3);
@@ -210,7 +221,6 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const shells: { geometry: { dispose(): void }; material: { dispose(): void } }[] = [];
       let cut: InstanceType<ThreeParts["Group"]> | undefined;
       if (options.cutaway === true) {
-        const interior = interiorOf(options.id);
         if (interior !== undefined) {
           mesh.visible = false;
           cut = new T.Group();
@@ -237,7 +247,12 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           }
         }
       }
-      options.onShells?.(shells.length);
+      const faces = cutSize === undefined || interior === undefined ? undefined : createCutaway(T, interior, cutSize);
+      if (faces !== undefined) {
+        faces.faceMesh.frustumCulled = false;
+        scene.add(faces.faceMesh);
+      }
+      options.onShells?.(interior?.layers.length ?? 0);
 
       // rings: a picture of them when the look has one (painted), else the table's strip
       const table = ringStrip(facts, 1024);
@@ -406,7 +421,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const scaleX = ax ? ax[1] / mean : 1;
         const scaleY = ax ? ax[2] / mean : measured ? 1 : 1 - facts.flattening;
         const scaleZ = ax ? ax[0] / mean : 1;
-        setBasis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
+        if (faces === undefined) setBasis(mesh, east, pole, meridian, scaleX, scaleY, scaleZ);
+        else setBasis(mesh, east, pole, meridian);
         if (cut !== undefined) setBasis(cut, [1, 0, 0], [0, 1, 0], [0, 0, 1]);
         if (ringHalves !== undefined) {
           const [near, far] = ringHalves;
@@ -543,7 +559,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         orient(state);
         frame(state);
         place(state);
-        syncLabel(state);
+        if (faces === undefined) syncLabel(state);
+        faces?.setTime(state.cutawaySeconds ?? 0);
         light.set(...state.pose.light);
         if (ringHalves !== undefined) {
           pole.set(...state.pose.pole);
@@ -602,7 +619,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           const mean = facts.radiusKm;
           detail.sync(
             { left: camera.left, right: camera.right, bottom: camera.bottom, top: camera.top },
-            { east, pole: state.pose.pole, meridian: state.pose.meridian, scale: [ax ? ax[1] / mean : 1, ax ? ax[2] / mean : shapeTable === undefined ? 1 - facts.flattening : 1, ax ? ax[0] / mean : 1] },
+            { east, pole: state.pose.pole, meridian: state.pose.meridian, scale: faces === undefined ? [ax ? ax[1] / mean : 1, ax ? ax[2] / mean : shapeTable === undefined ? 1 - facts.flattening : 1, ax ? ax[0] / mean : 1] : [1, 1, 1] },
             viewWidth,
           );
         }
@@ -652,6 +669,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             shell.geometry.dispose();
             shell.material.dispose();
           }
+          faces?.dispose();
           scene.clear();
         },
       };

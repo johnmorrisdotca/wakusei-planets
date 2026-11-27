@@ -11,7 +11,7 @@ import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId 
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg } from "./line.ts";
-import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf } from "./interior.ts";
+import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf, type CutSize } from "./interior.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
 import { detailOf, lookOf, starLookOf } from "./scene/look.ts";
@@ -101,7 +101,8 @@ const TEMPLATE = `<style>
 #cutaway { margin: 0; padding: 0; list-style: none; }
 #cutaway[hidden] { display: none; }
 #cutaway li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 8px; align-items: baseline; }
-#cutaway li[data-empty] { display: block; }
+#cutaway li[data-empty], #cutaway li[data-note] { display: block; }
+#cutaway li[data-note] { margin-top: 4px; }
 #cutaway [data-swatch] { width: 12px; height: 12px; }
 #stage svg { display: block; width: 100%; height: 100%; }
 #estimate { position: absolute; z-index: 2; left: 2px; right: 2px; bottom: 1px; margin: 0; max-height: 2.4em; overflow: hidden; text-align: center; font: 10px/1.2 system-ui, sans-serif; color: inherit; pointer-events: none; }
@@ -122,7 +123,7 @@ const TEMPLATE = `<style>
  * Close up, `tiles` is where the finer map tiles are (a folder address; `off` for none; by default the demo site's, unless `texture-base` names your own pictures): a window of them is laid over the painted map for the part in view and let go when it is not, and the zoom range of a body with tiles grows with them.
  * Whatever moves the view, `setView` sends a `wakusei-view` event with its `yaw`, `tilt`, `roll`, `zoom`, `panX` and `panY`.
  * `earth-from="chikyu"` (the Earth in the shaded looks only, and only when the page has imported chikyu-earth's realistic element) draws the Earth with chikyu-earth's `<chikyu-earth-realistic>`: day and night by the real Sun, lights, clouds and air, at `meridian` and, when there is a `time`, held at that date; `earth-texture-base` is the folder of its pictures. It is the other package's picture, so tilt, moons, places and the shared view controls do not apply to it.
- * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera. The shells are true spheres at the model's radii and the opening stays toward the camera, so the rims stay round; the Sun is whole discs. The legend names the layers. On a narrow picture it sits below the body. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
+ * `cutaway` (off when absent or `off`) opens a quarter of the globe toward the camera. The shells are true spheres at the model's radii and the opening stays toward the camera, so the rims stay round; the Sun is whole discs. The legend names the layers. On a narrow picture it sits below the body. Set its value to `half` or `quarter` for a filled cut in a shaded look or a cross-section in the line look. Add `cutaway-flow` to play illustrative motion for supported layers. Only a body with sourced figures is cut; the others stay whole and the legend says so. See the guide "A cutaway of the interior".
  * `places` marks the places on the body in the shaded looks, by layer (`landing`, `crash`, `planned`, `feature`; the lists come from `setPlacesLoader`), with `wakusei-place` on a click and `goToPlace` to turn one to the middle: see the guide "Places on the Moon, Mars and 31 more bodies".
  * `body-label` writes the body's name on its globe in the shaded looks (`painted`, `etched`, `outline` or `burned`; absent for none), with `body-label-strength`, `-repeat`, `-latitude`, `-facing`, `-font`, `-fallback-font` and `-tone` (`auto`, `light` or `dark` letters: auto takes dark ones for a `painted` look on a light body) beside it, and the `bodyLabel` property takes the same as an object: see the guide "A name on the body".
  * A dated picture (a `time`, or `moons`) has a clock: `rate` is the simulated seconds for each real second, and `rate="0"` holds it, drawing nothing. While it runs (`rate` not 0), `wakusei-timechange` carries
@@ -141,7 +142,7 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", "earth-from", "earth-texture-base", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", "cutaway-flow", "earth-from", "earth-texture-base", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
   #state: WakuseiState = "line";
@@ -154,6 +155,7 @@ export class WakuseiBody extends HTMLElement {
   #delegateKind = "";
   /** Whether the body is another package's drawing at the moment: the Earth's line look (chikyu-earth's globe), or its realistic Earth in a shaded look when the page asked for it (`earth-from="chikyu"`). */
   #delegating(): "line" | "shaded" | undefined {
+    if (this.#cutSize() !== undefined) return undefined;
     const delegate = delegates.get(this.body);
     if (delegate === undefined) return undefined;
     if (this.look === "line") return "line";
@@ -187,6 +189,9 @@ export class WakuseiBody extends HTMLElement {
   #sceneState: SceneState | undefined;
   #unsub: (() => void) | undefined;
   #reduce = false;
+  #motionPreference: MediaQueryList | undefined;
+  #flowSince: number | undefined;
+  #flowHeld = 0;
   #hands: ElementControls | undefined;
   #handsKey = "";
   #limitKey = "";
@@ -228,7 +233,13 @@ export class WakuseiBody extends HTMLElement {
     else if (state === "lost") this.#set("lost");
     else if (this.#view?.live) this.#set("live");
   };
+  #onMotionChange = (): void => {
+    if (!this.hasAttribute("cutaway-flow")) return;
+    this.#syncCutawayFlow();
+    this.#queue();
+  };
   #onHidden = (): void => {
+    this.#syncCutawayFlow();
     if (document.visibilityState === "hidden") this.#stopTick();
     else this.#resume();
     this.#syncClock();
@@ -276,7 +287,7 @@ export class WakuseiBody extends HTMLElement {
 
   /** The radius of the body's disc on the screen in CSS pixels, at the picture's own size: what `grab-radius` on the shared view controls wants for a drag that keeps the touched point under the pointer. */
   get discRadius(): number {
-    const { width, height } = this.getBoundingClientRect();
+    const { width, height } = (this.#cutSize() === undefined ? this : (this.#stage ?? this)).getBoundingClientRect();
     return (Math.min(width, height) / 2) * this.#fill();
   }
   get body(): BodyId {
@@ -485,7 +496,9 @@ export class WakuseiBody extends HTMLElement {
     const top = state.panY * half + halfH;
     const facts = this.#facts();
     const ax = facts.axesKm;
-    const scale: Vec3 = ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
+    const size = this.#cutSize();
+    const scale: Vec3 = size !== undefined ? [1, 1, 1] :
+      ax ? [ax[1] / facts.radiusKm, ax[2] / facts.radiusKm, ax[0] / facts.radiusKm] : [1, 1 - facts.flattening, 1];
     const view = {
       centre: [0, 0, 0] as Vec3,
       radius: 1,
@@ -498,8 +511,8 @@ export class WakuseiBody extends HTMLElement {
       height: h,
       radiusPx: (Math.min(w, h) / 2) * (state.zoom / state.extent),
     };
-    const open = this.#cutawayOn() && this.body !== "sun" && interiorOf(this.body) !== undefined;
-    const marks = marksToShow(this.#placeList.list, layers, view, facts.radiusKm, names, [], this.getAttribute("lang") === "ja" ? "ja" : "en").filter((mark) => !open || !inCutOpening(surfacePoint(view, mark.place.lat, mark.place.lon).point));
+    const open = size !== undefined || (this.#cutawayOn() && this.body !== "sun" && interiorOf(this.body) !== undefined);
+    const marks = marksToShow(this.#placeList.list, layers, view, facts.radiusKm, names, [], this.getAttribute("lang") === "ja" ? "ja" : "en").filter((mark) => !open || !inCutOpening(surfacePoint(view, mark.place.lat, mark.place.lon).point, size));
     this.#placeLayer.set(marks, (Math.min(w, h) / 2) * (state.zoom / state.extent));
   }
 
@@ -518,7 +531,10 @@ export class WakuseiBody extends HTMLElement {
     this.#stage = root.getElementById("stage")!;
     this.#startedAt = performance.now();
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
-    this.#reduce = typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.#motionPreference = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : undefined;
+    this.#reduce = this.#motionPreference?.matches ?? false;
+    this.#motionPreference?.addEventListener("change", this.#onMotionChange);
+    this.#syncCutawayFlow();
     this.#clockFromAttributes();
     this.#stillSide();
     if (!this.hasAttribute("role")) this.setAttribute("role", "img");
@@ -528,6 +544,7 @@ export class WakuseiBody extends HTMLElement {
         const last = entries[entries.length - 1];
         if (last === undefined) return;
         this.#visible = last.isIntersecting;
+        this.#syncCutawayFlow();
         if (this.#visible) {
           this.#still();
           this.#resume();
@@ -563,6 +580,10 @@ export class WakuseiBody extends HTMLElement {
   disconnectedCallback(): void {
     clearTimeout(this.#clockTimer);
     this.#clockTimer = undefined;
+    this.#motionPreference?.removeEventListener("change", this.#onMotionChange);
+    this.#motionPreference = undefined;
+    this.#flowSince = undefined;
+    this.#flowHeld = 0;
     this.#stopTick();
     this.#gate?.cancel();
     this.#io?.disconnect();
@@ -603,16 +624,21 @@ export class WakuseiBody extends HTMLElement {
       this.#clockFromAttributes();
       this.#syncClock(true);
     }
+    if (name === "body" || name === "star") {
+      this.#flowSince = undefined;
+      this.#flowHeld = 0;
+    }
+    if (name === "cutaway" || name === "cutaway-flow" || name === "body" || name === "star") this.#syncCutawayFlow();
     if (name === "data") this.#door.book.ownOnly(this.getAttribute("data") === "own");
     if (name === "live") this.#applyHover();
     if (name === "still-size" && this.#stillSide()) this.#still();
-    if (name === "live" || name === "look" || name === "body" || name === "earth-from") this.#carry();
-    if (name === "body" || name === "look" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
+    if (name === "live" || name === "look" || name === "body" || name === "earth-from" || name === "cutaway") this.#carry();
+    if (name === "body" || name === "look" || name === "cutaway" || name === "moons" || name === "range" || name === "scale-to" || name === "span-km" || name === "fit" || name === "star") {
       if (name === "body" || name === "look") this.#tileLevels = undefined;
       this.#refreshLimits();
     }
     this.#lastAnchors = -1;
-    if (name === "places" || name === "site-flags" || name === "lang" || name === "body" || name === "look" || name === "star" || name === "surface-names") this.#markPlaces();
+    if (name === "places" || name === "site-flags" || name === "lang" || name === "body" || name === "look" || name === "star" || name === "cutaway" || name === "surface-names") this.#markPlaces();
     this.#queue();
   }
 
@@ -645,7 +671,8 @@ export class WakuseiBody extends HTMLElement {
 
   /** The shared controllers' camera: `yaw` turns the body about its pole, `tilt` tips its top away from you as it grows (a drag up moves the surface up), `roll` turns the picture clockwise about the line of sight, `zoom` scales it, and `panX` and `panY` move it by that many CSS pixels from the middle. */
   setView(view: { yaw?: number; tilt?: number; roll?: number; zoom?: number; panX?: number; panY?: number }): void {
-    const half = Math.max(1, Math.min(this.clientWidth, this.clientHeight)) / 2;
+    const stage = this.#cutSize() === undefined ? this : (this.#stage ?? this);
+    const half = Math.max(1, Math.min(stage.clientWidth, stage.clientHeight)) / 2;
     const [yaw, tilt, roll, zoom, panX, panY] = [view.yaw ?? 0, view.tilt ?? 0, view.roll ?? 0, view.zoom ?? 1, -(view.panX ?? 0) / half, (view.panY ?? 0) / half];
     if (yaw === this.#yaw && tilt === this.#tilt && roll === this.#roll && zoom === this.#zoom && panX === this.#panX && panY === this.#panY) return;
     [this.#yaw, this.#tilt, this.#roll, this.#zoom, this.#panX, this.#panY] = [yaw, tilt, roll, zoom, panX, panY];
@@ -796,7 +823,8 @@ export class WakuseiBody extends HTMLElement {
   get #moving(): boolean {
     const r = this.#request();
     const turning = r.turn !== 0 || (r.start !== undefined && r.rate !== 1 && r.rate !== 0);
-    return this.#reduce ? r.turn !== 0 : turning;
+    if (this.#isSection()) return this.#flowSince !== undefined;
+    return this.#flowSince !== undefined || (this.#reduce ? r.turn !== 0 : turning);
   }
 
   // --- the state of the scene --------------------------------------------------------------------------------------------------------------------
@@ -809,7 +837,7 @@ export class WakuseiBody extends HTMLElement {
     const extent = this.#extent(r.moons);
     const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll, this.#tumble ? this.#yaw : 0) : undefined;
     const label = this.#labelNow();
-    return { pose, extent, sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, label };
+    return { pose, extent, cutawaySeconds: this.#cutawaySeconds(), sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, label };
   }
 
   #labelHeld: { options: ({ text: string } & NameLabelOptions) | null; key: string } | undefined;
@@ -832,6 +860,9 @@ export class WakuseiBody extends HTMLElement {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
     const span = num(this.getAttribute("span-km"), 0);
+    if (!moons && !range && !span && scaleTo === null && this.#cutSize() !== undefined) {
+      return this.#isSection() ? 1.18 : Math.max(1.2, extentOf(this.#facts(), { tight: true }));
+    }
     return extentOf(this.#facts(), {
       tight: this.getAttribute("fit") === "tight",
       spanKm: span > 0 ? span : undefined,
@@ -952,7 +983,7 @@ export class WakuseiBody extends HTMLElement {
 
   /** The picture's identity: a new one disposes the view and builds it again, so a cutaway gives its shells back when it is turned off. */
   #signature(): string {
-    return `${this.#star()?.key ?? this.#estimate()?.id ?? this.body}|${this.look}|${this.#cutawayOn() ? "cut" : "whole"}`;
+    return `${this.#star()?.key ?? this.#estimate()?.id ?? this.body}|${this.look}|${this.#cutSize() ?? (this.#cutawayOn() ? "cut" : "whole")}`;
   }
 
   #cutawayOn(): boolean {
@@ -960,12 +991,38 @@ export class WakuseiBody extends HTMLElement {
     return value !== null && value !== "off" && value !== "0";
   }
 
+  #cutSize(): CutSize | undefined {
+    const value = this.getAttribute("cutaway");
+    if (value !== "half" && value !== "quarter") return undefined;
+    return this.hasAttribute("star") || this.#estimate() !== null || interiorOf(this.body) === undefined ? undefined : value;
+  }
+
+  #isSection(): boolean {
+    return (this.look === "line" || this.#state === "unavailable") && this.#cutSize() !== undefined;
+  }
+
+  #cutawaySeconds(): number {
+    return this.#flowHeld + (this.#flowSince === undefined ? 0 : (performance.now() - this.#flowSince) / 1000);
+  }
+
+  #syncCutawayFlow(): void {
+    const value = this.getAttribute("cutaway-flow");
+    const active = value !== null && value !== "off" && value !== "0" && this.#cutSize() !== undefined &&
+      this.#visible && document.visibilityState !== "hidden" && !this.#motionPreference?.matches &&
+      interiorOf(this.body)?.layers.some((layer) => layer.flow === true);
+    if (active && this.#flowSince === undefined) this.#flowSince = performance.now();
+    else if (!active && this.#flowSince !== undefined) {
+      this.#flowHeld = this.#cutawaySeconds();
+      this.#flowSince = undefined;
+    }
+  }
+
   /** On a narrow picture the legend takes a band under the body, so it is never drawn across the globe. */
   #fitCutaway(): void {
     const panel = this.shadowRoot?.querySelector("#cutaway-panel");
     if (!(panel instanceof HTMLElement)) return;
     const narrow = this.clientWidth > 0 && this.clientWidth <= 480;
-    const band = narrow && !panel.hidden ? panel.offsetHeight + 8 : 0;
+    const band = (narrow || this.#cutSize() !== undefined) && !panel.hidden ? panel.offsetHeight + 8 : 0;
     const next = `${band}px`;
     if (this.style.getPropertyValue("--cutaway-band") !== next) this.style.setProperty("--cutaway-band", next);
   }
@@ -988,7 +1045,7 @@ export class WakuseiBody extends HTMLElement {
     list.hidden = false;
     list.replaceChildren();
     const lang = this.getAttribute("lang") === "ja" ? "ja" : "en";
-    const rows = interiorLegend(this.body, lang);
+    const rows = this.#estimate() === null && !this.hasAttribute("star") ? interiorLegend(this.body, lang) : undefined;
     if (rows === undefined) {
       heading.hidden = true;
       const item = document.createElement("li");
@@ -1020,6 +1077,12 @@ export class WakuseiBody extends HTMLElement {
       item.append(swatch, text);
       list.append(item);
     }
+    if (this.body === "earth" && this.#cutSize() !== undefined) {
+      const note = document.createElement("li");
+      note.dataset.note = "";
+      note.textContent = lang === "ja" ? "明るい斑点は、模式的なマグマだまりを示します。" : "Bright pockets show illustrative magma near the surface.";
+      list.append(note);
+    }
     this.#fitCutaway();
   }
 
@@ -1050,7 +1113,7 @@ export class WakuseiBody extends HTMLElement {
       this.#drawLine();
       if (this.look === "line") this.#set("line");
       // the tick stopped while the other package's globe was shown
-      if (undelegated) this.#resume();
+      if (undelegated || this.#isSection()) this.#resume();
       return;
     }
     const sig = this.#signature();
@@ -1066,6 +1129,7 @@ export class WakuseiBody extends HTMLElement {
     if (this.#view?.live === true) {
       this.#sync();
       this.#view.invalidate();
+      if (this.#cutSize() !== undefined) this.#resume();
     } else {
       this.#rekey();
       if (this.#wantLive || this.#hasPriority()) void this.goLive();
@@ -1118,6 +1182,11 @@ export class WakuseiBody extends HTMLElement {
     }
     if (star !== undefined) return this.look === "line" ? (ja ? `${star.facts.name.ja}の線画。${star.disclaimer.ja}` : `${star.facts.name.en}, line drawing. ${star.disclaimer.en}`) : ja ? `${star.facts.name.ja}の陰影つきの絵。${star.disclaimer.ja}` : `${star.facts.name.en}, shaded star. ${star.disclaimer.en}`;
     const f = BODIES[this.body];
+    const size = this.#cutSize();
+    if (size !== undefined) {
+      if (this.#isSection()) return ja ? `${f.name.ja}の断面` : `${f.name.en} cross-section`;
+      return ja ? `${f.name.ja}の${size === "half" ? "半分" : "4分の1"}を切り取った図` : `${f.name.en}, ${size} cutaway`;
+    }
     const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "イラスト" : "illustrated drawing" } as const;
     return ja ? `${f.name.ja}の${looks[this.look]}` : `${f.name.en}, ${looks[this.look]}`;
   }
@@ -1139,9 +1208,10 @@ export class WakuseiBody extends HTMLElement {
     const draw = star === undefined ? (options: Parameters<typeof lineSvg>[1]) => lineSvg(this.body, options) : (options: Parameters<typeof lineSvg>[1]) => starLineSvg(star, options);
     const html = draw({
       size,
+      ...(this.#isSection() ? { cutaway: true, cutawaySeconds: scene.cutawaySeconds } : {}),
       pose: scene.pose,
       ...(r.moons ? { moons: true, ...(frame.time !== undefined ? { time: frame.time } : {}), range: scene.extent, moonsAt: (scene.moons ?? []).map((m) => ({ id: m.id as MoonId, x: m.x, y: m.y, z: m.z, distance: Math.hypot(m.x, m.y, m.z) })), orbits: new Map((scene.moons ?? []).filter((m) => m.orbit !== undefined).map((m) => [m.id as string, m.orbit!])) } : {}),
-      fill: scaleTo !== null || this.hasAttribute("span-km") || this.getAttribute("fit") !== "tight" ? this.#fill() : undefined,
+      fill: scaleTo !== null || this.hasAttribute("span-km") || this.getAttribute("fit") !== "tight" || this.#isSection() ? this.#fill() : undefined,
       lang: this.getAttribute("lang") === "ja" ? "ja" : undefined,
       labels: this.getAttribute("labels") === "off" ? false : undefined,
       stroke: stroke || undefined,
@@ -1153,7 +1223,8 @@ export class WakuseiBody extends HTMLElement {
 
   #key(state: SceneState): string {
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
-    return `${this.#star()?.key ?? this.#estimate()?.id ?? this.body}|${this.look}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}`;
+    const flow = this.#cutSize() === undefined ? "" : this.#flowHeld.toFixed(3);
+    return `${this.#signature()}|${flow}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.
@@ -1192,7 +1263,7 @@ export class WakuseiBody extends HTMLElement {
       id: this.body,
       ...(star !== undefined ? { shaded: star.look, facts: star.facts, assetKey: `star:${star.key}` } : rock === null ? {} : { shaded: rock.look, facts: rock.facts, assetKey: `rock:${rock.id}`, coarse: true }),
       look: this.look === "illustrated" ? "realistic" : "painted",
-      cutaway: rock === null && this.#cutawayOn(),
+      cutaway: rock === null && star === undefined ? (this.#cutSize() ?? this.#cutawayOn()) : false,
       onShells: (count) => {
         this.dataset.shells = String(count);
       },
@@ -1263,6 +1334,7 @@ export class WakuseiBody extends HTMLElement {
     const scaleTo = this.getAttribute("scale-to") as BodyId | null;
     const span = num(this.getAttribute("span-km"), 0);
     const half = span > 0 ? span : scaleTo !== null && scaleTo in BODIES ? BODIES[scaleTo].radiusKm * 1.06 : 0;
+    if (half === 0 && this.#cutSize() !== undefined) return 1 / this.#extent(false);
     return half > 0 ? Math.max(this.hasAttribute("star") ? 0.001 : 0.01, Math.min(1, this.#facts().radiusKm / half)) : this.getAttribute("fit") === "tight" ? 1 : 1 / ROOM;
   }
 
@@ -1309,13 +1381,13 @@ export class WakuseiBody extends HTMLElement {
   #resume(): void {
     this.#stopTick();
     if (this.#view?.live === true && this.#visible && this.#moving && document.visibilityState !== "hidden") this.#gate?.request();
-    else if (this.look === "line" && this.#visible && this.#moving) this.#lineTick();
+    else if ((this.look === "line" || this.#isSection()) && this.#visible && this.#moving) this.#lineTick();
   }
 
   #lineTick(): void {
     this.#stopTick();
     // a body another package draws (the Earth's globe) is that package's to turn: this package's line drawn here would replace it
-    if (!this.#visible || document.visibilityState === "hidden" || !this.#moving || this.look !== "line" || this.#delegateEl !== undefined) return;
+    if (!this.#visible || document.visibilityState === "hidden" || !this.#moving || (this.look !== "line" && !this.#isSection()) || this.#delegateEl !== undefined) return;
     this.#drawLine();
     this.#tick = setTimeout(() => this.#lineTick(), 1000 / 30);
   }
@@ -1332,7 +1404,11 @@ export class WakuseiBody extends HTMLElement {
     this.setAttribute("data-state", state);
     this.dispatchEvent(new CustomEvent("wakusei-state", { detail: { state } }));
     this.#door.announce();
-    if (state === "unavailable") this.#drawLine();
+    if (state === "unavailable") {
+      this.setAttribute("aria-label", this.#label());
+      this.#drawLine();
+      if (this.#isSection()) this.#resume();
+    }
   }
 }
 

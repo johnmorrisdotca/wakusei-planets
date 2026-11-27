@@ -3,6 +3,8 @@ import { apparent, nearMoons, orbitPath, system, type Pose } from "./ephemeris.t
 import { BODIES, ringReach, type BodyFacts, type BodyId, type Feature, type MoonId, type HostId } from "./facts.ts";
 import { facing, portrait, silhouette, surfacePoint, type Axes, type PortraitOptions } from "./pose.ts";
 import { cross, RAD, scale, unit, type Vec3 } from "./vec.ts";
+import { interiorOf } from "./interior.ts";
+import { interiorRings } from "./interior-line.ts";
 
 /**
  * Options for `lineSvg`: the size, a pose (`tilt`, `pitch`, `phase`, `spin`, a `time` or a `pose`), `moons`, `range`, `fill`, the language and the colours.
@@ -18,6 +20,10 @@ import { cross, RAD, scale, unit, type Vec3 } from "./vec.ts";
 export interface LineOptions extends PortraitOptions {
   /** The width and height of the square drawing, in pixels. Default 320. */
   size?: number;
+  /** Draw a 2D cross-section for a body with a sourced interior. Default false. */
+  cutaway?: boolean;
+  /** Illustrative flow phase in seconds for the 2D cross-section. Default 0. */
+  cutawaySeconds?: number;
   /** A moment in milliseconds since 1970: the body is drawn as the Earth sees it then (its real pose, phase and rings). Without it the body is a portrait. */
   time?: number;
   /** The radius of the body as a fraction of half the drawing's width, to draw bodies to scale side by side. Default: as large as fits, with its rings. */
@@ -274,6 +280,14 @@ export function lineSvg(id: BodyId, options: LineOptions = {}): string {
   const paper = options.paper ?? mix(facts.colour, NAVY, id === "sun" ? 0.62 : 0.84);
   const hair = Math.max(0.6, size / 320);
   const head = (label: string): string => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(size)} ${n(size)}" width="${n(size)}" height="${n(size)}" role="img" aria-label="${label}"><title>${label}</title>`;
+  const interior = options.cutaway ? interiorOf(id) : undefined;
+  if (interior !== undefined) {
+    const cx = (size / 2) * (1 - (options.panX ?? 0));
+    const cy = (size / 2) * (1 + (options.panY ?? 0));
+    const radius = (size / 2) * (options.fill ?? 0.89) * (options.zoom ?? 1);
+    const label = lang === "ja" ? `${facts.name.ja}の断面` : `${facts.name.en} cross-section`;
+    return `${head(label)}${interiorRings(interior, size, cx, cy, radius, options.cutawaySeconds ?? 0)}</svg>`;
+  }
   if (options.moons === true && facts.parent === undefined && id !== "sun") return systemSvg(id as HostId, options, size, stroke, paper, hair, head);
   const pose = poseFor(id, options);
   const reach = Math.max(ringReach(facts), id === "sun" ? 1.08 : 1, ...(axesOf(facts) ?? []));

@@ -5,15 +5,94 @@ order: 20
 description: Open a body to its layers. The cutaway is off until you ask, draws only figures from a named model, and says when a figure is about.
 ---
 
-`cutaway` on `<wakusei-body>` opens a quarter of the globe. The opening stays toward the camera. The shells are true spheres at the radii the model gives, not the body's flattened shape, so each rim is a circle and the rims share a centre. The Sun is drawn as whole discs, not a wedge. A legend names every layer, how deep it is from the surface, and what it is made of. The heading says the numbers are from the surface down. Each depth is three significant figures, with thousands grouped. On a narrow picture the legend sits below the body.
+Cutaways are off until requested. Leave off the attribute or set `cutaway="off"` for a whole body. The legend gives the layer names, their composition, and depth from the surface in kilometres to three significant figures.
 
-Leave the attribute off, or set it to `off`, and the body is whole. The shells are built when the cutaway is turned on and given back when it is turned off. A body with no sourced figures is not cut: the legend says so, and the globe stays whole.
+The examples assume you have imported `@johnmorrisdotca/wakusei-planets/element`. For a shaded Earth, also import `@johnmorrisdotca/wakusei-planets/earth` and install `three`. See [Looks and bodies](looks-and-bodies.md).
+
+## Classic cutaway
+
+Add the bare `cutaway` attribute to open a quarter of the globe in the classic nested-shell view. True spherical shells keep their rims concentric as the globe turns. The Sun uses whole discs. On phones, the layer legend goes below the globe.
 
 ```html
 <wakusei-body body="earth" look="realistic" cutaway></wakusei-body>
 ```
 
-`interiorOf("earth")` is the same table the legend uses. Depths are kilometres from the surface.
+![Earth in the classic nested-shell view with its layer legend](../images/cutaway/earth-classic.webp)
+
+## 2D cross-section
+
+Use the line look with either explicit cut size to draw a flat cross-section showing the complete rings. This view runs without WebGL and also serves as the fallback for an explicit cut if WebGL fails. The legend goes below the cross-section on phones.
+
+```html
+<wakusei-body body="earth" look="line" cutaway="quarter"></wakusei-body>
+```
+
+![Earth in 2D with four coloured concentric layers](../images/cutaway/earth-section.webp)
+
+## 3D half cutaway
+
+Use `half` to open 180° around the globe’s vertical axis. The filled face stays toward you as you rotate the globe. On phones, the globe and the full face fit above the legend.
+
+```html
+<wakusei-body body="earth" look="realistic" cutaway="half"></wakusei-body>
+```
+
+![Earth with a half cut and the exposed layers on one plane](../images/cutaway/earth-half.webp)
+
+## 3D quarter cutaway
+
+Use `quarter` to remove a 90° wedge and see its two filled faces. Turn the globe to inspect its surface while the opening stays toward you. On phones, both faces fit above the legend.
+
+```html
+<wakusei-body body="earth" look="realistic" cutaway="quarter"></wakusei-body>
+```
+
+![Earth with a quarter cut exposing two faces and its globe texture](../images/cutaway/earth-quarter.webp)
+
+## Animate the cutaway
+
+Add `cutaway-flow` to an explicit cut to animate the liquid outer core of Earth or the Moon, or the metallic hydrogen in Jupiter. You can use it in 2D as well. The bright spots near Earth’s surface illustrate local magma pockets. On phones and desktop, the demo’s **Play flow** and **Pause flow** buttons sit above the view. In your own page, remove the attribute to pause. Flow pauses when the body leaves the viewport or the tab is hidden, and the view stays still when reduced motion is on.
+
+```html
+<wakusei-body body="earth" look="realistic" cutaway="quarter" cutaway-flow></wakusei-body>
+```
+
+![Earth’s quarter cut during flow, with streaks in the liquid outer core](../images/cutaway/earth-flow.webp)
+
+## Available cutaways
+
+Layer proportions follow the sources below. “About” marks an approximate boundary. The classic view of the Sun uses discs.
+
+| Body | Views | Source | Schematic proportions |
+|---|---|---|---|
+| Earth | Classic, 2D, ½, ¼ | [NASA Earth Fact Sheet][earth-sheet] and [NASA Science Earth Facts][earth-facts] | No |
+| Mars | Classic, 2D, ½, ¼ | [NASA Mars Fact Sheet][mars-sheet] | No |
+| Moon | Classic, 2D, ½, ¼ | [NASA Moon Fact Sheet][moon-sheet] and [NASA Science Moon Facts][moon-facts] | No |
+| Mercury | Classic, 2D, ½, ¼ | [NASA Mercury Fact Sheet][mercury-sheet] and [NASA Science Mercury Facts][mercury-facts] | No |
+| Sun | Classic, 2D, ½, ¼ | [NASA Sun Fact Sheet][sun-sheet] and [NASA Science Sun Facts][sun-facts] | No |
+| Jupiter | Classic, 2D, ½, ¼ | [NASA Jupiter Fact Sheet][jupiter-sheet] and [Militzer et al. (2022), model A][jupiter-model] | No |
+| Saturn | Classic, 2D, ½, ¼ | [NASA Saturn Fact Sheet][saturn-sheet], [NASA Science Saturn Facts][saturn-facts] and [Mankovich and Fuller (2021)][saturn-model] | No |
+
+Bodies below stay whole because the package has no adopted source with their layer boundaries. When a cut is requested, the legend reports this. The NASA Science pages consulted for Venus, Uranus and Neptune name cores but give no core radii. The NASA fact sheets consulted for Io, Europa, Ganymede and Titan give no layer boundary figures.
+
+| Body | Views | Layer source | Schematic proportions |
+|---|---|---|---|
+| Venus, Uranus, Neptune | Whole | — | — |
+| Pluto, Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna | Whole | — | — |
+| Bennu, Eros, Vesta, Pallas, Arrokoth | Whole | — | — |
+| Chiron, Pholus | Whole | — | — |
+| Halley | Whole | — | — |
+| Phobos, Deimos | Whole | — | — |
+| Io, Europa, Ganymede, Callisto, Amalthea, Thebe | Whole | — | — |
+| Mimas, Enceladus, Tethys, Dione, Rhea, Titan, Iapetus, Hyperion, Phoebe, Janus, Epimetheus, Prometheus, Pandora, Atlas, Pan, Daphnis, Helene, Telesto, Calypso | Whole | — | — |
+| Miranda, Ariel, Umbriel, Titania, Oberon | Whole | — | — |
+| Proteus, Larissa, Triton, Nereid | Whole | — | — |
+| Charon, Nix, Hydra, Styx, Kerberos | Whole | — | — |
+| Vanth | Whole | — | — |
+| Hiʻiaka, Namaka | Whole | — | — |
+| Dysnomia | Whole | — | — |
+
+Use `interiorOf("earth")` to read the same layers the legend uses. [NOTICE.md](../../NOTICE.md) lists the sources and access dates.
 
 ## The Earth
 
@@ -85,6 +164,17 @@ Mankovich and Fuller, 2021, "A diffuse core in Saturn revealed by ring seismolog
 | Envelope | 0 km to about 23,300 km | hydrogen and helium |
 | Diffuse core | about 23,300 km to 58,200 km | ice and rock, mixed |
 
-## Left out
-
-Venus, Uranus and Neptune, and Io, Europa, Ganymede and Titan, are not cut. NASA Science's pages for Venus, Uranus and Neptune, read 2026-11-26, name a core and state no radius for it. The NASA fact sheets read on 2026-11-13 state no layer boundary for those three or for the four moons. The sources and the dates are in `NOTICE.md`.
+[earth-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+[earth-facts]: https://science.nasa.gov/earth/facts/
+[mars-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html
+[moon-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html
+[moon-facts]: https://science.nasa.gov/moon/facts/
+[mercury-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/mercuryfact.html
+[mercury-facts]: https://science.nasa.gov/mercury/facts/
+[sun-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html
+[sun-facts]: https://science.nasa.gov/sun/facts/
+[jupiter-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/jupiterfact.html
+[jupiter-model]: https://doi.org/10.3847/PSJ/ac7ec8
+[saturn-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html
+[saturn-facts]: https://science.nasa.gov/saturn/facts/
+[saturn-model]: https://doi.org/10.1038/s41550-021-01448-3

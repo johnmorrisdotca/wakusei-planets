@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf } from "../src/interior.ts";
+import * as THREE from "three";
+import { lineSvg } from "../src/line.ts";
+import { createCutaway } from "../src/scene/cutaway.ts";
+import { cutOpening, inCutOpening, interiorDepthHeading, interiorLegend, interiorOf } from "../src/interior.ts";
 
 test("the Earth and Mars use the figures read from NASA, and a body with none is left out", () => {
   const earth = interiorOf("earth");
@@ -98,4 +101,40 @@ test("the legend lists each layer from the surface, outermost first, in English 
   assert.equal(interiorLegend("earth", "ja")?.[0]?.depth, "0 km から 約30 km");
   assert.deepEqual(interiorLegend("mars", "en")?.map((row) => row.depth), ["0 km to 1,560 km", "1,560 km to 3,390 km"]);
   assert.equal(interiorLegend("venus", "en"), undefined);
+});
+
+test("the SVG shows the approved layers and only the approved flow bands move", () => {
+  const earth = lineSvg("earth", { cutaway: true, size: 240 });
+  const flowing = lineSvg("earth", { cutaway: true, size: 240, cutawaySeconds: 2 });
+  assert.match(earth, /aria-label="Earth cross-section"/);
+  assert.notEqual(earth, flowing);
+  assert.deepEqual(earth.match(/<path data-layer[^>]+>/g), flowing.match(/<path data-layer[^>]+>/g));
+  assert.match(earth, /data-magma/);
+  assert.equal(lineSvg("sun", { cutaway: true, cutawaySeconds: 2 }), lineSvg("sun", { cutaway: true }));
+  assert.equal(lineSvg("iapetus", { cutaway: true }), lineSvg("iapetus"));
+});
+
+test("half and quarter faces share the camera opening and release their resources", () => {
+  const earth = interiorOf("earth")!;
+  for (const size of ["half", "quarter"] as const) {
+    const [centre, halfWidth] = cutOpening(size);
+    const sample = (angle: number) => [Math.sin(angle), 0, Math.cos(angle)] as const;
+    assert.equal(inCutOpening(sample(centre), size), true);
+    assert.equal(inCutOpening(sample(centre + halfWidth + .01), size), false);
+    assert.equal(inCutOpening(sample(centre - halfWidth - .01), size), false);
+    const cut = createCutaway(THREE, earth, size);
+    const shape = cut.faceMesh.geometry;
+    const positions = shape.getAttribute("position");
+    for (const [j, angle] of [centre + halfWidth, centre - halfWidth].entries()) {
+      const equator = j * positions.count / 2 + (earth.layers.length - 1) * 97 * 2 + 97;
+      assert.ok(Math.abs(positions.getX(equator) - Math.sin(angle)) < 1e-6);
+      assert.ok(Math.abs(positions.getZ(equator) - Math.cos(angle)) < 1e-6);
+    }
+    cut.setTime(2.5);
+    assert.equal(cut.faceMesh.material.uniforms.uTime?.value, 2.5);
+    let disposed = 0;
+    for (const resource of [shape, cut.faceMesh.material]) resource.addEventListener("dispose", () => { disposed++; });
+    cut.dispose();
+    assert.equal(disposed, 2);
+  }
 });

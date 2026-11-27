@@ -50,3 +50,25 @@ test("the Earth's legend matches its layers, Japanese follows the language, and 
   await page.locator("#main").evaluate((el) => el.setAttribute("cutaway", ""));
   await expect.poll(() => legend(page)).toEqual([{ layer: "", empty: true, name: "", depth: "" }]);
 });
+
+test("explicit cut sizes carry over to the line view, where flow can be played and paused", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.goto("/wakusei-planets/?body=earth&look=line&cutaway=half");
+  const body = page.locator("#main");
+  const cuts = page.getByRole("group", { name: "Cutaway", exact: true });
+  await expect(cuts.getByRole("button", { name: "Cross-section" })).toHaveAttribute("aria-pressed", "true");
+  const band = body.locator("#stage svg [data-flow]").first();
+  const still = await band.getAttribute("d");
+  await page.getByRole("button", { name: "Play flow" }).click();
+  await body.scrollIntoViewIfNeeded();
+  await expect(band).not.toHaveAttribute("d", still ?? "");
+  await page.getByRole("button", { name: "Pause flow" }).click();
+  const paused = await band.getAttribute("d");
+  await page.waitForTimeout(180);
+  await expect(band).toHaveAttribute("d", paused ?? "");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("#cutaway-flow")).toBeHidden();
+  await cuts.getByRole("button", { name: "Off", exact: true }).click();
+  await expect(body.locator("#cutaway-panel")).toBeHidden();
+  await expect(band).toHaveCount(0);
+});

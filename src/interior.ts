@@ -14,6 +14,8 @@ export interface InteriorLayer {
   about: boolean;
   /** A flat colour from the cutaway's palette, `#rrggbb`. */
   colour: string;
+  /** This layer can show illustrative flow in an explicit cut. */
+  flow?: true;
 }
 
 /** The layers of one body, innermost first. `radiusKm` is the volumetric mean radius the depths are measured from. */
@@ -44,7 +46,7 @@ const EARTH: Interior = {
   source: { page: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html", read: "2026-11-13" },
   layers: [
     { id: "inner-core", name: { en: "Inner core", ja: "内核" }, madeOf: { en: "iron and nickel, solid", ja: "鉄とニッケル、固体" }, outerKm: 1221, about: true, colour: "#e6c36a" },
-    { id: "outer-core", name: { en: "Outer core", ja: "外核" }, madeOf: { en: "iron and nickel, fluid", ja: "鉄とニッケル、液体" }, outerKm: 3485, about: false, colour: "#d4652f" },
+    { id: "outer-core", name: { en: "Outer core", ja: "外核" }, madeOf: { en: "iron and nickel, fluid", ja: "鉄とニッケル、液体" }, outerKm: 3485, about: false, colour: "#d4652f", flow: true },
     { id: "mantle", name: { en: "Mantle", ja: "マントル" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: 6341, about: true, colour: "#8a3e2a" },
     { id: "crust", name: { en: "Crust", ja: "地殻" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: 6371, about: false, colour: "#c9a36b" },
   ],
@@ -73,7 +75,7 @@ const MOON: Interior = {
   source: { page: "https://science.nasa.gov/moon/facts/", read: "2026-11-26" },
   layers: [
     { id: "inner-core", name: { en: "Inner core", ja: "内核" }, madeOf: { en: "iron, solid", ja: "鉄、固体" }, outerKm: 240, about: false, colour: "#e6c36a" },
-    { id: "outer-core", name: { en: "Outer core", ja: "外核" }, madeOf: { en: "iron, liquid", ja: "鉄、液体" }, outerKm: 330, about: false, colour: "#d4652f" },
+    { id: "outer-core", name: { en: "Outer core", ja: "外核" }, madeOf: { en: "iron, liquid", ja: "鉄、液体" }, outerKm: 330, about: false, colour: "#d4652f", flow: true },
     { id: "mantle", name: { en: "Mantle", ja: "マントル" }, madeOf: { en: "olivine and pyroxene", ja: "かんらん石と輝石" }, outerKm: MOON_RADIUS_KM - 40, about: true, colour: "#8a3e2a" },
     { id: "crust", name: { en: "Crust", ja: "地殻" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: MOON_RADIUS_KM, about: false, colour: "#c9a36b" },
   ],
@@ -122,7 +124,7 @@ const JUPITER: Interior = {
   layers: [
     { id: "inner", name: { en: "Inner mix", ja: "均質な内層" }, madeOf: { en: "heavy elements, 18%", ja: "重元素 18%" }, outerKm: 0.41 * JUPITER_RADIUS_KM, about: true, colour: "#e6c36a" },
     { id: "transition", name: { en: "Transition", ja: "遷移層" }, madeOf: { en: "heavy elements, fading", ja: "重元素が減っていく" }, outerKm: 0.63 * JUPITER_RADIUS_KM, about: true, colour: "#d4652f" },
-    { id: "metallic", name: { en: "Metallic hydrogen", ja: "金属水素" }, madeOf: { en: "metallic hydrogen", ja: "金属状の水素" }, outerKm: 0.72 * JUPITER_RADIUS_KM, about: false, colour: "#8a3e2a" },
+    { id: "metallic", name: { en: "Metallic hydrogen", ja: "金属水素" }, madeOf: { en: "metallic hydrogen", ja: "金属状の水素" }, outerKm: 0.72 * JUPITER_RADIUS_KM, about: false, colour: "#8a3e2a", flow: true },
     { id: "helium-rain", name: { en: "Helium rain", ja: "ヘリウムの雨" }, madeOf: { en: "helium falls as droplets", ja: "ヘリウムが液滴になって沈む" }, outerKm: 0.83 * JUPITER_RADIUS_KM, about: false, colour: "#a85a3c" },
     { id: "envelope", name: { en: "Envelope", ja: "外層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: JUPITER_RADIUS_KM, about: false, colour: "#c9a36b" },
   ],
@@ -161,7 +163,7 @@ const INTERIORS: Partial<Record<BodyId, Interior>> = { sun: SUN, mercury: MERCUR
  * ```
  */
 export function interiorOf(bodyId: string): Interior | undefined {
-  return INTERIORS[bodyId as BodyId];
+  return Object.hasOwn(INTERIORS, bodyId) ? INTERIORS[bodyId as BodyId] : undefined;
 }
 
 /** Three significant figures, so a boundary worked out from a fraction is not written as if it were measured to a tenth of a kilometre. */
@@ -183,12 +185,18 @@ export function interiorDepthHeading(lang: "en" | "ja"): string {
   return lang === "ja" ? "表面から下へ" : "From the surface down";
 }
 
-/**
- * Whether a point in view space (the camera sits on +Z) lies in the quarter the cutaway leaves open.
- * The shells stay put, so this is the same sector the geometry omits.
- */
-export function inCutOpening(point: readonly [number, number, number]): boolean {
-  return point[2] > 0 && Math.abs(Math.atan2(point[0], point[2])) < Math.PI / 4;
+export type CutSize = "half" | "quarter";
+
+/** Centre angle and angular half-width of the opening, measured from the camera's +Z line. */
+export function cutOpening(size: CutSize): readonly [centre: number, halfWidth: number] {
+  // Slightly offset the opening so both the faces and the rounded exterior read in depth.
+  return size === "half" ? [0.59, Math.PI / 2] : [0.24, Math.PI / 4];
+}
+
+/** Whether a point falls in the camera-facing opening. */
+export function inCutOpening(point: readonly [number, number, number], size?: CutSize): boolean {
+  const [centre, width] = size === undefined ? [0, Math.PI / 4] : cutOpening(size);
+  return (point[0] !== 0 || point[2] !== 0) && Math.abs(Math.atan2(point[0], point[2]) - centre) < width;
 }
 
 /**

@@ -1368,6 +1368,12 @@ test("a cutaway builds its shells and gives them back when it is turned off", as
   await expect.poll(() => main(page).evaluate((el) => el.shadowRoot?.querySelectorAll("#cutaway [data-layer]").length ?? 0)).toBe(4);
   const open = await settledCounts(page);
   expect(gpuObjects(open), "the shells are graphics objects").toBeGreaterThan(gpuObjects(before));
+  for (const size of ["half", "quarter"] as const) {
+    await main(page).evaluate((el, size) => el.setAttribute("cutaway", size), size);
+    await expect(main(page)).toHaveAttribute("aria-label", `Earth, ${size} cutaway`);
+    await expect(main(page)).toHaveAttribute("data-shells", "4");
+    await settledCounts(page);
+  }
   await main(page).evaluate((el) => el.removeAttribute("cutaway"));
   await expect(main(page)).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
   await expect.poll(() => main(page).evaluate((el) => (el.shadowRoot?.querySelector("#cutaway") as HTMLElement | null)?.hidden ?? true)).toBe(true);

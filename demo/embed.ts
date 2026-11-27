@@ -49,7 +49,7 @@ function body(): void {
   element.setAttribute("look", query.get("look") ?? "line");
   element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
   element.setAttribute("tiles", query.get("tiles") ?? "tiles/");
-  for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang"]) {
+  for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang", "cutaway"]) {
     const value = query.get(name);
     if (value !== null) element.setAttribute(name, value);
   }

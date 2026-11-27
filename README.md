@@ -130,6 +130,12 @@ Import the element once in client code, and the entry point of each body you dra
 
 Every body has its real size relative to the others (`scale-to="jupiter"`), its axial tilt and its rotation. The Sun, Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune and Pluto are drawn, and so are the eight other dwarf planets (Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris and Sedna; Haumea and Quaoar as the long shapes they are, and Ceres with a painted map from Dawn) eight minor bodies (Bennu, Eros and Arrokoth, each drawn as NASA's published mesh and picture, Vesta, with Dawn's own map, Pallas, Chiron, Pholus and Halley's comet, each its own shape, size and spin) and 44 moons (the Moon, Phobos and Deimos, Amalthea, Thebe and the four Galilean moons, Saturn's seven larger moons with Hyperion, Phoebe and ten of its small ones (Pan, Daphnis, Atlas, Prometheus, Pandora, Epimetheus, Janus, Telesto, Calypso and Helene), Uranus's five, Larissa, Proteus, Triton and Nereid, Charon, Nix and Hydra, and Vanth, Hiʻiaka, Namaka and Dysnomia, the moons of the dwarf planets whose orbits are published with a date). The Earth is drawn like the rest in the realistic and painted looks (NASA's Blue Marble), and its line look is [chikyu-earth](https://github.com/johnmorrisdotca/chikyu-earth)'s own globe: `import "@johnmorrisdotca/wakusei-planets/earth"` (it needs `@johnmorrisdotca/chikyu-earth` 0.10.0 or later installed). The painted looks cover the Sun, the planets from Mercury to Earth and Pluto, Ceres, the Moon, the four Galilean moons, Saturn's Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus, Triton and Charon, and Saturn's rings are Cassini's own picture of them.
 
+## Cutaways
+
+Show an interior in 2D with `look="line" cutaway="quarter"`, or open a half or a quarter of the 3D globe with `cutaway="half"` or `cutaway="quarter"`. Add `cutaway-flow` to animate the liquid outer core of Earth or the Moon, or the metallic hydrogen in Jupiter. Seven bodies have sourced interiors. [A cutaway of the interior](docs/guides/cutaway.md)
+
+![Earth in a 3D quarter cutaway](https://johnmorrisdotca.github.io/wakusei-planets/docs/images/cutaway/earth-quarter.webp)
+
 ## A star from its numbers
 
 `<wakusei-body star="Betelgeuse" temperature-k="3650" radius-sun="1057" luminosity-class="Iab">` draws any star in 3D or as a line drawing, from a few numbers and with no catalogue: the temperature gives the colour, the radius the size beside the Sun, the luminosity class the grain of the surface, the rotation how it turns, and a flattened star such as Vega or Altair is squashed with hotter poles. Granulation boils, an active star has spots, prominences and flares, and a soft corona glows round it, all through the same shared renderer, with a cheaper `quality="low"` for weak devices. Every star says which parts are measured and which are drawn for looks: *drawn from its numbers, not a photo*. The Sun keeps its own look. See [A star from its numbers](docs/guides/star-look.md) and the [star page](https://johnmorrisdotca.github.io/wakusei-planets/star.html).
@@ -512,6 +518,7 @@ Each guide has a Japanese twin in [docs/guides/ja](docs/guides/ja/getting-starte
 | [Put it in your page](docs/guides/put-it-in-your-page.md) | Set up a body and copy the code |
 | [The portrait builder](docs/guides/portrait-builder.md) | Many bodies in one picture |
 | [Looks and bodies](docs/guides/looks-and-bodies.md) | The looks and each body's entry point |
+| [A cutaway of the interior](docs/guides/cutaway.md) | 2D cross-sections, 3D cuts, flow and sources for the layers |
 | [A name on the body](docs/guides/name-on-the-body.md) | The body's name written on its globe: looks, how many, where, facing you, the font |
 | [Why two packages](docs/guides/two-packages.md) | This package and chikyu-earth: which to install, alone or together |
 | [Moons and time](docs/guides/moons-and-time.md) | The sky on a date, time that runs fast |

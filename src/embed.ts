@@ -50,6 +50,8 @@ export interface EmbedOptions {
   /** A star drawn from numbers instead of the body (`body` is then ignored: give `sun`, the one star among the bodies): the `star` attribute and the numbers' attributes (`temperature-k`, `radius-sun` and the rest) are written, and no entry point besides the element is loaded. `time` and `moons` do not apply to it. */
   star?: StarNumbers;
   look?: Look;
+  /** Choose the bare cutaway, or an explicit half or quarter cut. */
+  cutaway?: "classic" | "half" | "quarter";
   /** The date and time as an ISO string, or `now`: the body as the Earth sees it then. Left out, a portrait. */
   time?: string;
   /** A planet with its moons on their orbits (needs `time`). */
@@ -112,6 +114,7 @@ function attributesOf(o: EmbedOptions): [string, string][] {
   const out: [string, string][] = o.star !== undefined ? [["star", o.star.name ?? ""], ["look", o.look ?? "realistic"]] : [["body", o.body], ["look", o.look ?? "realistic"]];
   if (o.size !== undefined && o.size !== 320) out.push(["size", String(o.size)]);
   if (o.star !== undefined) out.push(...starAttributes(o.star));
+  if (o.cutaway !== undefined && o.star === undefined) out.push(["cutaway", o.cutaway === "classic" ? "" : o.cutaway]);
   if (o.time !== undefined && o.star === undefined) out.push(["time", o.time]);
   if (o.moons === true && o.time !== undefined && o.star === undefined) out.push(["moons", ""]);
   if (o.turn !== undefined && o.turn > 0) out.push(["turn", String(o.turn)]);
@@ -158,6 +161,7 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
   const body = options.body;
   const query = new URLSearchParams(options.star !== undefined ? { ...(options.star.name !== undefined ? { star: options.star.name } : { star: "" }), look: options.look ?? "realistic", ...Object.fromEntries(starAttributes(options.star)) } : { body, look: options.look ?? "realistic" });
   if (options.time !== undefined && options.star === undefined) query.set("time", options.time);
+  if (options.cutaway !== undefined && options.star === undefined) query.set("cutaway", options.cutaway);
   if (options.moons === true && options.time !== undefined && options.star === undefined) query.set("moons", "1");
   if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
   if (options.zoom !== undefined && options.zoom !== 1 && Number.isFinite(options.zoom) && options.zoom > 0) query.set("zoom", String(Math.round(options.zoom * 1000) / 1000));

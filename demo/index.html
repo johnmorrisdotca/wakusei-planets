@@ -12,6 +12,7 @@
 
       <section class="fam-felt space-stage" aria-labelledby="stage-h">
         <h2 id="stage-h" class="fam-sr" data-say="stage">Body view</h2>
+        <button type="button" class="fam-button stage-flow" id="cutaway-flow" aria-pressed="false" hidden>Play flow</button>
         <div id="view" class="body-view" role="group" aria-label="Body view" data-say-label="stage">
           <wakusei-body id="main" body="jupiter" look="realistic" live="hover" tabindex="0"></wakusei-body>
           <svg id="scale-leader" class="scale-leader" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" hidden><line x1="50" y1="50" x2="77" y2="77" /></svg>
@@ -42,6 +43,16 @@
             </div>
             <button type="button" class="fam-button" id="spin" aria-pressed="false" data-say="spin">Turn</button>
             <kazoku-speed-buttons id="spin-speed" data-testid="spin-speed" steps="0.5 1 2" value="1" hidden></kazoku-speed-buttons>
+          </div>
+
+          <div class="fam-row">
+            <span class="fam-label" data-say="cutaway">Cutaway</span>
+            <div class="group fam-seg" id="cutaway-options" role="group" aria-label="Cutaway" data-say-label="cutaway">
+              <button type="button" data-cutaway="off" aria-pressed="true" data-say="cutaway_off">Off</button>
+              <button type="button" data-cutaway="classic" aria-pressed="false" data-say="cutaway_classic">Classic</button>
+              <button type="button" data-cutaway="half" aria-pressed="false" data-say="cutaway_half">½ cutaway</button>
+              <button type="button" data-cutaway="quarter" aria-pressed="false">¼ cutaway</button>
+            </div>
           </div>
 
           <div class="fam-row" data-help-en="Name on the body writes each body's name on its globe, like a title laid over the thing it names: it turns with the body (or faces you), once or on both sides, at the equator or near a pole, in four looks and three strengths. Nothing is drawn on a body too small on the screen." data-help-ja="「天体に名前」は、天体の名前をその球面に書きます。映画のタイトルのように天体に重なり、天体とともに回ります (「こちらを向く」なら見る人のほうを向いたまま)。一つか両側か、赤道か極の近くか、四つの見た目と三つの強さを選べます。画面上で小さい天体には描きません。">

@@ -5,15 +5,94 @@ order: 20
 description: 天体を開いて層を見る。断面は頼むまでオフで、名前を挙げたモデルの数値だけを描き、おおよその数値はおおよそと書く。
 ---
 
-`<wakusei-body>` の `cutaway` は、球の4分の1を開きます。開きはカメラの方を向いたままです。殻はモデルの半径どおりの真球で、天体のつぶれた形にはしません。縁は円で、中心を共有します。太陽は切れ目のない円盤です。凡例は層の名前、表面からの深さ、何でできているかを書きます。見出しは、数値が表面から下へ向かう深さだと示します。深さは有効数字3桁で、桁は区切ります。狭い絵では凡例を天体の下に置きます。
+断面は必要なときにオンにします。属性を付けないか `cutaway="off"` にすると、天体は丸ごとのままです。凡例には層の名前、表面からの深さ、成分を表示します。深さはキロメートルで、有効数字3桁です。
 
-属性を付けないか、`off` にすると、天体は丸ごとのままです。殻は断面をオンにしたときに作り、オフにしたときに返します。出典つきの数値がない天体は開きません。凡例はその旨を書き、球は丸ごとのままです。
+例では先に `@johnmorrisdotca/wakusei-planets/element` を読み込みます。陰影つきの地球には `@johnmorrisdotca/wakusei-planets/earth` と `three` も必要です。詳しくは[見た目と天体](looks-and-bodies.md)を参照してください。
+
+## 従来の断面
+
+値を指定せずに `cutaway` を付けると、球の4分の1が開き、重なった殻が見えます。殻は真球で、天体を回しても縁の円は中心を共有します。太陽は切れ目のない円盤で描きます。スマートフォンでは凡例が天体の下に並びます。
 
 ```html
-<wakusei-body body="earth" look="realistic" cutaway></wakusei-body>
+<wakusei-body body="earth" look="realistic" lang="ja" cutaway></wakusei-body>
 ```
 
-`interiorOf("earth")` は、凡例が使うのと同じ表です。深さは表面からのキロメートルです。
+![地球の従来の断面。重なった殻と層の凡例](../../images/cutaway/ja-earth-classic.webp)
+
+## 2D の断面
+
+`look="line"` と `cutaway="half"` または `cutaway="quarter"` を組み合わせると、すべての層が同心円で見える平面の断面を描きます。WebGL は不要です。3D の描画に失敗した場合も、同じ断面を表示します。スマートフォンでは凡例が断面の下に並びます。
+
+```html
+<wakusei-body body="earth" look="line" lang="ja" cutaway="quarter"></wakusei-body>
+```
+
+![4つの層を同心円で示す地球の平面断面](../../images/cutaway/ja-earth-section.webp)
+
+## 3D の2分の1断面
+
+`half` を指定すると、球の上下を結ぶ軸の周りに180度開きます。天体を回しても断面はこちらを向きます。スマートフォンでは、球と断面全体が凡例の上に収まります。
+
+```html
+<wakusei-body body="earth" look="realistic" lang="ja" cutaway="half"></wakusei-body>
+```
+
+![地球の半分を開き、同じ平面にすべての層を示した図](../../images/cutaway/ja-earth-half.webp)
+
+## 3D の4分の1断面
+
+`quarter` を指定すると、90度のくさび形の部分が開き、2つの断面が見えます。天体を回して表面を見ている間も、開口部はこちらを向きます。スマートフォンでは2つの断面が凡例の上に収まります。
+
+```html
+<wakusei-body body="earth" look="realistic" lang="ja" cutaway="quarter"></wakusei-body>
+```
+
+![地球の4分の1を開き、2つの断面と球の表面を示した図](../../images/cutaway/ja-earth-quarter.webp)
+
+## 断面の流れを動かす
+
+`half` または `quarter` の断面に `cutaway-flow` を付けると、地球と月の液体の外核、木星の金属水素の流れを描きます。2D でも使えます。地球の表面近くの明るい点は、マグマが局所的にたまる様子を示しています。スマートフォンでもパソコンでも、デモでは図の上のボタンで再生と一時停止を切り替えられます。自分のページでは属性を外すと止まります。天体が画面の外に出たときやタブが非表示のとき、動きを減らす設定が有効なときは、流れが止まります。
+
+```html
+<wakusei-body body="earth" look="realistic" lang="ja" cutaway="quarter" cutaway-flow></wakusei-body>
+```
+
+![4分の1を開いた地球。液体の外核に流れの筋が見える](../../images/cutaway/ja-earth-flow.webp)
+
+## 断面を表示できる天体
+
+層の厚さは下に挙げた出典の値に従います。「約」は出典の推定値です。従来の断面を選んだ場合、太陽は円盤で描きます。
+
+| 天体 | 表示 | 出典 | 模式的な層の比率 |
+|---|---|---|---|
+| 地球 | 従来、2D、2分の1、4分の1 | [NASA 地球ファクトシート][earth-sheet]、[NASA Science 地球の解説][earth-facts] | いいえ |
+| 火星 | 従来、2D、2分の1、4分の1 | [NASA 火星ファクトシート][mars-sheet] | いいえ |
+| 月 | 従来、2D、2分の1、4分の1 | [NASA 月ファクトシート][moon-sheet]、[NASA Science 月の解説][moon-facts] | いいえ |
+| 水星 | 従来、2D、2分の1、4分の1 | [NASA 水星ファクトシート][mercury-sheet]、[NASA Science 水星の解説][mercury-facts] | いいえ |
+| 太陽 | 従来、2D、2分の1、4分の1 | [NASA 太陽ファクトシート][sun-sheet]、[NASA Science 太陽の解説][sun-facts] | いいえ |
+| 木星 | 従来、2D、2分の1、4分の1 | [NASA 木星ファクトシート][jupiter-sheet]、[Militzer ほか（2022）のモデル A][jupiter-model] | いいえ |
+| 土星 | 従来、2D、2分の1、4分の1 | [NASA 土星ファクトシート][saturn-sheet]、[NASA Science 土星の解説][saturn-facts]、[Mankovich と Fuller（2021）][saturn-model] | いいえ |
+
+以下の天体は、層の境界を示す採用済みの出典がないため、丸ごと描きます。断面を指定すると、そのことを凡例に表示します。金星、天王星、海王星について参照した NASA Science のページは中心核に触れていますが、その半径の数値はありません。イオ、エウロパ、ガニメデ、タイタンについて参照した NASA のファクトシートには、層の境界の数値がありません。
+
+| 天体 | 表示 | 層の出典 | 模式的な層の比率 |
+|---|---|---|---|
+| 金星、天王星、海王星 | 全体 | — | — |
+| 冥王星、ケレス、オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナ | 全体 | — | — |
+| ベンヌ、エロス、ベスタ、パラス、アロコス | 全体 | — | — |
+| キロン、フォルス | 全体 | — | — |
+| ハレー彗星 | 全体 | — | — |
+| フォボス、ダイモス | 全体 | — | — |
+| イオ、エウロパ、ガニメデ、カリスト、アマルテア、テーベ | 全体 | — | — |
+| ミマス、エンケラドス、テティス、ディオネ、レア、タイタン、イアペトゥス、ハイペリオン、フェーベ、ヤヌス、エピメテウス、プロメテウス、パンドラ、アトラス、パン、ダフニス、ヘレネ、テレスト、カリプソ | 全体 | — | — |
+| ミランダ、アリエル、ウンブリエル、ティタニア、オベロン | 全体 | — | — |
+| プロテウス、ラリッサ、トリトン、ネレイド | 全体 | — | — |
+| カロン、ニクス、ヒドラ、ステュクス、ケルベロス | 全体 | — | — |
+| ヴァンス | 全体 | — | — |
+| ヒイアカ、ナマカ | 全体 | — | — |
+| ディスノミア | 全体 | — | — |
+
+`interiorOf("earth")` から、地球の凡例が使う層のデータを取得できます。出典と確認日は [NOTICE.md](../../../NOTICE.md) に記載しています。
 
 ## 地球
 
@@ -85,6 +164,17 @@ Mankovich と Fuller、2021、"A diffuse core in Saturn revealed by ring seismol
 | 外層 | 0 km から 約23,300 km | 水素とヘリウム |
 | 境界のぼやけた核 | 約23,300 km から 58,200 km | 氷と岩石が混ざっている |
 
-## 入れていない天体
-
-金星、天王星、海王星、そしてイオ、エウロパ、ガニメデ、タイタンは開きません。NASA Science の金星、天王星、海王星のページを 2026-11-26 に読むと、核の名前はあり、半径はありません。2026-11-13 に読んだ NASA のファクトシートにも、この3つと4つの衛星の層の境はありません。出典と日付は `NOTICE.md` にあります。
+[earth-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
+[earth-facts]: https://science.nasa.gov/earth/facts/
+[mars-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html
+[moon-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html
+[moon-facts]: https://science.nasa.gov/moon/facts/
+[mercury-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/mercuryfact.html
+[mercury-facts]: https://science.nasa.gov/mercury/facts/
+[sun-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/sunfact.html
+[sun-facts]: https://science.nasa.gov/sun/facts/
+[jupiter-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/jupiterfact.html
+[jupiter-model]: https://doi.org/10.3847/PSJ/ac7ec8
+[saturn-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html
+[saturn-facts]: https://science.nasa.gov/saturn/facts/
+[saturn-model]: https://doi.org/10.1038/s41550-021-01448-3

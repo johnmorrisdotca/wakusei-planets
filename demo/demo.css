@@ -4,6 +4,7 @@
 .body-view :focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
 /* laid on the view with the four edges, not with a percentage height: WebKit does not resolve a child's 100% against a height that comes from aspect-ratio and max-height, and the body came out as tall as it is wide */
 .body-view wakusei-body, .body-view wakusei-space { --wakusei-size: 100%; position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; aspect-ratio: auto; }
+.stage-flow { margin-bottom: 8px; }
 .stage-name { color: #9fb0c6; margin: 8px 0 0; min-height: 1.3em; }
 kazoku-view-controls { display: block; margin: 8px auto 14px; max-width: 560px; }
 kazoku-replay-bar::part(repeat) { display: none; }

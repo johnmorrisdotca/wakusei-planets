@@ -10,6 +10,8 @@
 
 - **The Sun's star drawing is a step warmer** (MODULES-734). Near the Sun's temperature the cells and the glow lean toward the Sun's own yellow and orange. The named colour stays the black body. A hot star is left alone.
 
+- **2D cross-sections and 3D half and quarter cutaways** (MODULES-1691). Use `cutaway="half"` or `cutaway="quarter"` to choose the opening in a shaded view or draw a cross-section in the line view. Optional flow animates the liquid outer core of Earth or the Moon and Jupiter’s metallic hydrogen. The demo and embed accept the cutaway setting. The English and Japanese guides show all five options and list the sources for the seven supported bodies.
+
 ## [0.80.0] - 2026-11-27
 
 - **Prominences turn with the star** (MODULES-734). They sit on the surface, so the turn carries them round the edge. The flicker stays with the clock. They are still drawn for looks.
