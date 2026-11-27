@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A guide to the surface maps** (MODULES-1821). `docs/guides/surface-maps.md`, in English and Japanese, has one table of every body with a map: the mission and mosaic it comes from, how much of the ground was photographed, what was reconstructed or painted, and the credit. It also says how the larger sizes load on close zoom.
+
 - **The demo names the whole solar system 太陽系全体** (MODULES-1014). The guides already used that name. The space view's button and its hint still said 太陽系ぜんぶ.
 
 - **Shown times match the page's own date in any zone** (MODULES-954). A local date box shows the device's time, and a sky date on the portrait page is a real instant. A spacecraft event that names a minute shows that minute. A time marked UTC stays UTC.
