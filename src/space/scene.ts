@@ -1201,7 +1201,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const from: Vec3 = [glide.from.p[0] - origin[0], glide.from.p[1] - origin[1], glide.from.p[2] - origin[2]];
               fromQ.set(glide.from.q[0], glide.from.q[1], glide.from.q[2], glide.from.q[3]);
               const sf = scratchA.set(0, 0, -1).applyQuaternion(fromQ);
-              const su = scratchB.set(0, 1, 0).applyQuaternion(fromQ);
+              // The last pose includes the reader's roll. Take it out of the route because the draw applies the controls' roll again.
+              const roll = (model.drawnView?.roll ?? 0) * RAD;
+              const su = scratchB.set(Math.sin(roll), Math.cos(roll), 0).applyQuaternion(fromQ);
               const start = { position: from, forward: [sf.x, sf.y, sf.z] as Vec3, up: [su.x, su.y, su.z] as Vec3, fov: glide.from.fov };
               const ef = scratchA.set(0, 0, -1).applyQuaternion(camera.quaternion);
               const eu = scratchB.set(0, 1, 0).applyQuaternion(camera.quaternion);

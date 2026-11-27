@@ -30,7 +30,7 @@ import { groundDirection } from "./aim.ts";
 import { besideFace, faceView, facingPoint } from "./face.ts";
 import { besideMoon } from "./beside.ts";
 import { SUN_REGIONS, type SunRegion } from "./regions.ts";
-import { travelArrival, type TravelKind } from "./travel.ts";
+import { TRAVEL_POLE_UP, travelArrival, type TravelKind } from "./travel.ts";
 import { controlsFor, readFrame, type FrameKind } from "./hold.ts";
 import type { MoonSource, MoonSpot } from "./all-moons.ts";
 import { nearestLine, type ScreenLine } from "./orbit-lines.ts";
@@ -2319,9 +2319,11 @@ export class WakuseiSpace extends HTMLElement {
     model.companion = wanted.behind ? (wanted.companion ?? this.#arrivedFrom) : wanted.companion;
     const side: [number, number, number] = [wanted.position[0] - body.at[0], wanted.position[1] - body.at[1], wanted.position[2] - body.at[2]];
     const anchor = model.anchor ?? model.time;
+    const avoidPole = model.transition !== null;
     // the scene aims from the ground direction of (lon - yaw, lat - tilt) at the anchor moment: search the pair that lies along the wanted side, coarse then fine
     const score = (yaw: number, tilt: number): number => {
       const aim = groundDirection(model.centre.lon - yaw, Math.max(-90, Math.min(90, model.centre.lat - tilt)), anchor);
+      if (avoidPole && Math.abs(aim[1]) > TRAVEL_POLE_UP) return -Infinity;
       return aim[0] * side[0] + aim[1] * side[1] + aim[2] * side[2];
     };
     let best = { yaw: model.view.yaw, tilt: model.view.tilt, score: -Infinity };

@@ -4,7 +4,7 @@
 //
 // How the path is built (`turn-travel`, the default):
 //   1. The turn pivots about one body, which is held in the picture by its place on the screen and its distance: the body being left, or the planet when both ends are of one planet's family (`around`).
-//      The look direction swings along the one shortest arc from the first view's to the last view's, and the roll about it is spread evenly, so no turn is made that is not needed and none is undone.
+//      The look direction swings along the shortest arc. Where that would come within ten degrees of the reference pole, the camera tips, pans round the pole without rolling, then tips to its last view.
 //   2. Where the last view's own direction can see the destination from beside the pivot, the whole turn is made there and the rest is one straight line with the camera's direction fixed: whatever is in
 //      the picture at both ends of a straight line stays in it between them, so the destination, and its planet for a moon, never leave.
 //   3. Where it cannot (the last view looks at the destination from another side), the turn stops with the destination just inside the picture, the camera goes straight at it, and the rest of the turn
@@ -305,7 +305,7 @@ function squareTo(f: Vec3): Vec3 {
   return unit(sub(pick, scale(f, dot(pick, f))));
 }
 
-function facingOf(view: TravelView): Facing {
+function facingOf(view: Pick<TravelView, "forward" | "up">): Facing {
   const f = length(view.forward) < 1e-12 ? ([0, 0, -1] as Vec3) : unit(view.forward);
   const across = sub(view.up, scale(f, dot(view.up, f)));
   return { f, u: length(across) < 1e-9 ? squareTo(f) : unit(across) };
@@ -347,28 +347,112 @@ function arc(a: Vec3, b: Vec3, t: number): Vec3 {
   return spin(a, length(axis) < 1e-9 ? squareTo(a) : unit(axis), angle * t);
 }
 
-/** A turn from one facing to another: the look direction along the shortest arc, then the roll about it that is left, both spread evenly. */
+const NORTH: Vec3 = [0, 1, 0];
+const POLE_LIMIT = 80 * RAD;
+/** The largest absolute up component of an automatically chosen look direction. */
+export const TRAVEL_POLE_UP = Math.sin(POLE_LIMIT);
+
+/** A turn from one facing to another, with a separate path where the shortest arc would make the horizon turn over. */
 interface Swing {
   from: Facing;
   axis: Vec3;
   angle: number;
   roll: number;
+  polar?: PolarSwing;
 }
+
+interface PolarSwing {
+  to: Facing;
+  peak: number;
+  heading: Vec3;
+  pitch: number;
+  rim: number;
+  yaw: number;
+  startRoll: number;
+  endRoll: number;
+  edges: readonly [number, number, number, number, number];
+}
+
+/** The signed offset from a level view about the look direction. */
+function rollOf(level: Vec3, facing: Facing): number {
+  return Math.atan2(dot(cross(level, facing.u), facing.f), dot(level, facing.u));
+}
+
+const headingOf = (f: Vec3): Vec3 => unit([f[0], 0, f[2]]);
+const levelUp = (f: Vec3): Vec3 => unit(sub(NORTH, scale(f, f[1])));
+
+function lookAtPitch(heading: Vec3, pitch: number): Vec3 {
+  const width = Math.cos(pitch);
+  return [heading[0] * width, Math.sin(pitch), heading[2] * width];
+}
+
+function polarSwing(a: Facing, b: Facing, axis: Vec3, angle: number): PolarSwing | undefined {
+  // On the arc the north component is y*cos(t) + tangentY*sin(t). Its only interior extremum in a half-turn is at atan2(tangentY, y) modulo pi.
+  const tangentY = cross(axis, a.f)[1];
+  const extremum = (Math.atan2(tangentY, a.f[1]) + Math.PI) % Math.PI;
+  if (extremum >= angle) return undefined;
+  const middle = a.f[1] * Math.cos(extremum) + tangentY * Math.sin(extremum);
+  const peak = Math.min(1, Math.abs(middle));
+  // A view that was already aimed at a pole can tip straight out. Only a turn further into the cap needs the bypass.
+  if (peak <= Math.max(TRAVEL_POLE_UP, Math.abs(a.f[1]), Math.abs(b.f[1]))) return undefined;
+
+  const heading = headingOf(a.f);
+  const target = headingOf(b.f);
+  const pitch = Math.asin(a.f[1]);
+  const endPitch = Math.asin(b.f[1]);
+  const rim = Math.sign(middle) * POLE_LIMIT;
+  const yaw = Math.atan2(cross(heading, target)[1], dot(heading, target));
+  const startRoll = rollOf(levelUp(a.f), a);
+  const endRoll = rollOf(levelUp(b.f), b);
+  // A beside or held camera can have another reference plane.
+  if (Math.abs(startRoll) >= Math.PI / 2 || Math.abs(endRoll) >= Math.PI / 2) return undefined;
+  // From a steep start to a low stand, leave the last small part of the heading change to the tip out of the cap. It keeps the look from sailing past the arrival heading at the rim.
+  const settleYaw = Math.abs(pitch) >= 65 * RAD && Math.abs(endPitch) <= 45 * RAD ? yaw * 0.05 : 0;
+  const beforePan = Math.abs(startRoll) + Math.abs(rim - pitch);
+  const afterPan = beforePan + Math.abs(yaw - settleYaw);
+  const afterTip = afterPan + Math.hypot(endPitch - rim, settleYaw);
+  return { to: b, peak, heading, pitch, rim, yaw: yaw - settleYaw, startRoll, endRoll, edges: [Math.abs(startRoll), beforePan, afterPan, afterTip, afterTip + Math.abs(endRoll)] };
+}
+
+function polarAt(a: Facing, s: PolarSwing, t: number): Facing {
+  if (t <= 0) return a;
+  if (t >= 1) return s.to;
+  const [start, pan, tip, roll, end] = s.edges;
+  const at = t * end;
+  const step = (lo: number, hi: number): number => hi > lo ? smooth((at - lo) / (hi - lo)) : 1;
+  const heading = spin(s.heading, NORTH, s.yaw * step(pan, tip));
+  const pitch = s.pitch + (s.rim - s.pitch) * step(start, pan);
+  const f = at >= tip ? arc(lookAtPitch(heading, s.rim), s.to.f, step(tip, roll)) : lookAtPitch(heading, pitch);
+  const angle = s.startRoll * (1 - step(0, start)) + s.endRoll * step(roll, end);
+  const level = levelUp(f);
+  return { f, u: Math.abs(angle) > 1e-12 ? spin(level, f, angle) : level };
+}
+
 function swingOf(a: Facing, b: Facing): Swing {
   const c = cross(a.f, b.f);
   const angle = angleOf(a.f, b.f);
   // looking the opposite way has no shortest arc: turn about the picture's own up, as a head turns
   const axis = length(c) < 1e-9 ? a.u : unit(c);
   const carried = spin(a.u, axis, angle);
-  return { from: a, axis, angle: angle < 1e-9 ? 0 : angle, roll: Math.atan2(dot(cross(carried, b.u), b.f), dot(carried, b.u)) };
+  const polar = polarSwing(a, b, axis, angle);
+  return { from: a, axis, angle: angle < 1e-9 ? 0 : angle, roll: rollOf(carried, b), polar };
 }
-function swingAt(s: Swing, t: number): Facing {
+function swingAt(s: Swing, t: number, tracking = false): Facing {
+  const limit = tracking && s.polar !== undefined && s.polar.peak <= Math.sin(88 * RAD);
+  if (s.polar !== undefined && !limit) return polarAt(s.from, s.polar, t);
   const f = unit(spin(s.from.f, s.axis, s.angle * t));
   const carried = spin(s.from.u, s.axis, s.angle * t);
   const rolled = spin(carried, f, s.roll * t);
-  return { f, u: unit(sub(rolled, scale(f, dot(rolled, f)))) };
+  const o = { f, u: unit(sub(rolled, scale(f, dot(rolled, f)))) };
+  if (!limit || Math.abs(f[1]) <= Math.sin(75 * RAD)) return o;
+  // A look-back follows a moving sightline. Bring a shallow pass round the cap without retiming the rest of the turn or changing its heading.
+  const pitch = Math.asin(Math.abs(f[1]));
+  const blend = clamp01((pitch - 75 * RAD) / (10 * RAD));
+  const safe = Math.sign(f[1]) * (75 * RAD + (10 * RAD) * blend * (1 - blend / 2));
+  const front = lookAtPitch(headingOf(f), safe);
+  return { f: front, u: spin(levelUp(front), front, rollOf(levelUp(f), o)) };
 }
-const swingDegrees = (s: Swing): number => (s.angle + Math.abs(s.roll)) / RAD;
+const swingDegrees = (s: Swing): number => (s.polar?.edges[4] ?? (s.angle + Math.abs(s.roll))) / RAD;
 
 /** The nearest point to `p` that is inside two pictures at once: the pivot inside the frame (`fv`), and the camera backed off from the last view inside the frame (`fb`, about `apex`). Dykstra's projections on the eight planes. */
 function project(p: Vec3, apex: Vec3, fv: Frame, mv: number, fb: Frame, mb: number): Vec3 {
@@ -561,18 +645,19 @@ function turnAt(turn: Turn, p: number, t: number, share?: number): { position: V
   return { position: mix(near, position, smooth(p / turn.hold.q)), o, fov: fovBetween(turn.fov0, turn.fov1, p) };
 }
 
-function legAt(leg: Leg, q: number, t: number): { position: Vec3; o: Facing; fov: number } {
+function legAt(leg: Leg, q: number, t: number, direct = false): { position: Vec3; o: Facing; fov: number } {
   const centre = placeOf(leg.about, t);
   if (leg.type === "line") {
     const left = leftOf(q, leg.l, leg.ea, leg.eb);
     const position = add(centre, leg.l <= 0 ? leg.to : add(leg.to, scale(sub(leg.from, leg.to), left / leg.l)));
-    let o = swingAt(leg.swing, q);
+    // A straight leg keeps its opening and closing views a little longer while detouring around a pole, so the turn does not delay bringing the destination into frame.
+    let o = swingAt(leg.swing, direct && leg.swing.polar !== undefined ? (q - 0.15) / 0.7 : q);
     if (leg.watch) {
       // look-back: turn to the body being left, hold it, and turn to the last view over the last part
       const toBody = sub(placeOf(leg.watch, t), position);
-      const held = length(toBody) < 1e-12 ? leg.swing.from : swingAt(swingOf(leg.swing.from, { f: unit(toBody), u: leg.swing.from.u }), 1);
-      const watching = swingAt(swingOf(leg.swing.from, held), smooth(q / 0.15));
-      o = swingAt(swingOf(watching, swingAt(leg.swing, 1)), smooth((q - (1 - LOOK_BACK_TURN)) / LOOK_BACK_TURN));
+      const held = length(toBody) < 1e-12 ? leg.swing.from : facingOf({ forward: toBody, up: leg.swing.from.u });
+      const watching = swingAt(swingOf(leg.swing.from, held), smooth(q / 0.15), true);
+      o = swingAt(swingOf(watching, swingAt(leg.swing, 1)), smooth((q - (1 - LOOK_BACK_TURN)) / LOOK_BACK_TURN), true);
     }
     return { position, o, fov: fovBetween(leg.fov0, leg.fov1, q) };
   }
@@ -610,7 +695,7 @@ function along(route: Route, t: number): { position: Vec3; o: Facing; fov: numbe
       const start = legAt(route.leg, 0, t);
       at = { ...at, position: add(at.position, sub(now.position, start.position)) };
     }
-  } else at = legAt(route.leg, ease(route.legStart >= 1 ? 1 : (t - route.legStart) / (1 - route.legStart)), t);
+  } else at = legAt(route.leg, ease(route.legStart >= 1 ? 1 : (t - route.legStart) / (1 - route.legStart)), t, route.input.kind === "direct");
   return { position: clearOf(route, at.position, t), o: at.o, fov: at.fov, stage: inTurn ? "turn" : t < route.arrive ? "travel" : "arrive" };
 }
 
@@ -1342,7 +1427,7 @@ function blended(first: { route: Route; plan: Omit<TravelPlan, "route"> }): { ro
   const rate = Math.max(1.25 * steepest(route), 3);
   for (const share of BLENDS) {
     const legStart = route.share * (1 - share);
-    const candidate: Route = { ...route, legStart, arrive: arriveFor(route.leg, legStart) };
+    const candidate: Route = { ...route, legStart, arrive: Math.max(route.share, arriveFor(route.leg, legStart)) };
     if (!noWorse(faultsOf(candidate), was) || steepest(candidate) > rate) continue;
     // a turn made by an aim point keeps the nearer body inside `AIM_EDGE` of the way to the edge, and the overlap must not take it out
     if (route.turn.aim !== undefined && turnEdge(candidate) > AIM_EDGE) continue;

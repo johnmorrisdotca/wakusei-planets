@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { type BodyId } from "../src/facts.ts";
 import { regionOrbits, regionView, SUN_REGIONS, travelArrival, travelPlan, travelPose, hostOf, type TravelBody, type TravelInput, type TravelSample, type TravelView } from "../src/space/index.ts";
-import { cross, dot, length, RAD, sub, type Vec3 } from "../src/vec.ts";
+import { cross, dot, length, RAD, scale, sub, type Vec3 } from "../src/vec.ts";
 import { angle, BENT, bodyOf, moveOf, SAMPLES, SCALES, SHAPES, SIDES, site, SPAN, START, walk, type Walk } from "./travel-harness.ts";
 
 const PAIRS: readonly [BodyId, BodyId][] = [
@@ -17,6 +17,43 @@ const rows: string[] = [];
 const row = (name: string, mode: string, shape: string, w: Walk): void => {
   rows.push(`${name.padEnd(22)} ${mode.padEnd(10)} ${shape.padEnd(6)} ${w.path.padEnd(6)} ${(w.duration / 1000).toFixed(1).padStart(4)} s  turn ${w.turned.toFixed(0).padStart(3)} of ${w.least.toFixed(0).padStart(3)} deg (back ${w.back.toFixed(0).padStart(2)}, settle ${w.settle.toFixed(0).padStart(3)}) in ${(w.turnShare * 100).toFixed(0).padStart(2)}%  nearest ${w.nearest.radii.toFixed(2).padStart(9)} radii (${w.nearest.id})  worst step ${w.worstTurn.toFixed(2)} deg, ${w.worstScreen.toFixed(3)} frame`);
 };
+
+for (const pole of [1, -1]) {
+  test(`a travel turn near the ${pole > 0 ? "north" : "south"} pole keeps two fixed far landmarks in left-to-right order`, () => {
+    const up: Vec3 = [0, 1, 0];
+    const start: Vec3 = [0, 0, 0];
+    const end: Vec3 = [0, 10 * pole, -2];
+    const left: Vec3 = [-40, 100 * pole, -40];
+    const right: Vec3 = [20, 100 * pole, -24];
+    const fov = 100;
+    const aspect = 16 / 9;
+    const view = (body: Vec3, yaw: number): TravelView => {
+      const pitch = 60 * RAD;
+      const forward: Vec3 = [Math.sin(yaw) * Math.cos(pitch), pole * Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)];
+      return { position: sub(body, scale(forward, 4.1)), forward, up, fov };
+    };
+    const input: TravelInput = { start: view(start, -75 * RAD), end: view(end, 75 * RAD), leaving: { from: start, radius: 1 }, destination: { from: end, radius: 1 }, aspect };
+    const plan = travelPlan(input);
+    assert.ok(plan.stages.travel >= 0, "the overlap cannot end the travel stage before the turn");
+    const halfHeight = Math.tan(fov * RAD / 2);
+    for (let i = 0; i <= SAMPLES; i += 1) {
+      const camera = travelPose(input, i / SAMPLES, plan);
+      const across = cross(camera.forward, camera.up);
+      const x = (place: Vec3): number => {
+        const ray = sub(place, camera.position);
+        const depth = dot(ray, camera.forward);
+        assert.ok(depth > 0, `landmark behind at sample ${i}`);
+        assert.ok(Math.abs(dot(ray, camera.up)) < depth * halfHeight, `landmark outside the height at sample ${i}`);
+        const ndc = dot(ray, across) / (depth * halfHeight * aspect);
+        assert.ok(Math.abs(ndc) < 1, `landmark outside the width at sample ${i}`);
+        return ndc;
+      };
+      assert.ok(Math.abs(dot(camera.forward, up)) <= Math.cos(10 * RAD) + 1e-9, `look too near pole at sample ${i}`);
+      assert.ok(dot(camera.up, up) > 0 && Math.abs(dot(across, up)) < 1e-9, `horizon tilted at sample ${i}`);
+      assert.ok(x(left) < x(right), `landmarks swapped at sample ${i}`);
+    }
+  });
+}
 
 for (const [a, b] of PAIRS) {
   for (const mode of SCALES) {
