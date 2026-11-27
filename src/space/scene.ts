@@ -265,6 +265,8 @@ export interface SpaceModel {
   /** The catalogue as a source of places and orbits, for the planets set to show all their moons (`moons`), or null for none (or before it has loaded); the planets chosen; what the orbits' colours say. */
   moonSource: MoonSource | null;
   moonHosts: ReadonlySet<string>;
+  /** Full moons that pass the active filter, or null when the view shows the full set. */
+  moonAllowed: ReadonlySet<string> | null;
   moonColors: MoonColorChoice;
   /** How many moon dots and orbits the last draw drew, and where the dots are on the screen (for a press). */
   moonDots: number;
@@ -469,6 +471,7 @@ export const newSpaceModel = (): SpaceModel => ({
   labels: true,
   moonSource: null,
   moonHosts: new Set(),
+  moonAllowed: null,
   moonColors: "group",
   moonDots: 0,
   moonOrbits: 0,
@@ -942,6 +945,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             track.setStep(model.stepMs);
           }
           const mode = model.mode;
+          const moonVisible = model.moonAllowed?.has("moon") ?? true;
           const pos = placeBodies(mode, frame);
           const radiusOf = (id: SpaceBody): number => radiusIn(id, mode);
           // where a moon is round its planet, as the view draws it: in the planet's radii, drawn nearer in a compressed view where the real distance would cross the next planet's orbit
@@ -1290,7 +1294,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const drawing = slot.drawing;
             if (!drawing) continue;
             paintedBodies += 1;
-            drawing.object.visible = id !== hiddenBody;
+            drawing.object.visible = id !== hiddenBody && (id !== "moon" || moonVisible);
             drawing.object.position.set(pos[id][0], pos[id][1], pos[id][2]);
             drawing.object.scale.setScalar(radiusOf(id));
             if (drawing.billboard) drawing.object.quaternion.copy(camera.quaternion);
@@ -1386,6 +1390,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const nearRadius = radiusOf(nearId);
           for (const id of ORBIT_BODIES) {
             const o = orbits.get(id)!;
+            if (id === "moon" && !moonVisible) {
+              o.line.visible = false;
+              continue;
+            }
             const hide = flying || (closeUp && !ownLine(id));
             o.line.visible = model.orbits && !hide;
             if (!model.orbits) continue;
@@ -1692,7 +1700,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const id of [...SPACE_PLANETS, ...SPACE_DWARFS]) {
             const planet = slotOf(id).drawing;
             if (!planet) continue;
-            const sites = ((MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? []).map((moon) => ({ name: moon as string, offset: moonOffset(moon, model.time), radius: BODIES[moon].radiusKm / BODIES[id].radiusKm }));
+            const moons = (MOONS_OF as Record<string, readonly MoonId[]>)[id] ?? [];
+            const sites = moons.map((moon) => ({ name: moon as string, offset: moonOffset(moon, model.time), radius: BODIES[moon].radiusKm / BODIES[id].radiusKm }));
             const sized = moonSizeFactor(mode, id, model.moonSize, sites.map((site) => ({ radius: site.radius, orbit: moonDistance(mode, id, Math.hypot(site.offset[0], site.offset[1], site.offset[2])) })));
             if (id === model.focus || hostOf(model.focus) === id) model.moonDrawn = { factor: sized.factor, clamped: sized.clamped };
             // the moons are shown once the planet is a few pixels across, or the system round it is wide enough on the screen to tell its moons from the planet, or one of its moons is the body looked at
@@ -1701,6 +1710,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             if (px[id] < MOON_MIN_PLANET_PX && px[id] * spread < MOON_MIN_SYSTEM_PX && hostOf(model.focus) !== id) continue;
             const radius = radiusOf(id);
             for (const site of sites) {
+              if (model.moonAllowed !== null && !model.moonAllowed.has(site.name)) continue;
               const reach = Math.hypot(site.offset[0], site.offset[1], site.offset[2]);
               const k = reach === 0 ? 1 : moonDistance(mode, id, reach) / reach;
               const at: Vec3 = [pos[id][0] + site.offset[0] * k * radius, pos[id][1] + site.offset[1] * k * radius, pos[id][2] + site.offset[2] * k * radius];
@@ -1801,7 +1811,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           if (deps.onLabels) {
             const places: Record<string, BodyPlace | null> = { ...moonPlaces };
             for (const id of SPACE_BODIES) {
-              const at = id === hiddenBody || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
+              const at = id === hiddenBody || (id === "moon" && !moonVisible) || (rideFrom && id === rideFrom.around) ? null : labelFor(pos[id]);
               const drawing = slots.get(id)?.drawing;
               places[id] = at ? { x: at.x, y: at.y, r: px[id], named: drawing !== undefined && drawing.object.visible && drawing.label?.shown === true } : null;
             }
@@ -1904,9 +1914,9 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               projected.applyMatrix4(camera.projectionMatrix);
               sights[id] = { front, x: front ? ((projected.x + 1) / 2) * size.width : 0, y: front ? ((1 - projected.y) / 2) * size.height : 0, r: front ? r : 0, dx: cx, dy: -cy, offAxis, distance: away, distanceKm: mode === "true" ? away * EARTH_RADIUS_KM : null };
             };
-            for (const id of SPACE_BODIES) if (id !== hiddenBody && !(rideFrom && id === rideFrom.around)) sight(id, pos[id], px[id]);
+            for (const id of SPACE_BODIES) if (id !== hiddenBody && (id !== "moon" || moonVisible) && !(rideFrom && id === rideFrom.around)) sight(id, pos[id], px[id]);
             const moons = new Set<string>([...((MOONS_OF as Record<string, readonly MoonId[]>)[hostOf(model.focus) ?? model.focus] ?? []), ...Object.keys(moonPlaces)]);
-            for (const id of moons) if (id !== hiddenMoon && !(SPACE_BODIES as readonly string[]).includes(id)) sight(id, absoluteSite(id as MoonId), moonPlaces[id]?.r ?? 0);
+            for (const id of moons) if (id !== hiddenMoon && (model.moonAllowed?.has(id) ?? true) && !(SPACE_BODIES as readonly string[]).includes(id)) sight(id, absoluteSite(id as MoonId), moonPlaces[id]?.r ?? 0);
             for (const craft of craftAts) sight(craft.id, craft.at, craft.px);
             for (const [id, { at, px: dotPx }] of Object.entries(orbiterPlaces)) sight(id, at, dotPx);
             for (const one of asteroidAts) sight(one.id, one.at, 1);

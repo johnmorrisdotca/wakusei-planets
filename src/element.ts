@@ -6,11 +6,11 @@ import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/
 import "./tables/ceres.ts";
 import "./tables/dwarfs.ts";
 import { loadMinorTables, loadMoonTheory } from "./tables/lazy.ts";
-import { orbitPath } from "./ephemeris.ts";
+import { orbitPath, type Apparent } from "./ephemeris.ts";
 import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId } from "./facts.ts";
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
-import { lineSvg } from "./line.ts";
+import { lineSvg, type LineOptions } from "./line.ts";
 import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf, type CutSize } from "./interior.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
@@ -35,9 +35,28 @@ import { cross, RAD, turn as turnVec, type Vec3 } from "./vec.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "./places.ts";
 import { marksToShow, readPlaceLayers, readSurfaceNames, surfacePoint, turnToPlace, type PlaceLayer } from "./place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "./scene/place-layer.ts";
+import { MOON_FILTER_ATTRIBUTES, normalizeMoonFilter, readMoonFilter, type MoonFilter } from "./moon-filters.ts";
+import type { MoonsChoice } from "./space/moon-settings.ts";
 
 export { setThreeLoader };
 export { placeLine, setPlacesLoader } from "./scene/place-layer.ts";
+export type { MoonDiscoveryRange, MoonDirection, MoonFilter, MoonSizeClass, MoonStatus } from "./moon-filters.ts";
+
+/**
+ * The moon clicked in a planet view, from the `wakusei-moon-select` event.
+ * @example
+ * ```ts no-run
+ * import type { WakuseiMoonSelection } from "@johnmorrisdotca/wakusei-planets/element";
+ * document.querySelector("wakusei-body")!.addEventListener("wakusei-moon-select", (event) => {
+ *   const { id, host } = (event as CustomEvent<WakuseiMoonSelection>).detail;
+ *   console.log(id, host);
+ * });
+ * ```
+ */
+export interface WakuseiMoonSelection {
+  id: string;
+  host: BodyId;
+}
 
 /**
  * What the element is doing: `line` (an SVG), `loading` (waiting for three.js or a picture, or for the element to come into sight: a still is made only for a picture on the screen, so one below the fold of a box that scrolls, a short card for instance, stays `loading` until it is scrolled to), `still` (a picture of the 3D look, nothing running), `live` (drawing), `lost` (the GPU took the context; it comes back by itself) or `unavailable` (no WebGL: the line drawing is shown).
@@ -108,7 +127,9 @@ const TEMPLATE = `<style>
 #estimate { position: absolute; z-index: 2; left: 2px; right: 2px; bottom: 1px; margin: 0; max-height: 2.4em; overflow: hidden; text-align: center; font: 10px/1.2 system-ui, sans-serif; color: inherit; pointer-events: none; }
 #estimate[hidden] { display: none; }
 :host([data-shape="estimated"]) #stage { bottom: 22px; }
-</style><div id="stage"></div><p id="estimate" hidden></p><div id="cutaway-panel" hidden><p id="cutaway-heading" hidden></p><ol id="cutaway" hidden></ol></div>`;
+#moon-name { position: absolute; z-index: 2; bottom: 8px; left: 50%; transform: translateX(-50%); margin: 0; padding: 2px 6px; max-width: 90%; background: Canvas; color: CanvasText; font: 12px system-ui, sans-serif; pointer-events: none; }
+#moon-name[hidden] { display: none; }
+</style><div id="stage"></div><p id="estimate" hidden></p><p id="moon-name" hidden></p><div id="cutaway-panel" hidden><p id="cutaway-heading" hidden></p><ol id="cutaway" hidden></ol></div>`;
 
 /**
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
@@ -142,9 +163,17 @@ const TEMPLATE = `<style>
  * ```
  */
 export class WakuseiBody extends HTMLElement {
-  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", "cutaway-flow", "earth-from", "earth-texture-base", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["body", "star", "quality", ...STAR_ATTRS, "look", "size", "time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "moons", "moon-orbits", ...MOON_FILTER_ATTRIBUTES, "range", "scale-to", "span-km", "fit", "live", "still-size", "texture-base", "texture-far-base", "tiles", "data", "lang", "labels", "places", "surface-names", "site-flags", "cutaway", "cutaway-flow", "earth-from", "earth-texture-base", ...NAME_LABEL_ATTRIBUTES];
 
   #stage!: HTMLElement;
+  #moonModule: typeof import("./scene/body-moons.ts") | undefined;
+  #moonLoading = false;
+  #moonFilter: MoonFilter = {};
+  #moonFilterKey = "{}";
+  #moonSelection: ReturnType<typeof import("./scene/body-moons.ts").bodyMoonSelection> | undefined;
+  #moonSelectionKey = "";
+  #moonPointer: { id: number; x: number; y: number } | undefined;
+  #moonPoints: { state: SceneState; dots: readonly { id: string; label: string; ja: string | null; at: Vec3; color: string }[] } | undefined;
   #state: WakuseiState = "line";
   #renderer: SharedRenderer<ThreeParts> | undefined;
   #release: (() => void) | undefined;
@@ -158,7 +187,10 @@ export class WakuseiBody extends HTMLElement {
     if (this.#cutSize() !== undefined) return undefined;
     const delegate = delegates.get(this.body);
     if (delegate === undefined) return undefined;
-    if (this.look === "line") return "line";
+    if (this.look === "line") {
+      const moons = this.moons;
+      return moons !== null && (moons === "all" || this.#moonFilterKey !== "{}" || this.getAttribute("moon-orbits") === "off") ? undefined : "line";
+    }
     return this.body === "earth" && this.getAttribute("earth-from") === "chikyu" && delegate.shaded !== undefined ? "shaded" : undefined;
   }
   #stilled = false;
@@ -520,6 +552,126 @@ export class WakuseiBody extends HTMLElement {
   get state(): WakuseiState {
     return this.#state;
   }
+
+  /** The planet's major moons, its entire catalogue, or no moons. A bare `moons` attribute keeps the major view. */
+  get moons(): MoonsChoice | null {
+    const value = this.getAttribute("moons");
+    return value === null ? null : value.trim().toLowerCase() === "all" ? "all" : "major";
+  }
+  set moons(value: MoonsChoice | null) {
+    if (value === null) this.removeAttribute("moons");
+    else this.setAttribute("moons", value);
+  }
+
+  /** Which moons to show. The matching attributes are `moon-status`, `moon-size-class`, `moon-group`, `moon-direction` and `moon-discovered`. */
+  get moonFilter(): MoonFilter {
+    return normalizeMoonFilter(this.#moonFilter);
+  }
+  set moonFilter(value: MoonFilter) {
+    const filter = normalizeMoonFilter(value);
+    const key = JSON.stringify(filter);
+    if (key === this.#moonFilterKey) return;
+    this.#moonFilter = filter;
+    this.#moonFilterKey = key;
+    this.#hideMoonName();
+    this.#syncMoonSelection();
+    if (this.isConnected) this.#queue();
+  }
+
+  #syncMoonSelection(): void {
+    const all = this.moons === "all";
+    if (this.hasAttribute("star") || this.moons === null || (!all && this.#moonFilterKey === "{}")) {
+      this.#moonSelection = undefined;
+      this.#moonSelectionKey = "";
+      return;
+    }
+    const key = `${this.body}|${this.moons}|${this.#moonFilterKey}`;
+    if (this.#moonSelectionKey === key) return;
+    if (this.#moonModule !== undefined) {
+      this.#moonSelectionKey = key;
+      this.#moonSelection = this.#moonModule.bodyMoonSelection(this.body, this.#moonFilter, all);
+    } else if (this.isConnected && !this.#moonLoading) {
+      this.#moonLoading = true;
+      void import("./scene/body-moons.ts").then((module) => {
+        this.#moonModule = module;
+        this.#moonLoading = false;
+        this.#syncMoonSelection();
+        if (!this.isConnected) return;
+        this.#refreshLimits();
+        this.#queue();
+      }, () => { this.#moonLoading = false; });
+    }
+  }
+
+  #smallMoons(state: SceneState) {
+    if (this.#moonPoints?.state === state) return this.#moonPoints.dots;
+    const catalogue = state.moonCatalogue;
+    const module = this.#moonModule;
+    const dots = catalogue === undefined || module === undefined ? [] : catalogue.source.moons.map((moon) => ({
+      id: moon.id,
+      label: moon.label,
+      ja: moon.ja,
+      at: module.bodyMoonPoint(catalogue, moon.host, catalogue.source.position(moon, catalogue.time)),
+      color: moon.newest ? "#fff1a6" : moon.colors.group,
+    }));
+    this.#moonPoints = { state, dots };
+    return dots;
+  }
+
+  #pickedMoon(event: MouseEvent): { id: string; label: string } | undefined {
+    const state = this.#sceneState;
+    if (this.moons === null || state === undefined || this.#delegateEl !== undefined || this.#cutSize() !== undefined) return undefined;
+    const box = this.#stage.getBoundingClientRect();
+    const line = this.look === "line" || this.#state === "unavailable";
+    const half = Math.min(box.width, box.height) / 2;
+    const fit = line ? 0.94 : 1;
+    const radius = half * fit / state.extent;
+    const centreX = box.left + box.width / 2 - half * state.panX;
+    const centreY = box.top + box.height / 2 + half * state.panY;
+    const ja = this.getAttribute("lang") === "ja";
+    let best: { id: string; label: string } | undefined;
+    let distance = 10;
+    const pick = (id: string, label: string, [x, y, z]: Vec3, zoom: number): void => {
+      if (z < 0 && Math.hypot(x, y) < 1) return;
+      const gap = Math.hypot(event.clientX - centreX - x * radius * zoom, event.clientY - centreY + y * radius * zoom);
+      if (gap < distance) {
+        best = { id, label };
+        distance = gap;
+      }
+    };
+    for (const moon of this.#smallMoons(state)) pick(moon.id, (ja ? moon.ja : null) ?? moon.label, moon.at, state.zoom);
+    for (const moon of state.moons ?? []) pick(moon.id, BODIES[moon.id].name[ja ? "ja" : "en"], [moon.x, moon.y, moon.z], line ? 1 : state.zoom);
+    return best;
+  }
+
+  #moonDown = (event: PointerEvent): void => {
+    this.#moonPointer = undefined;
+    if (this.moons === null || !event.isPrimary || event.button !== 0 || !event.composedPath().includes(this.#stage)) return;
+    this.#moonPointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+  };
+  #showMoonName(moon?: { label: string }): void {
+    const name = this.shadowRoot?.getElementById("moon-name");
+    if (name === null || name === undefined) return;
+    name.hidden = moon === undefined;
+    if (moon !== undefined && name.textContent !== moon.label) name.textContent = moon.label;
+  }
+  #hideMoonName = (): void => this.#showMoonName();
+  #moonHover = (event: PointerEvent): void => {
+    const start = this.#moonPointer;
+    if (start !== undefined && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) this.#moonPointer = undefined;
+    if (event.buttons === 0 && event.pointerType !== "touch" && this.moons !== null) {
+      this.#showMoonName(event.composedPath().includes(this.#stage) ? this.#pickedMoon(event) : undefined);
+    }
+  };
+  #moonCancel = (): void => { this.#moonPointer = undefined; };
+  #moonUp = (event: PointerEvent): void => {
+    const start = this.#moonPointer;
+    this.#moonPointer = undefined;
+    if (start?.id !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) return;
+    const moon = this.#pickedMoon(event);
+    this.#showMoonName(moon);
+    if (moon !== undefined) this.dispatchEvent(new CustomEvent<WakuseiMoonSelection>("wakusei-moon-select", { detail: { id: moon.id, host: this.body }, bubbles: true, composed: true }));
+  };
   /** Numbers for a test or a status line: the state, the texture width in use and the renderer's own counts. */
   get stats(): { state: WakuseiState; textureWidth: number; anchors: number; renderer: SharedRenderer<ThreeParts>["stats"] | undefined; tiles: DetailStats | undefined; zoomMax: number | undefined; label: BodyScene["label"] | null } {
     return { state: this.#state, textureWidth: this.#textureWidth, anchors: this.#live.anchors, renderer: this.#renderer?.stats, tiles: (this.#view?.scene as BodyScene | undefined)?.detail ?? this.#tiles, zoomMax: this.#hands?.controller.limits.zoomMax, label: (this.#view?.scene as BodyScene | undefined)?.label ?? null };
@@ -529,6 +681,13 @@ export class WakuseiBody extends HTMLElement {
     const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
     root.innerHTML = TEMPLATE;
     this.#stage = root.getElementById("stage")!;
+    // The shared controls can capture a pointer to the host before it comes up.
+    this.addEventListener("pointerdown", this.#moonDown, true);
+    this.addEventListener("pointermove", this.#moonHover);
+    this.addEventListener("pointerleave", this.#hideMoonName);
+    this.addEventListener("pointercancel", this.#moonCancel);
+    this.addEventListener("pointerup", this.#moonUp);
+    this.#syncMoonSelection();
     this.#startedAt = performance.now();
     this.#door.book.ownOnly(this.getAttribute("data") === "own");
     this.#motionPreference = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : undefined;
@@ -578,6 +737,12 @@ export class WakuseiBody extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    this.removeEventListener("pointerdown", this.#moonDown, true);
+    this.removeEventListener("pointermove", this.#moonHover);
+    this.removeEventListener("pointerleave", this.#hideMoonName);
+    this.removeEventListener("pointercancel", this.#moonCancel);
+    this.removeEventListener("pointerup", this.#moonUp);
+    this.#moonCancel();
     clearTimeout(this.#clockTimer);
     this.#clockTimer = undefined;
     this.#motionPreference?.removeEventListener("change", this.#onMotionChange);
@@ -617,7 +782,15 @@ export class WakuseiBody extends HTMLElement {
   }
 
   attributeChangedCallback(name: string): void {
+    if ((MOON_FILTER_ATTRIBUTES as readonly string[]).includes(name)) {
+      this.moonFilter = readMoonFilter(this);
+      return;
+    }
     if (!this.isConnected) return;
+    if (name === "body" || name === "star" || name === "moons") {
+      this.#hideMoonName();
+      this.#syncMoonSelection();
+    }
     // the name on the globe is read again when its attributes, the body, a star's numbers or the language change
     if (name === "body" || name === "star" || name === "lang" || (NAME_LABEL_ATTRIBUTES as readonly string[]).includes(name)) this.#labelHeld = undefined;
     if (name === "time" || name === "rate") {
@@ -835,9 +1008,19 @@ export class WakuseiBody extends HTMLElement {
     const pose = viewPose(frame.pose, this.#yaw, tiltBy, roll, this.#tumble);
     const r = this.#request();
     const extent = this.#extent(r.moons);
-    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll, this.#tumble ? this.#yaw : 0) : undefined;
+    const spin = this.#tumble ? this.#yaw : 0;
+    const rotateMoon = (vector: Vec3): Vec3 => {
+      const spun = spin === 0 ? vector : turnVec(vector, [0, 1, 0], spin);
+      const tilted = tiltBy === 0 ? spun : turnVec(spun, [1, 0, 0], tiltBy);
+      return roll === 0 ? tilted : turnVec(tilted, [0, 0, 1], roll);
+    };
+    const moons = r.moons ? this.#moonsOf(frame, extent, tiltBy, roll, spin, rotateMoon) : undefined;
+    const moonCatalogue = this.#moonSelection !== undefined && frame.time !== undefined && "frame" in frame.pose
+      ? this.#moonModule?.bodyMoonCatalogue(this.#moonSelection, this.body, frame.pose as Apparent, frame.time, rotateMoon)
+      : undefined;
+    const moonOrbits = this.getAttribute("moon-orbits") !== "off";
     const label = this.#labelNow();
-    return { pose, extent, cutawaySeconds: this.#cutawaySeconds(), sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, label };
+    return { pose, extent, cutawaySeconds: this.#cutawaySeconds(), sky: frame.time !== undefined, zoom: this.#zoom, panX: clampPan(this.#panX, extent, this.#zoom), panY: clampPan(this.#panY, extent, this.#zoom), moons, moonCatalogue, moonOrbits, label };
   }
 
   #labelHeld: { options: ({ text: string } & NameLabelOptions) | null; key: string } | undefined;
@@ -865,13 +1048,14 @@ export class WakuseiBody extends HTMLElement {
       // Wide rings can make a tight fit smaller than the ordinary view. Keep the cut at least that large in its stage.
       return Math.min(ROOM, Math.max(1.2, extentOf(this.#facts(), { tight: true })));
     }
-    return extentOf(this.#facts(), {
+    const extent = extentOf(this.#facts(), {
       tight: this.getAttribute("fit") === "tight",
       spanKm: span > 0 ? span : undefined,
       scaleTo: scaleTo !== null && scaleTo in BODIES ? scaleTo : undefined,
       moons,
       range: range !== undefined && range > 0 ? range : undefined,
     });
+    return moons && !(range !== undefined && range > 0) ? Math.max(extent, this.#moonSelection?.extent ?? 0) : extent;
   }
 
   /**
@@ -899,14 +1083,12 @@ export class WakuseiBody extends HTMLElement {
     this.#hands.setLimits(limits);
   }
 
-  #moonsOf(frame: LiveFrame, extent: number, tilt: number, roll: number, spin: number): MoonDraw[] {
+  #moonsOf(frame: LiveFrame, extent: number, tilt: number, roll: number, spin: number, rotate: (vector: Vec3) => Vec3): MoonDraw[] {
     const moons: MoonDraw[] = [];
     for (const m of frame.moons) {
-      if (m.distance <= extent * 1.05) {
-        const orbit = this.#orbits.get(m.id as string);
-        const spun = spin === 0 ? ([m.x, m.y, m.z] as Vec3) : turnVec([m.x, m.y, m.z], [0, 1, 0], spin);
-        const tipped = tilt === 0 ? spun : turnVec(spun, [1, 0, 0], tilt);
-        const rotated = roll === 0 ? tipped : turnVec(tipped, [0, 0, 1], roll);
+      if (m.distance <= extent * 1.05 && (this.#moonSelection === undefined || this.#moonSelection.full.has(m.id))) {
+        const orbit = this.getAttribute("moon-orbits") === "off" ? undefined : this.#orbits.get(m.id as string);
+        const rotated = rotate([m.x, m.y, m.z]);
         moons.push({ id: m.id, x: rotated[0], y: rotated[1], z: rotated[2], orbit: orbit === undefined || (spin === 0 && tilt === 0 && roll === 0) ? orbit : this.#tiltedOrbit(m.id as string, orbit, tilt, roll, spin) });
       }
     }
@@ -943,7 +1125,7 @@ export class WakuseiBody extends HTMLElement {
 
   #ensureOrbits(frame: LiveFrame): void {
     const r = this.#request();
-    if (!r.moons || frame.time === undefined) return;
+    if (!r.moons || frame.time === undefined || this.getAttribute("moon-orbits") === "off") return;
     const bucket = `${r.id}:${Math.floor(frame.time / 3_600_000)}`;
     if (bucket === this.#orbitKey) return;
     this.#orbitKey = bucket;
@@ -1115,7 +1297,7 @@ export class WakuseiBody extends HTMLElement {
       this.#drawLine();
       if (this.look === "line") this.#set("line");
       // the tick stopped while the other package's globe was shown
-      if (undelegated || this.#isSection()) this.#resume();
+      if (undelegated || this.#isSection() || this.moons === "all") this.#resume();
       return;
     }
     const sig = this.#signature();
@@ -1131,7 +1313,7 @@ export class WakuseiBody extends HTMLElement {
     if (this.#view?.live === true) {
       this.#sync();
       this.#view.invalidate();
-      if (this.#cutSize() !== undefined) this.#resume();
+      if (this.#cutSize() !== undefined || this.moons === "all") this.#resume();
     } else {
       this.#rekey();
       if (this.#wantLive || this.#hasPriority()) void this.goLive();
@@ -1205,17 +1387,21 @@ export class WakuseiBody extends HTMLElement {
     const stroke = getComputedStyle(this).getPropertyValue("--wakusei-line").trim();
     const paper = getComputedStyle(this).getPropertyValue("--wakusei-paper").trim();
     const scene = this.#sceneOf(frame);
+    this.#sceneState = scene;
     const size = 480;
     const star = this.#star();
     const draw = star === undefined ? (options: Parameters<typeof lineSvg>[1]) => lineSvg(this.body, options) : (options: Parameters<typeof lineSvg>[1]) => starLineSvg(star, options);
+    const catalogueMoons = scene.moonCatalogue === undefined ? undefined : this.#lineCatalogue(scene);
     const html = draw({
       size,
       ...(this.#isSection() ? { cutaway: true, cutawaySeconds: scene.cutawaySeconds } : {}),
       pose: scene.pose,
       ...(r.moons ? { moons: true, ...(frame.time !== undefined ? { time: frame.time } : {}), range: scene.extent, moonsAt: (scene.moons ?? []).map((m) => ({ id: m.id as MoonId, x: m.x, y: m.y, z: m.z, distance: Math.hypot(m.x, m.y, m.z) })), orbits: new Map((scene.moons ?? []).filter((m) => m.orbit !== undefined).map((m) => [m.id as string, m.orbit!])) } : {}),
+      moonOrbits: scene.moonOrbits,
+      catalogueMoons,
       fill: scaleTo !== null || this.hasAttribute("span-km") || this.getAttribute("fit") !== "tight" || this.#isSection() ? this.#fill() : undefined,
       lang: this.getAttribute("lang") === "ja" ? "ja" : undefined,
-      labels: this.getAttribute("labels") === "off" ? false : undefined,
+      labels: this.getAttribute("labels") === "off" || this.moons === "all" ? false : undefined,
       stroke: stroke || undefined,
       paper: paper || undefined,
       ...(this.#zoom !== 1 ? { zoom: this.#zoom, panX: scene.panX, panY: scene.panY } : {}),
@@ -1223,10 +1409,32 @@ export class WakuseiBody extends HTMLElement {
     this.#stage.innerHTML = html;
   }
 
+  #lineOrbits: { source: NonNullable<SceneState["moonCatalogue"]>["source"]; time: number; byId: ReadonlyMap<string, readonly Vec3[]> } | undefined;
+  #lineCatalogue(scene: SceneState): LineOptions["catalogueMoons"] {
+    const dots = this.#smallMoons(scene);
+    const catalogue = scene.moonCatalogue;
+    const module = this.#moonModule;
+    if (!scene.moonOrbits || catalogue === undefined || module === undefined) return dots;
+    if (this.#lineOrbits?.source !== catalogue.source || Math.abs(this.#lineOrbits.time - catalogue.time) > 20 * 86_400_000) {
+      this.#lineOrbits = {
+        source: catalogue.source,
+        time: catalogue.time,
+        byId: new Map(catalogue.source.moons.map((moon) => [moon.id, catalogue.source.orbit(moon, catalogue.time, 36)])),
+      };
+    }
+    const paths = this.#lineOrbits.byId;
+    return dots.map((dot, index) => {
+      const moon = catalogue.source.moons[index]!;
+      return { ...dot, orbit: paths.get(moon.id)?.map((point) => module.bodyMoonPoint(catalogue, moon.host, point)) };
+    });
+  }
+
   #key(state: SceneState): string {
     const moons = (state.moons ?? []).map((m) => `${m.id}:${m.x.toFixed(1)},${m.y.toFixed(1)}`).join(";");
     const flow = this.#cutSize() === undefined ? "" : this.#flowHeld.toFixed(3);
-    return `${this.#signature()}|${flow}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}`;
+    const catalogue = state.moonCatalogue === undefined ? "" : `|${this.#moonSelectionKey}|${Math.round(state.moonCatalogue.time / 1000)}|${state.moonCatalogue.axes.map(vectorKey).join(",")}`;
+    const paths = state.moonOrbits === false ? "|no-moon-orbits" : "";
+    return `${this.#signature()}|${flow}|${vectorKey(state.pose.pole)}|${vectorKey(state.pose.meridian)}|${vectorKey(state.pose.light)}|${state.extent.toFixed(2)}|${state.zoom.toFixed(2)}|${state.panX.toFixed(2)},${state.panY.toFixed(2)}|${moons}|${this.#labelKey()}${catalogue}${paths}`;
   }
 
   // Replacing a view keeps the renderer lease; leaving 3D gives it back.

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Filters for the moon catalogue** (MODULES-664). Both elements can filter moons by naming status, size class, orbit group, direction and discovery years. `<wakusei-body moons="all">` adds the catalogue's small moons and optional orbit paths to a planet view. The filters appear in the planet and space demos, with discovery playback and sourced moon cards. The code builder carries the same settings into its snippets and iframe. The size budgets for the single-file `/element` and `/portrait` bundles now include the optional catalogue. With code splitting, the catalogue is loaded when a view asks for it.
+
 - **Nearby bodies and upcoming close approaches** (MODULES-663). The space demo finds neighbours by distance or by angle in Earth's sky and lists the next close approaches. Choosing a result emphasizes the two bodies. Choosing an event sets the demo clock to its date and pauses it. The space element exposes `highlightedBodies` so other pages can use the same label emphasis.
 
 - **Tighter Moon and Uranus ephemerides** (MODULES-639). Refitting the Moon's mean longitude brings the maximum error on independent Horizons dates from 5.31″ to 0.90″ with the same 540 terms. The optional finer Uranus series adds a longitude correction, improving its maximum on the same dates from 2.03″ to 1.39″.

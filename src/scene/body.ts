@@ -23,6 +23,7 @@ import { createCutaway } from "./cutaway.ts";
 import { loadImage } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import type { createMoonLayer, MoonLayer, MoonSource } from "../space/all-moons.ts";
 
 export { fallbackLook } from "./fallback.ts";
 
@@ -31,7 +32,16 @@ export type ThreeParts = Pick<
   typeof THREE,
   | "AdditiveBlending" | "BufferAttribute" | "BufferGeometry" | "ClampToEdgeWrapping" | "DataTexture" | "DoubleSide" | "Group" | "Line" | "LineBasicMaterial" | "LineSegments" | "LinearFilter" | "Mesh" | "NoColorSpace"
   | "OrthographicCamera" | "PlaneGeometry" | "RepeatWrapping" | "RGBAFormat" | "RingGeometry" | "Scene" | "ShaderMaterial" | "SphereGeometry" | "TextureLoader" | "Vector2" | "Vector3" | "WebGLRenderer"
-> & Partial<Pick<typeof THREE, "CanvasTexture" | "SRGBColorSpace" | "NormalBlending" | "WebGLRenderTarget">>;
+> & Partial<Pick<typeof THREE, "CanvasTexture" | "SRGBColorSpace" | "NormalBlending" | "WebGLRenderTarget" | "Points" | "PointsMaterial">>;
+
+/** A planet's optional batch of small moons, in the scene's axes and planet radii. */
+export interface BodyMoonCatalogue {
+  source: MoonSource;
+  create: typeof createMoonLayer;
+  hosts: ReadonlySet<string>;
+  axes: readonly [Vec3, Vec3, Vec3];
+  time: number;
+}
 
 /** One moon in a system view: its place in planet radii (viewer's frame) and the points of its orbit, if they changed. */
 export interface MoonDraw {
@@ -54,6 +64,8 @@ export interface SceneState {
   panX: number;
   panY: number;
   moons?: readonly MoonDraw[];
+  moonCatalogue?: BodyMoonCatalogue;
+  moonOrbits?: boolean;
   /** The body is drawn as the sky shows it at a date: its real phase, with no light on the night side from a wrapped terminator or a rim of air. */
   sky?: boolean;
   /** The smallest a moon is drawn, in CSS pixels across its radius. Default 2.5. */
@@ -448,6 +460,12 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         camera.right = cx + halfW;
         camera.top = cy + halfH;
         camera.bottom = cy - halfH;
+        const depth = Math.max(200, (state.moonCatalogue === undefined ? 0 : state.extent) * 1.2);
+        if (camera.position.z !== depth) {
+          camera.position.z = depth;
+          camera.far = depth * 2;
+          camera.updateMatrixWorld();
+        }
         camera.updateProjectionMatrix();
       };
 
@@ -471,7 +489,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const minR = (state.minMoonPx ?? 2.5) * unitsPerPx;
         const live = new Set(moons.map((m) => m.id));
         for (const [id, m] of moonMeshes) if (!live.has(id)) { scene.remove(m); moonMeshes.delete(id); }
-        for (const [id, o] of orbitLines) if (!live.has(id)) { scene.remove(o.line); o.line.geometry.dispose(); orbitLines.delete(id); }
+        for (const [id, o] of orbitLines) if (state.moonOrbits === false || !live.has(id)) { scene.remove(o.line); o.line.geometry.dispose(); orbitLines.delete(id); }
         for (const moon of moons) {
           const f = BODIES[moon.id];
           const mesh2 = moonFor(moon.id);
@@ -496,6 +514,40 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           }
         }
         if (state.orbitColour !== undefined) orbitMaterial.color.set(state.orbitColour);
+      };
+
+      let catalogueLayer: { group: THREE.Group; layer: MoonLayer } | undefined;
+      const dropCatalogue = (): void => {
+        if (catalogueLayer === undefined) return;
+        catalogueLayer.layer.dispose();
+        scene.remove(catalogueLayer.group);
+        catalogueLayer = undefined;
+      };
+      const placeCatalogue = (state: SceneState): void => {
+        const catalogue = state.moonCatalogue;
+        const { Points, PointsMaterial } = T;
+        if (catalogue === undefined || Points === undefined || PointsMaterial === undefined) {
+          dropCatalogue();
+          return;
+        }
+        if (catalogueLayer === undefined) {
+          const group = new T.Group();
+          scene.add(group);
+          catalogueLayer = { group, layer: catalogue.create({ ...T, Points, PointsMaterial }, group) };
+        }
+        setBasis(catalogueLayer.group, ...catalogue.axes);
+        catalogueLayer.layer.update({
+          source: catalogue.source,
+          hosts: catalogue.hosts,
+          mode: "true",
+          by: "group",
+          time: catalogue.time,
+          orbits: state.moonOrbits !== false,
+          at: () => [0, 0, 0],
+          radius: () => 1,
+          ratio: options.tiles?.ratio() ?? 1,
+          spot: () => null,
+        });
       };
 
       const requestSharperTexture = (state: SceneState): void => {
@@ -559,6 +611,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         orient(state);
         frame(state);
         place(state);
+        placeCatalogue(state);
         if (faces === undefined) syncLabel(state);
         faces?.setTime(state.cutawaySeconds ?? 0);
         light.set(...state.pose.light);
@@ -650,6 +703,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           aspect = viewWidth / Math.max(1, viewHeight);
           frame(latest);
           place(latest);
+          placeCatalogue(latest);
         },
         update() {
           return false;
@@ -663,6 +717,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           detail?.dispose();
           label?.dispose();
           label = undefined;
+          dropCatalogue();
           for (const o of orbitLines.values()) o.line.geometry.dispose();
           orbitMaterial.dispose();
           for (const shell of shells) {

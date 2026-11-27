@@ -40,6 +40,10 @@ export interface LineOptions extends PortraitOptions {
   moonsAt?: readonly { id: MoonId; x: number; y: number; z: number; distance: number }[];
   /** Orbit paths already worked out (x, y, z in planet radii, by moon), to draw instead of working them out. */
   orbits?: ReadonlyMap<string, Float32Array>;
+  /** Whether to draw orbit lines in a moon system. Default true. */
+  moonOrbits?: boolean;
+  /** Small catalogue dots already projected into the body's view, and their paths if requested. */
+  catalogueMoons?: readonly { at: Vec3; color: string; orbit?: readonly Vec3[] }[];
   /** How far the picture reaches from the planet's centre, in planet radii, when `moons` is on. Default: past the farthest moon. */
   range?: number;
   /** Write the names of the moons. Default true. */
@@ -316,7 +320,7 @@ function systemSvg(planet: HostId, options: LineOptions, size: number, stroke: s
   const names: string[] = [];
   const moonPx = (id: MoonId): number => Math.max((BODIES[id].radiusKm / facts.radiusKm) * unitPx, size / 110);
   // the orbits: the path each moon follows over one trip, as it is at that time
-  for (const m of moons) {
+  for (const m of options.moonOrbits === false ? [] : moons) {
     const flat = options.orbits?.get(m.id) ?? cachedOrbit(m.id, time);
     const orbitPts: Vec3[] = [];
     for (let k = 0; k <= flat.length / 3; k += 1) {
@@ -325,6 +329,13 @@ function systemSvg(planet: HostId, options: LineOptions, size: number, stroke: s
     }
     if (orbitPts.length > 2) parts.push(`<path d="${path(frame, orbitPts)}" fill="none" stroke="${stroke}" stroke-opacity="0.28" stroke-width="${n(hair * 0.7)}"/>`);
   }
+  const small = options.catalogueMoons ?? [];
+  const tint = (color: string): string => /^#[0-9a-f]{6}$/i.test(color) ? color : stroke;
+  for (const moon of small) {
+    if (options.moonOrbits !== false && moon.orbit !== undefined) parts.push(`<path d="${path(frame, moon.orbit)}" fill="none" stroke="${tint(moon.color)}" stroke-opacity="0.35" stroke-width="${n(hair * 0.6)}"/>`);
+  }
+  const dots = (front: boolean): string => small.filter(({ at }) => (at[2] >= 0) === front).map(({ at, color }) =>
+    `<circle data-moon-dot cx="${n(frame.cx + at[0] * frame.r)}" cy="${n(frame.cy - at[1] * frame.r)}" r="${n(size / 300)}" fill="${tint(color)}"/>`).join("");
   const placed = moons.map((m) => ({ m, px: frame.cx + m.x * unitPx, py: frame.cy - m.y * unitPx }));
   const draw = (items: typeof placed): string =>
     items
@@ -338,7 +349,7 @@ function systemSvg(planet: HostId, options: LineOptions, size: number, stroke: s
       .join("");
   const behind = placed.filter(({ m }) => m.z < 0);
   const inFront = placed.filter(({ m }) => m.z >= 0);
-  parts.push(draw(behind), bodyGroup(planet, pose, frame, { stroke, paper }, hair, 1), draw(inFront));
+  parts.push(dots(false), draw(behind), bodyGroup(planet, pose, frame, { stroke, paper }, hair, 1), draw(inFront), dots(true));
   const label = lang === "ja" ? `${facts.name.ja}と衛星の線画 (${names.length})` : `Line drawing of ${facts.name.en} and its moons`;
   return `${head(label)}${parts.join("")}</svg>`;
 }

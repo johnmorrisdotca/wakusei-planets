@@ -15,3 +15,4 @@ export { regionOrbits, regionView, SUN_REGIONS, type SunRegion } from "./regions
 export { SIGHT_STEP_PX, sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 export { besideFace, facingPoint, faceView, subCameraPoint, surfaceDirection, type Face, type FaceView } from "./face.ts";
 export { BUILT_IN_PATH_STYLES, MAX_PATHS, completeStyle, nearestPath, pathSpanMs, styleTable, type PathHit, type PathRequest, type PathScreen, type PathStyle } from "./path-styles.ts";
+export type { MoonDiscoveryRange, MoonDirection, MoonFilter, MoonSizeClass, MoonStatus } from "../moon-filters.ts";

@@ -2,6 +2,7 @@
 // a planet is first set to `all`.
 import { SPACE_DWARFS, SPACE_PLANETS, type SpaceDwarf, type SpacePlanet } from "./frame.ts";
 import type { MoonColorChoice, MoonSource } from "./all-moons.ts";
+import type { CatalogueMoon } from "../moon-catalogue.ts";
 
 /** What a planet shows: its `major` moons (the ones the view draws in full: today's default) or `all` of them (every moon of the catalogue as a pressable dot with its orbit). */
 export type MoonsChoice = "major" | "all";
@@ -46,11 +47,12 @@ export const catalogueMoonIdOf = (key: string): string | undefined => (key.start
 type CatalogueModule = Pick<typeof import("../moon-catalogue.ts"), "MOON_CATALOGUE" | "catalogueMoonPosition" | "catalogueMoonOrbit" | "moonOrbitColor">;
 
 /** The catalogue as the layer's source: the moons with an orbit that go round a planet the view places. */
-export function moonSourceOf(catalogue: CatalogueModule): MoonSource {
-  const moons = catalogue.MOON_CATALOGUE.filter((m) => m.orbit !== null && (MOON_HOSTS as readonly string[]).includes(m.host));
+export function moonSourceOf(catalogue: CatalogueModule, selected: readonly CatalogueMoon[] = catalogue.MOON_CATALOGUE, highlight = false): MoonSource {
+  const moons = selected.filter((m) => m.orbit !== null && (MOON_HOSTS as readonly string[]).includes(m.host));
   const byId = new Map(moons.map((m) => [m.id, m]));
+  const newest = highlight && Math.max(...moons.map((moon) => moon.discovery.year ?? -Infinity));
   return {
-    moons: moons.map((m) => ({ id: m.id, label: m.label, ja: m.ja, host: m.host as SpacePlanet | SpaceDwarf, full: m.full, colors: { group: catalogue.moonOrbitColor(m, "group"), direction: catalogue.moonOrbitColor(m, "direction") } })),
+    moons: moons.map((m) => ({ id: m.id, label: m.label, ja: m.ja, host: m.host as SpacePlanet | SpaceDwarf, full: m.full, newest: m.discovery.year === newest, colors: { group: catalogue.moonOrbitColor(m, "group"), direction: catalogue.moonOrbitColor(m, "direction") } })),
     position: (moon, ms) => catalogue.catalogueMoonPosition(byId.get(moon.id)!, ms)!,
     orbit: (moon, ms, points) => catalogue.catalogueMoonOrbit(byId.get(moon.id)!, ms, points)!,
   };

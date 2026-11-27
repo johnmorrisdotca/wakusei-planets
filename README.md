@@ -268,7 +268,9 @@ A page full of bodies stays light: one WebGL context for the page through kazoku
 | `look` | `line`, `realistic` or `painted`. | `line` |
 | `size` | The width in pixels. | `320` |
 | `time` | `now` or an ISO date: the body as the Earth sees it then. Left out, a portrait. | portrait |
-| `moons` | A planet with its moons on their orbits (with a date). | off |
+| `moons` | Show a planet's major moons with bare `moons` or `moons="major"`. Set `"all"` to add the smaller moons with catalogue orbits. | off |
+| `moon-orbits` | Set `"off"` to hide the planet view's moon paths. | on |
+| `moon-status`, `moon-size-class`, `moon-group`, `moon-direction`, `moon-discovered` | Filter the moons shown, as described in the [catalogue guide](docs/guides/moon-catalogue.md#filtering-the-catalogue). | all in the selected mode |
 | `rate` | Simulated seconds for each real second; `0` holds the clock and draws nothing. A dated picture sends `wakusei-timechange` (`{ time, running }`) while the clock runs and once when it holds. | `1` |
 | `turn` | A portrait turns this many degrees a second. | `0` |
 | `tilt`, `pitch`, `phase`, `meridian` | A portrait's pose in degrees. | the body's own |

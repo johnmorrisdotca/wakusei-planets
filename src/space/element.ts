@@ -36,6 +36,7 @@ import type { MoonSource, MoonSpot } from "./all-moons.ts";
 import { nearestLine, type ScreenLine } from "./orbit-lines.ts";
 import { capPaths, hitRadius, nearestPath, pathSpanMs, readPathHit, styleOf, styleTable, type PathHit, type PathRequest, type PathScreen, type PathStyle } from "./path-styles.ts";
 import { catalogueMoonIdOf, catalogueMoonKey, hostsShowingAll, MOON_HOSTS, moonSourceOf, readMoonColors, readMoonsChoice, readMoonsOf, type MoonsChoice } from "./moon-settings.ts";
+import { MOON_FILTER_ATTRIBUTES, normalizeMoonFilter, readMoonFilter, type MoonFilter } from "../moon-filters.ts";
 import { findPlace, PLACE_BODIES, type Place, type PlaceBody } from "../places.ts";
 import { marksToShow, pointUnder, readPlaceLayers, readSurfaceNames, spotView, type Obstacle, type PlaceLayer } from "../place-marks.ts";
 import { createPlaceLayer, onPlacesLoader, placesLoader, type PlaceLayerView } from "../scene/place-layer.ts";
@@ -322,12 +323,16 @@ const orbiterLines = (value: string | null): "all" | "chosen" | "none" => (value
  * ```
  */
 export class WakuseiSpace extends HTMLElement {
-  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "path-hit", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...NAME_LABEL_ATTRIBUTES];
+  static observedAttributes = ["center", "time", "speed", "scale", "labels", "labels-always", "covered", "roadster", "spacecraft", "orbiters", "asteroids", "orbiter", "orbiter-lines", "orbiter-track", "orbits", "path-hit", "help", "look", "light", "lang", "data", "arrows", "help-through", "help-place", "places", "surface-names", "site-flags", "earth-places", "earth-places-look", "earth-place-layers", "body-places", "all-moons", "moons", "moons-of", "moon-colors", "far-opacity", "transition", "pace", "frame", "pair-with", "belts", "moon-size", ...MOON_FILTER_ATTRIBUTES, ...NAME_LABEL_ATTRIBUTES];
 
   #model: SpaceModel = newSpaceModel();
   #moons: MoonsChoice = "major";
   #moonsOf: Partial<Record<string, MoonsChoice>> = {};
-  #catalogue: Promise<MoonSource> | undefined;
+  #moonFilter: MoonFilter = {};
+  #moonFilterKey = "{}";
+  #moonSourceKey: string | undefined;
+  #catalogue: typeof import("../moon-catalogue.ts") | undefined;
+  #catalogueLoading = false;
   #clock: GameClock = createGameClock("now", 1);
   #view: View | undefined;
   #gate: Gate | undefined;
@@ -598,6 +603,7 @@ export class WakuseiSpace extends HTMLElement {
     else if (name === "all-moons") this.allMoons = value !== null && value !== "off";
     else if (name === "moons") this.moons = readMoonsChoice(value);
     else if (name === "moons-of") this.moonsOf = readMoonsOf(value);
+    else if ((MOON_FILTER_ATTRIBUTES as readonly string[]).includes(name)) this.moonFilter = readMoonFilter(this);
     else if (name === "moon-colors") this.moonColors = readMoonColors(value);
     else if (name === "arrows") this.arrows = arrowCount(value);
     else if (name === "help") this.help = value !== null && value !== "off";
@@ -1715,7 +1721,7 @@ export class WakuseiSpace extends HTMLElement {
 
   /**
    * What every planet shows by default (the attribute `moons`): `"major"`, the moons the view draws in full (today's default), or `"all"`, every moon of `/moon-catalogue` as a small pressable dot round its planet, with
-   * its orbit. A planet with a choice of its own (`moonsOf`, `setMoons`) keeps it. The catalogue is fetched, as a chunk of its own, the first time a planet is set to `all`; a view that never does never loads it.
+   * its orbit. A planet with a choice of its own (`moonsOf`, `setMoons`) keeps it. The catalogue is fetched as a separate chunk when a planet is first set to `all` or a filter is applied.
    */
   get moons(): MoonsChoice {
     return this.#moons;
@@ -1771,18 +1777,43 @@ export class WakuseiSpace extends HTMLElement {
   set allMoons(value: boolean) {
     this.setMoons(value ? "all" : "major");
   }
+
+  /**
+   * Which moons to show in the view. The matching attributes are `moon-status`, `moon-size-class`, `moon-group`, `moon-direction` and `moon-discovered`.
+   * Set an empty object to show every moon in the chosen mode.
+   */
+  get moonFilter(): MoonFilter {
+    return normalizeMoonFilter(this.#moonFilter);
+  }
+  set moonFilter(value: MoonFilter) {
+    const filter = normalizeMoonFilter(value);
+    const key = JSON.stringify(filter);
+    if (key === this.#moonFilterKey) return;
+    this.#moonFilter = filter;
+    this.#moonFilterKey = key;
+    this.#moonsChanged();
+  }
+
   #moonsChanged(): void {
     const hosts = hostsShowingAll(this.#moons, this.#moonsOf);
     this.#model.moonHosts = hosts;
-    if (hosts.size === 0) {
-      this.#gate?.request();
-      return;
+    const filtered = this.#moonFilterKey !== "{}";
+    if (!filtered) this.#model.moonAllowed = null;
+    if (hosts.size > 0 || filtered) {
+      if (this.#catalogue !== undefined && this.#moonSourceKey !== this.#moonFilterKey) {
+        const moons = filtered ? this.#catalogue.filterMoonCatalogue(this.#moonFilter) : this.#catalogue.MOON_CATALOGUE;
+        this.#model.moonSource = moonSourceOf(this.#catalogue, moons, this.#moonFilter.discovered !== undefined);
+        this.#model.moonAllowed = filtered ? new Set(moons.filter((moon) => moon.full).map((moon) => moon.id)) : null;
+        this.#moonSourceKey = this.#moonFilterKey;
+      } else if (this.#catalogue === undefined && !this.#catalogueLoading) {
+        this.#catalogueLoading = true;
+        void import("../moon-catalogue.ts").then((catalogue) => {
+          this.#catalogue = catalogue;
+          this.#catalogueLoading = false;
+          this.#moonsChanged();
+        }, () => { this.#catalogueLoading = false; });
+      }
     }
-    this.#catalogue ??= import("../moon-catalogue.ts").then((catalogue) => moonSourceOf(catalogue));
-    void this.#catalogue.then((source) => {
-      this.#model.moonSource = source;
-      this.#gate?.request();
-    });
     this.#gate?.request();
   }
 

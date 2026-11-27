@@ -34,6 +34,7 @@ export interface SourceMoon {
   host: Host;
   /** Whether the view draws it in full: then it is a body, not a dot, and only its orbit is drawn here. */
   full: boolean;
+  newest?: boolean;
   /** `#rrggbb` of its orbit by group and by direction. */
   colors: Readonly<Record<MoonColorChoice, string>>;
 }
@@ -190,6 +191,9 @@ export function createMoonLayer(T: DotsThree, parent: THREE.Object3D): MoonLayer
         entry = { object, geometry, count: 0, moons: [] };
         lines.set(host, entry);
         parent.add(object);
+      } else {
+        // A change of date or filter replaces both attributes. Dispose their GPU buffers before replacing them.
+        entry.geometry.dispose();
       }
       entry.geometry.setAttribute("position", new T.BufferAttribute(array, 3));
       entry.geometry.setAttribute("color", new T.BufferAttribute(tint, 3));
@@ -233,7 +237,7 @@ export function createMoonLayer(T: DotsThree, parent: THREE.Object3D): MoonLayer
         positions[k * 3] = x;
         positions[k * 3 + 1] = y;
         positions[k * 3 + 2] = z;
-        colors.set(rgb(moon.colors[input.by]), k * 3);
+        colors.set(rgb(moon.newest ? "#fff1a6" : moon.colors[input.by]), k * 3);
         const spot = input.spot([x, y, z]);
         if (spot !== null) spots.push({ id: moon.id, host: moon.host, x: spot.x, y: spot.y });
       }

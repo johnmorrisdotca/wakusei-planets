@@ -8,6 +8,7 @@ import type { LineupSet } from "./lineup/data.ts";
 import type { LineupLayout } from "./lineup/layout.ts";
 import type { StarNumbers } from "./star.ts";
 import { VERSION } from "./version.ts";
+import { moonFilterAttributes, type MoonFilter } from "./moon-filters.ts";
 
 /**
  * The ways `embedCode` writes a body into a page.
@@ -54,8 +55,12 @@ export interface EmbedOptions {
   cutaway?: "classic" | "half" | "quarter";
   /** The date and time as an ISO string, or `now`: the body as the Earth sees it then. Left out, a portrait. */
   time?: string;
-  /** A planet with its moons on their orbits (needs `time`). */
-  moons?: boolean;
+  /** A planet's moons. `true` keeps the dated major-moon view, or choose the `major` or `all` mode. */
+  moons?: boolean | "major" | "all";
+  /** The filter applied to those moons. */
+  moonFilter?: MoonFilter;
+  /** Draw the moons' paths. Default true. */
+  moonOrbits?: boolean;
   /** Degrees a second it turns by itself; left out or 0, it is still. */
   turn?: number;
   /** Pixels across. */
@@ -116,9 +121,16 @@ function attributesOf(o: EmbedOptions): [string, string][] {
   if (o.star !== undefined) out.push(...starAttributes(o.star));
   if (o.cutaway !== undefined && o.star === undefined) out.push(["cutaway", o.cutaway === "classic" ? "" : o.cutaway]);
   if (o.time !== undefined && o.star === undefined) out.push(["time", o.time]);
-  if (o.moons === true && o.time !== undefined && o.star === undefined) out.push(["moons", ""]);
+  out.push(...moonAttributesOf(o));
   if (o.turn !== undefined && o.turn > 0) out.push(["turn", String(o.turn)]);
   return out;
+}
+
+function moonAttributesOf(o: EmbedOptions): [string, string][] {
+  if (o.star !== undefined || !o.moons || (o.moons === true && o.time === undefined)) return [];
+  const attributes: [string, string][] = [["moons", o.moons === true ? "" : o.moons], ...moonFilterAttributes(o.moonFilter)];
+  if (o.moonOrbits === false) attributes.push(["moon-orbits", "off"]);
+  return attributes;
 }
 
 const needsShading = (o: EmbedOptions): boolean => (o.look ?? "realistic") !== "line";
@@ -162,7 +174,7 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
   const query = new URLSearchParams(options.star !== undefined ? { ...(options.star.name !== undefined ? { star: options.star.name } : { star: "" }), look: options.look ?? "realistic", ...Object.fromEntries(starAttributes(options.star)) } : { body, look: options.look ?? "realistic" });
   if (options.time !== undefined && options.star === undefined) query.set("time", options.time);
   if (options.cutaway !== undefined && options.star === undefined) query.set("cutaway", options.cutaway);
-  if (options.moons === true && options.time !== undefined && options.star === undefined) query.set("moons", "1");
+  for (const [name, value] of moonAttributesOf(options)) query.set(name, name === "moons" && value === "" ? "1" : value);
   if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
   if (options.zoom !== undefined && options.zoom !== 1 && Number.isFinite(options.zoom) && options.zoom > 0) query.set("zoom", String(Math.round(options.zoom * 1000) / 1000));
   return snippet(

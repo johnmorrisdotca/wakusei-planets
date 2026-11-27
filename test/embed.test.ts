@@ -118,6 +118,20 @@ test("there is a snippet for every kind, and the credit names what is used", () 
   assert.match(embedCredit({ body: "mercury", look: "realistic" }), /Shady Tex/);
 });
 
+test("filtered moon settings survive both the element and iframe forms", () => {
+  const options: EmbedOptions = {
+    body: "jupiter", moons: "all", moonOrbits: false,
+    moonFilter: { status: "provisional", size: "estimated", group: "ananke", direction: "retrograde", discovered: { from: 2000, to: 2026 } },
+  };
+  const html = embedCode(options, "html");
+  const iframe = embedCode(options, "iframe");
+  const params = new URL(/src="([^"]+)"/.exec(iframe)![1]!.replace(/&amp;/g, "&")).searchParams;
+  for (const [attr, value] of [["moons", "all"], ["moon-orbits", "off"], ["moon-status", "provisional"], ["moon-size-class", "estimated"], ["moon-group", "ananke"], ["moon-direction", "retrograde"], ["moon-discovered", "2000..2026"]] as const) {
+    assert.ok(html.includes(`${attr}="${value}"`), attr);
+    assert.equal(params.get(attr), value);
+  }
+});
+
 for (const id of BODY_IDS) {
   test(`the embed credit for ${id} names that body's picture, in English and Japanese`, () => {
     const row = PICTURE_CREDITS.find((one) => one.id === id);

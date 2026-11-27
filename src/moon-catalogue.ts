@@ -8,9 +8,11 @@ import { kepler } from "./ephemeris.ts";
 import type { HostId } from "./facts.ts";
 import { cross, fromRaDec, RAD, toEcliptic, type Vec3 } from "./vec.ts";
 import { moment, type When } from "./when.ts";
+import { MOON_FILTER_GROUPS, moonMatches, normalizeMoonFilter, type MoonFilter } from "./moon-filters.ts";
 
 export type { HostId } from "./facts.ts";
 export type { When } from "./when.ts";
+export { moonSizeClass, moonStatus, type MoonDirection, type MoonDiscoveryRange, type MoonFilter, type MoonSizeClass, type MoonStatus } from "./moon-filters.ts";
 
 const DAY_MS = 86_400_000;
 const UNIX_JD = 2_440_587.5;
@@ -42,7 +44,7 @@ export type MoonGroup = "inner" | "major" | "regular" | "themisto" | "himalia" |
  * console.log(MOON_GROUPS.join(", "));
  * ```
  */
-export const MOON_GROUPS: readonly MoonGroup[] = ["inner", "major", "regular", "themisto", "himalia", "carpo", "valetudo", "ananke", "carme", "pasiphae", "inuit", "gallic", "norse", "prograde", "retrograde", "none"];
+export const MOON_GROUPS: readonly MoonGroup[] = MOON_FILTER_GROUPS;
 
 /**
  * How well the catalogue places a moon, by the worst angle (seen from the planet's centre) between `catalogueMoonPosition` and JPL Horizons on 2025-07-02, 2026-07-02 and 2027-07-02, dates the orbit was not set from:
@@ -394,6 +396,24 @@ function moonOf(row: MoonRow): CatalogueMoon {
  * ```
  */
 export const MOON_CATALOGUE: readonly CatalogueMoon[] = MOON_CATALOGUE_ROWS.map(moonOf);
+
+/**
+ * The moons that match every requested filter, in catalogue order. Pass a subset to filter one planet.
+ * @param filter - The conditions to match. An empty filter includes all rows in the input.
+ * @param moons - The rows to search. Defaults to the entire catalogue.
+ * @returns The matching rows in their input order.
+ *
+ * @example
+ * ```ts
+ * import { catalogueMoonsOf, filterMoonCatalogue } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+ *
+ * console.log(filterMoonCatalogue({ direction: "retrograde" }, catalogueMoonsOf("jupiter")).length);
+ * ```
+ */
+export function filterMoonCatalogue(filter: MoonFilter = {}, moons: readonly CatalogueMoon[] = MOON_CATALOGUE): readonly CatalogueMoon[] {
+  const options = normalizeMoonFilter(filter);
+  return moons.filter((moon) => moonMatches(moon, options));
+}
 
 /**
  * The day the catalogue was read from JPL. New moons are announced every year; `scripts/make-moon-catalogue.py --refresh` reads the sources again and prints what changed.

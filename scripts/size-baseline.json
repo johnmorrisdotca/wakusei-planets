@@ -2,8 +2,8 @@
   "measured": "esbuild 0.25.12, bundled, minified, ES2020, gzip level 9",
   "entries": {
     ".": 68671,
-    "./element": 379669,
-    "./portrait": 688848,
+    "./element": 443361,
+    "./portrait": 750005,
     "./lineup": 552690,
     "./space": 53792,
     "./space/element": 1289496,
@@ -164,8 +164,8 @@
   },
   "minified": {
     ".": 188423,
-    "./element": 1238450,
-    "./portrait": 1928943,
+    "./element": 1449741,
+    "./portrait": 2140670,
     "./lineup": 1580541,
     "./space": 140381,
     "./space/element": 3358710,

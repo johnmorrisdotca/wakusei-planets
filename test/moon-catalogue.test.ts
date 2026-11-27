@@ -3,6 +3,7 @@
 // rows are a chunk of their own that no other entry point carries.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 import { test } from "node:test";
 import { build } from "esbuild";
@@ -15,14 +16,55 @@ import {
   MOON_GROUPS,
   catalogueMoonPosition,
   catalogueMoonsOf,
+  filterMoonCatalogue,
   findCatalogueMoon,
   moonCounts,
+  type MoonFilter,
 } from "../src/moon-catalogue.ts";
+import { readMoonFilter } from "../src/moon-filters.ts";
 import { BODIES, MOONS_OF } from "../src/facts.ts";
 import { moonVector } from "../src/ephemeris.ts";
 import { moonDotOffset } from "../src/space/all-moons.ts";
 import { moonOffset } from "../src/scene/orient.ts";
 import { ttMinusUtc } from "../src/time.ts";
+
+test("moon filters classify the published catalogue and combine inclusive constraints", () => {
+  const expected: readonly [MoonFilter, number][] = [
+    [{}, 468],
+    [{ status: "named" }, 175],
+    [{ status: "numbered" }, 21],
+    [{ status: "provisional" }, 272],
+    [{ size: "major" }, 46],
+    [{ size: "measured" }, 7],
+    [{ size: "estimated" }, 50],
+    [{ group: "himalia" }, 11],
+    [{ direction: "prograde" }, 144],
+    [{ direction: "retrograde" }, 316],
+    [{ discovered: { from: 1610, to: 1610 } }, 4],
+    [{ discovered: { to: 2026 } }, 467],
+    [{ status: "provisional", direction: "retrograde", discovered: { from: 2020 } }, 103],
+    [{ discovered: { from: 2000, to: 1610 } }, 0],
+  ];
+  for (const [filter, count] of expected) assert.equal(filterMoonCatalogue(filter).length, count, JSON.stringify(filter));
+  assert.deepEqual(filterMoonCatalogue({ discovered: { to: 1610 } }, catalogueMoonsOf("jupiter")).map(({ id }) => id).sort(), ["callisto", "europa", "ganymede", "io"]);
+});
+
+test("moon filter attributes parse closed, open and exact years without treating the moon display scale as a size filter", () => {
+  const attributes = new Map([["moon-status", " Numbered "], ["moon-size", "2"], ["moon-size-class", "MEASURED"], ["moon-group", "norse"], ["moon-direction", "retrograde"]]);
+  const element = { getAttribute: (key: string) => attributes.get(key) ?? null };
+  for (const [text, range] of [
+    ["1610", { from: 1610, to: 1610 }],
+    ["2000..2026", { from: 2000, to: 2026 }],
+    ["..2026", { from: undefined, to: 2026 }],
+    ["2000..", { from: 2000, to: undefined }],
+    ["unknown", undefined],
+  ] as const) {
+    attributes.set("moon-discovered", text);
+    assert.deepEqual(readMoonFilter(element), { status: "numbered", size: "measured", group: "norse", direction: "retrograde", ...(range ? { discovered: range } : {}) });
+  }
+  attributes.delete("moon-size-class");
+  assert.equal(readMoonFilter(element).size, undefined);
+});
 
 interface Fixture {
   fetched: string;
@@ -258,24 +300,36 @@ test("the space view's dots: a moon in the true scale is where its kilometres pu
   assert.ok(io.full, "Io is drawn in full, so the view leaves it out of the dots");
 });
 
-test("the rows are a chunk of their own: no other entry point carries them, and the space element fetches them only when asked", async () => {
+test("the catalogue rows stay out of the startup chunks for both elements", async () => {
   const root = new URL("..", import.meta.url).pathname;
   const bundle = async (contents: string, splitting = false) => {
-    const result = await build({ stdin: { contents, resolveDir: root, loader: "ts" }, bundle: true, splitting, format: "esm", minify: true, outdir: "out", write: false, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
-    return result.outputFiles.map((file) => ({ path: file.path, text: file.text, gzip: gzipSync(file.contents, { level: 9 }).length }));
+    const result = await build({ absWorkingDir: root, stdin: { contents, resolveDir: root, loader: "ts" }, bundle: true, splitting, format: "esm", minify: true, outdir: "out", write: false, metafile: true, logLevel: "silent", platform: "browser", target: "es2020", external: ["three", "@johnmorrisdotca/kazoku-ui*"], loader: { ".css": "text", ".svg": "text", ".txt": "text" } });
+    const links = new Map(Object.entries(result.metafile.outputs).map(([path, info]) => [resolve(root, path), info.imports.filter((link) => link.kind === "import-statement" && !link.external).map((link) => resolve(root, link.path))]));
+    return result.outputFiles.map((file) => ({ path: file.path, text: file.text, gzip: gzipSync(file.contents, { level: 9 }).length, imports: links.get(file.path) ?? [] }));
   };
   // a discoverer's line that appears only in the rows
   const mark = "Cassini Imaging Science Team";
   const [own] = await bundle(`export * from "./src/moon-catalogue.ts";`);
   assert.ok(own!.text.includes(mark), "the /moon-catalogue bundle holds the rows");
-  for (const entry of ["./src/index.ts", "./src/space/index.ts", "./src/element.ts", "./src/asteroids.ts", "./src/comets.ts", "./src/plan/index.ts"]) {
+  for (const entry of ["./src/index.ts", "./src/space/index.ts", "./src/asteroids.ts", "./src/comets.ts", "./src/plan/index.ts"]) {
     const [text] = await bundle(`import ${JSON.stringify(entry)};`);
     assert.ok(!text!.text.includes(mark), `${entry} does not carry the moon catalogue`);
   }
-  const split = await bundle(`import "./src/space/element.ts";`, true);
-  const entry = split.find((file) => file.path.endsWith("/stdin.js"))!;
-  assert.ok(!entry.text.includes(mark), "the space element's own chunk does not hold the rows");
-  assert.equal(split.filter((file) => file.text.includes(mark)).length, 1, "the rows are one chunk, fetched by all-moons");
+  for (const entry of ["./src/element.ts", "./src/space/element.ts"]) {
+    const split = await bundle(`import ${JSON.stringify(entry)};`, true);
+    const byPath = new Map(split.map((file) => [file.path, file]));
+    const visited = new Set<string>();
+    const pending = [split.find((file) => file.path.endsWith("/stdin.js"))!.path];
+    while (pending.length > 0) {
+      const path = pending.pop()!;
+      if (visited.has(path)) continue;
+      visited.add(path);
+      const file = byPath.get(path)!;
+      assert.ok(!file.text.includes(mark), `${entry} fetches the catalogue only when asked`);
+      pending.push(...file.imports);
+    }
+    assert.equal(split.filter((file) => file.text.includes(mark)).length, 1, `${entry} has one optional catalogue chunk`);
+  }
   const raw = readFileSync(new URL("../src/data/moon-catalogue.ts", import.meta.url));
   console.log(`moon catalogue: ${MOON_CATALOGUE.length} moons; rows ${raw.length} bytes, ${gzipSync(raw, { level: 9 }).length} gzipped; /moon-catalogue bundled ${own!.text.length} bytes, ${own!.gzip} gzipped`);
   assert.ok(own!.gzip < BUDGET_GZIP, `/moon-catalogue is ${own!.gzip} bytes gzipped`);
