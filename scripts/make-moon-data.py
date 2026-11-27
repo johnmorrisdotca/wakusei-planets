@@ -41,6 +41,8 @@ MOONS = {
 PLANET_POLE = {"uranus": (257.311, -15.175), "neptune": (299.36, 43.46), "pluto": (132.993, -6.163)}
 EPOCH_MS = 946728000000  # 2000-01-01 12:00 UT
 START, STOP, STEP_HOURS = "1800-01-05", "2199-11-30", 273  # about 11.4 days: not a multiple of any moon's period
+# These use the separate Horizons fits in src/data/moon-refinements.ts.
+REFINED_MOONS = {"miranda", "nereid", "nix", "hydra"}
 
 dot = lambda a, b: a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
 cross = lambda a, b: [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]
@@ -207,7 +209,7 @@ for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page, re.S):
 
 lines = ["// Made by scripts/make-moon-data.py: the Moon from JPL's Planetary Satellite Mean Elements (https://ssd.jpl.nasa.gov/sats/elem/), every other moon fitted to JPL Horizons' positions for 1800 to 2199; do not edit by hand.",
          "// The moons of the dwarf planets other than Pluto's are not in either: their orbits are in dwarf.ts, from the papers it cites, and are added at the end.",
-         "import { DWARF_MOON_ORBITS } from \"./dwarf.ts\";", "",
+         "import { DWARF_MOON_ORBITS } from \"./dwarf.ts\";", "import { REFINED_ORBITS } from \"./moon-refinements.ts\";", "",
          "// `sid` is the mean longitude's rate in degrees a day; `dw` and `dn` are the precession rates of the periapsis and the node, degrees a day.",
          "export interface OrbitElements {", "  /** The planet it goes round. */", "  parent: string;",
          "  /** The reference plane: the ecliptic, the Earth's equator of J2000, the planet's equator, or the plane whose pole is `pole` (right ascension, declination, degrees). */",
@@ -222,6 +224,8 @@ lines = ["// Made by scripts/make-moon-data.py: the Moon from JPL's Planetary Sa
          "export const ORBITS: Record<string, OrbitElements> = {"]
 new_rows = []
 for key, (period, parent, name, code, centre, mu) in MOONS.items():
+    if key in REFINED_MOONS:
+        continue
     if ADD is not None and key not in ADD:
         continue
     c = rows[name]
@@ -245,11 +249,12 @@ if ADD is not None:
     path = "src/data/orbits.ts"
     text = open(path).read()
     marker = "  ...DWARF_MOON_ORBITS,"
-    assert marker in text and not any(f"  {k}: {{" in text for k in ADD), "a moon to add is already in orbits.ts"
+    assert marker in text and not any(k in REFINED_MOONS or f"  {k}: {{" in text for k in ADD), "a moon to add already has an orbit"
     open(path, "w").write(text.replace(marker, "\n".join(new_rows) + "\n" + marker))
     print("added", len(new_rows), "orbits to src/data/orbits.ts")
     sys.exit(0)
 lines.append("  ...DWARF_MOON_ORBITS,")
+lines.append("  ...REFINED_ORBITS,")
 lines.append("};")
 open("src/data/orbits.ts", "w").write("\n".join(lines) + "\n")
 print("wrote src/data/orbits.ts,", len(MOONS), "orbits")

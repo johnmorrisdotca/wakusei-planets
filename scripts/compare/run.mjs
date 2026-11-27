@@ -35,7 +35,7 @@ for(const [group,dateKey] of [['planets','planetDates'],['dwarfs','dwarfDates'],
   for(const [body,samples] of Object.entries(reference[group])) {
     for(let i=0;i<samples.length;i++) {
       const date=reference[dateKey][i], ms=Date.parse(date), time=A.MakeTime(new Date(ms));
-      const vectors={wakusei:ourVector(body,ms,group)};
+      const vectors={wakusei:ourVector(body,ms,group,true)};
       const name=body[0].toUpperCase()+body.slice(1);
       if(group==='planets')vectors.astronomyEngine=aeVector(A.HelioVector(A.Body[name],time));
       else if(body==='moon')vectors.astronomyEngine=aeVector(A.GeoMoon(time));

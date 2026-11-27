@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import * as A from 'astronomy-engine';
 import { ourVector } from './our.mjs';
 import { AU_KM, EPS0, arcsec, rotateX } from './math.mjs';
+import { moonReference } from '../../test/accuracy-reference.ts';
 
 const reference = JSON.parse(readFileSync(new URL('../../test/data/horizons-dense.json', import.meta.url), 'utf8'));
 const aeVector = (v) => rotateX([v.x * AU_KM, v.y * AU_KM, v.z * AU_KM], -EPS0);
@@ -12,8 +13,9 @@ const worst = (body, group, engine) => {
   let ours = 0, theirs = engine ? 0 : null;
   reference[group][body].forEach((target, i) => {
     const ms = Date.parse(reference.dates[i]);
-    ours = Math.max(ours, arcsec(ourVector(body, ms, group === 'planets' ? 'planets' : 'moons'), target));
-    if (engine) theirs = Math.max(theirs, arcsec(engine(A.MakeTime(new Date(ms))), target));
+    const vector = group === 'moons' ? moonReference(body, ms, target) : target;
+    ours = Math.max(ours, arcsec(ourVector(body, ms, group), vector));
+    if (engine) theirs = Math.max(theirs, arcsec(engine(A.MakeTime(new Date(ms))), vector));
   });
   rows.push({ body, ours, theirs });
 };

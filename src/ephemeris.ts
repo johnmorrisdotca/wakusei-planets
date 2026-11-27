@@ -8,6 +8,7 @@ import { DWARF_ELEMENTS } from "./data/dwarf.ts";
 import { MINOR_ELEMENTS } from "./data/minor.ts";
 import { tableOf, type FittedTable } from "./data/tables.ts";
 import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
+import { MEAN_MOON_PHASE, moonPhaseTime } from "./data/moon-refinements.ts";
 import { VSOP87 } from "./data/vsop.ts";
 import { moonGeocentric, vsopPosition } from "./theory.ts";
 
@@ -20,6 +21,8 @@ import { add, cross, DEG, dot, fromRaDec, length, OBLIQUITY, RAD, scale, sub, to
 const J2000 = Date.UTC(2000, 0, 1, 12);
 const DAY = 86_400_000;
 const AU_KM = 149_597_870.7;
+// Gravitational parameters in km³/s² from JPL's Planetary Satellite Physical Parameters and DE440.
+const CHARON_SYSTEM_MASS_FRACTION = 106.1 / 975.5;
 /** Light takes this many seconds to cross one astronomical unit. */
 const LIGHT_SECONDS_PER_AU = 499.004784;
 
@@ -340,11 +343,11 @@ function geometry(id: BodyId, ms: number): { earth: Vec3; target: Vec3; sunFrom:
   const facts = BODIES[id];
   const planet: HostId = (facts.parent ?? id) as HostId;
   let emit = ms;
-  let h = heliocentric(planet, ms);
+  let h = heliocentricCentre(planet, ms);
   let g = sub(h, earth);
   for (let i = 0; i < 2; i += 1) {
     emit = ms - length(g) * LIGHT_SECONDS_PER_AU * 1000;
-    h = heliocentric(planet, emit);
+    h = heliocentricCentre(planet, emit);
     g = sub(h, earth);
   }
   return { earth, target: g, sunFrom: scale(h, -1), emit, distanceAu: length(g) };
@@ -420,7 +423,20 @@ export function moonVector(id: MoonId, ms: number): Vec3 {
   if (theory !== undefined) return theory(toTerrestrialTime(ms));
   const orbit = ORBITS[id];
   if (orbit === undefined) throw new Error(`no orbit for ${id}`);
-  return orbitVector(orbit, ms);
+  const position = orbitVector(orbit, moonPhaseTime(ms, MEAN_MOON_PHASE[id]));
+  // The circumbinary orbit fits start at the Pluto system's barycentre.
+  return id === "nix" || id === "hydra" ? add(position, plutoBarycentreOffset(ms)) : position;
+}
+
+/** From Pluto's centre to the centre of mass of the Pluto system, in kilometres. */
+function plutoBarycentreOffset(ms: number): Vec3 {
+  return scale(orbitVector(ORBITS.charon!, ms), CHARON_SYSTEM_MASS_FRACTION);
+}
+
+/** The centre to which planet-relative moon positions can be added. */
+export function heliocentricCentre(planet: HostId | MinorId, ms: number): Vec3 {
+  const position = heliocentric(planet, ms);
+  return planet === "pluto" ? sub(position, scale(plutoBarycentreOffset(ms), 1 / AU_KM)) : position;
 }
 
 function referenceBasis(orbit: OrbitElements): { x: Vec3; y: Vec3; z: Vec3 } {
@@ -571,8 +587,15 @@ export function orbitPath(id: MoonId, time: number, points = 96): Float32Array {
 export function nearMoons(planet: HostId, within = 80): { id: MoonId; reach: number }[] {
   const ids: readonly MoonId[] = planet in MOONS_OF ? MOONS_OF[planet as keyof typeof MOONS_OF] : [];
   const radius = BODIES[planet].radiusKm;
+  const charonOrbit = ORBITS.charon!;
+  const plutoOffset = charonOrbit.a * (1 + charonOrbit.e) * CHARON_SYSTEM_MASS_FRACTION;
   return ids
-    .map((id) => ({ id, reach: id === "moon" ? 405500 / radius : ((ORBITS[id]?.a ?? 0) * (1 + (ORBITS[id]?.e ?? 0))) / radius }))
+    .map((id) => {
+      const orbit = ORBITS[id];
+      const apocentre = id === "moon" ? 405500 : (orbit?.a ?? 0) * (1 + (orbit?.e ?? 0));
+      const offset = id === "nix" || id === "hydra" ? plutoOffset : 0;
+      return { id, reach: (apocentre + offset) / radius };
+    })
     .filter((m) => m.reach <= within)
     .sort((a, b) => a.reach - b.reach);
 }

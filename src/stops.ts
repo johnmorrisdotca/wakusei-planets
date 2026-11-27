@@ -7,7 +7,7 @@
 // Bennu (4.8904e-9), Eros (4.463e-4), Vesta (17.2882844) and Pallas (13.63): the GM of JPL's Small-Body Database (https://ssd-api.jpl.nasa.gov/sbdb.api; Bennu and Eros read 2026-11-23, the others 2026-11-10), from Chesley et al. 2020, Yeomans et al. 2000, Park et al. 2025 and Vernazza et al. 2021.
 // A moon's escape speed is sqrt(2 GM / radius) from this package's radius. Nereid, and the dwarf planets and moons
 // whose pages do not print a mass, are left empty.
-import { heliocentric, meanSunAu, moonVector } from "./ephemeris.ts";
+import { heliocentricCentre, meanSunAu, moonVector } from "./ephemeris.ts";
 import { BODIES, BODY_IDS, type BodyFacts, type BodyId, type HostId, type MinorId, type MoonId } from "./facts.ts";
 import { add, scale, type Vec3 } from "./vec.ts";
 
@@ -189,7 +189,7 @@ export function journeyStop(id: BodyId): JourneyStop {
 export function stopPlaceAu(id: BodyId, ms: number): Vec3 {
   if (id === "sun") return [0, 0, 0];
   const facts = BODIES[id];
-  if (facts.kind !== "moon") return heliocentric(id as HostId, ms);
+  if (facts.kind !== "moon") return heliocentricCentre(id as HostId, ms);
   if (facts.parent === undefined) throw new Error(`no parent for ${id}`);
-  return add(heliocentric(facts.parent, ms), scale(moonVector(id as MoonId, ms), 1 / AU_KM));
+  return add(heliocentricCentre(facts.parent, ms), scale(moonVector(id as MoonId, ms), 1 / AU_KM));
 }

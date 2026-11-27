@@ -4,8 +4,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { heliocentric, moonGeocentric, moonVector } from "../src/ephemeris.ts";
+import { distance } from "../src/nearest.ts";
 import "../src/tables/all.ts";
 import { length, RAD, type Vec3 } from "../src/vec.ts";
+import { moonReference, refinedMoonReference } from "./accuracy-reference.ts";
 
 type Dense = { dates: string[]; planets: Record<string, Vec3[]>; moons: Record<string, Vec3[]> };
 const reference = JSON.parse(readFileSync(new URL("./data/horizons-dense.json", import.meta.url), "utf8")) as Dense;
@@ -13,12 +15,12 @@ const AU_KM = 149597870.7;
 
 /** The worst direction error in arc-seconds from the Sun over the 60 dates, for each planet. */
 const PLANET_ARCSEC: Record<string, number> = { mercury: 4.5, venus: 2.6, earth: 4, mars: 6, jupiter: 3.6, saturn: 5.7, uranus: 5, neptune: 3.4, pluto: 0.2 };
-/** The worst direction error in degrees from the planet (from the Pluto system's barycentre for Nix and Hydra) over the 60 dates, for the Moon and each moon. */
+/** The worst direction error in degrees from the planet's centre over the 60 dates, for the Moon and each moon. */
 const MOON_DEGREES: Record<string, number> = {
   moon: 0.0016, phobos: 0.55, deimos: 0.55, io: 0.15, europa: 0.05, ganymede: 0.03, callisto: 0.02,
-  mimas: 2.1, enceladus: 0.72, tethys: 0.27, dione: 0.23, rhea: 0.27, titan: 0.06, iapetus: 0.04,
-  miranda: 3, ariel: 0.3, umbriel: 0.28, titania: 0.52, oberon: 0.6,
-  triton: 0.17, nereid: 6.3, proteus: 0.17, charon: 0.06, nix: 2.6, hydra: 2.1,
+  mimas: 0.5, enceladus: 0.05, tethys: 0.27, dione: 0.23, rhea: 0.27, titan: 0.06, iapetus: 0.04,
+  miranda: 0.4, ariel: 0.3, umbriel: 0.28, titania: 0.52, oberon: 0.6,
+  triton: 0.17, nereid: 2.6, proteus: 0.17, charon: 0.06, nix: 0.46, hydra: 0.86,
 };
 
 const degreesBetween = (a: Vec3, b: Vec3): number => Math.acos(Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (length(a) * length(b))))) / RAD;
@@ -39,8 +41,35 @@ test("the Moon and every moon are where JPL Horizons puts them on 60 dates from 
     reference.moons[name]!.forEach((horizons, i) => {
       const ms = Date.parse(reference.dates[i]!);
       const mine = name === "moon" ? moonGeocentric(ms) : moonVector(name as Parameters<typeof moonVector>[0], ms);
-      const degrees = degreesBetween(mine, horizons);
+      const degrees = degreesBetween(mine, moonReference(name, ms, horizons));
       assert.ok(degrees <= limit, `${name} on ${reference.dates[i]} is ${degrees.toFixed(4)} degrees from Horizons, the limit is ${limit}`);
     });
   }
+});
+
+test("the six refined moons agree with planet-centred Horizons vectors at 192 held-out dates", () => {
+  const { dates, moons } = refinedMoonReference;
+  assert.equal(dates.length, 192);
+  assert.deepEqual(Object.keys(moons).sort(), ["enceladus", "hydra", "mimas", "miranda", "nereid", "nix"]);
+  for (const [name, vectors] of Object.entries(moons)) {
+    assert.equal(vectors.length, dates.length, name);
+    vectors.forEach((horizons, i) => {
+      const ms = dates[i]!;
+      const degrees = degreesBetween(moonVector(name as Parameters<typeof moonVector>[0], ms), horizons);
+      assert.ok(degrees <= MOON_DEGREES[name]!, `${name} on ${new Date(ms).toISOString()} is ${degrees.toFixed(4)} degrees from Horizons`);
+    });
+  }
+});
+
+test("Pluto's moon distances use the body's centre, and refined limits apply inside their measured years", () => {
+  const { dates, moons } = refinedMoonReference;
+  for (const id of ["nix", "hydra"] as const) {
+    dates.forEach((ms, i) => {
+      const expected = length(moons[id]![i]!);
+      assert.ok(Math.abs(distance("pluto", id, ms).distanceKm - expected) < 0.01 * expected, id);
+    });
+  }
+  const near = distance("saturn", "mimas", Date.UTC(2026, 0, 1));
+  const beyond = distance("saturn", "mimas", Date.UTC(2220, 0, 1));
+  assert.ok(beyond.uncertaintyKm > 4 * near.uncertaintyKm);
 });

@@ -124,32 +124,30 @@ Every other moon's orbit, and every moon's orbit before one of those tables is i
 | Europa | L1.2 | 0.09° | 0.022° | 0.037° | 0.05° |
 | Ganymede | L1.2 | 0.21° | 0.016° | 0.026° | 0.03° |
 | Callisto | L1.2 | 0.07° | 0.006° | 0.014° | 0.02° |
-| Mimas | TASS1.7 | 1.07° | 0.74° | 1.68° | 2.1° |
-| Enceladus | TASS1.7 | 0.42° | 0.23° | 0.57° | 0.72° |
+| Mimas | TASS1.7 with phase correction | 1.07° | 0.164° | 0.345° | 0.5° |
+| Enceladus | TASS1.7 with phase correction | 0.42° | 0.020° | 0.038° | 0.05° |
 | Tethys | TASS1.7 | 0.22° | 0.040° | 0.21° | 0.27° |
 | Dione | TASS1.7 | 0.08° | 0.086° | 0.18° | 0.23° |
 | Rhea | TASS1.7 | 0.09° | 0.081° | 0.22° | 0.27° |
 | Titan | TASS1.7 | 0.05° | 0.017° | 0.044° | 0.06° |
 | Iapetus | TASS1.7 | 0.23° | 0.016° | 0.032° | 0.04° |
-| Miranda | fitted | 1.76° | 1.15° | 2.19° | 3° |
+| Miranda | fitted | 1.76° | 0.115° | 0.173° | 0.4° |
 | Ariel | fitted | 0.38° | 0.20° | 0.22° | 0.3° |
 | Umbriel | fitted | 0.14° | 0.084° | 0.20° | 0.28° |
 | Titania | fitted | 0.40° | 0.18° | 0.39° | 0.52° |
 | Oberon | fitted | 0.38° | 0.43° | 0.44° | 0.6° |
 | Triton | fitted | 0.03° | 0.054° | 0.12° | 0.17° |
-| Nereid | fitted | 6.05° | 2.5° | 4.6° | 6.3° |
+| Nereid | fitted | 6.05° | 0.973° | 1.72° | 2.6° |
 | Proteus | fitted | 0.13° | 0.10° | 0.12° | 0.17° |
 | Charon | fitted | 0.02° | 0.02° | 0.02° | 0.06° |
-| Nix | fitted | 1.93° | 1.55° | 1.98° | 2.6° |
-| Hydra | fitted | 1.54° | 1.57° | 1.63° | 2.1° |
+| Nix | fitted | 1.93° | 0.287° | 0.358° | 0.46° |
+| Hydra | fitted | 1.54° | 0.584° | 0.667° | 0.86° |
 
 On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engine's (`node scripts/compare/dense.mjs`: Io 411″ against its 2,626″, Europa 132″ against 1,403″, Ganymede 92″ against 814″, Callisto 52″ against 379″), and the Moon 4.7″ against 207″.
 
-- **Why the Saturn moons are not closer.** TASS1.7 is a fit to observations of the moons, and observations of Saturn's moons are good to about 0.1 arc-second, which is 600 km at Saturn. Mimas, which goes round in under a day on an orbit of 185,000 km, is 0.7 degree off for that reason. Horizons' own ephemeris is numerical and fitted to spacecraft (Cassini), so the two differ by about that much. Dione and Rhea are where the old fit to 1950 to 2050 was as close as the theory, so they did not move.
-- **Nereid** is the loosest because its orbit is very eccentric (0.75): near its closest point a small timing error is a large angle.
-- **Nix and Hydra** are measured from the Pluto system's barycentre, which they go round. Pluto's centre is about 2,000 km from it, so seen from Pluto's centre they can be up to about 2.5° further off.
+- **Mimas, Enceladus, Miranda and Nereid** use corrections to the phase of their orbits. The correction is a drift with a few periodic terms fitted to 768 Horizons dates from 1800 to 2199. A separate set of 192 Horizons dates measured maximum errors of 0.395°, 0.036°, 0.306° and 2.08° respectively. Nereid has eccentricity 0.75, and small timing errors near periapsis still make large angular errors.
+- **Nix and Hydra** orbit the Pluto system's barycentre, and their positions in a moon system are relative to Pluto's centre. The conversion uses Charon's share of the system mass and its current position relative to Pluto. For both moons the new fits and the previous models were compared to the same Pluto-centred Horizons vectors. On the 192 separate dates the maximum fell from 2.01° to 0.363° for Nix and from 1.68° to 0.686° for Hydra. The **Before** figures in the table are the older barycentric measurements.
 - **Styx and Kerberos** use the moon catalogue's mean elements (JPL Planetary Satellite Mean Elements, ephemeris PLU060, epoch 2026-01-01). They are not in this Horizons check. A distance that names them allows 5°.
-- **Miranda** and **Mimas** are the loosest of the regular moons: both have small swings the fitted orbit does not carry.
 - The dwarf planets' moons other than Pluto's (Eris, Haumea, Makemake, Orcus, Quaoar and the rest) come from the papers named in `src/data/dwarf.ts`, and are not part of this check.
 
 ### The moons added with their shape models

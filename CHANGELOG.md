@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Refined six moon ephemerides** (MODULES-637). Mimas, Enceladus, Miranda and Nereid have phase corrections fitted to Horizons. Nix and Hydra have refined mean orbits and appear relative to Pluto's centre. All six have tighter limits on held-out Horizons dates. The root entry and optional Saturn table have updated size baselines for the new coefficients.
+
 - **Spacecraft tracks and mission events** (MODULES-632). The spacecraft chart and flat solar system break each track where Horizons switches solutions. The chart frames the labelled planetary flybys and shows where the path continues, with a button to see the whole path. The timeline adds the Voyager heliopause crossings, the Huygens release and landing, Cassini at Masursky, Juno's close moon flybys and Parker's first 29 perihelia. New Horizons' Pluto flyby gives the closest approach of 12,500 km above the surface.
 
 - **Camera events for a star backdrop** (MODULES-587). `wakusei-camera` provides the last drawn camera’s direction, up vector, position, field of view, size and pan on the first frame and when they change. Pages can use it to align their own sky with the space view.

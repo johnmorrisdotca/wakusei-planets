@@ -1,7 +1,8 @@
 // Which bodies are nearest to a body on a date, and when two bodies come closest over a span: for the Sun, the planets, the dwarf planets, the minor bodies and the moons, by the angle between them in the sky of an observer
 // or by the distance between them in space. The positions are this package's own (heliocentric, ephemeris.ts): a sky angle is astrometric (the Earth's or the observer's place at the date, the body's place when
 // its light left, no aberration or light bending), a distance is the geometry at one instant. Each result carries the accuracy the theories are held to (docs/guides/accuracy.md). Pure: no DOM, no three.js.
-import { heliocentric, heliocentricModel, meanSunAu, moonVector } from "./ephemeris.ts";
+import { heliocentric, heliocentricCentre, heliocentricModel, meanSunAu, moonVector } from "./ephemeris.ts";
+import { MOON_REFINEMENT_END, MOON_REFINEMENT_START } from "./data/moon-refinements.ts";
 import { julianCenturies } from "./clock.ts";
 import { BODIES, BODY_IDS, type BodyFacts, type BodyId } from "./facts.ts";
 import { ORBITS } from "./data/orbits.ts";
@@ -35,6 +36,10 @@ const MOON_DEGREES: Readonly<Record<string, number>> = {
   triton: 0.17, nereid: 6.3, proteus: 0.17, charon: 0.06, nix: 2.6, hydra: 2.1,
   // the moons added with their shape models: the limits of test/accuracy.test.ts (their dates are the years Horizons has an ephemeris for)
   amalthea: 1.2, thebe: 0.25, hyperion: 20, phoebe: 2.8, janus: 9, epimetheus: 31, helene: 22, telesto: 3.5, calypso: 7.5, atlas: 12, prometheus: 22, pandora: 40, pan: 0.9, daphnis: 0.8, larissa: 0.4,
+};
+/** Limits of the refinements, within the range checked on held-out times. */
+const REFINED_MOON_DEGREES: Readonly<Partial<Record<string, number>>> = {
+  mimas: 0.5, enceladus: 0.05, miranda: 0.4, nereid: 2.6, nix: 0.46, hydra: 0.86,
 };
 /** The same for the moons of Jupiter and Saturn when `tables` has not been imported and their fitted orbits answer. */
 const FITTED_MOON_DEGREES: Readonly<Record<string, number>> = { io: 0.15, europa: 0.18, ganymede: 0.6, callisto: 0.09, mimas: 7.5, enceladus: 0.72, tethys: 0.45, dione: 0.23, rhea: 0.27, titan: 0.08, iapetus: 0.72 };
@@ -249,8 +254,8 @@ function viewOf(observer: Viewpoint | undefined): View {
 function placeAu(id: BodyId, ms: number): Vec3 {
   if (id === "sun") return [0, 0, 0];
   const facts = BODIES[id];
-  if (facts.kind !== "moon") return heliocentric(id as Parameters<typeof heliocentric>[0], ms);
-  const host = heliocentric(facts.parent ?? "earth", ms);
+  if (facts.kind !== "moon") return heliocentricCentre(id as Parameters<typeof heliocentric>[0], ms);
+  const host = heliocentricCentre(facts.parent ?? "earth", ms);
   const offset = moonVector(id as Parameters<typeof moonVector>[0], ms);
   return [host[0] + offset[0] / AU_KM, host[1] + offset[1] / AU_KM, host[2] + offset[2] / AU_KM];
 }
@@ -300,7 +305,8 @@ function partsOf(id: BodyId, ms: number): Map<string, number> {
   if (facts.kind !== "moon") return parts.set(id, hostErrorKm(id, ms));
   const host = facts.parent ?? "earth";
   const fitted = host === "jupiter" || host === "saturn" ? moonTheoryOf(id) === undefined : false;
-  const degrees = (fitted ? FITTED_MOON_DEGREES[id] : undefined) ?? MOON_DEGREES[id] ?? 5;
+  const inRefinedSpan = ms >= MOON_REFINEMENT_START && ms < MOON_REFINEMENT_END;
+  const degrees = (fitted ? FITTED_MOON_DEGREES[id] : inRefinedSpan ? REFINED_MOON_DEGREES[id] : undefined) ?? MOON_DEGREES[id] ?? 5;
   parts.set(host, hostErrorKm(host, ms));
   return parts.set(`${id} orbit`, length(moonVector(id as Parameters<typeof moonVector>[0], ms)) * Math.tan((degrees * Math.PI) / 180));
 }

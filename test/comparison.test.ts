@@ -13,7 +13,7 @@ interface Helpers {
   removeRefraction(h: number, correction: (n: number) => number): number;
 }
 interface Ours {
-  ourVector(body: string, ms: number, group: string): Vector;
+  ourVector(body: string, ms: number, group: string, plutoBarycentre?: boolean): Vector;
   ourHorizontal(body: string, date: string, observer: { latitude: number; longitude: number }): Vector;
 }
 const helpers = await import(new URL("../scripts/compare/math.mjs", import.meta.url).href) as Helpers;
@@ -33,7 +33,7 @@ test("every published wakusei comparison stays below its frozen limit on every r
   for (const row of results.rows) {
     const value = row.group === "apparentAirlessTopocentric"
       ? ours.ourHorizontal(row.body.startsWith("sun") ? "sun" : "moon", row.date, results.configuration.observer)
-      : ours.ourVector(row.body, Date.parse(row.date), row.group);
+      : ours.ourVector(row.body, Date.parse(row.date), row.group, true);
     const error = helpers.arcsec(value, row.reference);
     const limit = limits[row.body];
     assert.ok(Number.isFinite(limit), `no published limit for ${row.body}`);

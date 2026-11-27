@@ -36,7 +36,7 @@ The result is `zoom = extent × reach`, where `reach` is how many picture widths
 | Saturn | 2048 | map | 36.4x | 66.9 radii | 1000x |
 | Uranus | 2048 | map | 9.6x | 25.2 radii | 109.3x |
 | Neptune | 2048 | map | 9.6x | 15.8 radii | 68.5x |
-| Pluto | 4096 | tiles | 11x | 60.8 radii | 304.1x |
+| Pluto | 4096 | tiles | 11x | 61.9 radii | 309.4x |
 | Ceres | 2048 | map | 8x |  |  |
 | Orcus | 4096 | shader | 11x | 21.7 radii | 108.5x |
 | Haumea | 4096 | shader | 11x | 72.3 radii | 361.3x |

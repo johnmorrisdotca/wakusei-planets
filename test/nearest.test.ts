@@ -3,7 +3,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { heliocentric, moonVector } from "../src/ephemeris.ts";
+import { heliocentric, heliocentricCentre, moonVector } from "../src/ephemeris.ts";
 import "../src/tables/all.ts";
 import { BODIES, BODY_IDS, type BodyId } from "../src/facts.ts";
 import { closestApproach, conjunctions, distance, distanceRange, nearest, within } from "../src/nearest.ts";
@@ -90,8 +90,8 @@ function direction(id: BodyId, ms: number): Vec3 {
   const earth = heliocentric("earth", ms);
   const place = (when: number): Vec3 => {
     if (id === "sun") return [0, 0, 0];
-    if (BODIES[id].kind !== "moon") return heliocentric(id as never, when);
-    const host = heliocentric(BODIES[id].parent ?? "earth", when);
+    if (BODIES[id].kind !== "moon") return heliocentricCentre(id as never, when);
+    const host = heliocentricCentre(BODIES[id].parent ?? "earth", when);
     const offset = moonVector(id as never, when);
     return [host[0] + offset[0] / AU_KM, host[1] + offset[1] / AU_KM, host[2] + offset[2] / AU_KM];
   };
@@ -123,7 +123,7 @@ test("nearest in space is the brute-force list, in order, and agrees with the Ho
   for (const target of ["earth", "mars", "jupiter"] as const) {
     const date = Date.UTC(2026, 10, 8);
     const brute = BODY_IDS.filter((id) => id !== target).map((id) => {
-      const a = id === "sun" ? [0, 0, 0] : BODIES[id].kind === "moon" ? [0, 0, 0] : heliocentric(id as never, date);
+      const a = id === "sun" ? [0, 0, 0] : BODIES[id].kind === "moon" ? [0, 0, 0] : heliocentricCentre(id as never, date);
       const b = heliocentric(target, date);
       return { id, km: Math.hypot(a[0]! - b[0], a[1]! - b[1], a[2]! - b[2]) * AU_KM, moon: BODIES[id].kind === "moon" };
     }).filter((row) => !row.moon).sort((x, y) => x.km - y.km);

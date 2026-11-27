@@ -8,6 +8,7 @@ import { heliocentric, moonGeocentric, moonVector } from "../src/ephemeris.ts";
 import "../src/tables/all.ts";
 import { ORBITS } from "../src/data/orbits.ts";
 import { length, RAD, type Vec3 } from "../src/vec.ts";
+import { moonReference } from "./accuracy-reference.ts";
 
 type Reference = { planetDates: string[]; moonDates: string[]; dwarfDates: string[]; planets: Record<string, Vec3[]>; moons: Record<string, Vec3[]>; dwarfs: Record<string, Vec3[]> };
 const minorReference = JSON.parse(readFileSync(new URL("./data/horizons-minor.json", import.meta.url), "utf8")) as { minorDates: string[]; minors: Record<string, Vec3[]> };
@@ -21,12 +22,12 @@ const DWARF_ARCSEC: Record<string, number> = { ceres: 0.3, orcus: 0.1, haumea: 0
 /** The worst direction error in arc-seconds from the Sun for each fitted minor body, on the dates inside its table's years (Vesta and Pallas 1900 to 2100, the others 1800 to 2200): the fits are held to 1 arc-second, and the measured worst is under 0.6. Eros is the Small-Body Database ellipse and is not in this table. */
 const MINOR_ARCSEC: Record<string, number> = { vesta: 1, pallas: 1, chiron: 1, pholus: 1, halley: 1 };
 const MINOR_YEARS: Record<string, [number, number]> = { vesta: [1900, 2100], pallas: [1900, 2100], chiron: [1800, 2200], pholus: [1800, 2200], halley: [1800, 2200] };
-/** The worst direction error in degrees from the planet (from the Pluto system's barycentre for Nix and Hydra), over the dates, for the Moon and each moon. */
+/** The worst direction error in degrees from the planet's centre, over the dates, for the Moon and each moon. */
 const MOON_DEGREES: Record<string, number> = {
   moon: 0.0008, phobos: 0.5, deimos: 0.45, io: 0.08, europa: 0.03, ganymede: 0.022, callisto: 0.008,
-  mimas: 1, enceladus: 0.32, tethys: 0.06, dione: 0.15, rhea: 0.15, titan: 0.025, iapetus: 0.025,
-  miranda: 1.6, ariel: 0.3, umbriel: 0.13, titania: 0.25, oberon: 0.6,
-  triton: 0.1, nereid: 3.6, proteus: 0.15, charon: 0.05, nix: 2.4, hydra: 2.4,
+  mimas: 0.22, enceladus: 0.03, tethys: 0.06, dione: 0.15, rhea: 0.15, titan: 0.025, iapetus: 0.025,
+  miranda: 0.16, ariel: 0.3, umbriel: 0.13, titania: 0.25, oberon: 0.6,
+  triton: 0.1, nereid: 1.25, proteus: 0.15, charon: 0.05, nix: 0.37, hydra: 0.74,
 };
 
 /**
@@ -96,7 +97,7 @@ test("the Moon and every moon are where JPL Horizons puts them, within their lim
     rows.forEach((horizons, i) => {
       const ms = Date.parse(reference.moonDates[i]!);
       const mine = name === "moon" ? moonGeocentric(ms) : moonVector(name as Parameters<typeof moonVector>[0], ms);
-      const degrees = degreesBetween(mine, horizons);
+      const degrees = degreesBetween(mine, moonReference(name, ms, horizons));
       assert.ok(degrees <= limit, `${name} on ${reference.moonDates[i]} is ${degrees.toFixed(2)} degrees from Horizons, the limit is ${limit}`);
     });
   }

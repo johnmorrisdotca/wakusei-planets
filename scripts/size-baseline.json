@@ -1,7 +1,7 @@
 {
   "measured": "esbuild 0.25.12, bundled, minified, ES2020, gzip level 9",
   "entries": {
-    ".": 65155,
+    ".": 68671,
     "./element": 379669,
     "./portrait": 688848,
     "./lineup": 552690,
@@ -132,7 +132,7 @@
     "./tables/minor": 47861,
     "./tables/vsop": 29637,
     "./tables/galilean": 4877,
-    "./tables/saturn-moons": 6426,
+    "./tables/saturn-moons": 7082,
     "./look": 11961,
     "./painter": 335298,
     "./all": 288820,
@@ -163,7 +163,7 @@
     "./moon-catalogue": 44828
   },
   "minified": {
-    ".": 176922,
+    ".": 188423,
     "./element": 1238450,
     "./portrait": 1928943,
     "./lineup": 1580541,
@@ -294,7 +294,7 @@
     "./tables/minor": 116390,
     "./tables/vsop": 81267,
     "./tables/galilean": 10865,
-    "./tables/saturn-moons": 18922,
+    "./tables/saturn-moons": 19567,
     "./look": 30717,
     "./painter": 765086,
     "./all": 641174,
