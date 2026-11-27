@@ -240,9 +240,12 @@ vec4 surface(vec3 p) {
     vec2 gy = useA ? ay : by;
     float rx = fract(q.x - uDetailRect.x) / uDetailRect.z;
     float ry = (uDetailRect.y - q.y) / uDetailRect.w;
-    if (rx < 1.0 && ry > 0.0 && ry < 1.0) {
+    if (rx < 1.0 && ry >= 0.0 && ry <= 1.0) {
       float fx = uDetailFade.x > 0.0 ? min(smoothstep(0.0, uDetailFade.x, rx), smoothstep(0.0, uDetailFade.x, 1.0 - rx)) : 1.0;
-      float fy = uDetailFade.y > 0.0 ? min(smoothstep(0.0, uDetailFade.y, ry), smoothstep(0.0, uDetailFade.y, 1.0 - ry)) : 1.0;
+      // The pole is covered to the last texel. Fade only where a window meets the base map.
+      float north = uDetailRect.y >= 1.0 ? 1.0 : smoothstep(0.0, uDetailFade.y, ry);
+      float south = uDetailRect.y - uDetailRect.w <= 0.0 ? 1.0 : smoothstep(0.0, uDetailFade.y, 1.0 - ry);
+      float fy = min(north, south);
       vec3 d = textureGrad(uDetail, vec2(rx, ry), vec2(gx.x / uDetailRect.z, -gx.y / uDetailRect.w), vec2(gy.x / uDetailRect.z, -gy.y / uDetailRect.w)).rgb;
       c = mix(c, d, fx * fy);
       gTexel = mix(uTexel, uDetailTexel, fx * fy);

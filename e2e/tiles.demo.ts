@@ -54,6 +54,19 @@ const cyan = (c: number[]): boolean => Math.min(c[1]!, c[2]!) > 15 && c[0]! < 0.
 const yellow = (c: number[]): boolean => Math.min(c[0]!, c[1]!) > 15 && c[2]! < 0.35 * Math.min(c[0]!, c[1]!);
 const level = (tile: string): number => Number(tile.split("/")[1]);
 
+test("the north and south poles sample the last latitude of their tile windows", async ({ page }) => {
+  const log = await routeTiles(page, () => false, { poleBands: true });
+  await open(page, "body=mars&look=realistic");
+  const zoom = await zoomFor(page, 900);
+  for (const [pitch, row] of [[90, 0], [-90, 3]] as const) {
+    await main(page).evaluate((el, degrees) => el.setAttribute("pitch", String(degrees)), pitch);
+    await setZoom(page, zoom);
+    await expect.poll(() => log.tiles.some((tile) => tile.startsWith("mars/1/") && tile.endsWith(`/${row}`))).toBe(true);
+    await expect.poll(async () => (await statsOf(page)).tiles?.shown).toBe(1);
+    await expect.poll(async () => cyan(await middle(page, main(page))), { message: `the polar strip at ${pitch}° is visible` }).toBe(true);
+  }
+});
+
 test("a close zoom asks for the tiles in view at the level it needs, draws them over the map, and frees them when the zoom drops", async ({ page }) => {
   const log = await routeTiles(page);
   await open(page, "body=mars&look=realistic");

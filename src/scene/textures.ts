@@ -3,6 +3,9 @@ import type { SourceBook } from "../door/book.ts";
 import { tilesSource, type BodyMapSource } from "../door/map.ts";
 import { VERSION } from "../version.ts";
 
+/** Preserve latitude detail when the longitude texels converge. three.js caps this at the device's limit. */
+export const MAP_ANISOTROPY = 16;
+
 /**
  * The default home of the surface pictures: the files of this exact version on jsDelivr. Set `texture-base` on an element to serve them yourself.
  *

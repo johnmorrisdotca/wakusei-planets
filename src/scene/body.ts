@@ -21,7 +21,7 @@ import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
 import { cutOpening, interiorOf, type CutSize } from "../interior.ts";
 import { createCutaway } from "./cutaway.ts";
-import { loadImage } from "./textures.ts";
+import { loadImage, MAP_ANISOTROPY } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 import type { createMoonLayer, MoonLayer, MoonSource } from "../space/all-moons.ts";
@@ -371,7 +371,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           drop(t);
           return;
         }
-        t.anisotropy = 4;
+        t.anisotropy = MAP_ANISOTROPY;
         t.wrapS = T.RepeatWrapping;
         t.colorSpace = T.NoColorSpace;
         const shared = assets.acquire(`wk:map:${options.id}:${w}`, () => t, (tex) => drop(tex));

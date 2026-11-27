@@ -5,7 +5,7 @@ import type * as THREE from "three";
 import "../bodies/all.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../facts.ts";
 import { writeBasis } from "./basis.ts";
-import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, mapSourceFor, tilesAllowed } from "./textures.ts";
+import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, MAP_ANISOTROPY, mapSourceFor, tilesAllowed } from "./textures.ts";
 import { createSourceBook, type SourceBook } from "../door/book.ts";
 import { OWN_BY_ID } from "../door/own.ts";
 import { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit } from "../picture-credits.ts";
@@ -517,7 +517,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   const tried = new Set<number>();
   const urlOf = (w: number): string => `${look.painted!.far !== undefined && w >= look.painted!.far && bases.far !== undefined ? bases.far : bases.near}${look.painted!.map}-${w}.webp`;
   const prepare = (t: THREE.Texture): THREE.Texture => {
-    t.anisotropy = 4;
+    t.anisotropy = MAP_ANISOTROPY;
     t.wrapS = T.RepeatWrapping;
     t.colorSpace = T.NoColorSpace;
     return t;

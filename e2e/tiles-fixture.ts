@@ -26,11 +26,15 @@ const encode = (size: number, raw: Buffer): Buffer => {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", header), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]);
 };
 
-const png = (rgb: [number, number, number]): Buffer => {
+const png = (rgb: [number, number, number], pole?: "north" | "south"): Buffer => {
   const size = 512;
   const row = Buffer.alloc(1 + size * 3);
-  for (let x = 0; x < size; x += 1) row.set(rgb, 1 + x * 3);
-  return encode(size, Buffer.concat(Array.from({ length: size }, () => row)));
+  const polar = Buffer.alloc(row.length);
+  for (let x = 0; x < size; x += 1) {
+    row.set(rgb, 1 + x * 3);
+    polar.set(COLOURS[2]!, 1 + x * 3);
+  }
+  return encode(size, Buffer.concat(Array.from({ length: size }, (_, y) => (pole === "north" && y < 16) || (pole === "south" && y >= size - 16) ? polar : row)));
 };
 
 /** A tile that has something to look at: 16 pixel blocks of colour that are the same for the same tile and different from block to block, so a picture of it can be told from one shifted (the gesture checks need it). */
@@ -60,8 +64,8 @@ export interface TileLog {
   manifests: number;
 }
 
-/** Serve the made-up set at the demo's `tiles/`: every tile one flat colour for its level, or with `pattern` blocks of colour that differ from tile to tile. `fail` is asked for each tile (`body/level/column/row`) and answers true to give a 404. The returned log is the requests so far. */
-export async function routeTiles(page: Page, fail: (tile: string) => boolean = () => false, options: { pattern?: boolean } = {}): Promise<TileLog> {
+/** Serve flat colours by level, patterned blocks, or a cyan band at each pole. `fail` answers true to give a tile a 404. The returned log is the requests so far. */
+export async function routeTiles(page: Page, fail: (tile: string) => boolean = () => false, options: { pattern?: boolean; poleBands?: boolean } = {}): Promise<TileLog> {
   const log: TileLog = { tiles: [], manifests: 0 };
   const pictures = new Map<string, Buffer>();
   await page.route("**/tiles/**", (route) => {
@@ -75,9 +79,12 @@ export async function routeTiles(page: Page, fail: (tile: string) => boolean = (
     const tile = path.replace(/\.webp$/, "");
     log.tiles.push(tile);
     if (fail(tile)) return route.fulfill({ status: 404 });
-    const colour = COLOURS[Number(match[2])] ?? [128, 128, 128];
-    const key = options.pattern === true ? tile : colour.join(",");
-    if (!pictures.has(key)) pictures.set(key, options.pattern === true ? patterned(Number(match[2]), Number(match[3]), Number(match[4])) : png(colour));
+    const n = Number(match[2]);
+    const row = Number(match[4]);
+    const colour = COLOURS[n] ?? [128, 128, 128];
+    const pole = options.poleBands !== true ? undefined : row === 0 ? "north" : row === level(n).rows - 1 ? "south" : undefined;
+    const key = options.pattern === true ? tile : `${colour.join(",")}:${pole ?? ""}`;
+    if (!pictures.has(key)) pictures.set(key, options.pattern === true ? patterned(n, Number(match[3]), row) : png(colour, pole));
     return route.fulfill({ body: pictures.get(key)!, contentType: "image/png", headers: { "access-control-allow-origin": "*" } });
   });
   return log;

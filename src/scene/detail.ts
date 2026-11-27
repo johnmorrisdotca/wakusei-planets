@@ -6,9 +6,10 @@ import type * as THREE from "three";
 import type { SourceInfo } from "../data-door.ts";
 import { accountOf, type SourceBook } from "../door/book.ts";
 import { DEFAULT_LEVELS, forgetManifests as forgetFolders, tileKeyParts, type BodyMapSource } from "../door/map.ts";
+import { MAP_ANISOTROPY } from "./textures.ts";
 import { chooseWindow, covers, visibleRegion, windowRect, windowTiles, BASE_WIDTH, TEXEL_SLACK, TILE_SIZE, texelAngle, type Axes, type Region, type Seen, type TileLevel, type TileWindow, type ViewBox } from "./tiles.ts";
 
-type Three = Pick<typeof THREE, "ClampToEdgeWrapping" | "DataTexture" | "LinearFilter" | "NoColorSpace">;
+type Three = Pick<typeof THREE, "ClampToEdgeWrapping" | "DataTexture" | "LinearFilter" | "NoColorSpace" | "RepeatWrapping">;
 
 /** Milliseconds a window that the view no longer needs is kept (the view may come straight back) before its texture is freed. */
 export const DETAIL_KEEP_MS = 4000;
@@ -46,7 +47,7 @@ export interface DetailWindow {
   texture: THREE.Texture;
   /** `u0` the map coordinate of the west edge, `vTop` of the north edge, `du` and `dv` the size, all fractions of the map. */
   rect: { u0: number; du: number; vTop: number; dv: number };
-  /** The softening at the window's edges as fractions of its size; 0 where the window meets a pole or goes right round. */
+  /** The softening at the window's edges as fractions of its size. Full rows have no longitude edge. The shader skips a latitude edge at a pole. */
   fade: { u: number; v: number };
   /** The angle a texel of the window covers, in radians. */
   texel: number;
@@ -204,27 +205,20 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
       }
     }
     const texture = new TextureClass(canvas);
+    const full = window.cols >= window.columns;
     texture.flipY = false;
-    texture.wrapS = T.ClampToEdgeWrapping;
+    texture.wrapS = full ? T.RepeatWrapping : T.ClampToEdgeWrapping;
     texture.wrapT = T.ClampToEdgeWrapping;
     texture.magFilter = T.LinearFilter;
     texture.colorSpace = T.NoColorSpace;
-    texture.anisotropy = 4;
+    texture.anisotropy = MAP_ANISOTROPY;
     texture.needsUpdate = true;
     const old = held;
     held = { key: keyOf(window), window, texture, canvas, source: source.info, tiles: placed.length };
-    const rect = windowRect(window);
-    const full = window.cols >= window.columns;
-    // a window that reaches a pole has no edge there: its rectangle goes a little past the pole and the picture is clamped
-    const northPole = window.row0 === 0;
-    const southPole = window.row0 + window.rows >= window.rowsTotal;
-    const grow = 0.06 * rect.dv;
-    const vTop = northPole ? rect.vTop + grow : rect.vTop;
-    const dv = rect.dv + (northPole ? grow : 0) + (southPole ? grow : 0);
     deps.apply({
       texture,
-      rect: { u0: rect.u0, du: rect.du, vTop, dv },
-      fade: { u: full ? 0 : 0.03, v: northPole && southPole ? 0 : 0.03 },
+      rect: windowRect(window),
+      fade: { u: full ? 0 : 0.03, v: 0.03 },
       texel: texelAngle(window.columns * TILE_SIZE),
     });
     if (old !== undefined) {
