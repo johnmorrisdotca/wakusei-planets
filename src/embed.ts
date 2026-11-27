@@ -230,7 +230,7 @@ export function portraitCode(options: PortraitEmbed, kind: EmbedKind = "html", s
   const site = settings.site ?? SITE;
   const width = options.width ?? 720;
   const scene = decodeScene(options.scene);
-  const kinds = [...new Set(scene.items.map((i) => entryOf(i.body)))];
+  const kinds = [...new Set(scene.items.filter((item) => item.star === undefined).map((item) => entryOf(item.body)))];
   const entries = scene.look === "line" ? [] : kinds.length > 6 ? ["all"] : kinds;
   const attrs: [string, string][] = [["scene", options.scene]];
   if (width !== 720) attrs.push(["size", String(width)]);

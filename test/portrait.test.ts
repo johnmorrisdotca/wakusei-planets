@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { MOONS_OF, ringReach } from "../src/facts.ts";
 import { BODIES } from "../src/index.ts";
-import { addBody, addMoons, auto, centreCamera, createHistory, decodeScene, defaultPortrait, encodeScene, fitAll, freeze, hitTest, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, sizesFor, snap, toScreen, fromScreen, type Portrait } from "../src/portrait/model.ts";
+import { addBody, addMoons, addStar, auto, centreCamera, createHistory, decodeScene, defaultPortrait, encodeScene, fitAll, freeze, hitTest, moveInOrder, PRESETS, removeBody, removeItem, rescale, resolve, setItem, setPortrait, sizesFor, snap, toScreen, fromScreen, type Portrait } from "../src/portrait/model.ts";
 import { shapesOf, shapesSvg } from "../src/portrait/overlay.ts";
 import { poseOf } from "../src/portrait/pose.ts";
 import { surfacePoint } from "../src/pose.ts";
 import { dot } from "../src/vec.ts";
+import type { StarNumbers } from "../src/star.ts";
 
 const withBodies = (...ids: Parameters<typeof addBody>[1][]): Portrait => ids.reduce((p, id) => addBody(p, id), defaultPortrait());
 
@@ -16,6 +17,46 @@ test("bodies are added once, in the order of the sky for an automatic layout, an
   assert.deepEqual(p.items.map((i) => i.body), ["sun", "earth", "saturn"]);
   assert.deepEqual(removeBody(p, "earth").items.map((i) => i.body), ["sun", "saturn"]);
   assert.equal(removeBody(p, "mars"), p);
+});
+
+test("a portrait keeps several stars, the real Sun and the legacy body's scene record", () => {
+  const named: StarNumbers = {
+    name: '光 ~ A_1! "&"', temperatureK: 4200, radiusSun: 2.5, luminosityClass: "III",
+    rotationDays: -12.75, activity: 0.25, oblateness: 0.23, inclinationDeg: 26, corona: 0.4,
+    variablePeriodDays: 2.5, variableAmplitude: 0.1, estimated: ["radiusSun", "rotationDays"],
+  };
+  const old = withBodies("sun", "earth");
+  const scene = addStar(addStar(old, named), { name: "Second star", temperatureK: 7860, radiusSun: 3 });
+  const encoded = encodeScene(scene);
+  assert.ok(encoded.startsWith(encodeScene(old) + "~star:"));
+  assert.equal(encoded.split("~").length, 4);
+  const link = new URLSearchParams({ scene: encoded }).toString();
+  const restored = decodeScene(new URLSearchParams(link).get("scene")!);
+  assert.deepEqual(restored.items.filter((item) => item.star === undefined).map((item) => item.body), ["sun", "earth"]);
+  assert.deepEqual(restored.items[2]!.star, named);
+  assert.equal(restored.items[3]!.star?.name, "Second star");
+  assert.equal(encodeScene(restored), encoded);
+  assert.equal(removeBody(restored, "sun").items.filter((item) => item.star !== undefined).length, 2);
+  assert.equal(removeItem(restored, 2).items[2]!.star?.name, "Second star");
+  assert.deepEqual(decodeScene("star:bad!%E0%A4~constructor~sun").items.map((item) => item.body), ["sun"]);
+  assert.equal(addStar(old, { temperatureK: 100, radiusSun: 1 }), old);
+});
+
+test("true-size portrait measures stars against the Sun at every layout and through a manual URL", () => {
+  const small = { name: "Small star", temperatureK: 6000, radiusSun: 0.0001 };
+  const big = { name: "Big star", temperatureK: 3400, radiusSun: 5000 };
+  const scene = { ...addStar(addStar(withBodies("sun"), small), big), scale: "true" as const };
+  for (const arrange of ["row", "arc", "grid", "orbit"] as const) {
+    const placed = resolve({ ...scene, arrange }).placed;
+    assert.ok(Math.abs(placed[1]!.r / placed[0]!.r - small.radiusSun) < 1e-10);
+    assert.ok(Math.abs(placed[2]!.r / placed[0]!.r - big.radiusSun) < 1e-8);
+    assert.ok(placed[2]!.x > placed[0]!.x);
+  }
+  const manual = decodeScene(encodeScene(freeze(scene)));
+  const placed = resolve(manual).placed;
+  assert.ok(Math.abs(placed[1]!.r / placed[0]!.r - small.radiusSun) < 1e-10);
+  assert.ok(Math.abs(placed[2]!.r / placed[0]!.r - big.radiusSun) < 1e-8);
+  assert.equal(decodeScene("layout:manual~sun_0_0_0.0002").items[0]?.r, 0.0005);
 });
 
 test("an automatic row never overlaps, and the camera holds every body with a margin", () => {

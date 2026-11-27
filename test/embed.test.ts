@@ -7,7 +7,7 @@ import { build } from "esbuild";
 import { compile } from "svelte/compiler";
 import ts from "typescript";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
-import { BODY_IDS, embedCode, embedCredit, EMBED_KINDS, PICTURE_CREDITS, picturesCredit, type EmbedOptions } from "../src/index.ts";
+import { addStar, BODY_IDS, decodeScene, defaultPortrait, embedCode, encodeScene, embedCredit, EMBED_KINDS, PICTURE_CREDITS, picturesCredit, portraitCode, type EmbedOptions } from "../src/index.ts";
 import { entryOf } from "../src/embed.ts";
 
 const CHOICES: EmbedOptions[] = [
@@ -32,6 +32,20 @@ test("a plain page: script tags from the CDN, the body's own entry only for a sh
   assert.match(embedCode({ body: "jupiter", look: "realistic", time: "now", moons: true }, "html"), /time="now" moons>/);
   assert.doesNotMatch(embedCode({ body: "jupiter", look: "realistic", moons: true }, "html"), /moons/, "moons need a date");
   assert.match(embedCode({ body: "mars", look: "line", size: 240 }, "html"), /size="240"/);
+});
+
+test("portrait snippets preserve their star numbers and omit a Solar System look import for a star-only scene", () => {
+  const star = { name: "光 ~ A!", temperatureK: 5200, radiusSun: 0.72, luminosityClass: "V" as const };
+  const scene = encodeScene({ ...addStar(defaultPortrait(), star), look: "painted" });
+  const html = portraitCode({ scene }, "html");
+  assert.match(html, /<wakusei-portrait scene="star:/);
+  assert.doesNotMatch(html, /bodies\/sun/);
+  const iframe = portraitCode({ scene }, "iframe");
+  const url = new URL(/src="([^"]+)"/.exec(iframe)![1]!);
+  assert.deepEqual(decodeScene(url.searchParams.get("scene")!).items[0]?.star, star);
+  for (const kind of EMBED_KINDS) {
+    if (kind !== "iframe") assert.ok(portraitCode({ scene }, kind).includes(scene), kind);
+  }
 });
 
 test("every body's entry point exists in the package", async () => {

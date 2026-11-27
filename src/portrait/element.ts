@@ -1,6 +1,6 @@
 // <wakusei-portrait>: a scene of bodies of the solar system, arranged on one picture. The line look is one SVG and needs nothing else; the realistic and painted looks put EVERY body of the scene in ONE
 // three.js scene, drawn through kazoku-ui's shared renderer (one WebGL context for the page). It draws only when something changes, at most 30 times a second while it moves, and nothing while
-// it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn; a turn of 0 is the only stop. The same element is the portrait builder's canvas: the page sets `portrait`, `editing`, and asks `pick`.
+// it is out of sight or the tab is hidden. A reader who prefers reduced motion gets a slower turn on solar system bodies and a still star. This is also the portrait builder's canvas.
 import type { SharedRenderer, View } from "@johnmorrisdotca/kazoku-ui/renderer";
 import { carryControls, type ElementControls } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import { BODIES } from "../facts.ts";
@@ -18,6 +18,7 @@ import { decodeScene, defaultPortrait, encodeScene, fromScreen, hitTest, resolve
 import { REDUCED_TURN } from "../live.ts";
 import { poseOf } from "./pose.ts";
 import { createPortraitItem, type PortraitDraw, type PortraitScene } from "./scene3d.ts";
+import { itemName, portraitStarLook } from "./stars.ts";
 import { linePortraitLimits } from "./zoom-range.ts";
 
 export { setThreeLoader };
@@ -309,7 +310,7 @@ export class WakuseiPortrait extends HTMLElement {
     let zoomMax: number = CARRIED_LIMITS.zoomMax;
     for (const one of placed) {
       if (one.r <= 0) continue;
-      const look = lookOf(one.body);
+      const look = one.star === undefined ? lookOf(one.body) : portraitStarLook(one.star).look;
       if (look === undefined) continue;
       const painted = p.look !== "illustrated" && look.painted !== undefined;
       const smooth = detailOf(look).stretch > 1;
@@ -345,7 +346,7 @@ export class WakuseiPortrait extends HTMLElement {
   }
 
   get #turning(): boolean {
-    return this.#portrait.items.some((i) => i.turn !== 0);
+    return this.#portrait.items.some((i) => i.turn !== 0 && (!this.#reduce || i.star === undefined));
   }
 
   #seconds(): number {
@@ -356,7 +357,8 @@ export class WakuseiPortrait extends HTMLElement {
 
   #draw(): PortraitDraw {
     const p = this.#portrait;
-    return { placed: this.#resolved.placed, camera: this.#resolved.camera, light: p.light, look: p.look === "illustrated" ? "realistic" : "painted", ms: this.#date(), seconds: this.#seconds(), shadows: p.shadows };
+    const seconds = this.#seconds();
+    return { placed: this.#resolved.placed, camera: this.#resolved.camera, light: p.light, look: p.look === "illustrated" ? "realistic" : "painted", ms: this.#date(), seconds, starSeconds: this.#reduce ? 0 : seconds, shadows: p.shadows };
   }
 
   #changed(): void {
@@ -429,7 +431,7 @@ export class WakuseiPortrait extends HTMLElement {
   }
 
   #label(): string {
-    const names = this.#portrait.items.map((i) => BODIES[i.body].name[this.#lang()]);
+    const names = this.#portrait.items.map((i) => itemName(i, this.#lang()));
     return this.#lang() === "ja" ? `惑星の肖像: ${names.join("、")}` : `Portrait: ${names.join(", ")}`;
   }
 
@@ -447,7 +449,7 @@ export class WakuseiPortrait extends HTMLElement {
 
   #poses(): ReturnType<typeof poseOf>[] {
     const seconds = this.#seconds();
-    return this.#resolved.placed.map((q) => poseOf(q, this.#date(), seconds, this.#portrait.light));
+    return this.#resolved.placed.map((q) => poseOf(q, this.#date(), this.#reduce && q.star !== undefined ? 0 : seconds, this.#portrait.light));
   }
 
   #lineBody(width: number, height: number): string {
@@ -633,7 +635,7 @@ export class WakuseiPortrait extends HTMLElement {
     else if (withBackground && p.bg === "gradient") back = `<defs><radialGradient id="sky" cx="30%" cy="20%" r="110%"><stop offset="0" stop-color="#1c3358"/><stop offset="0.55" stop-color="#0d1a33"/><stop offset="1" stop-color="#050914"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#sky)"/>`;
     else if (withBackground && p.bg === "stars") back = `<defs><radialGradient id="sky" cx="50%" cy="40%" r="80%"><stop offset="0" stop-color="#07101f"/><stop offset="1" stop-color="#000"/></radialGradient></defs><rect width="${width}" height="${height}" fill="url(#sky)"/>${stars.map((s) => `<circle cx="${(s.x * width).toFixed(1)}" cy="${(s.y * height).toFixed(1)}" r="${Math.max(0.5, s.r * 1000).toFixed(2)}" fill="#fff" fill-opacity="${s.a.toFixed(2)}"/>`).join("")}`;
     const over = shapesSvg(shapesOf(p, this.#resolved, width, height, this.#lang()));
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${this.#label().replace(/&/g, "&amp;").replace(/"/g, "&quot;")}">${back}${bodies}${over}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="${this.#label().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;")}">${back}${bodies}${over}</svg>`;
   }
 }
 

@@ -4,10 +4,11 @@ import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import { wheelMove, wheelZoomFactor } from "@johnmorrisdotca/kazoku-ui/view-controls";
 import "@johnmorrisdotca/kazoku-ui/embed-panel/define";
 import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/element";
-import { BODIES, DWARF_IDS, drawnTilt, MOONS_OF, PLANET_IDS, picturesCredit, type BodyId, type Look } from "../src/index.ts";
+import { BODIES, DWARF_IDS, drawnTilt, LUMINOSITY_CLASSES, MOONS_OF, PLANET_IDS, picturesCredit, type BodyId, type Look, type LuminosityClass } from "../src/index.ts";
 import { EMBED_KINDS, portraitCode, type EmbedKind } from "../src/embed.ts";
-import { addBody, addMoons, ASPECTS, auto, centreCamera, createHistory, decodeScene, encodeScene, fitAll, moveInOrder, PRESETS, removeBody, rescale, resolve, setItem, setPortrait, snap, type Guide, type Item, type Portrait } from "../src/portrait/model.ts";
+import { addBody, addMoons, addStar, ASPECTS, auto, centreCamera, createHistory, decodeScene, encodeScene, fitAll, MAX_ITEMS, moveInOrder, PRESETS, removeBody, removeItem, rescale, resolve, setItem, setPortrait, snap, type Guide, type Item, type Portrait } from "../src/portrait/model.ts";
 import { defaultPitch } from "../src/portrait/pose.ts";
+import { itemName } from "../src/portrait/stars.ts";
 import "../src/portrait/element.ts";
 import "../src/bodies/all.ts";
 import "@johnmorrisdotca/chikyu-earth/element";
@@ -19,6 +20,7 @@ const chooser = (): { lang: "en" | "ja"; word(key: string): string | undefined }
 const say = (key: string, values: Record<string, string | number> = {}): string => (chooser()?.word(key) ?? WORDS.en[key] ?? key).replace(/\{(\w+)\}/g, (all, name: string) => String(values[name] ?? all));
 const lang = (): "en" | "ja" => chooser()?.lang ?? "en";
 const name = (id: BodyId): string => BODIES[id].name[lang()];
+const pitchOf = (item: Item): number => item.pitch ?? item.star?.inclinationDeg ?? defaultPitch(item.body);
 
 setThreeLoader(() => import("./three-subset.ts"));
 
@@ -113,9 +115,28 @@ for (const [selector, key] of NOTES) {
 // --- the page from the scene --------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const GROUPS: readonly { id: string; label: () => string; bodies: readonly BodyId[] }[] = [
   { id: "planets", label: () => say("pt_g_planets"), bodies: ["sun", ...PLANET_IDS] },
+  { id: "stars", label: () => say("pt_g_stars"), bodies: [] },
   { id: "dwarfs", label: () => say("pt_g_dwarfs"), bodies: DWARF_IDS },
   ...Object.entries(MOONS_OF).map(([planet, moons]) => ({ id: planet, label: () => say("moonsOf", { planet: name(planet as BodyId) }), bodies: moons as readonly BodyId[] })),
 ];
+
+const starForm = $<HTMLFormElement>("#star-form");
+const starClass = $<HTMLSelectElement>("#star-class");
+starClass.replaceChildren(...LUMINOSITY_CLASSES.map((cls) => new Option(cls)));
+starClass.value = "V";
+starForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = $<HTMLInputElement>("#star-name").value.trim();
+  const next = addStar(scene(), {
+    ...(name === "" ? {} : { name }),
+    temperatureK: $<HTMLInputElement>("#star-temperature").valueAsNumber,
+    radiusSun: $<HTMLInputElement>("#star-radius").valueAsNumber,
+    luminosityClass: starClass.value as LuminosityClass,
+  });
+  if (next === scene()) return;
+  ui.selected = next.items.length - 1;
+  change(next);
+});
 
 function chip(text: string, on: boolean, click: () => void, testid?: string): HTMLButtonElement {
   const b = document.createElement("button");
@@ -135,12 +156,16 @@ function renderBodies(p: Portrait): void {
   );
   $("#groups").replaceChildren(...GROUPS.map((g) => chip(g.label(), g.id === ui.group, () => ((ui.group = g.id), render()), `group-${g.id}`)));
   const group = GROUPS.find((g) => g.id === ui.group) ?? GROUPS[0]!;
+  const full = p.items.length >= MAX_ITEMS;
+  starForm.hidden = group.id !== "stars";
+  $("#star-full").hidden = !full;
+  $<HTMLButtonElement>("#star-add").disabled = full;
   $("#picker").replaceChildren(
     ...group.bodies.map((id) =>
-      chip(name(id), p.items.some((i) => i.body === id), () => {
-        const next = scene().items.some((i) => i.body === id) ? removeBody(scene(), id) : addBody(scene(), id);
+      chip(name(id), p.items.some((i) => i.star === undefined && i.body === id), () => {
+        const next = scene().items.some((i) => i.star === undefined && i.body === id) ? removeBody(scene(), id) : addBody(scene(), id);
         change(next);
-        const at = scene().items.findIndex((i) => i.body === id);
+        const at = scene().items.findIndex((i) => i.star === undefined && i.body === id);
         if (at >= 0) ui.selected = at;
         else if (ui.selected >= scene().items.length) ui.selected = -1;
         render();
@@ -152,10 +177,10 @@ function renderBodies(p: Portrait): void {
 function renderSelection(p: Portrait): void {
   const item: Item | undefined = p.items[ui.selected];
   const manual = p.layout === "manual";
-  $("#inscene").replaceChildren(...p.items.map((it, i) => chip(name(it.body), i === ui.selected, () => select(i), `item-${it.body}`)));
-  $("#sel-name").textContent = item === undefined ? say("pt_none") : `${say("pt_sel")}: ${name(item.body)}`;
+  $("#inscene").replaceChildren(...p.items.map((it, i) => chip(itemName(it, lang()), i === ui.selected, () => select(i), it.star === undefined ? `item-${it.body}` : `item-star-${i}`)));
+  $("#sel-name").textContent = item === undefined ? say("pt_none") : `${say("pt_sel")}: ${itemName(item, lang())}`;
   for (const id of ["o-back", "o-backward", "o-forward", "o-front", "remove"]) $<HTMLButtonElement>(`#${id}`).disabled = item === undefined;
-  $<HTMLButtonElement>("#addmoons").disabled = item === undefined || !(item.body in MOONS_OF) || MOONS_OF[item.body as keyof typeof MOONS_OF].every((m) => p.items.some((i) => i.body === m));
+  $<HTMLButtonElement>("#addmoons").disabled = item === undefined || item.star !== undefined || !(item.body in MOONS_OF) || MOONS_OF[item.body as keyof typeof MOONS_OF].every((m) => p.items.some((i) => i.body === m));
   const size = $<HTMLInputElement>("#size");
   size.disabled = item === undefined || !manual;
   if (item !== undefined) size.value = String(Math.log(item.r));
@@ -164,7 +189,7 @@ function renderSelection(p: Portrait): void {
   lean.disabled = over.disabled = item === undefined;
   if (item !== undefined) {
     lean.value = String(Math.round(item.tilt ?? drawnTilt(BODIES[item.body])));
-    over.value = String(Math.round(item.pitch ?? defaultPitch(item.body)));
+    over.value = String(Math.round(pitchOf(item)));
   }
   for (const b of all<HTMLButtonElement>("#turns [data-turn]")) {
     b.disabled = item === undefined;
@@ -213,8 +238,9 @@ if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;
 panel.generate = ({ kind, preview }) => portraitCode({ scene: encodeScene(scene()), width: 720 }, kind as EmbedKind, preview ? { site: "" } : {});
 panel.credits = () => {
   const drawsMaps = scene().look !== "line" && scene().look !== "illustrated";
-  const pictures = drawsMaps ? picturesCredit(scene().items.map((i) => i.body), lang()) : "";
-  return `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${pictures === "" ? "" : ` ${pictures}`}`;
+  const pictures = drawsMaps ? picturesCredit(scene().items.filter((i) => i.star === undefined).map((i) => i.body), lang()) : "";
+  const stars = scene().items.some((i) => i.star !== undefined) ? ` ${say("pt_star_credits")}` : "";
+  return `Wakusei Planets by John Morris (MIT). Sizes, tilt and rotation: IAU and NASA fact sheets.${stars}${pictures === "" ? "" : ` ${pictures}`}`;
 };
 panel.addEventListener("kazoku-embedchange", (event) => {
   const { kind } = (event as CustomEvent<EmbedChangeDetail>).detail;
@@ -303,13 +329,10 @@ $("#o-back").addEventListener("click", () => reorder(() => 0));
 $("#o-backward").addEventListener("click", () => reorder((i) => i - 1));
 $("#o-forward").addEventListener("click", () => reorder((i) => i + 1));
 $("#o-front").addEventListener("click", () => reorder((_i, n) => n - 1));
-$("#remove").addEventListener("click", () => {
-  const body = scene().items[ui.selected]?.body;
-  if (body !== undefined) change(removeBody(scene(), body));
-});
+$("#remove").addEventListener("click", () => change(removeItem(scene(), ui.selected)));
 $("#addmoons").addEventListener("click", () => {
-  const body = scene().items[ui.selected]?.body;
-  if (body !== undefined) change(addMoons(scene(), body));
+  const item = scene().items[ui.selected];
+  if (item !== undefined && item.star === undefined) change(addMoons(scene(), item.body));
 });
 $<HTMLInputElement>("#size").addEventListener("input", (event) => withSelected((p, i) => setItem(p, i, { r: Math.exp(Number((event.target as HTMLInputElement).value)) }), "size"));
 $<HTMLInputElement>("#lean").addEventListener("input", (event) => withSelected((p, i) => setItem(p, i, { tilt: Number((event.target as HTMLInputElement).value) }), "lean"));
@@ -407,7 +430,7 @@ wrap.addEventListener("pointermove", (event) => {
     const rPx = Math.max(nudgeRadius(p, d.index) * scale, 24);
     const dx = event.clientX - d.lastX;
     const dy = event.clientY - d.lastY;
-    d.current = setItem(p, d.index, { spin: item.spin - (dx / rPx) * DEG, pitch: clamp((item.pitch ?? defaultPitch(item.body)) + (dy / rPx) * DEG, -90, 90) });
+    d.current = setItem(p, d.index, { spin: item.spin - (dx / rPx) * DEG, pitch: clamp(pitchOf(item) + (dy / rPx) * DEG, -90, 90) });
   } else if (d.mode === "pan") {
     if (p.layout === "manual") d.current = setPortrait(p, { camera: { ...p.camera, x: p.camera.x - (event.clientX - d.lastX) / scale, y: p.camera.y + (event.clientY - d.lastY) / scale } });
   } else {
@@ -495,7 +518,7 @@ wrap.addEventListener("keydown", (event) => {
   let handled = true;
   if (event.key === "Escape") select(-1);
   else if (item === undefined) handled = false;
-  else if (event.key === "Delete" || event.key === "Backspace") change(removeBody(p, item.body));
+  else if (event.key === "Delete" || event.key === "Backspace") change(removeItem(p, i));
   else if (event.key === "PageUp") reorder((n) => n + 1);
   else if (event.key === "PageDown") reorder((n) => n - 1);
   else if (event.key === "Home") reorder(() => 0);
@@ -507,7 +530,7 @@ wrap.addEventListener("keydown", (event) => {
     const sy = event.key === "ArrowUp" ? 1 : event.key === "ArrowDown" ? -1 : 0;
     if (ui.tool === "turn") {
       // the surface goes the way the key points: right turns the body so its surface moves right, up so it moves up
-      change(setItem(p, i, { spin: item.spin - sx * (big ? 20 : 5), pitch: clamp((item.pitch ?? defaultPitch(item.body)) - sy * (big ? 20 : 5), -90, 90) }), "turn");
+      change(setItem(p, i, { spin: item.spin - sx * (big ? 20 : 5), pitch: clamp(pitchOf(item) - sy * (big ? 20 : 5), -90, 90) }), "turn");
     } else if (p.layout === "manual") change(setItem(p, i, { x: item.x + sx * px, y: item.y + sy * px }), "nudge");
     else if (sx !== 0) reorder((n) => n + sx);
     else handled = false;

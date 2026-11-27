@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Stars in portrait scenes** (MODULES-733). Add a star by its temperature and radius, compare it with the Sun at true scale, and share the same scene by link or embed. The shared star model gives cool dwarfs smaller, sparser spots and a darker limb in the shaded look. The `/look` size baseline includes this shared validation and shading.
+
 ## [0.86.0] - 2026-11-27
 
 - **Cutaways for Venus, Uranus and Neptune** (MODULES-728). The displayed layers follow named interior models, with their assumptions in the legend. The Sun now shows the radiative and convection zones separately, using the convection boundary from corrected Model S. All four use the existing line, classic, half and quarter views.

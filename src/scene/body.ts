@@ -8,7 +8,8 @@ import { starBrightness } from "../star.ts";
 import { silhouette } from "../pose.ts";
 import { prominenceFrame } from "./prominence.ts";
 import { cross, type Vec3 } from "../vec.ts";
-import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
+import { BALL_FRAGMENT, bodyFragment, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, VERTEX } from "./glsl.ts";
+import { makeGlowMaterial } from "./glow.ts";
 import { atmosphereTint, detailOf, lookOf, type BodyLook } from "./look.ts";
 import { craftGeometry, craftMaterial, craftPicture } from "./craft.ts";
 import { shapeGeometry } from "./shape.ts";
@@ -331,8 +332,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const glowGeometry = assets.acquire("wk:glow", () => new T.PlaneGeometry(6, 6), (g) => g.dispose());
         const own = look.glow;
         const glowMaterial = own === undefined
-          ? assets.acquire("wk:glowmat", () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(1, 0.7, 0.3) } } }), (m) => m.dispose())
-          : assets.acquire(`wk:glowmat:${held}`, () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 }, uSpin: { value: 0 }, uPole: { value: 0 }, uTilt: { value: 0 } } }), (m) => m.dispose());
+          ? assets.acquire("wk:glowmat", () => makeGlowMaterial(T, own), (m) => m.dispose())
+          : assets.acquire(`wk:glowmat:${held}`, () => makeGlowMaterial(T, own), (m) => m.dispose());
         glow = new T.Mesh(glowGeometry, glowMaterial);
         glow.position.z = -5;
         glow.scale.setScalar(1);

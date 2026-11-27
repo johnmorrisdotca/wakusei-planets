@@ -2,7 +2,9 @@
 // editing, the chosen body's outline and the guides. The same shapes become an SVG overlay on the page and 2D canvas strokes in an exported picture, so the two always agree. Pure: no DOM.
 import { BODIES, type BodyId, type Look } from "../facts.ts";
 import { lineSvg } from "../line.ts";
+import { starBodyGroup } from "../star-line.ts";
 import { toScreen, type Background, type Guide, type Placed, type Portrait, type Resolved } from "./model.ts";
+import { itemName, portraitStarLook } from "./stars.ts";
 
 export interface Shapes {
   circles: { cx: number; cy: number; r: number; kind: "orbit" | "select" }[];
@@ -78,10 +80,11 @@ const labelSize = (width: number): number => Math.max(11, Math.min(15, width / 6
 export function shapesOf(p: Portrait, resolved: Resolved, width: number, height: number, lang: "en" | "ja" = "en", edit?: { selected?: number; guides?: readonly Guide[] }): Shapes {
   const at = toScreen(resolved.camera, width, height);
   const out: Shapes = { circles: [], lines: [], texts: [] };
-  const byBody = new Map<BodyId, Placed>(resolved.placed.map((q) => [q.body, q]));
   if (p.orbits) {
+    const bodies = resolved.placed.filter((q) => q.star === undefined);
+    const byBody = new Map<BodyId, Placed>(bodies.map((q) => [q.body, q]));
     const sun = p.arrange === "orbit" ? byBody.get("sun") : undefined;
-    for (const moon of resolved.placed) {
+    for (const moon of bodies) {
       const host = BODIES[moon.body].parent === undefined ? (moon.body === "sun" ? undefined : sun) : byBody.get(BODIES[moon.body].parent as BodyId);
       if (host === undefined) continue;
       const d = Math.hypot(moon.x - host.x, moon.y - host.y) * at.scale;
@@ -92,10 +95,26 @@ export function shapesOf(p: Portrait, resolved: Resolved, width: number, height:
     const size = labelSize(width);
     const boxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
     for (const q of resolved.placed) {
-      const text = BODIES[q.body].name[lang];
+      const text = itemName(q, lang);
       const w = [...text].reduce((n, c) => n + (c.charCodeAt(0) > 255 ? size : size * 0.58), 0);
       const x = at.px(q.x);
-      const y = at.py(q.y) + Math.max(q.r * at.scale, 2) + size * 1.25;
+      let y = at.py(q.y) + Math.max(q.r * at.scale, 2) + size * 1.25;
+      if (q.star !== undefined) {
+        // A small star's name can be wider than the space between large discs, especially in Japanese.
+        const obstacles = boxes.filter((b) => x - w / 2 - 6 < b.x1 && x + w / 2 + 6 > b.x0).map(({ y0, y1 }) => ({ y0, y1 }));
+        for (const other of resolved.placed) {
+          if (other === q) continue;
+          const r = other.r * at.scale;
+          const dx = Math.max(0, Math.abs(at.px(other.x) - x) - w / 2 - 2);
+          if (dx >= r) continue;
+          const dy = Math.sqrt(r * r - dx * dx);
+          const cy = at.py(other.y);
+          obstacles.push({ y0: cy - dy, y1: cy + dy });
+        }
+        for (const { y0, y1 } of obstacles.sort((a, b) => a.y0 - b.y0)) {
+          if (y - size < y1 + 2 && y + size * 0.3 > y0 - 2) y = y1 + size + 2;
+        }
+      }
       const box = { x0: x - w / 2, x1: x + w / 2, y0: y - size, y1: y + size * 0.3 };
       if (box.x0 < 0 || box.x1 > width || box.y1 > height + size) continue;
       if (boxes.some((b) => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)) continue;
@@ -111,7 +130,7 @@ export function shapesOf(p: Portrait, resolved: Resolved, width: number, height:
   return out;
 }
 
-const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const esc = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const f = (n: number): string => (Math.round(n * 100) / 100).toString();
 
 /** The shapes as SVG elements (no wrapper), in the picture's pixels. */
@@ -178,9 +197,12 @@ export function lineScene(p: Portrait, resolved: Resolved, width: number, height
     const fill = 0.94 / reach;
     const rPx = Math.max(q.r * at.scale, 1.2);
     const side = (2 * rPx) / fill;
-    const inner = lineSvg(q.body as Parameters<typeof lineSvg>[0], { size: 480, fill, labels: false, pose: poses[i]!, lang, ...(stroke !== undefined ? { stroke } : {}) });
-    const nested = inner.replace(/^<svg [^>]*>/, () => `<svg x="${f(at.px(q.x) - side / 2)}" y="${f(at.py(q.y) - side / 2)}" width="${f(side)}" height="${f(side)}" viewBox="0 0 480 480" role="img" aria-label="${esc(facts.name[lang])}" overflow="hidden">`);
-    parts.push(nested);
+    const colours = stroke === undefined ? {} : { stroke };
+    const pose = poses[i]!;
+    const body = q.star === undefined
+      ? lineSvg(q.body, { size: 480, fill, labels: false, pose, lang, ...colours }).replace(/^<svg [^>]*>|<\/svg>$/g, "")
+      : starBodyGroup(portraitStarLook(q.star), pose, { cx: 240, cy: 240, r: 240 * fill }, 1.5, `wk-portrait-star-${i}`, colours);
+    parts.push(`<svg x="${f(at.px(q.x) - side / 2)}" y="${f(at.py(q.y) - side / 2)}" width="${f(side)}" height="${f(side)}" viewBox="0 0 480 480" role="img" aria-label="${esc(itemName(q, lang))}" overflow="hidden">${body}</svg>`);
   });
   return parts.join("");
 }

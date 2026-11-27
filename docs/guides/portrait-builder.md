@@ -2,16 +2,18 @@
 title: The portrait builder
 section: how-to
 order: 7
-description: Put any bodies of the solar system in one picture, arrange them, light them, and take the code or a saved picture.
+description: Put solar system bodies and stars in one picture, compare their sizes, and take the code or a saved picture.
 ---
 
-[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies of the solar system in one picture: the Sun, the planets, Pluto, the other dwarf planets and any of the moons. Every body is drawn in the same WebGL scene, so the page still holds one WebGL context however many bodies are in it.
+[The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts the Sun, planets, dwarf planets, moons and stars in one picture. Every body is drawn in the same WebGL scene, so the page still holds one WebGL context however many bodies are in it.
 
 ![The Jupiter and the Galileans preset in the portrait builder.](../images/portrait-galileans.png)
 
 ## Choosing and arranging
 
 Pick bodies on the **Bodies** tab (a button for each; press it again to take the body out), or start from a preset: a family photo, the gas giants, Jupiter and the Galileans, the Earth and the Moon to scale, a giant planet's edge with its main moons in an arc, or every drawn moon beside its planet. A chosen body is drawn at the front and has its own controls under the picture: its place in the order (front to back), its size, its lean and how far you look over its pole, and whether it turns by itself.
+
+On the **Bodies** tab, choose **Stars**. Give a temperature in kelvin and a radius in solar radii, choose a luminosity class, and optionally give the star a name. Press **Add star** for each star you want in the picture. Its colour comes from the temperature, its size from the radius, and its surface pattern from the class. Cells, spots and glow are illustrative. Add the Sun and choose **True scale** on the **Arrange** tab to see how the stars' radii compare. The **Remove** button under the picture takes out the selected star.
 
 The **Arrange** tab has two layouts.
 
@@ -27,6 +29,8 @@ Choose the **Turn** tool (or hold Shift while you drag): dragging turns the surf
 ## Light, sky and look
 
 The **Look** tab chooses how the bodies are drawn (line, realistic or painted), the background (black, stars, a gradient or clear), and where the Sun is: one direction for the whole picture, a compass angle and how far toward you. Shadows let one body shade another from the Sun, as in an eclipse, and are easiest to see with the Sun low and to the side. Names and orbit rings can be switched off. **Sky at a date** turns each body as the Earth sees it on that date, with its real pole.
+
+Added stars keep their own pose in a dated scene. They draw their own light and stand beside the Solar System bodies in the orbit layout.
 
 ## Keys
 
@@ -45,6 +49,16 @@ The scene is kept in the address, as `?scene=...`, so a link is the picture. The
 
 `encodeScene` and `decodeScene` turn a scene into that text and back, `addBody` and `layoutPortrait` make and place one in code, and `portraitCode` writes the page code the builder shows.
 
+```ts
+import { addBody, addStar, defaultPortrait, encodeScene } from "@johnmorrisdotca/wakusei-planets";
+
+const withSun = addBody({ ...defaultPortrait(), scale: "true" }, "sun");
+const scene = addStar(withSun, { name: "Proxima Centauri", temperatureK: 3042, radiusSun: 0.154, luminosityClass: "V" });
+console.log(encodeScene(scene));
+```
+
+`addStar` takes the same numbers as `starLook`, including optional rotation, flattening, inclination, activity, corona and variability. The encoded scene stores each star as `star:<x_y_r_spin_tilt_pitch_turn>!<percent-encoded JSON>`. Pass the whole scene text through your page's usual URL encoder when putting it in a query parameter.
+
 ## Performance
 
-One WebGL context for the whole scene, however many bodies. Nothing is drawn while the picture is at rest. While something moves it is drawn thirty times a second at most, and while it is out of sight or in a hidden tab nothing moves. A reader who prefers reduced motion gets a quarter of the turn; a turn of 0 is the only stop. A body's picture is fetched at the size it needs, and given back when the body shrinks or leaves. The freeze test plays twelve bodies in one scene and fails on a draw at rest, more than one context, graphics memory that grows, or a canvas over its budget.
+One WebGL context for the whole scene, however many bodies. Nothing is drawn while the picture is at rest. While something moves it is drawn thirty times a second at most, and while it is out of sight or in a hidden tab nothing moves. With reduced motion, stars are still and Solar System bodies turn at a quarter of their usual rate. A body's picture is fetched at the size it needs, and given back when the body shrinks or leaves. The freeze test checks resting draws, the shared context, graphics memory and the canvas size.

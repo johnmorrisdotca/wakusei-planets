@@ -3,6 +3,8 @@
 import { ORBITS } from "../data/orbits.ts";
 import { heliocentric, moonVector } from "../ephemeris.ts";
 import { BODIES, DWARF_IDS, MOONS_OF, PLANET_IDS, ringReach, type BodyId, type HostId, type Look, type MoonId } from "../facts.ts";
+import type { StarNumbers } from "../star.ts";
+import { decodePortraitStar, encodePortraitStar, portraitStar } from "./stars.ts";
 
 /** How the automatic layout arranges the bodies. */
 export type Arrange = "row" | "arc" | "grid" | "orbit";
@@ -23,6 +25,8 @@ export type Background = "black" | "stars" | "gradient" | "transparent";
  */
 export interface Item {
   body: BodyId;
+  /** A star drawn from these numbers. Its body field is the Sun, and the numbers describe its own surface and size. */
+  star?: StarNumbers;
   x: number;
   y: number;
   /** The radius, in scene units. */
@@ -156,11 +160,20 @@ export const reachOf = (id: BodyId): number => (id === "sun" ? 1.7 : Math.max(1,
 
 /** Raw sizes for the bodies, in any unit, in proportion: true to scale, or squeezed (a root of the radius) with the smallest lifted to a tenth of the largest so every body can be seen. */
 export function sizesFor(ids: readonly BodyId[], mode: ScaleMode): number[] {
-  if (mode === "true") return ids.map((id) => BODIES[id].radiusKm);
-  const raw = ids.map((id) => BODIES[id].radiusKm ** 0.3);
+  return scaleRadii(ids.map((id) => BODIES[id].radiusKm), mode);
+}
+
+const itemRadiusKm = (item: Item): number => item.star === undefined ? BODIES[item.body].radiusKm : item.star.radiusSun * BODIES.sun.radiusKm;
+const itemReach = (item: Item): number => reachOf(item.star === undefined ? item.body : "sun");
+
+function scaleRadii(radii: number[], mode: ScaleMode): number[] {
+  if (mode === "true") return radii;
+  const raw = radii.map((r) => r ** 0.3);
   const floor = 0.11 * Math.max(...raw, 0);
   return raw.map((r) => Math.max(r, floor));
 }
+
+const itemSizes = (items: readonly Item[], mode: ScaleMode): number[] => scaleRadii(items.map(itemRadiusKm), mode);
 
 // --- the automatic layout -------------------------------------------------------------------------------------------------------------------------------
 
@@ -178,13 +191,13 @@ function groups(items: readonly Item[], moons: "auto" | "manual"): number[][] {
   const out: number[][] = [];
   const owner = new Map<BodyId, number[]>();
   items.forEach((item, i) => {
-    const parent = BODIES[item.body].parent;
+    const parent = item.star === undefined ? BODIES[item.body].parent : undefined;
     const home = moons === "auto" && parent !== undefined ? owner.get(parent) : undefined;
     if (home !== undefined) home.push(i);
     else {
       const group = [i];
       out.push(group);
-      owner.set(item.body, group);
+      if (item.star === undefined) owner.set(item.body, group);
     }
   });
   // moons nearest first inside their planet's group
@@ -193,9 +206,9 @@ function groups(items: readonly Item[], moons: "auto" | "manual"): number[][] {
 }
 
 /** A planet at the left of its group and its moons in a line to the right of it, in orbit order, each clear of the last. */
-function unitOf(members: number[], radii: readonly number[], ids: readonly BodyId[]): Unit {
+function unitOf(members: number[], radii: readonly number[], items: readonly Item[]): Unit {
   const first = members[0]!;
-  const reachFirst = radii[first]! * reachOf(ids[first]!);
+  const reachFirst = radii[first]! * itemReach(items[first]!);
   const at = [0];
   let cursor = reachFirst;
   let maxX = reachFirst;
@@ -266,7 +279,7 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
   const items = p.items;
   const ms = p.date === undefined ? undefined : Date.parse(p.date);
   const when = ms !== undefined && Number.isFinite(ms) ? ms : undefined;
-  const index = new Map<BodyId, number>(items.map((i, k) => [i.body, k]));
+  const sun = items.findIndex((i) => i.body === "sun" && i.star === undefined);
   const planetKind = (id: BodyId): boolean => BODIES[id].parent === undefined && id !== "sun";
   const planetSpot = (id: BodyId): Spot => {
     const v = heliocentric(id as HostId, when ?? J2000);
@@ -279,10 +292,9 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
   };
   const systems: System[] = [];
   const taken = new Set<number>();
-  const sun = index.get("sun");
   const attachMoons = (system: System, planet: number, at: Spot): void => {
     for (const [k, item] of items.entries()) {
-      if (BODIES[item.body].parent !== items[planet]!.body || taken.has(k)) continue;
+      if (item.star !== undefined || BODIES[item.body].parent !== items[planet]!.body || taken.has(k)) continue;
       const m = moonSpot(item.body);
       system.members.push(k);
       system.spot.set(k, { x: at.x + m.x, y: at.y + m.y });
@@ -290,11 +302,11 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
       taken.add(k);
     }
   };
-  if (sun !== undefined) {
+  if (sun >= 0) {
     const system: System = { members: [sun], spot: new Map([[sun, { x: 0, y: 0 }]]), centre: new Map() };
     taken.add(sun);
     for (const [k, item] of items.entries()) {
-      if (!planetKind(item.body)) continue;
+      if (item.star !== undefined || !planetKind(item.body)) continue;
       const at = planetSpot(item.body);
       system.members.push(k);
       system.spot.set(k, at);
@@ -305,7 +317,7 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
     systems.push(system);
   }
   for (const [k, item] of items.entries()) {
-    if (taken.has(k) || !planetKind(item.body)) continue;
+    if (taken.has(k) || item.star !== undefined || !planetKind(item.body)) continue;
     const system: System = { members: [k], spot: new Map([[k, { x: 0, y: 0 }]]), centre: new Map() };
     taken.add(k);
     if (p.moons === "auto") attachMoons(system, k, { x: 0, y: 0 });
@@ -317,7 +329,7 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
     taken.add(k);
   }
   // sizes: true, or squeezed against the size of the picture the distances make
-  const ids = items.map((i) => i.body);
+  const radii = items.map(itemRadiusKm);
   let span = 0;
   for (const system of systems) {
     for (const k of system.members) {
@@ -328,10 +340,13 @@ function orbitLayout(p: Portrait): { placed: Placed[]; reachPoints: Spot[] } {
       span = Math.max(span, Math.hypot(a.x - b.x, a.y - b.y));
     }
   }
-  const biggest = Math.max(...ids.map((id) => BODIES[id].radiusKm));
+  const biggest = Math.max(...radii);
   span = Math.max(span, biggest * 8);
-  const radius = (id: BodyId): number => (p.scale === "true" ? BODIES[id].radiusKm : Math.max(0.014 * span, 0.06 * span * (BODIES[id].radiusKm / biggest) ** 0.4));
-  const raw: Placed[] = items.map((item, index2) => ({ ...item, index: index2, x: 0, y: 0, r: radius(item.body), reach: radius(item.body) * reachOf(item.body) }));
+  const raw: Placed[] = items.map((item, index) => {
+    const radius = radii[index]!;
+    const r = p.scale === "true" ? radius : Math.max(0.014 * span, 0.06 * span * (radius / biggest) ** 0.4);
+    return { ...item, index, x: 0, y: 0, r, reach: r * itemReach(item) };
+  });
   // the circle each body goes round its centre on reaches this far every way
   const extent = (system: System): { minX: number; maxX: number; minY: number; maxY: number } => {
     let minX = Infinity;
@@ -409,7 +424,7 @@ export function fitCamera(placed: readonly Pick<Placed, "x" | "y" | "reach">[], 
 export function resolve(scene: Portrait): Resolved {
   const p = scene;
   if (p.layout === "manual" || p.items.length === 0) {
-    return { placed: p.items.map((item, index) => ({ ...item, index, reach: item.r * reachOf(item.body) })), camera: p.camera };
+    return { placed: p.items.map((item, index) => ({ ...item, index, reach: item.r * itemReach(item) })), camera: p.camera };
   }
   if (p.arrange === "orbit") {
     const { placed: raw, reachPoints } = orbitLayout(p);
@@ -417,12 +432,11 @@ export function resolve(scene: Portrait): Resolved {
     const k = 1 / cam.h;
     return { placed: raw.map((it) => ({ ...it, x: (it.x - cam.x) * k, y: (it.y - cam.y) * k, r: it.r * k, reach: it.reach * k })), camera: { x: 0, y: 0, h: 1 } };
   }
-  const ids = p.items.map((item) => item.body);
-  const sizes = sizesFor(ids, p.scale);
+  const sizes = itemSizes(p.items, p.scale);
   const grouped = groups(p.items, p.moons);
-  const units = grouped.map((members) => unitOf(members, sizes, ids));
+  const units = grouped.map((members) => unitOf(members, sizes, p.items));
   const spots = arrangeUnits(units, p.arrange, p.aspect);
-  const raw: Placed[] = p.items.map((item, index) => ({ ...item, index, x: 0, y: 0, r: sizes[index]!, reach: sizes[index]! * reachOf(item.body) }));
+  const raw: Placed[] = p.items.map((item, index) => ({ ...item, index, x: 0, y: 0, r: sizes[index]!, reach: sizes[index]! * itemReach(item) }));
   units.forEach((u, k) => {
     u.members.forEach((m, j) => {
       raw[m]!.x = spots[k]!.ox + u.at[j]!;
@@ -444,7 +458,7 @@ export function freeze(p: Portrait): Portrait {
   const { placed, camera } = resolve(p);
   const out = copy(p);
   out.layout = "manual";
-  out.items = placed.map((q) => ({ body: q.body, x: q.x, y: q.y, r: q.r, spin: q.spin, turn: q.turn, ...(q.tilt !== undefined ? { tilt: q.tilt } : {}), ...(q.pitch !== undefined ? { pitch: q.pitch } : {}) }));
+  out.items = placed.map((q) => ({ body: q.body, ...(q.star !== undefined ? { star: q.star } : {}), x: q.x, y: q.y, r: q.r, spin: q.spin, turn: q.turn, ...(q.tilt !== undefined ? { tilt: q.tilt } : {}), ...(q.pitch !== undefined ? { pitch: q.pitch } : {}) }));
   out.camera = camera;
   return out;
 }
@@ -457,10 +471,10 @@ export function auto(p: Portrait): Portrait {
 const fresh = (body: BodyId): Item => ({ body, x: 0, y: 0, r: 0.3, spin: BODIES[body].showLon ?? 0, turn: 0 });
 
 /** The factor between a stored radius and the size a body should be by the scene's scale, from the bodies already there (0.3 of the half-height for the largest, for an empty scene). */
-function unitSize(p: Portrait, adding: BodyId): number {
+function unitSize(p: Portrait, adding: Item): number {
   const have = p.items.filter((i) => i.r > 0);
-  if (have.length === 0) return 0.34 / sizesFor([adding], p.scale)[0]!;
-  const sizes = sizesFor(have.map((i) => i.body), p.scale);
+  if (have.length === 0) return 0.34 / itemSizes([adding], p.scale)[0]!;
+  const sizes = itemSizes(have, p.scale);
   const k = have.map((i, n) => i.r / sizes[n]!).sort((a, b) => a - b);
   return k[Math.floor(k.length / 2)]!;
 }
@@ -481,18 +495,41 @@ function unitSize(p: Portrait, adding: BodyId): number {
  * ```
  */
 export function addBody(scene: Portrait, body: BodyId): Portrait {
-  const p = scene;
-  if (p.items.some((i) => i.body === body) || p.items.length >= MAX_ITEMS) return p;
+  if (scene.items.some((item) => item.star === undefined && item.body === body)) return scene;
+  return addItem(scene, fresh(body));
+}
+
+/**
+ * Add a star drawn from its numbers. It occupies its own place in the scene, so the Sun and multiple stars can be compared.
+ * @param scene - The scene to add to.
+ * @param numbers - Temperature in kelvin, radius in solar radii, and optional star parameters.
+ * @returns A new scene, or the same one when the scene is full or the numbers are invalid.
+ * @example
+ * ```ts
+ * import { addStar, defaultPortrait } from "@johnmorrisdotca/wakusei-planets";
+ * const scene = addStar(defaultPortrait(), { name: "Example star", temperatureK: 6100, radiusSun: 1.2 });
+ * console.log(scene.items[0]?.star?.radiusSun);
+ * ```
+ */
+export function addStar(scene: Portrait, numbers: StarNumbers): Portrait {
+  const star = portraitStar(numbers);
+  return star === undefined ? scene : addItem(scene, { ...fresh("sun"), star });
+}
+
+function addItem(p: Portrait, item: Item): Portrait {
+  if (p.items.length >= MAX_ITEMS) return p;
   const out = copy(p);
-  const item = fresh(body);
   if (p.layout === "auto") {
-    item.r = 0.3;
-    const at = out.items.findIndex((i) => rankOf(i.body) > rankOf(body));
-    out.items.splice(at < 0 ? out.items.length : at, 0, item);
+    if (item.star !== undefined) out.items.push(item);
+    else {
+      const at = out.items.findIndex((one) => one.star !== undefined || rankOf(one.body) > rankOf(item.body));
+      out.items.splice(at < 0 ? out.items.length : at, 0, item);
+    }
     return out;
   }
-  const sized = sizesFor([body], p.scale)[0]! * unitSize(p, body);
-  item.r = Math.max(0.006, sized);
+  const sized = itemSizes([item], p.scale)[0]! * unitSize(p, item);
+  const comparingStars = p.scale === "true" && (item.star !== undefined || p.items.some((one) => one.star !== undefined));
+  item.r = comparingStars ? sized : Math.max(0.006, sized);
   const right = out.items.reduce((m, i) => Math.max(m, i.x + i.r), -Infinity);
   item.x = out.items.length === 0 ? out.camera.x : right + item.r * 1.4 + 0.04;
   item.y = out.items.length === 0 ? out.camera.y : out.items[out.items.length - 1]!.y;
@@ -503,9 +540,17 @@ export function addBody(scene: Portrait, body: BodyId): Portrait {
 }
 
 export function removeBody(p: Portrait, body: BodyId): Portrait {
-  if (!p.items.some((i) => i.body === body)) return p;
+  if (!p.items.some((item) => item.star === undefined && item.body === body)) return p;
   const out = copy(p);
-  out.items = out.items.filter((i) => i.body !== body);
+  out.items = out.items.filter((item) => item.star !== undefined || item.body !== body);
+  return out;
+}
+
+/** Remove one scene item by its order in the scene. */
+export function removeItem(p: Portrait, index: number): Portrait {
+  if (index < 0 || index >= p.items.length) return p;
+  const out = copy(p);
+  out.items.splice(index, 1);
   return out;
 }
 
@@ -565,8 +610,8 @@ export function rescale(p: Portrait, mode: ScaleMode): Portrait {
   out.scale = mode;
   if (p.items.length === 0 || p.layout === "auto") return out;
   const largest = p.items.reduce((m, i) => (i.r > m.r ? i : m), p.items[0]!);
-  const base = sizesFor([largest.body], mode)[0]!;
-  const sizes = sizesFor(p.items.map((i) => i.body), mode);
+  const base = itemSizes([largest], mode)[0]!;
+  const sizes = itemSizes(p.items, mode);
   out.items.forEach((item, i) => {
     const scaled = (sizes[i]! / base) * largest.r;
     item.r = mode === "true" ? scaled : Math.max(0.004, scaled);
@@ -716,7 +761,7 @@ const optional = (value: string | undefined): number | undefined => {
 };
 
 /**
- * The scene as one short piece of text that is safe in an address: fields joined by `~`, each `name:value`, then one `body_x_y_r_spin_tilt_pitch_turn` for each body, back to front. An empty scene is an empty string.
+ * The scene as one short piece of text safe in an address. Fields are joined by `~`. Each planet or moon keeps its `body_x_y_r_spin_tilt_pitch_turn` record. A star's `star:` record has the pose followed by `!` and its encoded numbers.
  *
  * @param scene - The scene.
  * @returns The text.
@@ -745,11 +790,29 @@ export function encodeScene(scene: Portrait): string {
   if (!p.shadows) fields.push("shadows:0");
   if (p.date !== undefined) fields.push(`date:${p.date}`);
   if (p.layout === "manual") fields.push(`cam:${round(p.camera.x)},${round(p.camera.y)},${round(p.camera.h)}`);
+  const hasStars = p.items.some((i) => i.star !== undefined);
   for (const i of p.items) {
     const manual = p.layout === "manual";
-    fields.push([i.body, manual ? round(i.x) : "", manual ? round(i.y) : "", manual ? round(i.r) : "", round(i.spin, 1), i.tilt === undefined ? "" : round(i.tilt, 1), i.pitch === undefined ? "" : round(i.pitch, 1), i.turn === 0 ? "" : round(i.turn, 2)].join("_"));
+    // A radius in a manual star comparison can be a tiny fraction of the largest disc.
+    const pose = [manual ? round(i.x) : "", manual ? round(i.y) : "", manual ? (hasStars ? i.r : round(i.r)) : "", round(i.spin, 1), i.tilt === undefined ? "" : round(i.tilt, 1), i.pitch === undefined ? "" : round(i.pitch, 1), i.turn === 0 ? "" : round(i.turn, 2)].join("_");
+    fields.push(i.star === undefined ? `${i.body}_${pose}` : `star:${pose}!${encodePortraitStar(i.star)}`);
   }
   return fields.join("~");
+}
+
+function posedItem(body: BodyId, pose: string, star?: StarNumbers): Item {
+  const [x, y, r, spin, tilt, pitch, turn] = pose.split("_");
+  const radius = num(r, 0.3);
+  const item: Item = {
+    body, ...(star !== undefined ? { star } : {}),
+    x: num(x, 0), y: num(y, 0), r: radius > 0 ? radius : 0.0005,
+    spin: num(spin, BODIES[body].showLon ?? 0), turn: clamp(num(turn, 0), -720, 720),
+  };
+  const t = optional(tilt);
+  const pi = optional(pitch);
+  if (t !== undefined) item.tilt = t;
+  if (pi !== undefined) item.pitch = clamp(pi, -90, 90);
+  return item;
 }
 
 /**
@@ -784,6 +847,12 @@ export function decodeScene(text: string): Portrait {
       else if (key === "light") {
         const [az, el] = value.split(",");
         p.light = { az: ((num(az, p.light.az) % 360) + 360) % 360, el: clamp(num(el, p.light.el), 0, 90) };
+      } else if (key === "star" && items.length < MAX_ITEMS) {
+        const split = value.indexOf("!");
+        if (split >= 0) {
+          const star = decodePortraitStar(value.slice(split + 1));
+          if (star !== undefined) items.push(posedItem("sun", value.slice(0, split), star));
+        }
       } else if (key === "labels") p.labels = value !== "0";
       else if (key === "orbits") p.orbits = value !== "0";
       else if (key === "shadows") p.shadows = value !== "0";
@@ -794,14 +863,13 @@ export function decodeScene(text: string): Portrait {
       }
       continue;
     }
-    const [body, x, y, r, spin, tilt, pitch, turn] = field.split("_");
-    if (body === undefined || !(body in BODIES) || items.some((i) => i.body === body) || items.length >= MAX_ITEMS) continue;
-    const item: Item = { body: body as BodyId, x: num(x, 0), y: num(y, 0), r: Math.max(0.0005, num(r, 0.3)), spin: num(spin, BODIES[body as BodyId].showLon ?? 0), turn: clamp(num(turn, 0), -720, 720) };
-    const t = optional(tilt);
-    const pi = optional(pitch);
-    if (t !== undefined) item.tilt = t;
-    if (pi !== undefined) item.pitch = clamp(pi, -90, 90);
-    items.push(item);
+    const separator = field.indexOf("_");
+    const body = field.slice(0, separator < 0 ? field.length : separator);
+    if (!Object.hasOwn(BODIES, body) || items.some((i) => i.star === undefined && i.body === body) || items.length >= MAX_ITEMS) continue;
+    items.push(posedItem(body as BodyId, separator < 0 ? "" : field.slice(separator + 1)));
+  }
+  if (!items.some((i) => i.star !== undefined)) {
+    for (const item of items) item.r = Math.max(0.0005, item.r);
   }
   p.items = items;
   return p;

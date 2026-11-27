@@ -1,5 +1,6 @@
 // A star as a line drawing: the Sun's outline drawing with this star's size, shape, cells and spots, and the Sun and two orbits drawn round it, so the size can be read against what we know. Pure: one SVG string.
 import { portrait } from "./pose.ts";
+import type { Pose } from "./ephemeris.ts";
 import { bodyGroup, mix, NAVY, type Frame, type LineOptions } from "./line.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 
@@ -12,6 +13,14 @@ const RINGS: readonly { ratio: number; en: string; ja: string }[] = [
 
 const n = (v: number): string => (Math.round(v * 100) / 100).toString();
 const escape = (text: string): string => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** A star's own disc, drawn at the radius supplied by its caller. */
+export function starBodyGroup(star: StarLook, pose: Pose, frame: Frame, hair: number, clip: string, options: Pick<LineOptions, "stroke" | "paper"> = {}): string {
+  return bodyGroup("sun", pose, frame, {
+    stroke: options.stroke ?? mix(star.tone, "#ffffff", 0.3),
+    paper: options.paper ?? mix(star.tone, NAVY, 0.7),
+  }, hair, 1, star.facts, clip);
+}
 
 /**
  * A star as a line drawing, as an SVG string: its outline (squeezed when it is oblate), its cells and spots as outlines, a ring of rays, and, drawn round it, the Sun's size and the orbits of the Earth and Jupiter
@@ -35,7 +44,6 @@ export function starLineSvg(star: StarNumbers | StarLook, options: LineOptions =
   const size = options.size ?? 320;
   const lang = options.lang ?? "en";
   const stroke = options.stroke ?? mix(made.tone, "#ffffff", 0.3);
-  const paper = options.paper ?? mix(made.tone, NAVY, 0.7);
   const hair = Math.max(0.6, size / 320);
   const pose = options.pose ?? portrait("sun", options);
   const fit = options.fill === undefined ? 0.94 / 1.08 : options.fill;
@@ -58,6 +66,6 @@ export function starLineSvg(star: StarNumbers | StarLook, options: LineOptions =
   const radius = made.radiusSun >= 10 ? Math.round(made.radiusSun).toLocaleString("en-US") : String(Number(made.radiusSun.toPrecision(3)));
   const caption = lang === "ja" ? `太陽の${radius}倍 · ${Math.round(made.temperatureK).toLocaleString("en-US")} K · ${made.luminosityClass}` : `${radius} × Sun · ${Math.round(made.temperatureK).toLocaleString("en-US")} K · ${made.luminosityClass}`;
   const text = `<text x="${n(size / 2)}" y="${n(size - size / 40)}" text-anchor="middle" font-size="${n(size / 34)}" fill="${stroke}" fill-opacity="0.85" font-family="system-ui,sans-serif">${escape(caption)}</text>`;
-  const group = bodyGroup("sun", pose, frame, { stroke, paper }, hair, 1, made.facts, `wk-star-${[...made.key].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36)}`);
+  const group = starBodyGroup(made, pose, frame, hair, `wk-star-${[...made.key].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7).toString(36)}`, options);
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(size)} ${n(size)}" width="${n(size)}" height="${n(size)}" role="img" aria-label="${escape(label)}"><title>${escape(label)}</title>${rings.join("")}${group}${text}</svg>`;
 }

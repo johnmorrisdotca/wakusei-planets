@@ -438,6 +438,8 @@ The tiles of every body share one 48 MB budget, six loads at a time for a source
 
 [The portrait builder](https://johnmorrisdotca.github.io/wakusei-planets/portrait.html) puts any bodies in one picture: drag them, size them, turn them, order them front to back, arrange them in a row, an arc, a grid or at true orbit distance (true or readable sizes, a planet's moons round it in orbit order), light them from one direction, and take the code, a PNG or an SVG. The scene is kept in the address, and every body is drawn in one WebGL scene, so the page holds one WebGL context. [The portrait builder](docs/guides/portrait-builder.md) is its guide.
 
+Choose **Stars** on the **Bodies** tab to draw a star from its temperature and radius. Add the Sun and choose **True scale** to compare their sizes. `addStar` adds the same kind of item in code.
+
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/portrait/+esm"></script>
 <script type="module" src="https://cdn.jsdelivr.net/npm/@johnmorrisdotca/wakusei-planets/all/+esm"></script>

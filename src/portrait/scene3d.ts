@@ -9,6 +9,7 @@ import type { TileLevel } from "../scene/tiles.ts";
 import "../bodies/all.ts";
 import { lightVector, type Placed, type Resolved } from "./model.ts";
 import { poseOf } from "./pose.ts";
+import { portraitStarLook } from "./stars.ts";
 
 /** Everything that decides how the scene looks at one draw. */
 export interface PortraitDraw {
@@ -20,6 +21,8 @@ export interface PortraitDraw {
   ms: number | undefined;
   /** Seconds of each body's own turning so far. */
   seconds: number;
+  /** Seconds of a star's turning and surface motion, or zero under reduced motion. */
+  starSeconds: number;
   shadows: boolean;
 }
 
@@ -74,14 +77,14 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
       const painter = createPainter({ textureBase: options.textureBase(), farBase: options.farBase(), tiles: options.tilesBase() ?? "off" });
       const scene = new T.Scene();
       const camera = new T.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
-      const held = new Map<BodyId, { painting: Painting; look: string }>();
+      const held = new Map<string, { painting: Painting; look: string }>();
       let viewWidth = width;
       let viewHeight = height;
       let latest: PortraitDraw = options.state();
       let after: (() => void)[] = [];
       const ratio = (): number => Math.min(2, globalThis.devicePixelRatio || 1);
 
-      const drop = (id: BodyId): void => {
+      const drop = (id: string): void => {
         const one = held.get(id);
         if (one === undefined) return;
         scene.remove(one.painting.object);
@@ -92,7 +95,15 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
       const apply = (state: PortraitDraw): void => {
         latest = state;
         const { placed, camera: cam } = state;
-        const present = new Set(placed.map((p) => p.body));
+        const occurrences = new Map<string, number>();
+        const entries = placed.map((p) => {
+          if (p.star === undefined) return { p, key: p.body };
+          const star = portraitStarLook(p.star);
+          const occurrence = occurrences.get(star.key) ?? 0;
+          occurrences.set(star.key, occurrence + 1);
+          return { p, star, key: `star:${star.key}:${occurrence}` };
+        });
+        const present = new Set(entries.map(({ key }) => key));
         for (const id of [...held.keys()]) if (!present.has(id) || held.get(id)!.look !== state.look) drop(id);
         const aspect = viewWidth / Math.max(1, viewHeight);
         const halfH = cam.h;
@@ -112,21 +123,29 @@ export function createPortraitItem(options: PortraitItemOptions): Item3D<ThreePa
         camera.updateProjectionMatrix();
         camera.updateMatrixWorld();
         const toSun = lightVector(state.light);
-        placed.forEach((p, i) => {
-          let one = held.get(p.body);
+        entries.forEach(({ p, key, star }, i) => {
+          let one = held.get(key);
           if (one === undefined) {
-            const painting = painter.make(T, p.body, { look: state.look, invalidate: () => options.redraw(), ratio: ratio(), maxTexture: placed.length > 6 ? 1024 : 2048, onLevels: (levels) => options.onLevels(p.body, levels) });
+            const painting = painter.make(T, p.body, {
+              look: state.look,
+              invalidate: () => options.redraw(),
+              ratio: ratio(),
+              maxTexture: placed.length > 6 ? 1024 : 2048,
+              ...(star === undefined ? { onLevels: (levels) => options.onLevels(p.body, levels) } : { star }),
+            });
             scene.add(painting.object);
             one = { painting, look: state.look };
-            held.set(p.body, one);
+            held.set(key, one);
           }
           const r = Math.max(p.r, MIN_RADIUS_PX / pxPerUnit);
           one.painting.object.position.set(p.x, p.y, i * slot);
           one.painting.object.scale.setScalar(r);
-          const pose = poseOf(p, state.ms, state.seconds, state.light);
+          const seconds = star === undefined ? state.seconds : state.starSeconds;
+          const pose = poseOf(p, state.ms, seconds, state.light);
           one.painting.update({
             toSun,
             ms: state.ms ?? 0,
+            seconds,
             radiusPx: r * pxPerUnit,
             pose: { pole: pose.pole, meridian: pose.meridian },
             ...(state.shadows ? { occluders: occludersFor(placed, i) } : {}),

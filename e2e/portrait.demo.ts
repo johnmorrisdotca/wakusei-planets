@@ -3,6 +3,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import "./load.ts";
 import { dragBy, groundShift } from "./ground.ts";
+import { addBody, addStar, decodeScene, defaultPortrait, encodeScene, setItem, setPortrait } from "../src/portrait/model.ts";
+import type { StarNumbers } from "../src/star.ts";
 
 const PAGE = "/wakusei-planets/portrait.html";
 const MANUAL = "layout:manual~look:painted~labels:0~orbits:0~shadows:0";
@@ -11,7 +13,7 @@ const open = async (page: Page, scene: string): Promise<void> => {
   await expect(page.locator("#view")).toHaveAttribute("data-state", /live|line/, { timeout: 90_000 });
 };
 interface Dbg {
-  scene(): { items: { body: string; x: number; y: number; r: number; spin: number; pitch?: number; turn: number }[]; camera: { x: number; y: number; h: number }; layout: string; look: string };
+  scene(): { items: { body: string; x: number; y: number; r: number; spin: number; pitch?: number; turn: number; star?: StarNumbers }[]; camera: { x: number; y: number; h: number }; layout: string; look: string };
 }
 const scene = (page: Page) => page.evaluate(() => (globalThis as unknown as { wakuseiPortraitDebug: Dbg }).wakuseiPortraitDebug.scene());
 const metrics = (page: Page) => page.evaluate(() => (document.querySelector("#view") as unknown as { metrics: { width: number; height: number; scale: number } }).metrics);
@@ -235,6 +237,82 @@ test.describe("3D", () => {
     await expect(page.locator("wakusei-portrait")).toHaveAttribute("data-state", /live|still/, { timeout: 90_000 });
     expect(await page.locator("wakusei-portrait").evaluate((el) => (el as unknown as { stats: { bodies: number } }).stats.bodies)).toBe(2);
   });
+
+  test("two model stars share the Sun's scene and save their own colours", async ({ page }) => {
+    const dark = setPortrait(defaultPortrait(), { bg: "black", look: "painted", layout: "manual", labels: false });
+    const withSun = addBody(dark, "sun");
+    const withCool = addStar(withSun, { name: "Cool", temperatureK: 3042, radiusSun: 0.154, corona: 0 });
+    const withHot = addStar(withCool, { name: "Hot", temperatureK: 25200, radiusSun: 0.0084, luminosityClass: "D", oblateness: 0.2, inclinationDeg: 28 });
+    const p = [-0.55, 0, 0.55].reduce((out, x, i) => setItem(out, i, { x, y: 0, r: 0.21 }), withHot);
+    const problems: string[] = [];
+    page.on("pageerror", (e) => problems.push(e.message));
+    page.on("console", (message) => {
+      if (message.type() === "error") problems.push(message.text());
+    });
+    await page.goto(`/wakusei-planets/embed.html?scene=${encodeURIComponent(encodeScene({ ...p, camera: { x: 0, y: 0, h: 0.5 } }))}`);
+    const view = page.locator("wakusei-portrait");
+    await expect(view).toHaveAttribute("data-state", /live|still/, { timeout: 90_000 });
+    const { bodies, pixels } = await view.evaluate(async (element) => {
+      const v = element as unknown as { toPng(scale: number): Promise<Blob>; stats: { bodies: number } };
+      const bitmap = await createImageBitmap(await v.toPng(1));
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(bitmap, 0, 0);
+      return { bodies: v.stats.bodies, pixels: [-0.55, 0, 0.55].map((x) => Array.from(ctx.getImageData(Math.round(bitmap.width / 2 + x * bitmap.height), Math.round(bitmap.height / 2), 1, 1).data)) };
+    });
+    expect(bodies).toBe(3);
+    expect(pixels[0]![0]).toBeGreaterThan(100);
+    expect(pixels[1]![0]! - pixels[1]![2]!).toBeGreaterThan(30);
+    expect(pixels[2]![2]! - pixels[2]![0]!).toBeGreaterThan(15);
+    expect(problems).toEqual([]);
+  });
+});
+
+test("the builder adds stars beside the Sun, saves their numbers and shares the same scene", async ({ page }) => {
+  await open(page, "look:line~scale:true~sun_0_0_0.3_0");
+  await page.getByTestId("group-stars").click();
+  const cool = "Proxima ~ <&\">";
+  const hot = "Sirius A";
+  for (const [name, kelvin, radius] of [[cool, "3042", "0.154"], [hot, "9940", "1.71"]]) {
+    await page.locator("#star-name").fill(name!);
+    await page.locator("#star-temperature").fill(kelvin!);
+    await page.locator("#star-radius").fill(radius!);
+    await page.locator("#star-add").click();
+  }
+  await expect(page.locator("#view")).toHaveAttribute("aria-label", `Portrait: Sun, ${cool}, ${hot}`);
+  await expect(page.locator("#addmoons")).toBeDisabled();
+  const starDrawing = page.locator("#view #stage svg svg").last();
+  const beforeTurn = await starDrawing.innerHTML();
+  await page.locator('#turns [data-turn="30"]').click();
+  await page.waitForTimeout(400);
+  expect(await starDrawing.innerHTML()).toBe(beforeTurn);
+  await page.locator("#o-back").click();
+  await expect(page.locator("#view")).toHaveAttribute("aria-label", `Portrait: ${hot}, Sun, ${cool}`);
+  const radii = await page.locator("#view").evaluate((el) => (el as unknown as { metrics: { placed: { r: number }[] } }).metrics.placed.map((i) => i.r));
+  expect(radii[0]! / radii[1]!).toBeCloseTo(1.71, 6);
+  expect(radii[2]! / radii[1]!).toBeCloseTo(0.154, 6);
+  await expect.poll(() => decodeScene(new URL(page.url()).searchParams.get("scene") ?? "").items.map((i) => i.star?.name ?? i.body)).toEqual([hot, "sun", cool]);
+  const address = new URL(page.url()).searchParams.get("scene");
+  await page.reload();
+  await expect(page.locator("#view")).toHaveAttribute("aria-label", `Portrait: ${hot}, Sun, ${cool}`);
+  expect((await scene(page)).items.map((i) => i.star?.temperatureK)).toEqual([9940, undefined, 3042]);
+  const svg = await page.locator("#view").evaluate((el) => (el as unknown as { toSvg(): Promise<string> }).toSvg());
+  expect(svg).toContain("wk-portrait-star-0");
+  expect(svg).toContain("wk-portrait-star-2");
+  expect(svg).toContain("Proxima ~ &lt;&amp;&quot;&gt;");
+  await page.locator("#tab-share").click();
+  await page.locator('#embed-panel button[data-kind="iframe"]').click();
+  const url = await page.locator('#embed-panel [part="open"]').getAttribute("href");
+  expect(new URL(url!, page.url()).searchParams.get("scene")).toBe(address);
+  // Open the same generated query through the locally built embed.
+  await page.goto(`/wakusei-planets/embed.html?${new URL(url!, page.url()).searchParams.toString()}`);
+  await expect(page.locator("wakusei-portrait")).toHaveAttribute("aria-label", `Portrait: ${hot}, Sun, ${cool}`);
+  await page.goBack();
+  await page.getByTestId("item-star-0").click();
+  await page.locator("#remove").click();
+  await expect(page.locator("#view")).toHaveAttribute("aria-label", `Portrait: Sun, ${cool}`);
 });
 
 test("nothing the Share tab had before the shared panel is gone: seven tabs, the code, Copy, Save PNG, Save SVG, Copy link, the embed page and the credit, and a docs link besides", async ({ page }) => {

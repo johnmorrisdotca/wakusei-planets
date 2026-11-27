@@ -44,7 +44,7 @@ export interface Placed extends Item { index: number; reach: number; }
 export type PlanetId = (typeof PLANET_IDS)[number];
 export interface Portrait { items: Item[]; layout: "auto" | "manual"; arrange: Arrange; scale: ScaleMode; moons: "auto" | "manual"; look: Look; bg: Background; aspect: number; light: { az: number; el: number; }; labels: boolean; orbits: boolean; shadows: boolean; date: string | undefined; camera: { x: number; y: number; h: number; }; }
 export interface PortraitEmbed { scene: string; width?: number; }
-export interface Item { body: BodyId; x: number; y: number; r: number; spin: number; tilt?: number; pitch?: number; turn: number; }
+export interface Item { body: BodyId; star?: StarNumbers; x: number; y: number; r: number; spin: number; tilt?: number; pitch?: number; turn: number; }
 export interface Resolved { placed: Placed[]; camera: { x: number; y: number; h: number; }; }
 export interface PortraitOptions { tilt?: number; pitch?: number; phase?: number; spin?: number; }
 export interface Preset { id: string; name: { en: string; ja: string; }; scene: Portrait; }
@@ -62,6 +62,7 @@ export interface StarPart { part: "temperature" | "colour" | "size" | "edge" | "
 export type StarStatus = "measured" | "estimated" | "derived" | "illustrative";
 export interface System { planet: Apparent; moons: MoonPlace[]; }
 function addBody(scene: Portrait, body: BodyId) => Portrait
+function addStar(scene: Portrait, numbers: StarNumbers) => Portrait
 function apparent(id: BodyId, time: number) => Apparent
 function decodeScene(text: string) => Portrait
 function defaultPortrait() => Portrait
@@ -1186,8 +1187,8 @@ export interface MoonSite { name: string; offset: Vec3; radius: number; }
 export interface NameLabelOptions { look: BodyLabelLook; strength?: number; repeat?: BodyLabelRepeat; latitude?: number; facing?: boolean; font?: string; fallbackFont?: string; size?: BodyLabelSize; minRadiusPx?: number; tone?: NameLabelTone; }
 export type NameLabelTone = "auto" | "light" | "dark";
 const PICTURE_CREDITS: readonly PictureCredit[]
-export interface PaintContext { look?: string; mapped?: boolean; invalidate?(): void; ratio?: number; maxTexture?: number; onLevels?(levels: readonly TileLevel[] | undefined): void; label?: PaintLabel | null; }
-export interface PaintInfo { toSun: Vec3; ms: number; radiusPx: number; pose?: { pole: Vec3; meridian: Vec3; }; occluders?: readonly (readonly [ number, number, number, number ])[]; view?: PaintView; round?: boolean; }
+export interface PaintContext { look?: string; star?: StarLook; mapped?: boolean; invalidate?(): void; ratio?: number; maxTexture?: number; onLevels?(levels: readonly TileLevel[] | undefined): void; label?: PaintLabel | null; }
+export interface PaintInfo { toSun: Vec3; ms: number; radiusPx: number; seconds?: number; pose?: { pole: Vec3; meridian: Vec3; }; occluders?: readonly (readonly [ number, number, number, number ])[]; view?: PaintView; round?: boolean; }
 export interface PaintLabel extends NameLabelOptions { lang?: "en" | "ja"; text?: string; }
 export interface PaintView { camera: THREE.Camera; width: number; height: number; }
 export type PainterLook = (typeof LOOKS)[number];

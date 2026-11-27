@@ -172,6 +172,7 @@ test("a flattened star is squashed, with hotter poles and a darker equator; a ro
 test("the edge darkens less on a hot star, and every star glows in its own colour", () => {
   assert.ok(starLook(RIGEL).look.limb! < starLook(STAR_SUN).look.limb!);
   assert.ok(starLook(BETELGEUSE).look.limb! > starLook(STAR_SUN).look.limb!);
+  assert.ok(starLook(STAR_SUN).look.limb! > 1.7 && starLook(PROXIMA).look.limb! > 2);
   const glow = starLook(RIGEL).look.glow!;
   assert.ok(glow.colour[2] > glow.colour[0], "a blue star has a blue glow");
   assert.ok(starLook({ ...RIGEL, corona: 0 }).look.glow!.strength === 0);

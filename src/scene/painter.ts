@@ -10,8 +10,12 @@ import { createSourceBook, type SourceBook } from "../door/book.ts";
 import { OWN_BY_ID } from "../door/own.ts";
 import { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit } from "../picture-credits.ts";
 import { cross, type Vec3 } from "../vec.ts";
+import { silhouette } from "../pose.ts";
+import { starBrightness, type StarLook } from "../star.ts";
 import type { ThreeParts } from "./body.ts";
-import { bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
+import { bodyFragment, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_WORLD, RING_VERTEX_WORLD, VERTEX_WORLD } from "./glsl.ts";
+import { makeGlowMaterial } from "./glow.ts";
+import { prominenceFrame } from "./prominence.ts";
 import { fallbackLook } from "./fallback.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
 import { atmosphereTint, detailOf, lookOf } from "./look.ts";
@@ -94,6 +98,8 @@ export type PainterLook = (typeof LOOKS)[number];
 export interface PaintContext {
   /** `realistic` (the default) or `painted`. */
   look?: string;
+  /** A star drawn from its numbers, in place of the built-in Sun. */
+  star?: StarLook;
   /** True to draw every body that has a surface picture from it, in any look (the space view does: a planet or a moon with a real map never shows the shaded look instead). A body with no picture is still shaded. */
   mapped?: boolean;
   /** Ask for a new draw: a sharper picture has arrived. */
@@ -162,6 +168,8 @@ export interface PaintInfo {
   toSun: Vec3;
   ms: number;
   radiusPx: number;
+  /** Seconds of motion in a scene, for a star's surface and glow. Defaults to 0. */
+  seconds?: number;
   /** The pole and the prime meridian to draw instead of the body's real ones at `ms` (a portrait's own pose), in the scene's axes. */
   pose?: { pole: Vec3; meridian: Vec3 };
   /** Spheres that may shade this body from the Sun: x, y, z (from this body's centre) and radius, all in this body's radii, in the scene's axes. At most six are used. */
@@ -322,8 +330,9 @@ interface CreditBody {
 }
 
 function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string | undefined; tiles: string | undefined; book: SourceBook; shared: boolean }, hold?: (body: CreditBody) => () => void): Painting {
-  const facts = BODIES[id];
-  const look = lookOf(id) ?? fallbackLook(facts);
+  const star = id === "sun" ? context.star : undefined;
+  const facts = star?.facts ?? BODIES[id];
+  const look = star?.look ?? lookOf(id) ?? fallbackLook(facts);
   const wantPainted = (context.look === "painted" || look.mapped === true || context.mapped === true) && look.painted !== undefined;
   const ratio = context.ratio ?? 1;
   const maxWidth = context.maxTexture ?? 2048;
@@ -368,13 +377,14 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       uRingOn: { value: 0 },
       uRingTex: { value: null },
       uMap: { value: null },
+      ...(star === undefined ? {} : { uTime: { value: 0 }, uPulse: { value: 1 } }),
       uScale: { value: 1 },
       uOccN: { value: 0 },
       uOcc: { value: new Float32Array(24) },
     };
   };
   const material = (painted: boolean): THREE.ShaderMaterial => {
-    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, undefined, generic), uniforms: uniforms(painted) });
+    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, look.limbTint, generic), uniforms: uniforms(painted) });
     disposables.push(m);
     return m;
   };
@@ -481,11 +491,11 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   }
 
   // the glow of a star: a plane through its centre that `update` turns to the camera, so the globe inside it keeps its own orientation
-  let glowMesh: THREE.Mesh | undefined;
+  let glowMesh: THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> | undefined;
   if (look.emissive === true) {
     const glowGeometry = acquire(T, "glow", () => new T.PlaneGeometry(6, 6));
     releases.push(glowGeometry.release);
-    const glowMaterial = new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(1, 0.7, 0.3) } } });
+    const glowMaterial = makeGlowMaterial(T, look.glow);
     disposables.push(glowMaterial);
     const glow = new T.Mesh(glowGeometry.value, glowMaterial);
     glow.renderOrder = 4;
@@ -693,6 +703,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   if (context.label) setLabel(context.label);
 
   const drop = hold?.({ id, picture: wantPainted, tiles: () => detail?.stats.shown != null });
+  const glowAxis = new T.Vector3();
 
   return {
     object: group,
@@ -720,8 +731,8 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           squeeze.uRoundK.value = shape.k;
         } else squeeze.uRoundK.value = 1;
       }
+      const { pole, meridian } = info.pose ?? orientation(id, info.ms);
       {
-        const { pole, meridian } = info.pose ?? orientation(id, info.ms);
         const east = cross(pole, meridian);
         if (look.emissive !== true && detail !== undefined) {
           // a body big enough in the view, seen by a camera we were told of, is worked out for a window of finer map; any other keeps the pictures it has
@@ -734,7 +745,35 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
       }
       const occluders = info.occluders ?? [];
       const shaded = Math.min(6, occluders.length);
+      const seconds = info.seconds ?? 0;
+      const variable = look.glow?.variable;
+      const pulse = variable === undefined ? 1 : starBrightness(variable.periodDays, variable.amplitude, seconds);
+      if (glowMesh !== undefined && look.glow !== undefined) {
+        const inView = (axis: Vec3): Vec3 => {
+          glowAxis.set(...axis);
+          if (info.view !== undefined) glowAxis.transformDirection(info.view.camera.matrixWorldInverse);
+          return [glowAxis.x, glowAxis.y, glowAxis.z];
+        };
+        const viewPole = inView(pole);
+        const viewMeridian = inView(meridian);
+        const { b, angle } = silhouette({ pole: viewPole, meridian: viewMeridian, light: info.toSun }, facts.flattening);
+        const rotation = (-angle * Math.PI) / 180;
+        if (info.view === undefined) glowMesh.rotation.set(0, 0, rotation);
+        else glowMesh.rotateZ(rotation);
+        glowMesh.scale.set(1, b, 1);
+        const frame = prominenceFrame(viewPole, viewMeridian, rotation);
+        const u = glowMesh.material.uniforms;
+        u.uTime!.value = seconds;
+        u.uPulse!.value = pulse;
+        u.uSpin!.value = frame.spin;
+        u.uPole!.value = frame.pole;
+        u.uTilt!.value = frame.tilt;
+      }
       for (const m of materials) {
+        if (star !== undefined) {
+          m.uniforms.uTime!.value = seconds;
+          m.uniforms.uPulse!.value = pulse;
+        }
         (m.uniforms.uLight!.value as THREE.Vector3).copy(light);
         m.uniforms.uScale!.value = scale;
         (m.uniforms.uRingN!.value as THREE.Vector3).copy(poleVec);

@@ -315,6 +315,17 @@ test("changes to the portrait give back what they took: adding and removing bodi
       await page.locator(`[data-testid="body-${id}"]`).click();
       await settle(page, 400);
     }
+    await page.getByTestId("group-stars").click();
+    await page.locator("#star-temperature").fill("9845");
+    await page.locator("#star-radius").fill("1.7144");
+    await page.locator("#star-add").click();
+    await page.locator("#star-add").click();
+    const count = () => view(page).evaluate((el) => (el as unknown as { stats: { bodies: number } }).stats.bodies);
+    await expect.poll(count).toBe(14);
+    await page.locator("#remove").click();
+    await page.locator("#remove").click();
+    await expect.poll(count).toBe(12);
+    await page.getByTestId("group-planets").click();
     await liveView(page);
   };
   await round();

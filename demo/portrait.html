@@ -12,7 +12,7 @@
 
       <section class="fam-felt space-stage portrait-stage" aria-labelledby="stage-h">
         <h1 id="stage-h" class="portrait-title"><span data-say="pt_title">Portrait builder</span></h1>
-        <p class="fam-fine portrait-lede" data-say="pt_lede">Put any bodies of the solar system in one picture. Drag them, size them, turn them, then copy the code or save the picture.</p>
+        <p class="fam-fine portrait-lede" data-say="pt_lede">Arrange solar system bodies and stars in one picture. Drag them, size them, turn them, then copy the code or save the picture.</p>
         <div class="portrait-top">
           <div class="group fam-seg" id="tools" role="group" aria-label="Tool" data-say-label="pt_tools">
             <button type="button" data-tool="move" aria-pressed="true" data-say="pt_tool_move">Move</button>
@@ -73,6 +73,16 @@
               <div class="chips" id="groups" role="group" aria-label="Which bodies" data-say-label="pt_group"></div>
             </div>
             <div class="chips" id="picker" role="group" aria-label="Bodies"></div>
+            <form id="star-form" hidden>
+              <div class="fam-row">
+                <label class="field"><span data-say="pt_star_name">Name (optional)</span><input id="star-name" class="fam-field" type="text" /></label>
+                <label class="field"><span data-say="st_temperature">Temperature (K)</span><input id="star-temperature" class="fam-field" type="number" min="1000" max="200000" step="any" required /></label>
+                <label class="field"><span data-say="st_radius">Radius (Sun = 1)</span><input id="star-radius" class="fam-field" type="number" min="0.0001" max="5000" step="any" required /></label>
+                <label class="field"><span data-say="pt_star_class">Luminosity class</span><select id="star-class" class="fam-field"></select></label>
+                <button type="submit" id="star-add" class="fam-button" data-say="pt_star_add">Add star</button>
+              </div>
+              <p class="fam-fine" id="star-full" data-say="pt_star_full" hidden>The portrait is full.</p>
+            </form>
           </div>
 
           <div role="tabpanel" id="panel-arrange" aria-labelledby="tab-arrange" hidden>

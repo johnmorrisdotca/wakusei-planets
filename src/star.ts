@@ -338,6 +338,26 @@ export function starBrightness(periodDays: number, amplitude: number, seconds: n
   return 1 + amplitude * Math.sin((seconds / (periodDays * 86_400)) * Math.PI * 2);
 }
 
+/** Check the numbers before either drawing a star or storing its data in a scene. */
+export function validateStarNumbers(numbers: StarNumbers): void {
+  within("temperatureK", numbers.temperatureK, 1000, 200_000);
+  within("radiusSun", numbers.radiusSun, 1e-4, 5000);
+  const cls = numbers.luminosityClass ?? "V";
+  if (!(LUMINOSITY_CLASSES as readonly string[]).includes(cls)) throw new RangeError(`luminosityClass must be one of ${LUMINOSITY_CLASSES.join(", ")}, got ${String(cls)}`);
+  const optional = (key: string, value: number | undefined, lo: number, hi: number): void => {
+    if (value !== undefined) within(key, value, lo, hi);
+  };
+  optional("rotationDays", numbers.rotationDays, -1e6, 1e6);
+  if (numbers.rotationDays === 0) throw new RangeError("rotationDays must not be 0: leave it out when the rotation is not known");
+  optional("oblateness", numbers.oblateness, 0, 0.4);
+  optional("inclinationDeg", numbers.inclinationDeg, 0, 90);
+  optional("corona", numbers.corona, 0, 1);
+  optional("activity", numbers.activity, 0, 1);
+  if ((numbers.variablePeriodDays === undefined) !== (numbers.variableAmplitude === undefined)) throw new RangeError("variablePeriodDays and variableAmplitude are given together, or neither");
+  optional("variablePeriodDays", numbers.variablePeriodDays, 1e-4, 1e6);
+  optional("variableAmplitude", numbers.variableAmplitude, 0, 1);
+}
+
 /**
  * Everything the package draws a star with, from the numbers alone: the same numbers always give the same star. Throws a `RangeError` that names the number when one is out of range.
  *
@@ -357,23 +377,14 @@ export function starBrightness(periodDays: number, amplitude: number, seconds: n
  * ```
  */
 export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): StarLook {
+  validateStarNumbers(numbers);
   const low = options.quality === "low";
-  const temperatureK = within("temperatureK", numbers.temperatureK, 1000, 200_000);
-  const radiusSun = within("radiusSun", numbers.radiusSun, 1e-4, 5000);
+  const { temperatureK, radiusSun, rotationDays, oblateness = 0, inclinationDeg, corona = 0.8, variablePeriodDays, variableAmplitude } = numbers;
   const cls = numbers.luminosityClass ?? "V";
-  if (!(LUMINOSITY_CLASSES as readonly string[]).includes(cls)) throw new RangeError(`luminosityClass must be one of ${LUMINOSITY_CLASSES.join(", ")}, got ${String(cls)}`);
-  const rotationDays = numbers.rotationDays === undefined ? undefined : within("rotationDays", numbers.rotationDays, -1e6, 1e6);
-  if (rotationDays === 0) throw new RangeError("rotationDays must not be 0: leave it out when the rotation is not known");
-  const oblateness = numbers.oblateness === undefined ? 0 : within("oblateness", numbers.oblateness, 0, 0.4);
-  const inclinationDeg = numbers.inclinationDeg === undefined ? undefined : within("inclinationDeg", numbers.inclinationDeg, 0, 90);
-  const corona = numbers.corona === undefined ? 0.8 : within("corona", numbers.corona, 0, 1);
-  const activity = numbers.activity === undefined ? defaultActivity(temperatureK, cls, rotationDays) : within("activity", numbers.activity, 0, 1);
-  const name = numbers.name !== undefined && numbers.name.trim() !== "" ? numbers.name.trim() : "Star";
+  const activity = numbers.activity ?? defaultActivity(temperatureK, cls, rotationDays);
+  const name = numbers.name?.trim() || "Star";
   const estimated = new Set(numbers.estimated ?? []);
-  const periodGiven = numbers.variablePeriodDays !== undefined;
-  const swingGiven = numbers.variableAmplitude !== undefined;
-  if (periodGiven !== swingGiven) throw new RangeError("variablePeriodDays and variableAmplitude are given together, or neither");
-  const variable = periodGiven ? { periodDays: within("variablePeriodDays", numbers.variablePeriodDays!, 1e-4, 1e6), amplitude: within("variableAmplitude", numbers.variableAmplitude!, 0, 1) } : undefined;
+  const variable = variablePeriodDays === undefined ? undefined : { periodDays: variablePeriodDays, amplitude: variableAmplitude! };
 
   // colour: the black body for the cells, a cooler and more saturated one for the lanes between them. Near the Sun's temperature the cells and the glow lean toward the Sun's own orange.
   const body = unit(temperatureK);
@@ -381,10 +392,16 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
   const cell = lean(saturate(unit(temperatureK * 1.06), 2), SUN_YELLOW, warm);
   const lane = saturate(unit(temperatureK * (0.62 + 0.3 * clamp((temperatureK - 5000) / 7000, 0, 1))), 2.6).map((v) => v * 0.85) as [number, number, number];
   const gran = visibility(temperatureK, cls);
+  const dwarf = cls === "IV" || cls === "V" || cls === "VI";
+  const quietCells = dwarf ? clamp((6600 - temperatureK) / 500, 0, 1) : 0;
+  const cellContrast = gran * (1 - 0.7 * quietCells);
   const [grainFreq, grainFine] = GRAIN[cls];
   const band = 25 + 43 * activity;
-  const threshold = 0.74 - 0.2 * activity;
-  const spotFreq = cls === "0" || cls === "Ia" ? 2 : cls === "Iab" || cls === "Ib" || cls === "II" ? 2.6 : cls === "III" ? 3.4 : temperatureK < 3900 ? 6.5 : 5;
+  // Resolve small groups in cool dwarfs without spreading their penumbrae across the brighter cells.
+  const threshold = 0.74 - 0.2 * activity + quietCells * (0.008 + 0.1 * activity);
+  const penumbra = 0.07 - 0.02 * quietCells;
+  const dwarfSpotFreq = 5 + quietCells * (9 + 4 * clamp((temperatureK - 3900) / 1800, 0, 1));
+  const spotFreq = cls === "0" || cls === "Ia" ? 2 : cls === "Iab" || cls === "Ib" || cls === "II" ? 2.6 : cls === "III" ? 3.4 : dwarfSpotFreq;
 
   // gravity darkening: the pole is hotter than the equator by (1 - 3e)^beta, beta 0.25 for a star whose envelope is radiative and 0.08 for a convective one (von Zeipel; Lucy)
   const beta = temperatureK > 7000 ? 0.25 : 0.08;
@@ -402,11 +419,11 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
       : low
         ? `float g = fbm(p * ${f(grainFreq)});
   float g2 = fbm(p * ${f(grainFreq * 4)} + 4.0);
-  float cell = mix(0.8, smoothstep(0.32, 0.72, mix(g, g2, ${f(grainFine)})), ${f(gran)});`
+  float cell = mix(0.8, smoothstep(0.32, 0.72, mix(g, g2, ${f(grainFine)})), ${f(cellContrast)});`
         : `float boil = 0.5 + 0.5 * sin(uTime * 0.35);
   float g = fbm(p * ${f(grainFreq)} + vec3(0.0, 0.0, uTime * 0.004));
   float g2 = mix(fbm(p * ${f(grainFreq * 4)} + 4.0), fbm(p * ${f(grainFreq * 4)} + 11.0), boil);
-  float cell = mix(0.8, smoothstep(0.32, 0.72, mix(g, g2, ${f(grainFine)})), ${f(gran)});`;
+  float cell = mix(0.8, smoothstep(0.32, 0.72, mix(g, g2, ${f(grainFine)})), ${f(cellContrast)});`;
   const shape = oblateness > 0 ? `\n  col *= mix(${v3(ratioAt(pole))}, ${v3(ratioAt(eq * pole))}, 1.0 - p.z * p.z);` : "";
   const spots =
     activity > 0.02
@@ -414,7 +431,7 @@ export function starLook(numbers: StarNumbers, options: StarLookOptions = {}): S
   float act = smoothstep(radians(${f(band)}), radians(8.0), abs(lat(p)));
   float sn = fbm(p * ${f(spotFreq)} + 3.0);
   float spot = smoothstep(${f(threshold)}, ${f(threshold + 0.08)}, sn) * act;
-  float pen = smoothstep(${f(threshold - 0.07)}, ${f(threshold)}, sn) * act;
+  float pen = smoothstep(${f(threshold - penumbra)}, ${f(threshold)}, sn) * act;
   col = mix(col, ${v3(lane.map((v) => v * 0.6))}, pen * 0.55);
   col = mix(col, ${v3(lane.map((v) => v * 0.16))}, spot * 0.92);`
       : "";
@@ -426,7 +443,8 @@ vec4 surface(vec3 p) {
 }`;
 
   // the edge: the exponent of the limb darkening, and the colour the edge shifts to (a cooler layer seen at a slant)
-  const limb = clamp(0.5 + (SUN_K - temperatureK) / 30_000, 0.2, 0.7);
+  const coolLimb = cls === "D" ? 0 : 1.55 * clamp((6800 - temperatureK) / 1200, 0, 1);
+  const limb = clamp(0.5 + (SUN_K - temperatureK) / 30_000, 0.2, 0.7) + coolLimb;
   const cool = unit(temperatureK * 0.78);
   const tint = [0, 1, 2].map((i) => Math.min(1, (cool[i]! / body[i]!) ** 1.4)) as [number, number, number];
   const glowColour = lean(saturate(body, 1.1), SUN_ORANGE, warm);
