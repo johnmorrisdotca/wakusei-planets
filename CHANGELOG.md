@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.89.0] - 2026-11-27
+
 - **Finer Europa and Ganymede maps** (MODULES-774). The tile sets add brightness detail from the Voyager and Galileo mosaics where the images resolve it. Detail fades across observation joins and gaps.
 
 ## [0.88.0] - 2026-11-27
