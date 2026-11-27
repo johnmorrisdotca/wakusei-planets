@@ -1082,6 +1082,7 @@ export interface SkyHorizonOptions { observer: Observer; within?: { days: number
 export interface SkyRiseSet { rise: Date | null; transit: Date | null; set: Date | null; horizon: "crosses" | "above" | "below"; }
 export interface SkyRiseSetOptions { observer: Observer; timeZone: string; }
 export interface SkySeasons { marchEquinox: Date; juneSolstice: Date; septemberEquinox: Date; decemberSolstice: Date; }
+function bestTimeToLook(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", date: When, options: SkyRiseSetOptions) => Date | null
 function findEclipses(from: When, to: When) => SkyEclipse[]
 function localSolarEclipse(from: When, options: { observer: Observer; within?: { days: number; } | undefined; }) => LocalSolarEclipse | null
 function lunarApsides(from: When, to: When) => LunarApsis[]

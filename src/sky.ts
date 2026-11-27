@@ -2,7 +2,7 @@
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
+import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchAltitude, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
 import type { SkyBodyId } from "./sky-bodies.ts";
 import type { Observer } from "./sky/types.ts";
 import { moment, type When } from "./when.ts";
@@ -679,6 +679,115 @@ export function riseSetTimes(body: SkyBodyId, date: When, options: SkyRiseSetOpt
   const middle = new Date((start + end) / 2);
   const equator = Equator(engineBody, middle, observer, true, true);
   return { rise, transit, set, horizon: Horizon(middle, observer, equator.ra, equator.dec, "normal").altitude > 0 ? "above" : "below" };
+}
+
+/** The Sun's centre at this altitude, in degrees, is the edge of a sky dark enough to look for a planet: the end of civil twilight. */
+const DARK_SUN_ALTITUDE = -6;
+
+/** The altitude of a body's centre, degrees, with refraction, at one moment. */
+function altitudeAt(body: Body, when: number, observer: EngineObserver): number {
+  const at = new Date(when);
+  const equator = Equator(body, at, observer, true, true);
+  return Horizon(at, observer, equator.ra, equator.dec, "normal").altitude;
+}
+
+/** The next time the Sun's centre crosses 6 degrees below the horizon inside the day, rising (`+1`) or setting (`-1`). */
+function sunCross(observer: EngineObserver, from: number, end: number, direction: 1 | -1): number | null {
+  const limit = (end - from) / DAY_MS;
+  if (!(limit > 0.00001)) return null;
+  const found = SearchAltitude(Body.Sun, observer, direction, new Date(from), limit, DARK_SUN_ALTITUDE);
+  if (found === null || found.date.getTime() >= end) return null;
+  return found.date.getTime();
+}
+
+/** The stretches of a calendar day when the Sun has set through 6 degrees below the horizon and has not risen back through it. */
+function darkWindows(observer: EngineObserver, start: number, end: number): Array<[number, number]> {
+  const windows: Array<[number, number]> = [];
+  let cursor = start;
+  for (let guard = 0; guard < 8 && cursor < end - 1000; guard += 1) {
+    const dawn = sunCross(observer, cursor + 1000, end, +1);
+    const dusk = sunCross(observer, cursor + 1000, end, -1);
+    const inDark = (dawn !== null && (dusk === null || dawn < dusk)) || (dawn === null && dusk === null && altitudeAt(Body.Sun, cursor, observer) < 0);
+    if (!inDark) {
+      if (dusk === null || dusk <= cursor) break;
+      cursor = dusk;
+      continue;
+    }
+    const stop = dawn ?? end;
+    if (stop > cursor) windows.push([cursor, stop]);
+    if (dawn === null) break;
+    cursor = dawn + 1000;
+  }
+  return windows;
+}
+
+/** The stretches of a calendar day when the body is above the horizon, from the day's rise and set. */
+function upWindows(day: SkyRiseSet, start: number, end: number): Array<[number, number]> {
+  const rise = day.rise?.getTime() ?? null;
+  const set = day.set?.getTime() ?? null;
+  if (rise === null && set === null) return day.horizon === "above" ? [[start, end]] : [];
+  if (rise !== null && set !== null) return rise < set ? [[rise, set]] : [[start, set], [rise, end]];
+  if (rise !== null) return [[rise, end]];
+  return [[start, set!]];
+}
+
+/** The overlap of two lists of stretches, dropping anything shorter than a second. */
+function overlap(left: Array<[number, number]>, right: Array<[number, number]>): Array<[number, number]> {
+  const out: Array<[number, number]> = [];
+  for (const [a0, a1] of left) for (const [b0, b1] of right) {
+    const from = Math.max(a0, b0);
+    const to = Math.min(a1, b1);
+    if (to - from >= 1000) out.push([from, to]);
+  }
+  return out;
+}
+
+/** The highest moment of one stretch: the transit when it falls inside, otherwise the end nearer the transit. */
+function bestIn(transit: number | null, start: number, end: number, altitude: (when: number) => number): number {
+  if (transit !== null && transit >= start && transit < end) return transit;
+  const last = Math.max(start, end - 1000);
+  if (transit === null) return altitude(start) >= altitude(last) ? start : last;
+  return Math.abs(start - transit) <= Math.abs(last - transit) ? start : last;
+}
+
+/**
+ * The best moment of one calendar day to look for a body: when it is highest while its centre is above the horizon and the Sun's centre is at least 6 degrees below it (the end of civil twilight). That is the body's transit when the transit falls in such a stretch, and otherwise the end of the stretch nearer the transit. `null` when the body is never up in a dark sky that day, which includes a midnight sun. The Sun throws a `RangeError`: this is for a body you look for against a dark sky.
+ *
+ * @param body - The Moon or a planet (`"mars"`). Not the Sun.
+ * @param date - Any moment inside the day wanted.
+ * @param options - The observer and the IANA time zone, as for `riseSetTimes`.
+ * @returns The moment, or `null` when there is no dark stretch with the body up.
+ * @experimental
+ * @example
+ * ```ts
+ * import { bestTimeToLook } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const tokyo = { latitude: 35.6895, longitude: 139.6917 };
+ * console.log(bestTimeToLook("jupiter", Date.UTC(2026, 0, 15), { observer: tokyo, timeZone: "Asia/Tokyo" }) instanceof Date);
+ * ```
+ */
+export function bestTimeToLook(body: SkyBodyId, date: When, options: SkyRiseSetOptions): Date | null {
+  if (body === "sun") throw new RangeError("bestTimeToLook is for a body seen against a dark sky, not the sun");
+  const at = moment(date, "date");
+  const day = riseSetTimes(body, date, options);
+  const [start, end] = calendarDay(options.timeZone, at);
+  const observer = observerOf(options.observer);
+  const engineBody = bodyOf(body);
+  const visible = overlap(darkWindows(observer, start, end), upWindows(day, start, end));
+  if (visible.length === 0) return null;
+  const transit = day.transit?.getTime() ?? null;
+  const height = (when: number): number => altitudeAt(engineBody, when, observer);
+  let best = visible[0]![0];
+  let bestAlt = -Infinity;
+  for (const [from, to] of visible) {
+    const when = bestIn(transit, from, to, height);
+    const alt = height(when);
+    if (alt > bestAlt) {
+      best = when;
+      bestAlt = alt;
+    }
+  }
+  return new Date(best);
 }
 
 /**
