@@ -1143,7 +1143,7 @@ export const WORDS = {
     pt_star_class: "光度階級",
     pt_star_add: "恒星を追加",
     pt_star_full: "これ以上は追加できません。",
-    pt_star_credits: "恒星は数値をもとに描いています。粒状斑、黒点、光は模式的な表現です。",
+    pt_star_credits: "恒星は数字から描いています。もよう、黒点、光は作りものです。",
     pt_g_dwarfs: "準惑星",
     grp_planets: "太陽と惑星",
     grp_dwarfs: "準惑星",
