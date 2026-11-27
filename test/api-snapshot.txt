@@ -1082,6 +1082,7 @@ export interface SkyHorizonOptions { observer: Observer; within?: { days: number
 export interface SkyRiseSet { rise: Date | null; transit: Date | null; set: Date | null; horizon: "crosses" | "above" | "below"; }
 export interface SkyRiseSetOptions { observer: Observer; timeZone: string; }
 export interface SkySeasons { marchEquinox: Date; juneSolstice: Date; septemberEquinox: Date; decemberSolstice: Date; }
+export interface SolarTransit { start: Date; peak: Date; finish: Date; separationArcmin: number; }
 function bestTimeToLook(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", date: When, options: SkyRiseSetOptions) => Date | null
 function findEclipses(from: When, to: When) => SkyEclipse[]
 function localSolarEclipse(from: When, options: { observer: Observer; within?: { days: number; } | undefined; }) => LocalSolarEclipse | null
@@ -1097,6 +1098,7 @@ function nextMoonPhase(from: When, options: { phase: MoonPhaseName; within?: { d
 function nextPeakMagnitude(body: "venus", from: When) => PeakMagnitude
 function nextRise(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: SkyHorizonOptions) => Date | null
 function nextSet(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: SkyHorizonOptions) => Date | null
+function nextSolarTransit(body: "mercury" | "venus", from: When) => SolarTransit
 function nextTransit(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: SkyHorizonOptions) => Date | null
 function riseSetTimes(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", date: When, options: SkyRiseSetOptions) => SkyRiseSet
 function seasons(year: number) => SkySeasons

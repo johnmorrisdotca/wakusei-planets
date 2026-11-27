@@ -2,7 +2,7 @@
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchAltitude, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
+import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchAltitude, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, SearchTransit, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
 import type { SkyBodyId } from "./sky-bodies.ts";
 import type { Observer } from "./sky/types.ts";
 import { moment, type When } from "./when.ts";
@@ -561,6 +561,50 @@ export function nextGreatestElongation(body: "mercury" | "venus", from: When): G
   if (body !== "mercury" && body !== "venus") throw new RangeError(`body must be mercury or venus, got ${String(body)}`);
   const found = SearchMaxElongation(bodyOf(body), new Date(start));
   return { time: found.time.date, elongation: found.elongation, side: found.visibility === "evening" ? "east" : "west" };
+}
+
+/**
+ * One passage of Mercury or Venus across the face of the Sun, as seen from the Earth's centre.
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextSolarTransit, type SolarTransit } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const transit: SolarTransit = nextSolarTransit("mercury", Date.UTC(2019, 0, 1));
+ * console.log(transit.start < transit.peak && transit.peak < transit.finish);
+ * ```
+ */
+export interface SolarTransit {
+  /** The moment the planet's disc first touches the Sun's. */
+  start: Date;
+  /** The moment the centres are closest. */
+  peak: Date;
+  /** The moment the planet's disc last touches the Sun's. */
+  finish: Date;
+  /** The smallest separation of the two centres, in arcminutes. */
+  separationArcmin: number;
+}
+
+/**
+ * The next transit of Mercury or Venus after `from`: the planet passes between the Earth and the Sun and is seen against the Sun. Any other body throws a `RangeError`. This is not `nextTransit`, which is the moment a body crosses the meridian.
+ *
+ * @param body - `"mercury"` or `"venus"`.
+ * @param from - Where to start looking, included.
+ * @returns The start, the closest moment, the finish, and the separation in arcminutes.
+ * @experimental
+ * @example
+ * ```ts
+ * import { nextSolarTransit } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const mercury = nextSolarTransit("mercury", Date.UTC(2019, 0, 1));
+ * console.log(mercury.peak.toISOString().slice(0, 10));
+ * ```
+ */
+export function nextSolarTransit(body: "mercury" | "venus", from: When): SolarTransit {
+  if (body !== "mercury" && body !== "venus") throw new RangeError(`body must be mercury or venus, got ${String(body)}`);
+  const found = SearchTransit(bodyOf(body), new Date(moment(from, "from")));
+  return { start: found.start.date, peak: found.peak.date, finish: found.finish.date, separationArcmin: found.separation };
 }
 
 /**

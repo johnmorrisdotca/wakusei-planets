@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Mercury and Venus cross the Sun** (MODULES-674). `nextSolarTransit` is the next time either planet is seen against the Sun: the start, the closest moment, the finish, and the separation. The closest moments of 11 November 2019 and 6 June 2012 fall within two minutes of the minute NASA prints. The Moon covering a planet or a star, and the demo list, still wait.
+
 - **The demo names its build** (MODULES-1825). GitHub Pages keeps a file for about ten minutes, so a new page could run the previous build's script. `pnpm site` stamps every local script and stylesheet address, in the pages and in each module's own imports, with the commit on Pages or the version otherwise. The shared docs builder is copied unchanged and still waits, and so do the other packages.
 
 - **The best time to look** (MODULES-675). `bestTimeToLook` is the highest moment of a calendar day while a planet or the Moon is above the horizon and the Sun's centre is at least 6 degrees below it. That is the transit when the transit falls in the dark, and nothing on a midnight-sun day. Rise, transit, set, altitude and magnitude were already there.
