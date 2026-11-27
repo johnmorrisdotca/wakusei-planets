@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.80.0] - 2026-11-27
+
 - **Prominences turn with the star** (MODULES-734). They sit on the surface, so the turn carries them round the edge. The flicker stays with the clock. They are still drawn for looks.
 
 - **Europa's map mended** (MODULES-1821). The sharp and soft parts of the Galileo and Voyager mosaic now meet without rectangle edges at either pole, the seam down the middle of the map is gone, and the stretched ground near the south pole is ridged plains and lineae like the photographed ice next to it.
