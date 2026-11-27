@@ -33,11 +33,11 @@ const MOON_DEGREES: Record<string, number> = {
 /**
  * The same for the moons added with their shape models (MODULES-1601), on the dates inside the years Horizons has an ephemeris for each (test/data/horizons-more-moons.json, made by
  * `scripts/fetch-horizons-reference.py more-moons`): about half as much again as the worst measured. A fit of a mean orbit cannot follow the resonances of Saturn's small moons,
- * so those are the loose ones: Janus and Epimetheus swap their orbits every four years, Pandora, Prometheus and Atlas are pulled by one another and by Mimas's resonances, Helene librates round
- * Dione's leading Trojan point, and Hyperion's orbit is locked to Titan's.
+ * so those are the loose ones: Janus and Epimetheus swap their orbits every four years, Pandora, Prometheus and Atlas are pulled by one another and by Mimas's resonances, and Helene librates round
+ * Dione's leading Trojan point. Hyperion uses TASS1.7 after the optional table is loaded.
  */
 const MORE_MOON_DEGREES: Record<string, number> = {
-  amalthea: 1.2, thebe: 0.25, hyperion: 20, phoebe: 2.8, janus: 9, epimetheus: 31, helene: 22, telesto: 3.5, calypso: 7.5, atlas: 12, prometheus: 22, pandora: 40, pan: 0.9, daphnis: 0.8, larissa: 0.4,
+  amalthea: 1.2, thebe: 0.25, hyperion: 0.6, phoebe: 2.8, janus: 9, epimetheus: 31, helene: 22, telesto: 3.5, calypso: 7.5, atlas: 12, prometheus: 22, pandora: 40, pan: 0.9, daphnis: 0.8, larissa: 0.4,
 };
 const moreMoons = JSON.parse(readFileSync(new URL("./data/horizons-more-moons.json", import.meta.url), "utf8")) as { moons: Record<string, { dates: string[]; vectors: Vec3[] }> };
 

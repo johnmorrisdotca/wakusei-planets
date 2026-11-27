@@ -39,7 +39,7 @@ const MOON_DEGREES: Readonly<Record<string, number>> = {
 };
 /** Limits of the refinements, within the range checked on held-out times. */
 const REFINED_MOON_DEGREES: Readonly<Partial<Record<string, number>>> = {
-  mimas: 0.5, enceladus: 0.05, miranda: 0.4, nereid: 2.6, nix: 0.46, hydra: 0.86,
+  mimas: 0.5, enceladus: 0.05, hyperion: 1, miranda: 0.4, nereid: 2.6, nix: 0.46, hydra: 0.86,
 };
 /** The same for the moons of Jupiter and Saturn when `tables` has not been imported and their fitted orbits answer. */
 const FITTED_MOON_DEGREES: Readonly<Record<string, number>> = { io: 0.15, europa: 0.18, ganymede: 0.6, callisto: 0.09, mimas: 7.5, enceladus: 0.72, tethys: 0.45, dione: 0.23, rhea: 0.27, titan: 0.08, iapetus: 0.72 };

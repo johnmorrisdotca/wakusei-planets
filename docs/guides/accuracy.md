@@ -18,6 +18,8 @@ There are two cuts of the series, so that a page pays only for the accuracy it n
 - **The default**: 995 of the 35,080 terms (13.8 kB gzipped for all eight planets, the same as before). It is the series every caller gets, with no code change.
 - **`tables/vsop`**, optional: 2,581 terms (32 kB gzipped, not in `tables`, because it is the size of the whole planet engine again). Importing it teaches `heliocentric` the finer series.
 
+The body and space views use the default series at every zoom. Across the same 60 dates and eight planets, the largest changes in apparent orientation and diameter imply less than 0.20 pixels of movement on a 4,096-pixel-wide planet disc. The space view centres the scene on the focused body, so moving that body's heliocentric position does not move its disc across the scene. Import the finer series when the calculation itself needs more precise positions.
+
 ```ts
 import { heliocentric } from "@johnmorrisdotca/wakusei-planets";
 import "@johnmorrisdotca/wakusei-planets/tables/vsop"; // the finer VSOP87B series: about 32 kB gzipped
@@ -103,11 +105,11 @@ Outside those years each is a plain ellipse from Horizons' osculating elements o
 Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both; the web component fetches each only when it draws that planet's moons, as a chunk of its own, so a page that shows one planet does not grow):
 
 - **Io, Europa, Ganymede and Callisto**: L1.2 (Lainey, Duriez and Vienne 2006, IMCCE), cut to 140 terms with a Chebyshev polynomial for the slowest swings (`tables/galilean`, about 5 kB gzipped). Valid from 1130 to 2760.
-- **Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus**: TASS1.7 (Vienne and Duriez 1995, IMCCE), cut to 316 terms (`tables/saturn-moons`, about 7 kB gzipped). Hyperion and Saturn's small moons are fitted instead (below).
+- **Mimas, Enceladus, Tethys, Dione, Rhea, Titan, Hyperion and Iapetus** use TASS1.7 (`tables/saturn-moons`, about 11 kB gzipped). The seven coupled orbits use 316 terms from Vienne and Duriez (1995, IMCCE). Hyperion's separate series keeps 230 terms.
 
 ```ts
 import { system } from "@johnmorrisdotca/wakusei-planets";
-import "@johnmorrisdotca/wakusei-planets/tables/saturn-moons"; // Mimas to Iapetus from TASS1.7: about 7 kB gzipped
+import "@johnmorrisdotca/wakusei-planets/tables/saturn-moons"; // Eight TASS1.7 orbits, about 11 kB gzipped
 
 const titan = system("saturn", Date.UTC(2026, 10, 7, 12)).moons.find((moon) => moon.id === "titan");
 console.log(Math.round(titan?.distance ?? 0));
@@ -145,6 +147,7 @@ Every other moon's orbit, and every moon's orbit before one of those tables is i
 
 On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engine's (`node scripts/compare/dense.mjs`: Io 411″ against its 2,626″, Europa 132″ against 1,403″, Ganymede 92″ against 814″, Callisto 52″ against 379″), and the Moon 4.7″ against 207″.
 
+- **Hyperion** is in a 4 to 3 orbital resonance with Titan. On 192 separate Horizons dates from 1800 through 2199, the maximum error in its direction from Saturn's centre fell from 14.40° with the fitted orbit to 0.82° with TASS1.7. The test holds the loaded theory to 1° over these dates. The cut differs from the full Orbiter series by at most 0.015° on the same dates. The fitted orbit answers until the optional table loads.
 - **Mimas, Enceladus, Miranda and Nereid** use corrections to the phase of their orbits. The correction is a drift with a few periodic terms fitted to 768 Horizons dates from 1800 to 2199. A separate set of 192 Horizons dates measured maximum errors of 0.395°, 0.036°, 0.306° and 2.08° respectively. Nereid has eccentricity 0.75, and small timing errors near periapsis still make large angular errors.
 - **Nix and Hydra** orbit the Pluto system's barycentre, and their positions in a moon system are relative to Pluto's centre. The conversion uses Charon's share of the system mass and its current position relative to Pluto. For both moons the new fits and the previous models were compared to the same Pluto-centred Horizons vectors. On the 192 separate dates the maximum fell from 2.01° to 0.363° for Nix and from 1.68° to 0.686° for Hydra. The **Before** figures in the table are the older barycentric measurements.
 - **Styx and Kerberos** use the moon catalogue's mean elements (JPL Planetary Satellite Mean Elements, ephemeris PLU060, epoch 2026-01-01). They are not in this Horizons check. A distance that names them allows 5°.
@@ -154,7 +157,7 @@ On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engin
 
 Fifteen more moons are drawn in full, each with the shape a spacecraft measured: Amalthea and Thebe (Jupiter), Pan, Daphnis, Atlas, Prometheus, Pandora, Epimetheus, Janus, Telesto, Calypso, Helene, Hyperion and Phoebe (Saturn) and Larissa (Neptune). Each orbit is fitted the same way, one fit to Horizons' positions for the years Horizons has an ephemeris for the moon (the table says which: Janus, Epimetheus, Atlas, Prometheus, Pandora and Pan only from 1949-12-27 to 2050-01-06, Daphnis only from 1990-06-15 to 2018-01-14), and the line is carried on outside those years, where it is not checked. Where the mean orbit cannot follow a moon, the worst error is large, and the limit says so:
 
-| Body | Fitted to Horizons for | Worst of the test dates | Held to |
+| Body | Fitted to Horizons for | Worst fitted error on the test dates | Fitted orbit held to |
 |---|---|---|---|
 | Amalthea | 1800 to 2199 | 0.82° | 1.2° |
 | Thebe | 1800 to 2199 | 0.15° | 0.25° |
@@ -177,7 +180,6 @@ These are measured on 5 to 7 dates inside each moon's years (`test/data/horizons
 - **Janus and Epimetheus** swap their orbits every four years (each moves out a little as the other moves in), so neither goes round at one rate.
 - **Prometheus, Pandora and Atlas** pull on one another and on Saturn's rings and sit in resonances with Mimas; the fit leaves 4 to 7° of scatter.
 - **Helene** swings (librates) round Dione's leading Trojan point, over tens of degrees, and **Telesto and Calypso** do the same round Tethys's, over about 10.
-- **Hyperion**'s orbit is locked to Titan's in a 4 to 3 resonance and turns its periapsis in a way a line cannot follow.
 - **Pan, Daphnis, Amalthea, Thebe, Phoebe and Larissa** are close, within a degree or two.
 
 ## What it is good for

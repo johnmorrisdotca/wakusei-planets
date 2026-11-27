@@ -1,7 +1,7 @@
-// TASS1.7, the theory of the motion of Mimas, Enceladus, Tethys, Dione, Rhea, Titan and Iapetus (Vienne and Duriez 1995, Astron. Astrophys. 297, 588; IMCCE), from the terms in data/tass17.ts.
-// Each moon's elements (a, mean longitude, k, h, q, p) are sums of cosines and sines whose arguments are whole multiples of seven slowly changing longitudes; they give a position from Saturn's centre.
+// TASS1.7, the theory of the motion of eight Saturnian moons (Vienne and Duriez 1995, Astron. Astrophys. 297, 588; IMCCE), from the terms in data/tass17.ts.
+// Seven moons share slowly changing longitudes in their series. Hyperion's separate series use time in days and independent phases.
 // The arrangement follows Orbiter's conversion of IMCCE's FORTRAN (github.com/orbitersim/orbiter, Src/Celbody/Satsat/Tass17.cpp, MIT, Copyright (c) Martin Schweiger).
-import { TASS17, TASS17_CONSTANTS } from "../data/tass17.ts";
+import { TASS17, TASS17_CONSTANTS, TASS17_HYPERION } from "../data/tass17.ts";
 import type { Vec3 } from "../vec.ts";
 
 const AU_KM = 149_597_870.7;
@@ -15,7 +15,7 @@ const node = K.node * RAD;
 
 type Terms = readonly (readonly number[])[];
 
-/** The seven perturbations of the mean longitudes (Hyperion, the eighth, is not in the theory here), by moon. */
+/** The seven coupled perturbations of the mean longitudes in Saturnian satellite order. */
 function longitudes(t: number): number[] {
   const out = [0, 0, 0, 0, 0, 0, 0, 0];
   TASS17.forEach((moon, i) => {
@@ -59,6 +59,31 @@ export function tass17Position(index: number, terrestrialMs: number): Vec3 {
   const h = sum(z, 0, t, dlo, Math.sin);
   const q = sum(zeta, 0, t, dlo, Math.cos);
   const p = sum(zeta, 0, t, dlo, Math.sin);
+  return positionFromElements(slot, da, lambda, k, h, q, p);
+}
+
+type HyperionTerms = typeof TASS17_HYPERION.motion;
+
+function hyperionSum(terms: HyperionTerms, days: number, trig: (x: number) => number): number {
+  let value = 0;
+  for (const [amplitude, phase, rate] of terms) value += amplitude * trig(phase + rate * days);
+  return value;
+}
+
+/** Hyperion's position from Saturn's centre in the J2000 ecliptic, in kilometres, in terrestrial time. */
+export function tass17HyperionPosition(terrestrialMs: number): Vec3 {
+  const series = TASS17_HYPERION;
+  const days = terrestrialMs / DAY + J1970_JD - series.epoch;
+  const da = series.motionOffset + hyperionSum(series.motion, days, Math.cos);
+  const lambda = (series.rate * days + series.longitudeOffset + hyperionSum(series.longitude, days, Math.sin)) % (2 * Math.PI);
+  const k = hyperionSum(series.eccentricity, days, Math.cos);
+  const h = hyperionSum(series.eccentricity, days, Math.sin);
+  const q = hyperionSum(series.inclination, days, Math.cos);
+  const p = hyperionSum(series.inclination, days, Math.sin);
+  return positionFromElements(6, da, lambda, k, h, q, p);
+}
+
+function positionFromElements(slot: number, da: number, lambda: number, k: number, h: number, q: number, p: number): Vec3 {
   const meanMotion = K.meanMotion[slot]! * 365.25 * (da + 1);
   const mu = gk1 * (1 / K.massRatio[slot]! + 1);
   const size = Math.cbrt(mu / (meanMotion * meanMotion));

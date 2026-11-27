@@ -280,7 +280,7 @@ The pure side has no DOM: `BODIES`, `apparent(id, time)`, `system(planet, time)`
 
 ## The data
 
-Sizes, flattening, poles and rotation are the IAU's and NASA's; Mercury to Neptune are VSOP87B, cut down, and Pluto is a table fitted to Horizons; the Moon's are the lunar solution ELP2000-82B cut down; Jupiter's four big moons are the theory L1.2 and Saturn's seven inner ones TASS1.7, and the others are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
+Sizes, flattening, poles and rotation are the IAU's and NASA's; Mercury to Neptune are VSOP87B, cut down, and Pluto is a table fitted to Horizons; the Moon's are the lunar solution ELP2000-82B cut down; Jupiter's four big moons use L1.2 and eight Saturnian moons including Hyperion use TASS1.7 when their optional tables are loaded, and the others are fitted to JPL Horizons' positions, and every body is tested against Horizons ([accuracy](docs/guides/accuracy.md)). Nothing is fetched at run time by the line and shaded looks, which use no pictures. See [NOTICE.md](NOTICE.md).
 
 The same data comes as files for other languages: every release attaches CSV and Parquet tables of the bodies, their orbital elements, the spacecraft and their events, each with a schema, the data licence and checksums, for pandas, polars, R or Rust ([data files](docs/guides/data-files.md)). [Serve it yourself](docs/guides/serve-it-yourself.md) is a small Node server that answers a body's facts, its position on a date and the distance between two bodies; we host nothing, you run it.
 

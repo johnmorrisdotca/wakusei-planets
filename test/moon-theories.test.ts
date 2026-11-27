@@ -44,6 +44,7 @@ test("without a theory a moon is answered by its fitted orbit, and importing the
   const when = Date.UTC(2026, 10, 7, 12);
   assert.equal(moonTheoryOf("io"), undefined);
   assert.equal(moonTheoryOf("titan"), undefined);
+  assert.equal(moonTheoryOf("hyperion"), undefined);
   const fitted = moonVector("io", when);
   await import("../src/tables/galilean.ts");
   assert.ok(moonTheoryOf("io") !== undefined && moonTheoryOf("callisto") !== undefined);
@@ -52,6 +53,5 @@ test("without a theory a moon is answered by its fitted orbit, and importing the
   assert.ok(length(sub(fitted, theory)) > 1, "the theory changes the answer");
   assert.ok(length(sub(fitted, theory)) < 0.2 * length(theory), "and both put Io near the same place on its orbit");
   await import("../src/tables/saturn-moons.ts");
-  for (const name of ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus"]) assert.ok(moonTheoryOf(name) !== undefined, name);
-  assert.equal(moonTheoryOf("hyperion"), undefined);
+  for (const name of ["mimas", "enceladus", "tethys", "dione", "rhea", "titan", "hyperion", "iapetus"]) assert.ok(moonTheoryOf(name) !== undefined, name);
 });
