@@ -6,6 +6,7 @@ import type { Pose } from "../ephemeris.ts";
 import { BODIES, type BodyFacts, type BodyId } from "../facts.ts";
 import { starBrightness } from "../star.ts";
 import { silhouette } from "../pose.ts";
+import { prominenceFrame } from "./prominence.ts";
 import { cross, type Vec3 } from "../vec.ts";
 import { BALL_FRAGMENT, bodyFragment, GLOW_FRAGMENT, GLOW_VERTEX, PAINTED_SURFACE, PAINTED_SURFACE_WINDOWED, RING_FRAGMENT_DETAIL, RING_VERTEX, STAR_GLOW_FRAGMENT, VERTEX } from "./glsl.ts";
 import { atmosphereTint, detailOf, lookOf, type BodyLook } from "./look.ts";
@@ -304,7 +305,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         const own = look.glow;
         const glowMaterial = own === undefined
           ? assets.acquire("wk:glowmat", () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(1, 0.7, 0.3) } } }), (m) => m.dispose())
-          : assets.acquire(`wk:glowmat:${held}`, () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 } } }), (m) => m.dispose());
+          : assets.acquire(`wk:glowmat:${held}`, () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 }, uSpin: { value: 0 }, uPole: { value: 0 }, uTilt: { value: 0 } } }), (m) => m.dispose());
         glow = new T.Mesh(glowGeometry, glowMaterial);
         glow.position.z = -5;
         glow.scale.setScalar(1);
@@ -565,7 +566,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           mat.uniforms.uRimBase!.value = sky ? 0.02 : 0.12;
         }
         if (look.glow !== undefined) {
-          // the star's surface boils and its prominences move with the clock, but only when a frame is asked for: a star at rest draws nothing
+          // the star's surface boils and its prominences flicker, but only when a frame is asked for: a star at rest draws nothing
           const seconds = (performance.now() / 1000) % 100_000;
           const variable = look.glow?.variable;
           const pulse = variable === undefined ? 1 : starBrightness(variable.periodDays, variable.amplitude, seconds);
@@ -585,6 +586,12 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             glow.rotation.z = (-angle * Math.PI) / 180;
             glow.scale.set(1, b, 1);
           } else glow.scale.setScalar(1);
+          if (glowMaterialOf !== undefined && look.glow !== undefined) {
+            const frame = prominenceFrame(state.pose.pole, state.pose.meridian, glow.rotation.z);
+            glowMaterialOf.uniforms.uSpin!.value = frame.spin;
+            glowMaterialOf.uniforms.uPole!.value = frame.pole;
+            glowMaterialOf.uniforms.uTilt!.value = frame.tilt;
+          }
         }
         requestSharperTexture(state);
         // the disc's radius on the screen in CSS pixels: the short side's half at zoom 1 over the extent

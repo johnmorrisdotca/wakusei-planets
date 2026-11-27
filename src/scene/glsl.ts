@@ -387,7 +387,8 @@ void main() {
 
 /**
  * The glow round a star that is not the Sun, drawn on a plane behind it: a wide soft bloom, a tight bright inner bloom, a thin glowing edge (the chromosphere), and, on an active star, prominences standing off the edge
- * with an occasional flare. `uStrength` is how bright, `uSpread` how fast the bloom fades, `uRim` the edge, `uProm` how big the prominences are, `uSeed` where they are and `uTime` moves them.
+ * with an occasional flare. `uStrength` is how bright, `uSpread` how fast the bloom fades, `uRim` the edge, `uProm` how big the prominences are, `uSeed` which longitudes they sit on.
+ * `uSpin`, `uPole` and `uTilt` carry those places round with the surface. `uTime` only flickers them.
  */
 export const STAR_GLOW_FRAGMENT = /* glsl */ `
 precision highp float;
@@ -400,6 +401,9 @@ uniform float uProm;
 uniform float uSeed;
 uniform float uTime;
 uniform float uPulse;
+uniform float uSpin;
+uniform float uPole;
+uniform float uTilt;
 float h1(float n) { return fract(sin(n * 127.1 + uSeed * 91.7) * 43758.5453); }
 float n1(float x) { float i = floor(x); float f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(h1(i), h1(i + 1.0), f); }
 void main() {
@@ -413,15 +417,16 @@ void main() {
   vec3 col = uColour * (halo + tight) + mix(uColour, vec3(1.0), 0.4) * rim;
   float a = halo + tight + rim;
   if (uProm > 0.0) {
-    float ang = atan(vP.y, vP.x);
-    float site = smoothstep(0.55, 0.85, n1(ang * 2.6 + uSeed * 20.0));
-    float drift = 0.75 + 0.25 * sin(uTime * 0.5 + ang * 4.0);
+    float around = atan(vP.y, vP.x) - uPole;
+    float lon = uSpin + atan(sin(around), cos(around) * uTilt);
+    float site = smoothstep(0.55, 0.85, n1(lon * 2.6 + uSeed * 20.0));
+    float drift = 0.75 + 0.25 * sin(uTime * 0.5 + lon * 4.0);
     float height = site * uProm * 0.3 * drift;
-    float strands = 0.65 + 0.35 * n1(ang * 70.0 + uTime * 0.3);
+    float strands = 0.65 + 0.35 * n1(lon * 70.0 + uTime * 0.3);
     float pr = step(0.0, x) * pow(smoothstep(height, 0.0, x), 1.6) * site * strands * 0.9;
     vec3 pc = mix(vec3(1.0, 0.42, 0.26), uColour, 0.2);
-    float a0 = uSeed * 6.2831853 + uTime * 0.02;
-    float da = atan(sin(ang - a0), cos(ang - a0));
+    float a0 = uSeed * 6.2831853;
+    float da = atan(sin(lon - a0), cos(lon - a0));
     float burst = pow(max(0.0, sin(uTime * 0.9 + uSeed * 40.0)), 24.0) * uProm;
     float fl = exp(-da * da * 14.0) * exp(-x * 6.0) * burst * 1.6;
     col += pc * pr + vec3(1.0, 0.92, 0.75) * fl;

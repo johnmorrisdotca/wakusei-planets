@@ -9,6 +9,9 @@ import ts from "typescript";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
 import { embedCode, embedCredit, EMBED_KINDS, LUMINOSITY_CLASSES, portrait, STAR_SUN, starBrightness, starLineSvg, starLook, type EmbedOptions, type StarNumbers } from "../src/index.ts";
 import { registerStarLook, starLookOf } from "../src/scene/look.ts";
+import { STAR_GLOW_FRAGMENT } from "../src/scene/glsl.ts";
+import { prominenceFrame } from "../src/scene/prominence.ts";
+import { turn, type Vec3 } from "../src/vec.ts";
 
 const BETELGEUSE: StarNumbers = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab", estimated: ["radiusSun"] };
 const RIGEL: StarNumbers = { name: "Rigel", temperatureK: 12100, radiusSun: 78.9, luminosityClass: "Ia" };
@@ -41,6 +44,26 @@ test("the axis leans toward the viewer: 90 looks straight at the pole, 0 is equa
   assert.ok(Math.abs(portrait("sun", { pitch: edge.inclinationDeg }).pole[2]) < 1e-9);
   assert.equal(starLook(STAR_SUN).inclinationDeg, undefined);
   assert.throws(() => starLook({ temperatureK: 5000, radiusSun: 1, inclinationDeg: 91 }), /inclinationDeg/);
+});
+
+test("prominences stay on the surface: a quarter turn moves them by a right angle, and a pole-on mark stays put", () => {
+  const pole: [number, number, number] = [0, 1, 0];
+  const meridian: [number, number, number] = [0, 0, 1];
+  const before = prominenceFrame(pole, meridian);
+  const after = prominenceFrame(pole, turn(meridian, pole, 90));
+  const gap = Math.atan2(Math.sin(after.spin - before.spin), Math.cos(after.spin - before.spin));
+  assert.ok(Math.abs(Math.abs(gap) - Math.PI / 2) < 1e-9);
+  const face: [number, number, number] = [0, 0, 1];
+  const mark: [number, number, number] = [1, 0, 0];
+  const held = prominenceFrame(face, mark);
+  const moved = turn(mark, face, 90);
+  const turned = prominenceFrame(face, moved);
+  const place = (frame: { spin: number }, m: Vec3) => frame.spin + Math.atan2(m[1], m[0]);
+  const drift = place(turned, moved) - place(held, mark);
+  assert.ok(Math.abs(Math.atan2(Math.sin(drift), Math.cos(drift))) < 1e-9);
+  assert.ok(Math.abs(prominenceFrame([1, 0, 0], [0, 0, 1], -Math.PI / 2).pole - Math.PI / 2) < 1e-9);
+  assert.match(STAR_GLOW_FRAGMENT, /uSpin \+ atan\(sin\(around\), cos\(around\) \* uTilt\)/);
+  assert.equal(STAR_GLOW_FRAGMENT.includes("uTime * 0.02"), false);
 });
 
 test("the colour is the black body of the temperature: red for a cool star, white for the Sun, blue for a hot one", () => {

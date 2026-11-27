@@ -5,6 +5,7 @@ import type { BuildContext, Item3D, Scene3D } from "@johnmorrisdotca/kazoku-ui/r
 import type * as THREE from "three";
 import { makeBodyMaterial, type ThreeParts } from "../scene/body.ts";
 import { STAR_GLOW_FRAGMENT, GLOW_VERTEX } from "../scene/glsl.ts";
+import { prominenceFrame } from "../scene/prominence.ts";
 import { createPainter, type Painting } from "../scene/painter.ts";
 import { starBrightness, type StarLook } from "../star.ts";
 import "../bodies/earth.ts";
@@ -101,7 +102,7 @@ export function createLineupItem(options: LineupItemOptions): Item3D<ThreeParts>
           if (own !== undefined) {
             item.glowMaterial = assets.acquire(
               `lu:glow:${star.key}`,
-              () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 } } }),
+              () => new T.ShaderMaterial({ vertexShader: GLOW_VERTEX, fragmentShader: STAR_GLOW_FRAGMENT, transparent: true, depthWrite: false, blending: T.AdditiveBlending, uniforms: { uColour: { value: new T.Vector3(...own.colour) }, uStrength: { value: own.strength }, uSpread: { value: own.spread }, uRim: { value: own.rim ?? 0 }, uProm: { value: own.prominence ?? 0 }, uSeed: { value: own.seed ?? 0 }, uTime: { value: 0 }, uPulse: { value: 1 }, uSpin: { value: 0 }, uPole: { value: 0 }, uTilt: { value: 0 } } }),
               (m) => m.dispose(),
             );
             item.glow = new T.Mesh(glowGeometry, item.glowMaterial);
@@ -164,6 +165,12 @@ export function createLineupItem(options: LineupItemOptions): Item3D<ThreeParts>
             if (item.glowMaterial !== undefined) {
               item.glowMaterial.uniforms.uTime!.value = seconds;
               item.glowMaterial.uniforms.uPulse!.value = pulse;
+              const pole: [number, number, number] = [0, Math.cos(pitch), Math.sin(pitch)];
+              const meridian: [number, number, number] = [Math.sin(yaw), -Math.sin(pitch) * Math.cos(yaw), Math.cos(pitch) * Math.cos(yaw)];
+              const frame = prominenceFrame(pole, meridian);
+              item.glowMaterial.uniforms.uSpin!.value = frame.spin;
+              item.glowMaterial.uniforms.uPole!.value = frame.pole;
+              item.glowMaterial.uniforms.uTilt!.value = frame.tilt;
             }
           } else if (item.painting !== undefined) {
             const pole: [number, number, number] = [0, Math.cos(pitch), Math.sin(pitch)];

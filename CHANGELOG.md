@@ -8,7 +8,9 @@
 
 - **A star can be seen pole-on** (MODULES-734). `inclinationDeg` leans the axis toward the viewer, from 0 (equator-on) to 90 (straight at the pole). Left out, the usual small lean stays. A page's own `pitch` still wins.
 
-- **A variable star brightens and dims** (MODULES-734). Give `variablePeriodDays` and `variableAmplitude` together and the disc and the glow follow a sine wave around the mean brightness. Left out, the brightness stays steady. The wave is invented. The pole-on view and the prominences that turn with the surface still wait.
+- **Prominences turn with the star** (MODULES-734). They sit on the surface, so the turn carries them round the edge. The flicker stays with the clock. They are still drawn for looks.
+
+- **A variable star brightens and dims** (MODULES-734). Give `variablePeriodDays` and `variableAmplitude` together and the disc and the glow follow a sine wave around the mean brightness. Left out, the brightness stays steady. The wave is invented.
 
 - **Ecliptic longitude and latitude of date** (MODULES-536). `skyBody` gives `eclipticDate`, the same apparent direction as `equatorialDate`, on the ecliptic of date. Houses and ayanamsa stay out of this package.
 
