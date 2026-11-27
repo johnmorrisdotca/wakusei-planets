@@ -1,6 +1,7 @@
 // The demo must never ask a lot of the machine. Played in headless Chromium (drawing WebGL in software, never on the graphics card), these fail on a draw loop that runs when nothing
 // moves or more than once a frame, on WebGL contexts or graphics memory (buffers, vertex arrays, textures, programs) that grow with each change, on a canvas past its pixel budget on a
 // 5K screen, on a frame drawn out of sight, and on a moving picture drawn faster than thirty times a second.
+import "./load.ts";
 import { COUNT_SCRIPT, canvasSize, gpuObjects, readCounts, withinPixelBudget } from "@johnmorrisdotca/kazoku-ui/testing";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { addRocks } from "./door-fixture.ts";
@@ -697,6 +698,10 @@ test("every other known moon as dots: one draw, nothing drawn at rest, and turni
   expect(after.contexts).toBe(1);
   expect(after.draws - before.draws).toBe(0);
   const round = async () => {
+    await sky(page).evaluate((el) => Reflect.set(el, "moonFilter", { group: "himalia" }));
+    await expect.poll(async () => (await dots()).dots, { timeout: 30_000 }).toBe(11);
+    await sky(page).evaluate((el) => Reflect.set(el, "moonFilter", {}));
+    await expect.poll(async () => (await dots()).dots, { timeout: 30_000 }).toBeGreaterThan(400);
     await page.locator("#all-moons").dispatchEvent("click");
     await expect.poll(async () => (await dots()).dots, { timeout: 30_000 }).toBe(0);
     await page.locator("#all-moons").dispatchEvent("click");
@@ -709,6 +714,41 @@ test("every other known moon as dots: one draw, nothing drawn at rest, and turni
   expect(last.contexts).toBe(1);
   expect(gpuObjects(last)).toBeLessThanOrEqual(Math.max(...seen) + 2);
   await givenBackOnRemoval(page);
+});
+
+test("the planet's small moons share one point draw and return to rest after filtering", async ({ page }) => {
+  await page.addInitScript(() => {
+    const proto = WebGL2RenderingContext.prototype;
+    const draw = proto.drawArrays;
+    const batches: number[] = [];
+    Reflect.set(window, "moonPointBatches", batches);
+    proto.drawArrays = function (mode, first, count) {
+      if (mode === this.POINTS) batches.push(count);
+      return draw.call(this, mode, first, count);
+    };
+  });
+  await page.goto(`${URL}?body=jupiter&moons=all&t=2026-11-02T14:00Z&play=off&look=realistic`);
+  await main(page).hover();
+  await live(page);
+  const batches = () => page.evaluate(() => Reflect.get(window, "moonPointBatches") as number[]);
+  await expect.poll(async () => (await batches()).at(-1), { timeout: 60_000 }).toBe(109);
+  const round = async () => {
+    await main(page).evaluate((el) => Reflect.set(el, "moonFilter", { group: "himalia" }));
+    await expect.poll(async () => (await batches()).at(-1)).toBe(11);
+    await main(page).evaluate((el) => Reflect.set(el, "moonFilter", {}));
+    await expect.poll(async () => (await batches()).at(-1)).toBe(109);
+  };
+  const seen: number[] = [];
+  await converged(page, round, seen);
+  for (let i = 0; i < 3; i += 1) await round();
+  const before = await settledCounts(page);
+  const pointsBefore = (await batches()).length;
+  await settle(page, 2500);
+  const after = await readCounts(page);
+  expect(after.contexts).toBe(1);
+  expect(after.draws - before.draws).toBe(0);
+  expect((await batches()).length).toBe(pointsBefore);
+  expect(gpuObjects(after)).toBeLessThanOrEqual(Math.max(...seen) + 2);
 });
 
 /** The "Name on the body" row's choices, one after another: every look, how many, where, facing and off, so each texture is drawn again and the old one let go. Each waits on the draw it causes. */

@@ -17,6 +17,17 @@ Add `moons` to a planet and give it a `time`: the moons are drawn on their orbit
 
 `time="now"` follows the clock. A planet with a `time` and no `moons` is drawn as it looks that day: its rings opened as far as they are, its phase, the face turned toward us.
 
+## Show the full moon catalogue
+
+`moons="major"` is the same as the bare `moons` attribute. With `moons="all"`, the smaller moons that have a catalogue orbit appear as points. The view fits the planet's moon system when `range` is omitted. Add `moon-orbits="off"` to show positions without the paths. The line look draws SVG. The shaded looks draw all small moons together in a single batch. A custom three.js subset needs `Points` and `PointsMaterial` for that batch.
+
+```html
+<wakusei-body body="jupiter" look="line" moons="all" moon-group="himalia"
+  moon-discovered="1900..2026" time="2026-11-02T12:00:00Z" rate="0"></wakusei-body>
+```
+
+Set `body.moonFilter = { group: "himalia", discovered: { from: 1900, to: 2026 } }` to make the same choice from JavaScript. [Moon catalogue](moon-catalogue.md#filtering-the-catalogue) lists every filter. Clicking a moon sends `wakusei-moon-select` with `detail: { id, host }`. The demo opens the moon's card, and the Moon details selector offers the same cards by keyboard. The [code builder](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) and [iframe](embed-in-an-iframe.md) carry the filters into the page you embed.
+
 ## Showing the date while time runs
 
 A page that has a date box needs to know the date the clock has reached. `<wakusei-body>` (with a `time` or `moons`) and `<wakusei-space>` send `wakusei-timechange` with `detail: { time, running }`, `time` being the moment shown in milliseconds since 1970:

@@ -8,6 +8,9 @@ import type { EmbedPanelElement } from "@johnmorrisdotca/kazoku-ui/embed-panel/e
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
 import { BODIES, DWARF_IDS, MINOR_IDS, MOONS_OF, PLANET_IDS, type BodyId, type Look } from "../src/facts.ts";
+import { moonFilterAttributes, type MoonFilter } from "../src/moon-filters.ts";
+import { createMoonControls, moonWord } from "./moon-controls.ts";
+import { WORDS } from "./words.js";
 
 setThreeLoader(() => import("./three-subset.ts"));
 
@@ -19,8 +22,20 @@ const GROUPS: readonly { id: string; label: string; bodies: readonly BodyId[] }[
 ];
 const byId = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 const pageLang = (): "en" | "ja" => ((Reflect.get(globalThis, "wakuseiLanguage") as { lang?: string } | undefined)?.lang === "ja" ? "ja" : "en");
-const state = { group: "sun", body: "saturn" as BodyId, look: "line" as Look, sky: "portrait", turn: 0, zoom: 1 };
+const state = { group: "sun", body: "saturn" as BodyId, look: "line" as Look, sky: "portrait", turn: 0, zoom: 1, moons: "off" as "off" | "major" | "all", moonFilter: {} as MoonFilter, moonOrbits: true };
 const panel = byId<EmbedPanelElement>("embed-panel");
+const moonOrbits = byId<HTMLButtonElement>("builder-moon-orbits");
+const hasMoonMode = (): boolean => state.body in MOONS_OF;
+const activeMoons = (): boolean => hasMoonMode() && state.moons !== "off";
+const moonControls = createMoonControls(byId("moon-filters"), (filter) => {
+  state.moonFilter = filter;
+  panel.openHref = openHref();
+  panel.update();
+}, (group, lang) => WORDS[lang][`sp_group_${group}`] ?? group);
+moonOrbits.addEventListener("click", () => {
+  state.moonOrbits = !state.moonOrbits;
+  draw();
+});
 
 function fill(id: string, choices: readonly { id: string; label: string }[], chosen: string, prefix: string, on: (id: string) => void): void {
   const group = byId(id);
@@ -38,11 +53,21 @@ function fill(id: string, choices: readonly { id: string; label: string }[], cho
 }
 
 function options(withZoom = true): EmbedOptions {
-  const sky = state.sky === "now" ? { time: "now" } : {};
-  return { body: state.body, look: state.look, size: panel.size, lang: pageLang(), ...sky, ...(state.turn > 0 ? { turn: state.turn } : {}), ...(withZoom ? { zoom: state.zoom } : {}) };
+  const sky = state.sky === "now" || activeMoons() ? { time: "now" } : {};
+  const moons = activeMoons() && state.moons !== "off" ? { moons: state.moons, moonFilter: state.moonFilter, moonOrbits: state.moonOrbits } : {};
+  return { body: state.body, look: state.look, size: panel.size, lang: pageLang(), ...sky, ...moons, ...(state.turn > 0 ? { turn: state.turn } : {}), ...(withZoom ? { zoom: state.zoom } : {}) };
 }
 
-const openHref = (): string => `embed.html?${new URLSearchParams({ body: state.body, look: state.look, ...(state.sky === "now" ? { time: "now" } : {}), ...(state.turn > 0 ? { turn: String(state.turn) } : {}), ...(state.zoom !== 1 ? { zoom: String(state.zoom) } : {}) }).toString()}`;
+const openHref = (): string => {
+  const chosen = options();
+  const params = new URLSearchParams({ body: chosen.body, look: state.look, ...(chosen.time ? { time: chosen.time } : {}), ...(state.turn > 0 ? { turn: String(state.turn) } : {}), ...(state.zoom !== 1 ? { zoom: String(state.zoom) } : {}) });
+  if (chosen.moons) {
+    params.set("moons", String(chosen.moons));
+    if (chosen.moonOrbits === false) params.set("moon-orbits", "off");
+    for (const [name, value] of moonFilterAttributes(chosen.moonFilter)) params.set(name, value);
+  }
+  return `embed.html?${params}`;
+};
 
 function draw(): void {
   const group = GROUPS.find((one) => one.id === state.group) ?? GROUPS[0]!;
@@ -69,6 +94,16 @@ function draw(): void {
     state.turn = Number(id);
     draw();
   });
+  byId("builder-moons").hidden = !hasMoonMode();
+  byId("builder-moons-title").textContent = moonWord("moons", pageLang());
+  fill("moon-modes", (["off", "major", "all"] as const).map((id) => ({ id, label: moonWord(id, pageLang()) })), state.moons, "moon-mode", (id) => {
+    state.moons = id as typeof state.moons;
+    draw();
+  });
+  moonControls.render(activeMoons(), state.moonFilter, pageLang());
+  moonOrbits.hidden = !activeMoons();
+  moonOrbits.textContent = moonWord("orbits", pageLang());
+  moonOrbits.setAttribute("aria-pressed", String(state.moonOrbits));
   panel.openHref = openHref();
   panel.update();
 }
@@ -90,6 +125,11 @@ panel.preview = ({ kind }) => {
   for (const [name, value] of Object.entries({ body: chosen.body, look: chosen.look ?? "line", size: String(panel.size), "texture-base": "textures/", live: "hover", controls: "" })) element.setAttribute(name, value);
   element.addEventListener("wakusei-view", (event) => zoomed((event as CustomEvent<{ zoom: number }>).detail.zoom));
   if (chosen.time !== undefined) element.setAttribute("time", chosen.time);
+  if (chosen.moons) {
+    element.setAttribute("moons", String(chosen.moons));
+    element.moonFilter = chosen.moonFilter ?? {};
+    if (chosen.moonOrbits === false) element.setAttribute("moon-orbits", "off");
+  }
   if (chosen.turn !== undefined) element.setAttribute("turn", String(chosen.turn));
   return element;
 };
@@ -101,6 +141,7 @@ window.addEventListener("message", (event) => {
   if (event.origin !== location.origin || data?.wakusei !== "view" || typeof data.zoom !== "number") return;
   zoomed(data.zoom);
 });
+window.addEventListener("wakusei-language", draw);
 
 draw();
 document.documentElement.dataset["ready"] = "true";

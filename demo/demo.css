@@ -154,6 +154,28 @@ kazoku-embed-panel { --kazoku-ink: var(--ink); --kazoku-surface: var(--surface);
 .moon-swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 50%; vertical-align: -0.1rem; }
 .moon-table-box th { position: sticky; top: 0; background: var(--surface); }
 .moon-list h2 { margin: 0; }
+.moon-controls { display: grid; gap: 8px; min-width: 0; }
+.moon-controls[hidden], .moon-options[hidden], .moon-card[hidden] { display: none; }
+.moon-options { display: grid; gap: 8px; }
+.moon-filter-chips { display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: start; }
+.moon-filter-field { display: grid; gap: 3px; min-width: 0; }
+.moon-filter-field .fam-seg { justify-self: start; max-width: 100%; }
+.moon-filter-field .fam-seg button { font-family: inherit; }
+.moon-controls summary { cursor: pointer; min-height: 44px; align-content: center; width: fit-content; }
+.moon-filter-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.moon-filter-more .field, .moon-range { min-width: 145px; }
+.moon-range { display: grid; grid-template-columns: 1fr auto; gap: 2px 7px; align-items: center; flex: 1; }
+.moon-range input { grid-column: 1 / -1; width: 100%; min-height: 44px; margin: 0; }
+#moon-pick { max-width: 100%; min-width: 0; }
+#moon-pick select { max-width: 100%; }
+.moon-card { margin-bottom: 12px; position: relative; }
+.moon-card h3 { margin: 0 0 6px; padding-inline-end: 50px; overflow-wrap: anywhere; }
+.moon-card > button { position: absolute; top: 10px; inset-inline-end: 10px; width: 44px; height: 44px; padding: 0; }
+.moon-card dl { display: grid; grid-template-columns: minmax(86px, auto) minmax(0, 1fr); gap: 4px 12px; margin: 8px 0; }
+.moon-card dd { margin: 0; overflow-wrap: anywhere; }
+.moon-card dt { color: var(--muted); }
+.moon-name-button { text-decoration: underline; text-underline-offset: .16em; text-align: start; font: inherit; color: inherit; background: transparent; padding: 4px; border: 0; min-height: 44px; }
+#moon-rows tr[data-new-moon] { background: color-mix(in srgb, #f8ce69 17%, transparent); }
 /* The space page's orbiter row: a body's name stays with its craft when the row wraps. */
 .orbiter-pair { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
 /* The Moon page: the orbit view is wide, and the standing view comes over it. */

@@ -2,12 +2,12 @@
 title: Every known moon
 section: how-to
 order: 20
-description: "Every known moon of the planets and the dwarf planets, 468 as JPL lists them on 2026-11-18: names and designations, who found each and when, the mean orbit, the size where it is known, and where each is on a date, with how far that place was measured to be off. A 35 kB table that only /moon-catalogue carries."
+description: "Every known moon of the planets and the dwarf planets, 468 as JPL lists them on 2026-11-18: names and designations, who found each and when, the mean orbit, the size where it is known, and where each is on a date, with how far that place was measured to be off. A 35 kB table the elements load on demand."
 ---
 
 [日本語](ja/moon-catalogue.md)
 
-The package draws 44 moons in full: each has a look, a size, a spin and its own orbit, fitted to JPL Horizons or worked out from a published theory. `/moon-catalogue` lists every known moon besides, 468 of them as JPL lists them on 2026-11-18: the name (or the provisional designation of a moon not yet named), the planet, the year it was found and who found it, the mean orbit, the size where it has been measured or can be worked out, and the group it belongs to. It also says where each moon is on any date, from its mean orbit, with the error that place was measured to have. It runs anywhere, with no DOM and no three.js, needs no loading step, and the rows (about 35 kB gzipped) are part of this entry point only: a page that does not import `/moon-catalogue` does not carry them.
+The package draws 46 moons in full: each has a look, a size, a spin and its own orbit, fitted to JPL Horizons or worked out from a published theory. `/moon-catalogue` lists every known moon besides, 468 of them as JPL lists them on 2026-11-18: the name (or the provisional designation of a moon not yet named), the planet, the year it was found and who found it, the mean orbit, the size where it has been measured or can be worked out, and the group it belongs to. It also says where each moon is on any date, from its mean orbit, with the error that place was measured to have. It runs anywhere, with no DOM and no three.js, needs no loading step, and the rows (about 35 kB gzipped) can be used directly from this entry point. The elements load them when a reader asks for the catalogue.
 
 ```ts
 import { catalogueMoonPosition, catalogueMoonsOf, findCatalogueMoon, moonCounts, MOON_CATALOGUE_FETCHED } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
@@ -44,14 +44,14 @@ A moon is "placed" when it has a mean orbit. Eight are not: S/2009 S 1, a moonle
 | Field | What it is |
 |---|---|
 | `id`, `label`, `name`, `designation`, `number` | the id ("himalia", "s-2003-j-18"), what to print (the name, else the designation), the IAU name, the provisional designation and the IAU number in Roman numerals |
-| `ja` | the Japanese name in katakana: the 44 moons the package draws in full, and 114 more from `scripts/moon-catalogue-ja.json`, each taken from a published Japanese list that is written down beside it (the National Museum of Nature and Science's moon table, which is mainly from the Rika Nenpyo, and the Japanese Wikipedia); `null` for the 17 named moons that no Japanese list gives katakana for yet and for every designation, which a Japanese page shows by their English name or designation |
+| `ja` | the Japanese name in katakana: the 46 moons the package draws in full, and 110 more from `scripts/moon-catalogue-ja.json`, each taken from a published Japanese list that is written down beside it (the National Museum of Nature and Science's moon table, which is mainly from the Rika Nenpyo, and the Japanese Wikipedia); `null` for the 19 named moons that no Japanese list gives katakana for yet and for every designation, which a Japanese page shows by their English name or designation |
 | `host`, `code` | the planet or dwarf planet, and the JPL (NAIF) id Horizons knows the moon by (501 for Io) |
 | `discovery` | `year`, `by` (the discoverers or the spacecraft team, as JPL writes them) and `reference` (where it was announced: an IAU Circular, a Minor Planet Electronic Circular, a CBET, or "IAU WGPSN" for the long-named moons) |
 | `orbit` | the mean orbit: `a`, `e`, `w`, `m`, `i`, `node`, `periodDays` (as fitted to Horizons), how many years the periapsis and the node take to turn (`apsisYears`, `nodeYears`), the plane it is measured from (`frame`, with its `pole`), the epoch (2026-01-01) and the JPL ephemeris it was taken from |
 | `retrograde`, `group` | whether it goes round against its planet's turn, and its dynamical group (below) |
 | `radiusKm`, `radiusSigmaKm`, `radiusFrom`, `albedo`, `magnitude`, `magnitudeFrom` | the size and where it comes from (below), the albedo where JPL gives it, the magnitude (V(1,0) from JPL's sheet, or the Almanac's V(1,0) column) and which it is: `sheet` or `usno` |
 | `accuracy`, `grade` | how far `catalogueMoonPosition` was from JPL Horizons, and its grade (below) |
-| `full` | `true` for the 44 moons the package draws in full: the main entry point's `moonVector` and `system` place those far better |
+| `full` | `true` for the 46 moons the package draws in full: the main entry point's `moonVector` and `system` place those far better |
 
 A number the sources do not give is `null`, never guessed.
 
@@ -119,7 +119,7 @@ console.log(moonOrbitKey("direction").map((entry) => `${entry.names.en}: ${entry
 
 The regular moons do well: the median worst angle is 0.5 degrees for the major moons and 0.6 for the inner ones. The irregular moons do not: the Sun's pull swings each one along its orbit by tens of degrees within months, which a mean orbit cannot follow. The median worst angle is 10 degrees for Saturn's Norse group, 12 for Jupiter's Himalia group, 25 to 27 for Saturn's Inuit and Gallic groups, 35 for Jupiter's Ananke group and over 50 for its Carme and Pasiphae groups.
 
-Every grade is below the 44 moons the package draws in full: from the main entry point those are within arc-seconds to a few arc-minutes (see [How exact it is](accuracy.md)). Decades away (1990, 2000 and 2040) the drift is much larger (`accuracy.farDegrees`). Use the catalogue's place to show where a small moon is round its planet, not to point a telescope at it.
+Every grade is below the 46 moons the package draws in full: from the main entry point those are within arc-seconds to a few arc-minutes (see [How exact it is](accuracy.md)). Decades away (1990, 2000 and 2040) the drift is much larger (`accuracy.farDegrees`). Use the catalogue's place to show where a small moon is round its planet, not to point a telescope at it.
 
 ## Near 2026-12-01 the irregular moons follow Horizons
 
@@ -151,11 +151,33 @@ space.moonHosts;                     // the planets showing every moon now, in t
 space.moonColors = "direction";      // the orbits' colours: "group" (the default) or "direction"
 ```
 
-A dot is where `catalogueMoonPosition` puts the moon, nearer in the compressed scale by the same mapping as the drawn moons, and its orbit is a closed line coloured by the moon's family (`moon-colors="group"`, each family's `color`) or by its direction (`direction`: blue goes with the planet's turn, red against it). `moonOrbitKey(by, hosts)` is the key to those colours as data, so a page draws its own legend from it. The dots are one draw and the orbits one more, built once for a scale, a colouring and a month and only moved with their planet after that; nothing is drawn at rest, and a draw at the same scale builds nothing again. The catalogue is a chunk of its own, fetched the first time a planet is set to `all`, so a view that never does never loads it. `stats.allMoons` says whether any planet is set to `all`, whether the catalogue has loaded, how many dots and orbits the last draw drew, and which planets show them. A page that hands the element its own subset of three.js (`setThreeLoader`) must include `Points`, `PointsMaterial`, `LineSegments` and `LineBasicMaterial`.
+A dot is where `catalogueMoonPosition` puts the moon, nearer in the compressed scale by the same mapping as the drawn moons, and its orbit is a closed line coloured by the moon's family (`moon-colors="group"`, each family's `color`) or by its direction (`direction`: blue goes with the planet's turn, red against it). `moonOrbitKey(by, hosts)` is the key to those colours as data, so a page draws its own legend from it. The dots are one draw and the orbits one more, built once for a scale, a colouring and a month and only moved with their planet after that; nothing is drawn at rest, and a draw at the same scale builds nothing again. The catalogue is a chunk of its own. The view fetches it the first time a planet is set to `all` or a filter is applied. `stats.allMoons` says whether any planet is set to `all`, whether the catalogue has loaded, how many dots and orbits the last draw drew, and which planets show them. A page that hands the element its own subset of three.js (`setThreeLoader`) must include `Points`, `PointsMaterial`, `LineSegments` and `LineBasicMaterial`.
 
-A dot answers a press within 9 CSS pixels, after every body with a name: the first press selects the moon and fires `wakusei-body-select`, `wakusei-body-click` and `wakusei-moon-click` with `{ id, name, kind: "catalogue-moon", host }`; a second press on the same moon makes its planet the middle of the view. Hovering one fires `wakusei-body-hover` with the same detail. `all-moons` and `space.allMoons` still work, as `moons="all"` for every planet. The demo's space page has a switch and a panel that lists the families of the planet in view, each with its count and sizes (an estimated size is marked) and the colour key; a moon measured more than 10 degrees off is marked "rough place".
+A dot answers a press within 9 CSS pixels, after every body with a name: the first press selects the moon and fires `wakusei-body-select`, `wakusei-body-click` and `wakusei-moon-click` with `{ id, name, kind: "catalogue-moon", host }`; a second press on the same moon makes its planet the middle of the view. Hovering one fires `wakusei-body-hover` with the same detail. `all-moons` and `space.allMoons` still work, as `moons="all"` for every planet. The demo lists matching moons for the planet in view, with their sizes and the orbit colour key. Open a moon's card for its designation, discovery, orbit, radius, accuracy and sources.
 
 The dots show each moon's orbit and roughly where on it the moon is. Regular moons are within about half a degree; many small outer moons can be tens of degrees off within a year (see how many above), so a dot is not an exact position.
+
+## Filtering the catalogue
+
+The planet and space elements take the same `moonFilter` object and the same attributes. Conditions combine. An empty object or absent attributes include every moon in the selected mode.
+
+| Attribute | JavaScript field | Values |
+|---|---|---|
+| `moon-status` | `status` | `named` has an IAU name, `numbered` has a number and no name, `provisional` has neither |
+| `moon-size-class` | `size` | `major` is a full rendering, `measured` is a smaller moon with a measured radius, `estimated` is a smaller moon with a radius estimated from its brightness |
+| `moon-group` | `group` | One of `MOON_GROUPS`, such as `himalia` or `norse` |
+| `moon-direction` | `direction` | `prograde` or `retrograde` |
+| `moon-discovered` | `discovered` | One year or an inclusive range such as `2000..2026`. Either endpoint can be left open. In JavaScript use `{ from: 2000, to: 2026 }`. |
+
+A moon with only a data-sheet radius or with no radius appears when no size class is selected. A discovery range excludes records with no discovery year. `moon-size` still sets the numerical display multiplier in compressed space.
+
+```ts
+import { catalogueMoonsOf, filterMoonCatalogue } from "@johnmorrisdotca/wakusei-planets/moon-catalogue";
+
+console.log(filterMoonCatalogue({ direction: "retrograde", discovered: { from: 2000 } }, catalogueMoonsOf("jupiter")).length);
+```
+
+In the demos, open **More filters** to set the discovery range or play discoveries from 1610 through 2026. Playback adds moons as their discovery years arrive and highlights the newest match. The view's orbital date stays where its own clock puts it. The catalogue includes records whose orbits are unavailable. They can appear in the list and open a card.
 
 ## Kept current
 

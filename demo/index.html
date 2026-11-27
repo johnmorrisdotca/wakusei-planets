@@ -30,6 +30,7 @@
           </div>
         </div>
       </section>
+      <aside class="fam-panel moon-card" id="moon-card" aria-live="polite" hidden></aside>
       <kazoku-view-controls id="controls" for="main" controls="advanced" speed="0"></kazoku-view-controls>
 
       <div class="fam-panels">
@@ -116,6 +117,14 @@
             </label>
             <button type="button" class="fam-button" id="now" aria-pressed="true" data-say="now">Now</button>
             <kazoku-replay-bar id="replay" data-testid="replay" steps="1 3600 86400" speed="3600"></kazoku-replay-bar>
+          </div>
+          <div class="moon-options" id="moon-options" hidden>
+            <div class="fam-row">
+              <button type="button" id="moon-all" class="fam-button" aria-pressed="false"></button>
+              <button type="button" id="moon-orbits" class="fam-button" aria-pressed="true"></button>
+              <label class="field" id="moon-pick" hidden><span></span><select class="fam-field"></select></label>
+            </div>
+            <div class="moon-controls" id="moon-filters"></div>
           </div>
           <p class="fam-fine" id="status" role="status" hidden></p>
         </div>

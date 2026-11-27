@@ -7,7 +7,7 @@ import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazo
 import type { SpeedButtonsElement } from "@johnmorrisdotca/kazoku-ui/speed-buttons/element";
 import { createAddressState } from "@johnmorrisdotca/kazoku-ui/address-state";
 import type { ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
-import { apparent, BODIES, DWARF_IDS, MINOR_IDS, MOONS_OF, type BodyId } from "../src/index.ts";
+import { apparent, BODIES, DWARF_IDS, MINOR_IDS, MOONS_OF, type BodyId, type HostId } from "../src/index.ts";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
 import { interiorOf } from "../src/interior.ts";
 import { lookOf } from "../src/scene/look.ts";
@@ -17,13 +17,15 @@ import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 // `earth-from=chikyu` in the address asks for chikyu-earth's realistic Earth in the shaded looks: its element is loaded only then (its own chunk), the way a page that wants it imports it
 if (new URLSearchParams(location.search).get("earth-from") === "chikyu") void import("@johnmorrisdotca/chikyu-earth/realistic/element");
-import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
+import { setThreeLoader, type WakuseiBody, type WakuseiMoonSelection } from "../src/element.ts";
 import { creditLine } from "../src/door/index.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
 import { opensPlaying } from "./opens-playing.ts";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
+import { MOON_FILTER_ATTRIBUTES, moonFilterAttributes, readMoonFilter } from "../src/moon-filters.ts";
+import { createMoonControls, moonWord, showMoonCard } from "./moon-controls.ts";
 
 type Look = "line" | "realistic" | "painted" | "illustrated";
 const TILES: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars", "jupiter", "saturn", "uranus", "neptune", "pluto"];
@@ -85,12 +87,16 @@ if (main && controls && pickerBox) {
   const asAlso = (value: string | null): BodyId[] => (value ?? "").split(",").filter((id): id is BodyId => id in BODIES);
   const asBody = (value: string | null): BodyId => (value !== null && value in BODIES ? (value as BodyId) : "jupiter");
   const DEFAULT_SPEED = 3600;
+  const initialMoons = address.get("moons");
   const state = {
     body: asBody(address.get("body")),
     cutaway: cutFrom(address.get("cutaway")),
     look: (["line", "realistic", "painted", "illustrated"].includes(address.get("look") ?? "") ? address.get("look") : "realistic") as Look,
-    real: address.get("sky") === "real" || address.get("moons") === "1",
-    moons: address.get("moons") === "1",
+    real: address.get("sky") === "real" || initialMoons === "1" || initialMoons === "major" || initialMoons === "all",
+    moons: initialMoons === "1" || initialMoons === "major" || initialMoons === "all",
+    allMoons: initialMoons === "all",
+    moonOrbits: address.get("moon-orbits") !== "off",
+    moonFilter: readMoonFilter({ getAttribute: (name) => address.get(name) }),
     scale: address.get("scale") === "1",
     also: asAlso(address.get("with")),
     relative: address.get("rel") === "1",
@@ -105,6 +111,89 @@ if (main && controls && pickerBox) {
   };
   const bodyLabel = readBodyLabelState(address);
   const places = readPlacesState(address);
+  const moonOptions = document.querySelector<HTMLElement>("#moon-options")!;
+  const allMoonsButton = document.querySelector<HTMLButtonElement>("#moon-all")!;
+  const moonOrbitsButton = document.querySelector<HTMLButtonElement>("#moon-orbits")!;
+  const moonCard = document.querySelector<HTMLElement>("#moon-card")!;
+  const moonPicker = document.querySelector<HTMLLabelElement>("#moon-pick")!;
+  const moonSelect = moonPicker.querySelector("select")!;
+  let catalogue: typeof import("../src/moon-catalogue.ts") | undefined;
+  let catalogueRequest: Promise<typeof import("../src/moon-catalogue.ts")> | undefined;
+  let shownMoon = "";
+  let moonListKey = "";
+  let newest: number | undefined;
+  const getCatalogue = () => catalogueRequest ??= import("../src/moon-catalogue.ts").then((module) => (catalogue = module));
+  const moonControls = createMoonControls(document.querySelector<HTMLElement>("#moon-filters")!, (filter) => {
+    state.moonFilter = filter;
+    main.moonFilter = filter;
+    writeMoonAddress();
+    renderMoonOptions();
+    renderEmbed();
+  }, (group) => say(`sp_group_${group}`));
+  allMoonsButton.addEventListener("click", () => {
+    state.allMoons = !state.allMoons;
+    render();
+  });
+  moonOrbitsButton.addEventListener("click", () => {
+    state.moonOrbits = !state.moonOrbits;
+    render();
+  });
+  moonSelect.addEventListener("change", () => { if (moonSelect.value) inspectMoon(moonSelect.value, true); });
+  main.addEventListener("wakusei-moon-select", (event) => inspectMoon((event as CustomEvent<WakuseiMoonSelection>).detail.id));
+
+  function inspectMoon(id: string, scroll = false): void {
+    shownMoon = id;
+    void getCatalogue().then((module) => {
+      if (shownMoon !== id) return;
+      const moon = module.findCatalogueMoon(id);
+      if (moon === undefined || moon.host !== state.body) return;
+      showMoonCard(moonCard, moon, lang(), newest, scroll);
+    });
+  }
+
+  function writeMoonAddress(): void {
+    address.set("moons", state.moons ? (state.allMoons ? "all" : "1") : null);
+    address.set("moon-orbits", state.moonOrbits ? null : "off");
+    const attrs = new Map(moonFilterAttributes(state.moonFilter));
+    for (const name of MOON_FILTER_ATTRIBUTES) address.set(name, attrs.get(name) ?? null);
+  }
+
+  function renderMoonOptions(): void {
+    const active = state.moons && hasMoons();
+    moonOptions.hidden = !active;
+    allMoonsButton.textContent = moonWord("all", lang());
+    moonOrbitsButton.textContent = moonWord("orbits", lang());
+    pressed(allMoonsButton, state.allMoons);
+    pressed(moonOrbitsButton, state.moonOrbits);
+    const all = catalogue?.catalogueMoonsOf(state.body as HostId).filter((moon) => state.allMoons || moon.full);
+    const groups = catalogue?.MOON_GROUPS.filter((group) => all?.some((moon) => moon.group === group));
+    moonControls.render(active, state.moonFilter, lang(), groups);
+    if (!active) {
+      moonCard.hidden = true;
+      shownMoon = "";
+    }
+    if (active && catalogue === undefined && (state.allMoons || moonFilterAttributes(state.moonFilter).length > 0)) void getCatalogue().then(renderMoonOptions);
+    const key = `${active}|${state.body}|${state.allMoons}|${lang()}|${JSON.stringify(state.moonFilter)}|${catalogue !== undefined}`;
+    if (key === moonListKey) return;
+    moonListKey = key;
+    const rows = active && all !== undefined ? catalogue?.filterMoonCatalogue(state.moonFilter, all) ?? [] : [];
+    const major = active && all === undefined ? (MOONS_OF[state.body as keyof typeof MOONS_OF] as readonly BodyId[]) ?? [] : [];
+    newest = state.moonFilter.discovered === undefined ? undefined : Math.max(...rows.map((moon) => moon.discovery.year ?? -Infinity));
+    const label = lang() === "ja" ? "衛星の詳細" : "Moon details";
+    moonPicker.querySelector("span")!.textContent = label;
+    moonPicker.hidden = !active;
+    const count = rows.length + major.length;
+    const summary = lang() === "ja" ? `${count}個の衛星` : `${count} ${count === 1 ? "moon" : "moons"}`;
+    moonSelect.replaceChildren(new Option(summary, ""),
+      ...major.map((id) => new Option(BODIES[id].name[lang()], id)),
+      ...rows.map((moon) => new Option(`${(lang() === "ja" ? moon.ja : null) ?? moon.label}${newest !== undefined && moon.discovery.year === newest ? ` · ${moonWord("newest", lang())}` : ""}`, moon.id)));
+    const selection = [...moonSelect.options].some((option) => option.value === shownMoon);
+    if (selection) moonSelect.value = shownMoon;
+    else {
+      shownMoon = "";
+      moonCard.hidden = true;
+    }
+  }
 
   const localValue = (ms: number): string => {
     const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000);
@@ -541,7 +630,10 @@ if (main && controls && pickerBox) {
     setAttr(main!, "rate", real ? String(state.play ? state.speed : 0) : null);
     // a dated picture turns with its own date's clock, so Play is what moves it; nothing is drawn while it holds
     setAttr(main!, "turn", state.spin && !real ? String((turnRate(state.body) < 0 ? -14 : 14) * state.spinSpeed) : "0");
-    setAttr(main!, "moons", state.moons && hasMoons() ? "" : null);
+    setAttr(main!, "moons", state.moons && hasMoons() ? (state.allMoons ? "all" : "") : null);
+    setAttr(main!, "moon-orbits", state.moonOrbits ? null : "off");
+    main!.moonFilter = state.moonFilter;
+    renderMoonOptions();
     setAttr(main!, "pitch", state.moons && hasMoons() ? "26" : null);
     renderBodyLabelRow(bodyLabel, main!, address);
     renderPlacesRow(places, main!, address);
@@ -584,7 +676,7 @@ if (main && controls && pickerBox) {
     address.set("look", state.look);
     address.set("cutaway", state.cutaway === "off" ? null : state.cutaway);
     address.set("sky", state.real ? "real" : null);
-    address.set("moons", state.moons ? "1" : null);
+    writeMoonAddress();
     address.set("with", state.also.length > 0 ? state.also.join(",") : null);
     address.set("rel", state.relative ? "1" : null);
     address.set("scale", state.scale ? "1" : null);
@@ -600,7 +692,7 @@ if (main && controls && pickerBox) {
   const panel = document.querySelector<EmbedPanelElement>("#embed-panel")!;
   const embedOptions = (): EmbedOptions => {
     const real = state.real || (state.moons && hasMoons());
-    return { body: state.body, look: state.look, size: panel.size, lang: lang(), ...(state.cutaway === "off" ? {} : { cutaway: state.cutaway }), ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: true } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
+    return { body: state.body, look: state.look, size: panel.size, lang: lang(), ...(state.cutaway === "off" ? {} : { cutaway: state.cutaway }), ...(real ? { time: state.time === "now" ? "now" : new Date(timeMs()).toISOString() } : {}), ...(state.moons && hasMoons() ? { moons: state.allMoons ? "all" : true, moonFilter: state.moonFilter, moonOrbits: state.moonOrbits } : {}), ...(state.spin && !real ? { turn: 14 } : {}) };
   };
   panel.kinds = EMBED_KINDS;
   const kept = address.get("embed");
@@ -614,7 +706,11 @@ if (main && controls && pickerBox) {
     for (const [name, value] of Object.entries({ body: options.body, look: options.look ?? "realistic", size: String(panel.size), "texture-base": "textures/", lang: lang() })) body.setAttribute(name, value);
     if (options.cutaway !== undefined) body.setAttribute("cutaway", options.cutaway === "classic" ? "" : options.cutaway);
     if (options.time !== undefined) body.setAttribute("time", options.time);
-    if (options.moons === true) body.setAttribute("moons", "");
+    if (options.moons) {
+      body.setAttribute("moons", options.moons === true ? "" : options.moons);
+      body.moonFilter = options.moonFilter ?? {};
+      if (options.moonOrbits === false) body.setAttribute("moon-orbits", "off");
+    }
     if (options.turn !== undefined) body.setAttribute("turn", String(options.turn));
     body.setAttribute("live", "off");
     return body;
@@ -628,7 +724,13 @@ if (main && controls && pickerBox) {
   function renderEmbed(): void {
     const options = embedOptions();
     panel.setAttribute("lang", lang());
-    panel.openHref = `embed.html?${new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.cutaway === undefined ? {} : { cutaway: options.cutaway }), ...(options.time !== undefined ? { time: options.time } : {}), ...(options.moons === true ? { moons: "1" } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) }).toString()}`;
+    const params = new URLSearchParams({ body: options.body, look: options.look ?? "realistic", ...(options.cutaway === undefined ? {} : { cutaway: options.cutaway }), ...(options.time !== undefined ? { time: options.time } : {}), ...(options.turn !== undefined ? { turn: String(options.turn) } : {}) });
+    if (options.moons) {
+      params.set("moons", options.moons === true ? "1" : options.moons);
+      if (options.moonOrbits === false) params.set("moon-orbits", "off");
+      for (const [name, value] of moonFilterAttributes(options.moonFilter)) params.set(name, value);
+    }
+    panel.openHref = `embed.html?${params}`;
     panel.update();
   }
 
@@ -712,7 +814,10 @@ if (main && controls && pickerBox) {
     state.spinSpeed = value;
     render();
   });
-  window.addEventListener("wakusei-language", () => render());
+  window.addEventListener("wakusei-language", () => {
+    render();
+    if (!moonCard.hidden && shownMoon) inspectMoon(shownMoon);
+  });
   // whose data is on the screen: the credit line of the big view, in the page's language (the data door)
   const doorLine = document.querySelector<HTMLElement>("#door-credit");
   if (doorLine) {

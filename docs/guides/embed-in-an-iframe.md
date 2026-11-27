@@ -37,7 +37,9 @@ The address takes these choices:
 | `body` | which body, `jupiter` by default |
 | `look` | `line` (the default), `realistic` or `painted`; the shaded looks need WebGL and fall back to the line drawing |
 | `time` | `now` or an ISO date: the body as the Earth sees it then. A portrait when left out |
-| `moons` | `1` draws the planet with its moons on their orbits |
+| `moons` | `1` or `major` draws the major moons. `all` also draws the catalogue’s small moons with known orbits |
+| `moon-orbits` | `off` hides paths |
+| `moon-status`, `moon-size-class`, `moon-group`, `moon-direction`, `moon-discovered` | [Filter the moons](moon-catalogue.md#filtering-the-catalogue) using the same values as the element |
 | `turn` | degrees a second it turns by itself; still by default |
 | `tilt`, `pitch`, `phase`, `meridian` | a portrait's pose, in degrees |
 | `zoom`, `yaw`, `vtilt` | how far in the view starts, and the angle and tilt it is turned to. The frame zooms with a drag, a pinch, Ctrl and the wheel, the keys and its + and - buttons, and keeps these in its own address as the reader moves, so the address can be copied. 1 is the whole body; see [zoom and pan](zoom-and-pan.md) for the range |

@@ -20,6 +20,7 @@ import "@johnmorrisdotca/chikyu-earth/element";
 import "../src/bodies/earth.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { frameCredit } from "./frame-credit.ts";
+import { MOON_FILTER_ATTRIBUTES } from "../src/moon-filters.ts";
 
 setThreeLoader(() => import("./three-subset.ts"));
 const query = new URLSearchParams(location.search);
@@ -49,11 +50,12 @@ function body(): void {
   element.setAttribute("look", query.get("look") ?? "line");
   element.setAttribute("texture-base", query.get("texture-base") ?? "textures/");
   element.setAttribute("tiles", query.get("tiles") ?? "tiles/");
-  for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang", "cutaway"]) {
+  for (const name of ["time", "tilt", "pitch", "phase", "meridian", "turn", "rate", "range", "scale-to", "lang", "cutaway", "moon-orbits", ...MOON_FILTER_ATTRIBUTES]) {
     const value = query.get(name);
     if (value !== null) element.setAttribute(name, value);
   }
-  if (query.get("moons") === "1") element.setAttribute("moons", "");
+  const moons = query.get("moons");
+  if (moons === "1" || moons === "major" || moons === "all") element.setAttribute("moons", moons === "1" ? "" : moons);
   frame.append(element);
 }
 

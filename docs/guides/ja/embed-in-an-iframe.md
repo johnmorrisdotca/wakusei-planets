@@ -37,7 +37,9 @@ description: iframe 1つで、自分のスクリプトなしに、他人のペ�
 | `body` | 天体。初期値は `jupiter` |
 | `look` | `line` (初期値)、`realistic`、`painted`。陰影つきには WebGL が必要で、使えないときは線画になります |
 | `time` | `now` か ISO の日時。その時刻に地球から見える姿。省くと肖像 |
-| `moons` | `1` で、惑星と衛星を軌道つきで描きます |
+| `moons` | `1` または `major` は主要衛星を表示します。`all` は軌道がわかっている小さな衛星も表示します |
+| `moon-orbits` | `off` で軌道の線を消します |
+| `moon-status`、`moon-size-class`、`moon-group`、`moon-direction`、`moon-discovered` | 要素の属性と同じ値で、[衛星を絞り込みます](moon-catalogue.md) |
 | `turn` | 自分で回る速さ (度/秒)。初期値は止まっています |
 | `tilt`、`pitch`、`phase`、`meridian` | 肖像の向き (度) |
 | `zoom`、`yaw`、`vtilt` | 表示の最初の拡大率と、回した角度、傾き。フレームは、ドラッグ、ピンチ、Ctrl とホイール、キー、+ と - のボタンでズームでき、操作に合わせてこれらを自分のアドレスに書くので、そのアドレスをコピーできます。1は天体ぜんぶが見える状態です。範囲は [ズームと移動](zoom-and-pan.md) にあります |

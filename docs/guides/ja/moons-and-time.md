@@ -17,6 +17,17 @@ description: ある日時の衛星の位置つきで惑星を描きます。時�
 
 `time="now"` は時計に従います。`moons` なしで `time` だけ付けると、その日の見え方になります。輪の開き、満ち欠け、こちらを向いている面です。
 
+## すべての衛星を表示する
+
+`moons="major"` は値を付けない `moons` と同じです。`moons="all"` を指定すると、カタログに軌道データがある小さな衛星も点で表示します。`range` を省くと、衛星系全体が画面に収まります。軌道の線を消して位置だけを表示するには `moon-orbits="off"` を指定します。線画は SVG で描き、陰影のある表示では小さな衛星をまとめて1回で描きます。three.js の一部だけを使う場合は `Points` と `PointsMaterial` を含めてください。
+
+```html
+<wakusei-body body="jupiter" look="line" moons="all" moon-group="himalia"
+  moon-discovered="1900..2026" time="2026-11-02T12:00:00Z" rate="0"></wakusei-body>
+```
+
+JavaScript では `body.moonFilter = { group: "himalia", discovered: { from: 1900, to: 2026 } }` と書くと同じ条件になります。条件の一覧は [衛星カタログ](moon-catalogue.md) を参照してください。衛星を押すと `wakusei-moon-select` が発火し、`detail: { id, host }` を返します。デモでは衛星の詳細カードを開きます。「衛星の詳細」からはキーボードで選べます。[コードビルダー](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) と [iframe](embed-in-an-iframe.md) でも同じ条件を指定できます。
+
 ## 時計が進むあいだの日付の見せ方
 
 日付の欄があるページは、時計がどの日時まで進んだかを知る必要があります。`<wakusei-body>` (`time` か `moons` があるとき) と `<wakusei-space>` は、`detail: { time, running }` をつけた `wakusei-timechange` を送ります。`time` は、いま見せている時刻で、1970年からのミリ秒です。

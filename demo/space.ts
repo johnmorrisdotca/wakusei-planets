@@ -7,7 +7,7 @@ import "@johnmorrisdotca/kazoku-ui/replay-bar/define";
 import type { ReplayBarElement, ReplayDetail } from "@johnmorrisdotca/kazoku-ui/replay-bar/element";
 import type { ViewControlsElement, ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { setThreeLoader, type BodyInfo, type SpacePreset, type WakuseiSpace } from "../src/space/element.ts";
-import { BODIES, type BodyId } from "../src/facts.ts";
+import { BODIES, type BodyId, type HostId } from "../src/facts.ts";
 import { findBody } from "../src/space/bodies.ts";
 import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
@@ -15,6 +15,8 @@ import { opensPlaying } from "./opens-playing.ts";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
 import { bindSpaceNearby } from "./space-nearby.ts";
+import { MOON_FILTER_ATTRIBUTES, moonFilterAttributes, readMoonFilter } from "../src/moon-filters.ts";
+import { createMoonControls, moonWord, showMoonCard } from "./moon-controls.ts";
 // chikyu-earth is an optional peer: the demo carries its places layout so a page can lay places on the Earth (`earth-places`)
 import "../src/earth-places.ts";
 import type * as Orbiters from "../src/orbiters.ts";
@@ -103,6 +105,7 @@ const state = {
   paintLength: pick(address.get("paintlength"), ["1d", "1w", "1m"], "1d") as "1d" | "1w" | "1m",
   /** Every other known moon drawn as a dot, and the list of the planet's moons under the controls (`moons=all`). */
   allMoons: address.get("moons") === "all",
+  moonFilter: readMoonFilter({ getAttribute: (name) => address.get(name) }),
   /** What the moons' orbit colours say: the moon's family, or the way it goes round (`mooncolors=direction`). */
   moonColors: pick(address.get("mooncolors"), ["group", "direction"], "group") as "group" | "direction",
   /** The craft picked out, which orbit lines are drawn, and its ground track. */
@@ -199,6 +202,7 @@ function render(): void {
   const mars = space.body === "mars" || space.body === "phobos" || space.body === "deimos";
   space.paint = state.paint ? { id: state.orbiter || (mars ? "mro" : "lro"), length: state.paintLength } : null;
   space.allMoons = state.allMoons;
+  space.moonFilter = state.moonFilter;
   space.moonColors = state.moonColors;
   space.orbiter = state.orbiter || null;
   space.orbiterLines = state.orbiterLines;
@@ -282,6 +286,8 @@ function render(): void {
   address.set("paint", state.paint ? "1" : null);
   address.set("paintlength", state.paintLength === "1d" ? null : state.paintLength);
   address.set("moons", state.allMoons ? "all" : null);
+  const moonAttrs = new Map(moonFilterAttributes(state.moonFilter));
+  for (const name of MOON_FILTER_ATTRIBUTES) address.set(name, moonAttrs.get(name) ?? null);
   address.set("mooncolors", state.moonColors === "group" ? null : state.moonColors);
   address.set("orbiter", state.orbiters && state.orbiter ? state.orbiter : null);
   address.set("olines", state.orbiters && state.orbiterLines !== "all" ? state.orbiterLines : null);
@@ -350,63 +356,96 @@ for (const b of $$("#paint-lengths [data-paint-length]")) b.addEventListener("cl
 document.querySelector("#all-moons")!.addEventListener("click", () => ((state.allMoons = !state.allMoons), render()));
 for (const b of $$("#moon-colors [data-moon-colors]")) b.addEventListener("click", () => ((state.moonColors = b.dataset["moonColors"] as "group" | "direction"), render()));
 
-// The moons of the planet in view, from the catalogue (fetched the first time "All moons" is on): the counts, a row of its groups, and a table that scrolls in its own box.
 let catalogue: typeof import("../src/moon-catalogue.ts") | undefined;
-let moonGroup = "";
+let moonCatalogueRequest: Promise<typeof import("../src/moon-catalogue.ts")> | undefined;
+const moonCatalogue = () => moonCatalogueRequest ??= import("../src/moon-catalogue.ts");
+const moonCard = document.querySelector<HTMLElement>("#moon-card")!;
+let shownMoon = "";
+const moonControls = createMoonControls(document.querySelector<HTMLElement>("#moon-filters")!, (filter) => {
+  state.moonFilter = filter;
+  space.moonFilter = filter;
+  const attrs = new Map(moonFilterAttributes(filter));
+  for (const name of MOON_FILTER_ATTRIBUTES) address.set(name, attrs.get(name) ?? null);
+  renderMoonList();
+}, (group) => say(`sp_group_${group}`));
+
+function inspectMoon(id: string, scroll = false): void {
+  shownMoon = id;
+  void moonCatalogue().then((module) => {
+    if (shownMoon !== id) return;
+    const moon = module.findCatalogueMoon(id);
+    if (moon !== undefined) {
+      showMoonCard(moonCard, moon, chooser()?.lang ?? "en", newest, scroll);
+    }
+  });
+}
+
+let newest: number | undefined;
 function renderMoonList(): void {
   const panel = document.querySelector<HTMLElement>("#moon-list")!;
-  panel.hidden = !state.allMoons;
-  if (!state.allMoons) return;
+  const filtering = moonFilterAttributes(state.moonFilter).length > 0;
+  panel.hidden = !state.allMoons && !filtering;
+  if (panel.hidden) {
+    moonControls.render(false, state.moonFilter, chooser()?.lang ?? "en");
+    return;
+  }
   if (catalogue === undefined) {
-    void import("../src/moon-catalogue.ts").then((mod) => ((catalogue = mod), renderMoonList()));
+    void moonCatalogue().then((mod) => ((catalogue = mod), renderMoonList()));
     return;
   }
   const here = space.bodyInfo(space.body);
-  const host = (here.kind === "moon" ? here.host : here.id) as BodyId;
-  const all = catalogue.catalogueMoonsOf(host as Parameters<typeof catalogue.catalogueMoonsOf>[0]);
+  const host = (here.kind === "moon" ? here.host : here.id) as HostId;
+  const all = catalogue.catalogueMoonsOf(host).filter((moon) => state.allMoons || moon.full);
+  const rows = catalogue.filterMoonCatalogue(state.moonFilter, all);
   const hostName = space.bodyInfo(host).name;
   document.querySelector("#moon-list-h")!.textContent = say("sp_moons_of", { name: hostName });
-  const named = all.filter((m) => m.named).length;
-  document.querySelector("#moon-count")!.textContent = all.length === 0 ? say("sp_moons_none", { name: hostName }) : say("sp_moons_count", { count: all.length, named, date: catalogue.MOON_CATALOGUE_FETCHED });
+  const named = rows.filter((m) => m.named).length;
   const lang = chooser()?.lang ?? "en";
-  // the planet's moons by family (`moonFamilies`): a chip each with its count, an estimated size marked, and the key to the orbits' colours
-  const families = catalogue.moonFamilies(host as Parameters<typeof catalogue.moonFamilies>[0]);
-  if (!families.some((f) => f.id === moonGroup)) moonGroup = "";
-  document.querySelector("#moon-groups")!.replaceChildren(
-    ...[{ id: "", label: `${say("sp_moon_group_all")} ${all.length}` }, ...families.map((f) => ({ id: f.id as string, label: `${f.names[lang]} ${f.count}` }))].map((choice) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.textContent = choice.label;
-      pressed(button, choice.id === moonGroup);
-      button.addEventListener("click", () => ((moonGroup = choice.id), renderMoonList()));
-      return button;
-    }),
-  );
-  const keyed = catalogue.moonOrbitKey(state.moonColors, [host as Parameters<typeof catalogue.moonFamilies>[0]]);
+  document.querySelector("#moon-count")!.textContent = all.length === 0 ? say("sp_moons_none", { name: hostName }) : filtering
+    ? (lang === "ja" ? `${all.length}個のうち${rows.length}個を表示` : `${rows.length} of ${all.length} moons shown`)
+    : say("sp_moons_count", { count: rows.length, named, date: catalogue.MOON_CATALOGUE_FETCHED });
+  moonControls.render(true, state.moonFilter, lang, catalogue.MOON_GROUPS.filter((group) => all.some((moon) => moon.group === group)));
+  const keyed = catalogue.moonOrbitKey(state.moonColors, [host]);
+  const colors = new Map<string, number>();
+  for (const moon of rows) {
+    if (moon.orbit === null) continue;
+    const color = catalogue.moonOrbitColor(moon, state.moonColors);
+    colors.set(color, (colors.get(color) ?? 0) + 1);
+  }
   document.querySelector("#moon-key")!.replaceChildren(
-    ...keyed.map((entry) => {
+    ...keyed.filter((entry) => colors.has(entry.color)).map((entry) => {
       const item = document.createElement("span");
       const swatch = Object.assign(document.createElement("span"), { className: "moon-swatch" });
       swatch.style.background = entry.color;
-      item.append(swatch, ` ${entry.names[lang]} ${entry.count}`);
+      item.append(swatch, ` ${entry.names[lang]} ${colors.get(entry.color)}`);
       return item;
     }),
   );
-  const inFamily = new Set(moonGroup === "" ? [] : families.find((f) => f.id === moonGroup)!.moons.map((m) => m.id));
-  const rows = all.filter((m) => moonGroup === "" || inFamily.has(m.id));
+  newest = state.moonFilter.discovered === undefined ? undefined : Math.max(...rows.map((m) => m.discovery.year ?? -Infinity));
   document.querySelector("#moon-rows")!.replaceChildren(
     ...rows.map((m) => {
       const tr = document.createElement("tr");
       const name = lang === "ja" && m.ja !== null ? m.ja : m.label;
       const found = m.discovery.year === null ? "" : `${m.discovery.year}${m.discovery.by ? ` · ${m.discovery.by}` : ""}`;
       const size = m.radiusKm === null ? "" : `${m.radiusKm.toLocaleString("en-US")} km${m.radiusFrom === "derived" ? " *" : ""}`;
-      for (const text of [name, say(`sp_group_${m.group}`), found, size, say(`sp_grade_${m.full ? "full" : m.grade}`)]) tr.append(Object.assign(document.createElement("td"), { textContent: text }));
+      const nameCell = tr.insertCell();
+      const button = Object.assign(document.createElement("button"), { textContent: name, type: "button", className: "moon-name-button" });
+      button.addEventListener("click", () => inspectMoon(m.id, true));
+      nameCell.append(button);
+      if (newest !== undefined && m.discovery.year === newest) {
+        tr.dataset["newMoon"] = "";
+        nameCell.append(Object.assign(document.createElement("span"), { className: "fam-sr", textContent: moonWord("newest", lang) }));
+      }
+      for (const text of [say(`sp_group_${m.group}`), found, size, say(`sp_grade_${m.full ? "full" : m.grade}`)]) tr.append(Object.assign(document.createElement("td"), { textContent: text }));
       return tr;
     }),
   );
 }
 space.addEventListener("wakusei-hop", () => renderMoonList());
-window.addEventListener("wakusei-language", () => queueMicrotask(renderMoonList));
+window.addEventListener("wakusei-language", () => queueMicrotask(() => {
+  renderMoonList();
+  if (!moonCard.hidden && shownMoon) inspectMoon(shownMoon);
+}));
 document.querySelector("#orbiters")!.addEventListener("click", () => {
   state.orbiters = !state.orbiters;
   if (!state.orbiters && state.ride === "orbiter") state.ride = "";
@@ -588,9 +627,11 @@ controls.addEventListener("kazoku-viewchange", (event) => {
   space.setView(detail, detail.final);
 });
 space.addEventListener("wakusei-body-click", (event) => {
-  const info = (event as CustomEvent<BodyInfo>).detail;
-  caption.textContent = say("sp_picked", { name: info.name, radius: Math.round(info.radiusKm).toLocaleString("en-US"), distance: Math.round(info.distanceKm).toLocaleString("en-US") });
+  const info = (event as CustomEvent<BodyInfo | { name: string; kind: "catalogue-moon" }>).detail;
+  caption.textContent = "radiusKm" in info ? say("sp_picked", { name: info.name, radius: Math.round(info.radiusKm).toLocaleString("en-US"), distance: Math.round(info.distanceKm).toLocaleString("en-US") }) : info.name;
+  if (info.kind === "moon") inspectMoon(info.id);
 });
+space.addEventListener("wakusei-moon-click", (event) => inspectMoon((event as CustomEvent<{ id: string }>).detail.id));
 // the first press on a body selects it and offers to go there; a second press on it goes, and so does the button. A press never sends the view anywhere else.
 const goThere = document.querySelector<HTMLButtonElement>("#go-there")!;
 space.addEventListener("wakusei-body-select", (event) => {

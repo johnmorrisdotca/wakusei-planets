@@ -18,6 +18,7 @@
         <p class="fam-fine stage-name" id="caption" role="status"></p>
         <p class="fam-fine" id="scale-note" role="status"></p>
       </section>
+      <aside class="fam-panel moon-card" id="moon-card" aria-live="polite" hidden></aside>
       <kazoku-view-controls id="controls" for="space" controls="advanced" address speed="0"></kazoku-view-controls>
 
       <section id="nearby" class="fam-panels nearby-panel" aria-label="Nearby bodies and close approaches" data-say-label="sp_near_title">
@@ -259,7 +260,7 @@
         <section class="fam-panel moon-list" id="moon-list" aria-labelledby="moon-list-h" hidden>
           <h2 id="moon-list-h" class="fam-label"></h2>
           <p class="fam-fine" id="moon-count" role="status"></p>
-          <div class="group fam-seg" id="moon-groups" role="group" aria-label="Group" data-say-label="sp_moon_group"></div>
+          <div class="moon-controls" id="moon-filters"></div>
           <p class="fam-fine moon-key" id="moon-key" role="note"></p>
           <div class="fam-table-box moon-table-box">
             <table>
