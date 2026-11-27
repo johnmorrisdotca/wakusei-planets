@@ -4,8 +4,10 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { gzipSync } from "node:zlib";
 import { test } from "node:test";
+import { build } from "esbuild";
+import { craftTrack } from "../src/craft-track.ts";
 import { craftSpan, craftTable } from "../src/data/craft.ts";
-import { BODIES } from "../src/facts.ts";
+import { BODIES, type MoonId } from "../src/facts.ts";
 import {
   loadSpacecraft,
   SPACECRAFT,
@@ -39,6 +41,8 @@ const limitKm = (r: number): number => Math.max(1000, 1e-6 * r);
 
 test("a path that has not been loaded says so", () => {
   assert.throws(() => spacecraftPosition("voyager1", Date.UTC(2026, 0, 1)), /voyager1/);
+  assert.deepEqual(craftTrack("voyager1"), []);
+  assert.deepEqual(craftTrack("roadster"), []);
 });
 
 await loadSpacecraft();
@@ -61,6 +65,7 @@ test("positions and speeds match Horizons at times that were not in the fit", ()
 });
 
 test("every flyby, orbit insertion and the page's date agree with the closest approach of the fitted path to the body", () => {
+  const moons: Readonly<Partial<Record<string, MoonId>>> = { "501": "io", "502": "europa", "503": "ganymede" };
   let checked = 0;
   for (const id of SPACECRAFT_IDS) {
     if (id === "roadster") continue;
@@ -72,10 +77,11 @@ test("every flyby, orbit insertion and the page's date agree with the closest ap
       assert.ok(gap <= (event.precision === "minute" ? 10 * 60_000 : 18 * 3_600_000), `${id} ${event.name.en}: the page says ${new Date(event.date).toISOString()}, Horizons' closest approach is ${new Date(utcOf(closest.jd)).toISOString()}`);
       assert.ok(closest.inRecord, `${id} ${event.name.en} is inside the record`);
       if (event.distanceKm !== undefined) {
-        const radius = event.body === undefined ? 0 : BODIES[event.body].radiusKm;
+        const body = event.body ?? moons[closest.horizons];
+        const radius = body === undefined ? 0 : BODIES[body].radiusKm;
         const reported = event.distanceKm + radius;
-        // a small body's own ephemeris is uncertain by thousands of kilometres (Arrokoth's is 2,000 km from where New Horizons found it)
-        const slack = event.body === undefined ? 3000 : Math.max(0.08 * closest.distanceKm, 400);
+        // Allow uncertainty in a small body's ephemeris and rounding on distant passes such as Masursky.
+        const slack = body === undefined ? Math.max(3000, 0.005 * closest.distanceKm) : Math.max(0.08 * closest.distanceKm, 400);
         assert.ok(Math.abs(reported - closest.distanceKm) <= slack, `${id} ${event.name.en}: the page's ${event.distanceKm} km (${reported.toFixed(0)} from the centre), Horizons ${closest.distanceKm} km`);
       }
       // the fitted path against the body, which moves in a straight line for a few hours about the closest approach
@@ -98,6 +104,36 @@ test("every flyby, orbit insertion and the page's date agree with the closest ap
     }
   }
   assert.ok(checked >= 30, `${checked} events checked`);
+});
+
+test("drawn tracks reach both sides of every Horizons join", () => {
+  for (const id of SPACECRAFT_IDS) {
+    const { joins, record } = SPACECRAFT[id];
+    const track = craftTrack(id, 72);
+    assert.equal(track.length, joins.length + 1, id);
+    assert.equal(track[0]![0]!.ms, record.start, id);
+    assert.equal(track.at(-1)!.at(-1)!.ms, record.end, id);
+    for (const points of track) assert.ok(points.length >= 2, id);
+    joins.forEach(({ date }, i) => {
+      assert.equal(track[i]!.at(-1)!.ms, date - 1, id);
+      assert.equal(track[i + 1]![0]!.ms, date, id);
+    });
+  }
+});
+
+test("Parker's numbered perihelia agree with the fitted solar distances", () => {
+  const events = SPACECRAFT.parker.events.filter((event) => event.kind === "perihelion");
+  assert.equal(events.length, 29);
+  events.forEach((event, index) => {
+    const window = event.precision === "day" ? 12 * 60 : 30;
+    let closest = Infinity;
+    for (let offset = -window; offset <= window; offset += 5) {
+      const distanceKm = spacecraftSunDistance("parker", event.date + offset * 60_000) - BODIES.sun.radiusKm;
+      closest = Math.min(closest, distanceKm);
+    }
+    assert.equal(event.name.en, `Perihelion ${index + 1}`);
+    assert.ok(Math.abs(closest - event.distanceKm!) < 0.01 * closest, event.name.en);
+  });
 });
 
 test("Voyager 1 is about a light-day away", () => {
@@ -156,6 +192,31 @@ test("each table fits its size budget (gzipped)", () => {
     const kilobytes = gzipSync(readFileSync(new URL(`../src/craft/${id}.ts`, import.meta.url))).length / 1024;
     assert.ok(kilobytes <= budgets[id]!, `${id} is ${kilobytes.toFixed(1)} kB gzipped, over its ${budgets[id]} kB budget`);
   }
+});
+
+test("a split consumer bundle loads each spacecraft table individually", async () => {
+  const { metafile } = await build({
+    entryPoints: ["src/spacecraft.ts"],
+    outdir: "out",
+    bundle: true,
+    splitting: true,
+    format: "esm",
+    write: false,
+    metafile: true,
+  });
+  const outputs = metafile.outputs;
+  const tables = new Set(SPACECRAFT_IDS.map((id) => id === "roadster" ? "src/data/roadster.ts" : `src/craft/${id}.ts`));
+  const staticallyLoadedTables = (file: string, visited = new Set<string>()): string[] => {
+    if (visited.has(file)) return [];
+    visited.add(file);
+    const { inputs, imports } = outputs[file]!;
+    return Object.keys(inputs).filter((input) => tables.has(input)).concat(
+      imports.filter((entry) => entry.kind === "import-statement").flatMap((entry) => staticallyLoadedTables(entry.path, visited)),
+    );
+  };
+  assert.deepEqual(staticallyLoadedTables("out/spacecraft.js"), []);
+  const imports = outputs["out/spacecraft.js"]!.imports.filter((entry) => entry.kind === "dynamic-import");
+  assert.deepEqual(imports.map((entry) => staticallyLoadedTables(entry.path)).sort(), [...tables].sort().map((table) => [table]));
 });
 
 test("the error each table reports is inside the limit it was fitted to", () => {

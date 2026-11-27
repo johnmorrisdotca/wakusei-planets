@@ -42,17 +42,17 @@ export type SpacecraftId = (typeof SPACECRAFT_IDS)[number];
  * ```
  */
 export interface SpacecraftEvent {
-  /** What happened: the launch, a flyby, going into orbit round a planet, getting to the place the craft works from, the end of the mission, or (the Roadster) a perihelion or an aphelion. */
-  kind: "launch" | "flyby" | "orbit-insertion" | "arrival" | "end" | "perihelion" | "aphelion";
+  /** What happened: launch, flyby, orbit insertion, arrival at a destination or boundary, deployment of another craft, end of mission, perihelion or aphelion. */
+  kind: "launch" | "flyby" | "orbit-insertion" | "arrival" | "deployment" | "end" | "perihelion" | "aphelion";
   /** The moment, in milliseconds since 1970 (UTC). Where `precision` is "day", only the date is known: this is that day's noon. */
   date: number;
   /** "minute" where the page gives a time, "day" where it gives only a date. */
   precision: "minute" | "day";
   /** The name of the event in English and Japanese. */
   name: { en: string; ja: string };
-  /** The planet (or Pluto) the event is at, when it is at one. A flyby of an asteroid or of Arrokoth has none. */
+  /** The planet (or Pluto) the event is at, when it is at one. Moons and smaller targets are named in the event's name. */
   body?: PlanetId;
-  /** The closest the craft came, in kilometres, as NASA gives it: above the planet's cloud tops or the body's surface, or from a planet for the one distant pass (Cassini at Jupiter). Left out where NASA gives none. */
+  /** The reported closest distance in kilometres, measured above the surface or cloud tops for close passes and from the target for distant passes. */
   distanceKm?: number;
 }
 
@@ -102,6 +102,39 @@ const noon = (y: number, m: number, d: number): number => T(y, m - 1, d, 12);
 const ev = (kind: SpacecraftEvent["kind"], date: number, precision: SpacecraftEvent["precision"], en: string, ja: string, more: { body?: PlanetId; distanceKm?: number } = {}): SpacecraftEvent => ({ kind, date, precision, name: { en, ja }, ...more });
 const flyby = (date: number, precision: SpacecraftEvent["precision"], en: string, ja: string, body?: PlanetId, distanceKm?: number): SpacecraftEvent => ev("flyby", date, precision, en, ja, { ...(body === undefined ? {} : { body }), ...(distanceKm === undefined ? {} : { distanceKm }) });
 
+// The completed Parker perihelia, numbered by the mission. Distances are above the solar surface.
+const parkerPerihelia: readonly [date: number, distanceKm: number, precision?: SpacecraftEvent["precision"]][] = [
+  [T(2018, 10, 6, 3, 28), 24_123_000],
+  [T(2019, 3, 4, 22, 41), 24_123_000],
+  [T(2019, 8, 1, 17, 51), 24_122_000],
+  [T(2020, 0, 29, 9, 38), 18_697_000],
+  [T(2020, 5, 7, 8, 24), 18_696_000],
+  [T(2020, 8, 27, 9, 17), 13_463_000],
+  [T(2021, 0, 17, 17, 40), 13_463_000],
+  [T(2021, 3, 29, 8, 48), 10_418_000],
+  [T(2021, 7, 9, 19, 12), 10_418_000],
+  [T(2021, 10, 21, 8, 26), 8_542_000],
+  [T(2022, 1, 25, 15, 37), 8_542_000],
+  [T(2022, 5, 1, 22, 51), 8_542_000],
+  [T(2022, 8, 6, 6, 5), 8_542_000],
+  [T(2022, 11, 11, 13, 17), 8_543_000],
+  [T(2023, 2, 17, 20, 32), 8_544_000],
+  [T(2023, 5, 22, 3, 47), 8_544_000],
+  [T(2023, 8, 27, 23, 29), 7_260_000],
+  [T(2023, 11, 29, 1, 11), 7_260_000],
+  [T(2024, 2, 30, 2, 23), 7_260_000],
+  [noon(2024, 6, 30), 7_260_000, "day"],
+  [T(2024, 8, 30, 5, 15), 7_260_000],
+  [noon(2024, 12, 24), 6_160_000, "day"],
+  [T(2025, 2, 22, 22, 42), 6_160_000],
+  [T(2025, 5, 19, 9, 31), 6_160_000],
+  [T(2025, 8, 15, 20, 22), 6_200_000],
+  [T(2025, 11, 13, 7, 11), 6_200_000],
+  [noon(2026, 3, 11), 6_200_000, "day"],
+  [noon(2026, 6, 8), 6_200_000, "day"],
+  [T(2026, 8, 4, 14, 53), 6_200_000],
+];
+
 /**
  * The nineteen craft and their facts, keyed by id.
  *
@@ -128,6 +161,7 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       ev("launch", T(1977, 8, 5, 12, 56, 1), "minute", "Launch", "打ち上げ"),
       flyby(T(1979, 2, 5, 12, 5), "minute", "Jupiter flyby", "木星フライバイ", "jupiter", 280_000),
       flyby(T(1980, 10, 12, 23, 46), "minute", "Saturn flyby", "土星フライバイ", "saturn", 126_000),
+      ev("arrival", noon(2012, 8, 25), "day", "Entered interstellar space", "恒星間空間に到達"),
     ],
   },
   voyager2: {
@@ -147,6 +181,7 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       flyby(noon(1981, 8, 26), "day", "Saturn flyby", "土星フライバイ", "saturn", 101_000),
       flyby(T(1986, 0, 24, 17, 59), "minute", "Uranus flyby", "天王星フライバイ", "uranus", 81_500),
       flyby(T(1989, 7, 25, 3, 56), "minute", "Neptune flyby", "海王星フライバイ", "neptune", 4_800),
+      ev("arrival", noon(2018, 11, 5), "day", "Entered interstellar space", "恒星間空間に到達"),
     ],
   },
   newhorizons: {
@@ -164,7 +199,7 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       ev("launch", T(2006, 0, 19, 19, 0, 0), "minute", "Launch", "打ち上げ"),
       flyby(noon(2006, 6, 13), "day", "Flyby of asteroid 132524 APL", "小惑星 132524 APL フライバイ", undefined, 101_867),
       flyby(T(2007, 1, 28, 5, 43, 40), "minute", "Jupiter flyby", "木星フライバイ", "jupiter"),
-      flyby(T(2015, 6, 14, 11, 49), "minute", "Pluto flyby", "冥王星フライバイ", "pluto"),
+      flyby(T(2015, 6, 14, 11, 49), "minute", "Pluto flyby", "冥王星フライバイ", "pluto", 12_500),
       flyby(noon(2019, 1, 1), "day", "Flyby of Arrokoth", "アロコス フライバイ", undefined, 3_500),
     ],
   },
@@ -219,8 +254,11 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       flyby(noon(1998, 4, 26), "day", "Venus flyby", "金星フライバイ", "venus", 284),
       flyby(noon(1999, 6, 24), "day", "Second Venus flyby", "2回目の金星フライバイ", "venus", 600),
       flyby(noon(1999, 8, 18), "day", "Earth flyby", "地球フライバイ", "earth", 1_100),
+      flyby(T(2000, 0, 23, 9, 58), "minute", "Flyby of asteroid 2685 Masursky", "小惑星 2685 Masursky フライバイ", undefined, 1_500_000),
       flyby(noon(2000, 12, 30), "day", "Jupiter flyby", "木星フライバイ", "jupiter", 10_000_000),
       ev("orbit-insertion", noon(2004, 7, 1), "day", "Saturn orbit insertion", "土星周回軌道に入る", { body: "saturn" }),
+      ev("deployment", T(2004, 11, 25, 2, 0), "minute", "Released the Huygens probe", "ホイヘンス探査機を分離"),
+      ev("arrival", T(2005, 0, 14, 11, 38, 11), "minute", "Huygens landed on Titan", "ホイヘンス探査機がタイタンに着陸"),
       ev("end", noon(2017, 9, 15), "day", "Grand Finale: plunge into Saturn", "グランドフィナーレ: 土星に突入"),
     ],
   },
@@ -261,6 +299,10 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       ev("launch", T(2011, 7, 5, 16, 25), "minute", "Launch", "打ち上げ"),
       flyby(T(2013, 9, 9, 19, 21), "minute", "Earth flyby", "地球フライバイ", "earth", 559),
       ev("orbit-insertion", noon(2016, 7, 5), "day", "Jupiter orbit insertion", "木星周回軌道に入る", { body: "jupiter", distanceKm: 4_200 }),
+      flyby(T(2021, 5, 7, 16, 56), "minute", "Ganymede flyby", "ガニメデ フライバイ", undefined, 1_038),
+      flyby(T(2022, 8, 29, 9, 36), "minute", "Europa flyby", "エウロパ フライバイ", undefined, 352),
+      flyby(T(2023, 11, 30, 8, 36), "minute", "Io flyby", "イオ フライバイ", undefined, 1_500),
+      flyby(T(2024, 1, 3, 17, 49), "minute", "Second close Io flyby", "イオへの2回目の接近フライバイ", undefined, 1_500),
     ],
   },
   parker: {
@@ -283,7 +325,8 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       flyby(noon(2021, 10, 16), "day", "Fifth Venus flyby", "5回目の金星フライバイ", "venus", 3_800),
       flyby(noon(2023, 8, 21), "day", "Sixth Venus flyby", "6回目の金星フライバイ", "venus", 3_900),
       flyby(noon(2024, 11, 6), "day", "Seventh Venus flyby", "7回目の金星フライバイ", "venus", 300),
-    ],
+      ...parkerPerihelia.map(([date, distanceKm, precision = "minute"], i) => ev("perihelion", date, precision, `Perihelion ${i + 1}`, `第${i + 1}回近日点通過`, { distanceKm })),
+    ].sort((first, second) => first.date - second.date),
   },
   webb: {
     id: "webb",

@@ -277,3 +277,5 @@ a.count[data-most="true"] { box-shadow: inset 0 0 0 2px #f2d48a; }
 .chart-legend i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 #chart svg { width: 100%; height: auto; display: block; background: #070b14; border-radius: 12px; }
 #chart text { fill: #f4efe4; font-family: system-ui, sans-serif; }
+#chart .craft-label text { font-size: 3px; paint-order: stroke; stroke: #070b14; stroke-width: .72px; stroke-linejoin: round; }
+#whole-path[hidden] { display: none; }

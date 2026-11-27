@@ -3,15 +3,15 @@
 import { smallBodyAt, type SmallBody } from "../door/small-bodies.ts";
 import { toJulianDate } from "../clock.ts";
 import { cometOrbit, cometPosition, listComets, type CometRecord } from "../comets.ts";
+import { craftPositionAu, sampleCraftPath } from "../craft-track.ts";
 import { heliocentric } from "../ephemeris.ts";
 import { BODIES, DWARF_IDS, MINOR_IDS, PLANET_IDS, type HostId, type MinorId } from "../facts.ts";
 import { planRadius, planSunExtent, type PlanSpacing } from "../plan/layout.ts";
 import { planetOrbit, type SpaceDwarf, type SpaceMinor, type SpacePlanet } from "../space/frame.ts";
-import { SPACECRAFT, SPACECRAFT_IDS, spacecraftPosition, type SpacecraftId } from "../spacecraft.ts";
+import { SPACECRAFT, SPACECRAFT_IDS, type SpacecraftId } from "../spacecraft.ts";
 import { toEcliptic, type Vec3 } from "../vec.ts";
 import { MAX_ZOOM } from "./geometry.ts";
 
-const AU_KM = 149_597_870.7;
 const DAY = 86_400_000;
 
 /**
@@ -387,15 +387,7 @@ export interface SystemOptions {
  */
 export function craftAu(id: string, ms: number): Vec3 | undefined {
   if (!SPACECRAFT_IDS.includes(id as SpacecraftId)) return undefined;
-  const craft = SPACECRAFT[id as SpacecraftId];
-  // the Roadster's record is filled in when its path is loaded: 0 until then
-  if (craft.record.end === 0 || ms < craft.record.start || ms > craft.record.end) return undefined;
-  try {
-    const p = spacecraftPosition(id as SpacecraftId, ms);
-    return [p[0] / AU_KM, p[1] / AU_KM, p[2] / AU_KM];
-  } catch {
-    return undefined;
-  }
+  return craftPositionAu(id as SpacecraftId, ms);
 }
 
 /** A comet's place, or undefined where two-body motion has none. */
@@ -587,7 +579,7 @@ export function systemCometOrbit(id: string, reach: number): readonly (readonly 
 }
 
 /**
- * A craft's whole path as points in the ecliptic plane, `count` steps over its record, each with its moment: what the map draws as the craft's track, the part behind the moment dashed and the part ahead solid. `[]` while the path is not loaded.
+ * A craft's whole path as points in the ecliptic plane, `count` steps over its record, each with its moment. Break drawn lines at the craft's Horizons joins. `[]` while the path is not loaded.
  *
  * @param id - The craft.
  * @param count - How many steps (from 2).
@@ -607,14 +599,7 @@ export function craftPath(id: string, count = 300): { x: number; y: number; ms: 
   if (!SPACECRAFT_IDS.includes(id as SpacecraftId)) return [];
   const { start, end } = SPACECRAFT[id as SpacecraftId].record;
   if (end === 0) return [];
-  const out: { x: number; y: number; ms: number }[] = [];
-  const n = Math.max(2, Math.floor(count));
-  for (let k = 0; k <= n; k += 1) {
-    const ms = start + ((end - start) * k) / n;
-    const p = craftAu(id, ms);
-    if (p !== undefined) out.push({ x: p[0], y: p[1], ms });
-  }
-  return out;
+  return sampleCraftPath(id as SpacecraftId, start, end, Math.max(2, Math.floor(count)));
 }
 
 export { SYSTEM_WORDS, saySystem } from "./system-words.ts";

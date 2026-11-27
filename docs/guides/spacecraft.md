@@ -71,7 +71,7 @@ Each table is within 1,000 km of Horizons' own samples near a planet and within 
 
 ## The voyage
 
-Each craft's `events` list its launch, each flyby, each time it went into orbit round a planet, where it arrived (the Webb telescope at the Sun–Earth second Lagrange point) and the end of the mission, in order, with names in English and Japanese. A flyby gives the planet in `body` and the closest distance NASA's page gives, above the planet's cloud tops or the body's surface. The `precision` is `"minute"` where the page gives a time and `"day"` where it gives only a date.
+Each craft's `events` list puts its launch, flybys, orbit insertions, arrivals and mission end in order, with English and Japanese names. The list can also include perihelia, aphelia and deployments. Huygens' release from Cassini has the kind `"deployment"`. For a flyby, `body` names a planet or Pluto when applicable, and `distanceKm` gives the closest reported distance above the cloud tops or surface when available. Moon and asteroid flybys name the target in `name`. The `precision` is `"minute"` for a known time and `"day"` for a known date.
 
 ```ts
 import { loadSpacecraft, SPACECRAFT, spacecraftEarthDistance, spacecraftSunDistance } from "@johnmorrisdotca/wakusei-planets/spacecraft";
@@ -85,7 +85,7 @@ for (const event of SPACECRAFT.voyager2.events) {
 }
 ```
 
-To draw a path from the launch to a date, step through the dates between `record.start` and the date and call `spacecraftPosition`; break the line at each of the craft's `joins` (next section).
+The spacecraft chart and flat solar system end each line just before a Horizons join and start a new line at the join. The chart starts with the Sun and the planetary encounters in view. Faint rings show the planets' orbits, and an arrow marks an outbound path that continues past the chart. Choose **Whole path** to see the entire record in the same chart. To draw a path from the launch to a date, step through the dates between `record.start` and the date and call `spacecraftPosition`. Break the line at each of the craft's `joins`.
 
 ## How exact it is
 
@@ -110,9 +110,9 @@ Where two solutions meet, Horizons' own record steps. `SPACECRAFT.<id>.joins` li
 
 ## Where the facts come from
 
-Positions are from JPL Horizons and facts and events are from NASA's mission pages, read on 2026-11-08 and listed in [NOTICE.md](../../NOTICE.md). A time is given only where a page gives one. Where a page and the path disagree, the package keeps the path's date and says so here:
+Positions are from JPL Horizons. The mission records listed in [NOTICE.md](../../NOTICE.md) also cover the Voyager heliopause crossings, Parker's first 29 perihelia through September 2026, the Huygens release and landing, Cassini at Masursky, and Juno's close flybys of Ganymede, Europa and Io. Perihelion distances are above the Sun's surface. A time is given where a source reports one. For these flybys where the mission page and the path disagree, the package keeps the path's date.
 
 - Voyager 2 at Saturn: NASA's page gives the closest approach as 01:21 UT on 1981-08-26, and the path's closest approach is at 03:24 UTC. Only the date is kept.
 - Cassini: the page's timeline dates the first Venus flyby 25 April 1998 and the Earth flyby 17 August 1999; the path's closest approaches are 26 April 13:44 UTC and 18 August 03:28 UTC, and those dates are kept. The page times the Saturn orbit insertion 9:12 p.m. UTC on 1 July 2004; the path's closest approach is at 02:38 UTC on 1 July, and only the date is kept.
-- New Horizons at Pluto: the page says 4,800 miles (7,800 km) above the surface; the path and Horizons put the closest approach 12,500 km (7,760 miles) above it. No distance is kept. At Arrokoth the page's 3,500 km and Horizons' 5,500 km differ by Horizons' uncertainty in the small body's own position.
+- New Horizons flew about 12,500 km above Pluto's surface, according to the Deep Space Network's flyby record and JPL Horizons. At Arrokoth the mission page gives 3,500 km and Horizons gives 5,500 km, a difference within Horizons' uncertainty in the small body's position.
 - Juno's orbit insertion: NASA's record gives 03:53 UT, the time the burn was confirmed at the Earth; the path's closest approach is at 02:47 UTC on 5 July 2016. Only the date is kept.

@@ -4,6 +4,7 @@
 import { BELT_IDS, BELTS, loadBeltBodies, type BeltBody, type BeltId } from "../belts/index.ts";
 import { BELT_SAMPLE } from "../belts/totals.ts";
 import { listComets } from "../comets.ts";
+import { craftTrack } from "../craft-track.ts";
 import { readSurfaceNames } from "../place-marks.ts";
 import { planRadius, type PlanSpacing } from "../plan/layout.ts";
 import { createGameClock, type GameClock } from "../space/clock.ts";
@@ -14,7 +15,6 @@ import {
   SYSTEM_LAYERS,
   SYSTEM_RINGS,
   clampSystemView,
-  craftPath,
   projectSystem,
   radiusAu,
   squeezeAu,
@@ -927,12 +927,19 @@ export class WakuseiFlatSystem extends HTMLElement {
       const strong = chosen === id;
       if (!strong && !(this.#track && chosen === null)) continue;
       if (layer === "craft") {
-        const path = craftPath(id);
-        const now = path.filter((p) => p.ms <= ms).map((p) => at(p.x, p.y));
-        const next = path.filter((p) => p.ms >= ms).map((p) => at(p.x, p.y));
+        const tracks = craftTrack(id as SpacecraftId);
         const here = { x: m.px, y: m.py };
-        stroke([...now, here], m.colour, strong, true);
-        stroke([here, ...next], m.colour, strong, false);
+        tracks.forEach((track, i) => {
+          const past = track.filter((p) => p.ms < ms).map((p) => at(p.x, p.y));
+          const future = track.filter((p) => p.ms > ms).map((p) => at(p.x, p.y));
+          const nextStart = tracks[i + 1]?.[0]?.ms ?? Infinity;
+          if (ms >= track[0]!.ms && ms < nextStart) {
+            past.push(here);
+            future.unshift(here);
+          }
+          stroke(past, m.colour, strong, true);
+          stroke(future, m.colour, strong, false);
+        });
       } else if (layer === "comets") stroke(systemCometOrbit(id, this.#extent).map((p) => at(p[0], p[1])), m.colour, strong, false);
       else if ((layer === "planets" || layer === "dwarfs") && strong) stroke(systemOrbit(id, ms).map((p) => at(p[0], p[1])), m.colour, true, false);
     }
