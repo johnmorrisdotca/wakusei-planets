@@ -78,7 +78,7 @@ const DEFINITIONS: Record<SolarSystemTerm, Omit<SolarSystemDefinition, "term">> 
     name: { en: "Dwarf planet", ja: "準惑星" },
     description: {
       en: "A dwarf planet goes around the Sun in its own right and is nearly round because of its gravity. It shares the neighbourhood of its orbit with other bodies whose motion it does not dominate.",
-      ja: "準惑星は、太陽を主天体として公転し、自身の重力でほぼ丸くなった天体です。軌道の周辺にはほかの天体があり、それらの運動を重力で支配するまでには至っていません。",
+      ja: "準惑星は、衛星ではなく太陽のまわりを直接回る天体で、自身の重力でほぼ丸くなっています。軌道の周辺にはほかの天体があり、それらの運動を重力で支配するまでには至っていません。",
     },
     sources: [IAU_PLANETS],
   },
@@ -94,7 +94,7 @@ const DEFINITIONS: Record<SolarSystemTerm, Omit<SolarSystemDefinition, "term">> 
     name: { en: "Asteroid", ja: "小惑星" },
     description: {
       en: "An asteroid is a small body orbiting the Sun, usually made chiefly of rock or metal. Many asteroids travel in the belt between Mars and Jupiter.",
-      ja: "小惑星は太陽のまわりを回る小天体で、多くは主に岩石や金属でできています。火星と木星の間にある小惑星帯に多く集まっています。",
+      ja: "小惑星は太陽のまわりを回る小天体で、たいていは岩石や金属が主な成分です。火星と木星の間にある小惑星帯には、多くの小惑星が集まっています。",
     },
     sources: [{ name: "NASA Science, Asteroids", url: "https://science.nasa.gov/solar-system/asteroids/" }],
   },
@@ -110,7 +110,7 @@ const DEFINITIONS: Record<SolarSystemTerm, Omit<SolarSystemDefinition, "term">> 
     name: { en: "Meteoroid", ja: "流星体" },
     description: {
       en: "A meteoroid is a natural piece of solid matter travelling in or arriving from the space between planets. The usual size range is about 30 micrometres to 1 metre.",
-      ja: "流星体は、惑星と惑星の間の空間を飛ぶ、またはそこから来た自然の固体です。大きさの目安は約30マイクロメートルから1メートルです。",
+      ja: "流星体は、惑星と惑星の間の空間を飛んでいる、またはそこから来た自然の固体です。大きさの目安は約30マイクロメートルから1メートルです。",
     },
     sources: [IAU_METEORS, NASA_METEORS],
   },
