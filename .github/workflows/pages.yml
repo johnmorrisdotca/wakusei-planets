@@ -58,6 +58,16 @@ jobs:
         run: |
           .cache/venv/bin/python -I scripts/make-moon-terrain.py fetch --sources .cache/moon-terrain-sources
           .cache/venv/bin/python -I scripts/make-moon-terrain.py build --sources .cache/moon-terrain-sources
+      - name: The Moon's polar relief made from the two PDS LOLA elevation grids
+        uses: actions/cache@v6
+        id: moon-polar
+        with:
+          path: |
+            .cache/moon-polar-sources
+            .cache/moon-polar-out
+          key: moon-polar-${{ hashFiles('scripts/make-moon-polar.py', 'scripts/make-moon-terrain.py', 'scripts/make-body-tiles.py') }}
+      - if: steps.moon-polar.outputs.cache-hit != 'true'
+        run: .cache/venv/bin/python -I scripts/make-moon-polar.py
       - run: pnpm site
       - run: pnpm docs:site
       - uses: ./.github/actions/playwright

@@ -112,7 +112,7 @@ description: 天体ごとにどこまでズームできて、なぜそこで止�
 | 天体 | 最上位のレベル | 出典 |
 |---|---|---|
 | 火星 | 3 (16384) | バイキングの火星デジタル画像モザイク 2.1、カラー、1ピクセル1 km。同じモザイクの1ピクセル232 m のものは、`WAKUSEI_SHARP_TILES=1` のときだけ `pnpm tiles:mars` がレベル4 (幅32768) に切ります |
-| 月 | 3 (16384) | LRO カメラのカラー地図 (NASA SVS、CGI Moon Kit)。LROC WAC の形態モザイク (1ピクセル100 m) は、同じスイッチで `pnpm tiles:moon` がレベル4に切ります |
+| 月 | 3 (16384) | LRO カメラのカラー地図 (NASA SVS、CGI Moon Kit)。拡大すると LOLA の標高データで極域の斜面を描きます。LROC WAC の形態モザイク (1ピクセル100 m) は、同じスイッチで `pnpm tiles:moon` がレベル4に切ります |
 | 地球 | 3 (16384) | 地形と海底地形つきの Blue Marble Next Generation |
 | 水星 | 2 (8192) | メッセンジャー MDIS の全球ベースマップ |
 | 金星 | 3 (16384) | マゼランの第1観測周期のレーダーモザイク (NASA、JPL、PDS)。観測範囲の境目では細部をなだらかに弱めます |
@@ -147,6 +147,10 @@ description: 天体ごとにどこまでズームできて、なぜそこで止�
 | 端末 | メモリが2 GB 以下と答える端末 (`navigator.deviceMemory`) は、タイルを使いません。 |
 
 ## タイルの置き場所
+
+月の地図を拡大すると、極域で観測された起伏が見えます。斜面の計算には [LOLA の標高グリッド](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/) を使い、色には CGI Moon Kit を使います。クレーターの斜面は太陽の向きに応じて明暗が変わります。南北とも緯度82°から起伏の効果を弱め、75.25°で消します。陰影は各地点の斜面から計算し、他の地形が落とす影は描きません。標高データは LOLA チーム (NASA/GSFC) によるもので、NASA Planetary Data System が公開しています。
+
+Pages ビルドは標高ファイルを `tiles/moon/polar/north.webp` と `tiles/moon/polar/south.webp` で配信します。自分で配信するには `.cache/venv/bin/python -I scripts/make-moon-polar.py` を実行し、`.cache/moon-polar-out` をタイルのフォルダーの `moon/polar/` にコピーします。
 
 タイルは **npm パッケージにも、リポジトリにも入っていません。** 18の天体で最大16384ピクセルまでだと約97 MB になり、リポジトリはすべてのファイルのすべての版を、ずっと残してしまうからです。タイルは `scripts/make-body-tiles.py` でもとの画像から作り、Pages のワークフローがビルドして、デモと並べて https://johnmorrisdotca.github.io/wakusei-planets/tiles/ から配信します (GitHub Pages は `access-control-allow-origin: *` を返します。公開リポジトリでは無料です)。月と火星のレベル4 (幅32768ピクセル、2048枚) は、リポジトリ変数 `WAKUSEI_SHARP_TILES` が `1` でないかぎり作りません。オフのとき、Pages のビルドはその2つのモザイクをダウンロードしません。2026-11-13 に、ファイルがディスクにある状態で測りました。月は 5.5 GB のモザイクから96秒で 72.79 MB、火星は 12 GB のモザイクから107秒で 66.02 MB です。2つ合わせてタイルのフォルダに約139 MB 足します。18の天体のふつうのタイルは約97 MB なので、フォルダは Pages の 1 GB の上限より小さいままです。`WAKUSEI_SHARP_TILES=1 pnpm tiles:moon` と `pnpm tiles:mars` が切ります。
 

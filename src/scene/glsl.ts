@@ -1,5 +1,6 @@
 // The shader code shared by every body: noise, craters and bands for the realistic look, the lighting, and the ring and glow shaders. Strings only.
 import { ROUND_GLSL } from "./round.ts";
+import { MOON_POLAR_RELIEF } from "./moon-polar.ts";
 
 export const VERTEX = /* glsl */ `
 varying vec3 vObj;
@@ -102,7 +103,7 @@ float microDetail(vec3 p) {
  * The fragment shader of a body: the surface code goes between the prelude and `main`. `limbTint` is the colour the edge of a glowing body shifts to (default the Sun's orange). `detail` adds the generic fine
  * detail (`MICRO_DETAIL`) that carries a body past the sharpness of its map; a body that glows never takes it, and without it the shader is the same program as before it existed.
  */
-export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number], detail = false): string {
+export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number], detail = false, moonPolar = false): string {
   const tint = limbTint === undefined ? "vec3(1.0, 0.55, 0.25)" : `vec3(${limbTint.map((v) => v.toFixed(4)).join(", ")})`;
   return /* glsl */ `
 precision highp float;
@@ -126,7 +127,7 @@ varying vec3 vN;
 varying vec3 vW;
 ${world ? "varying vec3 vV;\nuniform int uOccN;\nuniform vec4 uOcc[6];" : ""}
 ${PRELUDE}
-${detail ? MICRO_DETAIL : ""}${surface}
+${detail ? MICRO_DETAIL : ""}${moonPolar ? MOON_POLAR_RELIEF : ""}${surface}
 void main() {
   vec3 p = normalize(vObj);
 ${detail ? "  gTexel = uTexel;\n" : ""}  vec4 s = surface(p);
@@ -148,6 +149,13 @@ ${detail ? "  s.rgb *= microDetail(p);\n" : ""}
   float reliefLod = 1.0 - smoothstep(0.008, 0.024, length(fwidth(p)));
   // a wall steeper than about 50 degrees is not tipped further: the tilt of two pixels' difference on a steep bowl would turn the surface away from the light and draw a hard black ring
   vec3 tilt = sign(det) * uRelief * reliefLod * grad * 22.0;
+${moonPolar ? `  if (uMoonPolarSide != 0.0) {
+    float height = moonPolarHeight(p);
+    vec3 measured = cross(dpy, n) * dFdx(height) + cross(n, dpx) * dFdy(height);
+    float fade = moonPolarFade(p);
+    tilt = tilt * (1.0 - fade) + sign(det) * fade * measured;
+  }
+` : ""}
   vec3 nb = normalize(abs(det) * n - tilt * min(1.0, 1.2 * abs(det) / max(length(tilt), 1e-20)));
   float d = dot(nb, uLight);
   float diff = clamp((d + uWrap) / (1.0 + uWrap), 0.0, 1.0) * smoothstep(-0.02 - uWrap * 0.6, 0.1 + uWrap * 0.8, dg);

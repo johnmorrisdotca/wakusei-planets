@@ -7,6 +7,7 @@ import type { SourceInfo } from "../data-door.ts";
 import { accountOf, type SourceBook } from "../door/book.ts";
 import { DEFAULT_LEVELS, forgetManifests as forgetFolders, tileKeyParts, type BodyMapSource } from "../door/map.ts";
 import { MAP_ANISOTROPY } from "./textures.ts";
+import type { MoonPolarRelief } from "./moon-polar.ts";
 import { chooseWindow, covers, visibleRegion, windowRect, windowTiles, BASE_WIDTH, TEXEL_SLACK, TILE_SIZE, texelAngle, type Axes, type Region, type Seen, type TileLevel, type TileWindow, type ViewBox } from "./tiles.ts";
 
 type Three = Pick<typeof THREE, "ClampToEdgeWrapping" | "DataTexture" | "LinearFilter" | "NoColorSpace" | "RepeatWrapping">;
@@ -70,6 +71,8 @@ export interface DetailDeps {
   onLevels?: (levels: readonly TileLevel[] | undefined) => void;
   /** Put the window on the body, or take it off (`null`). */
   apply: (window: DetailWindow | null) => void;
+  /** An optional height layer shown wherever these views see one of the Moon's polar caps. */
+  moonPolar?: MoonPolarRelief;
   now?: () => number;
 }
 
@@ -412,24 +415,30 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
       if (gone) return;
       const source = take();
       if (source === undefined || !deps.allowed()) {
+        deps.moonPolar?.follow();
         idle();
         return;
       }
       ask(source);
-      if (levels === undefined) return;
+      if (levels === undefined && deps.moonPolar === undefined) return;
       const region = visibleRegion(box, axes);
-      track(source, region, region === undefined ? undefined : visibleRegion(box, axes, 0), (deps.ratio() * viewWidth) / Math.max(1e-9, box.right - box.left));
+      const inside = region === undefined ? undefined : visibleRegion(box, axes, 0);
+      const pixels = (deps.ratio() * viewWidth) / Math.max(1e-9, box.right - box.left);
+      deps.moonPolar?.follow(inside, pixels);
+      if (levels !== undefined) track(source, region, inside, pixels);
     },
     follow(seen_) {
       if (gone) return;
       const source = take();
       if (source === undefined || !deps.allowed()) {
+        deps.moonPolar?.follow();
         idle();
         return;
       }
       // the levels are read when the view wants more than the 2048 pixel map gives, not before: a page that never gets that close fetches nothing
       const radiansPixels = seen_ === undefined ? 0 : seen_.radiansPixels * deps.ratio();
       if (seen_ !== undefined && radiansPixels / TEXEL_SLACK > BASE_WIDTH / (2 * Math.PI)) ask(source);
+      deps.moonPolar?.follow(seen_?.inside, radiansPixels);
       if (levels === undefined) {
         idle();
         return;
@@ -437,7 +446,10 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
       track(source, seen_?.region, seen_?.inside, radiansPixels);
     },
     rest() {
-      if (!gone) idle();
+      if (!gone) {
+        deps.moonPolar?.follow();
+        idle();
+      }
     },
     get stats() {
       return {
@@ -455,6 +467,7 @@ export function createDetail(T: Three, deps: DetailDeps): Detail {
     },
     dispose() {
       gone = true;
+      deps.moonPolar?.dispose();
       unwatch();
       cancelPending();
       cancelLoading();

@@ -44,6 +44,8 @@ await cp(at("node_modules/@johnmorrisdotca/kazoku-ui/dist/body-label/fonts"), at
 if (existsSync(at(".cache/body-tiles-out/manifest.json"))) await cp(at(".cache/body-tiles-out"), at("site/tiles"), { recursive: true });
 // The Moon's ground tiles (`pnpm terrain`), served beside them at tiles/moon/: in no package and no repository either.
 if (existsSync(at(".cache/moon-terrain-out/moon"))) await cp(at(".cache/moon-terrain-out/moon"), at("site/tiles/moon"), { recursive: true });
+// The two LOLA height maps for the globe, fetched only when a close view reaches a pole.
+if (existsSync(at(".cache/moon-polar-out"))) await cp(at(".cache/moon-polar-out"), at("site/tiles/moon/polar"), { recursive: true });
 // The family's card in the demo's <head> (og:image, twitter:image, the icon), and the three pictures published beside it.
 const ALT = "Wakusei Planets: Mars, the Earth, Saturn with its rings, Jupiter and Neptune, shaded in 3D, side by side.";
 const pkg = JSON.parse(readFileSync(at("package.json"), "utf8"));

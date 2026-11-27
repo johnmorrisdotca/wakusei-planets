@@ -231,6 +231,17 @@ Jupiter, Saturn, Uranus, Neptune, the Sun, Titan and Ceres use their bundled map
 
 The generic detail of a close zoom (docs/guides/close-zoom.md) is noise made in the shader. It is no data and takes nothing from any source.
 
+## The Moon's polar relief
+
+Close views of the mapped Moon use the following [Lunar Orbiter Laser Altimeter gridded data records](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/) for slope shading. Credit **LOLA Team (NASA/GSFC)**, published by the **NASA Planetary Data System**, data set `LRO-L-LOLA-4-GDR-V1.0`. [The PDS Geosciences Node's terms](https://pds-geosciences.wustl.edu/faq.html) place archived data sets in the public domain. The files and their PDS labels were checked on 2026-11-27.
+
+| Product | Version and coverage | Source SHA-256 |
+|---|---|---|
+| [`ldem_75n_240m.img`](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75n_240m.img) | V2.1, 75°N to the north pole | `c63d22385f182f276dd90adb7755e3070e725c3cd50b6d0d20d76a94edbba41b` |
+| [`ldem_75s_240m.img`](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_75s_240m.img) | V2.0, 75°S to the south pole | `d031efe2611b17dfbf3c158f5e15dc04cd5719349dcbf6384bb21fd97697c490` |
+
+Each is a 3812 × 3812 polar stereographic grid at 240 m per pixel at the pole. Coordinates are planetocentric and east-positive in the DE421 Mean Earth/Polar Axis frame, with central longitude 0° and a 1,737,400 m reference radius. Elevation is 0.5 m per signed sample unit. The build resamples each grid to 1536 × 1536 at about 596 m per pixel at the pole. The shader uses these elevations to light local slopes over the CGI Moon Kit colour map. Cast shadows from neighbouring terrain are outside this slope-lighting model.
+
 ## The font of a name on a body
 
 A body's name written on its globe (`body-label`) is drawn in Michroma, by Vernon Adams, "Copyright 2011 The Michroma Project Authors (https://github.com/googlefonts/Michroma-font)", under the SIL Open Font License, Version 1.1, with no Reserved Font Name. The licence was read on 2026-11-11: it allows the font to be used, bundled, embedded and redistributed with software, as long as the copyright notice and the licence go with it and the font is not sold by itself. This package bundles no font: the file ships unchanged in `@johnmorrisdotca/kazoku-ui` (`dist/body-label/fonts/Michroma-Regular.ttf`, with `OFL.txt` beside it) and is fetched from there only when a page writes a name in it. A page that names its own font fetches nothing.
