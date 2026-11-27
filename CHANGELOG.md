@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Nothing is taken from interstellar-tools** (MODULES-530). The decision is in `docs/design/interstellar-tools.md`. Body names may be used as a checklist; every number comes from JPL. Their tables, time scales, Sun and Moon series, tracking and maps are not copied and not depended on.
+
 - **The body page opens moving** (MODULES-816). A bare body page starts the clock from now at an hour a second, the same rule as the space view. A link that names a date or a speed, and a reader who asked for reduced motion, stay still.
 
 - **The Moon's lunation number** (MODULES-605). `moonLunation` is the Brown number of the new moon the Moon is in, counting 17 January 1923 as 1. The new moon of 6 January 2000 is 953. The card, the magnitude, the constellation and the painted Moon still wait.
