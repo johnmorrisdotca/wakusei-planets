@@ -150,6 +150,24 @@ A drag changes the framing and the new framing is kept, in every frame: the came
 
 It costs no draw of its own: the direction is carried in the draws the running clock already makes, and at rest nothing is drawn. `stats.frame` is `{ asked, frame, pair }`: the frame asked for, the frame the last draw held, and the body a pair is held with. `wakusei-frame` is sent when the frame held changes, with `{ frame, asked, pair, previous }`. The pure parts are `FRAMES`, `readFrame`, `bodyBasis`, `hasRotation`, `pairAxis`, `pairBasis`, `carry`, `keepClear` and `directionBetween` from `/space`.
 
+## Following the camera with a star backdrop
+
+Listen for `wakusei-camera` on the space view to turn a page's own star backdrop with it. The first live draw sends a snapshot, and later draws send one when the camera, pan or picture size changes. The event takes no extra draw. A backdrop can also read `space.stats.camera` when it attaches after the first picture.
+
+The snapshot's `forward` and `up` are unit vectors in equatorial J2000 scene axes. For catalogue directions, right ascension 0° is +x, right ascension 90° is −z, and the north celestial pole is +y. Use the vertical `fov` in degrees, `width` and `height` for the projection, and `panX` and `panY` to offset the picture in CSS pixels. A distant backdrop follows the orientation and projection and can leave out the camera's translation.
+
+```ts no-run
+import type { SpaceCamera, WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+function followCamera(space: WakuseiSpace, drawSky: (camera: SpaceCamera) => void): () => void {
+  const update = (event: CustomEvent<SpaceCamera>) => drawSky(event.detail);
+  space.addEventListener("wakusei-camera", update);
+  const camera = space.stats.camera;
+  if (camera.width > 0) drawSky(camera);
+  return () => space.removeEventListener("wakusei-camera", update);
+}
+```
+
 ## Full screen
 
 `immersive` (an attribute, and `space.immersive`) makes the element a full-screen view: it fills the box it is in, whatever the shape (it is `width: 100%; height: 100%`, and a page that gives it any width and height does the same without the attribute), and a plain wheel zooms and a drag anywhere on it turns it, a touch drag included, instead of scrolling the page. Without `immersive` kazoku-ui's rules stand: Ctrl, Command or Alt with the wheel zooms and the plain wheel scrolls the page. At zoom 1 the body looked at is framed, with a margin of about a fifth, by the shorter side of the view, in a tall window as in a wide one, so it is never cut off (Saturn is framed with its rings), and `zoom-min` takes the camera as far out as the whole solar system.

@@ -150,6 +150,24 @@ try {
 
 この機能のための描画はありません。向きは動いている時計がすでに行う描画のなかで計算し、止まっているときは何も描きません。`stats.frame` は `{ asked, frame, pair }` で、求められた枠組み、最後の描画で保たれた枠組み、ペアの相手です。`wakusei-frame` は、保たれる枠組みが変わったときに `{ frame, asked, pair, previous }` とともに送られます。純粋な部品は `/space` の `FRAMES`、`readFrame`、`bodyBasis`、`hasRotation`、`pairAxis`、`pairBasis`、`carry`、`keepClear`、`directionBetween` です。
 
+## 背景の星空をカメラに合わせる
+
+ページ側で描く背景の星空をカメラに合わせるには、宇宙ビューの `wakusei-camera` を受け取ります。最初の描画と、カメラ、表示の移動量、または表示領域の大きさが変わったときの描画で、その状態を受け取れます。このイベントのための追加描画はありません。最初の描画後に背景を追加する場合は、`space.stats.camera` から現在の状態を読めます。
+
+`forward` と `up` は、J2000 の赤道座標を使うシーン内の単位ベクトルです。赤経0度は +x、赤経90度は −z、天の北極は +y です。投影には縦の視野角 `fov` (度) と `width`、`height` を使い、`panX`、`panY` の CSS ピクセル分だけ表示位置をずらします。遠くの星空は、カメラの向きと投影を合わせれば、カメラの位置の移動を反映する必要はありません。
+
+```ts no-run
+import type { SpaceCamera, WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+function followCamera(space: WakuseiSpace, drawSky: (camera: SpaceCamera) => void): () => void {
+  const update = (event: CustomEvent<SpaceCamera>) => drawSky(event.detail);
+  space.addEventListener("wakusei-camera", update);
+  const camera = space.stats.camera;
+  if (camera.width > 0) drawSky(camera);
+  return () => space.removeEventListener("wakusei-camera", update);
+}
+```
+
 ## 全画面
 
 `immersive` (属性、または `space.immersive`) をつけると、要素は全画面の表示になります。入れ物の大きさに、どんな形でもぴったり広がり (`width: 100%; height: 100%`。ページが幅と高さを決めれば、属性なしでも同じです)、ホイールだけで拡大縮小し、どこをドラッグしても (タッチのドラッグも) 回ります。ページはスクロールしません。`immersive` がないときは kazoku-ui の決まりのままで、Ctrl、Command、Alt のどれかを押しながらホイールを回すと拡大縮小し、ホイールだけならページがスクロールします。ズーム1では、見ている天体は表示の短いほうの辺の約8割の大きさで、まわりに約5分の1の余白が残るので、縦長の窓でも横長の窓でも切れません (土星は環ごと収まります)。`zoom-min` まで引くと、カメラは太陽系全体が見えるところまで下がります。

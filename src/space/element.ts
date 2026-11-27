@@ -43,7 +43,7 @@ import { createEarthPlaceLayer, earthPlaceClick, EARTH_PLACE_MARKS, EARTH_PLACES
 import { layBodyPlaces, bodiesOf, readBodyPlacesWith, type BodySurface, type PlaceOnBody, type PlaceOnBodyMark } from "../scene/body-places.ts";
 import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
-import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPathPoint, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceLight, type SpaceModel } from "./scene.ts";
+import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPathPoint, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceCamera, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
 
 export type { PaintSpec };
@@ -59,6 +59,9 @@ const SMALL_MOONS: ReadonlySet<string> = new Set(["amalthea", "thebe", "pan", "d
 
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
 export type { BodyPathPoint, BodyPlace };
+export type { SpaceCamera };
+
+const copyCamera = (camera: SpaceCamera): SpaceCamera => ({ ...camera, position: [...camera.position], up: [...camera.up], forward: [...camera.forward] });
 
 /** The words the view says on itself for the scale in use. A page in another language gives its own with `scaleNames`. */
 const SCALE_WORDS = {
@@ -486,6 +489,7 @@ export class WakuseiSpace extends HTMLElement {
       onPlaces: (places) => {
         this.#places = places;
       },
+      onCamera: () => this.#announceCamera(),
       onSight: (bodies, frame) => this.#see(bodies, frame),
       wantSight: () => this.#sightAsked || this.#sightListeners.size > 0,
       onSurface: (surface) => {
@@ -538,6 +542,7 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    this.#cameraTold = null;
     this.#hands?.unbind();
     this.#hands = undefined;
     this.removeEventListener("pointerdown", this.#down);
@@ -2148,6 +2153,26 @@ export class WakuseiSpace extends HTMLElement {
     return { at: [centre[0] + real[0] * k, centre[1] + real[1] * k, centre[2] + real[2] * k], radius: Math.max(1e-6, (BODIES[id].radiusKm / BODIES[host].radiusKm) * radiusIn(host, mode) * moonScaleFor(mode, host, this.#model.moonSize, this.#model.time).factor) };
   }
 
+  #cameraTold: SpaceCamera | null = null;
+  #announceCamera(): void {
+    if (!this.#view?.live) return;
+    const camera = this.#model.camera;
+    const last = this.#cameraTold;
+    if (
+      last !== null &&
+      last.fov === camera.fov &&
+      last.width === camera.width &&
+      last.height === camera.height &&
+      last.panX === camera.panX &&
+      last.panY === camera.panY &&
+      camera.position.every((value, i) => value === last.position[i]) &&
+      camera.up.every((value, i) => value === last.up[i]) &&
+      camera.forward.every((value, i) => value === last.forward[i])
+    ) return;
+    this.#cameraTold = camera;
+    this.dispatchEvent(new CustomEvent<SpaceCamera>("wakusei-camera", { detail: copyCamera(camera) }));
+  }
+
   #frameTold = "stars||";
   /** Tell the page when the frame the camera is held in changes (`wakusei-frame`): after a draw, which has worked out what was held. */
   #announceFrame(): void {
@@ -2721,8 +2746,8 @@ export class WakuseiSpace extends HTMLElement {
     time: number;
     /** How many frames the ephemeris has worked out. */
     lookups: number;
-    /** The camera as the last draw left it: its place in Earth radii from the Earth's centre, and its field of view in degrees. */
-    camera: { position: [number, number, number]; fov: number; up: [number, number, number]; forward: [number, number, number]; /** The point of the body in the middle that is under the camera (`subCameraPoint`), or `null` while riding. */ sub: { lon: number; lat: number } | null };
+    /** The camera used for the last picture, with the point under it (`subCameraPoint`, or `null` while riding). */
+    camera: SpaceCamera & { sub: { lon: number; lat: number } | null };
     /** What the painter has made at the last draw: the bodies with a drawing, the moons shown round a planet that is near, and the moons made and not yet let go. */
     bodies: { look: string; painted: number; moons: number; held: number };
     /** What the windows of finer map tiles on the bodies are doing at the last draw, summed: tile fetches made, tiles being fetched, tiles or windows that failed, and the finest level on a body now (`null` for none). */
@@ -2777,7 +2802,7 @@ export class WakuseiSpace extends HTMLElement {
       assets: { entries: stats?.assets.entries ?? 0, refs: stats?.assets.refs ?? 0 },
       time: this.time,
       lookups: this.#model.lookups,
-      camera: { position: [...this.#model.camera.position], fov: this.#model.camera.fov, up: [...this.#model.camera.up], forward: [...this.#model.camera.forward], sub: this.subCameraPoint() },
+      camera: { ...copyCamera(this.#model.camera), sub: this.subCameraPoint() },
       bodies: { look: this.#model.look, painted: this.#model.painted.bodies, moons: this.#model.painted.moons, held: this.#model.painted.held },
       tiles: { ...this.#model.tiles },
       door: { points: this.#model.door.points, belts: this.#model.door.belts, draws: this.#model.door.draws, sources: this.#door.book.stats() },
@@ -3547,6 +3572,9 @@ export class WakuseiSpace extends HTMLElement {
 }
 
 declare global {
+  interface HTMLElementEventMap {
+    "wakusei-camera": CustomEvent<SpaceCamera>;
+  }
   interface HTMLElementTagNameMap {
     "wakusei-space": WakuseiSpace;
   }

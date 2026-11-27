@@ -3,13 +3,48 @@
 // for a day at an hour a second keeps its ground still under the camera; a drag changes the framing and the new framing is kept; a ride ends a pair; nothing is drawn at rest.
 import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
+import type { SpaceCamera } from "../src/space/element.ts";
 import { advance, holdClock, takeClock } from "./clock.ts";
-import { callOn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
+import { callOn, drawn, openSpace, setOn, SPACE, statsOf } from "./space-ui.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
   void page;
   test.skip(testInfo.project.name !== "chromium-desk", "3D in software, Chromium only");
+});
+
+test("a backdrop gets the drawn camera on the first frame and when it turns, pans or resizes", async ({ page }) => {
+  await page.addInitScript(() => {
+    const events: SpaceCamera[] = [];
+    Reflect.set(window, "__spaceCameras", events);
+    document.addEventListener("wakusei-camera", (event) => events.push((event as CustomEvent<SpaceCamera>).detail), true);
+  });
+  await openSpace(page, "t=2026-11-02T14:00Z&speed=0&play=off");
+  const events = () => page.evaluate(() => Reflect.get(window, "__spaceCameras") as SpaceCamera[]);
+  const camera = () => page.locator(SPACE).evaluate((el) => (el as HTMLElementTagNameMap["wakusei-space"]).stats.camera);
+  const first = (await events()).at(-1)!;
+  expect(first).toMatchObject({ panX: 0, panY: 0 });
+  expect(first.width).toBeGreaterThan(0);
+  expect(first.height).toBeGreaterThan(0);
+
+  await drawn(page, () => page.locator(SPACE).evaluate((el) => {
+    const space = el as HTMLElementTagNameMap["wakusei-space"];
+    space.setAttribute("labels", "off");
+    space.setView({ yaw: 24, tilt: 12, zoom: 1, panX: 20, panY: -8 });
+  }));
+  const turned = (await events()).at(-1)!;
+  expect(turned.forward).not.toEqual(first.forward);
+  expect(turned).toMatchObject({ panX: 20, panY: -8 });
+  expect(await camera()).toMatchObject({ ...turned });
+
+  await drawn(page, () => page.locator(SPACE).evaluate((el) => { (el as HTMLElement).style.width = "550px"; }));
+  const resized = (await events()).at(-1)!;
+  expect(resized.width).toBe(550);
+  expect(await camera()).toMatchObject({ ...resized });
+
+  const count = (await events()).length;
+  await drawn(page, () => page.locator(SPACE).evaluate((el) => el.setAttribute("light", "lit")));
+  expect(await events()).toHaveLength(count);
 });
 
 async function openClocked(page: Page, query: string): Promise<void> {

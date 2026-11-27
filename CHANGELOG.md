@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Camera events for a star backdrop** (MODULES-587). `wakusei-camera` provides the last drawn camera’s direction, up vector, position, field of view, size and pan on the first frame and when they change. Pages can use it to align their own sky with the space view.
+
 - **Every painted surface map in the projection panel** (MODULES-546). The flat demo adds Phobos, Deimos, Phoebe and the five large moons of Uranus, shows the source credit beside the map, and pauses automatic drawing off screen, in a hidden tab or with reduced motion.
 
 ## [0.81.0] - 2026-11-27

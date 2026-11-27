@@ -222,6 +222,34 @@ export const ASTEROID_NAMES = 12;
 /** How near an asteroid must be to the camera to be named, in astronomical units in the true scale and in the view's units in the compressed one (where the whole system is some 250 across). */
 export const ASTEROID_NAME_RANGE = { true: 1, compressed: 40 } as const;
 
+/**
+ * The space view's drawn camera, in its equatorial J2000 scene axes (x at right ascension 0°, y north, and −z at right ascension 90°).
+ *
+ * @example
+ * ```ts no-run
+ * import type { SpaceCamera, WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+ * const space = document.createElement("wakusei-space") as WakuseiSpace;
+ * space.addEventListener("wakusei-camera", ({ detail }: CustomEvent<SpaceCamera>) => console.log(detail.forward, detail.up));
+ * document.body.append(space);
+ * ```
+ */
+export interface SpaceCamera {
+  /** The camera's place in scene units (Earth radii in true scale) from the Earth's centre. */
+  position: [number, number, number];
+  /** Vertical field of view, in degrees. */
+  fov: number;
+  /** The direction of the top of the camera, including its roll. */
+  up: [number, number, number];
+  /** The unit direction in which the camera looks. */
+  forward: [number, number, number];
+  /** The width and height of the picture in CSS pixels. */
+  width: number;
+  height: number;
+  /** The picture's pan in CSS pixels, positive right and down. */
+  panX: number;
+  panY: number;
+}
+
 export interface SpaceModel {
   /** Moment shown, milliseconds since the epoch. */
   time: number;
@@ -346,14 +374,7 @@ export interface SpaceModel {
   /** The shared controls' view as the last draw used it, and how tall the view was (CSS pixels). */
   drawnView: { yaw: number; tilt: number; zoom: number; roll: number; panX: number; panY: number } | null;
   heightPx: number;
-  camera: {
-    position: [number, number, number];
-    fov: number;
-    /** The picture's up in the scene's axes (y is the Earth's north): beside a moon it is the planet's own pole laid across the line of sight. */
-    up: [number, number, number];
-    /** Which way the camera looks, a unit vector in the scene's axes. */
-    forward: [number, number, number];
-  };
+  camera: SpaceCamera;
   /** The body or point the camera rides along with, or null. */
   ride: RideState | null;
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
@@ -509,7 +530,7 @@ export const newSpaceModel = (): SpaceModel => ({
   motion: 0,
   drawnView: null,
   heightPx: 420,
-  camera: { position: [0, 0, 0], fov: FOV, up: [0, 1, 0], forward: [0, 0, -1] },
+  camera: { position: [0, 0, 0], fov: FOV, up: [0, 1, 0], forward: [0, 0, -1], width: 0, height: 0, panX: 0, panY: 0 },
   ride: null,
   rideLost: false,
   transition: null,
@@ -573,6 +594,8 @@ export interface SpaceDeps {
   onLabels?: (places: Record<string, BodyPlace | null>) => void;
   /** The places of the bodies at this draw while the names are off (`onLabels` is called with them while they are on): `placeOf` reads them. */
   onPlaces?: (places: Record<string, BodyPlace | null>) => void;
+  /** The camera snapshot after this frame rendered. */
+  onCamera?: () => void;
   /** What the camera sees of each body at each draw, by id: the Sun, the planets and the other bodies of `SPACE_BODIES`, the moons of the body looked at, and any other moon drawn; with the picture's size and the point straight ahead of the camera. Not the body the camera rides on. */
   onSight?: (bodies: Record<string, SightInput>, frame: { width: number; height: number; axis: { x: number; y: number } }) => void;
   /** Whether `onSight` is wanted at this draw (left out, it always is): the page has asked for it. */
@@ -1221,7 +1244,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const hiddenBody = rideFrom?.hiddenBody ?? null;
           const hiddenMoon = rideFrom?.hiddenMoon ?? null;
           const e2 = camera.matrixWorld.elements;
-          model.camera = { position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], fov: fovNow, up: [e2[4]!, e2[5]!, e2[6]!], forward: [-e2[8]!, -e2[9]!, -e2[10]!] };
+          model.camera = {
+            position: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]],
+            fov: fovNow,
+            up: [e2[4]!, e2[5]!, e2[6]!],
+            forward: [-e2[8]!, -e2[9]!, -e2[10]!],
+            width: size.width,
+            height: size.height,
+            panX: model.view.panX,
+            panY: model.view.panY,
+          };
           model.pose = { p: [camera.position.x + origin[0], camera.position.y + origin[1], camera.position.z + origin[2]], q: [camera.quaternion.x, camera.quaternion.y, camera.quaternion.z, camera.quaternion.w], fov: fovNow, valid: true };
           model.drawnView = { yaw: model.view.yaw, tilt: model.view.tilt, zoom: model.view.zoom, roll: model.view.roll, panX: model.view.panX, panY: model.view.panY };
           model.heightPx = size.height;
@@ -1884,6 +1916,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           if (model.rideLost) deps.onRideLost?.();
           if (model.transition) deps.onMoving?.();
           return false;
+        },
+        render(gl) {
+          gl.render(scene, camera);
+          deps.onCamera?.();
         },
         resize(w, h) {
           size = { width: w, height: h };
