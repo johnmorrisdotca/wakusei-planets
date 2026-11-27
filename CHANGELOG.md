@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The demo names its build** (MODULES-1825). GitHub Pages keeps a file for about ten minutes, so a new page could run the previous build's script. `pnpm site` stamps every local script and stylesheet address, in the pages and in each module's own imports, with the commit on Pages or the version otherwise. The shared docs builder is copied unchanged and still waits, and so do the other packages.
+
 - **The best time to look** (MODULES-675). `bestTimeToLook` is the highest moment of a calendar day while a planet or the Moon is above the horizon and the Sun's centre is at least 6 degrees below it. That is the transit when the transit falls in the dark, and nothing on a midnight-sun day. Rise, transit, set, altitude and magnitude were already there.
 
 - **Your weight and age on another world** (MODULES-673). `weightOn` is a weight on the Sun, a planet, Pluto or the Moon, using the same surface gravity `/body-physics` holds from NASA's fact sheets. `worldAge` is the age in that world's years, and the next birthday there. The Moon's year is its 27.3217 day revolution. The Sun has no year. The other moons still wait, and so do the demo cards. The `/fact-sheets` entry grows by these two functions (about 0.7 kB gzipped).

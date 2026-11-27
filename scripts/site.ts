@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { build } from "esbuild";
 import { MOON_PAGE_HOSTS } from "../src/moon-pages/data.ts";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
+import { stampSite } from "./site-stamp.mjs";
 import { renderAll, renderBuilder, renderChart, renderCounts, renderCraft, renderEmbed, renderFlat, renderGroups, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface, renderDots } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
@@ -67,4 +68,7 @@ await writeFile(at("site/counts.html"), renderCounts(), "utf8");
 await writeFile(at("site/dots.html"), renderDots(), "utf8");
 await writeFile(at("site/chart.html"), renderChart(), "utf8");
 await writeFile(at("site/builder.html"), renderBuilder(), "utf8");
+// Pages keeps a file for about ten minutes, so the new page must not ask for the previous build's script by the same address.
+const stamp = process.env.GITHUB_SHA?.slice(0, 7) || pkg.version;
+await stampSite(at("site"), stamp);
 console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, system.html, jupiter.html, saturn.html, uranus.html, neptune.html, groups.html, all.html, counts.html, dots.html, chart.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
