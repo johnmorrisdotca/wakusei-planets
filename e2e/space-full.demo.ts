@@ -2,8 +2,10 @@
 // (Ctrl, Command or Alt with the wheel zooms, a plain wheel scrolls the page) stand everywhere else; the family's gesture check passes on the page. Chromium, in software.
 import "./load.ts";
 import { checkGestures, COUNT_SCRIPT } from "@johnmorrisdotca/kazoku-ui/testing";
+import type { ViewControlsElement } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, NOV2, setOn, settle, SPACE, statsOf } from "./space-ui.ts";
+import type { WakuseiSpace } from "../src/space/element.ts";
 
 test.use({ reducedMotion: "no-preference" });
 test.beforeEach(({ page }, testInfo) => {
@@ -99,6 +101,16 @@ test("without the immersive mode a plain wheel does not zoom, as kazoku-ui's rul
 test("the family's gesture check passes on the full-screen page", async ({ page }) => {
   test.setTimeout(480_000);
   await open(page);
-  const report = await checkGestures(page, SPACE, { controls: "#controls", ready: () => page.waitForTimeout(250), lacks: { "wheel-pan": "in a full-screen view the plain wheel zooms (the immersive mode); the wheel's pan is the family's rule for a view inside a page" } });
+  const controls = "#controls";
+  const report = await checkGestures(page, SPACE, {
+    controls,
+    // The controller takes a zoom before the software renderer draws it.
+    ready: () => page.waitForFunction(([space, bar]) => {
+      const drawn = document.querySelector<WakuseiSpace>(space)?.stats.labels;
+      const requested = document.querySelector<ViewControlsElement>(bar)?.state.zoom;
+      return drawn?.settled === true && drawn.zoom === requested;
+    }, [SPACE, controls] as const, { timeout: 60_000 }),
+    lacks: { "wheel-pan": "in a full-screen view the plain wheel zooms (the immersive mode); the wheel's pan is the family's rule for a view inside a page" },
+  });
   expect(report.filter((r) => r.result === "lacks").map((r) => r.gesture)).toEqual(["wheel-pan"]);
 });
