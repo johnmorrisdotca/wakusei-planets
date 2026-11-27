@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Moon's lunation number** (MODULES-605). `moonLunation` is the Brown number of the new moon the Moon is in, counting 17 January 1923 as 1. The new moon of 6 January 2000 is 953. The card, the magnitude, the constellation and the painted Moon still wait.
+
 - **Planet rows carry the rest of the orbit** (MODULES-706). The orbital-elements export had only each planet's mean semi-major axis. It now has JPL's approximate Keplerian elements and their rates for 1800 to 2050 and for 3000 BC to 3000 AD. Earth's eccentricity on the nearer span is 0.01671123. Pluto keeps the one span the approximate fallback already uses. The positions the package computes are unchanged.
 
 - **Mercury and Venus cross the Sun** (MODULES-674). `nextSolarTransit` is the next time either planet is seen against the Sun: the start, the closest moment, the finish, and the separation. The closest moments of 11 November 2019 and 6 June 2012 fall within two minutes of the minute NASA prints. The Moon covering a planet or a star, and the demo list, still wait.

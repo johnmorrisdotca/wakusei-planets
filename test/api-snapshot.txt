@@ -1090,6 +1090,7 @@ function lunarApsides(from: When, to: When) => LunarApsis[]
 function lunarNodes(from: When, to: When) => LunarNode[]
 function moonAge(when: When) => number
 function moonLibration(when: When) => MoonLibration
+function moonLunation(when: When) => number
 function moonPhaseName(when: When, lang: "en" | "ja") => string | null
 function moonPhases(from: When, to: When) => MoonPhaseEvent[]
 function nextAlignment(body: "sun" | "mercury" | "venus" | "mars" | "jupiter" | "saturn" | "uranus" | "neptune" | "pluto" | "moon", from: When, options: { kind: AlignmentKind; within?: { days: number; } | undefined; }) => SkyAlignment | null

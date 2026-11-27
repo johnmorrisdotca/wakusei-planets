@@ -182,6 +182,33 @@ export function moonAge(when: When): number {
   return (at - previous) / DAY_MS;
 }
 
+/** The mean length of a synodic month, in days, used only to count new moons apart. */
+const MEAN_SYNODIC_DAYS = 29.530588853;
+/** Brown's lunation number of the new moon of 6 January 2000. Lunation 1 is the new moon of 17 January 1923. */
+const BROWN_AT_2000 = 953;
+
+/**
+ * The Brown lunation number at `when`: which new moon the Moon is in, counting the new moon of 17 January 1923 as 1. The number advances at the instant of the new moon. Earlier new moons are 0 and negative.
+ *
+ * @param when - The moment, a `Date` or milliseconds.
+ * @returns The lunation number in progress.
+ * @experimental
+ * @example
+ * ```ts
+ * import { moonLunation } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * console.log(moonLunation(Date.UTC(2000, 0, 7)));
+ * ```
+ */
+export function moonLunation(when: When): number {
+  const at = moment(when, "when");
+  const current = at - moonAge(at) * DAY_MS;
+  // Noon on 7 January 2000 is during lunation 953, the one the new moon of 6 January opened.
+  const anchorAt = Date.UTC(2000, 0, 7, 12);
+  const anchor = anchorAt - moonAge(anchorAt) * DAY_MS;
+  return BROWN_AT_2000 + Math.round((current - anchor) / (MEAN_SYNODIC_DAYS * DAY_MS));
+}
+
 /**
  * The name of the Moon's look at `when`. English is one of the eight looks (`"new moon"`, `"waxing crescent"`, `"first quarter"`, `"waxing gibbous"`, `"full moon"`, `"waning gibbous"`, `"last quarter"`, `"waning crescent"`).
  * Japanese is the Observatory's name for that look, or `null` when its table gives none. `"ja"` and `"en"` are the only languages.
