@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Finer Europa and Ganymede maps** (MODULES-774). The tile sets add brightness detail from the Voyager and Galileo mosaics where the images resolve it. Detail fades across observation joins and gaps.
+
 ## [0.88.0] - 2026-11-27
 
 - **Venus map credit** (MODULES-1902). The English and Japanese guides identify Solar System Scope's `2k_venus_surface.jpg` and record the source's unspecified mission and coverage.

@@ -32,7 +32,7 @@ jobs:
         id: tiles
         with:
           path: .cache/body-tiles-out
-          key: body-tiles-${{ hashFiles('scripts/make-body-tiles.py', 'textures/*-2048.webp') }}-${{ vars.WAKUSEI_SHARP_TILES }}
+          key: body-tiles-${{ hashFiles('scripts/make-body-tiles.py', 'scripts/body-tile-masks/*.png', 'textures/*-2048.webp') }}-${{ vars.WAKUSEI_SHARP_TILES }}
       - name: The big source maps, kept between runs while the sources are the same (keyed on their SHA-256, so they are fetched again only when one is replaced in the script); they are verified against those hashes when used
         if: steps.tiles.outputs.cache-hit != 'true'
         id: sources-key

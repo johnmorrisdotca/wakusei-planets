@@ -54,7 +54,8 @@ def tls_context():
 
 # Each source: where it is, its SHA-256 (a file with another hash is never used), how it lies on the sphere (the same steps scripts/make-textures.py takes for the 2048 picture) and the
 # WebP quality of its tiles. `roll` is a turn east, in fractions of the width; `strip` is ("lat", degrees) for a strip of an equirectangular map or ("merc", degrees) for a Mercator
-# strip, `crop` the box of the source that is the map, `keep` the colour kept by `desaturate`, `grey` takes the source's detail as brightness only, `night` marks black that was never imaged, `fade` how many cells of 8 pixels the source's detail fades over at the edge of its data (4 unless the picture fades the same edge into a plain tone).
+# strip, `crop` the box of the source that is the map, `keep` the colour kept by `desaturate`, `grey` takes the source's detail as brightness only, `night` marks black that was never imaged,
+# `mask` limits detail to the white parts of an aligned footprint map, and `fade` is the number of 8-pixel cells over which the detail fades at the edge of its data (4 by default).
 SOURCES = {
     "mercury": {
         "url": f"{COMMONS}/4/41/Mercury_MESSENGER_MDIS_Basemap_EnhancedColor_Mosaic_Global_32ppd.jpg",
@@ -104,6 +105,20 @@ SOURCES = {
         "file": "Io from Galileo and Voyager missions.jpg",
         "credit": "NASA / JPL (Galileo SSI and Voyager images)",
         "strip": ("lat", 57.3, 3), "roll": 0.5, "quality": 78,
+    },
+    "europa": {
+        "url": "https://planetarymaps.usgs.gov/mosaic/Europa_Voyager_GalileoSSI_global_mosaic_500m.tif",
+        "sha256": "a323f0c9ccb47d5af9902ea8297fe81f9a9708795645b80801f103c3f7c9a624",
+        "file": "Europa_Voyager_GalileoSSI_global_mosaic_500m.tif",
+        "credit": "NASA / JPL / U.S. Geological Survey Astrogeology (Voyager and Galileo SSI global mosaic, 500 m a pixel)",
+        "roll": 0.5, "grey": True, "night": True, "mask": "europa.png", "quality": 74,
+    },
+    "ganymede": {
+        "url": "https://planetarymaps.usgs.gov/mosaic/Ganymede_Voyager_GalileoSSI_global_mosaic_1km.tif",
+        "sha256": "c2c8d9506b8cf8f7a0a90d823d9052e91c8d9885cf7267fdce8de8216f4df888",
+        "file": "Ganymede_Voyager_GalileoSSI_global_mosaic_1km.tif",
+        "credit": "NASA / JPL / U.S. Geological Survey Astrogeology (Voyager and Galileo SSI global mosaic, 1 km a pixel)",
+        "roll": 0.5, "grey": True, "night": True, "mask": "ganymede.png", "quality": 74,
     },
     "callisto": {
         "url": f"{COMMONS}/a/a3/Callisto_equatorial.jpg",
@@ -274,6 +289,11 @@ def geometry(image, source, width):
     if source.get("night"):
         # black that was never imaged (a pole in the polar night, a strip's missing rows): not data
         valid = valid * (luminance(out) > 0.04).astype(np.float32)
+    if "mask" in source:
+        # The footprint mask is aligned with the bundled map, after the source's turn.
+        path = os.path.join(HERE, "body-tile-masks", source["mask"])
+        with Image.open(path) as mask:
+            valid *= np.asarray(mask.resize((width, height), Image.Resampling.NEAREST)) != 0
     return np.clip(out, 0, 1), valid.astype(np.float32)
 
 
@@ -486,6 +506,14 @@ def selftest():
         # a source whose edge the picture fades into a plain tone (`fade`) has its detail fade as far: less of it just inside the edge, none of the crisp ground a seam is made of
         wide = detail_level("fake", {"night": True, "fade": 8}, base, image, width)
         assert np.abs((wide - up)[44:70]).mean() < 0.6 * np.abs((picture - up)[44:70]).mean(), "a wider fade did not take the detail from the edge"
+        with tempfile.TemporaryDirectory() as folder:
+            mask = Image.new("1", (128, 64), 1)
+            mask.paste(0, (32, 0, 72, 64))
+            path = os.path.join(folder, "footprints.png")
+            mask.save(path)
+            masked = detail_level("fake", {**spec, "mask": path}, base, image, width)
+            assert np.array_equal(masked[100:400, 320:512], up[100:400, 320:512]), "detail came from the excluded swath"
+            assert np.array_equal(masked[100:400, 80:160], picture[100:400, 80:160]), "the footprint mask removed measured detail"
         entry = cut(picture, tempfile.mkdtemp(), "fake", 2, 100)
         assert entry["columns"] == width // TILE and entry["rows"] == width // 2 // TILE, entry
         assert entry["tiles"] == entry["columns"] * entry["rows"]
