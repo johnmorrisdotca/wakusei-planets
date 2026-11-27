@@ -47,7 +47,7 @@ test("the Japanese lesson fits on screen and the time scrubber works with reduce
   await expect(page.getByLabel("中心の天体")).toHaveValue("sun");
   const dot = page.locator("#kp-sweep .selected");
   const at = await dot.getAttribute("cx");
-  await page.getByLabel("軌道上の時間").evaluate((el: HTMLInputElement) => {
+  await page.getByLabel("軌道に沿った時間").evaluate((el: HTMLInputElement) => {
     el.value = "500";
     el.dispatchEvent(new Event("input", { bubbles: true }));
   });
