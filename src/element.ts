@@ -861,7 +861,9 @@ export class WakuseiBody extends HTMLElement {
     const range = this.hasAttribute("range") ? num(this.getAttribute("range"), 0) : undefined;
     const span = num(this.getAttribute("span-km"), 0);
     if (!moons && !range && !span && scaleTo === null && this.#cutSize() !== undefined) {
-      return this.#isSection() ? 1.18 : Math.max(1.2, extentOf(this.#facts(), { tight: true }));
+      if (this.#isSection()) return 1.18;
+      // Wide rings can make a tight fit smaller than the ordinary view. Keep the cut at least that large in its stage.
+      return Math.min(ROOM, Math.max(1.2, extentOf(this.#facts(), { tight: true })));
     }
     return extentOf(this.#facts(), {
       tight: this.getAttribute("fit") === "tight",
@@ -1080,7 +1082,7 @@ export class WakuseiBody extends HTMLElement {
     if (this.body === "earth" && this.#cutSize() !== undefined) {
       const note = document.createElement("li");
       note.dataset.note = "";
-      note.textContent = lang === "ja" ? "明るい斑点は、模式的なマグマだまりを示します。" : "Bright pockets show illustrative magma near the surface.";
+      note.textContent = lang === "ja" ? "表面近くの明るい点は、模式的なマグマだまりを示します。" : "Bright pockets show illustrative magma near the surface.";
       list.append(note);
     }
     this.#fitCutaway();
@@ -1185,7 +1187,7 @@ export class WakuseiBody extends HTMLElement {
     const size = this.#cutSize();
     if (size !== undefined) {
       if (this.#isSection()) return ja ? `${f.name.ja}の断面` : `${f.name.en} cross-section`;
-      return ja ? `${f.name.ja}の${size === "half" ? "半分" : "4分の1"}を切り取った図` : `${f.name.en}, ${size} cutaway`;
+      return ja ? `${f.name.ja}の${size === "half" ? "半分" : "4分の1"}を開いた図` : `${f.name.en}, ${size} cutaway`;
     }
     const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "イラスト" : "illustrated drawing" } as const;
     return ja ? `${f.name.ja}の${looks[this.look]}` : `${f.name.en}, ${looks[this.look]}`;

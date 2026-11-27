@@ -1,5 +1,6 @@
 // The interior cutaway's legend. The shells and the graphics objects they give back are in freeze.demo.ts.
 import { expect, test, type Page } from "@playwright/test";
+import type { WakuseiBody } from "../src/element.ts";
 
 test.beforeEach(async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk" && testInfo.project.name !== "chromium-phone" && testInfo.project.name !== "webkit-desk" && testInfo.project.name !== "webkit-phone", "the four browser projects");
@@ -71,4 +72,18 @@ test("explicit cut sizes carry over to the line view, where flow can be played a
   await cuts.getByRole("button", { name: "Off", exact: true }).click();
   await expect(body.locator("#cutaway-panel")).toBeHidden();
   await expect(band).toHaveCount(0);
+});
+
+test("Jupiter's rings do not pull either 3D cut farther back than the classic fit", async ({ page }) => {
+  await page.goto("/wakusei-planets/?body=jupiter&look=realistic&cutaway=quarter");
+  const body = page.locator("#main");
+  for (const size of ["quarter", "half"]) {
+    await page.locator(`#cutaway-options button[data-cutaway="${size}"]`).click();
+    await expect(body).toHaveAttribute("cutaway", size);
+    const visibleFraction = await body.evaluate((el) => {
+      const stage = el.shadowRoot!.getElementById("stage")!;
+      return (2 * (el as WakuseiBody).discRadius) / Math.min(stage.clientHeight, stage.clientWidth);
+    });
+    expect(visibleFraction).toBeCloseTo(1 / 2.2, 3);
+  }
 });
