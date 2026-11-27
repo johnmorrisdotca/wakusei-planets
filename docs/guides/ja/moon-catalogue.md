@@ -171,7 +171,7 @@ space.moonColors = "direction";      // 軌道の色: "group" (初期値) か "d
 | `moon-size-class` | `size` | `major` は立体で描く主要衛星、`measured` は半径の測定値がある小さな衛星、`estimated` は明るさから半径を推定した小さな衛星 |
 | `moon-group` | `group` | `himalia` や `norse` など、`MOON_GROUPS` にある名前 |
 | `moon-direction` | `direction` | `prograde` (順行) または `retrograde` (逆行) |
-| `moon-discovered` | `discovered` | 1年分、または `2000..2026` のように両端を含む範囲。片方の年は省略できます。JavaScript では `{ from: 2000, to: 2026 }` と書きます。 |
+| `moon-discovered` | `discovered` | 1年分、または `2000..2026` のように両端を含む範囲。片方の年は省略できます。JavaScript では `{ from: 2000, to: 2026 }` と書きます |
 
 データシートの半径だけがある衛星と半径が不明な衛星は、大きさの区分を指定しないときに表示します。発見年の範囲を指定すると、発見年の記録がない衛星は除きます。縮めた縮尺での衛星の表示倍率は、引き続き `moon-size` で指定します。
 

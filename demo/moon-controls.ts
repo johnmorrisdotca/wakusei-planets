@@ -17,17 +17,19 @@ const words = {
   size: ["Size class", "大きさの区分"],
   direction: ["Orbit direction", "公転方向"],
   named: ["IAU named", "IAU正式名称あり"],
-  numbered: ["Numbered", "番号あり"],
+  numbered: ["Numbered", "番号のみ"],
   provisional: ["Provisional", "仮符号のみ"],
   major: ["Major", "主要衛星"],
   measured: ["Measured", "測定値"],
   estimated: ["Estimated", "推定値"],
+  radiusMeasured: ["Measured", "半径は測定値"],
+  radiusEstimated: ["Estimated", "半径は推定値"],
   prograde: ["Prograde", "順行"],
   retrograde: ["Retrograde", "逆行"],
   more: ["More filters", "その他の絞り込み"],
-  group: ["Orbit group", "軌道のグループ"],
-  from: ["Discovered from", "発見年の下限"],
-  to: ["Discovered through", "発見年の上限"],
+  group: ["Orbit group", "衛星群"],
+  from: ["Discovered from", "発見年（から）"],
+  to: ["Discovered through", "発見年（まで）"],
   play: ["Play discoveries", "発見順に再生"],
   pause: ["Pause discoveries", "発見順の再生を一時停止"],
   clear: ["Clear years", "発見年の指定を解除"],
@@ -49,7 +51,7 @@ const words = {
   source: ["Source data", "出典"],
   unknown: ["No comparison with Horizons", "Horizonsとの比較なし"],
   full: ["Full ephemeris", "高精度の位置計算"],
-  newest: ["Newest in this result", "この結果で最も新しい発見"],
+  newest: ["Newest in this result", "この結果で最新の発見"],
 } as const;
 
 export const moonWord = (key: keyof typeof words, lang: Lang): string => words[key][lang === "ja" ? 1 : 0];
@@ -97,7 +99,8 @@ export function createMoonControls(root: HTMLElement, changed: (filter: MoonFilt
     const label = node("label", "moon-range");
     const title = node("span");
     const input = node("input");
-    const value = node("output");
+    const value = node("span");
+    value.setAttribute("aria-hidden", "true");
     input.type = "range";
     input.min = String(FIRST);
     input.max = String(LAST);
@@ -163,7 +166,8 @@ export function createMoonControls(root: HTMLElement, changed: (filter: MoonFilt
       row.setAttribute("aria-label", title.textContent);
       for (const item of buttons) {
         const value = item.dataset["moonValue"] as keyof typeof words | "";
-        item.textContent = moonWord(value || "any", lang);
+        const label = value === "measured" ? "radiusMeasured" : value === "estimated" ? "radiusEstimated" : value || "any";
+        item.textContent = moonWord(label, lang);
         item.setAttribute("aria-pressed", String((filter[key] ?? "") === value));
       }
     }
@@ -173,9 +177,9 @@ export function createMoonControls(root: HTMLElement, changed: (filter: MoonFilt
     const start = filter.discovered?.from ?? FIRST;
     const end = filter.discovered?.to ?? LAST;
     from.title.textContent = moonWord("from", lang);
-    from.input.value = from.value.value = String(start);
+    from.input.value = from.value.textContent = String(start);
     to.title.textContent = moonWord("to", lang);
-    to.input.value = to.value.value = String(end);
+    to.input.value = to.value.textContent = String(end);
     clear.textContent = moonWord("clear", lang);
     clear.disabled = filter.discovered === undefined;
     play.textContent = moonWord(interval === undefined ? "play" : "pause", lang);
@@ -236,12 +240,12 @@ export function showMoonCard(root: HTMLElement, moon: CatalogueMoon, lang: Lang,
   add(word("orbit"), orbit === null ? word("noOrbit") : [
     word(moon.retrograde ? "retrograde" : "prograde"),
     `${num(orbit.a)} km`,
-    lang === "ja" ? `${num(orbit.periodDays)} 日` : `${num(orbit.periodDays)} days`,
+    lang === "ja" ? `${num(orbit.periodDays)}日` : `${num(orbit.periodDays)} days`,
     `i = ${num(orbit.i)}°`,
   ].join(" · "));
   add(word("radius"), moon.radiusKm === null ? word("noRadius") : `${num(moon.radiusKm)}${moon.radiusSigmaKm === null ? "" : ` ± ${num(moon.radiusSigmaKm)}`} km${moon.radiusFrom ? ` · ${word(moon.radiusFrom === "derived" ? "estimated" : moon.radiusFrom)}` : ""}`);
   const accuracy = moon.accuracy;
-  add(word("accuracy"), moon.full ? word("full") : accuracy === null ? word("unknown") : `${num(accuracy.worstDegrees)}° · ${num(accuracy.worstKm)} km${lang === "ja" ? "（最大差）" : " maximum difference"}`);
+  add(word("accuracy"), moon.full ? word("full") : accuracy === null ? word("unknown") : `${num(accuracy.worstDegrees)}° · ${num(accuracy.worstKm)} km${lang === "ja" ? "（最大のずれ）" : " maximum difference"}`);
   const credited = node("p", "fam-fine");
   const source = node("a");
   source.href = "https://ssd.jpl.nasa.gov/sats/discovery.html";

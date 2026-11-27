@@ -26,7 +26,7 @@ description: ある日時の衛星の位置つきで惑星を描きます。時�
   moon-discovered="1900..2026" time="2026-11-02T12:00:00Z" rate="0"></wakusei-body>
 ```
 
-JavaScript では `body.moonFilter = { group: "himalia", discovered: { from: 1900, to: 2026 } }` と書くと同じ条件になります。条件の一覧は [衛星カタログ](moon-catalogue.md) を参照してください。衛星を押すと `wakusei-moon-select` が発火し、`detail: { id, host }` を返します。デモでは衛星の詳細カードを開きます。「衛星の詳細」からはキーボードで選べます。[コードビルダー](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) と [iframe](embed-in-an-iframe.md) でも同じ条件を指定できます。
+JavaScript では `body.moonFilter = { group: "himalia", discovered: { from: 1900, to: 2026 } }` と書くと同じ条件になります。条件の一覧は [衛星カタログ](moon-catalogue.md#衛星カタログを絞り込む) を参照してください。衛星を押すと `wakusei-moon-select` が発火し、`detail: { id, host }` を返します。デモでは衛星の詳細カードを開きます。「衛星の詳細」からはキーボードで選べます。[コードビルダー](https://johnmorrisdotca.github.io/wakusei-planets/builder.html) と [iframe](embed-in-an-iframe.md) でも同じ条件を指定できます。
 
 ## 時計が進むあいだの日付の見せ方
 
