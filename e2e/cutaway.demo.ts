@@ -58,7 +58,7 @@ test("the Venus legend explains the two models and leaves room for the cross-sec
   await expect(body.locator("#cutaway [data-note]")).toHaveText(/Margot.+3,500 km.+500 km.+Dumoulin.+2,900–3,450 km/);
   await body.evaluate((el) => el.setAttribute("lang", "ja"));
   await expect(body.locator("#cutaway [data-name]").first()).toHaveText("マントル");
-  await expect(body.locator("#cutaway [data-note]")).toHaveText(/約3,500 km.+約500 km.+2,900～3,450 km/);
+  await expect(body.locator("#cutaway [data-note]")).toHaveText(/約3,500 km.+約500 km.+2,900〜3,450 km/);
   await expect.poll(() => body.evaluate((el) => {
     const stage = el.shadowRoot!.getElementById("stage")!.getBoundingClientRect();
     const legend = el.shadowRoot!.getElementById("cutaway-panel")!.getBoundingClientRect();

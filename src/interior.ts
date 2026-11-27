@@ -106,7 +106,7 @@ const SUN: Interior = {
   radiusAbout: false,
   source: { page: "https://users-phys.au.dk/jcd/solar_models/", read: "2026-11-27" },
   layers: [
-    { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素がヘリウムに変わる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
+    { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素が核融合してヘリウムになる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
     { id: "radiative-zone", name: { en: "Radiative zone", ja: "放射層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: 0.7127 * SUN_RADIUS_KM, about: true, colour: "#d4652f" },
     { id: "convective-zone", name: { en: "Convection zone", ja: "対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#a85a3c" },
   ],
@@ -161,7 +161,7 @@ const VENUS: Interior = {
   ],
   note: {
     en: "Margot et al. give a core radius of about 3,500 km, uncertain by about 500 km. Dumoulin et al.’s models give 2,900–3,450 km.",
-    ja: "Margot らのモデルでは核の半径は約3,500 kmで、不確かさは約500 kmです。Dumoulin らのモデルでは2,900～3,450 kmです。",
+    ja: "Margot らのモデルでは核の半径は約3,500 kmで、不確かさは約500 kmです。Dumoulin らのモデルでは2,900〜3,450 kmです。",
   },
 };
 
