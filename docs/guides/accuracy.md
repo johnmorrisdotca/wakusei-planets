@@ -16,7 +16,7 @@ Mercury to Neptune come from the VSOP87B series (Bretagnon and Francou, IMCCE), 
 There are two cuts of the series, so that a page pays only for the accuracy it needs:
 
 - **The default**: 995 of the 35,080 terms (13.8 kB gzipped for all eight planets, the same as before). It is the series every caller gets, with no code change.
-- **`tables/vsop`**, optional: 2,581 terms (32 kB gzipped, not in `tables`, because it is the size of the whole planet engine again). Importing it teaches `heliocentric` the finer series.
+- **`tables/vsop`**, optional: 2,584 terms (about 32 kB gzipped). Import it separately from `tables` to teach `heliocentric` the finer series.
 
 The body and space views use the default series at every zoom. Across the same 60 dates and eight planets, the largest changes in apparent orientation and diameter imply less than 0.20 pixels of movement on a 4,096-pixel-wide planet disc. The space view centres the scene on the focused body, so moving that body's heliocentric position does not move its disc across the scene. Import the finer series when the calculation itself needs more precise positions.
 
@@ -30,6 +30,8 @@ console.log(Math.hypot(x, y, z).toFixed(1));
 
 VSOP87 was fitted to JPL's DE200, and against today's Horizons the mean longitudes of Jupiter and Neptune have drifted as a straight line in time (Neptune by 1.2 arc-seconds in 2000 and 13 more in each thousand years). `scripts/make-vsop-data.py` fits that line to Horizons on 80 dates that are not the test's and takes it out of the two series as two terms; without it Neptune was 5.7 arc-seconds off and Jupiter 3.1 on the 60 dates.
 
+The finer Uranus series uses three longitude terms for an offset, a drift and one cycle at Uranus's mean motion. The terms were fitted to 768 Horizons dates. On 192 separate dates from 1800 through 2199, the maximum error in the Sun-centred direction fell from 2.03″ to 1.39″. A drift alone increased the maximum error of the default series, which keeps its published coefficients.
+
 | Body | JPL approximate elements (before) | Default, 5 dates 1800 to 2050 | Default, 60 dates 1800 to 2200 | Held to | `tables/vsop`, 60 dates | Held to | astronomy-engine, 60 dates |
 |---|---|---|---|---|---|---|---|
 | Mercury | 41″ | 2.3″ | 3.4″ | 4.5″ | 1.3″ | 1.7″ | 74.5″ |
@@ -38,11 +40,11 @@ VSOP87 was fitted to JPL's DE200, and against today's Horizons the mean longitud
 | Mars | 58″ | 1.4″ | 4.8″ | 6″ | 0.7″ | 0.95″ | 11.4″ |
 | Jupiter | 309″ | 1.0″ | 2.8″ | 3.6″ | 0.5″ | 0.7″ | 13.7″ |
 | Saturn | 545″ | 3.7″ | 4.4″ | 5.7″ | 0.8″ | 1.1″ | 19.8″ |
-| Uranus | 79″ | 3.8″ | 3.9″ | 5″ | 1.9″ | 2.5″ | 17.3″ |
+| Uranus | 79″ | 3.8″ | 3.9″ | 5″ | 1.24″ | 1.6″ | 17.3″ |
 | Neptune | 45″ | 1.6″ | 2.6″ | 3.4″ | 0.7″ | 0.95″ | 19.9″ |
 | Pluto | 39″ | 0.05″ | 0.06″ | 0.2″ | the same | the same | 26.3″ |
 
-An arc-second is 1/3600 of a degree. The first column is where the package started (JPL's approximate elements, measured on the five reference dates), and the second and third are the same code, as it stands now, on the five dates and on the 60. The 60-date column is the honest one: the five dates are a regression grid, and a planet can be worse on the dates between. The last column is [astronomy-engine](https://github.com/cosinekitty/astronomy) (MIT) on the same 60 dates (`node scripts/compare/dense.mjs` prints it); its worst dates are mostly near the two ends of the 400 years. Even the whole of VSOP87B, with all 35,080 terms, leaves 2.2 arc-seconds on Uranus and (without the drift taken out) 3.7 on Neptune against Horizons: Uranus is the loosest of the finer series because that is about the theory's own limit, not the cut.
+An arc-second is 1/3600 of a degree. The first column is where the package started (JPL's approximate elements, measured on the five reference dates), and the second and third are the same code, as it stands now, on the five dates and on the 60. The 60-date column is the honest one: the five dates are a regression grid, and a planet can be worse on the dates between. The last column is [astronomy-engine](https://github.com/cosinekitty/astronomy) (MIT) on the same 60 dates (`node scripts/compare/dense.mjs` prints it); its worst dates are mostly near the two ends of the 400 years. Before the longitude corrections, the original full VSOP87B series left 2.2 arc-seconds on Uranus and 3.7 on Neptune against Horizons.
 
 The series is good for the years 1750 to 2250 and slowly gets worse beyond.
 
@@ -100,7 +102,9 @@ console.log(Math.hypot(x, y, z).toFixed(3)); // its perihelion: 0.587 au from th
 
 Outside those years each is a plain ellipse from Horizons' osculating elements of one epoch, which a planet's pull moves away from the real orbit: Vesta is 2.5° off in 1835 and 1.9° in 2134, Pallas is 8° off in 1835, and Halley, whose elements are from 1968, is 31° off by 2026 without its table. `heliocentricModel` says which one answered.
 
-## The Moon and the moons ELP2000-82B (Chapront-Touzé and Chapront, IMCCE) cut to its 540 largest terms and run in terrestrial time, as the planets are.
+## The Moon and the moons
+
+The Moon uses ELP2000-82B (Chapront-Touzé and Chapront, IMCCE), cut to its 540 largest terms and run in terrestrial time. The first three coefficients of its mean longitude were refitted to 768 Horizons dates. On 192 separate dates from 1800 through 2199, the maximum direction error fell from 5.31″ to 0.90″. The test holds it to 1.1″ on that grid. The full original 37,872-term series changed the worst error on the regular 60 dates by only 0.13″, so this fit keeps the 540 terms.
 
 Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both; the web component fetches each only when it draws that planet's moons, as a chunk of its own, so a page that shows one planet does not grow):
 
@@ -119,7 +123,7 @@ Every other moon's orbit, and every moon's orbit before one of those tables is i
 
 | Body | Theory | Before, 7 dates 1900 to 2100 | Now, the same 7 dates | Now, 60 dates 1800 to 2200 | Held to (60 dates) |
 |---|---|---|---|---|---|
-| The Moon | ELP2000-82B | 0.0005° | 0.0005° | 4.7″ | 5.8″ |
+| The Moon | ELP2000-82B with refitted mean longitude | 0.0005° | 0.46″ | 2.47″ | 3.24″ |
 | Phobos | fitted | 0.57° | 0.34° | 0.41° | 0.55° |
 | Deimos | fitted | 0.32° | 0.33° | 0.39° | 0.55° |
 | Io | L1.2 | 0.08° | 0.056° | 0.11° | 0.15° |
@@ -145,7 +149,7 @@ Every other moon's orbit, and every moon's orbit before one of those tables is i
 | Nix | fitted | 1.93° | 0.287° | 0.358° | 0.46° |
 | Hydra | fitted | 1.54° | 0.584° | 0.667° | 0.86° |
 
-On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engine's (`node scripts/compare/dense.mjs`: Io 411″ against its 2,626″, Europa 132″ against 1,403″, Ganymede 92″ against 814″, Callisto 52″ against 379″), and the Moon 4.7″ against 207″.
+On the 60 dates the Galilean moons are 6 to 11 times closer than astronomy-engine's (`node scripts/compare/dense.mjs`: Io 411″ against its 2,626″, Europa 132″ against 1,403″, Ganymede 92″ against 814″, Callisto 52″ against 379″), and the Moon 2.47″ against 207″.
 
 - **Hyperion** is in a 4 to 3 orbital resonance with Titan. On 192 separate Horizons dates from 1800 through 2199, the maximum error in its direction from Saturn's centre fell from 14.40° with the fitted orbit to 0.82° with TASS1.7. The test holds the loaded theory to 1° over these dates. The cut differs from the full Orbiter series by at most 0.015° on the same dates. The fitted orbit answers until the optional table loads.
 - **Mimas, Enceladus, Miranda and Nereid** use corrections to the phase of their orbits. The correction is a drift with a few periodic terms fitted to 768 Horizons dates from 1800 to 2199. A separate set of 192 Horizons dates measured maximum errors of 0.395°, 0.036°, 0.306° and 2.08° respectively. Nereid has eccentricity 0.75, and small timing errors near periapsis still make large angular errors.

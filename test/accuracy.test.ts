@@ -24,7 +24,7 @@ const MINOR_ARCSEC: Record<string, number> = { vesta: 1, pallas: 1, chiron: 1, p
 const MINOR_YEARS: Record<string, [number, number]> = { vesta: [1900, 2100], pallas: [1900, 2100], chiron: [1800, 2200], pholus: [1800, 2200], halley: [1800, 2200] };
 /** The worst direction error in degrees from the planet's centre, over the dates, for the Moon and each moon. */
 const MOON_DEGREES: Record<string, number> = {
-  moon: 0.0008, phobos: 0.5, deimos: 0.45, io: 0.08, europa: 0.03, ganymede: 0.022, callisto: 0.008,
+  moon: 0.0002, phobos: 0.5, deimos: 0.45, io: 0.08, europa: 0.03, ganymede: 0.022, callisto: 0.008,
   mimas: 0.22, enceladus: 0.03, tethys: 0.06, dione: 0.15, rhea: 0.15, titan: 0.025, iapetus: 0.025,
   miranda: 0.16, ariel: 0.3, umbriel: 0.13, titania: 0.25, oberon: 0.6,
   triton: 0.1, nereid: 1.25, proteus: 0.15, charon: 0.05, nix: 0.37, hydra: 0.74,

@@ -17,6 +17,12 @@ BASE = "https://ftp.imcce.fr/pub/ephem/planets/vsop87/VSOP87B."
 CORRECTED = ("jupiter", "neptune")
 PLANETS = {"mercury": "mer", "venus": "ven", "earth": "ear", "mars": "mar", "jupiter": "jup", "saturn": "sat", "uranus": "ura", "neptune": "nep"}
 
+# Additional longitude correction for the fine Uranus series, fitted on 768 independent Horizons dates (MODULES-639).
+# Offset and rate in arc-seconds and arc-seconds per millennium, then the cosine and sine coefficients at Uranus's mean motion.
+URANUS_FINE = (-0.08433560115, -1.37659415593, -0.42371740308, 0.55236037232)
+URANUS_MEAN_MOTION = 74.7815985673
+ARCSECOND = math.pi / 648000
+
 
 CODES = {"jupiter": "5", "neptune": "8"}
 
@@ -92,6 +98,11 @@ for name, code in PLANETS.items():
         kept[0][0].append((-c0, 0.0, 0.0))
         kept[0][1].append((-c1, 0.0, 0.0))
         print(f"{name:8s} longitude drift {c0 * 206264.806:+.2f} arc-seconds + {c1 * 206264.806:+.2f} per thousand years, taken out", flush=True)
+    if FINE and name == "uranus":
+        offset, rate, cosine, sine = URANUS_FINE
+        kept[0][0].append((offset * ARCSECOND, 0.0, 0.0))
+        kept[0][0].append((math.hypot(cosine, sine) * ARCSECOND, math.atan2(-sine, cosine) % (2 * math.pi), URANUS_MEAN_MOTION))
+        kept[0][1].append((rate * ARCSECOND, 0.0, 0.0))
     count = sum(len(terms) for var in kept for terms in var)
     total += count
     parts = []

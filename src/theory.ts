@@ -40,7 +40,8 @@ const ARCSEC = Math.PI / 648000;
 const dms = (d: number, m: number, sec: number): number => ((d + m / 60 + sec / 3600) * Math.PI) / 180;
 // The mean arguments of ELP2000-82B (Chapront-Touze and Chapront), each as a polynomial in Julian centuries of terrestrial time from J2000, in radians:
 // the Moon's mean longitude, its node and its perigee, the Earth–Moon barycentre's mean longitude and the Sun's perigee, then the planets' mean longitudes.
-const LUNAR_W1 = [dms(218, 18, 59.95571), 1732559343.73604 * ARCSEC, -5.8883 * ARCSEC, 0.6604e-2 * ARCSEC, -0.3169e-4 * ARCSEC];
+// The first three mean-longitude coefficients are fitted to 768 Horizons dates in 1800–2199 and rounded to a milliarcsecond.
+const LUNAR_W1 = [dms(218, 18, 59.816), 1732559343.343 * ARCSEC, -6.83 * ARCSEC, 0.6604e-2 * ARCSEC, -0.3169e-4 * ARCSEC];
 const LUNAR_W2 = [dms(83, 21, 11.67475), 14643420.2632 * ARCSEC, -38.2776 * ARCSEC, -0.45047e-1 * ARCSEC, 0.21301e-3 * ARCSEC];
 const LUNAR_W3 = [dms(125, 2, 40.39816), -6967919.3622 * ARCSEC, 6.3622 * ARCSEC, 0.7625e-2 * ARCSEC, -0.3586e-4 * ARCSEC];
 const LUNAR_EARTH = [dms(100, 27, 59.22059), 129597742.2758 * ARCSEC, -0.0202 * ARCSEC, 0.9e-5 * ARCSEC, 0.15e-6 * ARCSEC];

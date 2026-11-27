@@ -9,7 +9,7 @@ import { length, RAD, type Vec3 } from "../src/vec.ts";
 type Dense = { dates: string[]; planets: Record<string, Vec3[]> };
 const reference = JSON.parse(readFileSync(new URL("./data/horizons-dense.json", import.meta.url), "utf8")) as Dense;
 const AU_KM = 149597870.7;
-const FINE_ARCSEC: Record<string, number> = { mercury: 1.7, venus: 0.6, earth: 0.7, mars: 0.95, jupiter: 0.7, saturn: 1.1, uranus: 2.5, neptune: 0.95 };
+const FINE_ARCSEC: Record<string, number> = { mercury: 1.7, venus: 0.6, earth: 0.7, mars: 0.95, jupiter: 0.7, saturn: 1.1, uranus: 1.6, neptune: 0.95 };
 const worst = (name: string): number => {
   let most = 0;
   reference.planets[name]!.forEach((horizons, i) => {

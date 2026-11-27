@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Tighter Moon and Uranus ephemerides** (MODULES-639). Refitting the Moon's mean longitude brings the maximum error on independent Horizons dates from 5.31″ to 0.90″ with the same 540 terms. The optional finer Uranus series adds a longitude correction, improving its maximum on the same dates from 2.03″ to 1.39″.
+
 ## [0.82.0] - 2026-11-27
 
 - **Hyperion's orbit follows TASS1.7** (MODULES-638). The optional Saturn moon table adds Hyperion's separate 230-term series. On 192 independent Horizons dates, the maximum direction error from Saturn fell from 14.40° to 0.82°. The two optional table entries have updated size baselines for the new series. The finer VSOP87B planet series remains an explicit import at every zoom.
