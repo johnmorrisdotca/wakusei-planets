@@ -8,7 +8,7 @@ const press = (page: import("@playwright/test").Page, id: string, value: number)
 
 test("the date row is the family's replay bar: Play, Back and the speeds 1×, 3600× and 86400×, kept in the body's rate and the address", async ({ page }) => {
   await page.goto(`${URL}?look=line&body=jupiter&moons=1`);
-  await expect(page.locator("#replay button[data-act]:visible")).toHaveText(["Play", "Back to the date"]);
+  await expect(page.locator("#replay button[data-act]:visible")).toHaveText(["Pause", "Back to the date"]);
   await expect(page.locator("#replay button[data-v]")).toHaveText(["1×", "3600×", "86400×"]);
   await expect(press(page, "replay", 3600)).toHaveAttribute("aria-pressed", "true");
   // a bare page opens playing at an hour a second
