@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.83.0] - 2026-11-27
+
 - **Named camera framing** (MODULES-961). `space.framingFor` works out the zoom for Whole body and Close views and predicts where a companion lands on the screen. It uses the regular and beside cameras' own geometry. The query leaves the camera and its draw count as they were.
 
 - **Filters for the moon catalogue** (MODULES-664). Both elements can filter moons by naming status, size class, orbit group, direction and discovery years. `<wakusei-body moons="all">` adds the catalogue's small moons and optional orbit paths to a planet view. The filters appear in the planet and space demos, with discovery playback and sourced moon cards. The code builder carries the same settings into its snippets and iframe. The size budgets for the single-file `/element` and `/portrait` bundles now include the optional catalogue. With code splitting, the catalogue is loaded when a view asks for it.
