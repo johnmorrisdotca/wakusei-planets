@@ -90,6 +90,9 @@ export const renderLineup = (): string =>
 export const renderPlan = (): string =>
   moonLinks(render("plan.html", "Wakusei Planets 惑星: the top-down plan", "A small plan of the solar system from above, or of one planet's moons from above its pole, with one body marked, for any date: squeezed with a logarithm so the inner planets show, or to scale. SVG, no WebGL, light enough for an inset."));
 
+export const renderKepler = (): string =>
+  render("kepler.html", "Wakusei Planets 惑星: Kepler’s laws", "Compare the semimajor axes and periods of real orbits, see equal areas swept in equal time, and adjust a practice orbit. English and Japanese.");
+
 /** The flat map page. */
 export const renderFlat = (): string =>
   render("flat.html", "Wakusei Planets 惑星: flat maps of any body", "Any planet, dwarf planet or moon the package has a picture of, flat: as the photograph or as a line map, with day and night for any time, the sunrise line, the landing, rover and crash sites and named features, and the spacecraft in orbit round the Moon and Mars. English and Japanese, no WebGL.");

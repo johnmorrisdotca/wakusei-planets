@@ -6,14 +6,14 @@ import { build } from "esbuild";
 import { MOON_PAGE_HOSTS } from "../src/moon-pages/data.ts";
 import { publishThumbnails, thumbnailHead } from "./family-thumbnail.mjs";
 import { stampSite } from "./site-stamp.mjs";
-import { renderAll, renderBuilder, renderChart, renderCounts, renderCraft, renderEmbed, renderFlat, renderGroups, renderIndex, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface, renderDots } from "./page.ts";
+import { renderAll, renderBuilder, renderChart, renderCounts, renderCraft, renderEmbed, renderFlat, renderGroups, renderIndex, renderKepler, renderKids, renderLineup, renderMoons, renderPlan, renderPortrait, renderSpace, renderSystem, renderSpaceFull, renderStar, renderSurface, renderDots } from "./page.ts";
 
 const at = (path: string) => new URL(`../${path}`, import.meta.url).pathname;
 
 await rm(at("site/"), { recursive: true, force: true });
 await mkdir(at("site/"), { recursive: true });
 await build({
-  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts"), at("demo/flat.ts"), at("demo/system.ts"), at("demo/moons.ts"), at("demo/groups.ts"), at("demo/all.ts"), at("demo/counts.ts"), at("demo/dots.ts"), at("demo/chart.ts")],
+  entryPoints: [at("demo/demo.ts"), at("demo/surface.ts"), at("demo/embed.ts"), at("demo/builder.ts"), at("demo/portrait.ts"), at("demo/space.ts"), at("demo/space-full.ts"), at("demo/kids.ts"), at("demo/star.ts"), at("demo/craft.ts"), at("demo/lineup.ts"), at("demo/plan.ts"), at("demo/kepler.ts"), at("demo/flat.ts"), at("demo/system.ts"), at("demo/moons.ts"), at("demo/groups.ts"), at("demo/all.ts"), at("demo/counts.ts"), at("demo/dots.ts"), at("demo/chart.ts")],
   bundle: true,
   splitting: true,
   format: "esm",
@@ -58,6 +58,7 @@ await writeFile(at("site/star.html"), renderStar(), "utf8");
 await writeFile(at("site/craft.html"), renderCraft(), "utf8");
 await writeFile(at("site/lineup.html"), renderLineup(), "utf8");
 await writeFile(at("site/plan.html"), renderPlan(), "utf8");
+await writeFile(at("site/kepler.html"), renderKepler(), "utf8");
 await writeFile(at("site/flat.html"), renderFlat(), "utf8");
 await writeFile(at("site/system.html"), renderSystem(), "utf8");
 await writeFile(at("site/surface.html"), renderSurface(), "utf8");
@@ -71,4 +72,4 @@ await writeFile(at("site/builder.html"), renderBuilder(), "utf8");
 // Pages keeps a file for about ten minutes, so the new page must not ask for the previous build's script by the same address.
 const stamp = process.env.GITHUB_SHA?.slice(0, 7) || pkg.version;
 await stampSite(at("site"), stamp);
-console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, flat.html, system.html, jupiter.html, saturn.html, uranus.html, neptune.html, groups.html, all.html, counts.html, dots.html, chart.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");
+console.log("site built: index.html, embed.html, portrait.html, space.html, space-full.html, kids.html, star.html, craft.html, lineup.html, plan.html, kepler.html, flat.html, system.html, jupiter.html, saturn.html, uranus.html, neptune.html, groups.html, all.html, counts.html, dots.html, chart.html, builder.html, demo.js, embed.js, kazoku-parts.js, demo.css, family.css");

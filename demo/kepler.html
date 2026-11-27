@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!--family:head-->
+    <link rel="stylesheet" href="family.css" />
+    <link rel="stylesheet" href="demo.css" />
+    <style>
+      .kepler { display: grid; gap: 1rem; }
+      .kepler h1, .kepler h2, .kepler p { margin: 0; }
+      .kepler-header { display: grid; gap: .4rem; }
+      .kepler-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; max-width: 50rem; }
+      .kepler-controls label, .kepler-adjust label { display: grid; gap: .25rem; min-width: 0; }
+      .kepler-controls select { width: 100%; min-width: 0; min-height: 2.75rem; font: inherit; }
+      .kepler-diagrams { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+      .kepler figure { margin: 0; min-width: 0; padding: .75rem; border: 1px solid color-mix(in srgb, currentColor 24%, transparent); border-radius: .5rem; }
+      .kepler figure h2 { font-size: 1rem; }
+      .kepler figure p { font-size: .9rem; margin-top: .45rem; }
+      .kepler-svg { display: block; width: 100%; }
+      .kepler-svg text { fill: currentColor; }
+      .kepler-svg .grid { stroke: currentColor; opacity: .18; }
+      .kepler-svg .axes, .kepler-svg .ellipse { stroke: currentColor; opacity: .68; fill: none; }
+      .kepler-svg .trend { stroke: currentColor; stroke-width: 1.5; stroke-dasharray: 5 4; opacity: .7; }
+      .kepler-svg .catalogue { fill: #38a4cb; stroke: transparent; stroke-width: 9; cursor: pointer; }
+      .kepler-svg .selected { fill: #f4b344; stroke: currentColor; stroke-width: 1.5; }
+      .kepler-svg .near { fill: #ed9a35; fill-opacity: .46; stroke: #d48322; }
+      .kepler-svg .far { fill: #38a4cb; fill-opacity: .46; stroke: #2e91bb; }
+      .kepler-svg .focus { fill: #f4b344; stroke: currentColor; }
+      .kepler-svg .empty-focus, .kepler-svg .centre { fill: none; stroke: currentColor; stroke-width: 1.4; }
+      .kepler-key { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .3rem; font-size: .9rem; }
+      .kepler-key i { display: inline-block; width: .8em; height: .8em; border-radius: 50%; margin-inline-end: .25em; }
+      .kepler-key .near { background: #ed9a35; }
+      .kepler-key .far { background: #38a4cb; }
+      .kepler-practice { display: grid; gap: .5rem; }
+      .kepler-adjust { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; max-width: 50rem; }
+      .kepler-time { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .5rem .75rem; margin-top: .5rem; }
+      .kepler-time label { grid-column: 2; grid-row: 1; }
+      .kepler-time input { grid-column: 2; grid-row: 2; width: 100%; }
+      .kepler-time button { grid-row: 1 / 3; }
+      .kepler [hidden] { display: none; }
+      @media (max-width: 740px) {
+        .kepler-diagrams { grid-template-columns: minmax(0, 1fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!--family:header--><!--frame:header-->
+      <section class="kepler" aria-labelledby="kp-title">
+        <header class="kepler-header">
+          <h1 id="kp-title" data-say="kp_title">Kepler’s laws</h1>
+          <p data-say="kp_intro">Compare orbits around the same body, then see what changes when you stretch an orbit or move it farther out.</p>
+        </header>
+        <div class="kepler-controls">
+          <label><span data-say="kp_system">Central body</span><select class="fam-field" id="kp-system"></select></label>
+          <label><span data-say="kp_orbit">Orbiting body</span><select class="fam-field" id="kp-orbit"></select></label>
+        </div>
+        <div class="kepler-practice">
+          <label><input id="kp-practice" type="checkbox" /> <span data-say="kp_practice">Try a practice orbit</span></label>
+          <div id="kp-adjust" class="kepler-adjust" hidden>
+            <label><span data-say="kp_resize">Semimajor axis relative to the selected orbit</span><input id="kp-size" type="range" min="25" max="400" value="100" /><output id="kp-size-value" for="kp-size"></output></label>
+            <label><span data-say="kp_shape">Eccentricity</span><input id="kp-eccentricity" type="range" min="0" max="99" value="45" /><output id="kp-eccentricity-value" for="kp-eccentricity"></output></label>
+          </div>
+          <p id="kp-practice-period" hidden></p>
+        </div>
+        <div class="kepler-diagrams">
+          <figure aria-labelledby="kp-plot-title">
+            <h2 id="kp-plot-title" data-say="kp_plot">Period and semimajor axis</h2>
+            <div id="kp-plot"></div>
+            <p id="kp-period"></p>
+            <p data-say="kp_third">For orbits around the same body, the square of the period grows as the cube of the semimajor axis.</p>
+            <p data-say="kp_scale">Both axes use a logarithmic scale. The dashed line shows the period predicted by the third law.</p>
+          </figure>
+          <figure aria-labelledby="kp-sweep-title">
+            <h2 id="kp-sweep-title" data-say="kp_sweep">Equal areas in equal time</h2>
+            <div id="kp-sweep"></div>
+            <div class="kepler-key">
+              <span><i class="near"></i><span id="kp-near">Closest part · 12.5% of the ellipse</span></span>
+              <span><i class="far"></i><span id="kp-far">Farthest part · 12.5% of the ellipse</span></span>
+            </div>
+            <p data-say="kp_areas">The orbit is an ellipse with the central body at one focus. The two shaded sectors have equal area, and each takes one eighth of an orbit to sweep.</p>
+            <div class="kepler-time">
+              <button type="button" class="fam-button" id="kp-play" data-say="kp_play">Play orbit</button>
+              <label for="kp-time" data-say="kp_time">Time along the orbit</label>
+              <input id="kp-time" type="range" min="0" max="1000" value="0" />
+            </div>
+          </figure>
+        </div>
+      </section>
+      <!--family:unreviewed-->
+      <!--frame:credits-->
+      <!--family:footer-->
+    </main>
+    <!--family:scripts kepler.js-->
+  </body>
+</html>
