@@ -15,6 +15,7 @@ description: Draw any star from a few numbers (temperature, radius, class, how i
 | `rotationDays` | how it turns on the page: faster stars turn faster, sped up and labelled (the Sun is shown 73,000 times faster than real). Left out, a slow turn is drawn and the picture says so |
 | `activity` | spots, and prominences and flares on the edge. Left out it follows the temperature and the class: none on hot stars, many on cool dwarfs and red dwarfs |
 | `oblateness` | the squashed shape, and the hotter poles with a darker equator (gravity darkening): Vega is about 0.11 and Altair 0.2 |
+| `inclinationDeg` | how far the axis leans toward you, 0 to 90. 0 is equator-on, 90 looks straight at the pole. Left out, the usual small lean |
 | `corona` | the strength of the soft glow, 0 to 1 |
 | `variablePeriodDays`, `variableAmplitude` | the period in days and the swing either side of the mean brightness, 0 to 1. Give both. The wave is a sine, invented. Left out, the brightness stays steady |
 | `estimated` | the numbers above that are estimates, so the picture can say so |
@@ -177,7 +178,7 @@ export class StarViewComponent implements OnInit {
 
 ## In an iframe
 
-The embed page takes the same names in its address: `star`, `temperature-k`, `radius-sun`, `luminosity-class`, `rotation-days`, `activity`, `oblateness`, `corona`, `variable-period-days`, `variable-amplitude`, `estimated` and `look`.
+The embed page takes the same names in its address: `star`, `temperature-k`, `radius-sun`, `luminosity-class`, `rotation-days`, `activity`, `oblateness`, `inclination-deg`, `corona`, `variable-period-days`, `variable-amplitude`, `estimated` and `look`.
 
 ```html
 <!doctype html>

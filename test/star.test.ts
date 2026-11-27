@@ -7,7 +7,7 @@ import { build } from "esbuild";
 import { compile } from "svelte/compiler";
 import ts from "typescript";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
-import { embedCode, embedCredit, EMBED_KINDS, LUMINOSITY_CLASSES, STAR_SUN, starBrightness, starLineSvg, starLook, type EmbedOptions, type StarNumbers } from "../src/index.ts";
+import { embedCode, embedCredit, EMBED_KINDS, LUMINOSITY_CLASSES, portrait, STAR_SUN, starBrightness, starLineSvg, starLook, type EmbedOptions, type StarNumbers } from "../src/index.ts";
 import { registerStarLook, starLookOf } from "../src/scene/look.ts";
 
 const BETELGEUSE: StarNumbers = { name: "Betelgeuse", temperatureK: 3650, radiusSun: 1057, luminosityClass: "Iab", estimated: ["radiusSun"] };
@@ -30,6 +30,17 @@ test("a variable star is 1 at the mean, brighter by its swing a quarter of a per
   assert.equal(variable.look.surface.includes("uPulse"), true);
   assert.equal(variable.parts.some((part) => part.part === "variability"), true);
   assert.throws(() => starLook({ temperatureK: 3500, radiusSun: 40, variablePeriodDays: 10 }), /together/);
+});
+
+test("the axis leans toward the viewer: 90 looks straight at the pole, 0 is equator-on, and left out keeps the usual lean", () => {
+  const pole = starLook({ temperatureK: 9600, radiusSun: 2.36, inclinationDeg: 90 });
+  assert.equal(pole.inclinationDeg, 90);
+  assert.ok(portrait("sun", { pitch: pole.inclinationDeg }).pole[2] > 0.99);
+  assert.equal(pole.parts.some((part) => part.part === "inclination"), true);
+  const edge = starLook({ temperatureK: 9600, radiusSun: 2.36, inclinationDeg: 0 });
+  assert.ok(Math.abs(portrait("sun", { pitch: edge.inclinationDeg }).pole[2]) < 1e-9);
+  assert.equal(starLook(STAR_SUN).inclinationDeg, undefined);
+  assert.throws(() => starLook({ temperatureK: 5000, radiusSun: 1, inclinationDeg: 91 }), /inclinationDeg/);
 });
 
 test("the colour is the black body of the temperature: red for a cool star, white for the Sun, blue for a hot one", () => {

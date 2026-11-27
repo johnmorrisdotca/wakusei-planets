@@ -15,6 +15,7 @@ description: どんな星も、温度・半径・階級・自転などの数字�
 | `rotationDays` | ページでの回り方: 速く自転する星ほど速く回ります。速さは実際より上げていて、そう書いてあります (太陽は実際の73,000倍)。数字がないときはゆっくり回し、そう書きます |
 | `activity` | 黒点と、ふちのプロミネンス・フレア。ないときは、温度と階級から決めます。熱い星はなし、冷たい星や赤色矮星は多め |
 | `oblateness` | つぶれた形と、極が熱く赤道が暗いこと (重力暗化)。ベガは約0.11、アルタイルは0.2 |
+| `inclinationDeg` | 軸がこちらへ傾く角度 (0〜90)。0は赤道を横から、90は極を正面から見ます。ないときは、いつもの少しの傾きです |
 | `corona` | やわらかい光の強さ (0〜1) |
 | `variablePeriodDays`、`variableAmplitude` | 明るさの周期 (日) と、平均の上下への振れ (0〜1)。両方そろえて渡します。波は正弦波で、作りものです。ないときは、明るさは一定です |
 | `estimated` | 上の数字のうち、測定ではなく推定のもの。絵にもそう書きます |
@@ -177,7 +178,7 @@ export class StarViewComponent implements OnInit {
 
 ## iframe で
 
-埋め込みページは、同じ名前をアドレスで受け取ります: `star`・`temperature-k`・`radius-sun`・`luminosity-class`・`rotation-days`・`activity`・`oblateness`・`corona`・`variable-period-days`・`variable-amplitude`・`estimated`・`look`。
+埋め込みページは、同じ名前をアドレスで受け取ります: `star`・`temperature-k`・`radius-sun`・`luminosity-class`・`rotation-days`・`activity`・`oblateness`・`inclination-deg`・`corona`・`variable-period-days`・`variable-amplitude`・`estimated`・`look`。
 
 ```html
 <!doctype html>

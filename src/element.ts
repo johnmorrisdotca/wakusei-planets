@@ -65,7 +65,7 @@ const weakDevice = (): boolean => {
 };
 
 /** The attributes that carry a star's numbers beside `star`, and the number each is. */
-const STAR_ATTRS = ["temperature-k", "radius-sun", "luminosity-class", "rotation-days", "activity", "oblateness", "corona", "variable-period-days", "variable-amplitude", "estimated"] as const;
+const STAR_ATTRS = ["temperature-k", "radius-sun", "luminosity-class", "rotation-days", "activity", "oblateness", "inclination-deg", "corona", "variable-period-days", "variable-amplitude", "estimated"] as const;
 
 const readLook = (value: string | null): Look => (value === "realistic" || value === "painted" || value === "illustrated" ? value : "line");
 
@@ -714,6 +714,7 @@ export class WakuseiBody extends HTMLElement {
         ...(pick("rotation-days") !== null ? { rotationDays: number("rotation-days") } : {}),
         ...(pick("activity") !== null ? { activity: number("activity") } : {}),
         ...(pick("oblateness") !== null ? { oblateness: number("oblateness") } : {}),
+        ...(pick("inclination-deg") !== null ? { inclinationDeg: number("inclination-deg") } : {}),
         ...(pick("corona") !== null ? { corona: number("corona") } : {}),
         ...(pick("variable-period-days") !== null ? { variablePeriodDays: number("variable-period-days") } : {}),
         ...(pick("variable-amplitude") !== null ? { variableAmplitude: number("variable-amplitude") } : {}),
@@ -783,7 +784,7 @@ export class WakuseiBody extends HTMLElement {
       moons,
       portrait: {
         tilt: this.hasAttribute("tilt") ? num(this.getAttribute("tilt"), 0) : undefined,
-        pitch: this.hasAttribute("pitch") ? num(this.getAttribute("pitch"), 0) : undefined,
+        pitch: this.hasAttribute("pitch") ? num(this.getAttribute("pitch"), 0) : star?.inclinationDeg,
         phase: this.hasAttribute("phase") ? num(this.getAttribute("phase"), 0) : undefined,
         spin: this.hasAttribute("meridian") ? num(this.getAttribute("meridian"), 0) : undefined,
       },
