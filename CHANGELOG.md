@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.88.0] - 2026-11-27
+
 - **Venus map credit** (MODULES-1902). The English and Japanese guides identify Solar System Scope's `2k_venus_surface.jpg` and record the source's unspecified mission and coverage.
 - **Clearer mapped poles** (MODULES-1901). Map sampling keeps more detail near converging longitudes. Finer map windows now keep their exact latitude at each pole and fade where they meet the base map.
 
