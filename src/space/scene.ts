@@ -36,6 +36,7 @@ import { moonDistance, moonSizeFactor, orbitLine, placeAround, placeBodies, plac
 import { regionOrbits, regionView, type SunRegion } from "./regions.ts";
 import { TRAVEL_BUDGET_MS, travelPlan, travelPose, type TravelBody, type TravelInput, type TravelKind, type TravelPlan } from "./travel.ts";
 import { bodyBasis, carry, controlsFor, directionBetween, hasRotation, keepClear, pairAxis, pairBasis, type FrameKind, type HoldBasis } from "./hold.ts";
+import type { FramingSnapshot } from "./framing.ts";
 
 
 /** The parts of three.js the space view uses: the bodies' and a perspective camera. */
@@ -71,9 +72,23 @@ type OrbitBody = (typeof ORBIT_BODIES)[number];
 const FRAMED: Partial<Record<SpaceBody, number>> = { saturn: 2.3 };
 /** How much of the picture's shorter side a body's disc is framed across at zoom 1, in the body's radii: 1, and more for a ringed body. */
 export const framedOf = (id: string): number => FRAMED[id as SpaceBody] ?? 1;
+const framedDistance = (id: BodyId, radius: number, width: number, height: number, zoom: number): number =>
+  Math.max(1.05 * radius, FIT_DISTANCE * radius * framedOf(id) * Math.max(1, height / Math.max(1, width)) / Math.max(1e-9, zoom));
 /** The moons of a planet are shown once the planet is this many CSS pixels across its radius, and each is drawn at least this many pixels across its radius. */
 const MOON_MIN_PLANET_PX = 4;
 const MOON_MIN_PX = 2.2;
+const wantedMoonRadius = (radius: number, away: number, halfFov: number, height: number, factor: number): number =>
+  Math.max(radius, (away * halfFov * MOON_MIN_PX) / (height / 2)) * factor;
+
+const globePixels = (radius: number, away: number, halfFov: number, height: number, stretch: number): number =>
+  away <= radius * 1.001 ? 1e5 : ((height / 2) * (radius / Math.sqrt(away * away - radius * radius)) / halfFov) * stretch;
+
+type CameraTarget = { position: Vec3; aim: Vec3; up: Vec3; fov: number };
+function aimCamera(camera: THREE.PerspectiveCamera, pose: CameraTarget): void {
+  camera.position.set(...pose.position);
+  camera.up.set(...pose.up);
+  camera.lookAt(...pose.aim);
+}
 /** ...or a planet's moons are shown when the planet is smaller than that but its farthest moon is this many CSS pixels from it. */
 const MOON_MIN_SYSTEM_PX = 30;
 /** A moon that has been out of sight this long is let go (its pictures too). */
@@ -377,6 +392,8 @@ export interface SpaceModel {
   drawnView: { yaw: number; tilt: number; zoom: number; roll: number; panX: number; panY: number } | null;
   heightPx: number;
   camera: SpaceCamera;
+  /** Query inputs from the last settled draw. */
+  framing: FramingSnapshot | null;
   /** The body or point the camera rides along with, or null. */
   ride: RideState | null;
   /** Set at each draw: the target of the ride could not be placed, so the ordinary camera was used. */
@@ -429,7 +446,8 @@ export interface SpaceTransition {
  * ground and `pair` with the direction to a companion, from the anchor moment to now, and a pair keeps the companion from passing behind the body. Records the frame it held in `model.frameDrawn`. Worked out in the draw
  * the clock already makes; at rest, or with the frame on the stars, it costs nothing.
  */
-export function heldAim(model: SpaceModel, focus: BodyId, aim: Vec3, up: Vec3, mode: ScaleMode, siteNow: (id: BodyId) => Vec3, limb: number): { aim: Vec3; up: Vec3 } {
+type HeldCamera = Pick<SpaceModel, "frame" | "pairWith" | "companion" | "frameDrawn" | "anchor" | "holdFrom" | "time">;
+export function heldAim(model: HeldCamera, focus: BodyId, aim: Vec3, up: Vec3, mode: ScaleMode, siteNow: (id: BodyId) => Vec3, limb: number): { aim: Vec3; up: Vec3 } {
   const asked = model.frame;
   let drawn: FrameKind = "stars";
   let pair: BodyId | null = null;
@@ -534,6 +552,7 @@ export const newSpaceModel = (): SpaceModel => ({
   drawnView: null,
   heightPx: 420,
   camera: { position: [0, 0, 0], fov: FOV, up: [0, 1, 0], forward: [0, 0, -1], width: 0, height: 0, panX: 0, panY: 0 },
+  framing: null,
   ride: null,
   rideLost: false,
   transition: null,
@@ -697,6 +716,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       const camera = new three.PerspectiveCamera(FOV, width / Math.max(1, height), 0.05, 1000);
       const target = new three.Vector3();
       const projected = new three.Vector3();
+      let previewCamera: THREE.PerspectiveCamera | undefined;
+      let previewPoint: THREE.Vector3 | undefined;
       const fromQ = camera.quaternion.clone();
       const scratchA = new three.Vector3();
       const scratchB = new three.Vector3();
@@ -945,6 +966,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             track.setStep(model.stepMs);
           }
           const mode = model.mode;
+          const frameTime = model.time;
           const moonVisible = model.moonAllowed?.has("moon") ?? true;
           const pos = placeBodies(mode, frame);
           const radiusOf = (id: SpaceBody): number => radiusIn(id, mode);
@@ -961,7 +983,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           const absoluteSite = (id: BodyId): Vec3 => {
             if ((SPACE_BODIES as readonly string[]).includes(id)) return pos[id as SpaceBody];
             const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
-            const offset = moonSite(id as MoonId, model.time, host);
+            const offset = moonSite(id as MoonId, frameTime, host);
             const hostRadius = radiusOf(host);
             return [pos[host][0] + offset[0] * hostRadius, pos[host][1] + offset[1] * hostRadius, pos[host][2] + offset[2] * hostRadius];
           };
@@ -1095,11 +1117,15 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           model.frameDrawn = { asked: model.frame, drawn: "stars", pair: null };
           let fovNow = FOV;
           let distance = 0;
+          let framingCamera: ((zoom: number) => CameraTarget) | undefined;
           if (besideIn) {
-            const view = besideMoon({ ...besideIn, aspect: size.width / Math.max(1, size.height), zoom: model.view.zoom, yaw: model.view.yaw, tilt: model.view.tilt });
-            camera.position.set(view.position[0], view.position[1], view.position[2]);
-            camera.up.set(view.up[0], view.up[1], view.up[2]);
-            camera.lookAt(view.position[0] + view.forward[0], view.position[1] + view.forward[1], view.position[2] + view.forward[2]);
+            const input = { ...besideIn, aspect: size.width / Math.max(1, size.height), yaw: model.view.yaw, tilt: model.view.tilt };
+            const targetOf = (view: ReturnType<typeof besideMoon>): CameraTarget => ({
+              position: view.position, aim: plus(view.position, view.forward), up: view.up, fov: view.fov,
+            });
+            const view = besideMoon({ ...input, zoom: model.view.zoom });
+            aimCamera(camera, targetOf(view));
+            framingCamera = (zoom) => targetOf(besideMoon({ ...input, zoom }));
             fovNow = view.fov;
             distance = view.distance;
             camera.near = Math.max(1e-4, (view.distance - besideIn.moonRadius) * 0.1);
@@ -1125,17 +1151,17 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const bias = model.holdBias !== null && model.holdBias.anchor === model.anchor ? model.holdBias : { yaw: 0, tilt: 0, up: [0, 1, 0] as Vec3 };
             const lon = model.centre.lon - aimWay * (model.view.yaw + bias.yaw);
             const lat = Math.max(-90, Math.min(90, model.centre.lat - aimWay * (model.view.tilt + bias.tilt)));
-            let aim = groundDirection(lon, lat, model.anchor);
+            const ground = groundDirection(lon, lat, model.anchor);
+            const { width: cameraWidth, height: cameraHeight } = size;
+            const distanceAt = (zoom: number): number => framedDistance(focus, focusRadius, cameraWidth, cameraHeight, zoom);
             // at zoom 1 the whole picture of the body fits the shorter side of the view, in any shape: a tall view is as far again as it is taller than wide, and a ringed body is framed with its rings
-            const across = focusRadius * (FRAMED[focus as SpaceBody] ?? 1) * Math.max(1, size.height / Math.max(1, size.width));
-            distance = Math.max(1.05 * focusRadius, (FIT_DISTANCE * across) / Math.max(1e-9, model.view.zoom));
+            distance = distanceAt(model.view.zoom);
             // held in the frame the view is set to (`frame`): turned with the body's ground or with a pair, from the anchor moment to now
-            let upNow: Vec3 = bias.up;
-            if (model.frame !== "stars" && model.ride === null && model.region === null) {
-              const held = heldAim(model, focus, aim, bias.up, mode, absoluteSite, Math.asin(Math.min(0.99, focusRadius / Math.max(1e-9, distance))) * 1.05);
-              aim = held.aim;
-              upNow = held.up;
-            }
+            const useHold = model.frame !== "stars" && model.ride === null && model.region === null;
+            const directionAt = (range: number, holder: HeldCamera) => useHold
+              ? heldAim(holder, focus, ground, bias.up, mode, absoluteSite, Math.asin(Math.min(0.99, focusRadius / Math.max(1e-9, range))) * 1.05)
+              : { aim: ground, up: bias.up };
+            const { aim, up: upNow } = directionAt(distance, model);
             target.set(focusPos[0], focusPos[1], focusPos[2]);
             model.regionDrawn = null;
             if (model.region !== null && focus === "sun") {
@@ -1150,6 +1176,16 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             camera.position.set(target.x + aim[0] * distance, target.y + aim[1] * distance, target.z + aim[2] * distance);
             camera.up.set(upNow[0], upNow[1], upNow[2]);
             camera.lookAt(target);
+            if (model.region === null && model.ride === null) {
+              const { frame: heldFrame, pairWith, companion, frameDrawn, anchor, holdFrom } = model;
+              const previewHold = { frame: heldFrame, pairWith, companion, frameDrawn, anchor, holdFrom, time: frameTime };
+              framingCamera = (zoom) => {
+                const range = distanceAt(zoom);
+                const { aim: outward, up } = directionAt(range, previewHold);
+                const position: Vec3 = [focusPos[0] + outward[0] * range, focusPos[1] + outward[1] * range, focusPos[2] + outward[2] * range];
+                return { position, aim: focusPos, up, fov: FOV };
+              };
+            }
             // the floor is a tenth of the distance when the camera is nearer than 0.005 (about 32 km): Bennu's middle is 1 km from the eye, inside the old floor of 0.0005, and a point nearer than the near plane is not drawn or placed
             camera.near = Math.max(Math.min(0.0005, distance * 0.1), distance * 0.02 - focusRadius * 0.5, focusRadius * 0.01);
             camera.far = Math.max(2000, distance * 4 + (mode === "true" ? 40 * 23_481 : 400));
@@ -1267,10 +1303,95 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           // a body is drawn round wherever it is in the picture, and wider across the farther out it is (the picture's plane is that much farther from the camera there): its radius on the screen is that of one in the middle times `1 / cos` of how far off the line of sight it is
           const eyeAt: Vec3 = [camera.position.x, camera.position.y, camera.position.z];
           const lookAt: Vec3 = [-e2[8]!, -e2[9]!, -e2[10]!];
+          const cameraAt = framingCamera;
+          const allowed = model.moonAllowed;
+          model.framing = null;
+          if (cameraAt !== undefined && model.travelling === null && (BODIES[focus].kind !== "moon" || allowed === null || allowed.has(focus))) {
+            const { width: frameWidth, height: frameHeight } = size;
+            const { moonSize, view: { roll } } = model;
+            const drawnUp: Vec3 = [e2[4]!, e2[5]!, e2[6]!];
+            let sites: Map<BodyId, { at: Vec3; radius: number; cap: number; factor: number }> | undefined;
+            const siteOf = (id: BodyId) => {
+              sites ??= new Map();
+              const held = sites.get(id);
+              if (held !== undefined) return held;
+              let site;
+              if ((SPACE_BODIES as readonly BodyId[]).includes(id)) {
+                site = { at: pos[id as SpaceBody], radius: radiusOf(id as SpaceBody), cap: Infinity, factor: 1 };
+              } else {
+                const host = (hostOf(id) ?? "earth") as SpacePlanet | SpaceDwarf;
+                const radius = radiusOf(host);
+                site = {
+                  at: absoluteSite(id),
+                  radius: (BODIES[id].radiusKm / BODIES[host].radiusKm) * radius,
+                  cap: 0.25 * radius,
+                  factor: moonScaleFor(mode, host, moonSize, frameTime).factor,
+                };
+              }
+              sites.set(id, site);
+              return site;
+            };
+            model.framing = {
+              focus,
+              beside: besideIn !== null,
+              forBody(id) {
+                if (BODIES[id].kind === "moon" && allowed !== null && !allowed.has(id)) return null;
+                const beside = id === focus && besideIn !== null;
+                const subject = siteOf(id);
+                const poseAt = id === focus ? cameraAt : (zoom: number): CameraTarget => {
+                  const range = framedDistance(id, Math.max(1e-9, subject.radius * subject.factor), frameWidth, frameHeight, zoom);
+                  const at = subject.at;
+                  return {
+                    position: [at[0] - lookAt[0] * range, at[1] - lookAt[1] * range, at[2] - lookAt[2] * range],
+                    aim: at,
+                    up: drawnUp,
+                    fov: FOV,
+                  };
+                };
+                return {
+                  width: frameWidth,
+                  height: frameHeight,
+                  beside,
+                  host: beside ? (ride?.around ?? null) : null,
+                  sample(zoom, kind, companion) {
+                    const pose = poseAt(zoom);
+                    const forecast = previewCamera ??= new three.PerspectiveCamera();
+                    const point = previewPoint ??= new three.Vector3();
+                    aimCamera(forecast, pose);
+                    if (id === focus && roll !== 0) forecast.rotateZ(roll * RAD);
+                    forecast.fov = pose.fov;
+                    forecast.aspect = frameWidth / frameHeight;
+                    forecast.updateProjectionMatrix();
+                    forecast.updateMatrixWorld();
+                    const basis = forecast.matrixWorld.elements;
+                    const forward: Vec3 = [-basis[8]!, -basis[9]!, -basis[10]!];
+                    const tangent = Math.tan((pose.fov / 2) * RAD);
+                    const project = (id: BodyId, envelope: number) => {
+                      const { at, radius, cap, factor } = siteOf(id);
+                      const [dx, dy, dz] = minus(at, pose.position);
+                      if (dx * forward[0] + dy * forward[1] + dz * forward[2] <= 0) return null;
+                      const away = Math.hypot(dx, dy, dz);
+                      const drawn = cap === Infinity ? radius : Math.min(cap, wantedMoonRadius(radius, away, tangent, frameHeight, factor));
+                      const stretch = edgeStretch(pose.position, forward, at);
+                      point.set(...at).project(forecast);
+                      return {
+                        spot: { x: ((point.x + 1) / 2) * frameWidth, y: ((1 - point.y) / 2) * frameHeight, r: globePixels(drawn, away, tangent, frameHeight, stretch) },
+                        extent: globePixels(drawn * envelope, away, tangent, frameHeight, stretch),
+                      };
+                    };
+                    const body = project(id, kind === "whole" ? framedOf(id) : 1)!;
+                    const shown = companion === undefined || !Object.hasOwn(BODIES, companion) || (BODIES[companion].kind === "moon" && allowed !== null && !allowed.has(companion))
+                      ? null : (project(companion, 1)?.spot ?? null);
+                    return { body: body.spot, extent: body.extent, companion: shown };
+                  },
+                };
+              },
+            };
+          }
           const radiusPxOf = (id: SpaceBody): number => {
             const d = Math.hypot(pos[id][0] - camera.position.x, pos[id][1] - camera.position.y, pos[id][2] - camera.position.z);
             const r = radiusOf(id);
-            return d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, pos[id]);
+            return globePixels(r, d, half, size.height, edgeStretch(eyeAt, lookAt, pos[id]));
           };
           const px = {} as Record<SpaceBody, number>;
           for (const id of SPACE_BODIES) px[id] = radiusPxOf(id);
@@ -1737,15 +1858,14 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               const drawing = held.slot.drawing;
               if (!drawing) continue;
               const away = Math.hypot(at[0] - camera.position.x, at[1] - camera.position.y, at[2] - camera.position.z);
-              const floor = (away * half * MOON_MIN_PX) / (size.height / 2);
-              const wanted = Math.max(site.radius * radius, floor) * sized.factor;
+              const wanted = wantedMoonRadius(site.radius * radius, away, half, size.height, sized.factor);
               const cap = 0.25 * radius;
               const drawn = Math.min(wanted, cap);
               if (drawn + 1e-4 < wanted && (id === model.focus || hostOf(model.focus) === id)) model.moonDrawn = { factor: sized.factor, clamped: true };
               drawing.object.visible = true;
               drawing.object.position.set(at[0], at[1], at[2]);
               drawing.object.scale.setScalar(drawn);
-              const moonPx = away <= drawn * 1.001 ? 1e5 : (((size.height / 2) * (drawn / Math.sqrt(away * away - drawn * drawn))) / half) * edgeStretch(eyeAt, lookAt, at);
+              const moonPx = globePixels(drawn, away, half, size.height, edgeStretch(eyeAt, lookAt, at));
               drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
               const spot = labelFor(at);
               if (spot) {

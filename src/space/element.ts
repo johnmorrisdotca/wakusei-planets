@@ -46,6 +46,7 @@ import { cross, dot, length, sub, unit, type Vec3 } from "../vec.ts";
 import type { ArrivalCompanion } from "./travel.ts";
 import { createSpaceItem, FIT_DISTANCE, framedOf, heldAim, moonScaleFor, newSpaceModel, SPACE_BODIES, type BodyPathPoint, type BodyPlace, type RidePoint, type RideState, type RideTarget, type SpaceBody, type SpaceCamera, type SpaceLight, type SpaceModel } from "./scene.ts";
 import { paintLengthOf, paintSwathOf, type PaintSpec } from "../paint/trail.ts";
+import { solveFraming, type BodyFraming, type BodyFramingOptions, type BodyFramingResult } from "./framing.ts";
 
 export type { PaintSpec };
 export { BUILT_IN_PATH_STYLES, MAX_PATHS, completeStyle, nearestPath, pathSpanMs, styleTable, type PathHit, type PathRequest, type PathScreen, type PathStyle } from "./path-styles.ts";
@@ -61,6 +62,7 @@ const SMALL_MOONS: ReadonlySet<string> = new Set(["amalthea", "thebe", "pan", "d
 /** Where a body is on the screen, in CSS pixels in the element: its centre and its radius. */
 export type { BodyPathPoint, BodyPlace };
 export type { SpaceCamera };
+export type { BodyFraming, BodyFramingOptions, BodyFramingResult };
 
 const copyCamera = (camera: SpaceCamera): SpaceCamera => ({ ...camera, position: [...camera.position], up: [...camera.up], forward: [...camera.forward] });
 
@@ -547,6 +549,7 @@ export class WakuseiSpace extends HTMLElement {
   }
 
   disconnectedCallback(): void {
+    this.#model.framing = null;
     this.#cameraTold = null;
     this.#hands?.unbind();
     this.#hands = undefined;
@@ -2748,6 +2751,33 @@ export class WakuseiSpace extends HTMLElement {
     const zoom = FIT_DISTANCE / Math.max(FIT_DISTANCE, reach * 3.4);
     // the Moon's own picture is a quarter of the Earth's in the compressed scale (it was drawn as 0.9 of it): the view of its orbit is still the one that holds the Earth too, three Moon-distances out
     return preset === "moon" && mode === "compressed" ? zoom * (radiusIn("moon", mode) / 0.9) : zoom;
+  }
+
+  /**
+   * Predict a named framing or an exact zoom for a body, with pan reset. Uses the last settled camera's direction, screen size and date. For another body, it centres the normal camera on that body from the same direction.
+   * The body and companion's centres can lie outside the frame. Beside a moon, the companion defaults to its planet. The view stays where it is and the query asks for no frame.
+   *
+   * @param id - The body to frame.
+   * @param kind - `whole` includes the ring envelope. `close` measures the globe.
+   * @param options - A requested share of the shorter side, a zoom to inspect, or a companion to project.
+   * @returns The predicted framing, or `null` before a settled draw, during a glide or for a view with no framing for that body.
+   * @example
+   * ```ts no-run
+   * import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+   * const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+   * const whole = space.framingFor(space.body, "whole", { companion: "sun" });
+   * if (whole) space.controller?.set({ zoom: whole.zoom, panX: 0, panY: 0 });
+   * ```
+   */
+  framingFor(id: BodyId | string, kind: BodyFraming, options: BodyFramingOptions = {}): BodyFramingResult | null {
+    const { framing, ride, transition, region, focus } = this.#model;
+    const focused = ride?.view === "beside" ? ride.target : focus;
+    if (framing === null || this.#state !== "live" || transition !== null || region !== null || framing.beside !== (ride?.view === "beside")) return null;
+    if ((ride !== null && ride.view !== "beside") || (kind !== "whole" && kind !== "close") || focused !== framing.focus) return null;
+    const body = readBody(id);
+    const input = body === undefined ? null : framing.forBody(body);
+    if (input === null) return null;
+    return solveFraming(input, kind, options, this.controller?.limits ?? CARRIED_LIMITS);
   }
 
   /**

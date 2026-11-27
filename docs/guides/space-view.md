@@ -84,6 +84,22 @@ A planet's nearer moons appear round it once the planet is a few pixels across, 
 
 **The names of the craft give way.** With `spacecraft` on, a craft's name is written beside its dot like a body's, but it gives way. A body's name (a planet's, a dwarf planet's or a moon's) always wins over any craft's. Two craft names that touch give way by rank: the craft chosen first, then a favourite (`space.favourites`, a list of craft ids), then the one nearer the body in view. A craft's name goes round its dot, to the left, above or below, before it is left out; the dot always stays. `space.keepOut` is a list of rectangles of the element's own box, `[{ x, y, w, h }]` in CSS pixels: the page's bar, its notices, its strip. No name is written under one, a body's included. `space.labelShort` (`{ juice: { en: "JUICE", ja: "ジュース" }, webb: "Webb" }`) writes a craft's label short, in the language shown; the full name stays the craft's name for a card, a press, an event and a screen reader. The package ships no short names, so the page hands the table it wants. The layout is `placeLabels` (and `chooseLabels`) from `/space`, which takes the boxes, their ranks, other places to try and the rectangles.
 
+## Whole body and Close framing
+
+`space.framingFor(id, "whole" | "close", options)` predicts a zoom for a body. It uses the beside camera for the moon it is currently beside. For another body it centres the normal camera on that body from the direction of the last draw, so a page can choose its arrival zoom before travelling. The diameter is measured against the shorter side of the picture. Whole body defaults to two thirds, including Saturn's ring envelope. Close defaults to 1.8 and measures the globe. Set `share` to use a different proportion or pass `zoom` to inspect an exact zoom.
+
+The result gives the proposed `zoom`, the achieved `share`, `clamped` when the camera cannot reach the requested framing, and the predicted places of the body and companion in CSS pixels with pan reset. Pass `companion: "sun"` to see where the Sun would be. Beside a moon, its planet is the default companion. An off-screen companion in front of the camera can have coordinates beyond the edges. A companion behind the camera has a null place.
+
+```ts no-run
+import type { WakuseiSpace } from "@johnmorrisdotca/wakusei-planets/space/element";
+
+const space = document.querySelector<WakuseiSpace>("wakusei-space")!;
+const whole = space.framingFor(space.body, "whole", { companion: "sun" });
+if (whole) space.controller?.set({ zoom: whole.zoom, panX: 0, panY: 0 });
+```
+
+The query reads the last settled draw and leaves the live view alone. It returns `null` before that draw, during a glide, for a region or along-orbit camera, or for an unknown or filtered-out body. `zoomFor("solar-system")` and the other preset calls are available as before.
+
 ## Bodies out of view
 
 `space.sight()` says where each body is for the picture at the last draw, as a list of `{ id, kind, host, inView, behind, edge, x, y, along, angle }`. A body whose disc is on the picture is `inView`. For one that is not, `edge` is the side of the picture it lies beyond (`top`, `right`, `bottom` or `left`), `x` and `y` the point on that edge where a line from the middle of the view to the body crosses it, `along` the same point measured along the edge (from the left for the top and bottom, from the top for the sides), `angle` the way to it in degrees clockwise from the top of the picture, and `behind` is true while it is behind the camera. The list holds the Sun, the planets, the dwarf planets and the minor bodies, the moons of the body looked at and any other moon drawn, the asteroids of `/asteroids` with `kind: "small-body"` when the option `asteroids` is on, and it holds while riding along (without the body ridden on). `wakusei-sight` fires with `{ bodies }`, the same list, when a body comes into view or leaves it, goes behind the camera or comes out, changes edge, or moves 8 CSS pixels along its edge, at most four times a second while the view moves and once more when it settles; never at rest. The view works the list out only for a page that asks: the first `sight()` call or the first `wakusei-sight` listener asks for one draw, and the list is there from that draw on. The view draws no tabs itself: a page places its own on the edges its controls leave free, and a press on one calls `space.goTo(id)`. `sightOf` and `sightChanged` from `/space` are the maths.
