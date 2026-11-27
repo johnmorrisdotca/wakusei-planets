@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [0.84.0] - 2026-11-27
+
+- **Kepler's laws teaching page** (MODULES-676). A new English and Japanese demo, `kepler.html`, linked from Plan. It plots period against semimajor axis on log scales for each central body's catalogue orbits, with the third-law prediction dashed and the Sun's plot labelled at Mercury, Earth, Jupiter, Neptune and Pluto. An ellipse view marks the central body's focus, the empty focus and the centre, and shades two sectors that each sweep 12.5% of the ellipse in one eighth of an orbit. Practice sliders change the semimajor axis and eccentricity independently. Playback starts on request, stops while hidden and is off under reduced motion.
+
+- **Automatic travel stays level near the poles** (MODULES-1027). Every automatic motion of the space view turns about one axis at a time, so a trip that passes near a pole no longer rolls the view.
+
 ## [0.83.0] - 2026-11-27
 
 - **Named camera framing** (MODULES-961). `space.framingFor` works out the zoom for Whole body and Close views and predicts where a companion lands on the screen. It uses the regular and beside cameras' own geometry. The query leaves the camera and its draw count as they were.
