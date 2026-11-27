@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Ecliptic longitude and latitude of date** (MODULES-536). `skyBody` gives `eclipticDate`, the same apparent direction as `equatorialDate`, on the ecliptic of date. Houses and ayanamsa stay out of this package.
+
 - **A roadmap, planned and not promised** (MODULES-540). `docs/roadmap.md` says where positions, sky events, the suncalc drop-in, fact sheets, comets and asteroids, the element export and the interstellar-tools decision stand, and what is still open. It adds no accuracy figure. It is not a published guide.
 
 - **Nothing is taken from interstellar-tools** (MODULES-530). The decision is in `docs/design/interstellar-tools.md`. Body names may be used as a checklist; every number comes from JPL. Their tables, time scales, Sun and Moon series, tracking and maps are not copied and not depended on.

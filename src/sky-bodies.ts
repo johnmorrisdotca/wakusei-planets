@@ -5,7 +5,7 @@ import { julianCenturies } from "./clock.ts";
 import { heliocentric, heliocentricModel, moonGeocentric, poleOf } from "./ephemeris.ts";
 import { BODIES } from "./facts.ts";
 import { horizontalOf, moonEquatorial, moonPhase, refraction, sunEquatorial, type Equatorial } from "./sky/engine.ts";
-import { eclipticJ2000ToTrueEquatorialOfDate } from "./sky/frames.ts";
+import { eclipticJ2000ToTrueEquatorialOfDate, trueEquatorialOfDateToEcliptic } from "./sky/frames.ts";
 import { moment } from "./sky/events.ts";
 import { meanObliquityArcseconds } from "./sidereal.ts";
 import { earthPosition } from "./theory.ts";
@@ -108,7 +108,7 @@ export interface SkyHorizontal {
 
 /**
  * One body of the sky list. Angles are degrees, distances astronomical units (and kilometres), sizes arcseconds. `equatorialDate` is the apparent place of date (the true equator and equinox of the moment, aberration and
- * nutation in), `equatorialJ2000` the same direction without aberration in the J2000 equatorial frame (what a chart on J2000 reads). The places are the Earth's centre's; `horizontal` is the place's.
+ * nutation in), `eclipticDate` that same direction as ecliptic longitude and latitude of date, and `equatorialJ2000` the direction without aberration in the J2000 equatorial frame (what a chart on J2000 reads). The places are the Earth's centre's; `horizontal` is the place's.
  *
  * @example
  * ```ts no-run
@@ -128,6 +128,8 @@ export interface SkyBody {
    */
   accurate: boolean;
   equatorialDate: { rightAscensionDeg: number; declinationDeg: number };
+  /** The same apparent direction as `equatorialDate`, as ecliptic longitude and latitude of date, in degrees. */
+  eclipticDate: { longitudeDeg: number; latitudeDeg: number };
   equatorialJ2000: { rightAscensionDeg: number; declinationDeg: number };
   distanceAu: number;
   distanceKm: number;
@@ -221,7 +223,7 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
   const base = { id, name: { en: facts.name.en, ja: facts.name.ja } };
   let equatorial: Equatorial;
   let j2000: Vec;
-  let body: Omit<SkyBody, "horizontal" | "aboveHorizon" | "id" | "name" | "accurate">;
+  let body: Omit<SkyBody, "horizontal" | "aboveHorizon" | "id" | "name" | "accurate" | "eclipticDate">;
   const earth = earthPosition(ms) as Vec;
   const sunGeo = unit([-earth[0], -earth[1], -earth[2]]);
   const T = julianCenturies(ms);
@@ -292,7 +294,8 @@ function bodyAt(id: SkyBodyId, ms: number, observer: Observer | undefined): SkyB
   }
   // Pluto is from a table fitted for 1800 to 2199; outside it the package falls back on an approximate orbit that is off by degrees
   const accurate = id !== "pluto" || heliocentricModel("pluto", ms).theory === "chebyshev";
-  const out: SkyBody = { ...base, ...body, accurate } as SkyBody;
+  const eclipticDate = trueEquatorialOfDateToEcliptic(equatorial.rightAscension, equatorial.declination, T);
+  const out: SkyBody = { ...base, ...body, eclipticDate, accurate } as SkyBody;
   if (id !== "sun") {
     out.elongationDeg = Math.acos(Math.max(-1, Math.min(1, dot(geoDirection, sunGeo)))) * DEG;
     // the evening side: its right ascension is ahead of the Sun's by less than half a turn, so it crosses the meridian and sets after the Sun (JPL Horizons' "trailing", /T). Close to the Sun, where a planet

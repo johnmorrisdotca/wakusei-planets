@@ -2,7 +2,7 @@
 title: Where the planets are in the sky
 section: how-to
 order: 34
-description: The Sun, the Moon and the planets for a moment, and for a place, with right ascension and declination of date and of J2000, magnitude, size, phase, elongation, azimuth and altitude, as plain data.
+description: The Sun, the Moon and the planets for a moment, and for a place, with right ascension and declination of date and of J2000, ecliptic longitude and latitude of date, magnitude, size, phase, elongation, azimuth and altitude, as plain data.
 ---
 
 `skyBodies(when, observer?)` from `@johnmorrisdotca/wakusei-planets/sky-bodies` says where the Sun, the Moon, the seven other planets and Pluto are in the sky at a moment: where on the sky, how bright, how big, how much of the disc is lit and how far from the Sun, and, when a place is given, which way to look and whether the body is up. It is a pure function: the moment is passed in, nothing reads a clock, there is no DOM and no three.js, and it uses this package's own positions (the sky engine of `/suncalc` for the Sun and the Moon, VSOP87B with light time and aberration for the planets, Pluto from its table) and no second model.
@@ -28,6 +28,7 @@ console.log(`Mars: magnitude ${mars.magnitude.toFixed(1)}, ${mars.elongationDeg.
 | `id`, `name.en`, `name.ja`, `kind` | The body, its names and `star`, `moon`, `planet` or `dwarf`. |
 | `accurate` | `true` where the figures hold to the accuracy below, for every body. Pluto outside the years its table is fitted for (1800 to 2199) is still returned, with `accurate: false`: its place then comes from an approximate orbit that can be wrong by degrees. |
 | `equatorialDate` | The apparent place of the moment: right ascension and declination in degrees, true equator and equinox of date, aberration and nutation in. |
+| `eclipticDate` | The same apparent direction, as ecliptic longitude and latitude of date, in degrees. |
 | `equatorialJ2000` | The same direction without aberration, in the J2000 equatorial frame, in degrees: what a chart drawn on J2000 reads. |
 | `distanceAu`, `distanceKm` | The distance from the Earth's centre. |
 | `magnitude` | The apparent visual magnitude (Saturn's with its rings). |

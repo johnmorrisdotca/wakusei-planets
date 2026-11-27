@@ -17,6 +17,22 @@ const frameTurn = (axis: 1 | 2 | 3, a: number): Matrix => {
   return [[c, s, 0], [-s, c, 0], [0, 0, 1]];
 };
 
+/** Apparent right ascension and declination of date, in degrees, as ecliptic longitude and latitude of date. The obliquity is the true one, so this is the same direction. */
+export function trueEquatorialOfDateToEcliptic(rightAscensionDeg: number, declinationDeg: number, T: number): { longitudeDeg: number; latitudeDeg: number } {
+  const n = nutation(T);
+  const e = n.meanObliquity + n.obliquity;
+  const ra = rightAscensionDeg * (Math.PI / 180);
+  const dec = declinationDeg * (Math.PI / 180);
+  const cosDec = Math.cos(dec);
+  const x = cosDec * Math.cos(ra);
+  const y = cosDec * Math.sin(ra);
+  const z = Math.sin(dec);
+  const DEG = 180 / Math.PI;
+  const longitudeDeg = ((Math.atan2(y * Math.cos(e) + z * Math.sin(e), x) * DEG) % 360 + 360) % 360;
+  const latitudeDeg = Math.asin(Math.max(-1, Math.min(1, -y * Math.sin(e) + z * Math.cos(e)))) * DEG;
+  return { longitudeDeg, latitudeDeg };
+}
+
 /** A J2000 mean-ecliptic vector turned into the true equator and equinox of date: obliquity of J2000, IAU 1976 precession, then nutation. */
 export function eclipticJ2000ToTrueEquatorialOfDate(ecliptic: Vec, T: number): Vec {
   const equatorial = apply(frameTurn(1, -OBLIQUITY_J2000), ecliptic);

@@ -4,6 +4,8 @@
 //  - Azi and Elev (a-app): airless apparent azimuth and elevation for the site; the site's RA and DEC (a-appar) for the Moon's parallax.
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { julianCenturies } from "../src/clock.ts";
+import { trueEquatorialOfDateToEcliptic } from "../src/sky/frames.ts";
 import { SKY_BODY_IDS, SKY_RANGE, skyBodies, skyBody, type SkyBodyId } from "../src/sky-bodies.ts";
 
 const DATES = [Date.UTC(2024, 2, 20, 12), Date.UTC(2026, 5, 21, 12), Date.UTC(2030, 11, 1, 0)];
@@ -112,13 +114,15 @@ function separationArcmin(a: [number, number], b: [number, number]): number {
   return Math.acos(Math.max(-1, Math.min(1, c))) * (180 / Math.PI) * 60;
 }
 /** How far each figure of each body is from Horizons' (the worst of the rows given). Worked out inside the tests that use it, never when the file is read. */
-function measure(rows: readonly Row[]): Record<string, { j2000: number; ofDate: number; magnitude: number; diameter: number; elongation: number; illumination: number }> {
-  const worst: Record<string, { j2000: number; ofDate: number; magnitude: number; diameter: number; elongation: number; illumination: number }> = {};
+function measure(rows: readonly Row[]): Record<string, { j2000: number; ofDate: number; ecliptic: number; magnitude: number; diameter: number; elongation: number; illumination: number }> {
+  const worst: Record<string, { j2000: number; ofDate: number; ecliptic: number; magnitude: number; diameter: number; elongation: number; illumination: number }> = {};
   for (const row of rows) {
     const body = skyBody(row.id, row.date);
-    const w = (worst[row.id] ??= { j2000: 0, ofDate: 0, magnitude: 0, diameter: 0, elongation: 0, illumination: 0 });
+    const w = (worst[row.id] ??= { j2000: 0, ofDate: 0, ecliptic: 0, magnitude: 0, diameter: 0, elongation: 0, illumination: 0 });
     w.j2000 = Math.max(w.j2000, separationArcmin([body.equatorialJ2000.rightAscensionDeg, body.equatorialJ2000.declinationDeg], row.j2000));
     w.ofDate = Math.max(w.ofDate, separationArcmin([body.equatorialDate.rightAscensionDeg, body.equatorialDate.declinationDeg], row.ofDate));
+    const ecliptic = trueEquatorialOfDateToEcliptic(row.ofDate[0], row.ofDate[1], julianCenturies(row.date));
+    w.ecliptic = Math.max(w.ecliptic, separationArcmin([body.eclipticDate.longitudeDeg, body.eclipticDate.latitudeDeg], [ecliptic.longitudeDeg, ecliptic.latitudeDeg]));
     w.magnitude = Math.max(w.magnitude, Math.abs(body.magnitude - row.magnitude));
     w.diameter = Math.max(w.diameter, Math.abs(body.angularDiameterArcsec / row.diameterArcsec - 1));
     w.illumination = Math.max(w.illumination, Math.abs(body.illuminatedFraction * 100 - row.illuminationPercent));
@@ -167,6 +171,7 @@ test("every body's place, magnitude, size, phase and elongation are within the s
     const t = TOLERANCE[id];
     assert.ok(w.j2000 <= t.positionJ2000, `${id} J2000 ${w.j2000.toFixed(3)} arcmin`);
     assert.ok(w.ofDate <= t.position, `${id} of date ${w.ofDate.toFixed(3)} arcmin`);
+    assert.ok(w.ecliptic <= t.position, `${id} ecliptic ${w.ecliptic.toFixed(3)} arcmin`);
     assert.ok(w.magnitude <= t.magnitude, `${id} magnitude ${w.magnitude.toFixed(3)}`);
     assert.ok(w.diameter <= FIELDS.diameter, `${id} diameter ${(w.diameter * 100).toFixed(3)} percent`);
     assert.ok(w.illumination <= FIELDS.illuminationPoints, `${id} illuminated fraction ${w.illumination.toFixed(3)} points`);
