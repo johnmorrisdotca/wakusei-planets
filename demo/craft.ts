@@ -155,7 +155,9 @@ async function show(): Promise<void> {
     : `${craft.name.en} (${craft.agency}, ${status}). Launch: ${new Date(craft.launch.date).toLocaleString()}, ${craft.launch.site.en}, ${craft.launch.vehicle}.`;
   $<HTMLElement>("#events").replaceChildren(...craft.events.map((event) => {
     const item = document.createElement("li");
-    const at = new Date(event.date).toLocaleDateString(undefined, event.precision === "minute" ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" });
+    const at = event.precision === "minute"
+      ? new Date(event.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
+      : new Date(event.date).toLocaleDateString(undefined, { dateStyle: "medium" });
     item.textContent = `${at}: ${event.name[words]}`;
     return item;
   }));

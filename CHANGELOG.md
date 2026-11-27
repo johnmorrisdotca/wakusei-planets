@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Shown times match the page's own date in any zone** (MODULES-954). A local date box shows the device's time, and a sky date on the portrait page is a real instant. A spacecraft event that names a minute shows that minute. A time marked UTC stays UTC.
+
 - **A star's look is a step richer** (MODULES-734). The granulation is finer and deeper, the chromosphere ring is brighter, and a star hotter than the Sun has a stronger bloom. The Sun's own colour step is unchanged.
 
 - **The Sun's star drawing is a step warmer** (MODULES-734). Near the Sun's temperature the cells and the glow lean toward the Sun's own yellow and orange. The named colour stays the black body. A hot star is left alone.

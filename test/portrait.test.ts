@@ -174,6 +174,13 @@ test("a scene survives the address: every field, and a manual layout keeps its p
   assert.equal(encodeScene(defaultPortrait()), "");
 });
 
+test("a sky date is an instant, and the scene text keeps that instant", () => {
+  const ms = Date.parse("2026-11-02T14:00:00.000Z");
+  const p = setPortrait(defaultPortrait(), { date: new Date(ms).toISOString() });
+  const back = decodeScene(encodeScene(p));
+  assert.equal(Date.parse(back.date!), ms);
+});
+
 test("any text gives a scene: unknown bodies and fields are dropped, numbers are held in range, a body is there once", () => {
   const p = decodeScene("nonsense~look:cubist~bg:stars~earth_x_y_z~earth_1_1_1~planetx_1_1_1~light:900,500~ratio:99~mars__~~date:never~moons:manual");
   assert.deepEqual(p.items.map((i) => i.body), ["earth", "mars"]);

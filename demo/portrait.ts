@@ -275,10 +275,10 @@ for (const b of all("#bgs [data-bg]")) b.addEventListener("click", () => change(
 $("#labels").addEventListener("click", () => change(setPortrait(scene(), { labels: !scene().labels })));
 $("#orbits").addEventListener("click", () => change(setPortrait(scene(), { orbits: !scene().orbits })));
 $("#shadows").addEventListener("click", () => change(setPortrait(scene(), { shadows: !scene().shadows })));
-$("#skydate").addEventListener("click", () => change(setPortrait(scene(), { date: scene().date === undefined ? new Date().toISOString().slice(0, 16) : undefined })));
+$("#skydate").addEventListener("click", () => change(setPortrait(scene(), { date: scene().date === undefined ? new Date().toISOString() : undefined })));
 $<HTMLInputElement>("#when").addEventListener("change", (event) => {
   const ms = Date.parse((event.target as HTMLInputElement).value);
-  if (Number.isFinite(ms)) change(setPortrait(scene(), { date: new Date(ms).toISOString().slice(0, 16) }));
+  if (Number.isFinite(ms)) change(setPortrait(scene(), { date: new Date(ms).toISOString() }));
 });
 $<HTMLInputElement>("#sun-az").addEventListener("input", (event) => change(setPortrait(scene(), { light: { ...scene().light, az: Number((event.target as HTMLInputElement).value) } }), "light"));
 $<HTMLInputElement>("#sun-el").addEventListener("input", (event) => change(setPortrait(scene(), { light: { ...scene().light, el: Number((event.target as HTMLInputElement).value) } }), "light"));

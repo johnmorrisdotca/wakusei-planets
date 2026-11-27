@@ -34,7 +34,8 @@ const box = document.querySelector<HTMLInputElement>("#when")!;
 body.addEventListener("wakusei-timechange", (event) => {
   const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
   // 欄は時計について行きますが、読む人が入力しているあいだは書き換えません
-  if (document.activeElement !== box) box.value = new Date(time).toISOString().slice(0, 16);
+  const shown = new Date(time - new Date(time).getTimezoneOffset() * 60_000);
+  if (document.activeElement !== box) box.value = shown.toISOString().slice(0, 16);
   if (!running) history.replaceState(null, "", `?t=${new Date(time).toISOString()}`);
 });
 ```

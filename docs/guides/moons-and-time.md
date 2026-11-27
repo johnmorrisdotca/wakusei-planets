@@ -33,8 +33,9 @@ const body = document.querySelector("wakusei-body")!;
 const box = document.querySelector<HTMLInputElement>("#when")!;
 body.addEventListener("wakusei-timechange", (event) => {
   const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
-  // the box follows the clock, but never while the reader is typing in it
-  if (document.activeElement !== box) box.value = new Date(time).toISOString().slice(0, 16);
+  // the box follows the clock, but never while the reader is typing in it. A datetime-local box is the device's own time, not UTC digits.
+  const shown = new Date(time - new Date(time).getTimezoneOffset() * 60_000);
+  if (document.activeElement !== box) box.value = shown.toISOString().slice(0, 16);
   if (!running) history.replaceState(null, "", `?t=${new Date(time).toISOString()}`);
 });
 ```
