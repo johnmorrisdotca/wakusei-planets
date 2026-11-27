@@ -285,7 +285,7 @@
     "licence": "Public domain",
     "credit": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
     "artist": "NASA / JPL / USGS Astrogeology, Voyager 2 mosaic (Tammy Becker)",
-    "usage": "The 1440 by 720 USGS Voyager 2 map supplies the measured southern terrain. The unobserved north is painted to continue that ground. Parts of Miranda were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "usage": "The shipped WebP anchors orientation and the released image outside the repair. The Voyager 2 footprint sets an irregular join. Recovered Voyager pixels clipped by the strip where reliable, matched the adjoining tones and blended in new corona and fault detail only around the former join. The master's rows south of about 19.2° S are byte-identical to the resampled released map before WebP encoding. Parts of Miranda were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
     "sha256": "3b0e3fdd7233511be7bb55537ce00641223a9f611ecd5b364bbac87de03ffb03"
   },
   "umbriel": {
