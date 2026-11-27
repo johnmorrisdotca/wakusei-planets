@@ -4,7 +4,11 @@ import type { Series } from "./vsop.ts";
 import type { Vec3 } from "../vec.ts";
 
 /** A moon's position from its planet's centre in the J2000 ecliptic, in kilometres, at a moment in terrestrial time (milliseconds since 1970). */
-export type MoonTheory = (terrestrialMs: number) => Vec3;
+export interface MoonTheory {
+  (terrestrialMs: number): Vec3;
+  /** Fraction of the theory to use at this time, from 0 (fitted orbit) to 1 (theory). Defaults to 1. */
+  weight?: (terrestrialMs: number) => number;
+}
 
 const KEY = Symbol.for("johnmorrisdotca.wakusei-planets.moon-theories");
 const SERIES_KEY = Symbol.for("johnmorrisdotca.wakusei-planets.planet-series");

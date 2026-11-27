@@ -773,6 +773,11 @@
       "import": "./dist/tables/vsop.js",
       "default": "./dist/tables/vsop.js"
     },
+    "./tables/mars-moons": {
+      "types": "./dist/tables/mars-moons.d.ts",
+      "import": "./dist/tables/mars-moons.js",
+      "default": "./dist/tables/mars-moons.js"
+    },
     "./tables/galilean": {
       "types": "./dist/tables/galilean.d.ts",
       "import": "./dist/tables/galilean.js",

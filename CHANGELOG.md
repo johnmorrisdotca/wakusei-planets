@@ -9,6 +9,8 @@
 - **A covered body's arrow selects that body** (MODULES-1652). The first press selects it, as a press on its name does. A second press goes there.
 - **Eight solar-system definitions** (MODULES-1897). `/fact-sheets` exports `SOLAR_SYSTEM_TERMS` and `solarSystemDefinition` for the names, meanings and sources of eight terms in English and Japanese. The size baseline for this entry includes the new text and source links.
 
+- **Published orbit model for Phobos and Deimos** (MODULES-636). The optional `tables/mars-moons` entry uses Jacobson’s mean elements inside their published date span and joins the existing fit smoothly. On 192 independent Horizons dates, the maximum angular error fell from 0.22° to 0.14° for Phobos and from 0.38° to 0.17° for Deimos. The new entry is 1,258 bytes gzipped. The shared position selector adds 76 gzipped bytes to the space bundle on this base, taking it above the recorded allowance.
+
 ## [0.84.0] - 2026-11-27
 
 - **Kepler's laws teaching page** (MODULES-676). A new English and Japanese demo, `kepler.html`, linked from Plan. It plots period against semimajor axis on log scales for each central body's catalogue orbits, with the third-law prediction dashed and the Sun's plot labelled at Mercury, Earth, Jupiter, Neptune and Pluto. An ellipse view marks the central body's focus, the empty focus and the centre, and shades two sectors that each sweep 12.5% of the ellipse in one eighth of an orbit. Practice sliders change the semimajor axis and eccentricity independently. Playback starts on request, stops while hidden and is off under reduced motion.

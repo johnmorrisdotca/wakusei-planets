@@ -11,6 +11,7 @@ import { PLUTO, PLUTO_SEGMENT_MS, PLUTO_START } from "./data/pluto.ts";
 import { MEAN_MOON_PHASE, moonPhaseTime } from "./data/moon-refinements.ts";
 import { VSOP87 } from "./data/vsop.ts";
 import { moonGeocentric, vsopPosition } from "./theory.ts";
+import { kepler, laplaceBasis, precessingOrbitVector, type OrbitBasis } from "./orbit-vector.ts";
 
 export { moonGeocentric };
 import { toTerrestrialTime } from "./clock.ts";
@@ -43,20 +44,7 @@ const ELEMENTS: Record<PlanetId, readonly number[]> = {
 const centuries = (ms: number): number => (ms - J2000) / (DAY * 36525);
 const days = (ms: number): number => (ms - J2000) / DAY;
 
-/** Solve Kepler's equation for the eccentric anomaly, all in radians. */
-export function kepler(meanAnomaly: number, e: number): number {
-  let m = meanAnomaly % (2 * Math.PI);
-  if (m > Math.PI) m -= 2 * Math.PI;
-  if (m < -Math.PI) m += 2 * Math.PI;
-  // from the mean anomaly itself for a gentle orbit, and for a long one from a place on the same side of the orbit (Newton's method started at pi goes astray for a negative mean anomaly, which put Sedna's far side in the wrong places)
-  let E = e < 0.8 ? m : m + 0.85 * e * Math.sign(Math.sin(m) || 1);
-  for (let i = 0; i < 12; i += 1) {
-    const d = (E - e * Math.sin(E) - m) / (1 - e * Math.cos(E));
-    E -= d;
-    if (Math.abs(d) < 1e-12) break;
-  }
-  return E;
-}
+export { kepler };
 
 const PLUTO_TABLE: FittedTable = { start: PLUTO_START, segment: PLUTO_SEGMENT_MS, worst: 0.14637, segments: PLUTO };
 
@@ -420,12 +408,15 @@ export function apparent(id: BodyId, time: number): Apparent {
 export function moonVector(id: MoonId, ms: number): Vec3 {
   if (id === "moon") return moonGeocentric(ms);
   const theory = moonTheoryOf(id);
-  if (theory !== undefined) return theory(toTerrestrialTime(ms));
+  const terrestrialMs = theory === undefined ? ms : toTerrestrialTime(ms);
+  const weight = theory === undefined ? 0 : theory.weight?.(terrestrialMs) ?? 1;
+  if (theory !== undefined && weight === 1) return theory(terrestrialMs);
   const orbit = ORBITS[id];
   if (orbit === undefined) throw new Error(`no orbit for ${id}`);
-  const position = orbitVector(orbit, moonPhaseTime(ms, MEAN_MOON_PHASE[id]));
+  const fitted = orbitVector(orbit, moonPhaseTime(ms, MEAN_MOON_PHASE[id]));
   // The circumbinary orbit fits start at the Pluto system's barycentre.
-  return id === "nix" || id === "hydra" ? add(position, plutoBarycentreOffset(ms)) : position;
+  const position = id === "nix" || id === "hydra" ? add(fitted, plutoBarycentreOffset(ms)) : fitted;
+  return theory === undefined || weight === 0 ? position : add(scale(position, 1 - weight), scale(theory(terrestrialMs), weight));
 }
 
 /** From Pluto's centre to the centre of mass of the Pluto system, in kilometres. */
@@ -439,16 +430,14 @@ export function heliocentricCentre(planet: HostId | MinorId, ms: number): Vec3 {
   return planet === "pluto" ? sub(position, scale(plutoBarycentreOffset(ms), 1 / AU_KM)) : position;
 }
 
-function referenceBasis(orbit: OrbitElements): { x: Vec3; y: Vec3; z: Vec3 } {
+function referenceBasis(orbit: OrbitElements): OrbitBasis {
   if (orbit.frame === "ecliptic") return { x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] };
   if (orbit.frame === "j2000") return { x: toEcliptic([1, 0, 0]), y: toEcliptic([0, 1, 0]), z: toEcliptic([0, 0, 1]) };
   const pole = orbit.frame === "laplace" && orbit.pole !== undefined ? orbit.pole : ([BODIES[orbit.parent as HostId].pole.ra, BODIES[orbit.parent as HostId].pole.dec] as const);
-  const z = fromRaDec(pole[0], pole[1]);
-  const x = fromRaDec(pole[0] + 90, 0);
-  return { x: toEcliptic(x), y: toEcliptic(cross(z, x)), z: toEcliptic(z) };
+  return laplaceBasis(pole);
 }
 
-const basisCache = new Map<string, { x: Vec3; y: Vec3; z: Vec3 }>();
+const basisCache = new Map<string, OrbitBasis>();
 
 function orbitVector(orbit: OrbitElements, ms: number): Vec3 {
   const key = `${orbit.parent}:${orbit.frame}:${orbit.pole?.join(",") ?? ""}`;
@@ -457,25 +446,7 @@ function orbitVector(orbit: OrbitElements, ms: number): Vec3 {
     basis = referenceBasis(orbit);
     basisCache.set(key, basis);
   }
-  const dt = (ms - orbit.epoch) / DAY;
-  const w = orbit.w + orbit.dw * dt;
-  const node = orbit.node + orbit.dn * dt;
-  const lambda0 = orbit.w + orbit.node + orbit.m;
-  const swing = orbit.wave === undefined ? 0 : orbit.wave[0] * Math.sin((2 * Math.PI * dt) / orbit.wave[1] + orbit.wave[2] * RAD);
-  const M = lambda0 + orbit.sid * dt + 0.5 * (orbit.acc ?? 0) * dt * dt + swing - w - node;
-  const E = kepler(M * RAD, orbit.e);
-  const x = orbit.a * (Math.cos(E) - orbit.e);
-  const y = orbit.a * Math.sqrt(1 - orbit.e * orbit.e) * Math.sin(E);
-  const cw = Math.cos(w * RAD);
-  const sw = Math.sin(w * RAD);
-  const cn = Math.cos(node * RAD);
-  const sn = Math.sin(node * RAD);
-  const ci = Math.cos(orbit.i * RAD);
-  const si = Math.sin(orbit.i * RAD);
-  const px = (cw * cn - sw * sn * ci) * x + (-sw * cn - cw * sn * ci) * y;
-  const py = (cw * sn + sw * cn * ci) * x + (-sw * sn + cw * cn * ci) * y;
-  const pz = sw * si * x + cw * si * y;
-  return [px * basis.x[0] + py * basis.y[0] + pz * basis.z[0], px * basis.x[1] + py * basis.y[1] + pz * basis.z[1], px * basis.x[2] + py * basis.y[2] + pz * basis.z[2]];
+  return precessingOrbitVector(orbit, ms, basis);
 }
 
 /**

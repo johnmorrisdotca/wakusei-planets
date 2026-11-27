@@ -106,8 +106,9 @@ Outside those years each is a plain ellipse from Horizons' osculating elements o
 
 The Moon uses ELP2000-82B (Chapront-Touzé and Chapront, IMCCE), cut to its 540 largest terms and run in terrestrial time. The first three coefficients of its mean longitude were refitted to 768 Horizons dates. On 192 separate dates from 1800 through 2199, the maximum direction error fell from 5.31″ to 0.90″. The test holds it to 1.1″ on that grid. The full original 37,872-term series changed the worst error on the regular 60 dates by only 0.13″, so this fit keeps the 540 terms.
 
-Jupiter's and Saturn's moons follow published theories, as optional entry points (`tables` loads both; the web component fetches each only when it draws that planet's moons, as a chunk of its own, so a page that shows one planet does not grow):
+Mars, Jupiter and Saturn have optional entries that use published orbit models. `tables` loads all three. With code splitting, the web component fetches each theory only when it draws that planet's moons.
 
+- **Phobos and Deimos** use [Jacobson’s mean elements](https://doi.org/10.1088/0004-6256/139/2/668) and longitude corrections (`tables/mars-moons`). Between 1960 and 2040 the source model supplies the position. The fitted orbit supplies it outside the paper’s 1950–2050 interval. The two vectors are blended over the first and last ten years of that interval, with continuous position and velocity at each join.
 - **Io, Europa, Ganymede and Callisto**: L1.2 (Lainey, Duriez and Vienne 2006, IMCCE), cut to 140 terms with a Chebyshev polynomial for the slowest swings (`tables/galilean`, about 5 kB gzipped). Valid from 1130 to 2760.
 - **Mimas, Enceladus, Tethys, Dione, Rhea, Titan, Hyperion and Iapetus** use TASS1.7 (`tables/saturn-moons`, about 11 kB gzipped). The seven coupled orbits use 316 terms from Vienne and Duriez (1995, IMCCE). Hyperion's separate series keeps 230 terms.
 
@@ -119,13 +120,15 @@ const titan = system("saturn", Date.UTC(2026, 10, 7, 12)).moons.find((moon) => m
 console.log(Math.round(titan?.distance ?? 0));
 ```
 
-Every other moon's orbit, and every moon's orbit before one of those tables is imported, is fitted to Horizons' own positions and velocities for 1800 to 2199: a mean orbit plane, a mean longitude that moves at a steady rate, and a periapsis and node that turn at steady rates. Where a steady rate is not enough, a moon has one more term: Phobos, whose orbit is shrinking, has an acceleration, and Mimas and Tethys, which pull on each other, swing back and forth over about 70 years. It used to be fitted to 1950 to 2050 only: Phobos was 4 degrees off in 1800 and Ariel 1.4 degrees in 2194, and they are now 0.41 and 0.22. The Uranus and Mars moons stay fitted: IMCCE's GUST86 and ESAPHO/ESADEI theories carry a notice that forbids passing on changed files, so they are not used.
+Every other moon's orbit, and every moon's orbit before one of those tables is imported, is fitted to Horizons' own positions and velocities for 1800 to 2199: a mean orbit plane, a mean longitude that moves at a steady rate, and a periapsis and node that turn at steady rates. Where a steady rate is not enough, a moon has one more term: Phobos, whose orbit is shrinking, has an acceleration, and Mimas and Tethys, which pull on each other, swing back and forth over about 70 years. It used to be fitted to 1950 to 2050 only: Phobos was 4 degrees off in 1800 and Ariel 1.4 degrees in 2194, and they are now 0.41 and 0.22. Uranus and Neptune's moons use fitted orbits.
+
+On 192 independent dates within Jacobson’s 100-year interval, the largest angular error from Mars fell from 0.22° to 0.14° for Phobos and from 0.38° to 0.17° for Deimos, including the transitions. Across the 154 dates where the Jacobson model supplies the whole position, the largest errors were 0.042° and 0.091°, respectively. The regular 60-date comparison below also includes dates before and after the paper’s fit.
 
 | Body | Theory | Before, 7 dates 1900 to 2100 | Now, the same 7 dates | Now, 60 dates 1800 to 2200 | Held to (60 dates) |
 |---|---|---|---|---|---|
 | The Moon | ELP2000-82B with refitted mean longitude | 0.0005° | 0.46″ | 2.47″ | 3.24″ |
-| Phobos | fitted | 0.57° | 0.34° | 0.41° | 0.55° |
-| Deimos | fitted | 0.32° | 0.33° | 0.39° | 0.55° |
+| Phobos | Jacobson (1950–2050 blend), fitted outside | 0.57° | 0.34° | 0.41° | 0.55° |
+| Deimos | Jacobson (1950–2050 blend), fitted outside | 0.32° | 0.28° | 0.39° | 0.55° |
 | Io | L1.2 | 0.08° | 0.056° | 0.11° | 0.15° |
 | Europa | L1.2 | 0.09° | 0.022° | 0.037° | 0.05° |
 | Ganymede | L1.2 | 0.21° | 0.016° | 0.026° | 0.03° |

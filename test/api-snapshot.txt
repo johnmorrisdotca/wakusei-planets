@@ -1162,6 +1162,8 @@ const times: [number, string, string][]
 (no exports: it registers itself when imported)
 ## ./tables/vsop
 (no exports: it registers itself when imported)
+## ./tables/mars-moons
+(no exports: it registers itself when imported)
 ## ./tables/galilean
 (no exports: it registers itself when imported)
 ## ./tables/saturn-moons

@@ -1,8 +1,9 @@
-// Loads a planet's moon theory when a picture asks for its moons, so a page that shows one planet does not carry Jupiter's and Saturn's theories. A bundler with code splitting makes each a chunk of its own.
+// Loads a planet's moon theory only when a picture asks for its moons. A bundler with code splitting makes each theory a chunk of its own.
 import { moonTheoryOf } from "../data/theories.ts";
 import { tableOf } from "../data/tables.ts";
 
 const LOADERS: Record<string, { moon: string; load: () => Promise<unknown> }> = {
+  mars: { moon: "phobos", load: () => import("./mars-moons.ts") },
   jupiter: { moon: "io", load: () => import("./galilean.ts") },
   saturn: { moon: "mimas", load: () => import("./saturn-moons.ts") },
 };

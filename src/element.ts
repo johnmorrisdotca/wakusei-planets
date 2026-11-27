@@ -1112,7 +1112,7 @@ export class WakuseiBody extends HTMLElement {
     return out;
   }
 
-  /** The moons of Jupiter and Saturn follow their theories once those are fetched; until then the fitted orbits answer. */
+  /** Use this planet's moon theory once fetched. The fitted orbits can draw the first frame. */
   #wantTheory(id: BodyId): void {
     const planet = BODIES[id].parent ?? id;
     void loadMoonTheory(planet).then((loaded) => {
