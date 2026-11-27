@@ -16,6 +16,8 @@ test("Jupiter's picture is Nestaeric's, under CC BY 4.0, and the Moon and Mars n
   const plain = picturesCredit(["Moon", "Mars"], "en");
   assert.match(plain, /public domain/);
   assert.match(plain, /NASA/);
+  assert.match(picturesCredit(["Moon"], "en"), /LOLA Team \(NASA\/GSFC\), via NASA PDS/);
+  assert.match(picturesCredit(["Moon"], "ja"), /LOLA チーム（NASA\/GSFC）が作成し、NASA PDS が公開/);
   assert.doesNotMatch(plain, /CC BY/);
   assert.doesNotMatch(plain, /Nestaeric/);
   assert.doesNotMatch(plain, /Solar System Scope/);
