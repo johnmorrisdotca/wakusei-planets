@@ -43,6 +43,8 @@ jobs:
         with:
           path: .cache/body-tiles
           key: body-sources-${{ steps.sources-key.outputs.key }}
+          # a source added or replaced misses the exact key; the last cache still holds the others (some hosts, such as svs.gsfc.nasa.gov, now refuse scripted downloads), and each file is checked against its SHA-256 before use
+          restore-keys: body-sources-
       - if: steps.tiles.outputs.cache-hit != 'true'
         run: pnpm tiles
       - name: Sharper Moon and Mars tiles (off until the repository variable WAKUSEI_SHARP_TILES is 1; the sources are not downloaded otherwise)
