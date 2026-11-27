@@ -12,6 +12,8 @@ Now each body zooms to where **its own detail** runs out, and says so: the limit
 1. **Finer map tiles.** For the bodies that have a better public-domain map than the 2048 picture, the part in view is laid over the body from a pyramid of map tiles, up to 16384 pixels round. They are fetched only when the zoom needs them and let go when it does not.
 2. **Generic detail.** Where a map, however fine, is enlarged more than a quarter, the shader adds octaves of noise so a body never goes smooth. It is not a measured feature of the body, and the page says so (below).
 
+[Surface maps](surface-maps.md) lists the underlying maps, their photographed and reconstructed areas, and which WebP sizes a page can load.
+
 ## How far each body goes
 
 The zoom is measured against the picture: at zoom 1 the picture reaches `extent` body radii from the middle to its edge (2.2 for a body alone, the reach of its farthest moon or ring for a moons picture, which is 7 to 70). The disc is `zoom / extent` times as wide as the picture. A map `W` texels round the equator, on a disc `D` CSS pixels across, shows each texel `π D / W` pixels wide.

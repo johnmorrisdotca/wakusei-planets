@@ -185,6 +185,8 @@ console.log(saturn.counts.total, "moons,", saturn.counts.retrograde, "going agai
 
 `<wakusei-flat body="mars">` is any of the 28 planets, dwarf planets and moons the package has a picture of on a flat map (`body="moon"`, `"jupiter"`, `"titan"`, `"pluto"` and the rest): in two looks, `look="photo"` (the body's own painted picture, the default) and `look="map"` (a line map drawn from the same picture: dark tones, a line where one meets the next, a grid with its degrees, the named features), with an optional Map / Photo control (`controls="centre look zoom key"`). It shows day and night for the time shown with the sunrise and sunset line and the Sun's mark, the landing, rover and crash sites and named features where the package has them, a key under the map and the picture's credit in one small line. Round the Moon and Mars it draws the spacecraft in orbit as dots that move over it with their coverage circles and ground tracks, and for any body a page can add marks of its own (`setMarks`). It is a canvas with no WebGL, takes `time`, `speed` and `paused`, sends `wakusei-flat-pick` when an orbiter, a mark or a place is pressed, works by keyboard and touch, and has the same attributes, key and events as chikyu-earth's `<chikyu-flat>`, so one control can swap the Earth, the Moon and Mars. It draws five lunar orbiters (LRO, Chandrayaan-2, Danuri, ARTEMIS P1 and P2) and six Martian ones (MRO, Odyssey, MAVEN, Mars Express, TGO and Hope); CAPSTONE and Tianwen-1 have no public path and are not drawn.
 
+The [surface maps guide](docs/guides/surface-maps.md) lists the image sources, photographed coverage and reconstructed areas for each mapped body.
+
 ```ts
 import { flatOrbiter } from "@johnmorrisdotca/wakusei-planets/flat";
 
