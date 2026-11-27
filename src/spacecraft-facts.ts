@@ -254,7 +254,7 @@ export const SPACECRAFT: Readonly<Record<SpacecraftId, SpacecraftFacts>> = {
       flyby(noon(1998, 4, 26), "day", "Venus flyby", "金星フライバイ", "venus", 284),
       flyby(noon(1999, 6, 24), "day", "Second Venus flyby", "2回目の金星フライバイ", "venus", 600),
       flyby(noon(1999, 8, 18), "day", "Earth flyby", "地球フライバイ", "earth", 1_100),
-      flyby(T(2000, 0, 23, 9, 58), "minute", "Flyby of asteroid 2685 Masursky", "小惑星 2685 Masursky フライバイ", undefined, 1_500_000),
+      flyby(T(2000, 0, 23, 9, 58), "minute", "Flyby of asteroid 2685 Masursky", "小惑星マスルスキー フライバイ", undefined, 1_500_000),
       flyby(noon(2000, 12, 30), "day", "Jupiter flyby", "木星フライバイ", "jupiter", 10_000_000),
       ev("orbit-insertion", noon(2004, 7, 1), "day", "Saturn orbit insertion", "土星周回軌道に入る", { body: "saturn" }),
       ev("deployment", T(2004, 11, 25, 2, 0), "minute", "Released the Huygens probe", "ホイヘンス探査機を分離"),
