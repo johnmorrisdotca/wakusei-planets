@@ -165,12 +165,25 @@
     "usage": "Public domain (NASA). Kept until it has been compared with Solar System Scope beside a photograph."
   },
   "ceres": {
-    "file": "PIA20354-Ceres-DwarfPlanet-MercatorMap-HAMO-20160322-0DegreeLongitude.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:PIA20354-Ceres-DwarfPlanet-MercatorMap-HAMO-20160322-0DegreeLongitude.jpg",
+    "file": "Ceres_Dawn_FC_DLR_global_20ppd_Oct2015.tif",
+    "page": "https://dawngis.dlr.de/data/Ceres/mosaic_ceres.php",
     "licence": "Public domain",
-    "credit": "http://photojournal.jpl.nasa.gov/jpeg/PIA20354.jpg",
-    "artist": "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA",
-    "usage": "Public domain"
+    "credit": "NASA / JPL-Caltech / UCLA / MPS / DLR / IDA, Dawn FC2 (Roatsch et al.)",
+    "artist": "NASA / JPL-Caltech / UCLA / MPS / DLR / IDA, Dawn FC2 (Roatsch et al.)",
+    "usage": "The October 2015 Dawn FC2 global mosaic supplies the base. The controlled DLR north and south HAMO clear-filter polar stereographic mosaics are resampled using their GeoTIFF transforms and combined in their original longitude registration. The two tiles contain actual Dawn image data for the polar ground they cover. In these mosaics the southern shadow begins locally at 79.65° S. A neutral fill with a polar-projected feather covers the remaining 1,154,750 equirectangular pixels (3.44% of the 8192 × 4096 raster, under 1% of surface area). The Dawn CXJ mission later imaged the south pole (doi:10.1111/maps.13079). No terrain was painted.",
+    "sha256": "920f65e7d0718c9f8d5e86783f35e0b466096251a8c1f2d01a7748a6d534c154",
+    "polar_sources": [
+      {
+        "file": "Ceres_HAMO_mosaic_northern_hemi.tif",
+        "url": "https://dawngis.dlr.de/data/Ceres/mosaics/HAMO/clear/Ceres_HAMO_mosaic_northern_hemi.tif",
+        "sha256": "ce44d3a9f4f00847812eb5aa5d57024f50b209cbf0d1becb1e8bbaec787383ba"
+      },
+      {
+        "file": "Ceres_HAMO_mosaic_southern_hemi.tif",
+        "url": "https://dawngis.dlr.de/data/Ceres/mosaics/HAMO/clear/Ceres_HAMO_mosaic_southern_hemi.tif",
+        "sha256": "ad534b31f5ae16ea42badcd4841df78dd2dbdaa2b3e988857b73f7cb5b93b20c"
+      }
+    ]
   },
   "tethys": {
     "file": "Tethys Color Map.jpg",

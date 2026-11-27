@@ -120,7 +120,7 @@ export const PICTURE_CREDITS: readonly PictureCredit[] = [
   pd("rhea", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("enceladus", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute", "NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute"),
   pd("mimas", "NASA/JPL/Space Science Institute", "NASA/JPL/Space Science Institute"),
-  pd("ceres", "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA", "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA"),
+  pd("ceres", "NASA / JPL-Caltech / UCLA / MPS / DLR / IDA, Dawn FC2 (Roatsch et al.)", "NASA / JPL-Caltech / UCLA / MPS / DLR / IDA、ドーンFC2（Roatschほか）"),
   pd("vesta", "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA (as the file page gives it; hosted by the USGS Astrogeology Science Center's Gazetteer of Planetary Nomenclature)", "NASA/JPL-Caltech/UCLA/MPS/DLR/IDA（ファイルのページの表記。USGS Astrogeology Science CenterのGazetteer of Planetary Nomenclatureが公開）"),
   pd("phobos", "USGS Astrogeology Science Center, P. Stooke (DLR control), from Viking Orbiter images, NASA/JPL", "USGS Astrogeology Science Center、P. Stooke（DLRの制御点）、Viking Orbiterの画像（NASA/JPL）"),
   pd("deimos", "USGS Astrogeology Science Center, P. Stooke, from Viking Orbiter images, NASA/JPL", "USGS Astrogeology Science Center、P. Stooke、Viking Orbiterの画像（NASA/JPL）"),
