@@ -1557,6 +1557,22 @@ export class WakuseiSpace extends HTMLElement {
     return this.#hovered;
   }
 
+  #highlightedBodies = new Set<BodyId>();
+
+  /**
+   * The names, rings and edge arrows that the page emphasizes. An empty list gives the emphasis back to the body in focus. Pointing at a body keeps its usual temporary emphasis.
+   * Changing the list uses the labels already in the view.
+   */
+  get highlightedBodies(): readonly BodyId[] {
+    return [...this.#highlightedBodies];
+  }
+  set highlightedBodies(ids: readonly BodyId[]) {
+    const next = new Set(ids);
+    if (this.#highlightedBodies.size === next.size && [...next].every((id) => this.#highlightedBodies.has(id))) return;
+    this.#highlightedBodies = next;
+    if (this.#places && this.#model.labels) this.#placeLabels(this.#places);
+  }
+
   /**
    * Take the renderer back and draw: the page has one renderer and one view has it at a time, so after another view (the standing view that `land` of `/surface/land` puts over this one) has had it, this view is blank
    * until it is given back. Resolves true when this view is live again.
@@ -2932,7 +2948,10 @@ export class WakuseiSpace extends HTMLElement {
         const middle = places[this.#model.focus] ?? { x: frame.width / 2, y: frame.height / 2 };
         const chosen = this.#selected === (id as BodyId) || this.#hovered === (id as BodyId) || this.#model.companion === id;
         wanted.push({ id, x, y, width, height: 16, rank: craftRank({ chosen, favourite: this.#favourites.has(id) }), size: craftSize(Math.hypot(at.x - middle.x, at.y - middle.y)), alternates: nameAlternates(at, { width, height: 16 }, frame) });
-      } else wanted.push({ id, x, y, width, height: 16, rank: this.#rank(id), size: at.r });
+      } else {
+        const alternates = this.#highlightedBodies.has(id as BodyId) ? nameAlternates(at, { width, height: 16 }, frame) : undefined;
+        wanted.push({ id, x, y, width, height: 16, rank: this.#rank(id), size: at.r, ...(alternates === undefined ? {} : { alternates }) });
+      }
     }
     // no two names overlap and none lies under a keep-out rectangle: a moon gives way to its planet, a planet to the Sun, and every craft to every body
     const placed = placeLabels(wanted, LABEL_GAP, this.#keepOut);
@@ -3001,10 +3020,11 @@ export class WakuseiSpace extends HTMLElement {
   #labelRetry = false;
 
   /** The bodies drawn at full strength: the system of the body under the pointer, or else the one in the middle of the view. */
-  #lit(): Set<string> {
+  #lit(): ReadonlySet<string> {
     // the Sun in the middle lights the Sun and the eight planets; a body pointed at, the Sun too, lights its own system
     // a craft's name under the pointer is no body: it lights what the view's own focus lights
     const pointed = this.#hovered !== null && Object.hasOwn(BODIES, this.#hovered) ? this.#hovered : null;
+    if (pointed === null && this.#highlightedBodies.size > 0) return this.#highlightedBodies;
     if (pointed === null && this.#model.focus === "sun") return new Set<string>(["sun", ...BODY_IDS.filter((id) => BODIES[id].kind === "planet")]);
     const { host, moons } = systemOf(pointed ?? this.#model.focus);
     return new Set<string>([host, ...moons]);
@@ -3323,6 +3343,7 @@ export class WakuseiSpace extends HTMLElement {
 
   /** How sure a body's name is of its place: the body looked at first, then the Sun, the planets, the dwarf planets and minor bodies, and the moons. */
   #rank(id: string): number {
+    if (this.#highlightedBodies.has(id as BodyId)) return -1;
     if (id === this.#model.focus) return 0;
     if (id === "sun") return 1;
     if (id === "roadster" || this.#model.craftIds.includes(id)) return 3;

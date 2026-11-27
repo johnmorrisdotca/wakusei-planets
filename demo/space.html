@@ -20,6 +20,28 @@
       </section>
       <kazoku-view-controls id="controls" for="space" controls="advanced" address speed="0"></kazoku-view-controls>
 
+      <section id="nearby" class="fam-panels nearby-panel" aria-label="Nearby bodies and close approaches" data-say-label="sp_near_title">
+        <div class="fam-tabs" role="tablist" aria-label="Nearby bodies and close approaches" data-say-label="sp_near_title">
+          <button type="button" role="tab" id="tab-nearby" aria-selected="true" aria-controls="panel-nearby" data-say="sp_near_tab">Nearby</button>
+          <button type="button" role="tab" id="tab-approaches" aria-selected="false" tabindex="-1" aria-controls="panel-approaches" data-say="sp_near_next">Next close approaches</button>
+        </div>
+        <div class="fam-panel" role="tabpanel" id="panel-nearby" aria-labelledby="tab-nearby" tabindex="0">
+          <div class="fam-row">
+            <p id="nearby-target" class="fam-label"></p>
+            <div class="group fam-seg" role="group" aria-label="Measure closeness by" data-say-label="sp_near_measure">
+              <button type="button" id="nearby-space" aria-pressed="true" data-say="sp_near_space">Distance in space</button>
+              <button type="button" id="nearby-sky" aria-pressed="false" aria-describedby="nearby-note" data-say="sp_near_sky">Angle in Earth's sky</button>
+            </div>
+          </div>
+          <p class="fam-fine" id="nearby-note" role="status"></p>
+          <ol id="nearby-results" class="nearby-results"></ol>
+        </div>
+        <div class="fam-panel" role="tabpanel" id="panel-approaches" aria-labelledby="tab-approaches" tabindex="0" hidden>
+          <p class="fam-fine" id="approaches-note" role="status"></p>
+          <ol id="approaches-results" class="nearby-results"></ol>
+        </div>
+      </section>
+
       <div class="fam-panels">
         <div class="fam-panel controls">
           <p class="fam-fine" data-say="sp_help">Drag to turn the view.</p>

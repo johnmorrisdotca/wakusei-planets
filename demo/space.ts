@@ -7,13 +7,14 @@ import "@johnmorrisdotca/kazoku-ui/replay-bar/define";
 import type { ReplayBarElement, ReplayDetail } from "@johnmorrisdotca/kazoku-ui/replay-bar/element";
 import type { ViewControlsElement, ViewChangeDetail } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { setThreeLoader, type BodyInfo, type SpacePreset, type WakuseiSpace } from "../src/space/element.ts";
-import type { BodyId } from "../src/facts.ts";
+import { BODIES, type BodyId } from "../src/facts.ts";
 import { findBody } from "../src/space/bodies.ts";
 import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
 import { opensPlaying } from "./opens-playing.ts";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
+import { bindSpaceNearby } from "./space-nearby.ts";
 // chikyu-earth is an optional peer: the demo carries its places layout so a page can lay places on the Earth (`earth-places`)
 import "../src/earth-places.ts";
 import type * as Orbiters from "../src/orbiters.ts";
@@ -139,6 +140,51 @@ if (!Number.isFinite(origin)) origin = Date.now();
 
 let applied: string | undefined;
 let appliedRide: string | undefined;
+let nearbyTarget: BodyId | undefined;
+let framingNearbyPair = false;
+const nearby = bindSpaceNearby(document.querySelector<HTMLElement>("#nearby")!, {
+  time: () => space.time,
+  target: () => nearbyTarget ?? space.body,
+  language: () => chooser()?.lang ?? "en",
+  say,
+  show: ({ a, b, event }) => {
+    nearbyTarget = a;
+    state.names = true;
+    if (event !== undefined) {
+      state.play = false;
+      state.time = isoSecond(event);
+      origin = Date.parse(state.time);
+      applied = undefined;
+    }
+    render();
+    const planet = BODIES[a].parent ?? a;
+    framingNearbyPair = true;
+    try {
+      if (planet === (BODIES[b].parent ?? b)) {
+        space.goTo(planet, { smooth: false, zoom: space.zoomFor(planet === "earth" ? "moon" : `${planet}-moons`) });
+      } else {
+        const host = (id: BodyId): BodyId => BODIES[id].parent ?? id;
+        const inner: readonly BodyId[] = ["sun", "mercury", "venus", "earth", "mars"];
+        const planets: readonly BodyId[] = [...inner, "jupiter", "saturn", "uranus", "neptune"];
+        const stage = inner.includes(host(a)) && inner.includes(host(b)) ? "inner-planets"
+          : planets.includes(host(a)) && planets.includes(host(b)) ? "outer-planets" : "whole-system";
+        space.goTo(stage, { smooth: false });
+      }
+    } finally {
+      framingNearbyPair = false;
+    }
+    space.highlightedBodies = [a, b];
+    showNearbyCaption();
+  },
+});
+
+function showNearbyCaption(): void {
+  const [a, b] = space.highlightedBodies;
+  if (a !== undefined && b !== undefined) {
+    const lang = chooser()?.lang ?? "en";
+    caption.textContent = say("sp_near_highlight", { a: BODIES[a].name[lang], b: BODIES[b].name[lang] });
+  }
+}
 
 function render(): void {
   space.scale = state.scale;
@@ -160,12 +206,14 @@ function render(): void {
   space.belts = state.belts ? ["main", "hilda", "trojan", "centaur", "classical", "resonant", "scattered"] : [];
   if (replay.playing !== state.play) replay.playing = state.play;
   state.play = replay.playing;
-  if (applied !== state.time) {
+  const dateChanged = applied !== state.time;
+  if (dateChanged) {
     applied = state.time;
     space.time = state.time === "now" ? "now" : Date.parse(state.time);
   }
   // the speed is set after the date, so a clock that holds tells the page the date it was set to
   space.speed = state.play ? state.speed : 0;
+  if (dateChanged) nearby.dateChanged(space.time);
   for (const b of $$("#scales [data-scale]")) pressed(b, b.dataset["scale"] === state.scale);
   for (const b of $$("#moon-sizes [data-moon-size]")) pressed(b, b.dataset["moonSize"] === state.moonSize);
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
@@ -499,6 +547,7 @@ space.addEventListener("wakusei-timechange", (event) => {
   if (document.activeElement !== when) when.value = localValue(time);
   if (state.orbiters && state.orbiter) renderOrbiters();
   if (running) return;
+  nearby.dateChanged(time);
   // the clock holds: the date it stopped on is the date shown, and the address keeps it
   state.time = isoSecond(time);
   applied = state.time;
@@ -546,6 +595,9 @@ space.addEventListener("wakusei-body-click", (event) => {
 const goThere = document.querySelector<HTMLButtonElement>("#go-there")!;
 space.addEventListener("wakusei-body-select", (event) => {
   const info = (event as CustomEvent<BodyInfo>).detail;
+  nearbyTarget = Object.hasOwn(BODIES, info.id) ? info.id : undefined;
+  space.highlightedBodies = [];
+  nearby.targetChanged();
   goThere.hidden = info.id === space.body;
   goThere.textContent = `${say("sp_go")}: ${info.name}`;
 });
@@ -568,6 +620,12 @@ hopPrev.addEventListener("click", () => space.previous());
 hopNext.addEventListener("click", () => space.next());
 space.addEventListener("wakusei-hop", (event) => {
   const { zoom, yaw, tilt } = (event as CustomEvent<{ zoom?: number; yaw?: number; tilt?: number }>).detail;
+  if (!framingNearbyPair) {
+    nearbyTarget = undefined;
+    if (space.highlightedBodies.length > 0) caption.textContent = "";
+    space.highlightedBodies = [];
+    nearby.targetChanged();
+  }
   if (zoom !== undefined) {
     // a move that travels also says the side the camera comes from, so the way in is straight
     controls.controller.set(yaw !== undefined && tilt !== undefined ? { zoom, yaw, tilt } : { zoom }, true, "jump");
@@ -654,6 +712,8 @@ renderPicker();
 export type { BodyId };
 window.addEventListener("wakusei-language", () => {
   space.setAttribute("lang", chooser()?.lang ?? "en");
+  nearby.languageChanged();
+  showNearbyCaption();
   render();
   showHop();
 });

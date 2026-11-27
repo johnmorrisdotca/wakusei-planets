@@ -14,6 +14,13 @@ kazoku-view-controls, kazoku-speed-buttons, kazoku-replay-bar { --kazoku-ink: va
 .controls input[type="datetime-local"] { border-radius: 999px; padding: 0 14px; }
 .controls .field { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; }
 
+.nearby-panel { margin-bottom: 14px; }
+.nearby-panel [hidden] { display: none; }
+.nearby-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+.nearby-results .fam-button { display: grid; width: 100%; min-height: 48px; height: 100%; gap: 4px; text-align: left; justify-content: stretch; justify-items: start; align-content: center; border-radius: 8px; white-space: normal; }
+.nearby-results .fam-fine { color: var(--muted); }
+.nearby-event-date { white-space: nowrap; }
+
 .bodies { margin-top: 18px; }
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
 .tile, .pick { display: grid; grid-template-rows: 1fr auto; justify-items: center; gap: 4px; min-height: 48px; padding: 8px 6px 8px; border: 1px solid var(--rule); border-radius: 12px; background: #06080d; color: #c9d4e3; font: inherit; font-size: .85rem; cursor: pointer; }

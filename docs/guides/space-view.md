@@ -56,6 +56,14 @@ The element always names the scale in use on its own view: "True distances" or "
 
 `light="lit"` lights every body as if by daylight from the camera's side (the Sun is its own light), so a view of a night side is never a black frame. The bodies keep their true places either way.
 
+## Nearby bodies and close approaches
+
+The [space demo](https://johnmorrisdotca.github.io/wakusei-planets/space.html) has two tabs below the view. **Nearby** shows the five closest bodies to the body you choose at the displayed date. Distance in space is measured centre to centre in kilometres. The angle in Earth's sky is measured in degrees from Earth's centre.
+
+**Next close approaches** shows up to five events in the next 90 days, when two planets, or the Sun and a planet, come within five degrees in Earth's sky. Choose a result to highlight the two bodies in the space view. Choosing a dated event also sets the demo clock to that moment and pauses it.
+
+A page can set `space.highlightedBodies` to emphasize the names, rings and edge arrows of particular bodies. Set it to an empty array to return to the view's ordinary emphasis. The `/nearest` entry supplies the calculations. [Finding nearby bodies and close approaches](nearest.md)
+
 ## Zoom, looking at a body, naming
 
 The element carries the drag, the pinch, Ctrl and the wheel, and the keys itself ([zoom and pan](zoom-and-pan.md)), from a millionth (the camera far enough out to see the whole solar system) to 3.6x. The camera sits `4.1 / zoom` radii of the body it looks at from that body: zoom 1 shows the whole body with a margin, about 80% of the view's shorter side across, in any shape of view, and the ceiling, 3.6, is where the finest map tiles run out of detail; the camera is held 1.05 radii from the surface, so past about 3.9 nothing moves. At 3.6 the surface is as sharp as the finest map tiles go (the Earth, and Mars and the Moon in the `painted` look, have them: [close zoom](close-zoom.md)), and they are fetched only when the camera is that near, for the part in view. Put the family's `<kazoku-view-controls for="space">` beside it for buttons and it reads the same range; `zoom-min` and `zoom-max` on either one change it, and `controls="none"` takes the element's own hands off. `space.zoomFor("moon" | "sun" | "inner" | "solar-system" | "earth" | "jupiter-moons")` gives the zoom that shows each part of the sky at the current scale and moment (the name in any case; a name that is no preset gives 1, the zoom that shows the body looked at whole), and `space.controller.set({ zoom })` (or, with the bar, `controls.controller.set({ zoom }, true, "jump")`) goes there. `space.setView(controls detail)` turns the camera round the body (`roll` turns the picture clockwise about the line of sight, and `panX` and `panY` move everything in it by exactly that many CSS pixels, right and down positive, at any depth): it is fixed to the stars, so the Earth turns under it as time runs.

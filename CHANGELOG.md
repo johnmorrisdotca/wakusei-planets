@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Nearby bodies and upcoming close approaches** (MODULES-663). The space demo finds neighbours by distance or by angle in Earth's sky and lists the next close approaches. Choosing a result emphasizes the two bodies. Choosing an event sets the demo clock to its date and pauses it. The space element exposes `highlightedBodies` so other pages can use the same label emphasis.
+
 - **Tighter Moon and Uranus ephemerides** (MODULES-639). Refitting the Moon's mean longitude brings the maximum error on independent Horizons dates from 5.31″ to 0.90″ with the same 540 terms. The optional finer Uranus series adds a longitude correction, improving its maximum on the same dates from 2.03″ to 1.39″.
 
 ## [0.82.0] - 2026-11-27
