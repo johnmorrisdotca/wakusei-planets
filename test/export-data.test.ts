@@ -5,7 +5,8 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { BODY_IDS, PLANET_IDS } from "../src/facts.ts";
+import { BODY_IDS } from "../src/facts.ts";
+import { PLANET_KEPLER } from "../src/data/planet-kepler.ts";
 import { DWARF_ELEMENTS } from "../src/data/dwarf.ts";
 import { ORBITS } from "../src/data/orbits.ts";
 import { SPACECRAFT, SPACECRAFT_IDS } from "../src/spacecraft-facts.ts";
@@ -30,7 +31,7 @@ test("the export has the package tables, values, schemas and checksums", () => {
   try {
     execFileSync(process.execPath, ["scripts/export-data.ts", dir], { cwd: process.cwd() });
     const files = readdirSync(dir);
-    const expected: Record<string, number> = { bodies: BODY_IDS.length, "orbital-elements": PLANET_IDS.length + Object.keys(DWARF_ELEMENTS).length + Object.keys(ORBITS).length, spacecraft: SPACECRAFT_IDS.length, "spacecraft-events": SPACECRAFT_IDS.reduce((sum, id) => sum + SPACECRAFT[id].events.length, 0), places: placeCount };
+    const expected: Record<string, number> = { bodies: BODY_IDS.length, "orbital-elements": PLANET_KEPLER.length + Object.keys(DWARF_ELEMENTS).length + Object.keys(ORBITS).length, spacecraft: SPACECRAFT_IDS.length, "spacecraft-events": SPACECRAFT_IDS.reduce((sum, id) => sum + SPACECRAFT[id].events.length, 0), places: placeCount };
     for (const name of names) {
       assert.ok(files.includes(`${name}.csv`)); assert.ok(files.includes(`${name}.schema.json`));
       const schema = JSON.parse(readFileSync(join(dir, `${name}.schema.json`), "utf8")) as { rows: number; columns: { name: string; type: string; unit: string | null; meaning: string; source: string }[] };
@@ -42,7 +43,17 @@ test("the export has the package tables, values, schemas and checksums", () => {
       const row = (id: string) => { const found = lines.slice(1).map(csvRow).find((values) => values[0] === id); assert.ok(found, id); return Object.fromEntries(headers.map((key, index) => [key, found[index]!])); };
       if (name === "places") { const eagle = row("moon/apollo-11-lunar-module"); assert.equal(eagle.body, "moon"); assert.equal(eagle.kind, "crewed"); assert.ok(Math.abs(Number(eagle.lat) - 0.674) < 0.01); assert.equal(row("mars/rosalind-franklin").plannedDateOf, "landing"); assert.equal(row("mars/olympus-mons").featureType, "Mons, montes"); }
       if (name === "bodies") { assert.equal(Number(row("earth").radiusKm), 6378.137); assert.ok(Math.abs(Number(row("jupiter").rotationHours) - 9.925) < 0.001); }
-      if (name === "orbital-elements") assert.ok(Math.abs(Number(row("ceres").aAu) - 2.77) < 0.01);
+      if (name === "orbital-elements") {
+        assert.ok(Math.abs(Number(row("ceres").aAu) - 2.77) < 0.01);
+        const earth = row("earth");
+        assert.equal(earth.validFromYear, "1800");
+        assert.ok(Math.abs(Number(earth.eccentricity) - 0.01671123) < 1e-8);
+        const from = headers.indexOf("validFromYear");
+        const ecc = headers.indexOf("eccentricity");
+        const long = lines.slice(1).map(csvRow).filter((values) => values[0] === "earth" && values[from] === "-3000");
+        assert.equal(long.length, 1);
+        assert.ok(Math.abs(Number(long[0]![ecc]) - 0.01673163) < 1e-8);
+      }
     }
     assert.ok(files.includes("LICENCE-DATA.md"));
     const sums = readFileSync(join(dir, "SHA256SUMS"), "utf8").trim().split("\n");
