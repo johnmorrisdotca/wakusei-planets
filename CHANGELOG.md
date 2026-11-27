@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **The Moon's age, and a name for its look** (MODULES-603). `moonAge` is the days since the previous new moon. The noon age the National Astronomical Observatory prints is that number at noon Japan time, rounded to one decimal, and it matches the 2026 almanac for January (12.1, 29.1, 0.3, 12.3). `moonPhaseName` gives the eight English looks. Japanese is only a name the Observatory publishes (新月, 三日月, 上弦, 満月, 下弦); the fat waxing Moon, the fat waning Moon and the thin Moon lit on its eastern side come back as `null`, because that table gives them no name.
+
 - **A rover's shadow on Mars is lit by the dusty sky** (MODULES-1749). Cast shadows were painted black, which is right on the Moon. On Mars a daytime shadow is a dark brown-grey, and it is black again at night.
 
 - **The Japanese pitches name the photo map** (MODULES-569). The demo pitch and the site pitch said a line drawing, a surface map and a shaded picture. They now say a line drawing or a photographic surface map, and that realistic and the surface map are the same photos. The site pitch still says you can see where the moons are at any date and time.

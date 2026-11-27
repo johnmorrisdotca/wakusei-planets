@@ -2,7 +2,7 @@
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
+import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
 import type { SkyBodyId } from "./sky-bodies.ts";
 import type { Observer } from "./sky/types.ts";
 import { moment, type When } from "./when.ts";
@@ -141,6 +141,67 @@ export function nextMoonPhase(from: When, options: { phase: MoonPhaseName; withi
   if (!(days > 0) || !Number.isFinite(days)) throw new RangeError(`within.days must be a positive number, got ${String(days)}`);
   const found = SearchMoonPhase(index * 90, new Date(start), days);
   return found === null || found.date.getTime() >= start + days * DAY_MS ? null : found.date;
+}
+
+/** The eight looks of the Moon, in order from new, each one eighth of the cycle and centred on its mark. */
+const LOOKS = ["new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "last quarter", "waning crescent"] as const;
+
+/**
+ * Japanese names from the National Astronomical Observatory's table of how the Moon looks (https://www.nao.ac.jp/faq/a0201.html): 新月, 三日月, 上弦, 満月, 下弦.
+ * The same page gives no single name to the fat waxing Moon, the fat waning Moon, or the thin Moon lit on its eastern side (it says that last one has no special name). Those three are `null`, not a name made up here.
+ * 十三夜 is one night, not the whole waxing gibbous, so it is not used (the Observatory's calendar wiki).
+ */
+const LOOKS_JA: readonly (string | null)[] = ["新月", "三日月", "上弦", null, "満月", null, "下弦", null];
+
+/** Which of the eight looks the engine's phase angle falls in: 0 degrees is new, 90 first quarter, 180 full, 270 last quarter, each look 45 degrees wide and centred on its mark. */
+function lookOf(degrees: number): number {
+  const wrapped = ((degrees % 360) + 360) % 360;
+  return Math.floor((wrapped + 22.5) / 45) % 8;
+}
+
+/**
+ * The Moon's age: days since the previous new moon, 0 at that instant and about 29.5 at the next. The noon age the National Astronomical Observatory prints is this number at noon Japan time (03:00 UTC), rounded to one decimal.
+ *
+ * @param when - The moment, a `Date` or milliseconds.
+ * @returns Days since the previous new moon.
+ * @experimental
+ * @example
+ * ```ts
+ * import { moonAge } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const noon = moonAge(Date.UTC(2026, 0, 19, 3, 0));
+ * console.log(noon.toFixed(1));
+ * ```
+ */
+export function moonAge(when: When): number {
+  const at = moment(when, "when");
+  const events = moonPhases(at - 40 * DAY_MS, at + 1);
+  let previous = Number.NEGATIVE_INFINITY;
+  for (const event of events) if (event.phase === "new" && event.time.getTime() <= at) previous = event.time.getTime();
+  if (!Number.isFinite(previous)) throw new RangeError(`no new moon in the 40 days before ${new Date(at).toISOString()}`);
+  return (at - previous) / DAY_MS;
+}
+
+/**
+ * The name of the Moon's look at `when`. English is one of the eight looks (`"new moon"`, `"waxing crescent"`, `"first quarter"`, `"waxing gibbous"`, `"full moon"`, `"waning gibbous"`, `"last quarter"`, `"waning crescent"`).
+ * Japanese is the Observatory's name for that look, or `null` when its table gives none. `"ja"` and `"en"` are the only languages.
+ *
+ * @param when - The moment, a `Date` or milliseconds.
+ * @param lang - `"en"` or `"ja"`.
+ * @returns The name, or `null` for a Japanese look the Observatory does not name.
+ * @experimental
+ * @example
+ * ```ts
+ * import { moonPhaseName } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const name = moonPhaseName(Date.UTC(2026, 0, 19, 3, 0), "ja");
+ * console.log(name);
+ * ```
+ */
+export function moonPhaseName(when: When, lang: "en" | "ja"): string | null {
+  if (lang !== "en" && lang !== "ja") throw new RangeError(`lang must be en or ja, got ${String(lang)}`);
+  const look = lookOf(MoonPhase(new Date(moment(when, "when"))));
+  return lang === "en" ? LOOKS[look]! : (LOOKS_JA[look] ?? null);
 }
 
 /**
