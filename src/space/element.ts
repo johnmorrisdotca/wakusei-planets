@@ -3468,7 +3468,7 @@ export class WakuseiSpace extends HTMLElement {
     return this.#model.bodyPath(id, Array.from({ length: count + 1 }, (_, i) => from + ((to - from) * i) / count), about);
   }
 
-  /** Where a body is on the screen now: its centre and radius in CSS pixels in the element, or `null` when it is behind the camera or not drawn. */
+  /** Where a body is on the screen now: its centre and the enclosing radius of the disc that is drawn, in CSS pixels in the element, or `null` when it is behind the camera or not drawn. */
   placeOf(id: BodyId): BodyPlace | null {
     const at = this.#places?.[id];
     return at ? { ...at } : null;

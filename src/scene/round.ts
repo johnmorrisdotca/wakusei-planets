@@ -3,7 +3,7 @@
 // line of sight to its centre, by the factor the cone of sight from the camera needs for a circular section by the picture's plane (the circular sections of an elliptic cone: tan(theta)^2 = (1/A^2 - 1/B^2) / (1/B^2 + 1)
 // for a cone of half-angles A across the squeezed way and B across the other, and with B = r / sqrt(d^2 - r^2) the factor A / B is below). The body's colours, lighting and texture are still the sphere's own; only where
 // its points land on the screen changes, in the vertex shaders (`ROUND_GLSL`), by `squashPoint`'s sum. Pure, no allocation beyond the arrays themselves.
-import { dot, length, type Vec3 } from "../vec.ts";
+import { cross, dot, length, unit, type Vec3 } from "../vec.ts";
 
 /** How a body is squeezed to look round: along the unit `axis` (about the body's centre, in the scene's axes) to `k` times its length, `k` from 0 to 1, 1 for no change. */
 export interface Round {
@@ -64,6 +64,71 @@ export function edgeStretch(eye: Vec3, forward: Vec3, centre: Vec3): number {
   if (!(d > 0)) return 1;
   const cos = dot(forward, to) / d;
   return cos > 0.2 ? 1 / cos : 1;
+}
+
+/**
+ * The enclosing radius, in CSS pixels, of the disc the body is drawn as: the squashed sphere's outline about the projected centre.
+ * A small body is the on-axis radius times `edgeStretch`. A large body off the middle of a wide view sticks out past that, and this is the radius that contains the drawn disc.
+ * The camera inside the body, or a body that fills the forward view, is `1e5`.
+ *
+ * @param eye - The camera's place.
+ * @param forward - The way the camera looks, a unit vector.
+ * @param centre - The body's centre.
+ * @param radius - The body's radius, in the same units as `eye` and `centre`.
+ * @param height - The picture's height in CSS pixels.
+ * @param tanHalf - `tan` of half the vertical field of view.
+ * @returns The radius in CSS pixels.
+ */
+export function discPixels(eye: Vec3, forward: Vec3, centre: Vec3, radius: number, height: number, tanHalf: number): number {
+  const rel: Vec3 = [centre[0] - eye[0], centre[1] - eye[1], centre[2] - eye[2]];
+  const away = length(rel);
+  const depth = dot(forward, rel);
+  if (!(radius > 0) || !(tanHalf > 0) || !(height > 0) || !(away > radius * 1.001)) return 1e5;
+  const onAxis = ((height / 2) * (radius / Math.sqrt(away * away - radius * radius))) / tanHalf;
+  if (!(depth > away * 0.2)) return onAxis;
+  const shape = roundShape(eye, forward, centre, radius);
+  const hint: Vec3 = Math.abs(forward[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const right = unit(cross(forward, hint));
+  const up = cross(right, forward);
+  const cx = (rel[0] * right[0] + rel[1] * right[1] + rel[2] * right[2]) / depth;
+  const cy = (rel[0] * up[0] + rel[1] * up[1] + rel[2] * up[2]) / depth;
+  const ax = shape.axis[0], ay = shape.axis[1], az = shape.axis[2];
+  const grow = 1 / (shape.k * shape.k) - 1;
+  const relA = rel[0] * ax + rel[1] * ay + rel[2] * az;
+  const opens = (dx: number, dy: number): boolean => {
+    const x = right[0] * (cx + dx) + up[0] * (cy + dy) + forward[0];
+    const y = right[1] * (cx + dx) + up[1] * (cy + dy) + forward[1];
+    const z = right[2] * (cx + dx) + up[2] * (cy + dy) + forward[2];
+    const dirA = x * ax + y * ay + z * az;
+    const quad = x * x + y * y + z * z + grow * dirA * dirA;
+    const linear = x * rel[0] + y * rel[1] + z * rel[2] + grow * dirA * relA;
+    const constant = away * away + grow * relA * relA - radius * radius;
+    return linear * linear - quad * constant > 0;
+  };
+  let most = 0;
+  for (let i = 0; i < 16; i += 1) {
+    const ang = (i / 16) * Math.PI * 2;
+    const c = Math.cos(ang);
+    const s = Math.sin(ang);
+    let lo = 0;
+    let hi = Math.max(0.02, (radius / Math.sqrt(away * away - radius * radius)) * 2);
+    let grown = 0;
+    while (opens(c * hi, s * hi) && grown < 8) {
+      hi *= 1.6;
+      grown += 1;
+    }
+    if (opens(c * hi, s * hi)) {
+      if (hi > most) most = hi;
+      continue;
+    }
+    for (let n = 0; n < 24; n += 1) {
+      const mid = (lo + hi) / 2;
+      if (opens(c * mid, s * mid)) lo = mid;
+      else hi = mid;
+    }
+    if (lo > most) most = lo;
+  }
+  return Math.max(onAxis, most * (height / 2) / tanHalf);
 }
 
 /**

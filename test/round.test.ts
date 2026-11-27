@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { edgeStretch, NOT_SQUEEZED, roundShape, squashPoint } from "../src/scene/round.ts";
+import { discPixels, edgeStretch, NOT_SQUEEZED, roundShape, squashPoint } from "../src/scene/round.ts";
 import type { Vec3 } from "../src/vec.ts";
 
 const eye: Vec3 = [0, 0, 0];
@@ -41,6 +41,40 @@ test("no squeeze for a body behind the camera, one the camera is in, or one at t
   assert.deepEqual(roundShape(eye, forward, at(2, 20), 2), NOT_SQUEEZED);
   assert.equal(roundShape(eye, forward, at(40, 89), 1).k, 1);
   assert.ok(roundShape(eye, forward, at(40, 60), 1).k < 1);
+});
+
+test("the reported disc contains the squashed body, and a body in the middle keeps the on-axis radius", () => {
+  const height = 900;
+  const tanHalf = Math.tan((93.5 * RAD) / 2);
+  const onAxis = (radius: number, away: number) => ((height / 2) * (radius / Math.sqrt(away * away - radius * radius))) / tanHalf;
+  assert.ok(Math.abs(discPixels(eye, forward, [0, 0, -8], 1, height, tanHalf) - onAxis(1, 8)) < 0.5);
+  const cloud = (d: number, theta: number, radius: number): number => {
+    const centre = at(d, theta);
+    const shape = roundShape(eye, forward, centre, radius);
+    let most = 0;
+    const n = 36;
+    for (let j = 0; j < n; j += 1) {
+      const phi = Math.acos(1 - 2 * ((j + 0.5) / n));
+      for (let i = 0; i < n; i += 1) {
+        const turn = Math.PI * (1 + Math.sqrt(5)) * (j * n + i);
+        const point: Vec3 = [centre[0] + radius * Math.sin(phi) * Math.cos(turn), centre[1] + radius * Math.sin(phi) * Math.sin(turn), centre[2] + radius * Math.cos(phi)];
+        const drawn = squashPoint(point, centre, shape);
+        if (drawn[2] >= -1e-9) continue;
+        const px = Math.hypot(drawn[0] / -drawn[2] - centre[0] / -centre[2], drawn[1] / -drawn[2]) * (height / 2) / tanHalf;
+        if (px > most) most = px;
+      }
+    }
+    return most;
+  };
+  for (const [d, theta] of [[2.2, 45], [3, 35], [4, 20], [8, 45], [40, 37]] as const) {
+    const reported = discPixels(eye, forward, at(d, theta), 1, height, tanHalf);
+    const drawn = cloud(d, theta, 1);
+    assert.ok(reported + 0.5 >= drawn, `${d} at ${theta}: ${reported} should cover ${drawn}`);
+    assert.ok(reported < drawn * 1.05 + 1, `${d} at ${theta}: ${reported} is barely past ${drawn}`);
+  }
+  // a wide view, close, well off the middle: the old 1/cos radius left the drawn disc sticking out
+  const old = onAxis(1, 2.2) * edgeStretch(eye, forward, at(2.2, 45));
+  assert.ok(discPixels(eye, forward, at(2.2, 45), 1, height, tanHalf) > old + 50);
 });
 
 test("squashPoint is the same shift the shader makes: along the axis only, about the centre", () => {

@@ -13,7 +13,7 @@ import { createMoonLayer, MOON_ORBIT_OPACITY, type DotsThree, type MoonColorChoi
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
-import { edgeStretch, roundShape, squashPoint } from "../scene/round.ts";
+import { discPixels, roundShape, squashPoint } from "../scene/round.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
 import { turn, type Vec3 } from "../vec.ts";
@@ -80,8 +80,6 @@ const MOON_MIN_PX = 2.2;
 const wantedMoonRadius = (radius: number, away: number, halfFov: number, height: number, factor: number): number =>
   Math.max(radius, (away * halfFov * MOON_MIN_PX) / (height / 2)) * factor;
 
-const globePixels = (radius: number, away: number, halfFov: number, height: number, stretch: number): number =>
-  away <= radius * 1.001 ? 1e5 : ((height / 2) * (radius / Math.sqrt(away * away - radius * radius)) / halfFov) * stretch;
 
 type CameraTarget = { position: Vec3; aim: Vec3; up: Vec3; fov: number };
 function aimCamera(camera: THREE.PerspectiveCamera, pose: CameraTarget): void {
@@ -1374,11 +1372,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                       if (dx * forward[0] + dy * forward[1] + dz * forward[2] <= 0) return null;
                       const away = Math.hypot(dx, dy, dz);
                       const drawn = cap === Infinity ? radius : Math.min(cap, wantedMoonRadius(radius, away, tangent, frameHeight, factor));
-                      const stretch = edgeStretch(pose.position, forward, at);
                       point.set(...at).project(forecast);
                       return {
-                        spot: { x: ((point.x + 1) / 2) * frameWidth, y: ((1 - point.y) / 2) * frameHeight, r: globePixels(drawn, away, tangent, frameHeight, stretch) },
-                        extent: globePixels(drawn * envelope, away, tangent, frameHeight, stretch),
+                        spot: { x: ((point.x + 1) / 2) * frameWidth, y: ((1 - point.y) / 2) * frameHeight, r: discPixels(pose.position, forward, at, drawn, frameHeight, tangent) },
+                        extent: discPixels(pose.position, forward, at, drawn * envelope, frameHeight, tangent),
                       };
                     };
                     const body = project(id, kind === "whole" ? framedOf(id) : 1)!;
@@ -1390,11 +1387,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               },
             };
           }
-          const radiusPxOf = (id: SpaceBody): number => {
-            const d = Math.hypot(pos[id][0] - camera.position.x, pos[id][1] - camera.position.y, pos[id][2] - camera.position.z);
-            const r = radiusOf(id);
-            return globePixels(r, d, half, size.height, edgeStretch(eyeAt, lookAt, pos[id]));
-          };
+          const radiusPxOf = (id: SpaceBody): number => discPixels(eyeAt, lookAt, pos[id], radiusOf(id), size.height, half);
           const px = {} as Record<SpaceBody, number>;
           for (const id of SPACE_BODIES) px[id] = radiusPxOf(id);
           model.drawn = { frame, distance, radiusPx: px.earth };
@@ -1432,12 +1425,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             else {
               const at = shown.object.position;
               const r = shown.object.scale.x;
-              const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
               const { pole, meridian } = orientation(model.focus, model.time);
               const centre: Vec3 = [at.x, at.y, at.z];
               // what is laid over the body is put where the drawn (round) body's surface is
               const shape = roundShape(eyeAt, lookAt, centre, r);
-              deps.onSurface({ id: model.focus, centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre) });
+              deps.onSurface({ id: model.focus, centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: discPixels(eyeAt, lookAt, centre, r, size.height, half) });
             }
           }
           if (points !== undefined && deps.book !== undefined) {
@@ -1867,7 +1859,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               drawing.object.visible = true;
               drawing.object.position.set(at[0], at[1], at[2]);
               drawing.object.scale.setScalar(drawn);
-              const moonPx = globePixels(drawn, away, half, size.height, edgeStretch(eyeAt, lookAt, at));
+              const moonPx = discPixels(eyeAt, lookAt, at, drawn, size.height, half);
               drawing.update({ toSun: model.light === "lit" ? unit([camera.position.x - at[0], camera.position.y - at[1], camera.position.z - at[2]]) : toSunOf(id), ms: model.time, radiusPx: moonPx, view: { camera, width: size.width, height: size.height } });
               const spot = labelFor(at);
               if (spot) {
@@ -1997,11 +1989,10 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             else {
               const at = earth.object.position;
               const r = earth.object.scale.x;
-              const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
               const { pole, meridian } = orientation("earth", model.time);
               const centre: Vec3 = [at.x, at.y, at.z];
               const shape = roundShape(eyeAt, lookAt, centre, r);
-              deps.onEarth({ id: "earth", centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre), sun: model.light === "lit" ? null : toSunOf("earth") });
+              deps.onEarth({ id: "earth", centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: discPixels(eyeAt, lookAt, centre, r, size.height, half), sun: model.light === "lit" ? null : toSunOf("earth") });
             }
           }
           // the places on the other bodies: the same, for each body the page has places on (a planet, the Moon or a body drawn as a moon of the catalogue), after the names too
@@ -2014,12 +2005,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                 if (drawing === undefined || !drawing.object.visible) continue;
                 const at = drawing.object.position;
                 const r = drawing.object.scale.x;
-                const d = Math.hypot(at.x - camera.position.x, at.y - camera.position.y, at.z - camera.position.z);
                 const { pole, meridian } = orientation(id as BodyId, model.time);
                 const centre: Vec3 = [at.x, at.y, at.z];
                 const shape = roundShape(eyeAt, lookAt, centre, r);
                 const sun = model.light === "lit" || !(SPACE_BODIES as readonly string[]).includes(id) ? null : toSunOf(id as SpaceBody);
-                surfaces.push({ id, centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: d <= r * 1.001 ? 1e5 : (((size.height / 2) * (r / Math.sqrt(d * d - r * r))) / half) * edgeStretch(eyeAt, lookAt, centre), sun });
+                surfaces.push({ id, centre, radius: r, pole, meridian, eye: eyeAt, project: (v) => labelFor(squashPoint(v, centre, shape)), width: size.width, height: size.height, radiusPx: discPixels(eyeAt, lookAt, centre, r, size.height, half), sun });
               }
               deps.onBodyPlaces(surfaces);
             }
