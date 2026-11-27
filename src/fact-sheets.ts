@@ -7,6 +7,7 @@ import { DWARF_ELEMENTS } from "./data/dwarf.ts";
 import { MINOR_ELEMENTS } from "./data/minor.ts";
 import { BODIES, DWARF_IDS, MINOR_IDS, type PlanetId } from "./facts.ts";
 import { journeyStop } from "./stops.ts";
+import { moment, type When } from "./when.ts";
 
 const KM_PER_MILE = 1.609344;
 const AU_KM = 149_597_870.7;
@@ -58,7 +59,7 @@ export interface Length {
  * `radius` is the equatorial radius. `distanceFromSun` is the mean distance (zero for the Sun). `yearDays` is the sidereal year in Earth days (the time to go once round the Sun; `null` for the Sun) and
  * `rotationHours` the time to turn once on its axis against the stars (so it is not the length of a solar day: Venus's sidereal rotation is longer than its year's solar day), with `retrograde` true for a body
  * that turns backwards (Venus, Uranus and Pluto). `knownMoons` is the number of moons known on `moonsReadOn` (a date: the count moves as moons are found). `nasaPage` is NASA's own page about the body.
- * `description` is a short description in our own words.
+ * `description` is a short description in our own words. `gravityMs2` is the mean surface gravity in metres per second squared, the same figure `/body-physics` holds (for the giant planets, the mean at the 1 bar level; for the Sun, the equatorial surface gravity).
  *
  * @example
  * ```ts
@@ -80,6 +81,8 @@ export interface FactSheet {
   knownMoons: number;
   moonsReadOn: string;
   nasaPage: string;
+  /** Mean surface gravity, m/s², the same figure as `/body-physics`. Giant planets: the mean at 1 bar. The Sun: equatorial. */
+  gravityMs2: number;
   description: { en: string; ja: string };
 }
 
@@ -107,6 +110,12 @@ const YEAR_DAYS: Record<Exclude<FactSheetId, "sun">, number> = {
   neptune: 60189,
   pluto: 90560,
 };
+
+// The same figures `/body-physics` holds (NASA's fact sheets, read 2026-11-18). A test fails if the two drift. Kept here so this entry does not bundle the physics sheet.
+const GRAVITY_MS2: Record<FactSheetId, number> = { sun: 274, mercury: 3.7, venus: 8.87, earth: 9.82, mars: 3.73, jupiter: 25.92, saturn: 11.19, uranus: 9.01, neptune: 11.27, pluto: 0.62 };
+const MOON_GRAVITY = 1.62;
+const MOON_YEAR_DAYS = 27.3217;
+const DAY_MS = 86_400_000;
 
 // The known moons on MOONS_READ_ON (JPL's planetary satellite page); a test holds these to `/moon-catalogue`.
 const MOONS: Record<FactSheetId, number> = { sun: 0, mercury: 0, venus: 0, earth: 1, mars: 2, jupiter: 115, saturn: 293, uranus: 29, neptune: 16, pluto: 5 };
@@ -199,6 +208,7 @@ export function factSheet(id: FactSheetId): FactSheet {
     knownMoons: MOONS[id],
     moonsReadOn: MOONS_READ_ON,
     nasaPage: NASA[id],
+    gravityMs2: GRAVITY_MS2[id],
     description: { ...DESCRIPTION[id] },
   };
 }
@@ -282,4 +292,77 @@ export function minorFact(id: MinorFactId): MinorFact {
     periodDays: 360 / elements.n,
     epochMs: elements.epoch,
   };
+}
+
+/**
+ * A body with a physics sheet: a fact-sheet body, or the Moon. The other moons are not here yet.
+ *
+ * @example
+ * ```ts
+ * import { weightOn, type WorldId } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const id: WorldId = "moon";
+ * console.log(weightOn(id, 40) < 40);
+ * ```
+ */
+export type WorldId = FactSheetId | "moon";
+
+/**
+ * How heavy `kilograms` is on that world, in the same units. The gravity is the same figure `/body-physics` holds, so Earth (9.82 m/s²) leaves a kilogram as a kilogram, and the Moon is 1.62 m/s².
+ *
+ * @param id - A fact-sheet body, or `"moon"`.
+ * @param kilograms - A weight on Earth, zero or more.
+ * @returns The weight on that world.
+ * @throws {RangeError} For an unknown id, or a weight that is not a finite number of zero or more.
+ * @example
+ * ```ts
+ * import { weightOn } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * console.log(weightOn("mars", 40) < 40, weightOn("moon", 40) < weightOn("mars", 40));
+ * ```
+ */
+export function weightOn(id: WorldId, kilograms: number): number {
+  if (!(kilograms >= 0) || !Number.isFinite(kilograms)) throw new RangeError(`kilograms must be a finite number of zero or more, got ${String(kilograms)}`);
+  const earth = GRAVITY_MS2.earth;
+  return kilograms * gravityOf(id) / earth;
+}
+
+/**
+ * An age in that world's years, and the next birthday there. A world's year is its sidereal year; the Moon's is its 27.3217 day revolution about the Earth. The Sun has no year.
+ *
+ * @param id - A fact-sheet body, or `"moon"`.
+ * @param born - The birthday, a `Date` or milliseconds.
+ * @param on - The day the age is asked, a `Date` or milliseconds, not before `born`.
+ * @returns The age in that world's years and the next whole year, or `null` for the Sun.
+ * @throws {RangeError} For an unknown id, or an `on` before `born`.
+ * @example
+ * ```ts
+ * import { worldAge } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+ *
+ * const age = worldAge("mars", Date.UTC(2016, 0, 1), Date.UTC(2026, 0, 1));
+ * console.log(age !== null && age.years < 6, age?.nextBirthday instanceof Date);
+ * ```
+ */
+export function worldAge(id: WorldId, born: When, on: When): { years: number; nextBirthday: Date } | null {
+  const yearDays = id === "moon" ? MOON_YEAR_DAYS : yearOf(id);
+  const start = moment(born, "born");
+  const at = moment(on, "on");
+  if (yearDays === null) return null;
+  if (at < start) throw new RangeError(`on must not be before born, got born ${new Date(start).toISOString()} and on ${new Date(at).toISOString()}`);
+  const years = (at - start) / (yearDays * DAY_MS);
+  const yearMs = yearDays * DAY_MS;
+  const into = (at - start) % yearMs;
+  const nextBirthday = new Date(into < 1 ? at : at + (yearMs - into));
+  return { years, nextBirthday };
+}
+
+function gravityOf(id: WorldId): number {
+  if (id === "moon") return MOON_GRAVITY;
+  if (!FACT_SHEET_IDS.includes(id)) throw new RangeError(`There is no world for "${String(id)}"; it has one for ${FACT_SHEET_IDS.join(", ")} and moon.`);
+  return GRAVITY_MS2[id];
+}
+
+function yearOf(id: FactSheetId): number | null {
+  if (!FACT_SHEET_IDS.includes(id)) throw new RangeError(`There is no world for "${String(id)}"; it has one for ${FACT_SHEET_IDS.join(", ")} and moon.`);
+  return id === "sun" ? null : YEAR_DAYS[id];
 }

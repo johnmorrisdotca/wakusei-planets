@@ -27,6 +27,7 @@ console.log(mars.description.en);
 | `rotationHours`, `retrograde` | the time to turn once against the stars, and whether it turns backwards (Venus, Uranus, Pluto). This is not the length of a solar day |
 | `knownMoons`, `moonsReadOn` | the number of known moons and the date it was read: the count grows as moons are found. It is the count of `/moon-catalogue` |
 | `nasaPage` | NASA's own page about the body |
+| `gravityMs2` | the mean surface gravity in m/s², the same figure as `/body-physics` (for Jupiter, Saturn, Uranus and Neptune, the mean at the 1 bar level; for the Sun, the equatorial surface gravity). NASA's fact sheets, read 2026-11-18 |
 | `description` | a short description in our own words, `en` and `ja` |
 
 ## Orbits of the dwarf planets and the minor bodies
@@ -42,9 +43,21 @@ console.log(vesta.name.en, vesta.aAu, vesta.periodDays);
 console.log(discoveryOf("vesta")!.date?.value, discoveryOf("vesta")!.by?.value.join(", "));
 ```
 
+## Your weight and your age
+
+`weightOn(id, kilograms)` is that weight on the body, in the same units. The gravity is the one `/body-physics` already holds, so Earth (9.82 m/s²) leaves a kilogram as a kilogram. `id` may also be `"moon"` (1.62 m/s²). `worldAge(id, born, on)` is the age in that world's years: Earth days lived, divided by the sidereal year. The Moon's year is its 27.3217 day revolution about the Earth, from NASA's Moon fact sheet. `nextBirthday` is the next whole year there, which is today when the age is a whole number. The Sun has no year, so `worldAge("sun", ...)` is `null`. The other moons are not here yet.
+
+```ts
+import { weightOn, worldAge } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+
+console.log(weightOn("mars", 40) < 40);
+const age = worldAge("mars", Date.UTC(2016, 0, 1), Date.UTC(2026, 0, 1));
+console.log(age !== null && age.years < 6);
+```
+
 ## Where the facts come from
 
-Radius and rotation are the IAU working group's values and the distance is JPL's approximate elements (both are in the package already, see `NOTICE.md`); the year is from NASA's planetary fact sheets; the moon count is JPL's planetary satellite page; the links go to NASA's pages and copy nothing from them. The descriptions are written here: no text of NASA's, the IAU's, an encyclopedia's or of another package is copied.
+Radius and rotation are the IAU working group's values and the distance is JPL's approximate elements (both are in the package already, see `NOTICE.md`); the year is from NASA's planetary fact sheets and the surface gravity is the same figure as `/body-physics` (NASA's fact sheets, read 2026-11-18; the Moon's revolution, 27.3217 days, is from its own sheet); the moon count is JPL's planetary satellite page; the links go to NASA's pages and copy nothing from them. The descriptions are written here: no text of NASA's, the IAU's, an encyclopedia's or of another package is copied.
 
 ## Coming from npm-solar-system
 

@@ -6,7 +6,8 @@ import { DWARF_ELEMENTS } from "../src/data/dwarf.ts";
 import { MINOR_ELEMENTS } from "../src/data/minor.ts";
 import { BODIES, DWARF_IDS, MINOR_IDS } from "../src/facts.ts";
 import { journeyStop } from "../src/stops.ts";
-import { FACT_SHEET_IDS, MINOR_FACT_IDS, MOONS_READ_ON, factSheet, minorFact } from "../src/fact-sheets.ts";
+import { bodyPhysics } from "../src/body-physics.ts";
+import { FACT_SHEET_IDS, MINOR_FACT_IDS, MOONS_READ_ON, factSheet, minorFact, weightOn, worldAge } from "../src/fact-sheets.ts";
 
 test("a sheet's size, distance and spin are the package's own numbers, in km and in miles", () => {
   for (const id of FACT_SHEET_IDS) {
@@ -80,4 +81,36 @@ test("each dwarf planet besides Pluto and each minor body carries the ellipse th
   copy.name.en = "changed";
   assert.notEqual(minorFact("vesta").name.en, "changed");
   assert.throws(() => minorFact("mars" as never), /"mars"/);
+});
+
+test("surface gravity is NASA's fact sheet, and a weight on Earth stays itself", () => {
+  const gravity: Record<string, number> = { sun: 274, mercury: 3.7, venus: 8.87, earth: 9.82, mars: 3.73, jupiter: 25.92, saturn: 11.19, uranus: 9.01, neptune: 11.27, pluto: 0.62 };
+  for (const id of FACT_SHEET_IDS) {
+    assert.equal(factSheet(id).gravityMs2, gravity[id], id);
+    assert.equal(factSheet(id).gravityMs2, bodyPhysics(id).surfaceGravity!.value, id);
+  }
+  assert.equal(weightOn("earth", 40), 40);
+  assert.ok(Math.abs(weightOn("mars", 40) - 40 * 3.73 / 9.82) < 1e-9);
+  assert.ok(Math.abs(weightOn("moon", 40) - 40 * 1.62 / 9.82) < 1e-9);
+  assert.ok(weightOn("moon", 40) < weightOn("mars", 40));
+  assert.throws(() => weightOn("io" as never, 40), /"io"/);
+  assert.throws(() => weightOn("earth", -1), RangeError);
+  assert.throws(() => weightOn("earth", Number.NaN), RangeError);
+});
+
+test("an age is Earth days divided by that world's year, and the next birthday is the next whole year", () => {
+  const born = Date.UTC(2016, 0, 1);
+  const on = Date.UTC(2026, 0, 1);
+  const days = (on - born) / 86_400_000;
+  const mars = worldAge("mars", born, on);
+  assert.ok(mars !== null && Math.abs(mars.years - days / 686.98) < 1e-9);
+  assert.ok(mars.nextBirthday.getTime() > on);
+  const there = worldAge("mars", born, mars.nextBirthday);
+  assert.ok(there !== null && Math.abs(there.years - Math.round(there.years)) < 1e-9);
+  assert.equal(there.nextBirthday.getTime(), mars.nextBirthday.getTime());
+  const moon = worldAge("moon", born, on);
+  assert.ok(moon !== null && Math.abs(moon.years - days / 27.3217) < 1e-9);
+  assert.equal(worldAge("sun", born, on), null);
+  assert.ok(weightOn("sun", 40) > 1000);
+  assert.throws(() => worldAge("earth", on, born), /on must not be before born/);
 });

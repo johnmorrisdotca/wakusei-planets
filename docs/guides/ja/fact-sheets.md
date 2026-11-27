@@ -27,6 +27,7 @@ console.log(mars.description.ja);
 | `rotationHours`、`retrograde` | 恒星に対して1回自転する時間と、逆向きに自転するか (金星、天王星、冥王星)。太陽日の長さではありません |
 | `knownMoons`、`moonsReadOn` | 知られている衛星の数と、その数を読み取った日付。衛星が見つかるたびに数は増えます。`/moon-catalogue` と同じ数です |
 | `nasaPage` | その天体についての NASA の公式ページ |
+| `gravityMs2` | 平均の表面重力 (m/s²)。`/body-physics` と同じ値。木星、土星、天王星、海王星は 1 bar の高さでの平均。太陽は赤道での表面重力。NASA のファクトシートから、2026-11-18 に読んだ値 |
 | `description` | 私たち自身の言葉による短い説明。`en` と `ja` |
 
 ## 準惑星と小天体の軌道
@@ -42,9 +43,21 @@ console.log(vesta.name.en, vesta.aAu, vesta.periodDays);
 console.log(discoveryOf("vesta")!.date?.value, discoveryOf("vesta")!.by?.value.join(", "));
 ```
 
+## 別の天体での重さと年齢
+
+`weightOn(id, kilograms)` は、その天体での重さで、単位は同じです。重力は `/body-physics` がすでに持っている値なので、地球 (9.82 m/s²) ではキログラムのままです。`id` には `"moon"` も渡せます (1.62 m/s²)。`worldAge(id, born, on)` は、その天体の年での年齢です。生きた地球の日数を、恒星年で割ります。月の1年は、地球のまわりを 27.3217 日で一周する公転で、NASA の月のファクトシートの値です。`nextBirthday` は、その天体での次の整数年で、年齢が整数のときは今日です。太陽には年がないので、`worldAge("sun", ...)` は `null` です。ほかの衛星はまだありません。
+
+```ts
+import { weightOn, worldAge } from "@johnmorrisdotca/wakusei-planets/fact-sheets";
+
+console.log(weightOn("mars", 40) < 40);
+const age = worldAge("mars", Date.UTC(2016, 0, 1), Date.UTC(2026, 0, 1));
+console.log(age !== null && age.years < 6);
+```
+
 ## 事実の出どころ
 
-半径と自転は IAU の作業部会の値、距離は JPL の近似軌道要素です (どちらもすでにパッケージに入っています。`NOTICE.md` を参照)。1年の長さは NASA の惑星ファクトシート、衛星の数は JPL の惑星衛星のページの値です。リンクは NASA のページへ移動するだけで、中身は写していません。説明はここで書いたもので、NASA、IAU、百科事典、ほかのパッケージの文章は写していません。
+半径と自転は IAU の作業部会の値、距離は JPL の近似軌道要素です (どちらもすでにパッケージに入っています。`NOTICE.md` を参照)。1年の長さは NASA の惑星ファクトシート、表面重力は `/body-physics` と同じ値です (NASA のファクトシート、2026-11-18 に読んだもの。月の公転 27.3217 日はそのファクトシートの値です)。衛星の数は JPL の惑星衛星のページの値です。リンクは NASA のページへ移動するだけで、中身は写していません。説明はここで書いたもので、NASA、IAU、百科事典、ほかのパッケージの文章は写していません。
 
 ## npm-solar-system から移るとき
 
