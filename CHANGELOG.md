@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.91.0] - 2026-11-27
+
 - **Measured lunar polar relief** (MODULES-1906). Close views use Lunar Orbiter Laser Altimeter elevations for the slopes at both poles, with the existing colour map. The illumination of crater walls follows the Sun.
 
 ## [0.90.0] - 2026-11-27
