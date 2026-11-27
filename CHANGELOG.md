@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Pictures from a trip are let go** (MODULES-1905). A body that leaves the space view is kept a few seconds and then dropped, pictures included, and a closer picture is dropped once the body no longer needs it. A trip from the Earth out to the planets and back no longer keeps what it passed.
+
 ## [0.89.0] - 2026-11-27
 
 - **Finer Europa and Ganymede maps** (MODULES-774). The tile sets add brightness detail from the Voyager and Galileo mosaics where the images resolve it. Detail fades across observation joins and gaps.

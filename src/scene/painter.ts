@@ -514,6 +514,12 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   let loading = false;
   let failed = false;
   let tooBigSince = 0;
+  // armed when the body is too small for the big picture, so the picture is still let go after the view has stopped drawing
+  let sharpTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearSharpTimer = (): void => {
+    if (sharpTimer !== undefined) clearTimeout(sharpTimer);
+    sharpTimer = undefined;
+  };
   const tried = new Set<number>();
   const urlOf = (w: number): string => `${look.painted!.far !== undefined && w >= look.painted!.far && bases.far !== undefined ? bases.far : bases.near}${look.painted!.map}-${w}.webp`;
   const prepare = (t: THREE.Texture): THREE.Texture => {
@@ -529,6 +535,16 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     // the shaded look was drawn only until the picture came: if it was drawn at all, its program is let go now, so what a body holds does not depend on which came first
     shader.dispose();
     redraw();
+  };
+  const releaseSharp = (): void => {
+    clearSharpTimer();
+    if (gone || sharp === undefined || small === undefined) return;
+    show(small, widths[0]!);
+    sharp.dispose();
+    sharp = undefined;
+    sharpWidth = 0;
+    tried.clear();
+    tooBigSince = 0;
   };
   if (wantPainted && paintedMaterial !== undefined && widths[0] !== undefined) {
     void trackPicture(loadImage(T, urlOf(widths[0]))).then(
@@ -562,6 +578,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           const old = sharp;
           sharp = prepare(t);
           sharpWidth = next;
+          clearSharpTimer();
           show(sharp, next);
           old?.dispose();
         },
@@ -569,19 +586,16 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           loading = false;
         },
       );
-    } else if (sharp !== undefined && wanted * 2 < sharpWidth) {
-      // much smaller on the screen than the picture it holds: after a few seconds, let the big picture go
+    } else if (sharp !== undefined && sharpWidth > next) {
+      // a closer look fetched a larger picture than this body now needs. it used to stay until the body was half that size, so one close pass kept it for good (the soak's count never came back). after a few seconds at the smaller size, let it go. the timer covers a view that stops drawing before those seconds pass
       const now = Date.now();
       if (tooBigSince === 0) tooBigSince = now;
-      else if (now - tooBigSince > 4000) {
-        show(small, widths[0]!);
-        sharp.dispose();
-        sharp = undefined;
-        sharpWidth = 0;
-        tried.clear();
-        tooBigSince = 0;
-      }
-    } else tooBigSince = 0;
+      if (sharpTimer === undefined) sharpTimer = setTimeout(releaseSharp, Math.max(0, 4000 - (now - tooBigSince)));
+      if (now - tooBigSince > 4000) releaseSharp();
+    } else {
+      tooBigSince = 0;
+      clearSharpTimer();
+    }
   };
 
   // the window of finer map tiles for a close view, laid over the painted map by the painted material (see `scene/detail.ts`); only for a body that is told which camera sees it
@@ -801,6 +815,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     },
     dispose() {
       gone = true;
+      clearSharpTimer();
       drop?.();
       setLabel(null);
       if (windowUniforms !== undefined) {

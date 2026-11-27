@@ -731,6 +731,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
         failed: boolean;
         /** The `model.labelVersion` the drawing was last told of. */
         labelled: number;
+        /** When this body was last on screen. A drawing that has been off since then is let go, so a visit does not keep its pictures. */
+        seen: number;
       }
       const slots = new Map<string, Slot>();
       const empty = (slot: Slot): void => {
@@ -759,7 +761,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       };
       const slotOf = (id: string): Slot => {
         let slot = slots.get(id);
-        if (!slot) slots.set(id, (slot = { drawing: undefined, look: null, failed: false, labelled: -1 }));
+        if (!slot) slots.set(id, (slot = { drawing: undefined, look: null, failed: false, labelled: -1, seen: 0 }));
         return slot;
       };
       /** A body whose name setting changed since it was made is told the new one (once). */
@@ -1395,16 +1397,25 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const id of SPACE_BODIES) motion = Math.max(motion, (Math.abs(BODIES[id].prime.rate) / 86_400) * RAD * Math.min(px[id], size.height));
           model.motion = motion;
 
-          // the bodies, drawn by the painter, one slot each
+          // the bodies, drawn by the painter, one slot each. one that has left the picture is kept a few seconds (the view may come straight back) and then let go, pictures and all: three.js never frees a body it has drawn once the body is merely out of frame, so a trip out and back would keep every picture it passed
           let paintedBodies = 0;
+          const bodyNow = performance.now();
+          const keptBodies = new Set<string>();
           for (const id of SPACE_BODIES) {
             const slot = slotOf(id);
             // a dwarf planet or minor body too small to see is not made, and one that was made but has shrunk away is hidden
             const unseen = ((SPACE_DWARFS as readonly string[]).includes(id) || (SPACE_MINORS as readonly string[]).includes(id)) && px[id] < DWARF_MIN_PX && focus !== id && model.focus !== id && hostOf(model.focus) !== id;
-            if (unseen) {
-              if (slot.drawing) slot.drawing.object.visible = false;
+            projected.set(pos[id][0], pos[id][1], pos[id][2]).project(camera);
+            const inView = projected.z <= 1 && Math.abs(projected.x) <= 1.25 && Math.abs(projected.y) <= 1.25;
+            const stay = !unseen && (inView || id === focus || id === model.focus || hostOf(model.focus) === id);
+            if (!stay) {
+              // a look changed while it was away: the old pictures go now, not after the wait, or the trip's look is what the count keeps
+              if (slot.drawing !== undefined && slot.look !== model.look) empty(slot);
+              if (slot.drawing !== undefined) slot.drawing.object.visible = false;
               continue;
             }
+            slot.seen = bodyNow;
+            keptBodies.add(id);
             fill(id, slot);
             relabel(slot);
             const drawing = slot.drawing;
@@ -1844,7 +1855,7 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
                 continue;
               }
               if (held === undefined || (held.slot.look !== model.look && !held.slot.failed)) moonsMade += 1;
-              if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false, labelled: -1 }, seen: now }));
+              if (!held) moonSlots.set(key, (held = { slot: { drawing: undefined, look: null, failed: false, labelled: -1, seen: now }, seen: now }));
               held.seen = now;
               seen.add(key);
               fill(key, held.slot);
@@ -1878,6 +1889,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
               empty(held.slot);
               moonSlots.delete(key);
             } else soonest = Math.min(soonest, held.seen + MOON_KEEP_MS - now);
+          }
+          for (const [id, slot] of slots) {
+            if (keptBodies.has(id) || slot.drawing === undefined) continue;
+            if (bodyNow - slot.seen > MOON_KEEP_MS) empty(slot);
+            else soonest = Math.min(soonest, slot.seen + MOON_KEEP_MS - bodyNow);
           }
           // a view at rest draws nothing, so a moon that has left the view would be kept for ever: ask for one more draw when the first of them is due to be let go
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
