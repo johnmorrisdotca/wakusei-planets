@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A roadmap, planned and not promised** (MODULES-540). `docs/roadmap.md` says where positions, sky events, the suncalc drop-in, fact sheets, comets and asteroids, the element export and the interstellar-tools decision stand, and what is still open. It adds no accuracy figure. It is not a published guide.
+
 - **Nothing is taken from interstellar-tools** (MODULES-530). The decision is in `docs/design/interstellar-tools.md`. Body names may be used as a checklist; every number comes from JPL. Their tables, time scales, Sun and Moon series, tracking and maps are not copied and not depended on.
 
 - **The body page opens moving** (MODULES-816). A bare body page starts the clock from now at an hour a second, the same rule as the space view. A link that names a date or a speed, and a reader who asked for reduced motion, stay still.

@@ -1,6 +1,6 @@
 # API conventions (DRAFT 3)
 
-**Status: a draft for John to read and change. Not published on the docs site, not in the README, not a promise.** Nothing here is built unless it says "today". Tickets: MODULES-540 and MODULES-552. Each feature's own design page will name the ticket that builds it.
+**Status: a draft for John to read and change. Not published on the docs site, not in the README, not a promise.** Nothing here is built unless it says "today". Tickets: MODULES-540 and MODULES-552. Where each area stands is `docs/roadmap.md`. Each feature's own design page will name the ticket that builds it.
 
 **Reviewed by:** John, and a second developer (2026-11-07, two rounds), whose points are built in below and marked (R). Every open question of draft 2 is now answered.
 
