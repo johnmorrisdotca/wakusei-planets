@@ -18,6 +18,7 @@ import { makeGlowMaterial } from "./glow.ts";
 import { prominenceFrame } from "./prominence.ts";
 import { fallbackLook } from "./fallback.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
+import { moonPolarRelief, moonPolarUniforms } from "./moon-polar.ts";
 import { atmosphereTint, detailOf, lookOf } from "./look.ts";
 import { craftGeometry, craftMaterial, craftPicture } from "./craft.ts";
 import { shapeGeometry } from "./shape.ts";
@@ -355,6 +356,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     const a = look.atmosphere;
     return {
       ...squeeze,
+      ...(painted && id === "moon" ? moonPolarUniforms() : {}),
       ...(generic
         ? {
             uTexel: { value: painted ? (2 * Math.PI) / (look.painted?.widths[0] ?? 2048) : 0.005 },
@@ -384,7 +386,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     };
   };
   const material = (painted: boolean): THREE.ShaderMaterial => {
-    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, look.limbTint, generic), uniforms: uniforms(painted) });
+    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, look.limbTint, generic, painted && id === "moon"), uniforms: uniforms(painted) });
     disposables.push(m);
     return m;
   };
@@ -596,6 +598,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
           ratio: () => ratio,
           allowed: tilesAllowed,
           redraw,
+          ...(id === "moon" && bases.tiles !== undefined ? { moonPolar: moonPolarRelief(T, windowUniforms, () => bases.tiles, redraw) } : {}),
           ...(context.onLevels === undefined ? {} : { onLevels: (levels: readonly TileLevel[] | undefined) => context.onLevels!(levels) }),
           apply: (shown) => {
             if (shown === null) {

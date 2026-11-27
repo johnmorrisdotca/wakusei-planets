@@ -16,6 +16,7 @@ import { shapeGeometry } from "./shape.ts";
 import type { SourceBook } from "../door/book.ts";
 import type { BodyMapSource } from "../door/map.ts";
 import { createDetail, type Detail, type DetailStats } from "./detail.ts";
+import { moonPolarRelief, moonPolarUniforms } from "./moon-polar.ts";
 import type { TileLevel } from "./tiles.ts";
 import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
@@ -114,7 +115,7 @@ export interface BodyItemOptions {
   /** The scene tells the element which way it drew (the look can fall back to the shader). */
   report?(note: { painted: boolean; width: number; failed?: boolean }): void;
   /** Finer map tiles for a close zoom (see `scene/detail.ts`): where they are (`undefined` for none), the pixel ratio, whether this device may use them, and what to do when the tile set's levels for the body are known. */
-  tiles?: { source(body: string): BodyMapSource | undefined; book: SourceBook; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
+  tiles?: { polarBase?(): string | undefined; source(body: string): BodyMapSource | undefined; book: SourceBook; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
   /** Draw the interior cutaway instead of the whole globe. Off when left out. A body with no sourced interior is drawn whole. */
   cutaway?: boolean | CutSize;
   /** How many interior shells this scene built. `0` when the cutaway is off or the body has no sourced interior. */
@@ -127,7 +128,8 @@ export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean
   // a glowing body (the Sun, a star) is drawn as it always was: no window of finer map and no generic detail
   const generic = look.emissive !== true;
   const fine = detailOf(look);
-  const fragment = bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic);
+  const moonPolar = painted && look.id === "moon";
+  const fragment = bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic, moonPolar);
   const opening = cutSize === undefined ? undefined : cutOpening(cutSize);
   return new T.ShaderMaterial({
     vertexShader: VERTEX,
@@ -135,6 +137,7 @@ export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean
       `uniform vec2 uCutOpening;
 ${fragment.replace("void main() {", "void main() { if (abs(atan(vW.x, vW.z) - uCutOpening.x) < uCutOpening.y) discard;")}`,
     uniforms: {
+      ...(moonPolar ? moonPolarUniforms() : {}),
       ...(opening === undefined ? {} : { uCutOpening: { value: new T.Vector2(...opening) } }),
       ...(generic
         ? {
@@ -390,6 +393,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       };
       // the window of finer map for a close zoom, laid over the painted map by the painted material
       const windowUniforms = wantPainted && paintedMaterial !== undefined && look.emissive !== true && options.tiles !== undefined && look.painted !== undefined ? paintedMaterial.uniforms : undefined;
+      const polarBase = options.tiles?.polarBase;
       const detail: Detail | undefined =
         windowUniforms === undefined || options.tiles === undefined
           ? undefined
@@ -400,6 +404,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
               ratio: () => options.tiles!.ratio(),
               allowed: () => options.tiles!.allowed(),
               redraw: () => options.redraw(),
+              ...(look.id === "moon" && polarBase !== undefined ? { moonPolar: moonPolarRelief(T, windowUniforms, polarBase, options.redraw) } : {}),
               ...(options.tiles.onLevels === undefined ? {} : { onLevels: (levels: readonly TileLevel[] | undefined) => options.tiles!.onLevels!(levels) }),
               apply: (shown) => {
                 if (shown === null) {

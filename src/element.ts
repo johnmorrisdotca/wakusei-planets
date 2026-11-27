@@ -1486,6 +1486,7 @@ export class WakuseiBody extends HTMLElement {
       ...texturePaths(this),
       wantedWidth: (discPx) => discPx * Math.min(2, window.devicePixelRatio || 1) * 1.6,
       tiles: {
+        polarBase: () => tilesBase(this),
         source: (body) => mapSourceFor(this.#door.book, tilesBase(this), body),
         book: this.#door.book,
         ratio: () => window.devicePixelRatio || 1,
