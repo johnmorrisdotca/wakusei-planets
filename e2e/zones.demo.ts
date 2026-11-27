@@ -28,7 +28,7 @@ for (const zone of ZONES) {
       await expect.poll(async () => page.locator("#when").inputValue(), { timeout: 30_000 }).toBe(await localBox(page, AT));
       await expect(page.locator("#caption")).toContainText("2026-11-02 14:00 UTC", { timeout: 30_000 });
 
-      await page.goto(`/wakusei-planets/space-full.html?t=${new Date(AT).toISOString()}`);
+      await page.goto(`/wakusei-planets/space-full.html?t=${new Date(AT).toISOString()}&speed=0`);
       const full = await page.evaluate((at) => new Date(at).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "medium" }), AT);
       await expect.poll(async () => page.locator("#when").textContent(), { timeout: 30_000 }).toBe(full);
 
