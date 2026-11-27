@@ -158,7 +158,7 @@ A drag pans, two fingers pinch, the plus and minus buttons zoom (and so do the `
 
 ## Any body, in a projection
 
-`<wakusei-flat>` draws the Moon and Mars on the plain map, in which a degree is a degree both ways. The pure side of the same entry point also has the maths to flatten the painted map of any body (the 25 with a picture in `textures/`, from Mercury to Charon) five ways, and the demo's flat page has a panel that does it: choose the body and the projection, turn the middle, set the grid, and the Sun's ring marks where it is overhead at the time shown.
+`<wakusei-flat>` draws its maps in the equirectangular projection. The pure `/flat` API also projects the painted map of a body five ways. The demo's flat page uses it for every mapped planet, dwarf planet, moon and asteroid, including all five of Uranus's large moons. Choose the body, the projection, the centre and the grid. The Sun's ring shows where it is overhead at the selected time. The selected map keeps its [surface picture credit](surface-maps.md), and the map stays still if you prefer reduced motion.
 
 | Projection | What it keeps | The shape |
 |---|---|---|

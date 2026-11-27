@@ -1,10 +1,19 @@
 // Map projections for the painted maps: every projection round-trips, the shapes and the poles are right, the graticule is cut where it has to be, and the resampler wraps across the seam and holds at the poles.
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
 import { test } from "node:test";
+import { PROJECTED_BODIES } from "../demo/flat-projections.ts";
 import { MERCATOR_LIMIT, PROJECTIONS, fitMap, graticule, isProjection, mapExtent, mapOutline, mapPixels, mapSun, projectMap, resampleMap, unprojectMap, type ProjectionId } from "../src/flat/index.ts";
 
 const near = (a: number, b: number, eps: number, what: string): void => assert.ok(Math.abs(a - b) <= eps, `${what}: ${a} is not within ${eps} of ${b}`);
 const lonDiff = (a: number, b: number): number => Math.abs(((((a - b) % 360) + 540) % 360) - 180);
+
+test("the demo offers a projection for every painted surface map served by Pages", () => {
+  const maps = readdirSync(new URL("../textures/", import.meta.url))
+    .filter((file) => file.endsWith("-1024.webp") && file !== "sun-1024.webp")
+    .map((file) => file.slice(0, -"-1024.webp".length));
+  assert.deepEqual([...PROJECTED_BODIES].sort(), maps.sort());
+});
 
 test("every projection takes a place out and back again, about any centre", () => {
   for (const id of PROJECTIONS) {

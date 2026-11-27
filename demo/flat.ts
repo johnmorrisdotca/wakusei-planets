@@ -153,10 +153,10 @@ dateInput.addEventListener("change", () => {
 const shownTime = $("#shown-time");
 const iso = (ms: number): string => new Date(ms).toISOString().slice(0, 16).replace("T", " ");
 flat.addEventListener("wakusei-timechange", (event) => {
-  const { time } = (event as CustomEvent<{ time: number }>).detail;
+  const { time, running } = (event as CustomEvent<{ time: number; running: boolean }>).detail;
   shownTime.textContent = say("fl_now", { time: iso(time) });
   caption(time);
-  projections.render();
+  projections.renderTime(running);
   if (chosen?.kind === "orbiter") card();
 });
 

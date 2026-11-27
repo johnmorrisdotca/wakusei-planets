@@ -12,12 +12,14 @@ const open = async (page: Page, query = ""): Promise<string[]> => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`/wakusei-planets/flat.html${query}`);
+  await page.locator("wakusei-flat#flat").scrollIntoViewIfNeeded();
   await expect(page.locator("wakusei-flat#flat")).toHaveAttribute("data-state", "ready");
   // the clock is held at a fixed moment, in the same step as the first read, so a tick cannot move the Sun's ring
   await page.locator("wakusei-flat#flat").evaluate((el) => {
     el.setAttribute("speed", "0");
     el.setAttribute("time", "2026-11-17T12:00:00Z");
   });
+  await page.locator("#projected").scrollIntoViewIfNeeded();
   await expect.poll(async () => (await stats(page)).loaded).toBe(true);
   return errors;
 };
@@ -93,14 +95,15 @@ test("each projection is another picture, the disc asks for a middle latitude, a
     expect(await page.locator("#pj-lat-field").isHidden()).toBe(projection !== "azimuthal");
   }
   expect(seen.size, "five projections, five pictures").toBe(5);
-  // another body: Pluto, which has its own picture
   const before = (await stats(page)).overlayDraws;
   const mars = (await pixels(page)).hash;
-  await page.locator("#pj-body").selectOption("pluto");
-  await expect.poll(async () => (await stats(page)).loaded && (await stats(page)).body === "pluto").toBe(true);
+  await page.locator("#pj-body").selectOption("ariel");
+  await page.locator("#projected").scrollIntoViewIfNeeded();
+  await expect(page.locator("#projected")).toHaveAttribute("data-body", "ariel");
   await waitDrawn(page, before);
   expect((await pixels(page)).hash).not.toBe(mars);
-  await expect(page.locator("#pj-caption")).toContainText("Pluto");
+  await expect(page.locator("#pj-caption")).toContainText("Ariel");
+  await expect(page.locator("#pj-credit")).toContainText("Voyager 2 mosaic");
 });
 
 test("the lines are a choice and the middle turns the map: Off draws no graticule, and a new middle longitude draws a new picture", async ({ page }) => {
@@ -136,17 +139,33 @@ test("nothing is drawn at rest: with the clock held, the panel draws once for a 
   const flatDraws = await page.locator("wakusei-flat#flat").evaluate((el) => (el as Flat).stats.draws);
   expect(flatDraws).toBeGreaterThan(0);
   // the page asks the panel to draw when the clock's time changes; here the time is set and the panel asked in one call
-  const setTime = (iso: string): Promise<void> =>
-    page.locator("wakusei-flat#flat").evaluate((el, v) => {
-      (el as HTMLElement & { time: number }).time = Date.parse(v);
-      (Reflect.get(window, "wakuseiProjections") as { render(): void }).render();
-    }, iso);
+  const setTime = (iso: string, running = false): Promise<void> =>
+    page.locator("wakusei-flat#flat").evaluate((el, value) => {
+      (el as HTMLElement & { time: number }).time = Date.parse(value.iso);
+      (Reflect.get(window, "wakuseiProjections") as { renderTime(running: boolean): void }).renderTime(value.running);
+    }, { iso, running });
   await setTime("2026-11-17T12:00:05Z");
   await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(undefined)))));
   expect((await stats(page)).overlayDraws).toBe(first.overlayDraws);
   await setTime("2026-11-17T22:00:00Z");
   await expect.poll(async () => (await stats(page)).overlayDraws).toBe(first.overlayDraws + 1);
   expect((await stats(page)).draws, "the picture is the same, only the ring moved").toBe(first.draws);
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(page.locator("#projected")).not.toBeInViewport();
+  await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(undefined)))));
+  const offscreen = (await stats(page)).overlayDraws;
+  await setTime("2026-11-18T07:00:00Z");
+  expect((await stats(page)).overlayDraws).toBe(offscreen);
+  await page.locator("#projected").scrollIntoViewIfNeeded();
+  await waitDrawn(page, offscreen);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  const still = (await stats(page)).overlayDraws;
+  await setTime("2026-11-18T15:00:00Z", true);
+  expect((await stats(page)).overlayDraws).toBe(still);
+  await setTime("2026-11-18T15:00:00Z");
+  await waitDrawn(page, still);
 });
 
 test("Japanese: the words, the body's name and the label for a screen reader", async ({ page }) => {

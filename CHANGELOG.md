@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Every painted surface map in the projection panel** (MODULES-546). The flat demo adds Phobos, Deimos, Phoebe and the five large moons of Uranus, shows the source credit beside the map, and pauses automatic drawing off screen, in a hidden tab or with reduced motion.
+
 ## [0.81.0] - 2026-11-27
 
 - **A guide to the surface maps** (MODULES-1821). `docs/guides/surface-maps.md`, in English and Japanese, has one table of every body with a map: the mission and mosaic it comes from, how much of the ground was photographed, what was reconstructed or painted, and the credit. It also says how the larger sizes load on close zoom.

@@ -1,12 +1,14 @@
 // The projections panel of the flat page: any body with a painted map, drawn in one of five projections with the graticule and the Sun's place. The picture is the package's own equirectangular texture, read once into pixels
-// and resampled by `resampleMap`; the lines and the Sun's ring are a second canvas drawn over it. Nothing is drawn at rest: a change of body, projection, lines, middle, size, language or a Sun that moved a pixel draws again, and nothing else.
-import { BODIES, type BodyId } from "../src/facts.ts";
+// and resampled by `resampleMap`. The canvas reuses that raster when only the grid or Sun moves, and draws only while visible.
+import { BODIES, BODY_IDS } from "../src/facts.ts";
+import { PICTURE_CREDITS, picturesCredit } from "../src/picture-credits.ts";
 import { PROJECTIONS, coordinateText, fitMap, graticule, isProjection, mapExtent, mapOutline, mapPixels, mapSun, resampleMap, type MapCentre, type ProjectionId } from "../src/flat/index.ts";
 
-/** The bodies with a painted map, in the order of the Sun's family. */
-export const PROJECTED_BODIES = ["mercury", "venus", "earth", "moon", "mars", "ceres", "vesta", "jupiter", "io", "europa", "ganymede", "callisto", "saturn", "mimas", "enceladus", "tethys", "dione", "rhea", "titan", "iapetus", "uranus", "neptune", "triton", "pluto", "charon"] as const satisfies readonly BodyId[];
+const pictured = new Set(PICTURE_CREDITS.map(({ id }) => id));
+/** The bodies with surface pictures. The Sun has no surface coordinates for a sub-solar point. */
+export const PROJECTED_BODIES = BODY_IDS.filter((id) => id !== "sun" && pictured.has(id));
 type Projected = (typeof PROJECTED_BODIES)[number];
-const isProjected = (value: unknown): value is Projected => typeof value === "string" && (PROJECTED_BODIES as readonly string[]).includes(value);
+const isProjected = (value: unknown): value is Projected => PROJECTED_BODIES.some((id) => id === value);
 const LINES = ["0", "30", "15"] as const;
 
 export interface ProjectionsHost {
@@ -19,7 +21,13 @@ export interface ProjectionsHost {
   textureBase: string;
 }
 
-export function startProjections(host: ProjectionsHost): { render(): void; stats(): { draws: number; overlayDraws: number; body: string; projection: string; loaded: boolean } } {
+interface MapSource {
+  body: Projected;
+  pixels: ImageData | null;
+  failed: boolean;
+}
+
+export function startProjections(host: ProjectionsHost): { render(): void; renderTime(running: boolean): void; stats(): { draws: number; overlayDraws: number; body: string; projection: string; loaded: boolean } } {
   const $ = <T extends HTMLElement>(selector: string): T => document.querySelector<T>(selector)!;
   const select = $<HTMLSelectElement>("#pj-body");
   const projBox = $("#pj-proj");
@@ -29,19 +37,21 @@ export function startProjections(host: ProjectionsHost): { render(): void; stats
   const latField = $("#pj-lat-field");
   const canvas = $<HTMLCanvasElement>("#projected");
   const caption = $("#pj-caption");
+  const credit = $("#pj-credit");
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
 
   const askedBody = host.get("pbody");
   const askedProjection = host.get("proj");
   let body: Projected = isProjected(askedBody) ? askedBody : "mars";
   let projection: ProjectionId = isProjection(askedProjection) ? askedProjection : "mollweide";
   let lines: (typeof LINES)[number] = (LINES as readonly string[]).includes(host.get("grid") ?? "") ? (host.get("grid") as (typeof LINES)[number]) : "30";
-  let source: ImageData | null = null;
-  let loadedBody: Projected | null = null;
-  let base: { key: string; picture: Uint8ClampedArray } | null = null;
+  let source: MapSource | null = null;
+  let base: { key: string; picture: ImageData } | null = null;
+  let inView = false;
+  let controlLanguage: "en" | "ja" | undefined;
   let draws = 0;
   let overlayDraws = 0;
   let lastKey = "";
-  const layer = document.createElement("canvas");
 
   const word = (key: string): string => host.say(key);
   const name = (id: Projected): string => BODIES[id].name[host.lang()];
@@ -76,50 +86,66 @@ export function startProjections(host: ProjectionsHost): { render(): void; stats
   lonInput.addEventListener("input", render);
   latInput.addEventListener("input", render);
 
-  function loadSource(): void {
-    const wanted = body;
-    if (loadedBody === wanted && source !== null) return;
+  function loadSource(): MapSource {
+    if (source?.body === body) return source;
+    const next: MapSource = { body, pixels: null, failed: false };
+    source = next;
     const image = new Image();
     image.decoding = "async";
     image.addEventListener("load", () => {
-      if (wanted !== body) return;
+      if (next !== source || next.body !== body) return;
       const scratch = document.createElement("canvas");
       scratch.width = image.naturalWidth;
       scratch.height = image.naturalHeight;
       const context = scratch.getContext("2d", { willReadFrequently: true })!;
       context.drawImage(image, 0, 0);
-      source = context.getImageData(0, 0, scratch.width, scratch.height);
-      loadedBody = wanted;
-      base = null;
-      lastKey = "";
-      render();
+      next.pixels = context.getImageData(0, 0, scratch.width, scratch.height);
+      draw();
     });
-    image.src = `${host.textureBase}${wanted}-1024.webp`;
+    image.addEventListener("error", () => {
+      next.failed = true;
+      if (next === source && next.body === body) draw();
+    });
+    image.src = `${host.textureBase}${body}-1024.webp`;
+    return next;
   }
 
   const centre = (): MapCentre => ({ lon: Number(lonInput.value), lat: projection === "azimuthal" ? Number(latInput.value) : 0 });
 
   function render(): void {
-    select.replaceChildren(...[...select.options].map((option) => Object.assign(option, { textContent: name(option.value as Projected) })));
+    const l = host.lang();
+    if (controlLanguage !== l) {
+      controlLanguage = l;
+      for (const option of select.options) option.textContent = name(option.value as Projected);
+      for (const button of projBox.children as HTMLCollectionOf<HTMLButtonElement>) button.textContent = word(`pj_${button.dataset["value"]!}`);
+      for (const button of linesBox.children as HTMLCollectionOf<HTMLButtonElement>) {
+        const value = button.dataset["value"]!;
+        button.textContent = value === "0" ? word("pj_off") : `${value}°`;
+      }
+    }
     select.value = body;
-    for (const button of projBox.children as HTMLCollectionOf<HTMLButtonElement>) {
-      button.textContent = word(`pj_${button.dataset["value"]!}`);
-      button.setAttribute("aria-pressed", String(button.dataset["value"] === projection));
-    }
-    for (const button of linesBox.children as HTMLCollectionOf<HTMLButtonElement>) {
-      const value = button.dataset["value"]!;
-      button.textContent = value === "0" ? word("pj_off") : `${value}°`;
-      button.setAttribute("aria-pressed", String(value === lines));
-    }
+    for (const button of projBox.children as HTMLCollectionOf<HTMLButtonElement>) button.setAttribute("aria-pressed", String(button.dataset["value"] === projection));
+    for (const button of linesBox.children as HTMLCollectionOf<HTMLButtonElement>) button.setAttribute("aria-pressed", String(button.dataset["value"] === lines));
     latField.hidden = projection !== "azimuthal";
-    loadSource();
-    if (loadedBody !== body || source === null) return;
+    credit.textContent = picturesCredit([body], l);
+    draw();
+  }
+
+  function draw(): void {
+    if (!inView || document.hidden) return;
+    const map = loadSource();
+    canvas.style.visibility = map.pixels === null ? "hidden" : "";
+    if (map.pixels === null) {
+      caption.textContent = host.say(map.failed ? "pj_failed" : "pj_loading", { body: name(body) });
+      lastKey = "";
+      return;
+    }
 
     // the box: as wide as the stage, as tall as the projection's shape says, never taller than 640 pixels
     const { halfWidth, halfHeight } = mapExtent(projection);
-    const room = Math.max(280, Math.floor(canvas.parentElement!.clientWidth - 24));
+    const room = Math.max(1, Math.floor(canvas.parentElement!.clientWidth - 24));
     const cssWidth = Math.min(room, Math.round(640 * (halfWidth / halfHeight)));
-    const cssHeight = Math.round((cssWidth * halfHeight) / halfWidth);
+    const cssHeight = Math.max(1, Math.round((cssWidth * halfHeight) / halfWidth));
     const ratio = Math.min(2, window.devicePixelRatio || 1);
     const width = Math.round(cssWidth * ratio);
     const height = Math.round(cssHeight * ratio);
@@ -136,19 +162,17 @@ export function startProjections(host: ProjectionsHost): { render(): void; stats
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
-      layer.width = width;
-      layer.height = height;
       base = null;
     }
     canvas.style.width = `${cssWidth}px`;
     canvas.style.height = `${cssHeight}px`;
     const context = canvas.getContext("2d")!;
     if (base === null || base.key !== picture) {
-      base = { key: picture, picture: resampleMap(source, projection, width, height, { centre: c }) };
+      const pixels = resampleMap(map.pixels, projection, width, height, { centre: c });
+      base = { key: picture, picture: new ImageData(new Uint8ClampedArray(pixels), width, height) };
       draws += 1;
     }
-    context.clearRect(0, 0, width, height);
-    context.putImageData(new ImageData(new Uint8ClampedArray(base.picture), width, height), 0, 0);
+    context.putImageData(base.picture, 0, 0);
 
     const stroke = (points: { x: number; y: number }[], style: string, size: number): void => {
       context.beginPath();
@@ -191,8 +215,17 @@ export function startProjections(host: ProjectionsHost): { render(): void; stats
     const now = canvas.parentElement!.clientWidth;
     if (now === wide) return;
     wide = now;
-    render();
+    draw();
   }).observe(canvas.parentElement!);
+  new IntersectionObserver(([entry]) => {
+    inView = entry?.isIntersecting === true;
+    draw();
+  }).observe(canvas);
+  document.addEventListener("visibilitychange", draw);
 
-  return { render, stats: () => ({ draws, overlayDraws, body, projection, loaded: loadedBody === body && source !== null }) };
+  return {
+    render,
+    renderTime: (running) => { if (!running || !motion.matches) draw(); },
+    stats: () => ({ draws, overlayDraws, body, projection, loaded: source?.body === body && source.pixels !== null }),
+  };
 }
