@@ -20,6 +20,7 @@ import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { creditLine } from "../src/door/index.ts";
 import { turnRate } from "../src/live.ts";
 import { WORDS } from "./words.js";
+import { opensPlaying } from "./opens-playing.ts";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
 
@@ -87,8 +88,8 @@ if (main && controls && pickerBox) {
     relative: address.get("rel") === "1",
     ref: (["planet", "earth", "sun"].includes(address.get("ref") ?? "") ? address.get("ref") : "earth") as "planet" | "earth" | "sun",
     spin: address.get("spin") === "1",
-    /** Playing: the clock runs from the date shown at `speed` times real time (the replay bar; reduced motion leaves it off). */
-    play: address.get("play") === "on",
+    /** Playing: the clock runs from the date shown at `speed` times real time. A bare page opens playing, from now, an hour a second; a link that names a date or a speed, and reduced motion, stay still. */
+    play: opensPlaying({ play: address.get("play"), time: address.get("t"), speed: address.get("speed") }, matchMedia("(prefers-reduced-motion: reduce)").matches),
     /** Times real time while playing. */
     speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
     spinSpeed: Number(address.get("spinspeed") ?? 1) || 1,

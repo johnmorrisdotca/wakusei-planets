@@ -11,6 +11,7 @@ import type { BodyId } from "../src/facts.ts";
 import { findBody } from "../src/space/bodies.ts";
 import { creditLine } from "../src/door/index.ts";
 import { WORDS } from "./words.js";
+import { opensPlaying } from "./opens-playing.ts";
 import { bindBodyLabelRow, readBodyLabelState, renderBodyLabelRow } from "./body-label-row.ts";
 import { bindPlacesRow, readPlacesState, renderPlacesRow } from "./places-row.ts";
 // chikyu-earth is an optional peer: the demo carries its places layout so a page can lay places on the Earth (`earth-places`)
@@ -110,7 +111,7 @@ const state = {
   /** The asteroid belts and the Kuiper belt, drawn from NASA/JPL's Small-Body Database. */
   belts: address.get("belts") !== "0",
   /** Playing: the clock runs from the date shown at `speed` times real time. A page opened with no date, speed or play in its address opens playing, from now, an hour a second (the first speed at which the Earth's turn shows); a link that names a date or a speed, and a reader who asked for reduced motion, get it still with Play ready. */
-  play: address.get("play") === "on" || (!["play", "t", "speed"].some((key) => address.get(key) !== null) && !matchMedia("(prefers-reduced-motion: reduce)").matches),
+  play: opensPlaying({ play: address.get("play"), time: address.get("t"), speed: address.get("speed") }, matchMedia("(prefers-reduced-motion: reduce)").matches),
   /** Times real time while playing; an old link with `speed=0` or none gets an hour a second. */
   speed: Number(address.get("speed") ?? 0) || DEFAULT_SPEED,
   time: address.get("t") ?? "now",

@@ -1,4 +1,4 @@
-// The family's replay bar and speed buttons in the demo: the orbits' time (Play, Back and multiples of real time) and a body's spin (0.5×, 1×, 2× of 14 degrees a second). The pages that run time ask for no-preference motion: the config's reduced motion is on, and the replay bar leaves Play off under it.
+// The family's replay bar and speed buttons in the demo: the orbits' time (Play, Back and multiples of real time) and a body's spin (0.5×, 1×, 2× of 14 degrees a second). This file asks for no-preference motion, so a bare body page opens playing.
 import "./load.ts";
 import { expect, test } from "@playwright/test";
 
@@ -11,8 +11,12 @@ test("the date row is the family's replay bar: Play, Back and the speeds 1×, 36
   await expect(page.locator("#replay button[data-act]:visible")).toHaveText(["Play", "Back to the date"]);
   await expect(page.locator("#replay button[data-v]")).toHaveText(["1×", "3600×", "86400×"]);
   await expect(press(page, "replay", 3600)).toHaveAttribute("aria-pressed", "true");
-  // paused: the clock is held whatever the speed
+  // a bare page opens playing at an hour a second
+  await expect(page.locator("#main")).toHaveAttribute("rate", "3600");
+  await expect(page).toHaveURL(/play=on/);
+  await page.locator('#replay [data-act="play"]').click();
   await expect(page.locator("#main")).toHaveAttribute("rate", "0");
+  await expect(page).not.toHaveURL(/play=/);
   await press(page, "replay", 86400).click();
   await expect(page).toHaveURL(/speed=86400/);
   await expect(page.locator("#main")).toHaveAttribute("rate", "0");
