@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **A page can take a press** (MODULES-1651). `wakusei-body-click` is cancelable. `preventDefault` leaves the view where it is, so the page's own Go moves it.
 - **A covered body's arrow selects that body** (MODULES-1652). The first press selects it, as a press on its name does. A second press goes there.
 
 ## [0.84.0] - 2026-11-27

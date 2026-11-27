@@ -10,6 +10,7 @@ import { createGameClock, type GameClock } from "./clock.ts";
 import { bodyKindOf, findBody, hopFrom, hostOf, HOP_ORDER, inHopKind, systemOf, type SpaceKind } from "./bodies.ts";
 import { sightChanged, sightOf, withinMargin, type Sight, type SightEdge, type SightInput } from "./sight.ts";
 import { craftRank, craftSize, LABEL_GAP, nameAlternates, nameSpot, placeLabels, type KeepOut, type LabelBox, type LabelReport } from "./labels.ts";
+import { tellBodyClick } from "./body-click.ts";
 import { coverArrows, coverOf } from "./covered.ts";
 import { coveredArrowLabel } from "./covered-words.ts";
 import { createPainter, picturesPending, type WakuseiPainter } from "../scene/painter.ts";
@@ -3573,14 +3574,14 @@ export class WakuseiSpace extends HTMLElement {
   };
 
   /**
-   * A press on a body or its name. `wakusei-body-click` tells the page every time. The first press on a body selects it (`wakusei-body-select`, for the page's card); a second press on the body that is selected makes it
-   * the middle of the view (`goTo`), unless it already is, so a press never sends the view anywhere else. With `teleport` (Ctrl or Command held on an orbit line) the press selects and goes there at once, without the glide.
+   * A press on a body or its name. `wakusei-body-click` tells the page every time, and the page takes it with `preventDefault` (the view stays, for the page's own Go). The first press on a body selects it (`wakusei-body-select`, for the page's card); a second press on the body that is selected makes it
+   * the middle of the view (`goTo`), unless the page took the press or it already is, so a press never sends the view anywhere else. With `teleport` (Ctrl or Command held on an orbit line) the press selects and goes there at once, without the glide, unless the page took it.
    */
   #press(id: BodyId, teleport = false): void {
     if (this.#catalogueMoon(id) !== undefined) {
       // a moon of the catalogue is no body of the package: the press says which one, in the body event and in an event of its own; the first press selects it, and a second makes its planet the middle of the view
       const detail = this.#moonDetail(id);
-      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail, bubbles: true, composed: true }));
+      const taken = tellBodyClick(this, detail);
       this.dispatchEvent(new CustomEvent("wakusei-moon-click", { detail, bubbles: true, composed: true }));
       const first = this.#selected !== id;
       if (first) {
@@ -3588,29 +3589,29 @@ export class WakuseiSpace extends HTMLElement {
         this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail, bubbles: true, composed: true }));
       }
       const host = detail.host as BodyId;
-      if ((!first || teleport) && canCentre(host) && this.#model.focus !== host) this.goTo(host, teleport ? { smooth: false } : {});
+      if (!taken && (!first || teleport) && canCentre(host) && this.#model.focus !== host) this.goTo(host, teleport ? { smooth: false } : {});
       return;
     }
     // the Roadster and the orbiters are no bodies of the package: a press on such a name says so and goes nowhere
     if (this.#isAsteroid(id)) {
       // an asteroid is no body of the package: the press says which one, in the body event and in an event of its own, and goes nowhere
-      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" }, bubbles: true, composed: true }));
+      tellBodyClick(this, { id: asteroidIdOf(id), name: this.#nameOf(id), kind: "small-body" });
       this.dispatchEvent(new CustomEvent("wakusei-asteroid-click", { detail: { id: asteroidIdOf(id), name: this.#nameOf(id) }, bubbles: true, composed: true }));
       return;
     }
     if ((id as string) === "roadster" || this.#model.craftIds.includes(id) || (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id))) {
-      this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: { id, name: this.#nameOf(id), kind: "spacecraft" }, bubbles: true, composed: true }));
+      tellBodyClick(this, { id, name: this.#nameOf(id), kind: "spacecraft" });
       // an orbiter is told in an event of its own as well (`{ id, name }`, the id `orbiter` takes), the one above unchanged
       if (this.#model.orbiterSet !== null && this.#model.orbiterSet.ids.includes(id)) this.dispatchEvent(new CustomEvent("wakusei-orbiter-click", { detail: { id, name: this.#nameOf(id) }, bubbles: true, composed: true }));
       return;
     }
-    this.dispatchEvent(new CustomEvent("wakusei-body-click", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
+    const taken = tellBodyClick(this, this.bodyInfo(id));
     const first = this.#selected !== id;
     if (first) {
       this.#selected = id;
       this.dispatchEvent(new CustomEvent("wakusei-body-select", { detail: this.bodyInfo(id), bubbles: true, composed: true }));
     }
-    if ((!first || teleport) && canCentre(id) && this.#model.focus !== id) this.goTo(id, teleport ? { smooth: false } : {});
+    if (!taken && (!first || teleport) && canCentre(id) && this.#model.focus !== id) this.goTo(id, teleport ? { smooth: false } : {});
   }
   #labelFocus = (event: Event): void => {
     const id = (event.target as HTMLElement | null)?.dataset?.["body"] as BodyId | undefined;
