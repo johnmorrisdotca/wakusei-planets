@@ -2,7 +2,10 @@
 
 ## [Unreleased]
 
+## [0.86.0] - 2026-11-27
+
 - **Cutaways for Venus, Uranus and Neptune** (MODULES-728). The displayed layers follow named interior models, with their assumptions in the legend. The Sun now shows the radiative and convection zones separately, using the convection boundary from corrected Model S. All four use the existing line, classic, half and quarter views.
+- **Phobos and Deimos from Jacobson's theory** (MODULES-636). The Mars moons use Jacobson (2010) mean elements with a mean-longitude correction from 1960 to 2040, blended over a decade to the Horizons-fitted orbits outside 1950 to 2050. On 192 independent Horizons dates the worst angle from Mars's centre fell from 0.22° to 0.14° for Phobos and from 0.38° to 0.17° for Deimos.
 
 ## [0.85.0] - 2026-11-27
 
