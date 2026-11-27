@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.82.0] - 2026-11-27
+
 - **Hyperion's orbit follows TASS1.7** (MODULES-638). The optional Saturn moon table adds Hyperion's separate 230-term series. On 192 independent Horizons dates, the maximum direction error from Saturn fell from 14.40° to 0.82°. The two optional table entries have updated size baselines for the new series. The finer VSOP87B planet series remains an explicit import at every zoom.
 
 - **Refined six moon ephemerides** (MODULES-637). Mimas, Enceladus, Miranda and Nereid have phase corrections fitted to Horizons. Nix and Hydra have refined mean orbits and appear relative to Pluto's centre. All six have tighter limits on held-out Horizons dates. The root entry and optional Saturn table have updated size baselines for the new coefficients.
