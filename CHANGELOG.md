@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Miranda and Ceres maps mended** (MODULES-1821). Miranda's photographed south now meets the painted north without the straight line along the equator, and the smears at the join are gone. Ceres keeps its colour and now shows Dawn's real craters at both poles (the HAMO polar mosaics, matched in tone to the global map). Only the 0.34% of the surface around the south pole that was in shadow for Dawn is a plain fill, and nothing is painted there.
+
 - **A star can be seen pole-on** (MODULES-734). `inclinationDeg` leans the axis toward the viewer, from 0 (equator-on) to 90 (straight at the pole). Left out, the usual small lean stays. A page's own `pitch` still wins.
 
 - **A variable star brightens and dims** (MODULES-734). Give `variablePeriodDays` and `variableAmplitude` together and the disc and the glow follow a sine wave around the mean brightness. Left out, the brightness stays steady. The wave is invented. The pole-on view and the prominences that turn with the surface still wait.
