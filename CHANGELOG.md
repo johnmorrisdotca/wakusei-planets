@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.81.0] - 2026-11-27
+
 - **A guide to the surface maps** (MODULES-1821). `docs/guides/surface-maps.md`, in English and Japanese, has one table of every body with a map: the mission and mosaic it comes from, how much of the ground was photographed, what was reconstructed or painted, and the credit. It also says how the larger sizes load on close zoom.
 
 - **The demo names the whole solar system 太陽系全体** (MODULES-1014). The guides already used that name. The space view's button and its hint still said 太陽系ぜんぶ.
