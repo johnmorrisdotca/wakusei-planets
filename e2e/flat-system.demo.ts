@@ -29,6 +29,8 @@ const open = async (page: Page, query = ""): Promise<string[]> => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`/wakusei-planets/system.html${query}`);
+  // The demo header can put the whole map below the fold, where it does not draw.
+  await system(page).scrollIntoViewIfNeeded();
   await expect(system(page)).toHaveAttribute("data-state", "ready");
   await expect.poll(async () => (await stats(page)).draws).toBeGreaterThan(0);
   return errors;

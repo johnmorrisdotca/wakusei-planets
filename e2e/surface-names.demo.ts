@@ -88,9 +88,9 @@ test("a name never covers a landing dot or another name, and a press at the cent
       for (const other of names) if (other !== name) expect(overlap(name, other), `zoom ${zoom}: the name ${name.text} is over the name ${other.text}`).toBe(false);
     }
   }
-  const { dots } = await boxes();
-  // a real press at the middle of the dot goes to the dot, not to a name written over it
-  const eagle = dots.find((dot) => dot.id === "moon/apollo-11-lunar-module")!;
+  // Bring the dot into view before reading its viewport coordinates for a real press.
+  const eagle = space.locator('.wk-place[data-place="moon/apollo-11-lunar-module"]:not([data-name])');
+  await eagle.scrollIntoViewIfNeeded();
   await space.evaluate((el) => {
     const host = el as unknown as { _picked?: string };
     host._picked = "";
@@ -98,7 +98,8 @@ test("a name never covers a landing dot or another name, and a press at the cent
       host._picked = (event as CustomEvent<{ place: { id: string } }>).detail.place.id;
     });
   });
-  await page.mouse.click((eagle.left + eagle.right) / 2, (eagle.top + eagle.bottom) / 2);
+  const dot = (await eagle.boundingBox())!;
+  await page.mouse.click(dot.x + dot.width / 2, dot.y + dot.height / 2);
   await expect.poll(() => space.evaluate((el) => (el as unknown as { _picked?: string })._picked ?? "")).toBe("moon/apollo-11-lunar-module");
 });
 

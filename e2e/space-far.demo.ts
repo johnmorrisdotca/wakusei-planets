@@ -73,16 +73,19 @@ async function over(page: Page, id: string): Promise<{ x: number; y: number }> {
   const box = (await page.locator(SPACE).boundingBox())!;
   return { x: box.x + place!.x, y: box.y + place!.y };
 }
-/** A planet on the picture with no other body within 24 pixels of it, so a point on it can only be it. */
+/** A planet on screen with no other body within 24 pixels of it, so a point on it can only be it. */
 async function lonePlanet(page: Page, not: string[]): Promise<string> {
   const all = await page.locator(SPACE).evaluate((el) => {
     const space = el as unknown as { placeOf(id: string): Place | null; bodyList(): { id: string; kind: string }[] };
     return space.bodyList().map(({ id, kind }) => ({ id, kind, at: space.placeOf(id) })).filter((one): one is { id: string; kind: string; at: Place } => one.at !== null);
   });
   const box = (await page.locator(SPACE).boundingBox())!;
+  const viewport = page.viewportSize()!;
   for (const one of all) {
     if (one.kind !== "planet" || not.includes(one.id)) continue;
-    if (one.at.x < 20 || one.at.y < 60 || one.at.x > box.width - 20 || one.at.y > box.height - 40) continue;
+    const { x, y } = one.at;
+    if (x < 20 || y < 60 || x > box.width - 20 || y > box.height - 40) continue;
+    if (box.x + x < 0 || box.y + y < 0 || box.x + x >= viewport.width || box.y + y >= viewport.height) continue;
     if (all.every((other) => other.id === one.id || Math.hypot(other.at.x - one.at.x, other.at.y - one.at.y) > 24)) return one.id;
   }
   throw new Error(`no planet stands alone in the view: ${all.map((one) => `${one.id} ${Math.round(one.at.x)},${Math.round(one.at.y)}`).join("; ")}`);
@@ -165,6 +168,7 @@ test("a finger on a body lights its system and tells the page while it is down; 
   test.setTimeout(180_000);
   await fromAfar(page);
   await expect.poll(async () => (await strengths(page)).far.length, { timeout: 30_000 }).toBeGreaterThan(0);
+  await page.locator(SPACE).scrollIntoViewIfNeeded();
   await listen(page, ["wakusei-body-hover", "wakusei-body-hover-end"]);
   const planet = await lonePlanet(page, ["earth"]);
   const point = await over(page, planet);
