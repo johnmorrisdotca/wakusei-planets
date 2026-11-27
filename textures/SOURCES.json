@@ -86,7 +86,7 @@
     "licence": "Public domain",
     "credit": "NASA / JPL / U.S. Geological Survey Astrogeology, Voyager and Galileo SSI",
     "artist": "NASA / JPL / U.S. Geological Survey Astrogeology, Voyager and Galileo SSI",
-    "usage": "The USGS 500 m Voyager and Galileo mosaic supplies the measured ice and the sharp fractures. Missing regions and the soft patches are painted to continue that ground. Parts of Europa were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
+    "usage": "The USGS Voyager and Galileo 500 m mosaic anchors the measured southern detail. Separated sharp plates, softer measured ground and no-data gaps. Reconstructed detail in equal-area polar projections at both ends and feathered the incoming high-resolution plates while retaining the broad measured albedo and major lineae. Parts of Europa were never photographed or were photographed only at low resolution. Those areas are painted with an image model to continue the photographed ground. The painted details are unobserved.",
     "sha256": "a323f0c9ccb47d5af9902ea8297fe81f9a9708795645b80801f103c3f7c9a624"
   },
   "ganymede": {
