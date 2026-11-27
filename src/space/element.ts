@@ -1519,7 +1519,7 @@ export class WakuseiSpace extends HTMLElement {
   /**
    * What a body behind another gets (the attribute `covered`): `hide` (the default) fades its floating name and ring out while its place is inside a nearer body's drawn disc, and back when it comes out, as if the disc hid
    * them; `arrow` draws instead one small quiet arrow just outside the disc's edge on the side nearest the hidden body, pointing in behind it, with the surest hidden body's name beside it and the others counted
-   * (`Uranus +4`); a press on it goes to that body. The arrow goes as the body comes out; `name` draws the name and ring over the nearer body's disc as 0.57 and earlier did. The same discs hide the Oort cloud's note, the
+   * (`Uranus +4`); the first press selects that body, and a second press goes to it. The arrow goes as the body comes out; `name` draws the name and ring over the nearer body's disc as 0.57 and earlier did. The same discs hide the Oort cloud's note, the
    * marks of the places on a body that is behind another, and, through `coveredAt`, any label a page draws over the view.
    */
   get covered(): Covered {
@@ -3568,12 +3568,7 @@ export class WakuseiSpace extends HTMLElement {
     const target = event.target as HTMLElement | null;
     const id = target?.dataset?.["body"] as BodyId | undefined;
     if (!id) return;
-    // a press on a quiet arrow (a body behind another) goes to that body at once; a press on a name selects it first, as always
-    if (target?.dataset?.["cover"] !== undefined) {
-      if (canCentre(id)) this.goTo(id);
-      else this.#press(id);
-      return;
-    }
+    // a quiet arrow names a body behind another: the first press selects it, and a second press goes there, as a press on a name does
     this.#press(id);
   };
 

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A covered body's arrow selects that body** (MODULES-1652). The first press selects it, as a press on its name does. A second press goes there.
+
 ## [0.84.0] - 2026-11-27
 
 - **Kepler's laws teaching page** (MODULES-676). A new English and Japanese demo, `kepler.html`, linked from Plan. It plots period against semimajor axis on log scales for each central body's catalogue orbits, with the third-law prediction dashed and the Sun's plot labelled at Mercury, Earth, Jupiter, Neptune and Pluto. An ellipse view marks the central body's focus, the empty focus and the centre, and shades two sectors that each sweep 12.5% of the ellipse in one eighth of an orbit. Practice sliders change the semimajor axis and eccentricity independently. Playback starts on request, stops while hidden and is off under reduced motion.

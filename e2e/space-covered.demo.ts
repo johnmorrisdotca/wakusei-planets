@@ -1,5 +1,5 @@
 // A body behind another : with `covered="arrow"` its name and ring are not drawn over the nearer body's disc; one quiet arrow sits outside the disc's edge instead, named for the surest
-// hidden body, and a press on it goes there. With `covered="name"` the names are drawn over the disc as before; the default hides them (`space-occlude.demo.ts`). Chromium, drawing in software; every wait is on what the page reports.
+// hidden body. The first press selects that body; a second press goes there. With `covered="name"` the names are drawn over the disc as before; the default hides them (`space-occlude.demo.ts`). Chromium, drawing in software; every wait is on what the page reports.
 import "./load.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { callOn, clickCounted, drawnAfter, drawnAtRest, openSpace, SPACE } from "./space-ui.ts";
@@ -69,9 +69,15 @@ test("covered=\"name\": a body behind the Earth keeps its name over the disc; wi
   const near = Math.min(Math.hypot(box!.x - host!.x - earth.x, box!.y + 8 - host!.y - earth.y), Math.hypot(box!.x + box!.width - host!.x - earth.x, box!.y + 8 - host!.y - earth.y));
   expect(near, "the arrow's tip is at the Earth's edge").toBeGreaterThan(earth.r - 2);
   expect(near).toBeLessThan(earth.r + 30);
-  // a press on the arrow goes to the body it names
-  const before = await clickCounted(page.locator(SPACE).locator('.sp-arrow[data-cover="earth"]'));
-  await drawnAfter(page, before, "the press on the arrow");
+  // the first press selects the body the arrow names, and the view stays put
+  const stayed = await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"));
+  const arrow = page.locator(SPACE).locator('.sp-arrow[data-cover="earth"]');
+  await clickCounted(arrow);
+  await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "selected"))).toBe(earthArrow!.body);
+  expect(await page.locator(SPACE).evaluate((el) => Reflect.get(el, "body"))).toBe(stayed);
+  // a second press goes there
+  const before = await clickCounted(arrow);
+  await drawnAfter(page, before, "the second press on the arrow");
   await expect.poll(() => page.locator(SPACE).evaluate((el) => Reflect.get(el, "body")), { timeout: 30_000 }).toBe(earthArrow!.body);
 });
 
