@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Cutaways for Venus, Uranus and Neptune** (MODULES-728). The displayed layers follow named interior models, with their assumptions in the legend. The Sun now shows the radiative and convection zones separately, using the convection boundary from corrected Model S. All four use the existing line, classic, half and quarter views.
+
 ## [0.85.0] - 2026-11-27
 
 - **A body's place reports the disc that is drawn** (MODULES-1898). Off the middle of a wide view, `placeOf` and `framingFor` give the enclosing radius of the squashed disc, so the body is not smaller on the page than it is on the screen.

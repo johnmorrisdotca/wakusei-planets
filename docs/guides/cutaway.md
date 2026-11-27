@@ -69,15 +69,17 @@ Layer proportions follow the sources below. “About” marks an approximate bou
 | Mars | Classic, 2D, ½, ¼ | [NASA Mars Fact Sheet][mars-sheet] | No |
 | Moon | Classic, 2D, ½, ¼ | [NASA Moon Fact Sheet][moon-sheet] and [NASA Science Moon Facts][moon-facts] | No |
 | Mercury | Classic, 2D, ½, ¼ | [NASA Mercury Fact Sheet][mercury-sheet] and [NASA Science Mercury Facts][mercury-facts] | No |
-| Sun | Classic, 2D, ½, ¼ | [NASA Sun Fact Sheet][sun-sheet] and [NASA Science Sun Facts][sun-facts] | No |
+| Sun | Classic, 2D, ½, ¼ | [NASA Sun Fact Sheet][sun-sheet] and [NASA Science Sun Facts][sun-facts], with the convection boundary from [corrected Model S][sun-model] | No |
 | Jupiter | Classic, 2D, ½, ¼ | [NASA Jupiter Fact Sheet][jupiter-sheet] and [Militzer et al. (2022), model A][jupiter-model] | No |
 | Saturn | Classic, 2D, ½, ¼ | [NASA Saturn Fact Sheet][saturn-sheet], [NASA Science Saturn Facts][saturn-facts] and [Mankovich and Fuller (2021)][saturn-model] | No |
+| Venus | Classic, 2D, ½, ¼ | [Margot et al. (2021), two-layer model][venus-model] | No |
+| Uranus | Classic, 2D, ½, ¼ | [Nettelmann et al. (2013), model U2][ice-giant-model] | No |
+| Neptune | Classic, 2D, ½, ¼ | [Nettelmann et al. (2013), model N2b][ice-giant-model] | No |
 
-Bodies below stay whole because the package has no adopted source with their layer boundaries. When a cut is requested, the legend reports this. The NASA Science pages consulted for Venus, Uranus and Neptune name cores but give no core radii. The NASA fact sheets consulted for Io, Europa, Ganymede and Titan give no layer boundary figures.
+Bodies below stay whole because the package has no adopted source with their layer boundaries. When a cut is requested, the legend reports this. The NASA fact sheets consulted for Io, Europa, Ganymede and Titan give no layer boundary figures.
 
 | Body | Views | Layer source | Schematic proportions |
 |---|---|---|---|
-| Venus, Uranus, Neptune | Whole | — | — |
 | Pluto, Ceres, Orcus, Haumea, Quaoar, Makemake, Gonggong, Eris, Sedna | Whole | — | — |
 | Bennu, Eros, Vesta, Pallas, Arrokoth | Whole | — | — |
 | Chiron, Pholus | Whole | — | — |
@@ -136,12 +138,13 @@ The volumetric mean radius is 2439.7 km (NASA Mercury Fact Sheet). NASA Science'
 
 ## The Sun
 
-The volumetric mean radius is 695,700 km (NASA Sun Fact Sheet). NASA Science's Sun facts, read 2026-11-26, say the core is about 138,000 km thick. This cutaway uses that figure as the core's outside radius. The page names a radiative zone and a convection zone and states no boundary between them, so they are one layer. The photosphere is the atmosphere, and it is not drawn.
+NASA gives the volumetric mean radius as 695,700 km and a core about 138,000 km thick. The base of convection is at 0.7127 of the radius in the corrected Model S. The cutaway places that fraction on the NASA radius, with the radiative zone between the core and the convection zone. [NASA Sun Fact Sheet][sun-sheet], [NASA Science Sun Facts][sun-facts], [Model S author data][sun-model].
 
 | Layer | Depth from the surface | Made of |
 |---|---|---|
-| Radiative and convective zones | 0 km to about 558,000 km | hydrogen and helium |
-| Core | about 558,000 km to 696,000 km | hydrogen to helium |
+| Convection zone | 0 km to about 200,000 km | Hydrogen and helium |
+| Radiative zone | About 200,000 km to about 558,000 km | Hydrogen and helium |
+| Core | About 558,000 km to 696,000 km | Hydrogen fusing into helium |
 
 ## Jupiter
 
@@ -164,6 +167,24 @@ Mankovich and Fuller, 2021, "A diffuse core in Saturn revealed by ring seismolog
 | Envelope | 0 km to about 23,300 km | hydrogen and helium |
 | Diffuse core | about 23,300 km to 58,200 km | ice and rock, mixed |
 
+## Venus
+
+This view shows Margot et al.’s two-layer model based on the moment of inertia, using a planetary radius of 6,051.8 km. The authors find a core radius of 3,508 km with around 500 km uncertainty. The cutaway uses about 3,500 km. Dumoulin et al.’s tidal models put it between 2,900 and 3,450 km. [Margot et al. (2021)][venus-model], [Dumoulin et al. (2017)][venus-tides].
+
+| Layer | Depth from the surface | Made of |
+|---|---|---|
+| Mantle | 0 km to about 2,550 km | Rock |
+| Core | About 2,550 km to 6,050 km | Dense material |
+
+## Uranus and Neptune
+
+In Nettelmann et al.’s U2 and N2b models, a rock core sits inside two envelopes. The models use water to represent heavy material. The change in density in Figure 4 puts each core at about 0.15 of the model radius. Table 2 gives the envelope boundary and mean radius for each. The models share the same choice of modified shape and rotation data. [Nettelmann et al. (2013), Table 2 and Figure 4][ice-giant-model].
+
+| Model | Mean radius | Core radius | Radius of the envelope boundary |
+|---|---:|---:|---:|
+| Uranus U2 | 25,378 km | About 15% | About 75.7% |
+| Neptune N2b | 24,650 km | About 15% | About 60.5% |
+
 [earth-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
 [earth-facts]: https://science.nasa.gov/earth/facts/
 [mars-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html
@@ -178,3 +199,7 @@ Mankovich and Fuller, 2021, "A diffuse core in Saturn revealed by ring seismolog
 [saturn-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html
 [saturn-facts]: https://science.nasa.gov/saturn/facts/
 [saturn-model]: https://doi.org/10.1038/s41550-021-01448-3
+[sun-model]: https://users-phys.au.dk/jcd/solar_models/
+[venus-model]: https://doi.org/10.1038/s41550-021-01339-7
+[venus-tides]: https://doi.org/10.1002/2016JE005249
+[ice-giant-model]: https://doi.org/10.1016/j.pss.2012.06.019

@@ -46,10 +46,24 @@ test("the Earth's legend matches its layers, Japanese follows the language, and 
   ]);
   await body.evaluate((el) => el.removeAttribute("cutaway"));
   await expect.poll(() => legend(page)).toBeNull();
-  // Jupiter has a sourced interior. Venus is one of the bodies the pages give no radius for.
-  await page.goto("/wakusei-planets/?look=line&body=venus");
+  await page.goto("/wakusei-planets/?look=line&body=ceres");
   await page.locator("#main").evaluate((el) => el.setAttribute("cutaway", ""));
   await expect.poll(() => legend(page)).toEqual([{ layer: "", empty: true, name: "", depth: "" }]);
+});
+
+test("the Venus legend explains the two models and leaves room for the cross-section", async ({ page }) => {
+  await page.goto("/wakusei-planets/?look=line&body=venus&cutaway=quarter");
+  const body = page.locator("#main");
+  await expect(body.locator("#stage svg [data-layer]")).toHaveCount(2);
+  await expect(body.locator("#cutaway [data-note]")).toHaveText(/Margot.+3,500 km.+500 km.+Dumoulin.+2,900–3,450 km/);
+  await body.evaluate((el) => el.setAttribute("lang", "ja"));
+  await expect(body.locator("#cutaway [data-name]").first()).toHaveText("マントル");
+  await expect(body.locator("#cutaway [data-note]")).toHaveText(/約3,500 km.+約500 km.+2,900～3,450 km/);
+  await expect.poll(() => body.evaluate((el) => {
+    const stage = el.shadowRoot!.getElementById("stage")!.getBoundingClientRect();
+    const legend = el.shadowRoot!.getElementById("cutaway-panel")!.getBoundingClientRect();
+    return stage.bottom <= legend.top + 1 && stage.height > 0 && legend.width <= el.clientWidth;
+  })).toBe(true);
 });
 
 test("explicit cut sizes carry over to the line view, where flow can be played and paused", async ({ page }) => {

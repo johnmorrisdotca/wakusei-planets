@@ -1,5 +1,4 @@
-// A body's interior, for the cutaway. Every figure is one read of a named page (see NOTICE.md). A figure the page
-// gives as "about", or with an uncertainty, is marked `about`, and nothing is filled in where that page states no boundary.
+// A body's interior, with layer radii from the named sources in NOTICE.md. Approximate and uncertain boundaries are marked about.
 import type { BodyId } from "./facts.ts";
 
 /** One layer, from the centre outward. `outerKm` is the radius of its outside. */
@@ -27,6 +26,8 @@ export interface Interior {
   layers: readonly InteriorLayer[];
   /** Where the figures were read, and on which date. */
   source: { page: string; read: string };
+  /** A source model or uncertainty to show with the legend. */
+  note?: { en: string; ja: string };
 }
 
 /** One row of the legend: the layer's name, its depth from the surface, and what it is made of. */
@@ -96,19 +97,20 @@ const MERCURY: Interior = {
   ],
 };
 
-// NASA Sun Fact Sheet volumetric mean radius. science.nasa.gov/sun/facts/ (read 2026-11-26) says the core is about
-// 138,000 km thick; this cutaway uses that as the core's outside radius. The same page names a radiative zone and a
-// convection zone and states no boundary between them, so they are one layer. The photosphere is not drawn.
+// NASA's core radius and volumetric mean radius. The convection base is from the corrected GONG Model S profile,
+// read 2026-11-27, at the sign change of the Ledoux discriminant (0.712743 of the model’s photospheric radius).
 const SUN_RADIUS_KM = 695700;
 const SUN: Interior = {
   body: "sun",
   radiusKm: SUN_RADIUS_KM,
   radiusAbout: false,
-  source: { page: "https://science.nasa.gov/sun/facts/", read: "2026-11-26" },
+  source: { page: "https://users-phys.au.dk/jcd/solar_models/", read: "2026-11-27" },
   layers: [
     { id: "core", name: { en: "Core", ja: "中心核" }, madeOf: { en: "hydrogen to helium", ja: "水素がヘリウムに変わる" }, outerKm: 138000, about: true, colour: "#e6c36a" },
-    { id: "outside-core", name: { en: "Radiative and convective zones", ja: "放射層と対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#d4652f" },
+    { id: "radiative-zone", name: { en: "Radiative zone", ja: "放射層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: 0.7127 * SUN_RADIUS_KM, about: true, colour: "#d4652f" },
+    { id: "convective-zone", name: { en: "Convection zone", ja: "対流層" }, madeOf: { en: "hydrogen and helium", ja: "水素とヘリウム" }, outerKm: SUN_RADIUS_KM, about: false, colour: "#a85a3c" },
   ],
+  note: { en: "The convection boundary comes from the corrected solar Model S.", ja: "対流層の境界は、修正された太陽モデル S の値です。" },
 };
 
 // Militzer et al. 2022, Planet. Sci. J. (doi 10.3847/PSJ/ac7ec8), model A, read 2026-11-26. The ensemble gives the
@@ -145,11 +147,61 @@ const SATURN: Interior = {
   ],
 };
 
-const INTERIORS: Partial<Record<BodyId, Interior>> = { sun: SUN, mercury: MERCURY, earth: EARTH, mars: MARS, jupiter: JUPITER, saturn: SATURN, moon: MOON };
+// Margot et al. (2021), two-layer uniform-density model in Methods. They obtain a core radius of 3508 km
+// with about 500 km uncertainty from the moment of inertia. Dumoulin et al. (2017) give a model range.
+const VENUS_RADIUS_KM = 6051.8;
+const VENUS: Interior = {
+  body: "venus",
+  radiusKm: VENUS_RADIUS_KM,
+  radiusAbout: false,
+  source: { page: "https://doi.org/10.1038/s41550-021-01339-7", read: "2026-11-27" },
+  layers: [
+    { id: "core", name: { en: "Core", ja: "核" }, madeOf: { en: "dense material", ja: "密度の高い物質" }, outerKm: 3500, about: true, colour: "#e6c36a" },
+    { id: "mantle", name: { en: "Mantle", ja: "マントル" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: VENUS_RADIUS_KM, about: false, colour: "#a85a3c" },
+  ],
+  note: {
+    en: "Margot et al. give a core radius of about 3,500 km, uncertain by about 500 km. Dumoulin et al.’s models give 2,900–3,450 km.",
+    ja: "Margot らのモデルでは核の半径は約3,500 kmで、不確かさは約500 kmです。Dumoulin らのモデルでは2,900～3,450 kmです。",
+  },
+};
+
+// Nettelmann et al. (2013), Table 2 and Figure 4. Both use the modified shape and rotation data.
+// Use each model's mean radius and envelope transition. The core near 0.15 of the radius is read from the figure.
+const ICE_GIANT_SOURCE = { page: "https://doi.org/10.1016/j.pss.2012.06.019", read: "2026-11-27" };
+const URANUS_MODEL_RADIUS_KM = 25378;
+const URANUS: Interior = {
+  body: "uranus",
+  radiusKm: URANUS_MODEL_RADIUS_KM,
+  radiusAbout: false,
+  source: ICE_GIANT_SOURCE,
+  layers: [
+    { id: "rock-core", name: { en: "Rocky core", ja: "岩石の核" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: 0.15 * URANUS_MODEL_RADIUS_KM, about: true, colour: "#c59b71" },
+    { id: "inner-envelope", name: { en: "Inner envelope", ja: "内層" }, madeOf: { en: "mostly heavy material", ja: "主に重い成分" }, outerKm: 0.757 * URANUS_MODEL_RADIUS_KM, about: true, colour: "#346d79" },
+    { id: "outer-envelope", name: { en: "Outer envelope", ja: "外層" }, madeOf: { en: "mostly hydrogen and helium", ja: "主に水素とヘリウム" }, outerKm: URANUS_MODEL_RADIUS_KM, about: false, colour: "#7bb8b4" },
+  ],
+  note: { en: "Nettelmann et al.’s U2 model uses water to represent heavy material.", ja: "Nettelmann らの U2 モデルでは、重い成分を水で代表させています。" },
+};
+const NEPTUNE_MODEL_RADIUS_KM = 24650;
+const NEPTUNE: Interior = {
+  body: "neptune",
+  radiusKm: NEPTUNE_MODEL_RADIUS_KM,
+  radiusAbout: false,
+  source: ICE_GIANT_SOURCE,
+  layers: [
+    { id: "rock-core", name: { en: "Rocky core", ja: "岩石の核" }, madeOf: { en: "rock", ja: "岩石" }, outerKm: 0.15 * NEPTUNE_MODEL_RADIUS_KM, about: true, colour: "#c59b71" },
+    { id: "inner-envelope", name: { en: "Inner envelope", ja: "内層" }, madeOf: { en: "heavy material", ja: "重い成分" }, outerKm: 0.605 * NEPTUNE_MODEL_RADIUS_KM, about: true, colour: "#365887" },
+    { id: "outer-envelope", name: { en: "Outer envelope", ja: "外層" }, madeOf: { en: "hydrogen, helium and heavy material", ja: "水素、ヘリウム、重い成分" }, outerKm: NEPTUNE_MODEL_RADIUS_KM, about: false, colour: "#739dca" },
+  ],
+  note: { en: "Nettelmann et al.’s N2b model uses water to represent heavy material.", ja: "Nettelmann らの N2b モデルでは、重い成分を水で代表させています。" },
+};
+
+const INTERIORS: Partial<Record<BodyId, Interior>> = {
+  sun: SUN, mercury: MERCURY, venus: VENUS, earth: EARTH, mars: MARS,
+  jupiter: JUPITER, saturn: SATURN, uranus: URANUS, neptune: NEPTUNE, moon: MOON,
+};
 
 /**
  * The interior of a body, or `undefined` when this package has no sourced figures for it. The layers run from the centre outward.
- * Venus, Uranus, Neptune, and Io, Europa, Ganymede and Titan are left out: the pages read for them state no layer boundary.
  *
  * @param bodyId - A body's id, such as `"earth"`.
  * @returns The layers, or `undefined`.

@@ -69,15 +69,17 @@ description: 天体を開いて層を見る。断面は指定するまでオフ�
 | 火星 | 従来、2D、半分、4分の1 | [NASA 火星ファクトシート][mars-sheet] | いいえ |
 | 月 | 従来、2D、半分、4分の1 | [NASA 月ファクトシート][moon-sheet]、[NASA Science 月の解説][moon-facts] | いいえ |
 | 水星 | 従来、2D、半分、4分の1 | [NASA 水星ファクトシート][mercury-sheet]、[NASA Science 水星の解説][mercury-facts] | いいえ |
-| 太陽 | 従来、2D、半分、4分の1 | [NASA 太陽ファクトシート][sun-sheet]、[NASA Science 太陽の解説][sun-facts] | いいえ |
+| 太陽 | 従来、2D、半分、4分の1 | [NASA 太陽ファクトシート][sun-sheet]、[NASA Science 太陽の解説][sun-facts]、[修正された太陽モデル S][sun-model] | いいえ |
 | 木星 | 従来、2D、半分、4分の1 | [NASA 木星ファクトシート][jupiter-sheet]、[Militzer ほか (2022) のモデル A][jupiter-model] | いいえ |
 | 土星 | 従来、2D、半分、4分の1 | [NASA 土星ファクトシート][saturn-sheet]、[NASA Science 土星の解説][saturn-facts]、[Mankovich と Fuller (2021)][saturn-model] | いいえ |
+| 金星 | 従来、2D、半分、4分の1 | [Margot ら (2021) の2層モデル][venus-model] | いいえ |
+| 天王星 | 従来、2D、半分、4分の1 | [Nettelmann ら (2013) の U2 モデル][ice-giant-model] | いいえ |
+| 海王星 | 従来、2D、半分、4分の1 | [Nettelmann ら (2013) の N2b モデル][ice-giant-model] | いいえ |
 
-以下の天体は、このパッケージが層の境界の出典を採用していないため、丸ごと描きます。断面を指定すると、そのことを凡例に表示します。金星、天王星、海王星について確認した NASA Science のページには、核の記述はありますが、核の半径の数値はありません。イオ、エウロパ、ガニメデ、タイタンについて確認した NASA のファクトシートには、層の境界の数値がありません。
+以下の天体は、このパッケージが層の境界の出典を採用していないため、丸ごと描きます。断面を指定すると、そのことを凡例に表示します。イオ、エウロパ、ガニメデ、タイタンについて確認した NASA のファクトシートには、層の境界の数値がありません。
 
 | 天体 | 表示できる断面 | 層の出典 | 模式的な層の比率 |
 |---|---|---|---|
-| 金星、天王星、海王星 | 丸ごと | — | — |
 | 冥王星、ケレス、オルクス、ハウメア、クワオアー、マケマケ、ゴンゴン、エリス、セドナ | 丸ごと | — | — |
 | ベンヌ、エロス、ベスタ、パラス、アロコス | 丸ごと | — | — |
 | キロン、フォルス | 丸ごと | — | — |
@@ -136,11 +138,12 @@ description: 天体を開いて層を見る。断面は指定するまでオフ�
 
 ## 太陽
 
-体積平均半径は 695700 km です (NASA の太陽ファクトシート)。NASA Science の太陽の事実を 2026-11-26 に読むと、中心核の厚さは約 138000 km です。この断面は、その数値を中心核の外側の半径として使います。ページは放射層と対流層の名前を挙げ、その境を述べていないので、1枚の層です。光球は大気なので描きません。
+NASA が示す体積平均半径は695,700 km、中心核の半径は約138,000 kmです。修正された太陽モデル S では、対流層の内側は半径の0.7127の位置にあります。断面図では、その割合をNASAの半径に当てはめています。中心核と対流層の間に放射層があります。[NASA 太陽ファクトシート][sun-sheet]、[NASA Science 太陽の解説][sun-facts]、[太陽モデル S のデータ][sun-model]。
 
 | 層 | 表面からの深さ | 成分 |
 |---|---|---|
-| 放射層と対流層 | 0 km から 約558,000 km | 水素とヘリウム |
+| 対流層 | 0 km から 約200,000 km | 水素とヘリウム |
+| 放射層 | 約200,000 km から 約558,000 km | 水素とヘリウム |
 | 中心核 | 約558,000 km から 696,000 km | 水素がヘリウムに変わる |
 
 ## 木星
@@ -164,6 +167,24 @@ Mankovich と Fuller、2021、"A diffuse core in Saturn revealed by ring seismol
 | 外層 | 0 km から 約23,300 km | 水素とヘリウム |
 | 境界のぼやけた核 | 約23,300 km から 58,200 km | 氷と岩石が混ざっている |
 
+## 金星
+
+Margot らは慣性モーメントをもとに、半径6,051.8 kmの金星を2層に分けたモデルを示しています。このモデルによる核の半径は3,508 kmで、不確かさは約500 kmです。断面図は約3,500 kmを使います。Dumoulin らの潮汐モデルでは核の半径は2,900～3,450 kmです。[Margot ら (2021)][venus-model]、[Dumoulin ら (2017)][venus-tides]。
+
+| 層 | 表面からの深さ | 成分 |
+|---|---|---|
+| マントル | 0 km から 約2,550 km | 岩石 |
+| 核 | 約2,550 km から 6,050 km | 密度の高い物質 |
+
+## 天王星と海王星
+
+Nettelmann らの U2 モデルと N2b モデルでは、岩石の核を2つの層が取り囲みます。このモデルでは、重い成分を水で代表させています。図4の密度の段差から、核はどちらも半径の約0.15までと読み取れます。平均半径と外層の内側の境界は表2の値です。2つのモデルは自転と形に関して同じ種類の修正データを使います。[Nettelmann ら (2013) の表2と図4][ice-giant-model]。
+
+| モデル | 平均半径 | 核の半径 | 外層の内側の境界 |
+|---|---:|---:|---:|
+| 天王星 U2 | 25,378 km | 約15% | 約75.7% |
+| 海王星 N2b | 24,650 km | 約15% | 約60.5% |
+
 [earth-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html
 [earth-facts]: https://science.nasa.gov/earth/facts/
 [mars-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html
@@ -178,3 +199,7 @@ Mankovich と Fuller、2021、"A diffuse core in Saturn revealed by ring seismol
 [saturn-sheet]: https://nssdc.gsfc.nasa.gov/planetary/factsheet/saturnfact.html
 [saturn-facts]: https://science.nasa.gov/saturn/facts/
 [saturn-model]: https://doi.org/10.1038/s41550-021-01448-3
+[sun-model]: https://users-phys.au.dk/jcd/solar_models/
+[venus-model]: https://doi.org/10.1038/s41550-021-01339-7
+[venus-tides]: https://doi.org/10.1002/2016JE005249
+[ice-giant-model]: https://doi.org/10.1016/j.pss.2012.06.019

@@ -1261,10 +1261,14 @@ export class WakuseiBody extends HTMLElement {
       item.append(swatch, text);
       list.append(item);
     }
+    let explanation = interiorOf(this.body)?.note?.[lang];
     if (this.body === "earth" && this.#cutSize() !== undefined) {
+      explanation = lang === "ja" ? "表面近くの明るい点は、模式的なマグマだまりを示します。" : "Bright pockets show illustrative magma near the surface.";
+    }
+    if (explanation !== undefined) {
       const note = document.createElement("li");
       note.dataset.note = "";
-      note.textContent = lang === "ja" ? "表面近くの明るい点は、模式的なマグマだまりを示します。" : "Bright pockets show illustrative magma near the surface.";
+      note.textContent = explanation;
       list.append(note);
     }
     this.#fitCutaway();
