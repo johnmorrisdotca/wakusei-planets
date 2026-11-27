@@ -13,7 +13,7 @@
     "licence": "CC BY 4.0",
     "credit": "Solar System Scope, CC BY 4.0. https://www.solarsystemscope.com/textures/",
     "artist": "Solar System Scope",
-    "usage": "Equirectangular map, resized to 512, 1024 and 2048. The 8K original is not in this commit."
+    "usage": "Equirectangular texture resized to 512, 1024 and 2048 pixels wide. The source record gives no mission or observed coverage for this file."
   },
   "mars": {
     "file": "Mars Viking MDIM21 ClrMosaic 1km.jpg",

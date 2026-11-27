@@ -8,7 +8,7 @@ description: The looks, each body's own entry point, three.js, pictures and the 
 ## The looks
 
 - `line`: a clean outline drawing, an SVG string. It needs nothing else.
-- `realistic`: the photo maps, lit from the Sun's side. `painted` is the same maps, kept so an older page still works. The demo's one button for them is Realistic.
+- `realistic`: the surface maps, lit from the Sun's side. `painted` is the same maps, kept so an older page still works. The demo's one button for them is Realistic.
 - `illustrated`: the shaded drawing `realistic` used to be, worked out in the shader from the body's colours and features. It is not a default.
 
 A small picture loads first, and a sharper one is fetched on close zoom. If a picture cannot be fetched, the shaded look stays. [Surface maps](surface-maps.md) lists each mapped body’s source, photographed coverage and reconstructed areas.
@@ -19,7 +19,7 @@ A small picture loads first, and a sharper one is fetched on close zoom. If a pi
 
 ![Io in the painted look.](../images/hero-io-painted.png)
 
-![Venus in the realistic look, from its cloud map.](../images/hero-venus-realistic.png)
+![Venus in the realistic look, drawn from Solar System Scope's 2k_venus_surface.jpg.](../images/hero-venus-realistic.png)
 
 ## Rings
 

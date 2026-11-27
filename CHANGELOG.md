@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Venus map credit** (MODULES-1902). The English and Japanese guides identify Solar System Scope's `2k_venus_surface.jpg` and record the source's unspecified mission and coverage.
+
 ## [0.87.0] - 2026-11-27
 
 - **Stars in portrait scenes** (MODULES-733). Add a star by its temperature and radius, compare it with the Sun at true scale, and share the same scene by link or embed. The shared star model gives cool dwarfs smaller, sparser spots and a darker limb in the shaded look. The `/look` size baseline includes this shared validation and shading.
