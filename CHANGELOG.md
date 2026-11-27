@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.85.0] - 2026-11-27
+
 - **A body's place reports the disc that is drawn** (MODULES-1898). Off the middle of a wide view, `placeOf` and `framingFor` give the enclosing radius of the squashed disc, so the body is not smaller on the page than it is on the screen.
 - **A page can take a press** (MODULES-1651). `wakusei-body-click` is cancelable. `preventDefault` leaves the view where it is, so the page's own Go moves it.
 - **A covered body's arrow selects that body** (MODULES-1652). The first press selects it, as a press on its name does. A second press goes there.
