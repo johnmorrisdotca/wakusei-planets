@@ -112,7 +112,7 @@ description: 天体ごとにどこまでズームできて、なぜそこで止�
 | 天体 | 最上位のレベル | 出典 |
 |---|---|---|
 | 火星 | 3 (16384) | バイキングの火星デジタル画像モザイク 2.1、カラー、1ピクセル1 km。同じモザイクの1ピクセル232 m のものは、`WAKUSEI_SHARP_TILES=1` のときだけ `pnpm tiles:mars` がレベル4 (幅32768) に切ります |
-| 月 | 3 (16384) | LRO カメラのカラー地図 (NASA SVS、CGI Moon Kit)。拡大すると LOLA の標高データで極域の斜面を描きます。LROC WAC の形態モザイク (1ピクセル100 m) は、同じスイッチで `pnpm tiles:moon` がレベル4に切ります |
+| 月 | 3 (16384) | LRO カメラのカラー地図 (NASA SVS、CGI Moon Kit)。拡大すると、LOLA の標高データで極域の斜面に陰影をつけます。LROC WAC の形態モザイク (1ピクセル100 m) は、同じスイッチで `pnpm tiles:moon` がレベル4に切ります |
 | 地球 | 3 (16384) | 地形と海底地形つきの Blue Marble Next Generation |
 | 水星 | 2 (8192) | メッセンジャー MDIS の全球ベースマップ |
 | 金星 | 3 (16384) | マゼランの第1観測周期のレーダーモザイク (NASA、JPL、PDS)。観測範囲の境目では細部をなだらかに弱めます |
@@ -148,7 +148,7 @@ description: 天体ごとにどこまでズームできて、なぜそこで止�
 
 ## タイルの置き場所
 
-月の地図を拡大すると、極域で観測された起伏が見えます。斜面の計算には [LOLA の標高グリッド](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/) を使い、色には CGI Moon Kit を使います。クレーターの斜面は太陽の向きに応じて明暗が変わります。南北とも緯度82°から起伏の効果を弱め、75.25°で消します。陰影は各地点の斜面から計算し、他の地形が落とす影は描きません。標高データは LOLA チーム (NASA/GSFC) によるもので、NASA Planetary Data System が公開しています。
+月の地図を拡大すると、極域では実測の起伏も見えます。斜面の計算には [ルナー・オービター・レーザー高度計 (LOLA) の標高グリッド](https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/) を、色には CGI Moon Kit を使います。クレーターの斜面は太陽の向きに応じて明暗が変わります。南北どちらの半球でも、緯度82°から起伏の陰影を弱め、75.25°で消します。陰影は各地点の斜面から計算し、他の地形が落とす影は描きません。標高データは LOLA チーム (NASA/GSFC) によるもので、NASA Planetary Data System が公開しています。
 
 Pages ビルドは標高ファイルを `tiles/moon/polar/north.webp` と `tiles/moon/polar/south.webp` で配信します。自分で配信するには `.cache/venv/bin/python -I scripts/make-moon-polar.py` を実行し、`.cache/moon-polar-out` をタイルのフォルダーの `moon/polar/` にコピーします。
 
