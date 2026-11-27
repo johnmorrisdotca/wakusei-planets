@@ -4,6 +4,8 @@
 
 - **Prominences turn with the star** (MODULES-734). They sit on the surface, so the turn carries them round the edge. The flicker stays with the clock. They are still drawn for looks.
 
+- **Europa's map mended** (MODULES-1821). The sharp and soft parts of the Galileo and Voyager mosaic now meet without rectangle edges at either pole, the seam down the middle of the map is gone, and the stretched ground near the south pole is ridged plains and lineae like the photographed ice next to it.
+
 ## [0.79.0] - 2026-11-27
 
 - **Miranda and Ceres maps mended** (MODULES-1821). Miranda's photographed south now meets the painted north without the straight line along the equator, and the smears at the join are gone. Ceres keeps its colour and now shows Dawn's real craters at both poles (the HAMO polar mosaics, matched in tone to the global map). Only the 0.34% of the surface around the south pole that was in shadow for Dawn is a plain fill, and nothing is painted there.
