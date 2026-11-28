@@ -13,6 +13,7 @@ import { createMoonLayer, MOON_ORBIT_OPACITY, type DotsThree, type MoonColorChoi
 import { BELT_IDS, BELTS, OORT, type BeltId } from "../belts/index.ts";
 import { toTerrestrialTime } from "../clock.ts";
 import { moonOffset, orientation } from "../scene/orient.ts";
+import { pictureHeld, releaseBodyPicture } from "./picture-keep.ts";
 import { discPixels, roundShape, squashPoint } from "../scene/round.ts";
 import { type PaintLabel, type Painting, type WakuseiPainter } from "../scene/painter.ts";
 import "../bodies/all.ts";
@@ -736,10 +737,8 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
       }
       const slots = new Map<string, Slot>();
       const empty = (slot: Slot): void => {
-        if (!slot.drawing) return;
-        scene.remove(slot.drawing.object);
-        slot.drawing.dispose();
-        slot.drawing = undefined;
+        if (slot.drawing) scene.remove(slot.drawing.object);
+        releaseBodyPicture(slot);
       };
       const fill = (id: string, slot: Slot): void => {
         if (slot.look === model.look || slot.failed) return;
@@ -1397,10 +1396,11 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           for (const id of SPACE_BODIES) motion = Math.max(motion, (Math.abs(BODIES[id].prime.rate) / 86_400) * RAD * Math.min(px[id], size.height));
           model.motion = motion;
 
-          // the bodies, drawn by the painter, one slot each. one that has left the picture is kept a few seconds (the view may come straight back) and then let go, pictures and all: three.js never frees a body it has drawn once the body is merely out of frame, so a trip out and back would keep every picture it passed
+          // the bodies, drawn by the painter, one slot each. one that has left the picture is kept a few seconds (the view may come straight back) and then let go, pictures and all. the look is cleared with the picture, so the next time the body is in frame the picture is loaded again. one that has never been on screen keeps its picture: the opening view's bodies are painted before any of them fills the frame
           let paintedBodies = 0;
           const bodyNow = performance.now();
           const keptBodies = new Set<string>();
+          const leftBodies = new Set<string>();
           for (const id of SPACE_BODIES) {
             const slot = slotOf(id);
             // a dwarf planet or minor body too small to see is not made, and one that was made but has shrunk away is hidden
@@ -1409,9 +1409,22 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
             const inView = projected.z <= 1 && Math.abs(projected.x) <= 1.25 && Math.abs(projected.y) <= 1.25;
             const stay = !unseen && (inView || id === focus || id === model.focus || hostOf(model.focus) === id);
             if (!stay) {
+              if (unseen) {
+                if (slot.drawing) slot.drawing.object.visible = false;
+                continue;
+              }
               // a look changed while it was away: the old pictures go now, not after the wait, or the trip's look is what the count keeps
-              if (slot.drawing !== undefined && slot.look !== model.look) empty(slot);
-              if (slot.drawing !== undefined) slot.drawing.object.visible = false;
+              if (slot.drawing !== undefined && slot.look !== model.look) {
+                empty(slot);
+                slot.seen = 0;
+              }
+              // never drawn, and never on screen: make it once, so the opening view paints every body. one that was dropped (it has been on screen) waits until it is in frame again
+              if (slot.drawing === undefined && slot.seen === 0) fill(id, slot);
+              if (slot.drawing !== undefined) {
+                slot.drawing.object.visible = false;
+                paintedBodies += 1;
+                leftBodies.add(id);
+              }
               continue;
             }
             slot.seen = bodyNow;
@@ -1892,12 +1905,55 @@ export function createSpaceItem(model: SpaceModel, deps: SpaceDeps): Item3D<Thre
           }
           for (const [id, slot] of slots) {
             if (keptBodies.has(id) || slot.drawing === undefined) continue;
-            if (bodyNow - slot.seen > MOON_KEEP_MS) empty(slot);
-            else soonest = Math.min(soonest, slot.seen + MOON_KEEP_MS - bodyNow);
+            if (pictureHeld(slot.seen, bodyNow, MOON_KEEP_MS)) {
+              if (slot.seen !== 0) soonest = Math.min(soonest, slot.seen + MOON_KEEP_MS - bodyNow);
+              continue;
+            }
+            empty(slot);
           }
-          // a view at rest draws nothing, so a moon that has left the view would be kept for ever: ask for one more draw when the first of them is due to be let go
+          // a view at rest draws nothing, so a moon or a body that has left would be kept for ever. the timer lets them go without asking for a frame: a frame here is a draw at rest
+          const leftMoons = new Set<string>();
+          for (const key of moonSlots.keys()) if (!seen.has(key)) leftMoons.add(key);
+          const releaseLeft = (): void => {
+            const at = performance.now();
+            let changed = false;
+            let dropped = 0;
+            let next = Number.POSITIVE_INFINITY;
+            for (const key of leftMoons) {
+              const held = moonSlots.get(key);
+              if (held === undefined) continue;
+              const wait = held.seen + MOON_KEEP_MS - at;
+              if (wait > 0) {
+                next = Math.min(next, wait);
+                continue;
+              }
+              empty(held.slot);
+              moonSlots.delete(key);
+              changed = true;
+            }
+            for (const id of leftBodies) {
+              const slot = slots.get(id);
+              if (slot === undefined || slot.drawing === undefined) continue;
+              if (pictureHeld(slot.seen, at, MOON_KEEP_MS)) {
+                if (slot.seen !== 0) next = Math.min(next, slot.seen + MOON_KEEP_MS - at);
+                continue;
+              }
+              empty(slot);
+              dropped += 1;
+              changed = true;
+            }
+            if (changed) {
+              let moons = 0;
+              for (const held of moonSlots.values()) if (held.slot.drawing?.object.visible) moons += 1;
+              model.painted.moons = moons;
+              model.painted.held = moonSlots.size;
+              // only the bodies this timer let go: a recount would include a dwarf the draw hid and did not count
+              model.painted.bodies = Math.max(0, model.painted.bodies - dropped);
+            }
+            releaseTimer = next < Number.POSITIVE_INFINITY ? setTimeout(releaseLeft, next + 50) : undefined;
+          };
           if (releaseTimer !== undefined) clearTimeout(releaseTimer);
-          releaseTimer = soonest < Number.POSITIVE_INFINITY ? setTimeout(() => deps.invalidate(), soonest + 50) : undefined;
+          releaseTimer = soonest < Number.POSITIVE_INFINITY ? setTimeout(releaseLeft, soonest + 50) : undefined;
           let paintedMoons = 0;
           for (const held of moonSlots.values()) if (held.slot.drawing?.object.visible) paintedMoons += 1;
           model.painted.moons = paintedMoons;

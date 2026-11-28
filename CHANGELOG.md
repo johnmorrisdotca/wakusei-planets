@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A dropped picture comes back** (MODULES-1905). A body that returns to the space view loads its picture again, and a closer picture that was let go is fetched again when the body is large enough. The opening view still paints every body before any of them has filled the frame.
+
 ## [0.90.0] - 2026-11-27
 
 - **Venus surface orientation and closer views** (MODULES-774). The earlier realistic Venus was drawn upside down. Its replacement is NASA/JPL's Magellan radar composite, aligned to the mission grid. The finer maps add measured radar brightness where the first mapping cycle observed the surface.

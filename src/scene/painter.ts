@@ -28,9 +28,11 @@ import { createNameLabel, nameLabelText, shapeReach, type NameLabel, type NameLa
 import { roundShape } from "./round.ts";
 
 let pictureLoads = 0;
+/** Pictures a view has decided to let go and has not let go yet. A rest test waits, so the letting-go is not counted in the middle of its window. */
+let picturesLettingGo = 0;
 
 /**
- * How many surface pictures are still being fetched. A view draws once more when one arrives, so a rest test waits for this to be 0.
+ * How many surface pictures are still being fetched, or are about to be let go. A view draws once more when one arrives, so a rest test waits for this to be 0.
  *
  * @returns The number of picture fetches that have not finished.
  *
@@ -42,7 +44,7 @@ let pictureLoads = 0;
  * ```
  */
 export function picturesPending(): number {
-  return pictureLoads;
+  return pictureLoads + picturesLettingGo;
 }
 
 function trackPicture<T>(load: Promise<T>): Promise<T> {
@@ -517,8 +519,10 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   // armed when the body is too small for the big picture, so the picture is still let go after the view has stopped drawing
   let sharpTimer: ReturnType<typeof setTimeout> | undefined;
   const clearSharpTimer = (): void => {
-    if (sharpTimer !== undefined) clearTimeout(sharpTimer);
+    if (sharpTimer === undefined) return;
+    clearTimeout(sharpTimer);
     sharpTimer = undefined;
+    picturesLettingGo -= 1;
   };
   const tried = new Set<number>();
   const urlOf = (w: number): string => `${look.painted!.far !== undefined && w >= look.painted!.far && bases.far !== undefined ? bases.far : bases.near}${look.painted!.map}-${w}.webp`;
@@ -528,18 +532,19 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     t.colorSpace = T.NoColorSpace;
     return t;
   };
-  const show = (t: THREE.Texture, w: number): void => {
+  const show = (t: THREE.Texture, w: number, draw = true): void => {
     paintedMaterial!.uniforms.uMap!.value = t;
     if (paintedMaterial!.uniforms.uTexel !== undefined) paintedMaterial!.uniforms.uTexel.value = (2 * Math.PI) / w;
     mesh.material = paintedMaterial!;
     // the shaded look was drawn only until the picture came: if it was drawn at all, its program is let go now, so what a body holds does not depend on which came first
     shader.dispose();
-    redraw();
+    if (draw) redraw();
   };
+  // letting the big picture go does not ask for a frame: a view at rest must stay at rest, and the picture already on the screen is the one being let go
   const releaseSharp = (): void => {
     clearSharpTimer();
     if (gone || sharp === undefined || small === undefined) return;
-    show(small, widths[0]!);
+    show(small, widths[0]!, false);
     sharp.dispose();
     sharp = undefined;
     sharpWidth = 0;
@@ -587,10 +592,13 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
         },
       );
     } else if (sharp !== undefined && sharpWidth > next) {
-      // a closer look fetched a larger picture than this body now needs. it used to stay until the body was half that size, so one close pass kept it for good (the soak's count never came back). after a few seconds at the smaller size, let it go. the timer covers a view that stops drawing before those seconds pass
+      // a closer look fetched a larger picture than this body now needs. it used to stay until the body was half that size, so one close pass kept it for good (the soak's count never came back). after a few seconds at the smaller size, let it go, and forget that it was fetched, so the next time the body is large enough it is loaded again. the timer covers a view that stops drawing before those seconds pass
       const now = Date.now();
       if (tooBigSince === 0) tooBigSince = now;
-      if (sharpTimer === undefined) sharpTimer = setTimeout(releaseSharp, Math.max(0, 4000 - (now - tooBigSince)));
+      if (sharpTimer === undefined) {
+        picturesLettingGo += 1;
+        sharpTimer = setTimeout(releaseSharp, Math.max(0, 4000 - (now - tooBigSince)));
+      }
       if (now - tooBigSince > 4000) releaseSharp();
     } else {
       tooBigSince = 0;

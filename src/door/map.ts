@@ -147,7 +147,15 @@ const manifests = new Map<string, { at: number; value: Promise<TileManifest | un
 function readManifest(base: string, get: NonNullable<TilesSourceOptions["fetch"]>): Promise<TileManifest | undefined> {
   const now = performance.now();
   const held = manifests.get(base);
-  if (held !== undefined && now - held.at < RETRY_MS) return held.value;
+  if (held !== undefined) {
+    // a read that worked is kept: a body that was let go and made again must not fetch the tile set a second time. a read that failed is asked again only after a while
+    if (now - held.at < RETRY_MS) return held.value;
+    return held.value.then((value) => {
+      if (value !== undefined) return value;
+      if (manifests.get(base) === held) manifests.delete(base);
+      return readManifest(base, get);
+    });
+  }
   const value = get(`${base}manifest.json`, { mode: "cors" }).then(
     async (response) => (response.ok ? parseManifest(await response.json().catch(() => undefined)) : undefined),
     () => undefined,
