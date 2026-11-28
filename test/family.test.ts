@@ -29,9 +29,9 @@ const id = pkg.name.replace(/^@[^/]+\//, "");
 
 // The template of 2026-11-02c is the one of 2026-11-02b (chikyu-earth's) with this package added to the list (thirty-four packages, geography group, a line in English and Japanese), and
 // the README writer's number words reaching thirty-four. The other packages take the same two files when they are next touched.
-const TEMPLATE = { version: "2026-11-09", sha256: "75ca7e7da99092f360e5a539e34b109b14c92e9c04e7ad98f9e4b1e715c9240e" };
+const TEMPLATE = { version: "2026-11-27", sha256: "7ef6eeceabc7d049a6b5547a989e0d37cc55b9c704958375199954dc71202391" };
 const WRITER_SHA = "dfd4c27b70fe5d7d5f82724180cc739812f0dd13d209c41c053dbdc61bf90188";
-const CSS_SHA = "31df0a58f422070ca4023d5498566b26bc55a5f9a0751f1520d36c61bbb562c9";
+const CSS_SHA = "4d4f5775c436759b8032c106481b4efba1a275d59a0d983860170276972f5d91";
 
 test("the family template, the README writer and family.css are the recorded files, byte for byte", () => {
   assert.equal(template.FAMILY_TEMPLATE_VERSION, TEMPLATE.version);

@@ -17,7 +17,21 @@ const footer = (): string => familyFooter({ id }).replace('<span data-say="foot"
 const TITLE = "Wakusei Planets 惑星: the Sun, planets and moons for the web";
 const DESCRIPTION = "The Sun, the planets and their moons as a clean line drawing, a realistic surface map or the same pictures as a painted look, with real sizes, axial tilt and rotation, and the moons where they are at any date and time. A web component and an SVG string.";
 // No header link to the moon pages (the groups, all, counts, dots and chart pages are linked from the home page's moons section): a header of more rows on a phone pushes the first picture below the first screen.
-const LINKS = [{ href: "surface.html", say: "pageSurface" }, { href: "portrait.html", say: "pagePortrait" }, { href: "kids.html", say: "pageKids" }, { href: "space.html", say: "pageSpace" }, { href: "star.html", say: "pageStar" }, { href: "craft.html", say: "pageCraft" }, { href: "lineup.html", say: "pageLineup" }, { href: "plan.html", say: "pagePlan" }, { href: "flat.html", say: "pageFlat" }, { href: "system.html", say: "pageSystem" }, { href: "docs/index.html", say: "pageDocs" }, { href: "embed.html", say: "pageEmbed" }];
+const LINKS = [
+  { href: "index.html", say: "pageMap" },
+  { href: "space.html", say: "pageSpace" },
+  { href: "surface.html", say: "pageSurface" },
+  { href: "portrait.html", say: "pagePortrait" },
+  { href: "star.html", say: "pageStar" },
+  { href: "craft.html", say: "pageCraft" },
+  { href: "lineup.html", say: "pageLineup" },
+  { href: "plan.html", say: "pagePlan" },
+  { href: "flat.html", say: "pageFlat" },
+  { href: "system.html", say: "pageSystem" },
+  { href: "kids.html", say: "pageKids", group: "resources" as const },
+  { href: "docs/index.html", say: "pageDocs" },
+  { href: "embed.html", say: "pageEmbed" },
+];
 
 /** The family's scripts and the language chooser, then the page's own module. */
 const scripts = (script: string): string =>
@@ -40,7 +54,7 @@ function render(file: string, title: string, description: string): string {
   const html = readFileSync(new URL(`../demo/${file}`, import.meta.url), "utf8");
   return frame(html, title, description)
     .replace("<!--family:head-->", familyHead({ id, title, description }))
-    .replace("<!--family:header-->", familyHeader({ id, links: LINKS }))
+    .replace("<!--family:header-->", familyHeader({ id, links: LINKS, current: file }))
     .replace("<!--family:unreviewed-->", familyUnreviewed({ id }))
     .replace("<!--family:footer-->", footer())
     .replace(/<!--family:scripts ([\w.-]+)-->/, (_, script: string) => scripts(script));
