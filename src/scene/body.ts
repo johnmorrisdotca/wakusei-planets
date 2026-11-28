@@ -24,6 +24,7 @@ import { cutOpening, interiorOf, type CutSize } from "../interior.ts";
 import type { InteriorProfile } from "../interior-profile.ts";
 import { createCutaway } from "./cutaway.ts";
 import { loadImage, MAP_ANISOTROPY } from "./textures.ts";
+import { titanDisc, titanHaze } from "./titan-haze.ts";
 import { ringStrip } from "./rings.ts";
 import { createNameLabel, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 import type { createMoonLayer, MoonLayer, MoonSource } from "../space/all-moons.ts";
@@ -126,16 +127,17 @@ export interface BodyItemOptions {
 }
 
 /** The shader material of a body: its surface code with the look's lighting and glow uniforms. A star made from numbers is drawn with it too (the size line-up). */
-export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean, cutSize?: CutSize): THREE.ShaderMaterial {
+export function makeBodyMaterial(T: ThreeParts, look: BodyLook, painted: boolean, cutSize?: CutSize, hazeLimb = false): THREE.ShaderMaterial {
   const a = look.atmosphere;
   // a glowing body (the Sun, a star) is drawn as it always was: no window of finer map and no generic detail
   const generic = look.emissive !== true;
   const fine = detailOf(look);
   const moonPolar = painted && look.id === "moon";
-  const fragment = bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic, moonPolar);
+  const fragment = bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, false, look.limbTint, generic, moonPolar, hazeLimb);
   const opening = cutSize === undefined ? undefined : cutOpening(cutSize);
   return new T.ShaderMaterial({
     vertexShader: VERTEX,
+    transparent: hazeLimb,
     fragmentShader: opening === undefined ? fragment :
       `uniform vec2 uCutOpening;
 ${fragment.replace("void main() {", "void main() { if (abs(atan(vW.x, vW.z) - uCutOpening.x) < uCutOpening.y) discard;")}`,
@@ -198,11 +200,13 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
   return {
     key: options.key,
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
-      const look = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
+      const registered = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
       const interior = options.cutaway ? (options.interior ?? interiorOf(options.id)) : undefined;
       const cutSize = interior !== undefined && typeof options.cutaway === "string" ? options.cutaway : undefined;
       const cutKey = cutSize === undefined ? "" : `:${cutSize}`;
-      const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;
+      const wantPainted = (options.look === "painted" || registered.mapped === true) && registered.painted !== undefined;
+      const hasHaze = registered.id === "titan" && registered.painted?.map === "titan" && !wantPainted;
+      const look = hasHaze ? titanDisc(registered) : registered;
       // a moon with a published shape model is the globe moved to its radii (its table is a chunk of its own, waited for here), and then needs no stretching to an ellipsoid
       const shapeTable = look.shape === undefined ? undefined : await look.shape().catch(() => undefined);
       const craft = look.craft === undefined ? undefined : await look.craft().catch(() => undefined);
@@ -216,7 +220,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
         : shapeTable === undefined ? assets.acquire("wk:sphere", () => new T.SphereGeometry(1, 192, 96), (g) => g.dispose()) : assets.acquire(`wk:shape:${held}:${grid.lon}`, () => shapeGeometry(T, shapeTable, facts.radiusKm, grid), (g) => g.dispose());
       const shader = craft !== undefined
         ? assets.acquire(`wk:body:${held}:craft`, () => craftMaterial(T, look.ambient ?? 0.08), (m) => m.dispose())
-        : assets.acquire(`wk:body:${held}:r${cutKey}`, () => makeBodyMaterial(T, look, false, cutSize), (m) => m.dispose());
+        : assets.acquire(`wk:body:${held}:r${cutKey}${hasHaze ? ":haze" : ""}`, () => makeBodyMaterial(T, look, false, cutSize, hasHaze), (m) => m.dispose());
       if (craft !== undefined) {
         const picture = await loadImage(T, `${options.textureBase()}${craft.map}`).catch(() => undefined);
         if (picture !== undefined) {
@@ -236,6 +240,8 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
       const mesh = new T.Mesh(geometry, shader);
       mesh.frustumCulled = false;
       scene.add(mesh);
+      const haze = hasHaze ? titanHaze(T, geometry, shader.uniforms.uLight!) : undefined;
+      if (haze !== undefined) mesh.add(haze);
       // the cutaway: true spheres at the model's radii, a quarter left open toward the camera. Not the body's flattened shape, and not turned with it, so the rims stay round and concentric. The Sun is flat discs, one ring per layer, so the core stays in view. Its glow is unchanged.
       const shells: { geometry: { dispose(): void }; material: { dispose(): void } }[] = [];
       let cut: InstanceType<ThreeParts["Group"]> | undefined;
@@ -734,6 +740,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
             shell.material.dispose();
           }
           faces?.dispose();
+          haze?.material.dispose();
           scene.clear();
         },
       };

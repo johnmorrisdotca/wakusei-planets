@@ -6,6 +6,7 @@ import "../bodies/all.ts";
 import { BODIES, MOONS_OF, type BodyId, type MoonId, type HostId } from "../facts.ts";
 import { writeBasis } from "./basis.ts";
 import { TEXTURE_BASE, TEXTURE_FAR_BASE, TILES_BASE, slash, loadImage, MAP_ANISOTROPY, mapSourceFor, tilesAllowed } from "./textures.ts";
+import { titanDisc, titanHaze } from "./titan-haze.ts";
 import { createSourceBook, type SourceBook } from "../door/book.ts";
 import { OWN_BY_ID } from "../door/own.ts";
 import { mercuryTilesCredit, PICTURE_CREDITS, picturesCredit } from "../picture-credits.ts";
@@ -333,8 +334,10 @@ interface CreditBody {
 function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near: string; far: string | undefined; tiles: string | undefined; book: SourceBook; shared: boolean }, hold?: (body: CreditBody) => () => void): Painting {
   const star = id === "sun" ? context.star : undefined;
   const facts = star?.facts ?? BODIES[id];
-  const look = star?.look ?? lookOf(id) ?? fallbackLook(facts);
-  const wantPainted = (context.look === "painted" || look.mapped === true || context.mapped === true) && look.painted !== undefined;
+  const registered = star?.look ?? lookOf(id) ?? fallbackLook(facts);
+  const wantPainted = (context.look === "painted" || registered.mapped === true || context.mapped === true) && registered.painted !== undefined;
+  const hasHaze = id === "titan" && registered.painted?.map === "titan" && !wantPainted;
+  const look = hasHaze ? titanDisc(registered) : registered;
   const ratio = context.ratio ?? 1;
   const maxWidth = context.maxTexture ?? 2048;
   const redraw = (): void => context.invalidate?.();
@@ -386,7 +389,11 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     };
   };
   const material = (painted: boolean): THREE.ShaderMaterial => {
-    const m = new T.ShaderMaterial({ vertexShader: VERTEX_WORLD, fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, look.limbTint, generic, painted && id === "moon"), uniforms: uniforms(painted) });
+    const m = new T.ShaderMaterial({
+      vertexShader: VERTEX_WORLD,
+      fragmentShader: bodyFragment(painted ? (generic ? PAINTED_SURFACE_WINDOWED : PAINTED_SURFACE) : look.surface, painted, true, look.limbTint, generic, painted && id === "moon", hasHaze),
+      uniforms: uniforms(painted), transparent: hasHaze,
+    });
     disposables.push(m);
     return m;
   };
@@ -397,6 +404,11 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
   const mesh = new T.Mesh(sphere.value, shader);
   mesh.matrixAutoUpdate = false;
   group.add(mesh);
+  if (hasHaze) {
+    const haze = titanHaze(T, sphere.value, shader.uniforms.uLight!);
+    mesh.add(haze);
+    disposables.push(haze.material);
+  }
 
   // rings: the table's strip at once, the picture of them (painted) when it arrives
   let ringMesh: THREE.Mesh | undefined;

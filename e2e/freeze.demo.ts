@@ -97,6 +97,54 @@ test("a live body that is not moving draws nothing, and its frames are never ask
   expect(after.rafRequests - after.rafCallbacks).toBeLessThanOrEqual(1);
 });
 
+test("Titan's illustrated haze reaches beyond its disc, rests and gives back its material", async ({ page }) => {
+  const zoom = 1.7;
+  await page.goto(`${URL}?look=line`);
+  await page.waitForFunction(() => customElements.get("wakusei-body") !== undefined);
+  await page.evaluate((zoom) => {
+    const body = document.createElement("wakusei-body") as HTMLElement & { setView(view: { zoom: number }): void };
+    body.id = "titan-haze-test";
+    for (const [name, value] of Object.entries({ body: "titan", look: "illustrated", phase: "157", turn: "0", size: "640", "surface-names": "off", labels: "off" })) body.setAttribute(name, value);
+    body.style.background = "#080a10";
+    document.body.replaceChildren(body);
+    body.setView({ zoom });
+  }, zoom);
+  const view = page.locator("#titan-haze-test");
+  await expect(view).toHaveAttribute("data-state", "live", { timeout: 60_000 });
+  const open = await settledCounts(page);
+  const radius = zoom * await view.evaluate((element) => (element as HTMLElement & { discRadius: number }).discRadius);
+  const png = (await view.screenshot({ scale: "css" })).toString("base64");
+  const haze = await page.evaluate(async ({ png, radius }) => {
+    const image = await createImageBitmap(await (await fetch(`data:image/png;base64,${png}`)).blob());
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+    let blue = 0;
+    for (let angle = 0; angle < 24; angle++) for (const r of [1.20, 1.22, 1.24]) {
+      const radians = angle * Math.PI / 12;
+      const x = Math.round(canvas.width / 2 + Math.cos(radians) * radius * r);
+      const y = Math.round(canvas.height / 2 + Math.sin(radians) * radius * r);
+      const at = (y * canvas.width + x) * 4;
+      if (data[at + 2]! > data[at]! + 10 && data[at + 2]! > 30) blue++;
+    }
+    image.close();
+    return blue;
+  }, { png, radius });
+  expect(haze).toBeGreaterThan(6);
+  await settle(page, 1500);
+  const resting = await readCounts(page);
+  expect(resting.draws).toBe(open.draws);
+  expect(resting.rafRequests).toBe(open.rafRequests);
+  await view.evaluate((element) => element.remove());
+  await expect.poll(async () => {
+    const counts = await readCounts(page);
+    return counts.created.Program - counts.deleted.Program;
+  }, { timeout: 15_000 }).toBeLessThan(open.created.Program - open.deleted.Program);
+});
+
 test("a turning body is drawn at most thirty times a second, one frame at a time", async ({ page }) => {
   await page.goto(`${URL}?body=jupiter&spin=1`);
   await main(page).hover();

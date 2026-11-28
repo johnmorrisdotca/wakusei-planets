@@ -103,7 +103,7 @@ float microDetail(vec3 p) {
  * The fragment shader of a body: the surface code goes between the prelude and `main`. `limbTint` is the colour the edge of a glowing body shifts to (default the Sun's orange). `detail` adds the generic fine
  * detail (`MICRO_DETAIL`) that carries a body past the sharpness of its map; a body that glows never takes it, and without it the shader is the same program as before it existed.
  */
-export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number], detail = false, moonPolar = false): string {
+export function bodyFragment(surface: string, painted: boolean, world = false, limbTint?: readonly [number, number, number], detail = false, moonPolar = false, hazeLimb = false): string {
   const tint = limbTint === undefined ? "vec3(1.0, 0.55, 0.25)" : `vec3(${limbTint.map((v) => v.toFixed(4)).join(", ")})`;
   return /* glsl */ `
 precision highp float;
@@ -179,14 +179,20 @@ ${world ? `  for (int i = 0; i < 6; i++) {
       diff *= 1.0 - 0.92 * (1.0 - smoothstep(uOcc[i].w * 0.8, uOcc[i].w * 1.04 + 0.01, miss));
     }
   }` : ""}
+${hazeLimb ? `  // At high phase the atmosphere supplies the visible crescent.
+  float phaseLight = ${world ? "dot(normalize(vV), uLight)" : "uLight.z"};
+  float backlit = smoothstep(0.38, 0.91, -phaseLight);
+  diff *= 1.0 - backlit;
+  float discAmbient = uAmbient * (1.0 - 0.97 * backlit);
+` : ""}
   vec3 alb = pow(s.rgb, vec3(2.2));
-  vec3 lit = alb * (uAmbient + (1.0 - uAmbient) * diff * 1.18);
+  vec3 lit = alb * (${hazeLimb ? "discAmbient" : "uAmbient"} + (1.0 - uAmbient) * diff * 1.18);
   float rim = pow(1.0 - mu, uAtmosPow);
   // the extra haze stops at the terminator: the old +0.35 stayed bright a little way onto the night side and drew a lighter strip beside the line
   float dayRim = clamp(dg * 1.6 + 0.35, 0.0, 1.0) * smoothstep(-0.02, 0.08, dg);
   lit += pow(uAtmos, vec3(2.2)) * rim * (uRimBase + (1.0 - uRimBase) * dayRim);
   lit *= mix(1.0, pow(mu, 0.45), uLimb);
-  gl_FragColor = vec4(pow(lit, vec3(1.0 / 2.2)), 1.0);
+  gl_FragColor = vec4(pow(lit, vec3(1.0 / 2.2)), ${hazeLimb ? "smoothstep(0.02, 0.15, mu)" : "1.0"});
 }`;
 }
 

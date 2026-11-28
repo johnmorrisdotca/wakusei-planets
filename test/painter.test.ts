@@ -88,6 +88,28 @@ test("the Sun is a globe with a glow and no ring; Saturn has a ring that the lig
   saturn.dispose();
 });
 
+test("Titan's procedural haze reuses the globe and its light and is released with the painting", () => {
+  const titan = painter.make(THREE, "titan", { look: "realistic" });
+  const disc = titan.object.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  const haze = disc.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  assert.equal(disc.material.transparent, true);
+  assert.equal(haze.geometry, disc.geometry);
+  assert.ok(haze.scale.x > 1);
+  assert.equal(haze.material.uniforms.uLight, disc.material.uniforms.uLight);
+  titan.update({ toSun: [0, 0, 1], ms, radiusPx: 50 });
+  assert.deepEqual(haze.material.uniforms.uLight!.value.toArray(), [0, 0, 1]);
+  let disposed = 0;
+  haze.material.addEventListener("dispose", () => disposed += 1);
+  titan.dispose();
+  assert.equal(disposed, 1);
+
+  const mapped = painter.make(THREE, "titan", { look: "painted" });
+  const mappedDisc = mapped.object.children[0] as THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
+  assert.equal(mappedDisc.material.transparent, false);
+  assert.equal(mappedDisc.children.length, 0);
+  mapped.dispose();
+});
+
 test("every body can be made, in both looks, and let go: nothing is held after dispose", () => {
   const frees: string[] = [];
   for (const id of Object.keys(BODIES)) {

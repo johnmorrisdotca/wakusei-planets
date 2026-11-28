@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Illustrated Mars, Venus and Titan** (MODULES-1903). Mars has more varied craters and more of them in the southern highlands. Venus has curved cloud bands and Titan has separate amber and blue haze layers at its limb. The Mars and Venus shader formulas add under 2 KiB gzipped across their two entry points.
+
 ## [0.92.0] - 2026-11-28
 
 - **Four named stellar cutaways** (MODULES-1900). The star view can open a red dwarf, a hot main-sequence star, a red giant and a white dwarf at their archived model radii. The legends name each profile and the red giant has a magnified view of its hydrogen-burning shell.

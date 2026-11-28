@@ -11,6 +11,8 @@ description: The looks, each body's own entry point, three.js, pictures and the 
 - `realistic`: the surface maps, lit from the Sun's side. `painted` is the same maps, kept so an older page still works. The demo's one button for them is Realistic.
 - `illustrated`: the shaded drawing `realistic` used to be, worked out in the shader from the body's colours and features. It is not a default.
 
+In the illustrated look, Mars uses the crater catalogue's size and density statistics to place procedural craters. Venus uses the Y-shaped cloud fronts seen in ultraviolet as a guide to its pale cloud bands. Titan's amber haze and thin blue outer layer brighten when the Sun is behind the limb. [Sources and measurements](../../NOTICE.md#illustrated-mars-venus-and-titan)
+
 A small picture loads first, and a sharper one is fetched on close zoom. If a picture cannot be fetched, the shaded look stays. [Surface maps](surface-maps.md) lists each mapped body’s source, photographed coverage and reconstructed areas.
 
 ![Saturn in the painted look, with its rings from a Cassini picture.](../images/hero-saturn-painted.png)
