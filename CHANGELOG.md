@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.92.0] - 2026-11-28
+
 - **Four named stellar cutaways** (MODULES-1900). The star view can open a red dwarf, a hot main-sequence star, a red giant and a white dwarf at their archived model radii. The legends name each profile and the red giant has a magnified view of its hydrogen-burning shell.
 
 ## [0.91.0] - 2026-11-27
