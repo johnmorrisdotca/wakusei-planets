@@ -1310,7 +1310,7 @@ export class WakuseiBody extends HTMLElement {
       scale.dataset.scale = "";
       const edge = Number(radiusKm.toPrecision(3)).toLocaleString(lang === "ja" ? "ja-JP" : "en-CA");
       const percent = (100 * radiusKm / interior.radiusKm).toPrecision(2);
-      scale.textContent = lang === "ja" ? `中心から 0〜${edge} km（全半径の内側 ${percent}%）` : `0–${edge} km from centre, inner ${percent}% of the radius`;
+      scale.textContent = lang === "ja" ? `中心から 0〜${edge} km（全半径の ${percent}%）` : `0–${edge} km from centre, inner ${percent}% of the radius`;
       caption.append(title, scale);
       detail.append(caption);
     }
@@ -1327,7 +1327,7 @@ export class WakuseiBody extends HTMLElement {
         source.href = interior.source.page;
         source.target = "_blank";
         source.rel = "noopener";
-        source.textContent = lang === "ja" ? "元のモデル" : "Source model";
+        source.textContent = lang === "ja" ? "モデルの出典" : "Source model";
         note.append(" ", source);
       }
       list.append(note);
