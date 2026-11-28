@@ -773,7 +773,7 @@ export const WORDS = {
     nameLink: "名前について（英語）",
     foot: "ウェブ用の、太陽・惑星・衛星の部品です。コードはMITライセンスです。数値は IAU、NASA、JPL のものと、出典の一覧にある論文のものです。地図は NASA、USGS、JPL の画像と、一部の CC BY 4.0 の地図です。",
     creditsAll: "出典の一覧 (NOTICE.md)",
-    pageMap: "地図",
+    pageMap: "天体",
     pageDocs: "ドキュメント",
     pageChart: "木星の衛星図",
     jc_title: "木星の衛星",
