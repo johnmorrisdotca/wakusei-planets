@@ -1,8 +1,10 @@
 // The sun and moon from a place, with the names, arguments and results of suncalc 2 (degrees, azimuth clockwise from north), written from the public methods on this package's own positions:
 // the Sun from VSOP87B, the Moon from ELP2000-82B, with parallax, refraction and the Earth's turn. Its rise and set times are within half a second of JPL Horizons for both,
 // where suncalc 2.1.2 is within 5 to 7 seconds (scripts/compare/rise-set.mjs). Pure: no DOM, no three.js. `import { getTimes } from "@johnmorrisdotca/wakusei-planets/suncalc"` instead of from "suncalc" changes nothing else.
-import { horizontalOf, moonEquatorial, moonPhase, refraction, sunEquatorial } from "./sky/engine.ts";
+import { DAY_MS } from "./clock.ts";
+import { greenwichSiderealTime, horizontalOf, moonEquatorial, moonPhase, refraction, sunEquatorial } from "./sky/engine.ts";
 import { dayWindow, moment, moonDay, place, sunDay } from "./sky/events.ts";
+import { wrap360 } from "./vec.ts";
 
 /**
  * Where a body is in a place's sky: the azimuth in degrees clockwise from north (0 north, 90 east, 180 south, 270 west) and the apparent altitude (refraction included) in degrees.
@@ -142,6 +144,28 @@ export const times: Array<[number, string, string]> = [
  */
 export function addTime(angle: number, riseName: string, setName: string): void {
   times.push([angle, riseName, setName]);
+}
+
+/**
+ * Earth's equation of time in minutes: apparent solar time minus mean solar time.
+ * A positive result means a sundial reads ahead of the local mean solar clock. Longitude shifts both clocks equally.
+ * UTC approximates UT1, as it does for the other `/suncalc` functions.
+ *
+ * @param when - The moment, as a `Date` or milliseconds since 1970 (UTC).
+ * @returns The signed offset in minutes.
+ * @example
+ * ```ts
+ * import { equationOfTime } from "@johnmorrisdotca/wakusei-planets/suncalc";
+ *
+ * const minutes = equationOfTime(Date.UTC(2026, 10, 3, 12));
+ * console.log((12 * 60 + minutes).toFixed(1)); // apparent solar minutes after midnight at Greenwich
+ * ```
+ */
+export function equationOfTime(when: Date | number): number {
+  const ms = moment(when, "when");
+  const apparent = greenwichSiderealTime(ms) - sunEquatorial(ms).rightAscension;
+  const mean = ((ms % DAY_MS) * 360) / DAY_MS - 180;
+  return 4 * (wrap360(apparent - mean + 180) - 180);
 }
 
 /**

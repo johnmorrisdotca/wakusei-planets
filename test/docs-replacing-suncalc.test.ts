@@ -12,7 +12,7 @@ const PACKAGE = "@johnmorrisdotca/wakusei-planets/suncalc";
 for (const file of ["docs/guides/replacing-suncalc.md", "docs/guides/ja/replacing-suncalc.md"]) {
   test(`every ts example in ${file} runs and prints what it should`, async () => {
     const blocks = [...readFileSync(join(root, file), "utf8").matchAll(/```ts\n([\s\S]*?)```/g)].map((m) => m[1]!);
-    assert.equal(blocks.length, 3, "the three examples are there");
+    assert.equal(blocks.length, 4, "the four examples are there");
     const dir = mkdtempSync(join(tmpdir(), "suncalc-guide-"));
     const logged: string[] = [];
     const log = console.log;
@@ -35,5 +35,6 @@ for (const file of ["docs/guides/replacing-suncalc.md", "docs/guides/ja/replacin
     assert.match(logged[1]!, /^-?\d\.\d\d \d\.\d\d$/, "legacy: radians");
     assert.match(logged[2]!, /^\d+ 62$/, "converted back to degrees from north and from radians");
     assert.equal(logged[3], "true", "no sunrise at Tromsø in the midnight Sun is an invalid Date");
+    assert.equal(logged[4], "16.45 12:16:26", "the sundial is ahead of Greenwich mean solar time");
   });
 }

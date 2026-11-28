@@ -1133,6 +1133,7 @@ export type SunTimeName = "sunrise" | "sunset" | "sunriseEnd" | "sunsetStart" | 
 export type SunTimes = Record<SunTimeName, Date | null> & { solarNoon: Date; nadir: Date; alwaysUp?: boolean; alwaysDown?: boolean; [custom: string]: Date | boolean | null | undefined; };
 function addTime(angle: number, riseName: string, setName: string) => void
 const default: { getPosition: (date: number | Date, lat: number, lng: number) => Position; getTimes: (date: number | Date, lat: number, lng: number, height?: number, utcOffset?: number | undefined) => SunTimes; times: [number, string, string][]; addTime: (angle: number, riseName: string, setName: string) => void; getMoonPosition: (date: number | Date, lat: number, lng: number) => MoonPosition; getMoonIllumination: (date?: number | Date) => MoonIllumination; getMoonTimes: (date: number | Date, lat: number, lng: number, utcOffset?: number | undefined) => MoonTimes; }
+function equationOfTime(when: number | Date) => number
 function getMoonIllumination(date?: number | Date) => MoonIllumination
 function getMoonPosition(date: number | Date, lat: number, lng: number) => MoonPosition
 function getMoonTimes(date: number | Date, lat: number, lng: number, utcOffset?: number | undefined) => MoonTimes

@@ -100,6 +100,23 @@ Every function was run against suncalc 2.1.2 and suncalc 1.9.0, both installed a
 
 The old library's own error is the cause of the large legacy figures: this package's times are within a second of JPL Horizons, and suncalc 1.x's are not. If your code needs the old numbers to the minute, keep suncalc 1.x; if it needs the old conventions and the right numbers, use `/suncalc/legacy`.
 
+## The equation of time
+
+`equationOfTime(when)` gives apparent solar time minus mean solar time in minutes. A positive value means a sundial is ahead of a clock set to local mean solar time. Each degree of east longitude adds four minutes to both clocks, so the difference is the same at every longitude.
+
+At 12:00 UTC in Greenwich on 3 November 2026, the sundial reads about 12:16:27.
+
+```ts
+import { equationOfTime } from "@johnmorrisdotca/wakusei-planets/suncalc";
+
+const noon = Date.UTC(2026, 10, 3, 12);
+const minutes = equationOfTime(noon);
+const apparent = new Date(noon + minutes * 60_000);
+console.log(minutes.toFixed(2), apparent.toISOString().slice(11, 19)); // 16.45 12:16:26
+```
+
+The calculation uses the same apparent Sun as `getTimes` and takes UTC as an approximation to UT1, the time based on Earth's rotation. At Greenwich's longitude the largest difference across 365 daily comparisons in 2026 was 0.192 seconds. [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/), [U.S. Naval Observatory](https://web.archive.org/web/20261117/https://aa.usno.navy.mil/faq/eqtime).
+
 ## What suncalc3 has that this package does not
 
 suncalc3 (a fork of suncalc 1.x) adds functions that neither suncalc nor this package has. They are listed here and not built; which of them to build is a decision for the maintainer.

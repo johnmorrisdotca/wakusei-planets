@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Equation of time** (MODULES-1895). `equationOfTime(when)` in `/suncalc` gives the signed difference between apparent and mean solar time in minutes. It agreed with all 365 daily JPL Horizons values for 2026 to within 0.192 seconds.
+
 ## [0.91.0] - 2026-11-27
 
 - **Measured lunar polar relief** (MODULES-1906). Close views use Lunar Orbiter Laser Altimeter elevations for the slopes at both poles, with the existing colour map. The illumination of crater walls follows the Sun.
