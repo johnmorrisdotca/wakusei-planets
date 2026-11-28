@@ -102,9 +102,9 @@ legacy の差が大きいのは古いライブラリー自身の誤差のため�
 
 ## 均時差
 
-`equationOfTime(when)` は、視太陽時から平均太陽時を引いた均時差を分で返します。値が正なら、日時計は地方平均太陽時に合わせた時計よりも進んでいます。経度が東に 1° 増えるごとに両方の時計が 4 分進むため、時刻の差は経度によらず同じです。
+`equationOfTime(when)` は、視太陽時から平均太陽時を引いた均時差を分で返します。値が正なら、日時計は地方平均太陽時に合わせた時計よりも進んでいます。経度が東へ1度増えるごとに、どちらの時計も4分進むので、両者の差は経度によらず同じです。
 
-2026 年 11 月 3 日 12:00 UTC にグリニッジで日時計を読むと、約 12:16:27 です。
+2026年11月3日の 12:00 UTC に、グリニッジで日時計を読むと、約 12:16:27 です。
 
 ```ts
 import { equationOfTime } from "@johnmorrisdotca/wakusei-planets/suncalc";
@@ -115,7 +115,9 @@ const apparent = new Date(noon + minutes * 60_000);
 console.log(minutes.toFixed(2), apparent.toISOString().slice(11, 19)); // 16.45 12:16:26
 ```
 
-計算には `getTimes` と同じ太陽の視位置を使います。地球の自転に基づく時刻 UT1 は、UTC で近似します。2026 年のグリニッジの経度で毎日の値を照合したところ、365 日分の差は最大 0.192 秒でした。[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/)、[米国海軍天文台](https://web.archive.org/web/20261117/https://aa.usno.navy.mil/faq/eqtime)。
+計算には `getTimes` と同じ太陽の視位置を使います。地球の自転に基づく時刻 UT1 は、UTC で近似します。2026年のグリニッジの経度で、毎日の値を365日分照合したところ、差は最大0.192秒でした。
+
+出典：[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/)、[米国海軍天文台](https://web.archive.org/web/20261117/https://aa.usno.navy.mil/faq/eqtime)。
 
 ## suncalc3 にあって、このパッケージにないもの
 
