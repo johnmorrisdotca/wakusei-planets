@@ -3,7 +3,9 @@
 // From 1972 the step is exact: TT is TAI plus 32.184 seconds and TAI is UTC plus the leap seconds (IERS Bulletin C). Before 1972 it is delta T, from the polynomials of Espenak and Meeus
 // (NASA, https://eclipse.gsfc.nasa.gov/SEhelp/deltatpoly2004.html, for 1800 to 1972) and Morrison and Stephenson's parabola outside 1800 to 1972.
 
-import { moment, type When } from "./when.ts";
+import { J2000_MS, moment, type When } from "./when.ts";
+
+export { J2000_MS };
 
 export const DAY_MS = 86_400_000;
 /** The Julian date of the Unix epoch, 1970-01-01T00:00:00Z. */
@@ -204,17 +206,6 @@ export function toTerrestrialTime(when: When): number {
  * ```
  */
 export const J2000_JD = 2_451_545;
-/**
- * J2000.0, 2000-01-01 12:00, as milliseconds since 1970 counted on a clock that reads TT: a terrestrial time is this far from it.
- *
- * @example
- * ```ts
- * import { J2000_MS } from "@johnmorrisdotca/wakusei-planets/time";
- *
- * console.log(new Date(J2000_MS).toISOString());
- * ```
- */
-export const J2000_MS = 946_728_000_000;
 /**
  * The Julian date of the Besselian epoch B1950.0, 1950 January 0.923 (Meeus).
  *

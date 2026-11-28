@@ -24,3 +24,15 @@ export function moment(when: When, name = "when"): number {
   if (!Number.isFinite(ms)) throw new RangeError(`${name} must be a valid Date or a finite number of milliseconds since 1970, got ${String(when)}`);
   return ms;
 }
+
+/**
+ * J2000.0, 2000-01-01 12:00, as milliseconds since 1970 counted on a clock that reads TT: a terrestrial time is this far from it.
+ *
+ * @example
+ * ```ts
+ * import { J2000_MS } from "@johnmorrisdotca/wakusei-planets/time";
+ *
+ * console.log(new Date(J2000_MS).toISOString());
+ * ```
+ */
+export const J2000_MS = 946_728_000_000;

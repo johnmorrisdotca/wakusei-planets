@@ -1,11 +1,15 @@
-// Sky events (seasons, Moon phases, eclipses, rise/set/transit, calendar-day rise and set, alignments, peak magnitude, local solar eclipses, libration, lunar apsides and nodes, greatest elongation) through astronomy-engine, an OPTIONAL peer dependency: `pnpm add astronomy-engine` (2.1.19 or newer, below 3) beside this package.
+// Sky events (seasons, Moon phases, eclipses, rise/set/transit, calendar-day rise and set, alignments, peak magnitude, local solar eclipses, lunar occultations, libration, lunar apsides and nodes, greatest elongation) through astronomy-engine, an OPTIONAL peer dependency: `pnpm add astronomy-engine` (2.1.19 or newer, below 3) beside this package.
 // This is the only file under src/ that imports it, so the core, /suncalc and /sky-bodies never reach it (test/sky-events.test.ts holds that). A page that never imports `/sky` never needs the peer.
 // A missing peer cannot be caught here: a static import fails before any code runs, with the runtime's own "cannot find package astronomy-engine", which names it. (A top-level await would let this file word its own error, but
 // the package's size measure and any ES2020 bundler refuse top-level await; see the CHANGELOG, "default, for John to confirm".) Everything is experimental during 0.x. Pure: no DOM, no clock read, no three.js.
-import { ApsisKind, Body, Equator, GeoMoon, GeoVector, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, Search, SearchAltitude, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, SearchTransit, Seasons, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
+import { ApsisKind, Body, C_AUDAY, Equator, EquatorFromVector, GeoMoon, GeoVector, HelioState, Horizon, Ecliptic, KM_PER_AU, Libration, MakeTime, MoonPhase, NextGlobalSolarEclipse, NextLunarApsis, NextLunarEclipse, NextMoonNode, NextMoonQuarter, NodeEventKind, Observer as EngineObserver, ObserverVector, RotateVector, Rotation_EQJ_EQD, Search, SearchAltitude, SearchGlobalSolarEclipse, SearchHourAngle, SearchLocalSolarEclipse, SearchLunarApsis, SearchLunarEclipse, SearchMaxElongation, SearchMoonNode, SearchMoonPhase, SearchMoonQuarter, SearchPeakMagnitude, SearchRiseSet, SearchTransit, Seasons, Vector, type AstroTime, type EclipseEvent, type FlexibleDateTime } from "astronomy-engine";
+import { golden } from "./minimum.ts";
+import { starPosition } from "./star-position.ts";
+import type { Star } from "./stars.ts";
 import type { SkyBodyId } from "./sky-bodies.ts";
 import type { Observer } from "./sky/types.ts";
-import { moment, type When } from "./when.ts";
+import { add, cross, dot, fromRaDec, length, RAD, scale, sub, type Vec3 } from "./vec.ts";
+import { J2000_MS, moment, type When } from "./when.ts";
 
 const DAY_MS = 86_400_000;
 
@@ -1068,4 +1072,140 @@ export function localSolarEclipse(from: When, options: { observer: Observer; wit
   while (found.peak.time.date.getTime() < start) found = SearchLocalSolarEclipse(found.peak.time.AddDays(1), observer);
   if (found.peak.time.date.getTime() >= start + days * DAY_MS) return null;
   return { kind: found.kind as LocalSolarEclipse["kind"], obscuration: found.obscuration, partialBegin: contact(found.partial_begin)!, centralBegin: contact(found.total_begin), peak: contact(found.peak)!, centralEnd: contact(found.total_end), partialEnd: contact(found.partial_end)! };
+}
+
+/**
+ * The time of one stage of a lunar occultation and the star's geometric altitude in degrees.
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { type LunarOccultationContact } from "@johnmorrisdotca/wakusei-planets/sky";
+ *
+ * const contact: LunarOccultationContact = { time: new Date(0), altitude: 12 };
+ * console.log(contact.altitude > 0);
+ * ```
+ */
+export interface LunarOccultationContact {
+  time: Date;
+  altitude: number;
+}
+
+/**
+ * The Moon passing in front of a catalogue star for one observer. At `closest` the star is deepest inside the mean lunar limb.
+ *
+ * @experimental
+ * @example
+ * ```ts
+ * import { lunarOccultations, type LunarOccultation } from "@johnmorrisdotca/wakusei-planets/sky";
+ * import { starByName } from "@johnmorrisdotca/wakusei-planets/stars";
+ *
+ * const events: LunarOccultation[] = lunarOccultations(starByName("Antares")!, Date.UTC(2025, 2, 20), Date.UTC(2025, 2, 21), { observer: { latitude: -33.87, longitude: 151.21 } });
+ * console.log(events[0]?.disappearance.time.toISOString());
+ * ```
+ */
+export interface LunarOccultation {
+  star: Pick<Star, "hr" | "name">;
+  disappearance: LunarOccultationContact;
+  closest: LunarOccultationContact;
+  reappearance: LunarOccultationContact;
+}
+
+const OCCULTATION_STEP_MS = 3_600_000;
+const MOON_MEAN_RADIUS_AU = 1_737.4 / KM_PER_AU;
+
+/** Apparent topocentric star direction in J2000 axes, including proper motion, aberration and parallax. */
+function occultedStar(star: Star, ms: number, time: AstroTime, site: Vec3): Vec3 {
+  const { rightAscension, declination } = starPosition(star, ms);
+  const earth = HelioState(Body.Earth, time);
+  const parallax = Math.max(0, star.parallaxMas) * (RAD / 3_600_000);
+  const earthAndSite = add([earth.x, earth.y, earth.z], site);
+  const aberration = scale([earth.vx, earth.vy, earth.vz], 1 / C_AUDAY);
+  return sub(add(fromRaDec(rightAscension, declination), aberration), scale(earthAndSite, parallax));
+}
+
+/** The limb crossing between an occulted point and a point on the same side of the minimum with the star clear. */
+function occultationContact(clearance: (ms: number) => number, inside: number, offset: number): number {
+  let outside = inside + offset;
+  while (clearance(outside) < 0) outside += offset;
+  while (Math.abs(outside - inside) > 1) {
+    const middle = (inside + outside) / 2;
+    if (clearance(middle) < 0) inside = middle;
+    else outside = middle;
+  }
+  return (inside + outside) / 2;
+}
+
+/**
+ * Find the Moon's occultations of a star for an observer. The star's proper motion and apparent topocentric positions are evaluated against
+ * the Moon's mean spherical limb (1,737.4 km). Mountains and valleys can shift the contacts, especially in a grazing event.
+ * Altitudes are geometric and can be negative. Check them and the local sky conditions when planning to watch.
+ *
+ * @param star - A catalogue star, for example from `starByName` in `/stars`.
+ * @param from - Start of the UTC window, included.
+ * @param to - End of the UTC window, excluded. The window selects `closest`; contacts can fall on either side of it.
+ * @param options - Observer latitude and longitude in degrees north and east, and optional height in metres.
+ * @returns Occultations in chronological order. An empty array means no occultation in the window.
+ * @experimental
+ * @example
+ * ```ts
+ * import { lunarOccultations } from "@johnmorrisdotca/wakusei-planets/sky";
+ * import { starByName } from "@johnmorrisdotca/wakusei-planets/stars";
+ *
+ * const antares = starByName("Antares")!;
+ * const events = lunarOccultations(antares, Date.UTC(2025, 2, 20), Date.UTC(2025, 2, 21), {
+ *   observer: { latitude: -33.87, longitude: 151.21 }
+ * });
+ * for (const event of events) console.log(event.disappearance.time.toISOString(), event.reappearance.time.toISOString());
+ * ```
+ */
+export function lunarOccultations(star: Star, from: When, to: When, options: { observer: Observer }): LunarOccultation[] {
+  const [start, end] = interval(from, to);
+  const observer = observerOf(options.observer);
+  if (Math.abs(start) > 8.64e15 || Math.abs(end) > 8.64e15) throw new RangeError("from and to must be representable as Dates");
+  if (start === end) return [];
+  const engineTime = (ms: number) => MakeTime((ms - J2000_MS) / DAY_MS);
+  const clearance = (ms: number): number => {
+    const time = engineTime(ms);
+    const { x, y, z } = ObserverVector(time, observer, false);
+    const site: Vec3 = [x, y, z];
+    const moon = GeoMoon(time);
+    const lightDays = length(sub([moon.x, moon.y, moon.z], site)) / C_AUDAY;
+    // Earth carries both the observer and the Moon. Annual aberration cancels the Earth's motion over the lunar light time to first order.
+    const retarded = GeoMoon(time.AddDays(-lightDays));
+    const lunar = sub([retarded.x, retarded.y, retarded.z], site);
+    const stellar = occultedStar(star, ms, time, site);
+    const separation = Math.atan2(length(cross(lunar, stellar)), dot(lunar, stellar));
+    return separation - Math.asin(MOON_MEAN_RADIUS_AU / length(lunar));
+  };
+  const contact = (ms: number): LunarOccultationContact => {
+    const time = engineTime(ms);
+    const { x, y, z } = ObserverVector(time, observer, false);
+    const apparent = occultedStar(star, ms, time, [x, y, z]);
+    const vector = RotateVector(Rotation_EQJ_EQD(time), new Vector(...apparent, time));
+    const { ra, dec } = EquatorFromVector(vector);
+    return { time: new Date(ms), altitude: Horizon(time, observer, ra, dec).altitude };
+  };
+
+  // A graze can start and finish between two samples. Bracket each minimum before testing the limb.
+  const step = OCCULTATION_STEP_MS;
+  const first = Math.floor(start / step) * step;
+  const last = Math.ceil(end / step) * step;
+  let before = clearance(first - step);
+  let middle = clearance(first);
+  const events: LunarOccultation[] = [];
+  for (let ms = first; ms <= last; ms += step) {
+    const after = clearance(ms + step);
+    if (middle <= before && middle < after) {
+      const peak = Math.round(golden(clearance, ms - step, ms + step, 1));
+      if (peak >= start && peak < end && clearance(peak) < 0) {
+        const disappearance = Math.round(occultationContact(clearance, peak, -step));
+        const reappearance = Math.round(occultationContact(clearance, peak, step));
+        events.push({ star: { hr: star.hr, name: star.name }, disappearance: contact(disappearance), closest: contact(peak), reappearance: contact(reappearance) });
+      }
+    }
+    before = middle;
+    middle = after;
+  }
+  return events;
 }

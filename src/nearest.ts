@@ -5,6 +5,7 @@ import { heliocentric, heliocentricCentre, heliocentricModel, meanSunAu, moonVec
 import { MOON_REFINEMENT_END, MOON_REFINEMENT_START } from "./data/moon-refinements.ts";
 import { julianCenturies } from "./clock.ts";
 import { BODIES, BODY_IDS, type BodyFacts, type BodyId } from "./facts.ts";
+import { golden } from "./minimum.ts";
 import { ORBITS } from "./data/orbits.ts";
 import { moonTheoryOf } from "./data/theories.ts";
 import { eclipticJ2000ToTrueEquatorialOfDate } from "./sky/frames.ts";
@@ -424,34 +425,6 @@ function periodDays(id: BodyId): number {
 function stepMs(ids: readonly BodyId[], view: View): number {
   const fastest = Math.min(...ids.map(periodDays), periodDays(view.body));
   return Math.max(60_000, Math.min(2 * DAY_MS, (fastest * DAY_MS) / 40));
-}
-
-const GOLDEN = (Math.sqrt(5) - 1) / 2;
-
-/** The moment of the smallest value of a function with one minimum in [low, high], to within `tolerance` ms. */
-function golden(f: (ms: number) => number, low: number, high: number, tolerance: number): number {
-  let a = low;
-  let b = high;
-  let c = b - GOLDEN * (b - a);
-  let d = a + GOLDEN * (b - a);
-  let fc = f(c);
-  let fd = f(d);
-  while (b - a > tolerance) {
-    if (fc < fd) {
-      b = d;
-      d = c;
-      fd = fc;
-      c = b - GOLDEN * (b - a);
-      fc = f(c);
-    } else {
-      a = c;
-      c = d;
-      fc = fd;
-      d = a + GOLDEN * (b - a);
-      fd = f(d);
-    }
-  }
-  return (a + b) / 2;
 }
 
 interface Minimum {

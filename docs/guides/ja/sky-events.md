@@ -2,7 +2,7 @@
 title: 空の出来事 (実験的)
 section: how-to
 order: 37
-description: 春分・夏至・秋分・冬至、月の満ち欠け、食 (世界全体と観測地点ごと)、暦日ごとの天体の出入り、合と衝、最大光度、秤動、月の近地点・遠地点と交点、最大離角を、任意の peer の astronomy-engine で。0.x では実験的です。
+description: 春分・夏至・秋分・冬至、月の満ち欠け、食 (世界全体と観測地点ごと)、月による恒星の掩蔽、暦日ごとの天体の出入り、合と衝、最大光度、秤動、月の近地点・遠地点と交点、最大離角を、任意の peer の astronomy-engine で。0.x では実験的です。
 ---
 
 `@johnmorrisdotca/wakusei-planets/sky` は「いつ」に答えます。季節がいつ始まるか、月がいつ新月、満月、上弦・下弦になるか、どの食がいつ起こるか (自分の立つ場所からどう見えるかも)、自分のタイムゾーンの暦日に天体がいつ出ていつ沈むか、惑星がいつ合や衝になるか、金星がどれだけ明るくなるか、月の秤動、近地点・遠地点、交点、水星と金星の最大離角、などです。0.x の間は**実験的**で、名前、探す期間、結果が 1.0 の前に変わることがあります (すべての export に `@experimental` が付いています)。[空のどこに惑星があるか](sky-bodies.md) が「ある瞬間に天体がどこにあるか」を答えるのに対し、この入口は「出来事が起こる瞬間」を見つけます。
@@ -66,9 +66,29 @@ console.log(`Jupiter opposition ${opposition.time.toISOString().slice(0, 16)}Z`)
 - **観測地点の日食。** 高度は、エンジンが返す大気差を含めた太陽の中心の高度で、接触が地平線の下なら負です。食の一部または全部が見えないことがあります。金環食も同じ方法で求めます (`kind: "annular"`、環の段階は `centralBegin` と `centralEnd`) が、金環食については、照らし合わせる基準を確かめていません。
 - **月食の食分。** エンジンは返さないので、このパッケージがエンジン自身の影の形 (地球の半径に大気の層の 88 km を加えたもの) から求め、テストが NASA の公表している表の列と照らします。日食では最大の瞬間の食分は返さず、欠けた面積の割合 (obscuration) だけです。
 
+## 月による恒星の掩蔽
+
+`lunarOccultations(star, from, to, { observer })` は、明るい恒星が月の縁に隠れる時刻 (潜入) と、再び現れる時刻 (出現) を求めます。`/stars` で取得した恒星と、観測地点の緯度・経度を渡します。次の例では IOTA がシドニーの観測地点として掲載した座標を使います。
+
+```ts
+import { lunarOccultations } from "@johnmorrisdotca/wakusei-planets/sky";
+import { starByName } from "@johnmorrisdotca/wakusei-planets/stars";
+
+const events = lunarOccultations(starByName("Antares")!, Date.UTC(2025, 2, 20), Date.UTC(2025, 2, 21), {
+  observer: { latitude: -(33 + 56.8 / 60), longitude: 151 + 10.6 / 60 }
+});
+for (const { disappearance, reappearance } of events) {
+  console.log(disappearance.time.toISOString(), reappearance.time.toISOString());
+}
+```
+
+各結果には、恒星の名前と Harvard Revised カタログ番号、潜入、月の縁の内側に最も深く入る時刻 (`closest`)、出現が含まれます。検索期間は UTC で、開始時刻を含み、終了時刻を含みません。期間に入るかどうかは `closest` で判定するため、潜入や出現が期間外になることもあります。各時刻での恒星の幾何学的な高度を度で返します。高度が 0° 未満なら、その時刻の恒星は地平線の下にあります。
+
+計算には観測地点から見た見かけの位置を使い、月を半径 1,737.4 km の球とします。月の山や谷によって潜入・出現の時刻がずれ、月の縁をかすめる掩蔽の有無も変わることがあります。IOTA の 2025 年の予報と観測地点 8 か所で照合したところ、潜入・出現の計 16 時刻の差は最大 8.4 秒でした。予報表の座標は角度の 0.1 分単位、時刻は秒単位です。照合では観測地点の高さを 0 m としました。[アンタレス](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0320zc2366.htm)、[エルナト](https://web.archive.org/web/20250115/http://www.lunar-occultations.com/iota/bstar/0111zc810.htm)、[スピカ](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0316zc1925.htm)。
+
 ## 約束事
 
-新しい名前は API の約束事の草案 (リポジトリの docs/design/api-conventions.md) に従います。角度は単位の接尾辞なしの度、長さは単位つき、時刻は `Date`、期間内に起こらない出来事は `null` です。古い `skyBodies` の項目には `Deg` の接尾辞が付いていて、1.0 までは両者が異なったままです。
+新しい名前は API の約束事の草案 (リポジトリの docs/design/api-conventions.md) に従います。角度は単位の接尾辞なしの度、長さは単位つき、時刻は `Date`、出来事を 1 件探して期間内に見つからなければ `null` です。配列を返す検索で見つからなければ空配列になります。古い `skyBodies` の項目には `Deg` の接尾辞が付いていて、1.0 までは両者が異なったままです。
 
 ## 既定値
 

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **Lunar occultations of bright stars** (MODULES-1896). `/sky` gives the disappearance, closest approach and reappearance of a `/stars` catalogue star behind the Moon for a given observer. The mean-limb contact times were within 8.4 seconds of 16 published IOTA predictions. The optional `/sky` bundle adds 1,133 gzipped bytes for the contact solver and astrometry, and its size baseline records the new total.
+
 ## [0.91.0] - 2026-11-27
 
 - **Measured lunar polar relief** (MODULES-1906). Close views use Lunar Orbiter Laser Altimeter elevations for the slopes at both poles, with the existing colour map. The illumination of crater walls follows the Sun.

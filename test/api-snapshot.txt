@@ -1093,6 +1093,8 @@ export interface GreatestElongation { time: Date; elongation: number; side: "eas
 export interface LocalSolarEclipse { kind: "partial" | "annular" | "total"; obscuration: number; partialBegin: EclipseContact; centralBegin: EclipseContact | null; peak: EclipseContact; centralEnd: EclipseContact | null; partialEnd: EclipseContact; }
 export interface LunarApsis { kind: "perigee" | "apogee"; time: Date; distanceKm: number; }
 export interface LunarNode { kind: "ascending" | "descending"; time: Date; }
+export interface LunarOccultation { star: Pick<Star, "hr" | "name">; disappearance: LunarOccultationContact; closest: LunarOccultationContact; reappearance: LunarOccultationContact; }
+export interface LunarOccultationContact { time: Date; altitude: number; }
 export interface MoonLibration { longitude: number; latitude: number; distanceKm: number; angularDiameter: number; }
 export interface MoonPhaseEvent { phase: MoonPhaseName; time: Date; }
 export type MoonPhaseName = "new" | "firstQuarter" | "full" | "lastQuarter";
@@ -1109,6 +1111,7 @@ function findEclipses(from: When, to: When) => SkyEclipse[]
 function localSolarEclipse(from: When, options: { observer: Observer; within?: { days: number; } | undefined; }) => LocalSolarEclipse | null
 function lunarApsides(from: When, to: When) => LunarApsis[]
 function lunarNodes(from: When, to: When) => LunarNode[]
+function lunarOccultations(star: Star, from: When, to: When, options: { observer: Observer; }) => LunarOccultation[]
 function moonAge(when: When) => number
 function moonLibration(when: When) => MoonLibration
 function moonLunation(when: When) => number

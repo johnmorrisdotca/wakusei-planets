@@ -38,10 +38,10 @@ test("the core and every other entry point never reach the peer: each one's impo
   }
 });
 
-test("/sky reaches nothing of rendering or the browser: its own import graph is the time helper and the peer", async () => {
+test("/sky stays independent of rendering, the browser and the star catalogue", async () => {
   const result = await build({ entryPoints: [join(root, "src/sky.ts")], bundle: true, write: false, metafile: true, format: "esm", platform: "neutral", packages: "external", logLevel: "silent", outdir: "out" });
   const inputs = Object.keys(result.metafile.inputs);
-  assert.ok(inputs.every((path) => /^src\/(sky|when)\.ts$/.test(path)), `src/sky.ts reaches ${inputs.join(", ")}`);
+  assert.ok(inputs.every((path) => /^src\/(sky|minimum|star-position|vec|when)\.ts$/.test(path)), `src/sky.ts reaches ${inputs.join(", ")}`);
 });
 
 test("with the peer missing, importing /sky fails at once and the error names astronomy-engine", () => {

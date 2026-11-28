@@ -2,7 +2,7 @@
 title: Sky events (experimental)
 section: how-to
 order: 37
-description: Equinoxes and solstices, Moon phases, eclipses (global and local), rise and set over a calendar day, conjunctions and oppositions, peak magnitude, libration, lunar apsides and nodes, and greatest elongation, through astronomy-engine as an optional peer. Experimental in 0.x.
+description: Equinoxes and solstices, Moon phases, eclipses (global and local), lunar occultations of stars, rise and set over a calendar day, conjunctions and oppositions, peak magnitude, libration, lunar apsides and nodes, and greatest elongation, through astronomy-engine as an optional peer. Experimental in 0.x.
 ---
 
 `@johnmorrisdotca/wakusei-planets/sky` answers "when": when the seasons begin, when the Moon is new, full or at a quarter, which eclipses happen (and what one looks like from where you stand), when a body rises and sets on a calendar day of your time zone, when a planet is in conjunction or opposition, how bright Venus gets, the Moon's libration, apsides and nodes, and a planet's greatest elongation. It is **experimental during 0.x**: the names, the search windows and the results may change before 1.0 (every export is marked `@experimental`). Where [Where the planets are in the sky](sky-bodies.md) says where a body is at a moment, this entry finds the moment a thing happens.
@@ -66,9 +66,29 @@ console.log(`Jupiter opposition ${opposition.time.toISOString().slice(0, 16)}Z`)
 - **Local eclipses.** The altitude is the Sun's centre with refraction, as the engine gives it, and is negative when the contact is below the horizon: an eclipse can be partly or wholly unseen. Annular eclipses are found the same way (`kind: "annular"`, the ring phase in `centralBegin` and `centralEnd`) but no reference for one was checked.
 - **Lunar eclipse magnitude.** The engine does not report it, so the wrapper works it out from the engine's own shadow geometry (the Earth's radius with 88 km of atmosphere), and the test holds it to NASA's published column. A solar eclipse's magnitude at its greatest point is not given, only the obscuration.
 
+## When the Moon hides a star
+
+Use `lunarOccultations(star, from, to, { observer })` to find the disappearance and reappearance of a bright star behind the Moon. Pass a star from `/stars` and use the coordinates of the observation site. This example uses IOTA's Sydney station.
+
+```ts
+import { lunarOccultations } from "@johnmorrisdotca/wakusei-planets/sky";
+import { starByName } from "@johnmorrisdotca/wakusei-planets/stars";
+
+const events = lunarOccultations(starByName("Antares")!, Date.UTC(2025, 2, 20), Date.UTC(2025, 2, 21), {
+  observer: { latitude: -(33 + 56.8 / 60), longitude: 151 + 10.6 / 60 }
+});
+for (const { disappearance, reappearance } of events) {
+  console.log(disappearance.time.toISOString(), reappearance.time.toISOString());
+}
+```
+
+Each event gives the star's name and Harvard Revised catalogue number, the disappearance, the deepest point inside the lunar limb (`closest`), and the reappearance. The UTC window includes its start and excludes its end. It selects events by `closest` and can return contacts outside the window. Each stage includes the star's geometric altitude in degrees. An altitude below 0° places the star below the horizon at that time.
+
+The calculation uses apparent positions for the observer and a spherical Moon of radius 1,737.4 km. Lunar terrain can shift contact times or change whether a graze occurs. Against IOTA's 2025 predictions for eight stations, the 16 contact times differed by up to 8.4 seconds. The station tables give coordinates to a tenth of an arcminute and times to a second. The comparison uses zero observer height. [Antares](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0320zc2366.htm), [Elnath](https://web.archive.org/web/20250115/http://www.lunar-occultations.com/iota/bstar/0111zc810.htm), [Spica](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0316zc1925.htm).
+
 ## The conventions
 
-New names follow the API conventions draft (docs/design/api-conventions.md in the repository): angles in degrees without a suffix, lengths with their unit, times as `Date`, and `null` for an event that does not happen in the window. The older `skyBodies` fields carry a `Deg` suffix; the two stay different until 1.0.
+New names follow the API conventions draft (docs/design/api-conventions.md in the repository): angles in degrees without a suffix, lengths with their unit, times as `Date`, and `null` when a search for one event finds none. Searches that return an array give an empty array for a window with no events. The older `skyBodies` fields carry a `Deg` suffix; the two stay different until 1.0.
 
 ## Defaults
 
