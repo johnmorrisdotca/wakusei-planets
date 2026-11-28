@@ -1,5 +1,6 @@
 // Close the openings of a partial sphere with filled layers on the two radial faces.
-import { cutOpening, type CutSize, type Interior } from "../interior.ts";
+import { cutOpening, type CutSize } from "../interior.ts";
+import type { InteriorProfile } from "../interior-profile.ts";
 import type { ThreeParts } from "./body.ts";
 import { PRELUDE } from "./glsl.ts";
 
@@ -58,7 +59,7 @@ void main() {
 }
 `;
 
-export function createCutaway(T: ThreeParts, interior: Interior, size: CutSize) {
+export function createCutaway(T: ThreeParts, interior: InteriorProfile, size: CutSize) {
   const [centre, halfWidth] = cutOpening(size);
   const start = Math.PI / 2 + centre + halfWidth;
   const sweep = turn - 2 * halfWidth;

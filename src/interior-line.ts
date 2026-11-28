@@ -1,10 +1,11 @@
 // Front-on sections for the line look. Animation is a phase passed in by the caller.
-import type { Interior } from "./interior.ts";
+import type { InteriorProfile } from "./interior-profile.ts";
+import type { LineOptions } from "./line.ts";
 
 const tau = Math.PI * 2;
 const short = (value: number): string => (Math.round(value * 100) / 100).toString();
 
-export function interiorRings(interior: Interior, size: number, cx: number, cy: number, radius: number, seconds: number): string {
+export function interiorRings(interior: InteriorProfile, size: number, cx: number, cy: number, radius: number, seconds: number): string {
   const shapes: string[] = [];
   let inner = 0;
   for (const layer of interior.layers) {
@@ -41,4 +42,11 @@ export function interiorRings(interior: Interior, size: number, cx: number, cy: 
     }
   }
   return shapes.join("");
+}
+
+export function interiorSectionSvg(interior: InteriorProfile, label: string, options: LineOptions): string {
+  const { size = 320, fill = 0.89, zoom = 1, panX = 0, panY = 0, cutawaySeconds = 0 } = options;
+  const cx = size / 2 * (1 - panX), cy = size / 2 * (1 + panY);
+  const rings = interiorRings(interior, size, cx, cy, size / 2 * fill * zoom, cutawaySeconds);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${short(size)} ${short(size)}" width="${short(size)}" height="${short(size)}" role="img" aria-label="${label.replace(/"/g, "&quot;")}">${rings}</svg>`;
 }

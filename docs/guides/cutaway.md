@@ -96,6 +96,23 @@ Bodies below stay whole because the package has no adopted source with their lay
 
 Use `interiorOf("earth")` to read the same layers the legend uses. [NOTICE.md](../../NOTICE.md) lists the sources and access dates.
 
+## Named stellar models
+
+On the Star page, pick an **Interior model**, then choose **¼ cutaway** or **½ cutaway**. The legend gives radii from the centre, mass, age, initial composition and a link to the saved profile. Each example represents one stage of the model's evolution. A star made with custom numbers keeps its whole view.
+
+| `star` value | Model |
+| --- | --- |
+| `mesa-red-dwarf` | A fully convective 0.20-solar-mass red dwarf at the start of the main sequence |
+| `mesa-massive-zams` | A 20-solar-mass main-sequence star with a convective core |
+| `mesa-giant-tip` | A red giant at helium ignition. Beside it, an inset uses its own scale to show the core and burning shell from 0 to about 22,100 km, the inner 0.018% of the full radius. |
+| `mesa-hot-white-dwarf` | A 0.61-solar-mass hot white dwarf with hydrogen-rich and helium-rich layers over a carbon–oxygen core |
+
+```html
+<wakusei-body star="mesa-giant-tip" cutaway="quarter" look="realistic"></wakusei-body>
+```
+
+Set `look="line"` for the concentric cross-section. The embed controls on the Star page carry the selected model and cut into their generated code. [Profile credits and extraction](../../NOTICE.md#named-stellar-cutaways)
+
 ## The Earth
 
 The volumetric mean radius is 6371 km and the core's outside is 3485 km (NASA Earth Fact Sheet, read 2026-11-13). The inner core is about 1221 km in radius, iron and nickel, solid. The outer core is iron and nickel, fluid. The crust is rock, about 30 km deep on land. The mantle is the rock between the core and that crust, so its outside is the mean radius minus about 30 km. The page also says the ocean crust is about 5 km; this cutaway draws the land figure as the one crust.

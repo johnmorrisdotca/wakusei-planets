@@ -1,5 +1,6 @@
 // A body's interior, with layer radii from the named sources in NOTICE.md. Approximate and uncertain boundaries are marked about.
 import type { BodyId } from "./facts.ts";
+import { rowsForInterior } from "./interior-profile.ts";
 
 /** One layer, from the centre outward. `outerKm` is the radius of its outside. */
 export interface InteriorLayer {
@@ -218,20 +219,6 @@ export function interiorOf(bodyId: string): Interior | undefined {
   return Object.hasOwn(INTERIORS, bodyId) ? INTERIORS[bodyId as BodyId] : undefined;
 }
 
-/** Three significant figures, so a boundary worked out from a fraction is not written as if it were measured to a tenth of a kilometre. */
-function round3(n: number): number {
-  if (n === 0) return 0;
-  const scale = 10 ** (Math.floor(Math.log10(Math.abs(n))) - 2);
-  return Math.round(n / scale) * scale;
-}
-
-/** A depth, with "about" when the figure it comes from is the source's "about". Thousands are grouped. */
-function depthEnd(n: number, about: boolean, lang: "en" | "ja"): string {
-  const text = `${round3(n).toLocaleString(lang === "ja" ? "ja-JP" : "en-CA", { maximumFractionDigits: 0 })} km`;
-  if (!about) return text;
-  return lang === "ja" ? `約${text}` : `about ${text}`;
-}
-
 /** The legend's heading: the numbers are depth from the surface, not radius from the centre. */
 export function interiorDepthHeading(lang: "en" | "ja"): string {
   return lang === "ja" ? "表面から下へ" : "From the surface down";
@@ -269,25 +256,5 @@ export function inCutOpening(point: readonly [number, number, number], size?: Cu
  */
 export function interiorLegend(bodyId: string, lang: "en" | "ja"): InteriorRow[] | undefined {
   const interior = interiorOf(bodyId);
-  if (interior === undefined) return undefined;
-  const { radiusKm, layers } = interior;
-  const rows: InteriorRow[] = [];
-  for (let i = layers.length - 1; i >= 0; i -= 1) {
-    const layer = layers[i]!;
-    const innerKm = i === 0 ? 0 : layers[i - 1]!.outerKm;
-    const shallow = radiusKm - layer.outerKm;
-    const deep = radiusKm - innerKm;
-    const shallowAbout = layer.about;
-    const deepAbout = i === 0 ? false : layers[i - 1]!.about;
-    const from = depthEnd(shallow, shallowAbout, lang);
-    const to = depthEnd(deep, deepAbout, lang);
-    rows.push({
-      id: layer.id,
-      name: layer.name[lang],
-      depth: lang === "ja" ? `${from} から ${to}` : `${from} to ${to}`,
-      madeOf: layer.madeOf[lang],
-      colour: layer.colour,
-    });
-  }
-  return rows;
+  return interior === undefined ? undefined : rowsForInterior(interior, lang);
 }

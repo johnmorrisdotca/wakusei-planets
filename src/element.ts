@@ -11,7 +11,10 @@ import { BODIES, MINOR_IDS, type BodyFacts, type BodyId, type Look, type MoonId 
 import { extentOf, ROOM } from "./scene/extent.ts";
 import { createGate, frameCap, type Gate } from "./gate.ts";
 import { lineSvg, type LineOptions } from "./line.ts";
-import { inCutOpening, interiorDepthHeading, interiorLegend, interiorOf, type CutSize } from "./interior.ts";
+import { inCutOpening, interiorDepthHeading, interiorOf, type CutSize } from "./interior.ts";
+import { rowsForInterior } from "./interior-profile.ts";
+import { interiorSectionSvg } from "./interior-line.ts";
+import { stellarExample } from "./stellar-interiors.ts";
 import { starLook, type StarLook, type StarNumbers } from "./star.ts";
 import { starLineSvg } from "./star-line.ts";
 import { detailOf, lookOf, starLookOf } from "./scene/look.ts";
@@ -113,8 +116,18 @@ function clampPan(pan: number, extent: number, zoom: number): number {
 const LINE_LIMITS = { zoomMin: 0.1, zoomMax: 50, tiltMax: 90 } as const;
 const TEMPLATE = `<style>
 :host { display: block; width: var(--wakusei-size, 320px); max-width: 100%; aspect-ratio: 1 / 1; position: relative; contain: layout style; }
+#picture { display: contents; }
 #stage { position: absolute; inset: 0; bottom: var(--cutaway-band, 0px); }
 #cutaway-panel { position: absolute; z-index: 2; left: 8px; right: 8px; bottom: 8px; margin: 0; padding: 6px 8px; background: color-mix(in srgb, Canvas 88%, transparent); color: CanvasText; font: 12px/1.35 system-ui, sans-serif; }
+:host([data-stellar-cut]) { aspect-ratio: auto; }
+:host([data-stellar-cut]) #stage { position: relative; inset: auto; width: 100%; aspect-ratio: 1; max-height: 460px; }
+:host([data-stellar-cut]) #cutaway-panel { position: relative; inset: auto; margin: 0 8px 8px; }
+#picture:has(#stellar-detail:not([hidden])) { display: grid; grid-template-columns: minmax(0, 1fr) min(40%, clamp(104px, 25%, 192px)); align-items: center; padding-inline-end: 8px; }
+#stellar-detail { display: grid; justify-items: center; gap: 6px; margin: 0; padding: 8px 4px; text-align: center; overflow-wrap: anywhere; font: 12px/1.35 system-ui, sans-serif; border: 1px solid color-mix(in srgb, CanvasText 24%, transparent); border-radius: 12px; color: CanvasText; background: color-mix(in srgb, Canvas 92%, transparent); }
+#stellar-detail[hidden] { display: none; }
+#stellar-detail svg { width: min(100%, 112px); height: auto; }
+#stellar-detail strong, #stellar-detail [data-scale] { display: block; }
+#stellar-detail [data-scale] { margin-top: 4px; }
 #cutaway-panel[hidden] { display: none; }
 #cutaway-heading { margin: 0 0 4px; font-weight: 600; }
 #cutaway { margin: 0; padding: 0; list-style: none; }
@@ -122,6 +135,8 @@ const TEMPLATE = `<style>
 #cutaway li { display: grid; grid-template-columns: 12px 1fr; gap: 2px 8px; align-items: baseline; }
 #cutaway li[data-empty], #cutaway li[data-note] { display: block; }
 #cutaway li[data-note] { margin-top: 4px; }
+:host([data-stellar-cut]) [data-name] { font-weight: 600; }
+:host([data-stellar-cut]) [data-depth] { font-variant-numeric: tabular-nums; }
 #cutaway [data-swatch] { width: 12px; height: 12px; }
 #stage svg { display: block; width: 100%; height: 100%; }
 #estimate { position: absolute; z-index: 2; left: 2px; right: 2px; bottom: 1px; margin: 0; max-height: 2.4em; overflow: hidden; text-align: center; font: 10px/1.2 system-ui, sans-serif; color: inherit; pointer-events: none; }
@@ -129,7 +144,7 @@ const TEMPLATE = `<style>
 :host([data-shape="estimated"]) #stage { bottom: 22px; }
 #moon-name { position: absolute; z-index: 2; bottom: 8px; left: 50%; transform: translateX(-50%); margin: 0; padding: 2px 6px; max-width: 90%; background: Canvas; color: CanvasText; font: 12px system-ui, sans-serif; pointer-events: none; }
 #moon-name[hidden] { display: none; }
-</style><div id="stage"></div><p id="estimate" hidden></p><p id="moon-name" hidden></p><div id="cutaway-panel" hidden><p id="cutaway-heading" hidden></p><ol id="cutaway" hidden></ol></div>`;
+</style><div id="picture"><div id="stage"></div><figure id="stellar-detail" hidden></figure></div><p id="estimate" hidden></p><p id="moon-name" hidden></p><div id="cutaway-panel" hidden><p id="cutaway-heading" hidden></p><ol id="cutaway" hidden></ol></div>`;
 
 /**
  * The `<wakusei-body>` custom element: a body of the solar system, drawn in a look.
@@ -711,7 +726,7 @@ export class WakuseiBody extends HTMLElement {
         }
         else this.#stopTick();
       });
-      this.#io.observe(this);
+      this.#io.observe(this.#stage);
     }
     document.addEventListener("visibilitychange", this.#onHidden);
     this.#syncClock();
@@ -801,7 +816,6 @@ export class WakuseiBody extends HTMLElement {
       this.#flowSince = undefined;
       this.#flowHeld = 0;
     }
-    if (name === "cutaway" || name === "cutaway-flow" || name === "body" || name === "star") this.#syncCutawayFlow();
     if (name === "data") this.#door.book.ownOnly(this.getAttribute("data") === "own");
     if (name === "live") this.#applyHover();
     if (name === "still-size" && this.#stillSide()) this.#still();
@@ -901,9 +915,10 @@ export class WakuseiBody extends HTMLElement {
     this.removeAttribute("data-error");
     try {
       const value = (this.getAttribute("star") ?? "").trim();
+      const example = stellarExample(value);
       let base: Partial<StarNumbers> = {};
       if (value.startsWith("{")) base = JSON.parse(value) as Partial<StarNumbers>;
-      else if (value !== "") base = starLookOf(value)?.numbers ?? { name: value };
+      else if (value !== "") base = example?.numbers ?? starLookOf(value)?.numbers ?? { name: value };
       const pick = (name: (typeof STAR_ATTRS)[number]): string | null => this.getAttribute(name);
       const number = (name: (typeof STAR_ATTRS)[number]): number | undefined => (pick(name) === null ? undefined : Number(pick(name)));
       const numbers = {
@@ -920,7 +935,8 @@ export class WakuseiBody extends HTMLElement {
         ...(pick("variable-amplitude") !== null ? { variableAmplitude: number("variable-amplitude") } : {}),
         ...(pick("estimated") !== null ? { estimated: pick("estimated")!.split(",").map((part) => part.trim()).filter((part) => part !== "") as StarNumbers["estimated"] } : {}),
       } as StarNumbers;
-      this.#starMade = starLook(numbers, { quality });
+      const made = starLook(numbers, { quality });
+      this.#starMade = example === undefined ? made : { ...made, facts: { ...made.facts, name: example.name } };
     } catch (error) {
       this.setAttribute("data-error", `star: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -1175,10 +1191,26 @@ export class WakuseiBody extends HTMLElement {
     return value !== null && value !== "off" && value !== "0";
   }
 
+  #stellarExample() {
+    const example = stellarExample(this.getAttribute("star")?.trim());
+    if (example === undefined) return undefined;
+    const numbers = this.#star()?.numbers;
+    const source = example.numbers;
+    return numbers !== undefined && numbers.radiusSun === source.radiusSun && numbers.temperatureK === source.temperatureK &&
+      numbers.luminosityClass === source.luminosityClass && numbers.rotationDays === source.rotationDays &&
+      numbers.oblateness === source.oblateness ? example : undefined;
+  }
+
+  #interior() {
+    if (this.hasAttribute("star")) return this.#stellarExample()?.interior;
+    return this.#estimate() === null ? interiorOf(this.body) : undefined;
+  }
+
   #cutSize(): CutSize | undefined {
     const value = this.getAttribute("cutaway");
+    if ((value === "" || value === "classic") && this.#stellarExample() !== undefined) return "quarter";
     if (value !== "half" && value !== "quarter") return undefined;
-    return this.hasAttribute("star") || this.#estimate() !== null || interiorOf(this.body) === undefined ? undefined : value;
+    return this.#interior() === undefined ? undefined : value;
   }
 
   #isSection(): boolean {
@@ -1193,7 +1225,7 @@ export class WakuseiBody extends HTMLElement {
     const value = this.getAttribute("cutaway-flow");
     const active = value !== null && value !== "off" && value !== "0" && this.#cutSize() !== undefined &&
       this.#visible && document.visibilityState !== "hidden" && !this.#motionPreference?.matches &&
-      interiorOf(this.body)?.layers.some((layer) => layer.flow === true);
+      this.#interior()?.layers.some((layer) => layer.flow === true);
     if (active && this.#flowSince === undefined) this.#flowSince = performance.now();
     else if (!active && this.#flowSince !== undefined) {
       this.#flowHeld = this.#cutawaySeconds();
@@ -1206,17 +1238,22 @@ export class WakuseiBody extends HTMLElement {
     const panel = this.shadowRoot?.querySelector("#cutaway-panel");
     if (!(panel instanceof HTMLElement)) return;
     const narrow = this.clientWidth > 0 && this.clientWidth <= 480;
-    const band = (narrow || this.#cutSize() !== undefined) && !panel.hidden ? panel.offsetHeight + 8 : 0;
+    const band = !this.hasAttribute("data-stellar-cut") && !panel.hidden && (narrow || this.#cutSize() !== undefined) ? panel.offsetHeight + 8 : 0;
     const next = `${band}px`;
     if (this.style.getPropertyValue("--cutaway-band") !== next) this.style.setProperty("--cutaway-band", next);
   }
 
-  /** The legend. It is HTML, so it costs no graphics object, and it lists only the layers `interiorLegend` has. */
+  /** The legend and any magnified detail are laid out without WebGL objects. */
   #syncLegend(): void {
     const list = this.shadowRoot?.querySelector("#cutaway");
     const panel = this.shadowRoot?.querySelector("#cutaway-panel");
     const heading = this.shadowRoot?.querySelector("#cutaway-heading");
-    if (!(list instanceof HTMLOListElement) || !(panel instanceof HTMLElement) || !(heading instanceof HTMLElement)) return;
+    const detail = this.shadowRoot?.querySelector("#stellar-detail");
+    if (!(list instanceof HTMLOListElement) || !(panel instanceof HTMLElement) || !(heading instanceof HTMLElement) || !(detail instanceof HTMLElement)) return;
+    const example = this.#cutawayOn() ? this.#stellarExample() : undefined;
+    this.toggleAttribute("data-stellar-cut", example !== undefined);
+    detail.hidden = example?.detail === undefined;
+    detail.replaceChildren();
     if (!this.#cutawayOn()) {
       panel.hidden = true;
       list.hidden = true;
@@ -1229,8 +1266,8 @@ export class WakuseiBody extends HTMLElement {
     list.hidden = false;
     list.replaceChildren();
     const lang = this.getAttribute("lang") === "ja" ? "ja" : "en";
-    const rows = this.#estimate() === null && !this.hasAttribute("star") ? interiorLegend(this.body, lang) : undefined;
-    if (rows === undefined) {
+    const interior = this.hasAttribute("star") ? example?.interior : this.#interior();
+    if (interior === undefined) {
       heading.hidden = true;
       const item = document.createElement("li");
       item.dataset.empty = "";
@@ -1240,8 +1277,8 @@ export class WakuseiBody extends HTMLElement {
       return;
     }
     heading.hidden = false;
-    heading.textContent = interiorDepthHeading(lang);
-    for (const row of rows) {
+    heading.textContent = example === undefined ? interiorDepthHeading(lang) : (lang === "ja" ? "中心からの半径" : "Radius from the centre");
+    for (const row of rowsForInterior(interior, lang, example !== undefined)) {
       const item = document.createElement("li");
       item.dataset.layer = row.id;
       const swatch = document.createElement("span");
@@ -1261,14 +1298,38 @@ export class WakuseiBody extends HTMLElement {
       item.append(swatch, text);
       list.append(item);
     }
-    let explanation = interiorOf(this.body)?.note?.[lang];
-    if (this.body === "earth" && this.#cutSize() !== undefined) {
+    if (example?.detail !== undefined) {
+      const layers = interior.layers.slice(0, example.detail);
+      const radiusKm = layers.at(-1)!.outerKm;
+      const label = lang === "ja" ? "中心核と水素燃焼殻の拡大図" : "Magnified core and hydrogen-burning shell";
+      detail.innerHTML = interiorSectionSvg({ ...interior, radiusKm, layers }, label, { size: 112, fill: 0.94 });
+      const caption = document.createElement("figcaption");
+      const title = document.createElement("strong");
+      title.textContent = label;
+      const scale = document.createElement("span");
+      scale.dataset.scale = "";
+      const edge = Number(radiusKm.toPrecision(3)).toLocaleString(lang === "ja" ? "ja-JP" : "en-CA");
+      const percent = (100 * radiusKm / interior.radiusKm).toPrecision(2);
+      scale.textContent = lang === "ja" ? `中心から 0〜${edge} km（全半径の内側 ${percent}%）` : `0–${edge} km from centre, inner ${percent}% of the radius`;
+      caption.append(title, scale);
+      detail.append(caption);
+    }
+    let explanation = interior.note?.[lang];
+    if (interior.body === "earth" && this.#cutSize() !== undefined) {
       explanation = lang === "ja" ? "表面近くの明るい点は、模式的なマグマだまりを示します。" : "Bright pockets show illustrative magma near the surface.";
     }
     if (explanation !== undefined) {
       const note = document.createElement("li");
       note.dataset.note = "";
       note.textContent = explanation;
+      if (example !== undefined) {
+        const source = document.createElement("a");
+        source.href = interior.source.page;
+        source.target = "_blank";
+        source.rel = "noopener";
+        source.textContent = lang === "ja" ? "元のモデル" : "Source model";
+        note.append(" ", source);
+      }
       list.append(note);
     }
     this.#fitCutaway();
@@ -1276,6 +1337,7 @@ export class WakuseiBody extends HTMLElement {
 
   async #refresh(): Promise<void> {
     if (!this.isConnected) return;
+    this.#syncCutawayFlow();
     this.#syncLegend();
     this.#syncEstimate();
     this.setAttribute("aria-label", this.#label());
@@ -1368,13 +1430,13 @@ export class WakuseiBody extends HTMLElement {
       const note = ja ? rock.note.ja : rock.note.en;
       return ja ? `${rock.label}。${note}` : `${rock.label}. ${note}`;
     }
-    if (star !== undefined) return this.look === "line" ? (ja ? `${star.facts.name.ja}の線画。${star.disclaimer.ja}` : `${star.facts.name.en}, line drawing. ${star.disclaimer.en}`) : ja ? `${star.facts.name.ja}の陰影つきの絵。${star.disclaimer.ja}` : `${star.facts.name.en}, shaded star. ${star.disclaimer.en}`;
-    const f = BODIES[this.body];
+    const f = star?.facts ?? BODIES[this.body];
     const size = this.#cutSize();
     if (size !== undefined) {
       if (this.#isSection()) return ja ? `${f.name.ja}の断面` : `${f.name.en} cross-section`;
       return ja ? `${f.name.ja}の${size === "half" ? "半分" : "4分の1"}を開いた図` : `${f.name.en}, ${size} cutaway`;
     }
+    if (star !== undefined) return this.look === "line" ? (ja ? `${star.facts.name.ja}の線画。${star.disclaimer.ja}` : `${star.facts.name.en}, line drawing. ${star.disclaimer.en}`) : ja ? `${star.facts.name.ja}の陰影つきの絵。${star.disclaimer.ja}` : `${star.facts.name.en}, shaded star. ${star.disclaimer.en}`;
     const looks = { line: ja ? "線画" : "line drawing", realistic: ja ? "表面の地図" : "painted surface", painted: ja ? "表面の地図" : "painted surface", illustrated: ja ? "イラスト" : "illustrated drawing" } as const;
     return ja ? `${f.name.ja}の${looks[this.look]}` : `${f.name.en}, ${looks[this.look]}`;
   }
@@ -1394,7 +1456,13 @@ export class WakuseiBody extends HTMLElement {
     this.#sceneState = scene;
     const size = 480;
     const star = this.#star();
-    const draw = star === undefined ? (options: Parameters<typeof lineSvg>[1]) => lineSvg(this.body, options) : (options: Parameters<typeof lineSvg>[1]) => starLineSvg(star, options);
+    const draw = (options: LineOptions) => {
+      if (star === undefined) return lineSvg(this.body, options);
+      const interior = options.cutaway ? this.#interior() : undefined;
+      if (interior === undefined) return starLineSvg(star, options);
+      const label = options.lang === "ja" ? `${star.facts.name.ja}の断面` : `${star.facts.name.en} cross-section`;
+      return interiorSectionSvg(interior, label, options);
+    };
     const catalogueMoons = scene.moonCatalogue === undefined ? undefined : this.#lineCatalogue(scene);
     const html = draw({
       size,
@@ -1473,11 +1541,13 @@ export class WakuseiBody extends HTMLElement {
     this.#stage.innerHTML = "";
     const star = this.#star();
     const rock = this.#estimate();
+    const interior = this.#cutawayOn() ? this.#interior() : undefined;
     const item = createBodyItem({
       id: this.body,
       ...(star !== undefined ? { shaded: star.look, facts: star.facts, assetKey: `star:${star.key}` } : rock === null ? {} : { shaded: rock.look, facts: rock.facts, assetKey: `rock:${rock.id}`, coarse: true }),
       look: this.look === "illustrated" ? "realistic" : "painted",
-      cutaway: rock === null && star === undefined ? (this.#cutSize() ?? this.#cutawayOn()) : false,
+      cutaway: interior === undefined ? false : (this.#cutSize() ?? true),
+      ...(interior === undefined ? {} : { interior }),
       onShells: (count) => {
         this.dataset.shells = String(count);
       },

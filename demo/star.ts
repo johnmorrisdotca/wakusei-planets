@@ -7,8 +7,10 @@ import type { EmbedChangeDetail, EmbedPanelElement } from "@johnmorrisdotca/kazo
 import type { ViewChangeDetail, ViewControlsElement } from "@johnmorrisdotca/kazoku-ui/view-controls/element";
 import { embedCode, embedCredit, EMBED_KINDS, type EmbedKind, type EmbedOptions } from "../src/embed.ts";
 import { LINEUP_STARS } from "../src/lineup/data.ts";
+import type { CutSize } from "../src/interior.ts";
 import { registerStarLook } from "../src/scene/look.ts";
 import { LUMINOSITY_CLASSES, starLook, STAR_SUN, type LuminosityClass, type StarNumbers } from "../src/star.ts";
+import { STELLAR_EXAMPLES, stellarExample } from "../src/stellar-interiors.ts";
 import "../src/element.ts";
 import { setThreeLoader, type WakuseiBody } from "../src/element.ts";
 import { WORDS } from "./words.js";
@@ -49,6 +51,8 @@ const controls = document.querySelector<ViewControlsElement>("kazoku-view-contro
 const caption = document.querySelector<HTMLElement>("#caption")!;
 const honesty = document.querySelector<HTMLElement>("#honesty")!;
 const presetsBox = document.querySelector<HTMLElement>("#presets")!;
+const modelsBox = document.querySelector<HTMLElement>("#interior-models")!;
+const cutawayRow = document.querySelector<HTMLElement>("#stellar-cutaway-row")!;
 const partsBox = document.querySelector<HTMLElement>("#parts")!;
 const errorBox = document.querySelector<HTMLElement>("#error")!;
 const inputs = {
@@ -68,10 +72,13 @@ const pressed = (button: HTMLElement, on: boolean): void => {
 
 const address = createAddressState({ defaults: { star: "sun" } });
 const asLook = (value: string | null): "line" | "realistic" => (value === "line" ? "line" : "realistic");
+const asCut = (value: string | null): CutSize | undefined => value === "quarter" || value === "half" ? value : undefined;
 const KEYS = { temperatureK: "temperature-k", radiusSun: "radius-sun", luminosityClass: "luminosity-class", rotationDays: "rotation-days", oblateness: "oblateness", activity: "activity" } as const;
 
 const fromAddress = (): { preset: string | null; numbers: StarNumbers } => {
   const id = address.get("star") ?? "sun";
+  const example = stellarExample(id);
+  if (example !== undefined) return { preset: example.id, numbers: example.numbers };
   const preset = PRESETS.find((one) => one.id === id);
   if (preset !== undefined) return { preset: preset.id, numbers: preset.numbers };
   const read = (key: string): number | undefined => (address.get(key) === null ? undefined : Number(address.get(key)));
@@ -85,19 +92,21 @@ const fromAddress = (): { preset: string | null; numbers: StarNumbers } => {
   return { preset: null, numbers };
 };
 
-const state = { ...fromAddress(), look: asLook(address.get("look")), spin: address.get("spin") === "1", scale: address.get("scale") === "1" };
+const state = { ...fromAddress(), look: asLook(address.get("look")), cut: asCut(address.get("cutaway")), spin: address.get("spin") === "1", scale: address.get("scale") === "1" };
 
 for (const cls of LUMINOSITY_CLASSES) inputs.class.append(new Option(cls, cls));
-for (const preset of PRESETS) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.dataset["preset"] = preset.id;
-  button.addEventListener("click", () => {
-    state.preset = preset.id;
-    state.numbers = preset.numbers;
-    render();
-  });
-  presetsBox.append(button);
+for (const [box, presets] of [[presetsBox, PRESETS], [modelsBox, STELLAR_EXAMPLES]] as const) {
+  for (const preset of presets) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset["preset"] = preset.id;
+    button.addEventListener("click", () => {
+      state.preset = preset.id;
+      state.numbers = preset.numbers;
+      render();
+    });
+    box.append(button);
+  }
 }
 
 const group = (value: number): string => value.toLocaleString("en-US");
@@ -106,10 +115,16 @@ const short = (value: number): string => (value >= 10 ? group(Math.round(value))
 function render(): void {
   const lng = lang();
   const numbers = state.numbers;
+  const example = stellarExample(state.preset);
   // the element draws the star: a registered one by its name, a changed one from its numbers
-  if (state.preset !== null) star.setAttribute("star", numbers.name ?? state.preset);
+  if (state.preset !== null) star.setAttribute("star", example?.id ?? numbers.name ?? state.preset);
   else star.setAttribute("star", JSON.stringify(numbers));
   star.setAttribute("look", state.look);
+  const cut = example === undefined ? undefined : state.cut;
+  if (cut === undefined) star.removeAttribute("cutaway");
+  else star.setAttribute("cutaway", cut);
+  cutawayRow.hidden = example === undefined;
+  for (const button of $$("#stellar-cutaway [data-cut]")) pressed(button, button.dataset["cut"] === (cut ?? "off"));
   star.setAttribute("lang", lng);
   star.setAttribute("turn", state.spin ? String(Math.round(star.starLook?.turn.degreesPerSecond ?? 12)) : "0");
   if (state.scale) star.setAttribute("scale-to", "sun");
@@ -122,6 +137,11 @@ function render(): void {
     const preset = PRESETS.find((one) => one.id === button.dataset["preset"])!;
     button.textContent = lng === "ja" ? preset.ja : (preset.numbers.name === "Sun" ? say("st_sun") : preset.id === "white-dwarf" ? say("st_white_dwarf") : preset.numbers.name ?? preset.id);
     pressed(button, button.dataset["preset"] === state.preset);
+  }
+  for (const button of $$("#interior-models [data-preset]")) {
+    const model = stellarExample(button.dataset["preset"])!;
+    button.textContent = model.name[lng];
+    pressed(button, model.id === state.preset);
   }
   for (const b of $$("#looks [data-look]")) pressed(b, b.dataset["look"] === state.look);
   pressed(document.querySelector<HTMLElement>("#spin")!, state.spin);
@@ -160,6 +180,7 @@ function render(): void {
   }
   address.set("star", state.preset ?? "custom");
   address.set("look", state.look === "realistic" ? null : state.look);
+  address.set("cutaway", cut ?? null);
   address.set("spin", state.spin ? "1" : null);
   address.set("scale", state.scale ? "1" : null);
   for (const [key, name] of Object.entries(KEYS)) address.set(name, state.preset === null && numbers[key as keyof typeof KEYS] !== undefined ? String(numbers[key as keyof typeof KEYS]) : null);
@@ -199,7 +220,15 @@ for (const input of Object.values(inputs)) {
 }
 
 // --- "Put it in your page" ---------------------------------------------------------------------------------------------------------------------------
-const embedOptions = (): EmbedOptions => ({ body: "sun", star: state.numbers, look: state.look, size: panel.size, lang: lang(), ...(state.spin ? { turn: Math.round(star.starLook?.turn.degreesPerSecond ?? 12) } : {}) });
+const embedOptions = (): EmbedOptions => {
+  const example = stellarExample(state.preset);
+  return {
+    body: "sun", star: example === undefined ? state.numbers : { ...state.numbers, name: example.id },
+    look: state.look, size: panel.size, lang: lang(),
+    ...(example !== undefined && state.cut !== undefined ? { cutaway: state.cut } : {}),
+    ...(state.spin ? { turn: Math.round(star.starLook?.turn.degreesPerSecond ?? 12) } : {}),
+  };
+};
 panel.kinds = EMBED_KINDS;
 const kept = address.get("embed");
 if (EMBED_KINDS.includes(kept as EmbedKind)) panel.kind = kept as string;
@@ -209,7 +238,9 @@ panel.preview = ({ kind }) => {
   if (kind === "iframe") return undefined;
   const options = embedOptions();
   const element = document.createElement("wakusei-body") as WakuseiBody;
-  element.setAttribute("star", JSON.stringify(options.star));
+  const example = stellarExample(options.star?.name);
+  element.setAttribute("star", example?.id ?? JSON.stringify(options.star));
+  if (options.cutaway !== undefined) element.setAttribute("cutaway", options.cutaway);
   for (const [name, value] of Object.entries({ look: options.look ?? "realistic", size: String(panel.size), lang: lang(), live: "off" })) element.setAttribute(name, value);
   return element;
 };
@@ -221,13 +252,17 @@ panel.addEventListener("kazoku-embedchange", (event) => {
 });
 function renderEmbed(): void {
   const options = embedOptions();
-  const query = new URLSearchParams(embedCode(options, "iframe", { site: "" }).match(/src="([^"]*)"/)?.[1]?.split("?")[1] ?? "");
+  const src = embedCode(options, "iframe", { site: "" }).match(/src="([^"]*)"/)?.[1];
   panel.setAttribute("lang", lang());
-  panel.openHref = `embed.html?${query.toString()}`;
+  panel.openHref = src?.replaceAll("&amp;", "&") ?? "embed.html";
   panel.update();
 }
 
 for (const b of $$("#looks [data-look]")) b.addEventListener("click", () => ((state.look = asLook(b.dataset["look"] ?? null)), render()));
+for (const b of $$("#stellar-cutaway [data-cut]")) b.addEventListener("click", () => {
+  state.cut = asCut(b.dataset["cut"] ?? null);
+  render();
+});
 document.querySelector("#spin")!.addEventListener("click", () => ((state.spin = !state.spin), render()));
 document.querySelector("#scale")!.addEventListener("click", () => ((state.scale = !state.scale), render()));
 controls.addEventListener("kazoku-viewchange", (event) => star.setView((event as CustomEvent<ViewChangeDetail>).detail));

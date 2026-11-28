@@ -86,7 +86,8 @@ if (view !== null) {
 if (view !== null && Math.min(window.innerWidth, window.innerHeight) >= 240) {
   queueMicrotask(() => {
     const bar = document.createElement("kazoku-view-controls") as ViewControlsElement;
-    for (const [name, value] of Object.entries({ for: "view", address: "", overlay: "", layout: "compact", speed: "0", "address-keys": "tilt:vtilt", ...(query.has("scene") ? { flat: "" } : {}), ...(query.has("lang") ? { lang: query.get("lang")! } : {}) })) bar.setAttribute(name, value);
+    if (!view.hasAttribute("data-stellar-cut")) bar.setAttribute("overlay", "");
+    for (const [name, value] of Object.entries({ for: "view", address: "", layout: "compact", speed: "0", "address-keys": "tilt:vtilt", ...(query.has("scene") ? { flat: "" } : {}), ...(query.has("lang") ? { lang: query.get("lang")! } : {}) })) bar.setAttribute(name, value);
     bar.addEventListener("kazoku-viewchange", (event) => {
       const detail = (event as CustomEvent<ViewChangeDetail>).detail;
       view.setView(detail);

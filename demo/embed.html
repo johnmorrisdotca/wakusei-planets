@@ -10,6 +10,10 @@
       html, body { margin: 0; height: 100%; background: transparent; }
       body { display: flex; align-items: center; justify-content: center; overflow: hidden; }
       #frame { width: min(100vw, 100vh); height: min(100vw, 100vh); position: relative; }
+      body:has(#frame > wakusei-body[data-stellar-cut]) { overflow: auto; align-items: safe center; }
+      #frame:has(> wakusei-body[data-stellar-cut]) { width: min(100%, 640px); height: auto; }
+      #frame > wakusei-body[data-stellar-cut] { aspect-ratio: auto; }
+      #frame:has(> wakusei-body[data-stellar-cut]) > kazoku-view-controls { display: block; margin: 8px auto 12px; max-width: max-content; }
       /* the family's credit line is kept out of the flex row (it would squeeze the frame): the corner credit (frame-credit.ts) is what a reader sees, this one is for a screen reader */
       kazoku-page-credits { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
       wakusei-body:focus-visible, wakusei-portrait:focus-visible { outline: 3px solid #6cd0ff; outline-offset: -3px; }

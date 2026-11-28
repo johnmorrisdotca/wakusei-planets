@@ -21,6 +21,7 @@ import type { TileLevel } from "./tiles.ts";
 import { fallbackLook } from "./fallback.ts";
 import { writeBasis } from "./basis.ts";
 import { cutOpening, interiorOf, type CutSize } from "../interior.ts";
+import type { InteriorProfile } from "../interior-profile.ts";
 import { createCutaway } from "./cutaway.ts";
 import { loadImage, MAP_ANISOTROPY } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
@@ -118,6 +119,8 @@ export interface BodyItemOptions {
   tiles?: { polarBase?(): string | undefined; source(body: string): BodyMapSource | undefined; book: SourceBook; ratio(): number; allowed(): boolean; onLevels?(levels: readonly TileLevel[] | undefined): void };
   /** Draw the interior cutaway instead of the whole globe. Off when left out. A body with no sourced interior is drawn whole. */
   cutaway?: boolean | CutSize;
+  /** The named stellar profile when this scene draws a star. */
+  interior?: InteriorProfile;
   /** How many interior shells this scene built. `0` when the cutaway is off or the body has no sourced interior. */
   onShells?(count: number): void;
 }
@@ -196,7 +199,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
     key: options.key,
     async build({ three: T, assets, width, height }: BuildContext<ThreeParts>): Promise<BodyScene> {
       const look = options.shaded ?? lookOf(options.id) ?? fallbackLook(facts);
-      const interior = options.cutaway ? interiorOf(options.id) : undefined;
+      const interior = options.cutaway ? (options.interior ?? interiorOf(options.id)) : undefined;
       const cutSize = interior !== undefined && typeof options.cutaway === "string" ? options.cutaway : undefined;
       const cutKey = cutSize === undefined ? "" : `:${cutSize}`;
       const wantPainted = (options.look === "painted" || look.mapped === true) && look.painted !== undefined;

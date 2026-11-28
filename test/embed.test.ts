@@ -9,6 +9,7 @@ import ts from "typescript";
 import { compileScript, compileTemplate, parse } from "vue/compiler-sfc";
 import { addStar, BODY_IDS, decodeScene, defaultPortrait, embedCode, encodeScene, embedCredit, EMBED_KINDS, PICTURE_CREDITS, picturesCredit, portraitCode, type EmbedOptions } from "../src/index.ts";
 import { entryOf } from "../src/embed.ts";
+import { stellarExample } from "../src/stellar-interiors.ts";
 
 const CHOICES: EmbedOptions[] = [
   { body: "jupiter", look: "realistic" },
@@ -116,6 +117,20 @@ test("the iframe points at the demo's embed page with the same names the page re
   assert.equal(url.searchParams.get("moons"), "1");
   assert.equal(url.searchParams.get("turn"), "8");
   assert.match(code, /width="400"/);
+});
+
+test("stellar cutaway snippets carry the model, cut size and legend language", () => {
+  const example = stellarExample("mesa-giant-tip")!;
+  const options: EmbedOptions = { body: "sun", star: { ...example.numbers, name: example.id }, look: "line", cutaway: "half", lang: "ja" };
+  const html = embedCode(options, "html");
+  const iframe = embedCode(options, "iframe");
+  const params = new URL(/src="([^"]+)"/.exec(iframe)![1]!.replace(/&amp;/g, "&")).searchParams;
+  for (const [name, value] of [["star", example.id], ["cutaway", "half"], ["lang", "ja"]]) {
+    assert.ok(html.includes(`${name}="${value}"`), name);
+    assert.equal(params.get(name), value);
+  }
+  assert.match(iframe, /width="320"\s+height="640"/);
+  assert.doesNotMatch(embedCode({ ...options, star: { ...example.numbers, name: "Custom" } }), /cutaway|lang="ja"/);
 });
 
 test("there is a snippet for every kind, and the credit names what is used", () => {

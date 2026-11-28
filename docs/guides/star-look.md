@@ -234,6 +234,8 @@ Every star carries `parts`, and the element's `starLook` property and its label 
 - **derived**: worked out from those numbers by a stated rule (the colour from the temperature, the darkening toward the edge, the hot poles of a flattened star);
 - **illustrative**: invented to look right: the pattern of the cells, where the spots are, the prominences and flares, the glow. They follow the numbers (how many, how coarse) but they are not observations.
 
+The Star page also shows the interiors of four named evolutionary models. [Stellar cutaways](cutaway.md#named-stellar-models)
+
 ## Quality and speed
 
 The star goes through the same shared renderer as every body: one WebGL context, at most 30 frames a second, nothing drawn at rest or out of sight, still turning under reduced motion (a quarter as fast), a lost context recovered. In `full` quality the granulation boils and an active star has prominences and flares on its edge, but only while frames are being drawn. `quality="low"` (or `starLook(numbers, { quality: "low" })`) gives a still surface and a soft glow for weak devices; the element chooses it by itself on a device with 2 GB of memory or fewer, or two cores or fewer, unless `quality="full"` says otherwise.

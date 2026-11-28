@@ -7,6 +7,7 @@ import { decodeScene } from "./portrait/model.ts";
 import type { LineupSet } from "./lineup/data.ts";
 import type { LineupLayout } from "./lineup/layout.ts";
 import type { StarNumbers } from "./star.ts";
+import { isStellarModelId } from "./stellar-model-ids.ts";
 import { VERSION } from "./version.ts";
 import { moonFilterAttributes, type MoonFilter } from "./moon-filters.ts";
 
@@ -115,11 +116,12 @@ function starAttributes(star: StarNumbers): [string, string][] {
 }
 
 /** The attributes of the element for these choices, in the order they are written. */
-function attributesOf(o: EmbedOptions): [string, string][] {
+function attributesOf(o: EmbedOptions, stellarCut: boolean): [string, string][] {
   const out: [string, string][] = o.star !== undefined ? [["star", o.star.name ?? ""], ["look", o.look ?? "realistic"]] : [["body", o.body], ["look", o.look ?? "realistic"]];
   if (o.size !== undefined && o.size !== 320) out.push(["size", String(o.size)]);
   if (o.star !== undefined) out.push(...starAttributes(o.star));
-  if (o.cutaway !== undefined && o.star === undefined) out.push(["cutaway", o.cutaway === "classic" ? "" : o.cutaway]);
+  if (o.cutaway !== undefined && (o.star === undefined || stellarCut)) out.push(["cutaway", o.cutaway === "classic" ? "" : o.cutaway]);
+  if (stellarCut && o.lang === "ja") out.push(["lang", "ja"]);
   if (o.time !== undefined && o.star === undefined) out.push(["time", o.time]);
   out.push(...moonAttributesOf(o));
   if (o.turn !== undefined && o.turn > 0) out.push(["turn", String(o.turn)]);
@@ -171,9 +173,11 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
   const site = settings.site ?? SITE;
   const size = options.size ?? 320;
   const body = options.body;
+  const stellarCut = options.cutaway !== undefined && isStellarModelId(options.star?.name?.trim());
   const query = new URLSearchParams(options.star !== undefined ? { ...(options.star.name !== undefined ? { star: options.star.name } : { star: "" }), look: options.look ?? "realistic", ...Object.fromEntries(starAttributes(options.star)) } : { body, look: options.look ?? "realistic" });
   if (options.time !== undefined && options.star === undefined) query.set("time", options.time);
-  if (options.cutaway !== undefined && options.star === undefined) query.set("cutaway", options.cutaway);
+  if (options.cutaway !== undefined && (options.star === undefined || stellarCut)) query.set("cutaway", options.cutaway);
+  if (stellarCut && options.lang === "ja") query.set("lang", "ja");
   for (const [name, value] of moonAttributesOf(options)) query.set(name, name === "moons" && value === "" ? "1" : value);
   if (options.turn !== undefined && options.turn > 0) query.set("turn", String(options.turn));
   if (options.zoom !== undefined && options.zoom !== 1 && Number.isFinite(options.zoom) && options.zoom > 0) query.set("zoom", String(Math.round(options.zoom * 1000) / 1000));
@@ -183,9 +187,9 @@ export function embedCode(options: EmbedOptions, kind: EmbedKind = "html", setti
       tag: "wakusei-body",
       element: "element",
       entries: needsShading(options) && options.star === undefined ? [entryOf(body)] : [],
-      attrs: attributesOf(options),
+      attrs: attributesOf(options, stellarCut),
       name: "planet",
-      iframe: { src: `${site}embed.html?${query.toString()}`, title: options.star !== undefined ? (options.star.name ?? "Star") : BODIES[body].name.en, width: size, height: size },
+      iframe: { src: `${site}embed.html?${query.toString()}`, title: options.star !== undefined ? (options.star.name ?? "Star") : BODIES[body].name.en, width: size, height: stellarCut ? size + 320 : size },
     },
     cdn,
   );

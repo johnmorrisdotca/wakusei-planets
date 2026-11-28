@@ -1105,6 +1105,33 @@ test("a star at rest draws nothing, with one WebGL context and one canvas", asyn
   expect(await page.evaluate(() => document.querySelectorAll("canvas").length)).toBeLessThanOrEqual(1);
 });
 
+test("a stellar cutaway rests and gives back its graphics objects when closed", async ({ page }) => {
+  await page.goto(`${STAR}?star=mesa-giant-tip`);
+  const view = star(page);
+  const cuts = page.locator("#stellar-cutaway");
+  await view.hover();
+  await starLive(page);
+  await expect(view).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
+  const closed = await settledCounts(page);
+  await cuts.locator('[data-cut="quarter"]').click();
+  await view.hover();
+  await starLive(page);
+  await expect(view).toHaveAttribute("data-shells", "5", { timeout: 60_000 });
+  const open = await settledCounts(page);
+  expect(gpuObjects(open)).toBeGreaterThan(gpuObjects(closed));
+  await settle(page, 1500);
+  const resting = await readCounts(page);
+  expect(resting.draws).toBe(open.draws);
+  expect(resting.rafRequests).toBe(open.rafRequests);
+  await cuts.locator('[data-cut="off"]').click();
+  await view.hover();
+  await starLive(page);
+  await expect(view).toHaveAttribute("data-shells", "0", { timeout: 60_000 });
+  const closedAgain = await settledCounts(page);
+  expect(gpuObjects(closedAgain)).toBeLessThanOrEqual(gpuObjects(closed) + 4);
+  expect(closedAgain.contexts).toBe(1);
+});
+
 test("a turning star, with its prominences and its boiling surface, is drawn at most thirty times a second, one frame at a time", async ({ page }) => {
   await page.goto(`${STAR}?star=proxima&spin=1`);
   await star(page).hover();
