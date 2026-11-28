@@ -104,7 +104,7 @@ The old library's own error is the cause of the large legacy figures: this packa
 
 `equationOfTime(when)` gives apparent solar time minus mean solar time in minutes. A positive value means a sundial is ahead of a clock set to local mean solar time. Each degree of east longitude adds four minutes to both clocks, so the difference is the same at every longitude.
 
-At 12:00 UTC in Greenwich on 3 November 2026, the sundial reads about 12:16:27.
+At 12:00 UTC in Greenwich on 3 November 2026, the sundial reads about 12:16:26.
 
 ```ts
 import { equationOfTime } from "@johnmorrisdotca/wakusei-planets/suncalc";
