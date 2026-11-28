@@ -210,8 +210,8 @@ async function letterContrast(page: Page, id: string, plain: string, named: stri
   );
 }
 
-// MODULES-983: the name reads on every body. Dark letters on the light bodies (Venus, Saturn, Uranus, Europa), pale ones on the dark; `tone` forces one. Strength 0.5, the name facing the reader, 30 degrees north.
-test("the name reads on every body at strength 0.5: dark letters on Venus, Saturn, Uranus and Europa, pale on Mars, the Moon, the Earth and Neptune; a forced tone wins", async ({ page }) => {
+// MODULES-983: the name reads on every body. Pale letters on Venus's dark radar map, dark letters on light bodies, and `tone` forces either one. Strength 0.5, facing the reader, 30 degrees north.
+test("the name reads on every body at strength 0.5 with the strongest tone for its map; a forced tone wins", async ({ page }) => {
   test.setTimeout(480_000);
   await openSpace(page, "t=2026-11-02T14:00Z&play=off&look=realistic&scale=true&light=lit");
   // the letters are measured against the same view without them: the names of the features, written on by default, are left off so that only the body's own name changes the picture
@@ -220,7 +220,7 @@ test("the name reads on every body at strength 0.5: dark letters on Venus, Satur
   const looks = async (): Promise<string | undefined> => ((await statsOf(page)) as unknown as { bodyLabels: { focus: { look?: string } | null } }).bodyLabels.focus?.look;
   const measured: string[] = [];
   const low: string[] = [];
-  for (const [id, tone] of [["uranus", "dark"], ["venus", "dark"], ["saturn", "dark"], ["europa", "dark"], ["mars", "light"], ["moon", "light"], ["earth", "light"], ["neptune", "light"]] as const) {
+  for (const [id, tone] of [["uranus", "dark"], ["venus", "light"], ["saturn", "dark"], ["europa", "dark"], ["mars", "light"], ["moon", "light"], ["earth", "light"], ["neptune", "light"]] as const) {
     await setOn(page, "bodyLabel", null);
     await drawnShared(page, () => callOn(page, "goTo", id, { smooth: false }));
     // the same view of every body, the controls' own start: a move now stands on the side the camera came from (so a companion is in the picture), and which part of the face the letters land on changes how strongly they read, so the comparison is made on one fixed view

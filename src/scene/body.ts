@@ -23,7 +23,7 @@ import { cutOpening, interiorOf, type CutSize } from "../interior.ts";
 import { createCutaway } from "./cutaway.ts";
 import { loadImage, MAP_ANISOTROPY } from "./textures.ts";
 import { ringStrip } from "./rings.ts";
-import { createNameLabel, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import { createNameLabel, nameLabelColour, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 import type { createMoonLayer, MoonLayer, MoonSource } from "../space/all-moons.ts";
 
 export { fallbackLook } from "./fallback.ts";
@@ -594,7 +594,7 @@ export function createBodyItem(options: BodyItemOptions): Item3D<ThreeParts> {
           return;
         }
         if (label === undefined) {
-          label = createNameLabel(T, state.label.text, state.label, look.emissive === true, () => options.redraw(), facts.colour);
+          label = createNameLabel(T, state.label.text, state.label, look.emissive === true, () => options.redraw(), nameLabelColour(options.id, facts.colour, wantPainted));
           mesh.add(label.object);
           // a lumpy shape (Thebe, Amalthea, Phobos) stands out past the sphere the name is written on in places: the name is written on the shell that clears its highest point, so no letter is hidden inside the surface
           const reach = shapeReach(geometry);

@@ -62,7 +62,8 @@ for (const [body, look] of [["mars", "painted"], ["moon", "painted"]] as const) 
 // own sign is read (a positive turn is eastward, which the check above shows is to the right).
 test("Venus: the Turn button turns the body its real way, the ground goes left", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desk", "a pointer test, in software 3D");
-  await page.emulateMedia({ reducedMotion: "no-preference" });
+  // Reduced motion keeps the real turn at a quarter speed. The ground stays in the comparison window while software drawing captures it.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await open(page, "venus", "painted", true);
   // A sharper cloud picture replaces the first one. Wait until that has stopped, or the check follows the swap.
   const width = async (): Promise<number> => page.locator("#main").evaluate((el) => (el as unknown as { stats: { textureWidth: number } }).stats.textureWidth);
@@ -78,15 +79,15 @@ test("Venus: the Turn button turns the body its real way, the ground goes left",
   await expect(page.locator("#main")).toHaveAttribute("turn", "-14");
   await page.locator("#main").evaluate((el) => (el as unknown as { goLive(): Promise<boolean> }).goLive());
   await expect(page.locator("#main")).toHaveAttribute("data-state", "live");
-  await page.waitForTimeout(200);
-  // The two pictures are of the middle of the globe only: photographing the whole wide stage takes seconds on a slow machine, and the globe goes on turning meanwhile.
+  // The two pictures are of the middle of the globe, where the same ground is still in both captures.
   const box = (await view.boundingBox())!;
   const clip = { x: box.x + box.width / 2 - 160, y: box.y + box.height / 2 - 100, width: 320, height: 200 };
   const before = await page.screenshot({ clip, scale: "css" });
   await page.waitForTimeout(1000);
   const after = await page.screenshot({ clip, scale: "css" });
-  const turned = await groundShift(page, before, after, 110, [0.3, 0.7, 0.3, 0.7]);
+  const turned = await groundShift(page, before, after, 57, [0.3, 0.7, 0.3, 0.7]);
   expect(turned.x, `Turn moves the ground left (moved ${turned.x},${turned.y})`).toBeLessThan(-3);
+  expect(Math.abs(turned.y), "the upright globe turns across the picture").toBeLessThan(5);
 });
 
 test("Mars turns forwards: the Turn button is a positive turn, and a body that turns backwards a negative one", async ({ page }) => {

@@ -53,17 +53,28 @@ test("Venus's realistic map has its radar features at their published coordinate
     texture.src = location.href;
     await texture.decode();
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 5;
+    canvas.width = texture.naturalWidth;
+    canvas.height = texture.naturalHeight;
     const context = canvas.getContext("2d")!;
-    context.imageSmoothingQuality = "high";
+    context.drawImage(texture, 0, 0);
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
     return features.map(({ name, lat, lon, width, height, brightness }) => {
-      const regionWidth = width * texture.width / 360;
-      const regionHeight = height * texture.height / 180;
-      const left = (lon + 180) * texture.width / 360 - regionWidth / 2;
-      const top = (90 - lat) * texture.height / 180 - regionHeight / 2;
-      context.drawImage(texture, left, top, regionWidth, regionHeight, 0, 0, 5, 5);
-      const rgba = context.getImageData(0, 0, 5, 5).data;
-      const observed = brightness.map((_, i) => (rgba[i * 4]! + rgba[i * 4 + 1]! + rgba[i * 4 + 2]!) / 3);
+      // Average the texture pixels in each cell. Canvas downsampling uses different filters in Chromium and WebKit.
+      const xEdges = Array.from({ length: 6 }, (_, i) => Math.round((lon + 180 + width * (i / 5 - 0.5)) * canvas.width / 360));
+      const yEdges = Array.from({ length: 6 }, (_, i) => Math.round((90 - lat + height * (i / 5 - 0.5)) * canvas.height / 180));
+      const observed = brightness.map((_, i) => {
+        const col = i % 5, row = Math.floor(i / 5);
+        const left = xEdges[col]!, right = xEdges[col + 1]!;
+        const top = yEdges[row]!, bottom = yEdges[row + 1]!;
+        let sum = 0;
+        for (let y = top; y < bottom; y += 1) {
+          for (let x = left; x < right; x += 1) {
+            const offset = (y * canvas.width + x) * 4;
+            sum += pixels[offset]! + pixels[offset + 1]! + pixels[offset + 2]!;
+          }
+        }
+        return sum / ((right - left) * (bottom - top) * 3);
+      });
       const mean = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
       const observedMean = mean(observed);
       const referenceMean = mean(brightness);

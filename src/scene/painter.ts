@@ -24,7 +24,7 @@ import { shapeGeometry } from "./shape.ts";
 import { seenRegion, type Sight, type TileLevel } from "./tiles.ts";
 import { moonOffset, orientation } from "./orient.ts";
 import { ringStrip } from "./rings.ts";
-import { createNameLabel, nameLabelText, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
+import { createNameLabel, nameLabelColour, nameLabelText, shapeReach, type NameLabel, type NameLabelOptions } from "./name-label.ts";
 import { roundShape } from "./round.ts";
 
 let pictureLoads = 0;
@@ -705,7 +705,7 @@ function paint(T: PainterThree, id: BodyId, context: PaintContext, bases: { near
     labelText = text ?? nameLabelText(facts.name, lang ?? "en");
     labelReport.text = labelText;
     if (label === undefined) {
-      label = createNameLabel(T, labelText, options, look.emissive === true, redraw, facts.colour, squeeze);
+      label = createNameLabel(T, labelText, options, look.emissive === true, redraw, nameLabelColour(id, facts.colour, wantPainted), squeeze);
       labelReport.look = label.look;
       mesh.add(label.object);
     } else {

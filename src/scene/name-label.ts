@@ -3,6 +3,7 @@
 // bodies have no three.js lights (each is lit by the `uLight` of its own material). Nothing here draws: the host calls `update` before each draw and `set` when a setting changed.
 import { BODY_LABEL_FONT, createBodyLabel, loadBodyLabelFont, type BodyLabel, type BodyLabelLook, type BodyLabelRepeat, type BodyLabelSize, type BodyLabelThree } from "@johnmorrisdotca/kazoku-ui/body-label";
 import type * as THREE from "three";
+import type { BodyId } from "../facts.ts";
 import type { ThreeParts } from "./body.ts";
 import type { Vec3 } from "../vec.ts";
 import { ROUND_GLSL } from "./round.ts";
@@ -127,6 +128,11 @@ const luminanceOf = (hex: string): number => {
  */
 export function nameTone(colour: string): "light" | "dark" {
   return luminanceOf(colour) > 0.5 ? "dark" : "light";
+}
+
+/** Venus's Magellan map is darker than the procedural clouds. Its mean colour gives the painted globe pale letters. */
+export function nameLabelColour(id: BodyId, colour: string, painted: boolean): string {
+  return painted && id === "venus" ? "#a65a1b" : colour;
 }
 
 /**
