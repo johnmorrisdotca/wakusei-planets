@@ -22,7 +22,7 @@ console.log(scene.children.length);
 
 - `look` is `realistic` or `painted`. A painted body shows the shaded look until its map arrives, then `invalidate` is called so you draw again.
 - Place and scale the object first, then call `update` at each draw. `toSun` is the unit direction to the Sun in your scene's axes, and the scene is taken to be equatorial J2000 with y up (x to the vernal equinox). The body is turned about its real pole to its real turn at `ms`.
-- `radiusPx` is how many CSS pixels across its radius the body is. A sharper picture is fetched only when it would show, and the big one is let go a few seconds after the body shrinks.
+- `radiusPx` is how many CSS pixels across its radius the body is. A sharper picture is fetched only when it would show, and the big one is let go a few seconds after the body shrinks. It is fetched again when the body is large enough.
 - The Sun is a globe like the others: give `update` the `view` (the camera) and its glow turns to face it by itself, while the globe keeps the Sun's own pole and prime meridian (about 25 days a turn at the equator) and so turns with your camera and with time. Do not turn the object to the camera: `billboard` is no longer set (it used to be `true` for the Sun, which showed the same face whichever way the view turned).
 - `painter.moons("Jupiter", ms)` gives each moon's place from its planet in planet radii and its size, nearest first. Make a moon the same way (`painter.make(THREE, "Io")`) and put it at the planet's place plus `offset` times the planet's drawn radius.
 - The pictures come from jsDelivr by default; `createPainter({ textureBase, farBase })` points them at your own folder.

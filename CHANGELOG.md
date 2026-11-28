@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **A dropped picture comes back** (MODULES-1905). A body that leaves the space view is kept a few seconds and then dropped, pictures included, and a closer picture is dropped once the body no longer needs it. A body that returns loads its picture again, and a closer picture that was let go is fetched again when the body is large enough. The opening view still paints every body before any of them has filled the frame. Holding the flat map's clock drops a frame the running clock had already asked for, so nothing is drawn at rest.
+
 ## [0.91.0] - 2026-11-27
 
 - **Measured lunar polar relief** (MODULES-1906). Close views use Lunar Orbiter Laser Altimeter elevations for the slopes at both poles, with the existing colour map. The illumination of crater walls follows the Sun.

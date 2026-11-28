@@ -114,6 +114,8 @@ test("a turning body is drawn at most thirty times a second, one frame at a time
 });
 
 test("changes give back what they took: contexts, buffers, vertex arrays, textures and programs do not grow", async ({ page }) => {
+  // five rounds, and each body is drawn again after its picture was let go: a slow machine spends the 120 seconds before the last round
+  test.setTimeout(240_000);
   await page.goto(`${URL}?body=jupiter`);
   await main(page).hover();
   await live(page);

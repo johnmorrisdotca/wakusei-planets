@@ -404,16 +404,28 @@ export class WakuseiFlatSystem extends HTMLElement {
     if (name === "lang" || name === "controls" || name === "layers" || name === "spacing") this.#words();
     if (name === "layers" || name === "craft" || name === "belts") this.#fetch();
     this.#sync();
+    // holding the clock changes nothing on the map: a frame already asked for by the running clock is dropped with its timer, or it arrives late and counts as a draw at rest
+    if ((name === "speed" || name === "paused") && !this.#running()) {
+      this.#rest();
+      return;
+    }
     this.#request();
     this.#schedule();
   }
 
+  /** The clock is held, or the map is out of sight: drop the timer and a frame already asked for, so neither draws later. */
+  #rest(): void {
+    clearTimeout(this.#timer);
+    this.#timer = undefined;
+    if (this.#frame) {
+      cancelAnimationFrame(this.#frame);
+      this.#frame = 0;
+    }
+  }
+
   #onVisibility = (): void => {
     if (this.#visibleNow()) this.#wake();
-    else {
-      clearTimeout(this.#timer);
-      this.#timer = undefined;
-    }
+    else this.#rest();
   };
 
   #visibleNow(): boolean {
