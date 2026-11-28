@@ -82,13 +82,13 @@ for (const { disappearance, reappearance } of events) {
 }
 ```
 
-各結果には、恒星の名前と Harvard Revised カタログ番号、潜入、月の縁の内側に最も深く入る時刻 (`closest`)、出現が含まれます。検索期間は UTC で、開始時刻を含み、終了時刻を含みません。期間に入るかどうかは `closest` で判定するため、潜入や出現が期間外になることもあります。各時刻での恒星の幾何学的な高度を度で返します。高度が 0° 未満なら、その時刻の恒星は地平線の下にあります。
+各結果には、恒星の名前と Harvard Revised カタログ番号、潜入、恒星が月縁の内側でいちばん深い位置にある時刻 (`closest`)、出現が含まれます。検索期間は UTC で、始まりは含み、終わりは含みません。期間に入るかどうかは `closest` で判定するため、潜入や出現が期間外になることもあります。潜入、`closest`、出現のそれぞれに、その時刻の恒星の幾何学的な高度 (度) が入っています。高度が 0° 未満なら、その時刻の恒星は地平線の下にあります。
 
-計算には観測地点から見た見かけの位置を使い、月を半径 1,737.4 km の球とします。月の山や谷によって潜入・出現の時刻がずれ、月の縁をかすめる掩蔽の有無も変わることがあります。IOTA の 2025 年の予報と観測地点 8 か所で照合したところ、潜入・出現の計 16 時刻の差は最大 8.4 秒でした。予報表の座標は角度の 0.1 分単位、時刻は秒単位です。照合では観測地点の高さを 0 m としました。[アンタレス](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0320zc2366.htm)、[エルナト](https://web.archive.org/web/20250115/http://www.lunar-occultations.com/iota/bstar/0111zc810.htm)、[スピカ](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0316zc1925.htm)。
+計算には観測地点から見た見かけの位置を使い、月を半径 1,737.4 km の球とします。月面の地形によって潜入・出現の時刻がずれ、月縁をかすめる掩蔽 (接食) が起こるかどうかも変わることがあります。IOTA の2025年の予報と観測地点8か所で照合したところ、潜入・出現の計16件の時刻の差は最大8.4秒でした。予報表の座標は0.1弧分単位、時刻は1秒単位です。照合では観測地点の高さを 0 m としました。[アンタレス](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0320zc2366.htm)、[エルナト](https://web.archive.org/web/20250115/http://www.lunar-occultations.com/iota/bstar/0111zc810.htm)、[スピカ](https://web.archive.org/web/20250210/http://www.lunar-occultations.com/iota/bstar/0316zc1925.htm)。
 
 ## 約束事
 
-新しい名前は API の約束事の草案 (リポジトリの docs/design/api-conventions.md) に従います。角度は単位の接尾辞なしの度、長さは単位つき、時刻は `Date`、出来事を 1 件探して期間内に見つからなければ `null` です。配列を返す検索で見つからなければ空配列になります。古い `skyBodies` の項目には `Deg` の接尾辞が付いていて、1.0 までは両者が異なったままです。
+新しい名前は API の約束事の草案 (リポジトリの docs/design/api-conventions.md) に従います。角度は単位の接尾辞なしの度、長さは単位つき、時刻は `Date`、出来事を1件探して期間内に見つからなければ `null` です。配列を返す検索で見つからなければ空配列になります。古い `skyBodies` の項目には `Deg` の接尾辞が付いていて、1.0 までは両者が異なったままです。
 
 ## 既定値
 
