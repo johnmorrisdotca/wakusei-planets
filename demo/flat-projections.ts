@@ -38,7 +38,6 @@ export function startProjections(host: ProjectionsHost): { render(): void; rende
   const canvas = $<HTMLCanvasElement>("#projected");
   const caption = $("#pj-caption");
   const credit = $("#pj-credit");
-  const motion = matchMedia("(prefers-reduced-motion: reduce)");
 
   const askedBody = host.get("pbody");
   const askedProjection = host.get("proj");
@@ -225,7 +224,10 @@ export function startProjections(host: ProjectionsHost): { render(): void; rende
 
   return {
     render,
-    renderTime: (running) => { if (!running || !motion.matches) draw(); },
+    renderTime: (running) => {
+      // On WebKit a retained media query can still report the previous preference until the next rendering update.
+      if (!running || !matchMedia("(prefers-reduced-motion: reduce)").matches) draw();
+    },
     stats: () => ({ draws, overlayDraws, body, projection, loaded: source?.body === body && source.pixels !== null }),
   };
 }
