@@ -48,6 +48,23 @@ Checked against JPL Horizons (observer tables, read online on three dates only, 
 
 The moment must be from 1750-01-01 to 2250-01-01 UTC (`SKY_RANGE`): the years the package's own checks hold the planet series, VSOP87B, and the rest to (the series "is good for the years 1750 to 2250 and slowly gets worse beyond", in the accuracy guide). A moment outside them throws a `RangeError` that names the range, so a number that is out of range is never handed back as if it were good. The figures above were compared on 2024 to 2030; the years either side up to 1750 and 2250 are held by the series' own checks, not by these comparisons.
 
+## Finding retrograde stations
+
+A station is an extremum in apparent ecliptic longitude as seen from the Earth's centre. Longitude starts decreasing at a `retrograde` station and starts increasing at a `direct` station. The search follows the same apparent ecliptic of date as `skyBody().eclipticDate`.
+
+```ts
+import { retrogradeStations } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
+
+const events = retrogradeStations("mercury", Date.UTC(2025, 2, 1), Date.UTC(2025, 4, 1));
+for (const station of events) {
+  console.log(new Date(station.time).toISOString(), station.kind, station.longitudeDeg.toFixed(2));
+}
+```
+
+Pass Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune or Pluto. The start is included and the end is excluded. Both accept a `Date` or UTC milliseconds. An empty interval or an interval without a station gives `[]`. Use `SKY_RANGE.to` for the exclusive end of the last supported interval. An unknown body, reversed span or span outside `SKY_RANGE` is rejected.
+
+Each result carries `body`, the UTC `time` in milliseconds since 1970, the new direction in `kind`, the apparent `longitudeDeg`, and the position model's `accurate` flag. The search brackets changes in angular direction on a two-day grid and bisects them to a second, taking angular differences across zero longitude. The displayed second is the resolution of the search. Seven 2025 results were within one hour of extrema inferred from hourly longitude rows in the JPL Horizons observer tables. Pluto's out-of-table stations carry `accurate: false`, as its positions do. [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/)
+
 ## A star chart takes it as data
 
 A page that draws a star chart passes this list in as plain data: the chart keeps its own input type, it does not import this package, and this package does not import the chart. Rise, set and transit times are not here: they are in [`/suncalc`](suncalc.md).

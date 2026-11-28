@@ -48,6 +48,23 @@ JPL Horizons (観測者表。2024-03-20、2026-06-21、2030-12-01 の3つの日�
 
 瞬間は 1750-01-01 から 2250-01-01 (UTC) まででなければなりません (`SKY_RANGE`)。このパッケージ自身の検査が惑星の級数 (VSOP87B) などを保証する年で、精度ガイドには「1750年から2250年までよく、それより外では少しずつ悪くなる」とあります。範囲の外の瞬間は、範囲を名指しした `RangeError` を投げるので、範囲外の数値が良い値のように返ることはありません。上の数値の比較は2024年から2030年で行ったもので、その前後は1750年と2250年までは級数自身の検査が支えています。
 
+## 逆行の留を探す
+
+地心から見た視黄経が極大または極小となる時刻を、留と呼びます。`retrograde` は黄経が減少し始める留、`direct` は黄経が増加し始める留です。`skyBody().eclipticDate` と同じ、その日付の視黄経から求めます。
+
+```ts
+import { retrogradeStations } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
+
+const events = retrogradeStations("mercury", Date.UTC(2025, 2, 1), Date.UTC(2025, 4, 1));
+for (const station of events) {
+  console.log(new Date(station.time).toISOString(), station.kind, station.longitudeDeg.toFixed(2));
+}
+```
+
+水星、金星、火星、木星、土星、天王星、海王星、冥王星のいずれかを指定します。開始時刻を含み、終了時刻を含まない半開区間で、どちらも `Date` または UTC のミリ秒で指定できます。空の区間や留がない区間の結果は `[]` です。扱える範囲の末尾まで調べるときは、終了時刻に `SKY_RANGE.to` を指定します。未知の天体、開始と終了が逆の区間、`SKY_RANGE` の範囲外の区間にはエラーが返ります。
+
+結果には、天体の `body`、1970 年からの UTC ミリ秒で表した `time`、留の後の進行方向の `kind`、視黄経の `longitudeDeg`、位置モデルの精度フラグ `accurate` が入ります。黄経が 0° をまたぐときも角度差を連続に取り、2 日刻みで進行方向の変化を挟み、二分法で秒の単位まで絞ります。秒は探索の分解能です。2025 年の 7 件は、JPL Horizons の 1 時間刻みの観測者表から求めた極値の時刻と 1 時間以内で一致しました。冥王星の位置表の範囲外では、位置と同じく留にも `accurate: false` が付きます。[JPL Horizons](https://ssd.jpl.nasa.gov/horizons/)
+
 ## 星図にはデータとして渡す
 
 星図を描くページは、このリストをただのデータとして渡します。星図は自分の入力の型を持ち、このパッケージを import せず、このパッケージも星図を import しません。出没や南中の時刻はここにはありません。[`/suncalc`](suncalc.md) にあります。

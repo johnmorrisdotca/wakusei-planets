@@ -10,6 +10,7 @@ import { moment } from "./sky/events.ts";
 import { meanObliquityArcseconds } from "./sidereal.ts";
 import { earthPosition } from "./theory.ts";
 import type { Observer } from "./sky/types.ts";
+import { moment as checkedMoment } from "./when.ts";
 
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
@@ -365,4 +366,109 @@ export function skyBodies(when: Date | number, observer?: Observer): SkyBody[] {
   checkObserver(observer);
   const ms = inRange(when);
   return SKY_BODY_IDS.map((id) => bodyAt(id, ms, observer));
+}
+
+/** A planet seen from Earth, or Pluto, for a search for apparent retrograde stations.
+ *
+ * @example
+ * ```ts
+ * import { retrogradeStations, type RetrogradeBodyId } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
+ *
+ * const planet: RetrogradeBodyId = "mercury";
+ * console.log(retrogradeStations(planet, Date.UTC(2025, 0, 1), Date.UTC(2026, 0, 1)).length);
+ * ```
+ */
+export type RetrogradeBodyId = Exclude<SkyBodyId, "sun" | "moon">;
+
+/** A change in the direction of the apparent ecliptic longitude of date as seen from Earth.
+ *
+ * @example
+ * ```ts no-run
+ * import type { RetrogradeStation } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
+ *
+ * const isRetrograde = (event: RetrogradeStation): boolean => event.kind === "retrograde";
+ * ```
+ */
+export interface RetrogradeStation {
+  body: RetrogradeBodyId;
+  /** UTC milliseconds since 1970, reported to a second. */
+  time: number;
+  /** The direction that begins at the station: retrograde (decreasing longitude) or direct (increasing). */
+  kind: "retrograde" | "direct";
+  /** Apparent geocentric ecliptic longitude of date in degrees from 0 to 360. */
+  longitudeDeg: number;
+  /** The position model’s accuracy flag, as in {@link SkyBody}. */
+  accurate: boolean;
+}
+
+const STATION_STEP = 2 * 86_400_000;
+const STATION_RATE_STEP = 30 * 60_000;
+const STATION_TIME_STEP = 1_000;
+const lastSkyMoment = SKY_RANGE.to - 1;
+const longitudeDelta = (from: number, to: number): number => wrap360(to - from + 180) - 180;
+
+/**
+ * Find the stations of a planet or Pluto over a UTC interval, ordered from first to last. The search follows
+ * the apparent geocentric ecliptic longitude of date from {@link skyBody}. The dates of the stations are
+ * approximations from the package’s ephemeris, even though the search resolves to a second.
+ *
+ * @param body - Mercury, Venus, Mars, Jupiter, Saturn, Uranus, Neptune or Pluto.
+ * @param start - Inclusive start, a Date or UTC milliseconds inside {@link SKY_RANGE}.
+ * @param end - Exclusive end, a Date or UTC milliseconds, up to the end of {@link SKY_RANGE}.
+ * @returns The stations. An empty interval or one without a change of direction gives an empty array.
+ *
+ * @example
+ * ```ts
+ * import { retrogradeStations } from "@johnmorrisdotca/wakusei-planets/sky-bodies";
+ *
+ * const events = retrogradeStations("mercury", Date.UTC(2025, 2, 1), Date.UTC(2025, 4, 1));
+ * console.log(events.map(({ time, kind }) => [new Date(time).toISOString(), kind]));
+ * ```
+ */
+export function retrogradeStations(body: RetrogradeBodyId, start: Date | number, end: Date | number): RetrogradeStation[] {
+  if (SKY_BODY_IDS.indexOf(body) < 2) throw new RangeError(`unknown body for a retrograde station: ${String(body)}`);
+  const from = checkedMoment(start, "start");
+  const to = checkedMoment(end, "end");
+  if (from > to) throw new RangeError("start must be on or before end");
+  if (from < SKY_RANGE.from || to > SKY_RANGE.to) throw new RangeError("the station interval must be within 1750-01-01 to 2250-01-01 UTC");
+  if (from === to) return [];
+
+  const longitude = (ms: number): number => bodyAt(body, ms, undefined).eclipticDate.longitudeDeg;
+  const rate = (ms: number): number => {
+    const h = STATION_RATE_STEP;
+    if (ms - h >= SKY_RANGE.from && ms + h <= lastSkyMoment) return longitudeDelta(longitude(ms - h), longitude(ms + h));
+    // A second-order one-sided difference gives the same derivative at the edges of the ephemeris.
+    const step = ms - h < SKY_RANGE.from ? h : -h;
+    const here = longitude(ms);
+    return Math.sign(step) * (4 * longitudeDelta(here, longitude(ms + step)) - longitudeDelta(here, longitude(ms + 2 * step)));
+  };
+  const events: RetrogradeStation[] = [];
+  // The UTC grid, including the cells crossed by the requested edges, makes a station have the same time
+  // in a short or a long search. Allow for rounding to a second before filtering the half-open interval.
+  const first = Math.max(SKY_RANGE.from, Math.floor((from - STATION_TIME_STEP) / STATION_STEP) * STATION_STEP);
+  const limit = Math.min(lastSkyMoment, Math.ceil((to + STATION_TIME_STEP) / STATION_STEP) * STATION_STEP);
+  let left = first;
+  let retrograde = rate(left) < 0;
+  while (left < limit) {
+    const right = Math.min(limit, (Math.floor(left / STATION_STEP) + 1) * STATION_STEP);
+    const nextRetrograde = rate(right) < 0;
+    if (retrograde !== nextRetrograde) {
+      let lo = left, hi = right;
+      while (hi - lo > STATION_TIME_STEP) {
+        const mid = (lo + hi) / 2;
+        if ((rate(mid) < 0) === retrograde) lo = mid;
+        else hi = mid;
+      }
+      const time = Math.round((lo + hi) / (2 * STATION_TIME_STEP)) * STATION_TIME_STEP;
+      // A jump between Pluto’s fitted table and its fallback can change the sign without passing through zero.
+      // A genuine station converges well inside 0.00001 degree of one hour’s change at this time resolution.
+      if (time >= from && time < to && Math.abs(rate(time)) < 0.00001) {
+        const at = bodyAt(body, time, undefined);
+        events.push({ body, time, kind: nextRetrograde ? "retrograde" : "direct", longitudeDeg: at.eclipticDate.longitudeDeg, accurate: at.accurate });
+      }
+    }
+    left = right;
+    retrograde = nextRetrograde;
+  }
+  return events;
 }

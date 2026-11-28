@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- `retrogradeStations` in `/sky-bodies` finds when a planet or Pluto starts moving retrograde or direct in apparent geocentric ecliptic longitude, over a UTC date span (MODULES-1894).
+
 ## [0.90.0] - 2026-11-27
 
 - **Venus surface orientation and closer views** (MODULES-774). The earlier realistic Venus was drawn upside down. Its replacement is NASA/JPL's Magellan radar composite, aligned to the mission grid. The finer maps add measured radar brightness where the first mapping cycle observed the surface.
